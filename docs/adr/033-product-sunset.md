@@ -51,7 +51,7 @@ You can:
 • Switch it to a replacement product
 • Delete it entirely
 
-View your prop: props.to/keegan/[product]
+View your prop: proper-respect.example/keegan/[product]
 
 — The PROPER-RESPECT team
 ```

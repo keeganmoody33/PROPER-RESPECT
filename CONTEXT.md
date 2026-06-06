@@ -1,199 +1,99 @@
-# CONTEXT.md — PROPER-RESPECT
+# CONTEXT.md - PROPER-RESPECT
 
-> Shared domain language for the [TBD] product.  
-> Last updated: 2026-06-05 (Round 3)
+> Shared domain language for PROPER-RESPECT.  
+> Last updated: 2026-06-06.
 
 ## Product Identity
 
-**[TBD]** is a public timeline of everything a person uses, with the receipts to prove it.  
-One link in your bio. Every recommendation, credited. Every product journey, visible.
+PROPER-RESPECT is a product-stack profile: one place for the products a person uses, the links they want people to click, the proof that they actually know the product, and the story of who put them on.
 
-We are NOT an affiliate network. We are NOT a link tracker. We are NOT a financial intermediary.  
-We are a **credibility protocol** — a presentation layer that makes organic advocacy visible and verifiable.
+The product is not an affiliate network, a payment processor, a review site, a company analytics dashboard, or a surveillance product. It is a user-owned profile and proof surface for product advocacy.
 
 ## Core Terms
 
-| Term | Definition | Never Call It |
-|------|-----------|-------------|
-| **Prop** | A user's relationship with a single product (the card) | "link entry" |
-| **Linker** | The user who creates props and shares their profile | "affiliate" |
-| **Discoverer** | The visitor who browses a linker's profile | "lead" |
-| **Credibility Weight** | The display score of a prop based on proof of usage (universal algorithm) | "rank" |
-| **Reward Weight** | The company's configured payout rules for advocates (company-specific) | "commission" |
-| **Lineage** | The social graph of who put who on | "referral chain" |
-| **Surface** | The public profile page where props live | "landing page" |
-| **Ingestion** | The email-scanning process that finds products | "scraping" |
-| **Verification** | The proof tier of a prop (self → email → OAuth → company) | "validation" |
-| **Servant Leader** | A user with high credibility weight but low social reach | "micro-influencer" |
-| **Archive** | A prop for a product no longer actively used | "dormant link" |
-| **Give Respect** | The act of tagging who put you on | "referral attribution" |
-| **Get Respect** | The credit a linker receives for putting someone on | "commission" |
-| **Floating Lineage** | A "put on by" entry for someone not yet on [TBD] | "orphan link" |
-| **Self-Attested** | A lineage logged by the user without external confirmation | "unverified" |
-| **Product Entity** | The canonical representation of a product in our database | "company page" |
-| **Company Configuration** | When a company sets reward rules for their product | "claim" |
-| **Rebrand** | When a product changes its name but remains the same entity | "rename" |
-| **Predecessor** | The previous incarnation of a rebranded product | "old version" |
-| **Screen Time** | Device-level usage data (iOS/Android) as passive signal | "tracking" |
-| **Bundle ID** | The unique identifier for a mobile app (e.g., com.notion.id) | "app ID" |
-| **Polymorphic Lineage** | "Put on by" can be a person, content, community, or event | "source" |
-| **Product Category** | The type of product: SAAS, MOBILE_APP, PHYSICAL, SERVICE, COURSE, COMMUNITY, TOOL | "type" |
-| **Multi-Email** | Connecting multiple email addresses (personal + work) | "secondary email" |
-| **Threshold Notification** | Single email to company when they reach 50 advocates | "outreach" |
-| **90% Auto-Discovered** | The onboarding goal: 90% of products found automatically | "100% coverage" |
-| **Manual Curation** | The remaining 10% of products added by hand | "data entry" |
+| Term | Definition | Do Not Call It |
+| --- | --- | --- |
+| Linker | The person creating a public product-stack profile | Affiliate, influencer |
+| Visitor | Someone browsing a linker's profile | Lead |
+| Product Stack | The set of products a linker uses, tests, or has archived | Link list |
+| Prop | A linker's relationship with one product | Link entry |
+| Product | The tool, app, service, course, community, or physical item being logged | Company page |
+| Link Slot | The URL area on a prop: affiliate link, referral code, invite link, or canonical URL | Ad placement |
+| Affiliate Link | A product-provided link that can credit the linker | Tracking link |
+| Referral Code | A code the visitor can use to give the linker credit | Coupon |
+| Canonical Link | The normal product link used when no affiliate/referral link exists | Fallback ad |
+| Proof | Evidence attached to a prop showing the linker knows or uses the product | Verification theater |
+| Proof Source | The origin of proof: content, screenshot, receipt, public profile, extension capture, OAuth/API | Data source |
+| Content Proof | A Loom, YouTube video, article, screenshot, GitHub repo, or note that demonstrates usage | Marketing asset |
+| Usage Claim | The linker's claim that a product belongs on their stack | Verified usage |
+| Status | The linker's current relationship to a product: Active, Testing, Archived | Rank |
+| Lineage | The story of who or what put the linker on to a product | Referral chain |
+| Put On By | The field where the linker records lineage | Attribution form |
+| Floating Lineage | Lineage pointing to a person/content/community/event not on PROPER-RESPECT | Orphan link |
+| Import | Bringing in public or user-approved data to create draft props | Scraping |
+| Claim-on-Visit | Browser extension flow where the linker clicks while on a product page to create proof | Browser tracking |
+| Draft Prop | A prop that has been imported or created but not published | Auto-discovered product |
 
-## Two Weight Systems (Critical Distinction)
+## Status Model
 
-### Credibility Weight (Universal)
+| Status | Meaning |
+| --- | --- |
+| Active | The linker currently uses and recommends the product |
+| Testing | The linker is trying the product and has not fully adopted it |
+| Archived | The linker used the product before but no longer actively uses it |
 
-- **Purpose:** How [TBD] are sorted on a user's profile
-- **Owner:** PROPER-RESPECT platform
-- **Based on:** Tenure, verification, activity, content, lineage
-- **Philosophy:** Depth over reach
-- **Public:** Yes — the score is visible
+Status is user-curated. Automation may suggest a status, but the linker decides what appears publicly.
 
-### Reward Weight (Company-Configurable)
+## Proof Model
 
-- **Purpose:** How much a company pays/rewards an advocate
-- **Owner:** Each individual company
-- **Based on:** Company's own rules (flat, usage-based, tiered, custom)
-- **Philosophy:** Company autonomy
-- **Public:** Yes — the rules are displayed
+PROPER-RESPECT does not rely on one universal usage oracle. Proof is a ladder of signals, and different products support different proof.
 
-**Example:**
+| Proof Source | What It Shows | Notes |
+| --- | --- | --- |
+| Self-attested | The linker says it belongs on their stack | Baseline; valid but lowest confidence |
+| Content proof | The linker can show or explain the product in context | Strong launch signal |
+| Public profile proof | Public repos, articles, videos, or bios mention the product | Useful for import and enrichment |
+| Receipt proof | The linker paid for or subscribed to the product | Strong for paid tools, misses free tiers |
+| Claim-on-visit proof | The linker captured a URL/screenshot while using the product | Good for web products, user-triggered only |
+| OAuth/API proof | Product-specific API confirms activity or ownership | Strong but high friction |
+| Company-confirmed proof | The product company confirms the relationship | Future only |
 
-- Keegan has a Credibility Weight of 114 for Linear (displayed prominently)
-- Linear's Reward Weight is "Flat $25 per referral" (company's choice)
-- These are independent. Keegan's high credibility doesn't force Linear to pay more.
+## Lineage Model
 
-## Status Badges (The Credibility Surface)
+"Put on by" accepts four source types:
 
-| Badge | Meaning | Visual |
-|-------|---------|--------|
-| 🔥 **Active** | Daily/weekly usage, verified | Full color, top rank |
-| 🌱 **Testing** | Trial or new adopter | Soft color, mid rank |
-| ⚪️ **Archived** | Used to use, now switched | Muted, chronological |
-| ✅ **Verified** | Company-confirmed via API | Checkmark overlay |
-| 💰 **Monetized** | Affiliate link active | Subtle currency indicator |
-| 🏷️ **Self-Attested** | "Put on by" logged manually | Tag icon |
-| ✓ **Confirmed** | "Put on by" confirmed by tagged person | Double checkmark |
-| 📱 **Screen Time** | Usage verified via device data | Phone icon |
+| Source Type | Example |
+| --- | --- |
+| Person | "Jordan Crawford showed me Wispr Flow" |
+| Content | "A YouTube workflow video" |
+| Community | "A GTM operator Slack group" |
+| Event | "SaaStr hallway conversation" |
 
-## Verification Tiers (Progressive Trust)
+Lineage is allowed to be self-attested. The point is to preserve the story of influence, including dark social that normal affiliate systems miss.
 
-| Tier | Method | Trust Level |
-|------|--------|-------------|
-| **Self-Attested** | Manual entry by user | Baseline |
-| **Email-Confirmed** | Inbox metadata match | Low |
-| **Screen-Time-Confirmed** | Device usage data | Medium-High |
-| **OAuth-Verified** | Product API confirmation | Medium |
-| **Company-Confirmed** | Partner API or direct claim | High |
+## Link Model
 
-## The Weight Philosophy
+A prop can have more than one link type:
 
-**Credibility Weight rewards depth over reach.** A linker with 200 hours in Linear and 100 followers scores higher than a linker with 100K followers who opened Linear once.
+| Link Type | Purpose |
+| --- | --- |
+| Affiliate URL | The best monetized destination when the product provides one |
+| Referral code | A code the visitor can copy or apply |
+| Invite link | A product-specific invite URL |
+| Canonical URL | The normal product URL when no monetized option exists |
+| Proof URL | A Loom, YouTube video, article, repo, or screenshot source |
 
-**Reward Weight is the company's choice.** If they want to pay everyone equally, that's their business. We display it. We don't judge it.
+The profile should prioritize the link the linker wants clicked, while still being transparent about proof and lineage.
 
-## Domain Fallback Options
+## Product Principles
 
-Primary: `[TBD].to`  
-If unavailable:
-
-- `props.link` — semantic, short, clear
-- `props.page` — modern, clean
-- `get[TBD].to` — action-oriented
-- `propped.to` — past tense (less ideal)
-- `give[TBD].to` — verb form (longer)
-
-Decision: Check availability of `[TBD].to`. If taken, evaluate `props.link` and `props.page`. Purchase primary + one fallback for protection.
-
-## The 90% Onboarding Vision
-
-**Goal:** A user connects their email + enables screen time. Within 5 minutes, they have a draft profile with 90% of their products.
-
-**The flow:**
-
-1. User signs up
-2. Connects email (Gmail first, others later) → discovers 30+ SaaS products
-3. Enables screen time (optional) → discovers 15+ mobile apps
-4. Reviews drafts → keeps, archives, deletes
-5. Manually adds anything missed → the last 10%
-6. Attaches "Put on by" lineage → the social graph
-7. Publishes profile → done
-
-**Result:** 90% coverage in under 10 minutes. The user didn't type anything. They just reviewed and curated.
-
-**The honest framing:** "We get you to 90% in 5 minutes. The last 10% is manual curation — and that's where the real value lives."
-
-## Product Categories
-
-| Category | Examples | Discovery Method |
-|----------|----------|-----------------|
-| **SAAS** | Linear, Notion, Figma | Email scan, OAuth |
-| **MOBILE_APP** | Instagram, Spotify, Notion mobile | Screen time, manual |
-| **PHYSICAL** | Books, hardware, gear | Manual only |
-| **SERVICE** | Accountant, lawyer, consultant | Manual only |
-| **COURSE** | MasterClass, Reforge, OnDeck | Manual, email |
-| **COMMUNITY** | Discord server, Slack group, forum | Manual only |
-| **TOOL** | CLI tools, open source, scripts | Manual, GitHub OAuth |
-
-## Privacy Promise
-
-- We scan email **metadata only** (sender domain, subject keywords, date).
-- We **never read message bodies**.
-- We **never store personal correspondence**.
-- Screen time data is **local-first**. Only aggregated summaries sent to server.
-- All data is **user-owned**. Export or delete anytime.
-- Extension is **local-first**. No background tracking.
-- We are **not a data company**. We are a presentation layer.
-- **User-generated data is retained forever** (it's the product). Raw ingestion data is ephemeral.
-
-## The Three Product Tiers
-
-| Tier | Affiliate Link? | What Linker Gets | What Company Gets |
-|------|----------------|------------------|-------------------|
-| **Monetized** | Yes | Direct commission via their existing link | Tracked attribution |
-| **Verified** | No | Verified badge, reputation, discovery | Public proof of real usage |
-| **Curated** | No | Nothing (yet) | Listed in a real user's stack |
-
-## The Non-Affiliate Unlock
-
-80% of products people love have no referral program. PROPER-RESPECT makes those products visible anyway. The linker gets credibility. The company gets advocate intelligence. The visitor gets the full picture. Eventually, the company sees the demand and builds the program.
-
-## The Manual-First Philosophy
-
-**Manual logging is the core value.** Email scan is a starting point. Screen time is a bonus. The user is always in control of what appears on their profile.
-
-**"Put on by" is always manual.** No confirmation required. The user is the source of truth for who influenced them.
-
-**Product creation is user-driven.** No canonical database. If a product doesn't exist, the user creates it.
-
-## The Polymorphic Lineage
-
-"Put on by" accepts four types of sources:
-
-| Type | Example | UI |
-|------|---------|-----|
-| **Person** | "Jordan Crawford" | Name or @username |
-| **Content** | "The Tim Ferriss Podcast, Ep 612" | Title + URL |
-| **Community** | "r/SaaS on Reddit" | Community name |
-| **Event** | "SaaStr Annual 2024" | Event name + date |
-
-Default is Person. But content, community, and event are valid sources of influence.
-
-## Decision Principles
-
-1. **User owns their graph.** They can export, delete, or disconnect anytime.
-2. **Privacy is the feature, not the bug.** We collect less than we could, by design.
-3. **Credibility weight is transparent.** The algorithm is public and explainable.
-4. **Reward weight is company autonomy.** We don't dictate economics.
-5. **Companies come second.** We build for linkers first. Companies follow the graph.
-6. **No money holding.** We route links. We do not process payments.
-7. **Manual is the MVP.** Automation is additive, not required.
-8. **History is the product.** Data is retained forever because the timeline is the value.
-9. **English only at launch.** i18n is a future consideration.
-10. **90% auto-discovered.** The last 10% is manual curation — and that's where the value lives.
-11. **Screen time is optional.** Local-first. Aggregated only. Never raw timestamps.
-12. **Polymorphic lineage.** Influence comes from people, content, communities, and events.
+1. Manual curation is the source of truth.
+2. Automation creates drafts; it does not publish on behalf of the linker.
+3. The launch product is a profile builder, not a company dashboard.
+4. Affiliate links are important, but non-affiliate products still belong.
+5. Proof should be user-controlled and legible to visitors.
+6. The product should avoid surveillance. No background tracking as a default.
+7. Imports should get users more than halfway when possible, but never pretend to be complete.
+8. API/OAuth connectors are optional proof sources, not the foundation.
+9. Companies and monetization come later, after the linker profile works.
+10. If a feature does not improve the linker's profile or the visitor's trust, it waits.

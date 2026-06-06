@@ -1,113 +1,59 @@
-# ADR-019: Search and Discovery — How People Find Props
+# ADR-019: Search and Discovery - Simple Public Search First
 
 ## Status
-Accepted — 2026-06-05
+Accepted - revised 2026-06-06
 
 ## Context
-How do visitors find profiles? How do companies find advocates? How do users discover new products? Search is critical for the graph to be useful.
+
+Search is useful, but the MVP does not need company advocate search, trend rankings, or scoring filters. The first need is simple: users and visitors should find profiles and products that are already public.
 
 ## Decision
 
-### The Three Search Surfaces
+Start with simple database-backed search over public data.
 
-| Surface | User | What They Search For |
-|---------|------|---------------------|
-| **Profile Search** | Visitors | "Find people who use Linear and Cursor" |
-| **Product Search** | Companies | "Find advocates for my product" |
-| **People Search** | Users | "Find Keegan's profile" |
+## MVP Search Surfaces
 
-### Profile Search (Visitor-Facing)
+| Surface | Query Examples |
+| --- | --- |
+| People search | "keegan", "keegan moody" |
+| Product search | "Linear", "Wispr Flow", "Claude" |
+| Profile product filter | "show Keegan's active products" |
 
-**Query examples:**
-- "Users who use Linear AND Cursor"
-- "Users with credibility weight > 100 for Figma"
-- "Users who switched from Notion to Obsidian"
-- "Users who put people on Claude"
+## Indexed Data
 
-**Filters:**
-- Product (single or multiple)
-- Credibility weight range
-- Verification tier
-- Status (Active, Testing, Archived)
-- Content count
-- Location (future)
-- Industry (future)
+- Username
+- Display name
+- Bio
+- Public product names
+- Public prop notes/headlines
+- Public lineage names
 
-### Product Search (Company-Facing)
+## Not Indexed
 
-**Query examples:**
-- "Advocates for linear.app"
-- "Top 10% of Linear advocates"
-- "Advocates who also use Cursor"
-- "New adopters of Linear (joined in last 30 days)"
-
-**Filters:**
-- Credibility weight
-- Tenure
-- Verification tier
-- Content richness
-- "Put on" count
-- Reward tier (if company configured)
-
-### People Search (Direct Navigation)
-
-**Query examples:**
-- "keegan" → `props.to/keegan`
-- "keegan moody" → fuzzy match
-- "@keegan" → exact match
-
-**Search ranking:**
-1. Exact username match
-2. Exact display name match
-3. Fuzzy name match
-4. Bio text match
-5. Product match ("users who have Linear in their profile")
-
-### The Search Index
-
-**What is indexed:**
-- Usernames
-- Display names
-- Bio text
-- Product names (in user's profile)
-- Context notes (in PROPER-RESPECT)
-- "Put on by" names
-
-**What is NOT indexed:**
+- Draft props
 - Private props
-- Email metadata
-- OAuth data
-- Screen time data
-- Deleted content
+- Import artifacts before approval
+- Raw receipts or screenshots not published
+- API/OAuth data not converted into public proof
 
-### The Discovery Feed (Future)
+## Future
 
-A "Explore" page showing:
-- Trending products (most added in last 30 days)
-- Top advocates (highest credibility weight)
-- Recent switches ("Keegan switched from Jira to Linear")
-- New products (recently created by users)
+Advanced discovery, trending products, company advocate search, and scoring filters are parked until there are enough public profiles to make them useful.
 
 ## Consequences
 
 ### Positive
-- Search makes the graph discoverable
-- Companies can find advocates without knowing names
-- Visitors can find trusted recommenders
-- Discovery feed creates engagement
+
+- Keeps implementation simple.
+- Uses only public data.
+- Avoids premature analytics/search infrastructure.
 
 ### Negative
-- Search requires indexing infrastructure (Algolia, Elasticsearch)
-- Privacy risk: indexing bio text and context notes
-- Spam risk: users gaming search with keyword stuffing
-- Performance: searching across 100K+ profiles is expensive
 
-## Mitigations
-- Index only public data
-- Rate limit search API
-- No full-text search of private notes
-- Discovery feed is curated, not algorithmic (to avoid spam)
+- No advanced discovery at launch.
+- Manual curation and direct profile sharing matter more early.
 
 ## Related
-- ADR-005 (Manual Product Database) — product names are indexed
-- ADR-002 (Weight Over Reach) — credibility weight is a search filter
+
+- ADR-004 - Public/private draft boundaries
+- ADR-037 - Imports

@@ -1,5 +1,8 @@
 # ADR-026: The Company Page — Auto-Generated Advocate Dashboard
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — 2026-06-05
 

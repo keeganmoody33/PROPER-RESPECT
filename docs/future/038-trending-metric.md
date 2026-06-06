@@ -1,5 +1,8 @@
 # ADR-038: The Trending Metric — How We Calculate Product Adoption
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — 2026-06-05
 

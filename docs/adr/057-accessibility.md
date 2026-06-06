@@ -82,7 +82,7 @@ Switched to Obsidian."
 │                                     │
 │ If you encounter any accessibility  │
 │ issues, please contact us:            │
-│ accessibility@props.to                │
+│ accessibility@PROPER-RESPECT                │
 │                                     │
 │ [View Full Statement →]             │
 └─────────────────────────────────────┘

@@ -4,13 +4,13 @@
 Accepted — 2026-06-05
 
 ## Context
-When Keegan tags "Jordan Crawford" as the person who put him on Claude, but Jordan is not on PROPER-RESPECT, the lineage is "floating" — stored as text, not linked to a user. What happens when Jordan joins props later?
+When Keegan tags "Jordan Crawford" as the person who put him on Claude, but Jordan is not on PROPER-RESPECT, the lineage is "floating" — stored as text, not linked to a user. What happens when Jordan joins PROPER-RESPECT later?
 
 ## Decision
 
 ### The Hardening Flow
 
-1. **Jordan joins props** (creates account with email or OAuth)
+1. **Jordan joins PROPER-RESPECT** (creates account with email or OAuth)
 2. **System scans for floating lineage** mentioning "Jordan Crawford" or matching email/domain
 3. **Potential matches found:**
    - Keegan's prop: "Put on by Jordan Crawford"
@@ -75,7 +75,7 @@ Floating lineages have a **2-year expiration**:
 - Social graph grows organically as people join
 - No friction for the original logger (Keegan doesn't need Jordan to join first)
 - Jordan gets a "welcome" experience with immediate social proof
-- Confirmed lineages boost credibility weight for both parties
+- Confirmed lineages make the lineage link stronger and easier to trust
 
 ### Negative
 - Matching algorithm can be wrong (false positives)

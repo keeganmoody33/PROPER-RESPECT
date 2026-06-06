@@ -1,5 +1,8 @@
 # ADR-063: Churn Analysis — Why Users Leave and How We Prevent It
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — 2026-06-05
 

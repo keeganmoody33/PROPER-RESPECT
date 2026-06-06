@@ -1,5 +1,8 @@
 # ADR-035: The "Props" Gesture — Brand Interaction and Micro-Interactions
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — 2026-06-05
 

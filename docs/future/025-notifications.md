@@ -1,5 +1,8 @@
 # ADR-025: The Notification System — What Users Get Notified About
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 
 Accepted — 2026-06-05

@@ -1,5 +1,8 @@
 # ADR-030: Pricing Strategy — Pro Tier and Company Tier
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — 2026-06-05
 

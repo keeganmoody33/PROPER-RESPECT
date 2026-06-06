@@ -1,5 +1,8 @@
 # ADR-007: Company-Configurable Reward System
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — 2026-06-05
 

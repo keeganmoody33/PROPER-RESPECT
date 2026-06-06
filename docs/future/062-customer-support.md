@@ -1,5 +1,8 @@
 # ADR-062: Customer Support — Channels, Response Times, and Self-Service
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — 2026-06-05
 

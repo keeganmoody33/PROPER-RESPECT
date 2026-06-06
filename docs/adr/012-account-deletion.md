@@ -9,10 +9,10 @@ When a user deletes their account, what happens to the lineage graph? If Keegan 
 ## Decision
 
 ### What Gets Deleted (Hard Delete)
-- User profile page (`props.to/keegan`) → 404
+- User profile page (`proper-respect.example/keegan`) → 404
 - All props created by the user
 - All content (Looms, screenshots, notes) uploaded by the user
-- All email scan metadata (already ephemeral)
+- All draft import artifacts not needed for published props
 - All OAuth tokens and connections
 - All personal data (email, name, avatar)
 

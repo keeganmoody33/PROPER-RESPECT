@@ -4,7 +4,7 @@
 Accepted — 2026-06-05
 
 ## Context
-Most product introductions happen outside of trackable digital channels. A friend mentions a tool over coffee. A colleague drops a recommendation in a Zoom call. A mentor sends a Loom with no referral link. The "dark social" of product discovery is 90% of how people find tools — and it has zero attribution.
+Most product introductions happen outside of trackable digital channels. A friend mentions a tool over coffee. A colleague drops a recommendation in a Zoom call. A mentor sends a Loom with no referral link. A large share of product discovery happens in dark social, and normal affiliate systems give it no attribution.
 
 ## Decision
 Users manually log who put them on a product. **No link required. No confirmation required. No digital trace required.** The user is the source of truth.
@@ -38,7 +38,7 @@ When adding or editing a prop, the user sees:
 
 | Scenario | Resolution |
 |----------|------------|
-| User types a **props username** (`@jordan`) | Link to Jordan's profile. Jordan gets notified. Jordan can confirm (optional) or ignore. |
+| User types a **PROPER-RESPECT username** (`@jordan`) | Link to Jordan's profile. Jordan gets notified. Jordan can confirm (optional) or ignore. |
 | User types a **name** ("Jordan Crawford") | Stored as free text. "Floating" attribution. Searchable but not linked. |
 | User types **multiple people** | Each gets a separate lineage entry. Multiple people can get credit for the same introduction. |
 | User leaves it **blank** | No lineage. The prop stands alone. |
@@ -59,7 +59,7 @@ When adding or editing a prop, the user sees:
 1. **Most introductions are offline.** There's no digital mechanism to confirm a coffee-shop conversation.
 2. **Confirmation creates friction.** If Jordan has to click an email to confirm he put Keegan on Claude, 80% of lineages will never complete.
 3. **The user is the source of truth.** Keegan knows who influenced him. We don't need Jordan's permission for Keegan to express gratitude.
-4. **The graph grows organically.** If Jordan joins props later, the floating attribution can be hardened into a confirmed link.
+4. **The graph grows organically.** If Jordan joins PROPER-RESPECT later, the floating attribution can be hardened into a confirmed link.
 
 ## The Public Display
 
@@ -68,7 +68,7 @@ On Keegan's profile:
 ┌─────────────────────────────────────┐
 │ [Logo] Claude                       │
 │                                     │
-│ 🔥 Active · 6 mos · Weight: 67      │
+│ Active · proof attached      │
 │                                     │
 │ "Jordan Crawford put me on this.      │
 │  Changed how I work."                 │
@@ -102,7 +102,7 @@ Over time, the lineage graph becomes a **map of influence**:
 - "What products spread through which communities?"
 - "Who is the 'patient zero' for Cursor adoption in the GTM world?"
 
-This is **market intelligence** that no affiliate platform can provide because it captures the 90% of introductions that happen without links.
+This is influence context that normal affiliate platforms miss because many introductions happen without links.
 
 ## Consequences
 
@@ -126,4 +126,4 @@ This is **market intelligence** that no affiliate platform can provide because i
 
 ## Related
 - ADR-004 (Public Graph Privacy) — lineage is public, but user controls what they log
-- ADR-002 (Two Weight Systems) — confirmed lineage adds to credibility weight
+- ADR-002 (Credibility Is Proof-First) - lineage is part of visible proof context

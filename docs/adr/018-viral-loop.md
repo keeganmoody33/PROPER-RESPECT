@@ -1,93 +1,51 @@
-# ADR-018: The Viral Loop — How Profiles Spread Organically
+# ADR-018: Viral Loop - Product Stack as Share Surface
 
 ## Status
-
-Accepted — 2026-06-05
+Accepted - revised 2026-06-06
 
 ## Context
 
-How does a PROPER-RESPECT profile go viral? What is the mechanism for organic growth? Every user who creates a profile is a distribution channel.
+Every public profile can become distribution. The viral loop should come from a profile being more useful than a generic link page: it shows products, proof, links, and lineage.
 
 ## Decision
 
-### The Primary Viral Mechanism: The Bio Link
+The primary viral mechanism is the public product-stack profile.
 
-`props.to/{username}` is designed to be the **one link in your bio** that replaces:
-
-- Linktree
-- Beacons
-- Stan Store
-- Carrd
-- "Links in bio" tweets
-
-**The pitch:** "Instead of a generic link tree, show people what you actually use. With proof."
-
-### The Share Flow
-
-1. User creates profile
-2. User puts `props.to/{username}` in their bio (Twitter, LinkedIn, Instagram, TikTok)
-3. Visitor clicks → sees credible product stack
-4. Visitor thinks: "This is better than Linktree. I want one."
-5. Visitor signs up → creates profile → puts in their bio
-6. Loop repeats
-
-### The Viral Triggers
-
-| Trigger | How It Works |
-|---------|-------------|
-| **Bio link** | One link replaces all others. Every visitor is a potential signup. |
-| **"Put on by" notification** | When someone tags you, you get an email: "Keegan gave you respect for putting him on Claude. View your impact." → Drives signup. |
-| **Company discovery** | Company sees advocate page → shares it → advocates get visibility → more signups. |
-| **Content embed** | User embeds their props card in a blog post, newsletter, or tweet. |
-| **Trending products** | "Cursor is trending on PROPER-RESPECT" → drives curiosity → signups. |
-
-### The Embed Widget
-
-Pro users can embed their profile or specific props on external sites:
-
-```html
-<iframe src="https://props.to/keegan?embed=true" width="600" height="400"></iframe>
+```text
+Linker publishes profile
+  -> uses it as their product-stack link
+  -> visitor sees credible product cards
+  -> visitor clicks links or asks for their own profile
+  -> new linker creates profile
 ```
 
-**Use cases:**
+## Viral Triggers
 
-- Blog post: "My current stack" with live, updating props
-- Newsletter: "Tools I use" with credibility badges
-- Landing page: "Verified user of Linear" with weight score
-
-### The "Props Badge"
-
-Users can add a small badge to their website/GitHub README:
-
-```
-[props.to/keegan] — 12 active tools · 847 days of usage
-```
-
-Clicking the badge opens their full profile.
+| Trigger | How It Works | MVP? |
+| --- | --- | --- |
+| Public profile link | One link for the linker's product stack | Yes |
+| Product proof cards | Shareable cards around a product and proof item | Yes |
+| Put-on-by credit | Tagging a person/content/community creates a reason to share | Yes |
+| Imports | User can consolidate existing product links into one profile | Yes |
+| Embeds | External profile/card embeds | Future |
+| Company pages | Companies discover advocates | Future |
+| Trending products | Public discovery from aggregate usage | Future |
 
 ## Consequences
 
 ### Positive
 
-- Every user is a distribution channel
-- Bio link is the natural viral mechanism
-- "Put on by" notifications drive signups from tagged people
-- Embed widget extends reach beyond social platforms
+- Keeps distribution linker-first.
+- Does not require company-side features.
+- Reinforces product differentiation.
 
 ### Negative
 
-- Viral loops take time to build
-- Requires critical mass for network effects
-- "Put on by" notifications could be annoying if overused
-- Embed widget requires moderation (spam prevention)
-
-## Mitigations
-
-- "Put on by" notifications are limited: max 1 per week per recipient
-- Embed widget is read-only (no editing via embed)
-- Badge is optional (not forced on users)
+- Network effects take time.
+- Put-on-by notifications and embeds need careful moderation later.
 
 ## Related
 
-- ADR-009 (Manual Put On By) — notifications drive viral signups
-- ADR-011 (Company Discovery) — company pages drive viral discovery
+- ADR-009 - Manual put-on-by
+- ADR-037 - Imports
+- `docs/future/027-embed-widget.md` - Parked embeds

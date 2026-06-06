@@ -1,63 +1,51 @@
 # ADR-003: We Do Not Hold, Process, or Touch Money
 
 ## Status
-Accepted — 2026-06-05
+Accepted - revised 2026-06-06
 
 ## Context
-Early versions of this concept included a "credit slider" where companies could configure rev-share, discounts, or perks, and users would receive payouts through our platform. This introduces financial, legal, and fraud complexity that would kill the product before it ships.
+
+PROPER-RESPECT stores and routes links. Some links may be affiliate links, referral codes, or invite links. The product should not become a payment processor, wallet, payout platform, affiliate network, or commission ledger.
 
 ## Decision
-PROPER-RESPECT will never hold, process, or route money. We are a **link router and credibility layer**, not a payment platform.
 
-## How Money Actually Flows
+PROPER-RESPECT will never hold, process, or route money. It stores outbound links and lets the product's existing affiliate/referral system handle credit.
 
-| Scenario | What props Does | What Happens |
-|----------|----------------|--------------|
-| User has Amazon affiliate link | Stores the link. Routes clicks through it. | Amazon pays user directly via Associates program |
-| User has Notion referral code | Stores the code. Appends it to URL. | Notion credits user directly via their referral system |
-| Product has no affiliate program | Stores the raw URL. No tracking. | Nothing. User gets credibility, not cash. |
-| Company wants to reward advocates | Shows them the advocate graph. In-app messaging. | Company pays user directly, off-platform. |
+## How Money Flows
 
-## What We Explicitly Do NOT Do
+| Scenario | What PROPER-RESPECT Does | What Happens |
+| --- | --- | --- |
+| Linker has an affiliate link | Stores and routes visitors through that link | Product/affiliate platform credits the linker directly |
+| Linker has a referral code | Displays or copies the code | Product credits the linker directly |
+| Product has no referral system | Stores canonical product URL | No payout; the prop still carries proof and credibility |
+| Company wants to reward users | Future conversation, off-platform by default | No money touches PROPER-RESPECT |
+
+## Explicit Non-Goals
+
 - Hold funds in escrow
 - Process payouts
 - Calculate commission splits
 - Take a percentage of transactions
-- Issue 1099s or tax documents
-- Act as a money transmitter
-- Maintain a wallet or balance system
-
-## Alternatives Considered
-
-| Alternative | Why Rejected |
-|-------------|-------------|
-| Stripe Connect for payouts | Makes us a money transmitter. Requires state licenses. Fraud liability. |
-| Virtual currency / points | Creates a closed economy we must manage. Dilutes the core value. |
-| Take rate on affiliate clicks | Requires tracking conversions across domains. Technically hard. Legally gray. |
-| Company-paid "tips" through us | Same as payouts. Financial intermediary status. |
-| Crypto / token rewards | Regulatory nightmare. Distracts from core product. |
+- Issue tax documents
+- Maintain wallets or balances
+- Promise that a click creates earnings
 
 ## Consequences
 
 ### Positive
-- Zero financial regulatory burden
-- Zero fraud liability for synthetic transactions
-- Zero accounting complexity
-- Companies trust us because we don't touch their money
-- Users trust us because we don't hold their earnings
-- We can focus on the core: credibility and discovery
+
+- Avoids financial regulation and payout complexity.
+- Keeps launch focused on profiles, links, proof, and lineage.
+- Lets linkers use affiliate programs that already exist.
 
 ### Negative
-- No direct revenue from transaction volume
-- Users may want "one place to see all my earnings" — we can't provide this natively
-- Companies may want us to handle payouts — we must say no and point them to PartnerStack/Rewardful
-- The "credit slider" concept is dead (for now)
 
-## Revenue Model Instead
-- Pro tier: Analytics, custom domain, API access ($8-12/month)
-- Company tier: Advocate discovery, in-app messaging, sponsored placement ($49/month)
-- Data intelligence: Aggregated, anonymized trend reports (future)
+- No built-in earnings dashboard.
+- No unified payout experience.
+- Some visitors may expect affiliate-network behavior that we do not provide.
 
 ## Related
-- ADR-001 (Email Passport) — no financial data in email scan
-- ADR-004 (Public Graph Privacy) — no financial data in public profiles
+
+- ADR-002 - Credibility is proof-first, not reward-first
+- `docs/future/007-company-reward-config.md` - Parked company reward ideas
+- `docs/future/030-pricing.md` - Parked pricing ideas

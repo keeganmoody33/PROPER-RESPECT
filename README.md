@@ -1,138 +1,113 @@
 # PROPER-RESPECT
 
-> Get credit. Give credit.  
-> A living timeline of everything you use, with the receipts to prove it.
+> One place for the products you actually use: affiliate links, proof, and the story of who put you on.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+PROPER-RESPECT is a product-stack profile. It is not trying to predict a person's whole software life from surveillance data. It helps a linker collect the products they use, attach the best available proof, add their affiliate/referral links where they exist, and credit the people, content, communities, or events that introduced them.
 
-## The Problem
+## Current Direction
 
-Every product you love has someone who put you on.  
-Every product you put someone on, you did the marketing for free.  
+The product starts as a manual-first profile builder:
 
-Affiliate links are scattered. Referral codes expire. Your actual usage — the proof that you know this product — is invisible. No one knows who really drives adoption. Only who has the biggest audience.
+1. Add a product you use or have tested.
+2. Add your affiliate link, referral code, or canonical link.
+3. Attach proof: Loom, YouTube, screenshot, article, GitHub repo, receipt, or API/OAuth evidence when available.
+4. Add lineage: who or what put you on.
+5. Publish a public product-stack page.
 
-## The Solution
+Automation is additive. It should get a user more than halfway toward a useful profile, but it should not become the product's source of truth.
 
-**[TBD]** is your product journey, public and verified.
+## What Problem This Solves
 
-- **One profile:** `[TBD].to/keegan`
-- **Every product you use**, ranked by real usage — not clicks or followers
-- **Every product you archived**, because taste evolves and that's credibility too
-- **Looms, screenshots, and notes** attached to the things you actually know
-- **Affiliate links** where they exist. **Verified badges** where they don't.
-- **Who put you on** — and who you put on. The social graph of real influence.
+Affiliate and referral links are fragmented across product dashboards, YouTube descriptions, notes apps, old tweets, newsletters, and link-in-bio tools. Most products either have no referral program or make it hard for actual users to present their advocacy in one place.
 
-## How It Works
+PROPER-RESPECT gives linkers a single surface for:
 
-### For Linkers (Users)
+- Products they actively use
+- Products they are testing
+- Products they used and archived
+- Affiliate/referral links when available
+- Proof that they know the product
+- Lineage for who put them on
 
-1. **Connect your email** (any provider — Gmail, Outlook, Proton, IMAP) — we find every product you've ever signed up for
-2. **Review your timeline** — keep active, archive dormant, delete mistakes. Or add products manually.
-3. **Give respect** — tag who put you on, even if they have no link and aren't on the platform
-4. **Attach proof** — Looms, screenshots, notes
-5. **Share your respect** — one link in your bio. Every recommendation, credited.
+## What We Are Not Building Right Now
 
-### For Discoverers (Visitors)
+These ideas are parked in `docs/future/` until the core profile works:
 
-- Visit `[TBD].to/{username}`
-- See their stack: what's active, what's archived, what's being tested
-- Click through with confidence — you know this person actually uses it
-- Filter by category, see what friends use, follow "stacks"
+- B2B dashboards
+- Pricing and paid tiers
+- Company reward configuration
+- Public API monetization
+- Analytics dashboards
+- Mobile screen-time tracking
+- Company outreach workflows
 
-### For Companies
+## Proof Sources
 
-- Search your domain — see every verified user who lists you
-- Filter by **Credibility Weight** — tenure, activity, content, network
-- Find your **Servant Leaders** — the users who drive adoption without asking for money
-- **Configure your reward rules** — flat, usage-based, tiered. Your economics, your choice.
-- Reach out in-app — no cold email. Just: "We see you. We want to thank you."
+The product should support multiple proof sources because no single source covers every product.
 
-## The Two Weight Systems
+| Source | Best For | Signal | Launch Priority |
+| --- | --- | --- | --- |
+| Manual curation | Everything | User says this belongs on their stack | Now |
+| Content proof | Loom, YouTube, screenshots, articles | Shows the product in use | Now |
+| Link imports | Linktree, Beacons, GitHub README, Twitter bio | Existing public curation | Now |
+| Receipt forward | Paid products | User chooses a receipt to convert into a draft prop | Next |
+| Claim-on-visit extension | Web products | User clicks while on a product page and captures URL/screenshot | Next |
+| Public profile scan | GitHub repos, public articles, YouTube descriptions | Public evidence of usage or mention | Next |
+| Product API/OAuth | GitHub, Linear, Vercel, Notion, Figma | Product-specific verification | Later |
+| Email metadata scan | SaaS signup and receipt discovery | Broad but noisy | Later, optional |
 
-### Credibility Weight (Display)
+## MVP App Flow
 
-How props are sorted on your profile. Based on actual usage. Universal algorithm. Public and explainable.
+```text
+Linker signs up
+  -> creates profile
+  -> imports existing links or starts manually
+  -> adds product cards
+  -> adds affiliate/referral/canonical links
+  -> attaches proof
+  -> adds "put on by" lineage
+  -> publishes profile
+```
 
-| Badge | Meaning |
-|-------|---------|
-| 🔥 **Active** | Daily/weekly usage, verified |
-| 🌱 **Testing** | Trial or new adopter |
-| ⚪️ **Archived** | Used to use, now switched |
-| ✅ **Verified** | Company-confirmed via API |
-| 💰 **Monetized** | Affiliate link active |
+Visitor flow:
 
-### Reward Weight (Company-Configurable)
+```text
+Visitor opens profile
+  -> browses Active / Testing / Archived products
+  -> sees proof and lineage
+  -> clicks affiliate/referral/canonical link
+```
 
-How much a company pays for a referral. Their choice. Their rules. We display it, we don't process it.
+## Suggested Technical Stack
 
-## The Stack
+This remains a small web app until the profile builder proves itself.
 
-- **Frontend:** Next.js 14 + Tailwind + shadcn/ui
-- **Auth:** Clerk (OAuth + email)
-- **Database:** PostgreSQL (Neon) + Prisma
-- **Email Scan:** Gmail, Outlook, Yahoo, Proton, IMAP (metadata only)
-- **Extension:** Chrome Extension (local-first, optional)
-- **Storage:** Vercel Blob / AWS S3 for Looms/screenshots
-- **Payments:** Stripe (for Pro tier)
-- **Language:** English only (Phase 1-3)
-
-## Roadmap
-
-### Phase 0: Dogfood (Week 1)
-
-- [ ] Build `[TBD].to/keegan` manually
-- [ ] 10 products, real copy, real links, real lineage
-- [ ] Share it. See if anyone asks "how do I make one?"
-
-### Phase 1: Core Profile (Weeks 2-3)
-
-- [ ] Next.js app with auth (Clerk)
-- [ ] Database schema (Prisma + Neon)
-- [ ] Public profile pages (`[TBD].to/{username}`)
-- [ ] Dashboard: create/edit/delete props (manual)
-- [ ] Card UI with credibility weight badges
-- [ ] "Put on by" manual logging (no confirmation required)
-- [ ] Product creation (user-driven, no canonical DB)
-
-### Phase 2: Ingestion & Proof (Weeks 4-5)
-
-- [ ] Gmail OAuth + metadata scanner (first provider)
-- [ ] Draft review UI
-- [ ] Credibility weight calculation + badges
-- [ ] Content attachments (Loom embed, screenshot upload)
-- [ ] Browser extension (local login detection)
-- [ ] Per-product OAuth (GitHub, Linear)
-
-### Phase 3: The Graph & B2B (Weeks 6-8)
-
-- [ ] Company pages (auto-generated from user data)
-- [ ] Advocate search + ranking by credibility weight
-- [ ] Company configuration (reward rules)
-- [ ] In-app messaging (company → advocate)
-- [ ] Pro tier (Stripe)
-- [ ] Company tier (Stripe)
-- [ ] Analytics dashboard (Pro users)
-
-### Phase 4: Scale (Weeks 9-12)
-
-- [ ] Multi-provider email (Outlook, Yahoo, Proton, IMAP)
-- [ ] Product merge tool (deduplication)
-- [ ] Floating lineage hardening
-- [ ] Company reputation score
-- [ ] API for third-party integrations
+- Frontend: Next.js + TypeScript
+- Styling: Tailwind or plain CSS modules; design should feel like a polished product stack, not a generic SaaS dashboard
+- Auth: Clerk or a simple auth provider
+- Database: Postgres (Neon is fine)
+- ORM: Prisma or Drizzle
+- Storage: Vercel Blob/S3 for screenshots; external embeds for Loom/YouTube
+- Hosting: Vercel
 
 ## Documentation
 
-- [`CONTEXT.md`](./CONTEXT.md) — Shared domain language (15 principles)
-- [`GRILL-SESSION.md`](./GRILL-SESSION.md) — The complete interrogation (9 rounds, 48 ADRs)
-- [`PRD.md`](./PRD.md) — The build spec
-- [`docs/adr/`](./docs/adr/) — 48 architecture decisions
+- `CONTEXT.md` - domain language and product principles
+- `PRD.md` - current MVP requirements and architecture
+- `GRILL-SESSION.md` - latest grilling decisions and unresolved questions
+- `INDEX.md` - active and future documentation map
+- `docs/adr/` - accepted active decisions
+- `docs/future/` - parked ideas that are not part of the current build
 
-## License
+## Current Build Target
 
-MIT
+Build the smallest useful product:
 
----
+- A public profile for one linker
+- Product cards with status: Active, Testing, Archived
+- Link slots: affiliate URL, referral code, canonical URL
+- Proof attachments: Loom, YouTube, screenshot, article, GitHub repo
+- Put-on-by lineage: person, content, community, event
+- Import from existing public surfaces where easy
 
-> *"We built this because we were tired of giving free marketing to companies that never said thank you."*
+If a feature does not make the profile more useful for the linker or more credible for the visitor, it waits.

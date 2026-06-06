@@ -1,5 +1,8 @@
 # ADR-011: Company Discovery — How Companies Find Their Advocates
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — Future (Phase 4) — 2026-06-05
 

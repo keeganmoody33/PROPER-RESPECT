@@ -1,5 +1,8 @@
 # ADR-010: Screen Time and Device Usage as Passive Usage Signal
 
+> Parked: not active MVP scope. Revisit only after the core product-stack profile works.
+
+
 ## Status
 Accepted — 2026-06-05
 
