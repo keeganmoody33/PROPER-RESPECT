@@ -12,6 +12,18 @@
 | `PRD.md` | MVP requirements and architecture |
 | `GRILL-SESSION.md` | Latest decision record and active questions |
 
+## V1 Product Direction
+
+These docs are the current source of truth for the V1 build. If an ADR conflicts with `docs/000-current-product-thesis.md`, the thesis wins.
+
+| # | File | Purpose |
+| --- | --- | --- |
+| 000 | `docs/000-current-product-thesis.md` | What V1 is and is not; manual-first rule |
+| 001 | `docs/001-git-for-product-attribution.md` | The Git-for-adoption mental model |
+| 002 | `docs/002-v1-product-motion.md` | V1 user motion and capability sequencing |
+| 003 | `docs/003-evidence-surfaces.md` | Proof types and evidence sources |
+| 004 | `docs/004-v1-technical-contract.md` | Entities, types, pipeline, and owed tests |
+
 ## Active ADRs
 
 These decisions are relevant to the current MVP.
