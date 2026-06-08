@@ -77,6 +77,7 @@ interface Link {
   label: string | null;
   isPrimary: boolean;        // the link the Linker most wants clicked
   createdAt: Date;
+  updatedAt: Date;
 }
 
 interface Proof {
