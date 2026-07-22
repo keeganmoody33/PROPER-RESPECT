@@ -38,7 +38,7 @@ The documented MVP is a manual-first, public product-stack profile: a linker rec
 ### Inconsistencies and decision debt
 
 1. The stack is open in `README.md` but partially prescriptive in ADR-057/058.
-2. Current MVP rejects opaque credibility scores, yet older active examples retain `credibilityWeight` or `Cred:` (`docs/adr/023-put-on-by-ui.md`, `docs/adr/057-accessibility.md`, `docs/adr/060-data-export.md`). Remove or replace those references with visible proof-method and disclosure fields before they influence an implementation.
+2. Current MVP rejects opaque credibility scores, yet older active examples retain `credibilityWeight` or `Cred:` (`docs/adr/023-put-on-by-ui.md`, `docs/adr/057-accessibility.md`, `docs/adr/060-data-export.md`). Replace those references with `publicProofLevel` + `proofMethodLabel`, evidence links selected by the author, relationship status/duration, and adjacent referral-disclosure fields before they influence an implementation.
 3. ADR-006 retention language conflicts with ADR-012's later, more specific anonymized-lineage deletion policy.
 4. Active docs use PROPER-RESPECT and `proper-respect.example`; parked documents use `props.to`. These must not become accidental URL contracts.
 5. The conceptual PRD model does not cover many accepted decisions: work/private context, lineage hardening, moderation reports, deletion lifecycle, product lifecycle, exports, or site/domain configuration.
@@ -81,7 +81,16 @@ User 1 ── * Prop * ── 1 Product
 | Proof | Type, URL/file/text, label; includes self-attested, content, receipt, claim-on-visit, OAuth/API, and future company confirmation concepts. |
 | Lineage | Person/content/community/event source plus name, URL, and context. |
 
-The problem statement's `Respect` maps most directly to `Prop`. This report uses **Prop** only when describing current documentation and **Respect** only for the recommended evolved model; the final product term remains a founder decision. Important missing concepts are: Site/Installation, Domain, Collection, Field Note, Disclosure as a first-class record, proof-level vocabulary and method, private-evidence references, link health checks, trust challenges/reviews, theme configuration, and relation duration/type.
+The problem statement's `Respect` maps most directly to `Prop`. This report uses **Prop** only when describing current documentation and **Respect** only for the recommended evolved model; the final product term remains a founder decision.
+
+Important missing concepts are:
+
+- Site/Installation and Domain
+- Collection and Field Note
+- Disclosure as a first-class record
+- Proof-level vocabulary, proof method, and private-evidence references
+- Link-health checks and trust challenges/reviews
+- Theme configuration and relationship duration/type
 
 ### Current journey
 
@@ -304,6 +313,8 @@ FieldNote(id, siteId, authorId, body, visibility)
 ```
 
 Use explicit enums and foreign keys rather than free-form status strings. Preserve an append-only publication/audit event record for moderation, domain changes, and disclosure revisions.
+
+The proposed logical/API field names use lower camel case consistently with the Prisma-shaped conceptual model in `PRD.md`; the selected ORM may map them to a database-specific convention without changing the public contract.
 
 ### API and hostname contract
 
