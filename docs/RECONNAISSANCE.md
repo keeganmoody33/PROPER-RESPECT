@@ -38,7 +38,7 @@ The documented MVP is a manual-first, public product-stack profile: a linker rec
 ### Inconsistencies and decision debt
 
 1. The stack is open in `README.md` but partially prescriptive in ADR-057/058.
-2. Current MVP rejects opaque credibility scores, yet older active examples retain `credibilityWeight` or `Cred:` (`docs/adr/023-put-on-by-ui.md`, `docs/adr/057-accessibility.md`, `docs/adr/060-data-export.md`). Replace those references with `publicProofLevel` + `proofMethodLabel`, evidence links selected by the author, relationship status/duration, and adjacent referral-disclosure fields before they influence an implementation.
+2. Current MVP rejects opaque credibility scores, yet older active examples retain `credibilityWeight` or `Cred:` (`docs/adr/023-put-on-by-ui.md`, `docs/adr/057-accessibility.md`, `docs/adr/060-data-export.md`). Replace those references with `publicProofLevel` + `proofMethodLabel`, evidence links selected by the author, relationship status/duration, and adjacent referral-disclosure fields before they influence an implementation. For example, replace `credibilityWeight: 114` with `publicProofLevel: "EVIDENCE_ATTACHED"` and `proofMethodLabel: "published workflow demonstration"`; do not derive either field from a score.
 3. ADR-006 retention language conflicts with ADR-012's later, more specific anonymized-lineage deletion policy.
 4. Active docs use PROPER-RESPECT and `proper-respect.example`; parked documents use `props.to`. These must not become accidental URL contracts.
 5. The conceptual PRD model does not cover many accepted decisions: work/private context, lineage hardening, moderation reports, deletion lifecycle, product lifecycle, exports, or site/domain configuration.
@@ -255,7 +255,7 @@ Owner authenticates on canonical app
 → hosted and connected sites render the same public policy fields
 ```
 
-### Connecting the task's hypothetical reference-customer hostname, `proper-respect.lecturesfrom.com`
+### Connecting the task-provided hypothetical reference-customer hostname, `proper-respect.lecturesfrom.com`
 
 ```text
 Owner creates Site and requested Domain on canonical app
@@ -353,7 +353,18 @@ When an application exists, likely boundaries are `app/` for hosted/public/dashb
 - **Security/privacy/SEO:** No private evidence leaks; do not render “verified” without exact method.
 - **Done:** Product language and schema are documented and exercised end to end.
 
-### 3. Implement private evidence and explicit publication controls
+### 3. Reconcile proof terminology in active documentation
+
+- **Problem:** Active ADR examples retain score language that conflicts with the proof-first MVP.
+- **Scope/non-goals:** Update only ADR-023, ADR-057, and ADR-060 to use the adopted proof/disclosure pattern; do not change production behavior or re-open unrelated accepted decisions.
+- **Likely modules:** The three ADR documents and the terminology section of `CONTEXT.md` if a shared definition is needed.
+- **Data/API:** Document `publicProofLevel` and `proofMethodLabel` as logical public-contract fields; no schema migration in this documentation task.
+- **Acceptance criteria:** No active MVP example presents a numeric credibility score; each proof example identifies an exact method rather than a generic verification claim.
+- **Tests:** Documentation consistency review against `PRD.md`, `CONTEXT.md`, and ADR-002/ADR-056.
+- **Security/privacy/SEO:** Preserve private-evidence and disclosure language; no external behavior change.
+- **Done:** The three documents agree with the adopted terminology and their update is separately committed/reviewed.
+
+### 4. Implement private evidence and explicit publication controls
 
 - **Problem:** Evidence is sensitive by default but lacks an enforceable boundary.
 - **Scope/non-goals:** Private uploads/references, public selection, and draft/published access policy; no OAuth connectors.
@@ -364,7 +375,7 @@ When an application exists, likely boundaries are `app/` for hosted/public/dashb
 - **Security/privacy/SEO:** Malware/content type checks, signed URLs, retention/deletion policy; private objects excluded from indexing.
 - **Done:** Security review confirms an anonymous request cannot retrieve private evidence.
 
-### 4. Add public trust operations and link health
+### 5. Add public trust operations and link health
 
 - **Problem:** Public links and claims need a safe challenge/report path and stale-link visibility.
 - **Scope/non-goals:** Report intake, moderation states, link-check observations, and retired/broken presentation; no automated truth scoring.
@@ -375,7 +386,7 @@ When an application exists, likely boundaries are `app/` for hosted/public/dashb
 - **Security/privacy/SEO:** SSRF prevention, rate limits, audit logging, abuse controls, no defamatory “fraud” labels.
 - **Done:** Operational runbook and test fixture cover link failure and moderation resolution.
 
-### 5. Define public API/export and portability contract
+### 6. Define public API/export and portability contract
 
 - **Problem:** A portable site needs stable public data rather than database coupling.
 - **Scope/non-goals:** Versioned public read API or signed build export; no paid API or webhooks.
@@ -386,7 +397,7 @@ When an application exists, likely boundaries are `app/` for hosted/public/dashb
 - **Security/privacy/SEO:** Public allowlist serializer, rate limits, no secret in static consumers.
 - **Done:** Contract version and deprecation policy published with sample sanitized payloads.
 
-### 6. Add Site and verified custom-domain lifecycle
+### 7. Add Site and verified custom-domain lifecycle
 
 - **Problem:** Owner domains cannot map to a shared network identity.
 - **Scope/non-goals:** Connected custom subdomains, DNS verification, managed certificates, and detach/transfer/recovery; no arbitrary customer code execution.
@@ -397,7 +408,7 @@ When an application exists, likely boundaries are `app/` for hosted/public/dashb
 - **Security/privacy/SEO:** DNS ownership proof, certificate lifecycle, host-header protection, recovery/audit trail, sitemap/robots/canonical policy.
 - **Done:** Staging domain passes setup, renewal, removal, and recovery drills.
 
-### 7. Deliver host-aware SEO, sessions, and analytics policy
+### 8. Deliver host-aware SEO, sessions, and analytics policy
 
 - **Problem:** Multiple public hosts create duplicate-content, attribution, and cookie risks.
 - **Scope/non-goals:** Canonical URLs, host-aware metadata/sitemaps/robots/OG, canonical editing flow, and privacy-conscious host attribution; no behavioral advertising.
@@ -408,7 +419,7 @@ When an application exists, likely boundaries are `app/` for hosted/public/dashb
 - **Security/privacy/SEO:** Explicit consent decision, callback allowlist, no tenant data in analytics identifiers.
 - **Done:** Search-console and browser-session validation documented for both host types.
 
-### 8. Create the `proper-respect-site` template repository
+### 9. Create the `proper-respect-site` template repository
 
 - **Problem:** Advanced owners need source-controlled presentation without losing network integrity.
 - **Scope/non-goals:** GitHub template-generated site, theme/configuration/local pages, static deployment; not a mandatory fork or required onboarding path.
