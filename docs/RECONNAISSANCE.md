@@ -255,7 +255,7 @@ Owner authenticates on canonical app
 → hosted and connected sites render the same public policy fields
 ```
 
-### Connecting `proper-respect.lecturesfrom.com`
+### Connecting the task's hypothetical reference-customer hostname, `proper-respect.lecturesfrom.com`
 
 ```text
 Owner creates Site and requested Domain on canonical app
@@ -345,7 +345,7 @@ When an application exists, likely boundaries are `app/` for hosted/public/dashb
 ### 2. Define Respect, proof, and disclosure semantics
 
 - **Problem:** The current Prop model cannot make genuine use and incentives legible.
-- **Scope/non-goals:** Add relationship type, status/retirement, reason, caveat, context, proof method, and structured outbound disclosure; do not introduce numeric trust scores or company confirmation.
+- **Scope/non-goals:** Add relationship type, status/retirement, reason, caveat, context, proof method, and structured outbound disclosure; update the legacy `credibilityWeight`/`Cred:` examples in ADR-023, ADR-057, and ADR-060 to the adopted proof/disclosure terminology; do not introduce numeric trust scores or company confirmation.
 - **Likely modules:** Schema, owner editor, public card/detail, validation library.
 - **Data/API:** Evolve Prop toward Respect with versioned public representation; separate link/disclosure records.
 - **Acceptance criteria:** Every outbound action has an adjacent disclosure or explicit “no referral/incentive” state; proof labels state method; retired records remain public.
