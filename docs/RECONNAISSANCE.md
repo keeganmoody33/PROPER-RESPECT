@@ -424,10 +424,10 @@ When an application exists, likely boundaries are `app/` for hosted/public/dashb
 - **Problem:** Advanced owners need source-controlled presentation without losing network integrity.
 - **Scope/non-goals:** GitHub template-generated site, theme/configuration/local pages, static deployment; not a mandatory fork or required onboarding path.
 - **Likely modules:** New template repository, configuration schema, data client, required disclosure/proof component package.
-- **Data/API:** Consume issue 5 public contract; optional scoped preview token flow.
-- **Acceptance criteria:** A template-generated repo with independent history can deploy a branded site with local pages and cannot remove mandated disclosure semantics.
-- **Tests:** Build against fixture API, config validation, disclosure component contract, static-host deploy smoke test.
-- **Security/privacy/SEO:** No privileged secrets in repository/browser; canonical host configuration; dependency/update ownership documented.
+- **Data/API:** Consume issue 6 public contract; optional scoped preview token flow with server-side revocation.
+- **Acceptance criteria:** A template-generated repo with independent history can deploy a branded site with local pages; mandated disclosure semantics are enforced centrally — public data is served only through the issue 6 contract with revocable access tokens, so moderation, account deletion, or domain detachment invalidates the data source rather than relying on the template code honoring policy.
+- **Tests:** Build against fixture API, config validation, disclosure component contract, token revocation/invalidation behavior, static-host deploy smoke test.
+- **Security/privacy/SEO:** No privileged secrets in repository/browser; canonical host configuration; dependency/update ownership documented; owner-controlled builds cannot bypass central moderation/removal because stale or revoked data is unavailable through the public contract.
 - **Done:** A nontechnical hosted path remains primary and a technical owner can complete a documented template deployment.
 
 ## Founder confirmations needed before implementation
