@@ -38,7 +38,7 @@ The documented MVP is a manual-first, public product-stack profile: a linker rec
 ### Inconsistencies and decision debt
 
 1. The stack is open in `README.md` but partially prescriptive in ADR-057/058.
-2. Current MVP rejects opaque credibility scores, yet older active examples retain `credibilityWeight` or `Cred:` (`docs/adr/023-put-on-by-ui.md`, `docs/adr/057-accessibility.md`, `docs/adr/060-data-export.md`). Replace those references with `publicProofLevel` + `proofMethodLabel`, evidence links selected by the author, relationship status/duration, and adjacent referral-disclosure fields before they influence an implementation. For example, replace `credibilityWeight: 114` with `publicProofLevel: "EVIDENCE_ATTACHED"` and `proofMethodLabel: "published workflow demonstration"`; do not derive either field from a score.
+2. Current MVP rejects opaque credibility scores, yet older active examples retain `credibilityWeight` or `Cred:` (`docs/adr/023-put-on-by-ui.md`, `docs/adr/057-accessibility.md`, `docs/adr/060-data-export.md`). Track this as proposed Issue 3: replace those references with `publicProofLevel` + `proofMethodLabel`, evidence links selected by the author, relationship status/duration, and adjacent referral-disclosure fields. For example, replace `credibilityWeight: 114` with `publicProofLevel: "EVIDENCE_ATTACHED"` and `proofMethodLabel: "published workflow demonstration"`; do not derive either field from a score.
 3. ADR-006 retention language conflicts with ADR-012's later, more specific anonymized-lineage deletion policy.
 4. Active docs use PROPER-RESPECT and `proper-respect.example`; parked documents use `props.to`. These must not become accidental URL contracts.
 5. The conceptual PRD model does not cover many accepted decisions: work/private context, lineage hardening, moderation reports, deletion lifecycle, product lifecycle, exports, or site/domain configuration.
@@ -255,7 +255,7 @@ Owner authenticates on canonical app
 → hosted and connected sites render the same public policy fields
 ```
 
-### Connecting the task-provided hypothetical reference-customer hostname, `proper-respect.lecturesfrom.com`
+### Connecting a custom domain (example: `proper-respect.lecturesfrom.com`)
 
 ```text
 Owner creates Site and requested Domain on canonical app
