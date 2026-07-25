@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { action, mutation } from "./_generated/server";
-import { api } from "./_generated/api";
+import { internalAction, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { proposeDrafts, type RawSignal } from "../src/domain/discovery";
 
@@ -36,7 +36,7 @@ const PROOF_TYPE_BY_SOURCE: Record<RawSignal["sourceType"], ProofType> = {
   GMAIL: "EMAIL_EVIDENCE",
 };
 
-export const ingestSignals = mutation({
+export const ingestSignals = internalMutation({
   args: {
     handle: v.string(),
     sourceType: evidenceSourceType,
@@ -224,7 +224,7 @@ type IngestResult = {
   createdProps: string[];
 };
 
-export const syncGithub = action({
+export const syncGithub = internalAction({
   args: {
     handle: v.string(),
     githubLogin: v.string(),
@@ -249,7 +249,7 @@ export const syncGithub = action({
         payload: JSON.stringify({ repo: repo.full_name }),
       }));
 
-    return await ctx.runMutation(api.discovery.ingestSignals, {
+    return await ctx.runMutation(internal.discovery.ingestSignals, {
       handle: args.handle,
       sourceType: "GITHUB",
       sourceLabel: `github.com/${args.githubLogin}`,
