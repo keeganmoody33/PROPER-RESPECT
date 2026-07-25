@@ -101,6 +101,22 @@ export const seedKeegan = mutation({
       description: "The home base for code, collaboration, and shipped work.",
     });
 
+    const wisprflowId = await upsertProduct(ctx, {
+      seedKey: "wisprflow",
+      name: "Wisprflow",
+      slug: "wisprflow",
+      domain: "wisprflow.ai",
+      description: "Voice dictation that keeps up with how I actually think.",
+    });
+
+    const notebooklmId = await upsertProduct(ctx, {
+      seedKey: "notebooklm",
+      name: "NotebookLM",
+      slug: "notebooklm",
+      domain: "notebooklm.google.com",
+      description: "Grounded research and synthesis over my own sources.",
+    });
+
     const publicPropId = await upsertProp(ctx, {
         seedKey: "keegan-github-public",
         userId,
@@ -138,6 +154,46 @@ export const seedKeegan = mutation({
       type: "CANONICAL",
       url: "https://github.com/keeganmoody33",
       label: "See Keegan on GitHub",
+      isPrimary: true,
+    });
+
+    const wisprflowPropId = await upsertProp(ctx, {
+        seedKey: "keegan-wisprflow-public",
+        userId,
+        productId: wisprflowId,
+        status: "ACTIVE",
+        visibility: "PUBLIC",
+        headline: "Talking is faster than typing.",
+        note: "I use Wisprflow to dictate specs, notes, and messages at the speed of thought.",
+        startedAt: "2025-01-01",
+    });
+
+    await upsertLink(ctx, {
+      seedKey: "keegan-wisprflow-primary",
+      propId: wisprflowPropId,
+      type: "CANONICAL",
+      url: "https://wisprflow.ai",
+      label: "Check out Wisprflow",
+      isPrimary: true,
+    });
+
+    const notebooklmPropId = await upsertProp(ctx, {
+        seedKey: "keegan-notebooklm-public",
+        userId,
+        productId: notebooklmId,
+        status: "ACTIVE",
+        visibility: "PUBLIC",
+        headline: "Research grounded in my own sources.",
+        note: "I use NotebookLM to synthesize docs and research into working knowledge.",
+        startedAt: "2025-01-01",
+    });
+
+    await upsertLink(ctx, {
+      seedKey: "keegan-notebooklm-primary",
+      propId: notebooklmPropId,
+      type: "CANONICAL",
+      url: "https://notebooklm.google.com",
+      label: "Check out NotebookLM",
       isPrimary: true,
     });
 
