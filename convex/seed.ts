@@ -148,7 +148,6 @@ export const seedKeegan = mutation({
       status: "ACTIVE",
     });
 
-    const product = (await ctx.db.get(githubId))!;
     const props = await ctx.db
       .query("props")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -156,6 +155,7 @@ export const seedKeegan = mutation({
 
     const projectedProps = await Promise.all(
       props.map(async (prop) => {
+        const product = (await ctx.db.get(prop.productId))!;
         const links = await ctx.db
           .query("links")
           .withIndex("by_prop", (q) => q.eq("propId", prop._id))

@@ -53,6 +53,43 @@ describe("projectPublicProfile", () => {
     expect(JSON.stringify(profile)).not.toContain("private secret");
   });
 
+  it("keeps each card tied to its own product", () => {
+    const linearProp: CuratedProp = {
+      ...baseProp,
+      note: "Linear note",
+      product: {
+        name: "Linear",
+        slug: "linear",
+        domain: "linear.app",
+        description: "Issue tracking.",
+      },
+      links: [
+        {
+          type: "CANONICAL",
+          url: "https://linear.app/keegan",
+          label: "See Keegan on Linear",
+          isPrimary: true,
+        },
+      ],
+    };
+
+    const profile = projectPublicProfile({
+      user: {
+        handle: "keegan",
+        displayName: "Keegan Moody",
+        bio: "Builder.",
+      },
+      props: [baseProp, linearProp],
+    });
+
+    expect(profile.cards.map((card) => card.product.slug)).toEqual([
+      "github",
+      "linear",
+    ]);
+    expect(profile.cards[1].product.domain).toBe("linear.app");
+    expect(profile.cards[1].primaryLink.url).toBe("https://linear.app/keegan");
+  });
+
   it("omits public props without an explicit primary link", () => {
     const profile = projectPublicProfile({
       user: {
