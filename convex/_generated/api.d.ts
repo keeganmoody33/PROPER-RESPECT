@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as discovery from "../discovery.js";
 import type * as publicProfiles from "../publicProfiles.js";
 import type * as seed from "../seed.js";
 
@@ -18,6 +19,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  discovery: typeof discovery;
   publicProfiles: typeof publicProfiles;
   seed: typeof seed;
 }>;
