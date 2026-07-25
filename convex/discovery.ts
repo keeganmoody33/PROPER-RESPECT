@@ -245,7 +245,7 @@ export const syncGithub = internalAction({
         sourceType: "GITHUB" as const,
         vendor: "GitHub",
         url: repo.html_url,
-        capturedAt: repo.pushed_at,
+        capturedAt: repo.pushed_at ?? new Date().toISOString(),
         payload: JSON.stringify({ repo: repo.full_name }),
       }));
 
