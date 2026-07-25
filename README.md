@@ -1,5 +1,33 @@
 # PROPER-RESPECT
 
+PROPER-RESPECT is a manual-first product attribution profile. The first
+runnable slice serves Keegan's seeded public Product Usage Identity from
+Next.js and Convex while keeping draft and private source records out of the
+public read model.
+
+## Run the first slice
+
+```bash
+npm install
+npx convex dev
+npm run convex:seed
+npm run dev
+```
+
+Convex writes `NEXT_PUBLIC_CONVEX_URL` to `.env.local`. Visit
+`http://localhost:3000/keegan`.
+
+## Verify
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
 > One place for the products you actually use: affiliate links, proof, and the story of who put you on.
 
 PROPER-RESPECT is a product-stack profile. It is not trying to predict a person's whole software life from surveillance data. It helps a linker collect the products they use, attach the best available proof, add their affiliate/referral links where they exist, and credit the people, content, communities, or events that introduced them.

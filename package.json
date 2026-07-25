@@ -1,0 +1,35 @@
+{
+  "name": "proper-respect",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "convex:dev": "convex dev",
+    "convex:seed": "convex run seed:seedKeegan"
+  },
+  "dependencies": {
+    "convex": "^1.42.3",
+    "next": "^16.2.11",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@playwright/test": "^1.62.0",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "^16.2.11",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}

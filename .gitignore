@@ -1,0 +1,10 @@
+node_modules
+.next
+.cache
+coverage
+test-results
+playwright-report
+.env.local
+.convex
+*.log
+*.tsbuildinfo
