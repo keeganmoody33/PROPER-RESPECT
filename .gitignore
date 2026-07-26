@@ -8,3 +8,5 @@ playwright-report
 .convex
 *.log
 *.tsbuildinfo
+.vercel
+.env*.local

@@ -3,6 +3,7 @@ import {
   projectPublicProfile,
   type CuratedProp,
 } from "./public-profile";
+import { KEEGAN_STARTER_CARDS } from "./keegan-starter-profile";
 
 const baseProp: CuratedProp = {
   visibility: "PUBLIC",
@@ -53,21 +54,30 @@ describe("projectPublicProfile", () => {
     expect(JSON.stringify(profile)).not.toContain("private secret");
   });
 
-  it("keeps each card tied to its own product", () => {
-    const linearProp: CuratedProp = {
+  it("keeps canonical starter cards and future public props tied to their own links", () => {
+    const starterProps: CuratedProp[] = KEEGAN_STARTER_CARDS.map((card) => ({
+      visibility: "PUBLIC",
+      status: card.status,
+      headline: card.headline,
+      note: card.note,
+      startedAt: card.startedAt,
+      product: card.product,
+      links: [{ ...card.primaryLink, isPrimary: true }],
+    }));
+    const futurePublicProp: CuratedProp = {
       ...baseProp,
-      note: "Linear note",
+      headline: "A future public product.",
       product: {
-        name: "Linear",
-        slug: "linear",
-        domain: "linear.app",
-        description: "Issue tracking.",
+        name: "Future Product",
+        slug: "future-product",
+        domain: "future.example",
+        description: "A product added after the starter set.",
       },
       links: [
         {
           type: "CANONICAL",
-          url: "https://linear.app/keegan",
-          label: "See Keegan on Linear",
+          url: "https://future.example/keegan",
+          label: "See Keegan on Future Product",
           isPrimary: true,
         },
       ],
@@ -79,15 +89,22 @@ describe("projectPublicProfile", () => {
         displayName: "Keegan Moody",
         bio: "Builder.",
       },
-      props: [baseProp, linearProp],
+      props: [...starterProps, futurePublicProp],
     });
 
-    expect(profile.cards.map((card) => card.product.slug)).toEqual([
-      "github",
-      "linear",
+    expect(profile.cards.map((card) => card.product.name)).toEqual([
+      "GitHub",
+      "Wispr Flow",
+      "NotebookLM",
+      "Devin Desktop",
+      "Future Product",
     ]);
-    expect(profile.cards[1].product.domain).toBe("linear.app");
-    expect(profile.cards[1].primaryLink.url).toBe("https://linear.app/keegan");
+    expect(profile.cards.map((card) => card.primaryLink.url)).toEqual(
+      [
+        ...KEEGAN_STARTER_CARDS.map((card) => card.primaryLink.url),
+        "https://future.example/keegan",
+      ],
+    );
   });
 
   it("omits public props without an explicit primary link", () => {
