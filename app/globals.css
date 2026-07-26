@@ -138,11 +138,14 @@ main {
 .card-copy {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   padding: clamp(1.5rem, 2.5vw, 2.5rem);
 }
 
 .status-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
   justify-content: space-between;
 }
 
@@ -158,6 +161,7 @@ main {
   letter-spacing: -0.07em;
   line-height: 0.8;
   margin: auto 0 2rem;
+  overflow-wrap: anywhere;
 }
 
 .headline {
@@ -247,7 +251,7 @@ main {
   margin-top: 2rem;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
   .card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -281,6 +285,20 @@ main {
 
   .card-copy h3 {
     font-size: clamp(2.5rem, 10vw, 4rem);
+  }
+}
+
+@media (max-width: 400px) {
+  .product-card {
+    grid-template-columns: 2.25rem 3.75rem minmax(0, 1fr);
+  }
+
+  .card-copy {
+    padding: 1rem;
+  }
+
+  .card-copy h3 {
+    font-size: clamp(2rem, 11vw, 3rem);
   }
 }
 

@@ -52,3 +52,37 @@ test("unknown handles receive a privacy-safe not-found state", async ({
   ).toBeVisible();
   await expect(page.getByText(/source record/i)).toHaveCount(0);
 });
+
+test("canonical card labels stay within their cards at responsive widths", async ({
+  page,
+}) => {
+  for (const viewport of [
+    { width: 1101, height: 900 },
+    { width: 320, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/keegan");
+
+    for (const card of await page.locator(".product-card").all()) {
+      const contentFits = await card.evaluate((element) => {
+        const cardRect = element.getBoundingClientRect();
+        const copy = element.querySelector<HTMLElement>(".card-copy");
+        const heading = element.querySelector<HTMLElement>("h3");
+        const status = element.querySelector<HTMLElement>(".status-row");
+
+        return (
+          copy !== null &&
+          heading !== null &&
+          status !== null &&
+          copy.scrollWidth <= copy.clientWidth &&
+          heading.scrollWidth <= heading.clientWidth &&
+          status.scrollWidth <= status.clientWidth &&
+          heading.getBoundingClientRect().right <= cardRect.right &&
+          status.getBoundingClientRect().right <= cardRect.right
+        );
+      });
+
+      expect(contentFits).toBe(true);
+    }
+  }
+});
