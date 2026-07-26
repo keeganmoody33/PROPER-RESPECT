@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import type {
   GenericMutationCtx,
   WithoutSystemFields,
@@ -83,7 +83,7 @@ async function upsertSite(
   return await ctx.db.insert("sites", value);
 }
 
-export const seedKeegan = mutation({
+export const seedKeegan = internalMutation({
   args: {},
   handler: async (ctx) => {
     const userId = await upsertUser(ctx, {
