@@ -8,3 +8,4 @@ playwright-report
 .convex
 *.log
 *.tsbuildinfo
+.vercel
