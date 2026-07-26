@@ -24,8 +24,8 @@ Convex writes `NEXT_PUBLIC_CONVEX_URL` to `.env.local`. Visit
 
 1. Copy `.env.example` to `.env.local` and add the Clerk publishable and secret
    keys.
-2. Activate Clerk's Convex JWT template.
-3. Set `CLERK_JWT_ISSUER_DOMAIN` and a long random
+2. Activate Clerk's Convex integration.
+3. Set `CLERK_FRONTEND_API_URL` and a long random
    `CONNECTOR_ENCRYPTION_KEY` in the Convex dashboard.
 4. Enable GitHub as a Clerk social connection if the GitHub connector should be
    available.
@@ -34,6 +34,14 @@ Convex writes `NEXT_PUBLIC_CONVEX_URL` to `.env.local`. Visit
 Connector tokens are encrypted before persistence and are never returned by
 public or owner-facing queries. Screenshot and CSV originals remain private
 until their owner deletes them.
+
+For variable ownership, production commands, deployment order, smoke tests, and
+rollback guidance, see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Before a
+deployment, run:
+
+```bash
+npm run deploy:check
+```
 
 ## Verify
 
@@ -140,6 +148,7 @@ This remains a small web app until the profile builder proves itself.
 
 - `CONTEXT.md` - domain language and product principles
 - `PRD.md` - current MVP requirements and architecture
+- `docs/DEPLOYMENT.md` - Clerk, Convex, connector, and Vercel deployment runbook
 - `GRILL-SESSION.md` - latest grilling decisions and unresolved questions
 - `INDEX.md` - active and future documentation map
 - `docs/adr/` - accepted active decisions

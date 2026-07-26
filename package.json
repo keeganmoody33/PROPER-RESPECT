@@ -8,11 +8,14 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/deployment-preflight.test.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "deploy:check": "node scripts/deployment-preflight.mjs",
+    "deploy:check:strict": "node scripts/deployment-preflight.mjs --strict",
     "convex:dev": "convex dev",
-    "convex:seed": "convex run seed:seedKeegan"
+    "convex:seed": "convex run seed:seedKeegan",
+    "convex:seed:prod": "convex run seed:seedKeegan --prod"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.6.1",
