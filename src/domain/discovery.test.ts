@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractDomain,
   normalizeVendorName,
+  prepareImportedProp,
   proposeDrafts,
   resolveProduct,
   type RawSignal,
@@ -34,6 +35,22 @@ describe("extractDomain", () => {
 });
 
 describe("resolveProduct", () => {
+  it("keeps Devin, Devin Desktop, Windsurf, and Greptile distinct", () => {
+    const products = [
+      signal({ vendor: "Devin" }),
+      signal({ vendor: "Devin Desktop" }),
+      signal({ vendor: "Windsurf" }),
+      signal({ vendor: "Greptile" }),
+    ].map((item) => resolveProduct(item)?.slug);
+
+    expect(products).toEqual([
+      "devin",
+      "devin-desktop",
+      "windsurf",
+      "greptile",
+    ]);
+  });
+
   it("collapses vendor name, domain, and URL variants onto one product", () => {
     const variants = [
       signal({ vendor: "Notion" }),
@@ -66,6 +83,18 @@ describe("resolveProduct", () => {
 });
 
 describe("proposeDrafts", () => {
+  it("prepares imported products as private pending drafts", () => {
+    const proposal = proposeDrafts([
+      signal({ vendor: "GitHub", sourceType: "GITHUB" }),
+    ])[0];
+
+    expect(prepareImportedProp(proposal, "GITHUB")).toMatchObject({
+      visibility: "DRAFT",
+      status: "TESTING",
+      draftStatus: "PENDING",
+    });
+  });
+
   it("merges cross-source signals for the same vendor into one proposal", () => {
     const proposals = proposeDrafts([
       signal({ vendor: "Notion", sourceType: "GMAIL" }),

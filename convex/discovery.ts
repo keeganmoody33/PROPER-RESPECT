@@ -2,7 +2,11 @@ import { v } from "convex/values";
 import { internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
-import { proposeDrafts, type RawSignal } from "../src/domain/discovery";
+import {
+  prepareImportedProp,
+  proposeDrafts,
+  type RawSignal,
+} from "../src/domain/discovery";
 
 const evidenceSourceType = v.union(
   v.literal("MANUAL"),
@@ -13,6 +17,15 @@ const evidenceSourceType = v.union(
   v.literal("SCREEN_TIME"),
   v.literal("SOCIAL_MESSAGES"),
   v.literal("GMAIL"),
+  v.literal("SCREENSHOT"),
+  v.literal("CSV"),
+  v.literal("URL_IMPORT"),
+  v.literal("DEVIN"),
+  v.literal("DEVIN_DESKTOP"),
+  v.literal("WINDSURF"),
+  v.literal("WISPR_FLOW"),
+  v.literal("NOTEBOOKLM"),
+  v.literal("GREPTILE"),
 );
 
 const signalValidator = v.object({
@@ -34,6 +47,15 @@ const PROOF_TYPE_BY_SOURCE: Record<RawSignal["sourceType"], ProofType> = {
   SCREEN_TIME: "SCREENSHOT",
   SOCIAL_MESSAGES: "NOTE",
   GMAIL: "EMAIL_EVIDENCE",
+  SCREENSHOT: "SCREENSHOT",
+  CSV: "BROWSER_HISTORY_EXPORT",
+  URL_IMPORT: "NOTE",
+  DEVIN: "API_OAUTH",
+  DEVIN_DESKTOP: "SCREENSHOT",
+  WINDSURF: "SCREENSHOT",
+  WISPR_FLOW: "SCREENSHOT",
+  NOTEBOOKLM: "SCREENSHOT",
+  GREPTILE: "BROWSER_HISTORY_EXPORT",
 };
 
 export const ingestSignals = internalMutation({
@@ -92,7 +114,7 @@ export const ingestSignals = internalMutation({
     );
 
     const proposals = proposeDrafts(args.signals);
-    const createdProps: string[] = [];
+    const createdDrafts: string[] = [];
 
     for (const proposal of proposals) {
       const rawEvidenceIds = proposal.signalIndexes.map(
@@ -122,7 +144,9 @@ export const ingestSignals = internalMutation({
         draft = (await ctx.db.get(draftId))!;
       }
 
-      if (draft.status === "REJECTED") continue;
+      if (draft.status !== "PENDING") continue;
+
+      const importedProp = prepareImportedProp(proposal, args.sourceType);
 
       const productSeedKey = proposal.product.slug;
       let product = await ctx.db
@@ -140,7 +164,7 @@ export const ingestSignals = internalMutation({
         product = (await ctx.db.get(productId))!;
       }
 
-      const propSeedKey = `${args.handle}-${proposal.product.slug}-auto`;
+      const propSeedKey = `${args.handle}-${proposal.product.slug}-import`;
       let prop = await ctx.db
         .query("props")
         .withIndex("by_seed_key", (q) => q.eq("seedKey", propSeedKey))
@@ -150,13 +174,13 @@ export const ingestSignals = internalMutation({
           seedKey: propSeedKey,
           userId: user._id,
           productId: product._id,
-          status: "ACTIVE",
-          visibility: "PUBLIC",
-          headline: `${proposal.product.name} is in the stack.`,
-          note: `Auto-discovered from ${args.sourceType.toLowerCase().replace(/_/g, " ")} evidence.`,
+          status: importedProp.status,
+          visibility: importedProp.visibility,
+          headline: importedProp.headline,
+          note: importedProp.note,
         });
         prop = (await ctx.db.get(propId))!;
-        createdProps.push(propSeedKey);
+        createdDrafts.push(propSeedKey);
       }
 
       const linkSeedKey = `${propSeedKey}-primary`;
@@ -195,7 +219,6 @@ export const ingestSignals = internalMutation({
       }
 
       await ctx.db.patch(draft._id, {
-        status: "APPROVED",
         resultPropId: prop._id,
         rawEvidenceIds: [
           ...new Set([...draft.rawEvidenceIds, ...rawEvidenceIds]),
@@ -206,7 +229,7 @@ export const ingestSignals = internalMutation({
     return {
       ingestedSignals: args.signals.length,
       proposals: proposals.length,
-      createdProps,
+      createdDrafts,
     };
   },
 });
@@ -221,7 +244,7 @@ type GithubRepo = {
 type IngestResult = {
   ingestedSignals: number;
   proposals: number;
-  createdProps: string[];
+  createdDrafts: string[];
 };
 
 export const syncGithub = internalAction({

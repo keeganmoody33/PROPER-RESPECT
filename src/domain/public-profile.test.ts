@@ -26,6 +26,54 @@ const baseProp: CuratedProp = {
 };
 
 describe("projectPublicProfile", () => {
+  it("publishes an approved activity module without raw evidence", () => {
+    const propWithPrivateEvidence: CuratedProp & {
+      privateEvidence: { payload: string };
+    } = {
+      ...baseProp,
+      product: {
+        ...baseProp.product,
+        logoUrl: "https://github.githubassets.com/favicons/favicon.svg",
+      },
+      activity: {
+        kind: "contributionCalendar",
+        attributionScope: "PERSONAL",
+        capturedAt: "2026-07-26T12:00:00.000Z",
+        freshness: "FRESH",
+        provenanceLabel: "GitHub public profile",
+        total: 523,
+        memberSince: "2024-01-01",
+        days: [
+          {
+            date: "2026-07-25",
+            count: 4,
+            level: 3,
+          },
+        ],
+      },
+      privateEvidence: {
+        payload: "private-repository-name",
+      },
+    };
+
+    const profile = projectPublicProfile({
+      user: {
+        handle: "keegan",
+        displayName: "Keegan Moody",
+        bio: "Builder.",
+      },
+      props: [propWithPrivateEvidence],
+    });
+
+    expect(profile.cards[0].product.logoUrl).toContain("githubassets.com");
+    expect(profile.cards[0].activity).toMatchObject({
+      kind: "contributionCalendar",
+      total: 523,
+      attributionScope: "PERSONAL",
+    });
+    expect(JSON.stringify(profile)).not.toContain("private-repository-name");
+  });
+
   it("publishes only public props", () => {
     const profile = projectPublicProfile({
       user: {

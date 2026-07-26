@@ -1,8 +1,10 @@
 :root {
   --ink: #171713;
-  --paper: #ece9df;
+  --paper: #f0eee7;
+  --panel: #fbfaf6;
   --signal: #d8ff3e;
-  --line: rgba(23, 23, 19, 0.32);
+  --muted: #706f68;
+  --line: rgba(23, 23, 19, 0.2);
 }
 
 * {
@@ -23,7 +25,10 @@ a {
   color: inherit;
 }
 
-button {
+button,
+input,
+select,
+textarea {
   color: inherit;
   font: inherit;
 }
@@ -41,10 +46,13 @@ main {
 }
 
 .masthead p,
-.section-heading p,
+.section-heading > p,
 .eyebrow,
 .status-row,
-.card-button {
+.card-button,
+.activity-meta,
+.card-topline,
+.onboarding-kicker {
   font-family: "Courier New", monospace;
   font-size: 0.72rem;
   font-weight: 700;
@@ -58,112 +66,273 @@ main {
   text-decoration: none;
 }
 
-.profile {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
-  padding: clamp(4rem, 10vw, 9rem) clamp(1rem, 4vw, 4rem);
-}
-
-.profile h1,
-.system-message h1 {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(4rem, 12vw, 11rem);
-  font-weight: 400;
-  letter-spacing: -0.07em;
-  line-height: 0.78;
-  margin: 1.5rem 0 0;
-  max-width: 9ch;
-}
-
-.bio {
-  align-self: end;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.3rem, 2.3vw, 2rem);
-  line-height: 1.25;
-  margin: 0;
-}
-
 .stack {
-  border-top: 1px solid var(--ink);
-  padding: 0 clamp(1rem, 4vw, 4rem) 6rem;
+  padding: clamp(2.5rem, 6vw, 6rem) clamp(1rem, 4vw, 4rem) 5rem;
 }
 
 .section-heading {
-  align-items: center;
+  align-items: end;
   display: flex;
+  gap: 2rem;
   justify-content: space-between;
-  padding: 1rem 0 3rem;
+  padding-bottom: clamp(2rem, 5vw, 4rem);
 }
 
-.section-heading h2 {
-  font-size: 0.85rem;
-  margin: 0;
+.section-heading h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.75rem, 7vw, 6.5rem);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+  margin: 0.7rem 0 0;
 }
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(12, 1fr);
+  gap: 1px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .product-card {
   background: var(--ink);
   color: var(--paper);
-  display: grid;
-  grid-column: 1 / span 8;
-  grid-template-columns: 3rem minmax(7rem, 0.9fr) minmax(0, 2fr);
-  min-height: 32rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 34rem;
   overflow: hidden;
+  padding: clamp(1.2rem, 3vw, 2rem);
   position: relative;
 }
 
-.card-index {
-  border-right: 1px solid rgba(236, 233, 223, 0.28);
-  font: 700 0.72rem "Courier New", monospace;
-  padding: 1.2rem 1rem;
+.product-card:nth-child(4n + 2),
+.product-card:nth-child(4n + 3) {
+  background: #25251f;
 }
 
-.product-mark {
+.card-topline,
+.card-title,
+.card-footer,
+.activity-meta {
   align-items: center;
-  background: var(--signal);
-  color: var(--ink);
-  display: flex;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(4rem, 8vw, 8rem);
-  justify-content: center;
-  letter-spacing: -0.08em;
-  writing-mode: vertical-rl;
-}
-
-.card-copy {
-  display: flex;
-  flex-direction: column;
-  padding: clamp(1.5rem, 4vw, 3.5rem);
-}
-
-.status-row {
   display: flex;
   justify-content: space-between;
 }
 
-.status-row span:first-child {
-  color: var(--signal);
+.product-logo {
+  align-items: center;
+  background-color: var(--signal);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 68%;
+  border-radius: 0.75rem;
+  color: var(--ink);
+  display: flex;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  height: 3.4rem;
+  justify-content: center;
+  width: 3.4rem;
 }
 
-.card-copy h3,
-.card-back h3 {
+.card-title {
+  align-items: end;
+  border-bottom: 1px solid rgba(240, 238, 231, 0.22);
+  gap: 1rem;
+  margin-top: 2.5rem;
+  padding-bottom: 1rem;
+}
+
+.card-title h2,
+.card-back h2 {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(4rem, 8vw, 8rem);
+  font-size: clamp(2.7rem, 5vw, 5.2rem);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 0.85;
+  margin: 0.55rem 0 0;
+}
+
+.card-title > a {
+  font-size: 2rem;
+  text-decoration: none;
+}
+
+.activity-module {
+  background: var(--panel);
+  color: var(--ink);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 1rem;
+  min-height: 14rem;
+  padding: clamp(1rem, 3vw, 1.75rem);
+}
+
+.activity-hero {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+}
+
+.activity-hero strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.2rem, 7vw, 6.25rem);
   font-weight: 400;
   letter-spacing: -0.07em;
-  line-height: 0.8;
-  margin: auto 0 2rem;
+  line-height: 0.9;
 }
 
-.headline {
-  font-size: 1.3rem;
+.activity-hero span,
+.metric-row span {
+  color: var(--muted);
+  font-size: 0.72rem;
   font-weight: 800;
-  margin-bottom: 0;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.activity-calendar {
+  display: grid;
+  gap: 3px;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 0.7rem);
+  margin: auto 0 1rem;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.activity-calendar span {
+  background: #deddd6;
+  border-radius: 2px;
+  height: 0.7rem;
+  width: 0.7rem;
+}
+
+.activity-calendar span[data-level="1"] {
+  background: #b8cf68;
+}
+
+.activity-calendar span[data-level="2"] {
+  background: #91ad35;
+}
+
+.activity-calendar span[data-level="3"] {
+  background: #63800f;
+}
+
+.activity-calendar span[data-level="4"] {
+  background: #354a00;
+}
+
+.activity-caption,
+.activity-empty {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: auto 0 1rem;
+}
+
+.metric-row {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: auto 0 1.5rem;
+}
+
+.metric-row > div {
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-left: 0.75rem;
+}
+
+.metric-row strong {
+  font: 400 clamp(1.4rem, 3vw, 2.4rem) Georgia, "Times New Roman", serif;
+}
+
+.metric-row-prominent {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metric-row-prominent strong {
+  font-size: clamp(3rem, 6vw, 5.5rem);
+}
+
+.severity-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: auto 0 1.5rem;
+}
+
+.severity-row span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: 700 0.7rem "Courier New", monospace;
+  padding: 0.45rem 0.65rem;
+  text-transform: uppercase;
+}
+
+.activity-bars {
+  align-items: end;
+  display: flex;
+  gap: 4px;
+  height: 6rem;
+  margin: auto 0 1.5rem;
+}
+
+.activity-bars span {
+  background: var(--ink);
+  flex: 1;
+  min-width: 4px;
+}
+
+.artifact-list {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: auto 0 1.5rem;
+  padding: 0;
+}
+
+.artifact-list a {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.activity-meta {
+  border-top: 1px solid var(--line);
+  gap: 1rem;
+  padding-top: 0.75rem;
+}
+
+.activity-meta span:last-child {
+  color: #516600;
+}
+
+.activity-meta span[data-freshness="STALE"],
+.activity-meta span[data-freshness="ERROR"] {
+  color: #9b3b26;
+}
+
+.activity-placeholder {
+  align-items: center;
+  color: var(--muted);
+  justify-content: center;
+}
+
+.card-footer {
+  align-items: end;
+  gap: 1rem;
+  padding-top: 1rem;
+}
+
+.card-footer p {
+  font-weight: 750;
+  margin: 0;
+  max-width: 28rem;
 }
 
 .card-button,
@@ -171,10 +340,8 @@ main {
   background: transparent;
   border: 1px solid currentColor;
   cursor: pointer;
-  margin-top: 2rem;
-  padding: 0.9rem 1rem;
-  text-align: left;
-  width: fit-content;
+  padding: 0.75rem 0.9rem;
+  white-space: nowrap;
 }
 
 .card-button:hover,
@@ -200,7 +367,7 @@ main {
   background: rgba(23, 23, 19, 0.78);
 }
 
-.card-back h3 {
+.card-back h2 {
   margin: 5rem 0 2rem;
 }
 
@@ -225,6 +392,30 @@ main {
   padding: 0.9rem 1rem;
 }
 
+.profile-footer {
+  align-items: start;
+  border-top: 1px solid var(--ink);
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr 2fr 1fr;
+  padding: 2rem clamp(1rem, 4vw, 4rem) 4rem;
+}
+
+.profile-footer div {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-footer p {
+  margin: 0;
+  max-width: 42rem;
+}
+
+.profile-footer a {
+  font-weight: 800;
+  text-align: right;
+}
+
 .empty-state {
   border: 1px solid var(--line);
   padding: 4rem;
@@ -237,6 +428,17 @@ main {
   padding: clamp(1rem, 6vw, 6rem);
 }
 
+.system-message h1,
+.onboarding-shell h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.5rem, 9vw, 8rem);
+  font-weight: 400;
+  letter-spacing: -0.07em;
+  line-height: 0.82;
+  margin: 1.5rem 0;
+  max-width: 11ch;
+}
+
 .system-message p {
   max-width: 40rem;
 }
@@ -246,31 +448,182 @@ main {
   margin-top: 2rem;
 }
 
-@media (max-width: 760px) {
-  .masthead p {
-    display: none;
-  }
+.onboarding-shell {
+  margin: 0 auto;
+  max-width: 88rem;
+  padding: clamp(2rem, 5vw, 5rem);
+}
 
-  .profile {
+.onboarding-intro {
+  align-items: end;
+  display: flex;
+  gap: 2rem;
+  justify-content: space-between;
+  margin-bottom: 4rem;
+}
+
+.onboarding-intro > p {
+  font: 1.2rem/1.45 Georgia, "Times New Roman", serif;
+  max-width: 30rem;
+}
+
+.onboarding-panel {
+  background: var(--panel);
+  border: 1px solid var(--ink);
+  margin-bottom: 1rem;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.onboarding-panel h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  margin: 0 0 0.5rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 1.5rem;
+}
+
+.form-grid label,
+.review-field {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  font-weight: 800;
+  gap: 0.45rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.form-grid input,
+.form-grid textarea,
+.form-grid select,
+.review-field input,
+.review-field textarea,
+.review-field select {
+  background: white;
+  border: 1px solid var(--line);
+  padding: 0.8rem;
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.connector-grid,
+.review-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 1.5rem;
+}
+
+.connector-card,
+.review-card {
+  border: 1px solid var(--line);
+  padding: 1rem;
+}
+
+.connector-card strong,
+.review-card h3 {
+  display: block;
+  font: 400 1.7rem Georgia, "Times New Roman", serif;
+  margin: 0 0 0.4rem;
+}
+
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.review-toggle {
+  align-items: center;
+  display: flex;
+  font-size: 0.75rem;
+  font-weight: 800;
+  gap: 0.5rem;
+  text-transform: uppercase;
+}
+
+.action-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.primary-action {
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: var(--paper);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.9rem 1.2rem;
+}
+
+.secondary-action {
+  background: transparent;
+  border: 1px solid var(--ink);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.9rem 1.2rem;
+}
+
+.message {
+  border-left: 0.4rem solid var(--signal);
+  font-weight: 700;
+  padding-left: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .card-grid,
+  .connector-grid,
+  .review-grid {
     grid-template-columns: 1fr;
   }
 
-  .profile h1,
-  .system-message h1 {
-    font-size: clamp(4rem, 20vw, 7rem);
+  .profile-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-footer a {
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .masthead p,
+  .section-heading > p {
+    display: none;
+  }
+
+  .section-heading,
+  .onboarding-intro {
+    align-items: start;
+    flex-direction: column;
   }
 
   .product-card {
-    grid-column: 1 / -1;
-    grid-template-columns: 2.5rem 5rem minmax(0, 1fr);
+    min-height: 31rem;
   }
 
-  .card-copy {
-    padding: 1.25rem;
+  .form-grid {
+    grid-template-columns: 1fr;
   }
 
-  .card-copy h3 {
-    font-size: clamp(3rem, 15vw, 5rem);
+  .form-grid .full {
+    grid-column: auto;
+  }
+
+  .metric-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

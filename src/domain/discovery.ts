@@ -9,6 +9,15 @@ export const evidenceSourceTypeSchema = z.enum([
   "SCREEN_TIME",
   "SOCIAL_MESSAGES",
   "GMAIL",
+  "SCREENSHOT",
+  "CSV",
+  "URL_IMPORT",
+  "DEVIN",
+  "DEVIN_DESKTOP",
+  "WINDSURF",
+  "WISPR_FLOW",
+  "NOTEBOOKLM",
+  "GREPTILE",
 ]);
 
 export type EvidenceSourceType = z.infer<typeof evidenceSourceTypeSchema>;
@@ -35,6 +44,19 @@ export type DraftProposal = {
   canonicalUrl: string;
   signalIndexes: number[];
 };
+
+export function prepareImportedProp(
+  proposal: DraftProposal,
+  sourceType: EvidenceSourceType,
+) {
+  return {
+    visibility: "DRAFT" as const,
+    status: "TESTING" as const,
+    draftStatus: "PENDING" as const,
+    headline: `${proposal.product.name} may be in your stack.`,
+    note: `Proposed from ${sourceType.toLowerCase().replace(/_/g, " ")} evidence. Review before publishing.`,
+  };
+}
 
 type CatalogEntry = ProductIdentity & {
   domains: string[];
@@ -73,6 +95,38 @@ const VENDOR_CATALOG: CatalogEntry[] = [
     description: "Docs, wikis, and databases in one connected workspace.",
     domains: ["notion.so", "notion.site", "notion.com"],
     aliases: ["notion", "notion labs", "notion labs inc"],
+  },
+  {
+    slug: "devin",
+    name: "Devin",
+    domain: "devin.ai",
+    description: "Autonomous software engineering activity.",
+    domains: ["devin.ai", "app.devin.ai"],
+    aliases: ["devin", "devin cloud", "cognition devin"],
+  },
+  {
+    slug: "devin-desktop",
+    name: "Devin Desktop",
+    domain: "devin.ai",
+    description: "Desktop coding activity in the Devin product family.",
+    domains: [],
+    aliases: ["devin desktop"],
+  },
+  {
+    slug: "windsurf",
+    name: "Windsurf",
+    domain: "windsurf.com",
+    description: "AI-assisted coding activity across editor workflows.",
+    domains: ["windsurf.com", "codeium.com"],
+    aliases: ["windsurf", "codeium"],
+  },
+  {
+    slug: "greptile",
+    name: "Greptile",
+    domain: "greptile.com",
+    description: "AI code review activity and bugs caught.",
+    domains: ["greptile.com"],
+    aliases: ["greptile"],
   },
 ];
 

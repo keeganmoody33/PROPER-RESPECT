@@ -44,21 +44,16 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <Link className="brand" href="/" aria-label="PROPER—RESPECT home">
           PROPER—RESPECT
         </Link>
-        <p>PUBLIC USAGE RECORD / 001</p>
+        <p>@{profile.handle} / LIVE PRODUCT ACTIVITY</p>
       </header>
-
-      <section className="profile" aria-labelledby="profile-name">
-        <div>
-          <p className="eyebrow">LINKER / @{profile.handle}</p>
-          <h1 id="profile-name">{profile.displayName}</h1>
-        </div>
-        <p className="bio">{profile.bio}</p>
-      </section>
 
       <section className="stack" aria-labelledby="stack-heading">
         <div className="section-heading">
-          <h2 id="stack-heading">THE STACK</h2>
-          <p>{profile.cards.length.toString().padStart(2, "0")} ACTIVE RECORD</p>
+          <div>
+            <p className="eyebrow">PUBLIC PRODUCT IDENTITY</p>
+            <h1 id="stack-heading">The stack, with receipts.</h1>
+          </div>
+          <p>{profile.cards.length.toString().padStart(2, "0")} PRODUCTS</p>
         </div>
 
         {profile.cards.length === 0 ? (
@@ -68,12 +63,25 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           </div>
         ) : (
           <div className="card-grid">
-            {profile.cards.map((card) => (
-              <ProductCard key={card.product.slug} card={card} />
+            {profile.cards.map((card, index) => (
+              <ProductCard
+                key={card.product.slug}
+                card={card}
+                index={index}
+              />
             ))}
           </div>
         )}
       </section>
+
+      <footer className="profile-footer">
+        <div>
+          <strong>{profile.displayName}</strong>
+          <span>@{profile.handle}</span>
+        </div>
+        <p>{profile.bio}</p>
+        <Link href="/onboarding">Build your PROPER—RESPECT profile →</Link>
+      </footer>
     </main>
   );
 }

@@ -15,6 +15,118 @@ const linkTypeSchema = z.enum([
   "INVITE",
 ]);
 
+export const attributionScopeSchema = z.enum([
+  "PERSONAL",
+  "REPOSITORY",
+  "WORKSPACE",
+  "ORGANIZATION",
+]);
+
+export const freshnessSchema = z.enum(["FRESH", "STALE", "ERROR"]);
+
+const periodSchema = z.object({
+  start: z.iso.date(),
+  end: z.iso.date(),
+  label: z.string().optional(),
+});
+
+const metricValueSchema = z.object({
+  label: z.string().min(1),
+  value: z.number(),
+  unit: z.string().optional(),
+});
+
+const activityCommonShape = {
+  attributionScope: attributionScopeSchema,
+  capturedAt: z.iso.datetime(),
+  freshness: freshnessSchema,
+  provenanceLabel: z.string().min(1),
+  period: periodSchema.optional(),
+};
+
+export const activityModuleSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("contributionCalendar"),
+    ...activityCommonShape,
+    total: z.number().int().nonnegative(),
+    memberSince: z.iso.date().optional(),
+    days: z.array(
+      z.object({
+        date: z.iso.date(),
+        count: z.number().int().nonnegative(),
+        level: z.number().int().min(0).max(4),
+      }),
+    ),
+  }),
+  z.object({
+    kind: z.literal("headlineMetrics"),
+    ...activityCommonShape,
+    primary: metricValueSchema,
+    supporting: z.array(metricValueSchema).max(4),
+  }),
+  z.object({
+    kind: z.literal("timeSeries"),
+    ...activityCommonShape,
+    label: z.string().min(1),
+    unit: z.string().optional(),
+    points: z.array(
+      z.object({
+        date: z.iso.date(),
+        value: z.number(),
+      }),
+    ),
+  }),
+  z.object({
+    kind: z.literal("artifactCollection"),
+    ...activityCommonShape,
+    total: z.number().int().nonnegative(),
+    artifacts: z
+      .array(
+        z.object({
+          title: z.string().min(1),
+          url: z.url(),
+          label: z.string().optional(),
+        }),
+      )
+      .max(6),
+  }),
+  z.object({
+    kind: z.literal("reviewActivity"),
+    ...activityCommonShape,
+    reviews: z.number().int().nonnegative(),
+    bugsCaught: z.number().int().nonnegative(),
+    severity: z.array(
+      z.object({
+        label: z.string().min(1),
+        count: z.number().int().nonnegative(),
+      }),
+    ),
+    points: z.array(
+      z.object({
+        date: z.iso.date(),
+        value: z.number().nonnegative(),
+      }),
+    ),
+  }),
+  z.object({
+    kind: z.literal("codingActivity"),
+    ...activityCommonShape,
+    primary: metricValueSchema,
+    supporting: z.array(metricValueSchema).max(4),
+    days: z
+      .array(
+        z.object({
+          date: z.iso.date(),
+          count: z.number().int().nonnegative(),
+          level: z.number().int().min(0).max(4),
+        }),
+      )
+      .optional(),
+  }),
+]);
+
+export type ActivityModule = z.infer<typeof activityModuleSchema>;
+
 export const publicProfileSchema = z.object({
   handle: handleSchema,
   displayName: z.string().min(1),
@@ -27,11 +139,13 @@ export const publicProfileSchema = z.object({
         slug: handleSchema,
         domain: z.string().min(1),
         description: z.string(),
+        logoUrl: z.url().optional(),
       }),
       status: statusSchema,
       headline: z.string(),
       note: z.string(),
       startedAt: z.iso.date().optional(),
+      activity: activityModuleSchema.optional(),
       primaryLink: z.object({
         type: linkTypeSchema,
         url: z.url(),
@@ -49,6 +163,7 @@ export type CuratedProp = {
   headline: string;
   note: string;
   startedAt?: string;
+  activity?: ActivityModule;
   product: PublicProfile["cards"][number]["product"];
   links: Array<PublicProfile["cards"][number]["primaryLink"] & {
     isPrimary: boolean;
@@ -72,6 +187,7 @@ export function projectPublicProfile(input: {
         headline: prop.headline,
         note: prop.note,
         startedAt: prop.startedAt,
+        activity: prop.activity,
         primaryLink: {
           type: primaryLink.type,
           url: primaryLink.url,

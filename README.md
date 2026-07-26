@@ -3,7 +3,10 @@
 PROPER-RESPECT is a manual-first product attribution profile. The first
 runnable slice serves Keegan's seeded public Product Usage Identity from
 Next.js and Convex while keeping draft and private source records out of the
-public read model.
+public read model. The current slice also includes Clerk-backed multi-user
+onboarding, retained private evidence uploads, bulk approval/publication,
+GitHub and Devin connectors, and daily refreshes limited to explicitly
+approved metrics.
 
 ## Run the first slice
 
@@ -16,6 +19,21 @@ npm run dev
 
 Convex writes `NEXT_PUBLIC_CONVEX_URL` to `.env.local`. Visit
 `http://localhost:3000/keegan`.
+
+## Configure accounts and connectors
+
+1. Copy `.env.example` to `.env.local` and add the Clerk publishable and secret
+   keys.
+2. Activate Clerk's Convex JWT template.
+3. Set `CLERK_JWT_ISSUER_DOMAIN` and a long random
+   `CONNECTOR_ENCRYPTION_KEY` in the Convex dashboard.
+4. Enable GitHub as a Clerk social connection if the GitHub connector should be
+   available.
+5. Run `npx convex dev`, then visit `http://localhost:3000/onboarding`.
+
+Connector tokens are encrypted before persistence and are never returned by
+public or owner-facing queries. Screenshot and CSV originals remain private
+until their owner deletes them.
 
 ## Verify
 
