@@ -17,6 +17,43 @@ npm run dev
 Convex writes `NEXT_PUBLIC_CONVEX_URL` to `.env.local`. Visit
 `http://localhost:3000/keegan`.
 
+`NEXT_PUBLIC_SITE_URL` defaults to `http://localhost:3000` outside production.
+Set it explicitly when testing a different local origin.
+
+## Canonical profile host
+
+Production metadata treats `NEXT_PUBLIC_SITE_URL` as a trusted deployment
+origin. Configure the Vercel production environment with:
+
+```text
+NEXT_PUBLIC_SITE_URL=https://props.lecturesfrom.com
+```
+
+To associate the hostname without guessing at DNS:
+
+1. Add the exact domain `props.lecturesfrom.com` to the production Vercel
+   project.
+2. At the DNS provider, create the exact CNAME target Vercel displays for that
+   domain. Do not substitute a generic Vercel target.
+3. Wait until Vercel reports the domain and TLS certificate as verified, then
+   redeploy with `NEXT_PUBLIC_SITE_URL` set.
+4. Verify `/keegan` on both the existing Vercel production origin and
+   `https://props.lecturesfrom.com/keegan` before changing or removing any
+   fallback DNS.
+
+Before cutover, record and test the existing Vercel production profile URL as
+the rollback check. If custom-domain verification or health fails, restore the
+previous DNS, set `NEXT_PUBLIC_SITE_URL` back to that verified production
+origin, and redeploy. Never use a preview deployment as the canonical origin.
+
+This slice intentionally does not redirect the hosted profile. A safe redirect
+depends on the remaining issue #13 Domain model: normalized request hosts,
+verified ownership and health, Site isolation, and a hosted-origin fallback.
+Until those checks exist, middleware must not infer trust from a raw `Host`
+header. Sitemap, robots, Open Graph image, verified/unverified host browser
+tests, and separation of app-only auth and callback routes also remain issue
+#13 work.
+
 ## Verify
 
 ```bash

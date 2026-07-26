@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ZodError } from "zod";
 import { ProductCard } from "@/components/product-card";
 import { getPublicProfile } from "@/src/data/get-public-profile";
+import { buildPublicProfileMetadata } from "@/src/domain/public-site";
+import { getServerEnv } from "@/src/env";
 
 type ProfilePageProps = {
   params: Promise<{ handle: string }>;
@@ -12,14 +14,15 @@ type ProfilePageProps = {
 export async function generateMetadata({
   params,
 }: ProfilePageProps): Promise<Metadata> {
+  const { NEXT_PUBLIC_SITE_URL } = getServerEnv();
   const { handle } = await params;
   try {
     const profile = await getPublicProfile(handle);
     if (!profile) return { title: "Profile not found" };
-    return {
-      title: profile.displayName,
-      description: profile.bio,
-    };
+    return buildPublicProfileMetadata({
+      siteUrl: NEXT_PUBLIC_SITE_URL,
+      profile,
+    });
   } catch {
     return { title: "Public profile" };
   }
