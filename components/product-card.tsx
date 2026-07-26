@@ -2,13 +2,15 @@
 
 import { useRef, useState } from "react";
 import type { PublicProfile } from "@/src/domain/public-profile";
+import { getProductCardPresentation } from "@/src/domain/product-card-presentation";
 
 type Card = PublicProfile["cards"][number];
 
-export function ProductCard({ card }: { card: Card }) {
+export function ProductCard({ card, index }: { card: Card; index: number }) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const presentation = getProductCardPresentation(card.product.name, index);
 
   function openCard() {
     setIsOpen(true);
@@ -22,10 +24,10 @@ export function ProductCard({ card }: { card: Card }) {
   return (
     <article className="product-card">
       <div className="card-index" aria-hidden="true">
-        01
+        {presentation.index}
       </div>
       <div className="product-mark" aria-hidden="true">
-        GH
+        {presentation.mark}
       </div>
       <div className="card-copy">
         <div className="status-row">

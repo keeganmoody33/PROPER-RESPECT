@@ -68,8 +68,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           </div>
         ) : (
           <div className="card-grid">
-            {profile.cards.map((card) => (
-              <ProductCard key={card.product.slug} card={card} />
+            {profile.cards.map((card, index) => (
+              <ProductCard
+                key={card.product.slug}
+                card={card}
+                index={index}
+              />
             ))}
           </div>
         )}

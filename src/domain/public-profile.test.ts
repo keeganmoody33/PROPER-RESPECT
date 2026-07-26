@@ -3,6 +3,7 @@ import {
   projectPublicProfile,
   type CuratedProp,
 } from "./public-profile";
+import { KEEGAN_STARTER_CARDS } from "./keegan-starter-profile";
 
 const baseProp: CuratedProp = {
   visibility: "PUBLIC",
@@ -53,25 +54,16 @@ describe("projectPublicProfile", () => {
     expect(JSON.stringify(profile)).not.toContain("private secret");
   });
 
-  it("keeps each card tied to its own product", () => {
-    const linearProp: CuratedProp = {
-      ...baseProp,
-      note: "Linear note",
-      product: {
-        name: "Linear",
-        slug: "linear",
-        domain: "linear.app",
-        description: "Issue tracking.",
-      },
-      links: [
-        {
-          type: "CANONICAL",
-          url: "https://linear.app/keegan",
-          label: "See Keegan on Linear",
-          isPrimary: true,
-        },
-      ],
-    };
+  it("keeps all four canonical starter cards tied to their own links", () => {
+    const props: CuratedProp[] = KEEGAN_STARTER_CARDS.map((card) => ({
+      visibility: "PUBLIC",
+      status: card.status,
+      headline: card.headline,
+      note: card.note,
+      startedAt: card.startedAt,
+      product: card.product,
+      links: [{ ...card.primaryLink, isPrimary: true }],
+    }));
 
     const profile = projectPublicProfile({
       user: {
@@ -79,15 +71,18 @@ describe("projectPublicProfile", () => {
         displayName: "Keegan Moody",
         bio: "Builder.",
       },
-      props: [baseProp, linearProp],
+      props,
     });
 
-    expect(profile.cards.map((card) => card.product.slug)).toEqual([
-      "github",
-      "linear",
+    expect(profile.cards.map((card) => card.product.name)).toEqual([
+      "GitHub",
+      "Wispr Flow",
+      "NotebookLM",
+      "Devin Desktop",
     ]);
-    expect(profile.cards[1].product.domain).toBe("linear.app");
-    expect(profile.cards[1].primaryLink.url).toBe("https://linear.app/keegan");
+    expect(profile.cards.map((card) => card.primaryLink.url)).toEqual(
+      KEEGAN_STARTER_CARDS.map((card) => card.primaryLink.url),
+    );
   });
 
   it("omits public props without an explicit primary link", () => {

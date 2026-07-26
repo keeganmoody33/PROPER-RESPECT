@@ -5,6 +5,7 @@ import type {
 } from "convex/server";
 import type { DataModel, Doc } from "./_generated/dataModel";
 import { projectPublicProfile } from "../src/domain/public-profile";
+import { KEEGAN_STARTER_CARDS } from "../src/domain/keegan-starter-profile";
 
 type MutationCtx = GenericMutationCtx<DataModel>;
 
@@ -93,40 +94,36 @@ export const seedKeegan = internalMutation({
       bio: "GTM engineer, system builder, ideator, and hip-hop evangelist.",
     });
 
-    const githubId = await upsertProduct(ctx, {
-      seedKey: "github",
-      name: "GitHub",
-      slug: "github",
-      domain: "github.com",
-      description: "The home base for code, collaboration, and shipped work.",
-    });
+    const productIds = new Map<string, Doc<"products">["_id"]>();
 
-    const wisprflowId = await upsertProduct(ctx, {
-      seedKey: "wisprflow",
-      name: "Wisprflow",
-      slug: "wisprflow",
-      domain: "wisprflow.ai",
-      description: "Voice dictation that keeps up with how I actually think.",
-    });
+    for (const card of KEEGAN_STARTER_CARDS) {
+      const productId = await upsertProduct(ctx, {
+        seedKey: card.seedKey,
+        ...card.product,
+      });
+      productIds.set(card.seedKey, productId);
 
-    const notebooklmId = await upsertProduct(ctx, {
-      seedKey: "notebooklm",
-      name: "NotebookLM",
-      slug: "notebooklm",
-      domain: "notebooklm.google.com",
-      description: "Grounded research and synthesis over my own sources.",
-    });
-
-    const publicPropId = await upsertProp(ctx, {
-        seedKey: "keegan-github-public",
+      const propId = await upsertProp(ctx, {
+        seedKey: `keegan-${card.seedKey}-public`,
         userId,
-        productId: githubId,
-        status: "ACTIVE",
+        productId,
+        status: card.status,
         visibility: "PUBLIC",
-        headline: "Where the receipts live.",
-        note: "I use GitHub to turn product thinking into inspectable, attributable work.",
-        startedAt: "2024-01-01",
-    });
+        headline: card.headline,
+        note: card.note,
+        startedAt: card.startedAt,
+      });
+
+      await upsertLink(ctx, {
+        seedKey: `keegan-${card.seedKey}-primary`,
+        propId,
+        ...card.primaryLink,
+        isPrimary: true,
+      });
+    }
+
+    const githubId = productIds.get("github");
+    if (!githubId) throw new Error("GitHub starter product was not seeded.");
 
     const draftPropId = await upsertProp(ctx, {
         seedKey: "keegan-github-draft",
@@ -146,55 +143,6 @@ export const seedKeegan = internalMutation({
         visibility: "PRIVATE",
         headline: "Private source record",
         note: "This must never enter the public projection.",
-    });
-
-    await upsertLink(ctx, {
-      seedKey: "keegan-github-primary",
-      propId: publicPropId,
-      type: "CANONICAL",
-      url: "https://github.com/keeganmoody33",
-      label: "See Keegan on GitHub",
-      isPrimary: true,
-    });
-
-    const wisprflowPropId = await upsertProp(ctx, {
-        seedKey: "keegan-wisprflow-public",
-        userId,
-        productId: wisprflowId,
-        status: "ACTIVE",
-        visibility: "PUBLIC",
-        headline: "Talking is faster than typing.",
-        note: "I use Wisprflow to dictate specs, notes, and messages at the speed of thought.",
-        startedAt: "2025-01-01",
-    });
-
-    await upsertLink(ctx, {
-      seedKey: "keegan-wisprflow-primary",
-      propId: wisprflowPropId,
-      type: "CANONICAL",
-      url: "https://wisprflow.ai",
-      label: "Check out Wisprflow",
-      isPrimary: true,
-    });
-
-    const notebooklmPropId = await upsertProp(ctx, {
-        seedKey: "keegan-notebooklm-public",
-        userId,
-        productId: notebooklmId,
-        status: "ACTIVE",
-        visibility: "PUBLIC",
-        headline: "Research grounded in my own sources.",
-        note: "I use NotebookLM to synthesize docs and research into working knowledge.",
-        startedAt: "2025-01-01",
-    });
-
-    await upsertLink(ctx, {
-      seedKey: "keegan-notebooklm-primary",
-      propId: notebooklmPropId,
-      type: "CANONICAL",
-      url: "https://notebooklm.google.com",
-      label: "Check out NotebookLM",
-      isPrimary: true,
     });
 
     await upsertSite(ctx, {
