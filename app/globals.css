@@ -1,0 +1,283 @@
+:root {
+  --ink: #171713;
+  --paper: #ece9df;
+  --signal: #d8ff3e;
+  --line: rgba(23, 23, 19, 0.32);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  color: inherit;
+  font: inherit;
+}
+
+main {
+  min-height: 100vh;
+}
+
+.masthead {
+  align-items: center;
+  border-bottom: 1px solid var(--ink);
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem clamp(1rem, 4vw, 4rem);
+}
+
+.masthead p,
+.section-heading p,
+.eyebrow,
+.status-row,
+.card-button {
+  font-family: "Courier New", monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand {
+  font-size: 0.9rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.profile {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+  padding: clamp(4rem, 10vw, 9rem) clamp(1rem, 4vw, 4rem);
+}
+
+.profile h1,
+.system-message h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(4rem, 12vw, 11rem);
+  font-weight: 400;
+  letter-spacing: -0.07em;
+  line-height: 0.78;
+  margin: 1.5rem 0 0;
+  max-width: 9ch;
+}
+
+.bio {
+  align-self: end;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.3rem, 2.3vw, 2rem);
+  line-height: 1.25;
+  margin: 0;
+}
+
+.stack {
+  border-top: 1px solid var(--ink);
+  padding: 0 clamp(1rem, 4vw, 4rem) 6rem;
+}
+
+.section-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 0 3rem;
+}
+
+.section-heading h2 {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.product-card {
+  background: var(--ink);
+  color: var(--paper);
+  display: grid;
+  grid-column: 1 / span 8;
+  grid-template-columns: 3rem minmax(7rem, 0.9fr) minmax(0, 2fr);
+  min-height: 32rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.card-index {
+  border-right: 1px solid rgba(236, 233, 223, 0.28);
+  font: 700 0.72rem "Courier New", monospace;
+  padding: 1.2rem 1rem;
+}
+
+.product-mark {
+  align-items: center;
+  background: var(--signal);
+  color: var(--ink);
+  display: flex;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(4rem, 8vw, 8rem);
+  justify-content: center;
+  letter-spacing: -0.08em;
+  writing-mode: vertical-rl;
+}
+
+.card-copy {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.status-row span:first-child {
+  color: var(--signal);
+}
+
+.card-copy h3,
+.card-back h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(4rem, 8vw, 8rem);
+  font-weight: 400;
+  letter-spacing: -0.07em;
+  line-height: 0.8;
+  margin: auto 0 2rem;
+}
+
+.headline {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 0;
+}
+
+.card-button,
+.button {
+  background: transparent;
+  border: 1px solid currentColor;
+  cursor: pointer;
+  margin-top: 2rem;
+  padding: 0.9rem 1rem;
+  text-align: left;
+  width: fit-content;
+}
+
+.card-button:hover,
+.card-button:focus-visible,
+.button:hover,
+.button:focus-visible {
+  background: var(--signal);
+  color: var(--ink);
+  outline: 3px solid var(--paper);
+  outline-offset: 3px;
+}
+
+.card-back {
+  background: var(--paper);
+  border: 0;
+  color: var(--ink);
+  max-width: 45rem;
+  padding: clamp(2rem, 6vw, 5rem);
+  width: calc(100% - 2rem);
+}
+
+.card-back::backdrop {
+  background: rgba(23, 23, 19, 0.78);
+}
+
+.card-back h3 {
+  margin: 5rem 0 2rem;
+}
+
+.card-back blockquote {
+  border-left: 0.5rem solid var(--signal);
+  font: 1.5rem/1.35 Georgia, "Times New Roman", serif;
+  margin: 0 0 2rem;
+  padding-left: 1.3rem;
+}
+
+.outbound-link {
+  display: block;
+  font-weight: 800;
+  margin: 3rem 0 1rem;
+}
+
+.close-button {
+  background: var(--ink);
+  border: 0;
+  color: var(--paper);
+  cursor: pointer;
+  padding: 0.9rem 1rem;
+}
+
+.empty-state {
+  border: 1px solid var(--line);
+  padding: 4rem;
+}
+
+.system-message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1rem, 6vw, 6rem);
+}
+
+.system-message p {
+  max-width: 40rem;
+}
+
+.system-message .text-link {
+  font-weight: 800;
+  margin-top: 2rem;
+}
+
+@media (max-width: 760px) {
+  .masthead p {
+    display: none;
+  }
+
+  .profile {
+    grid-template-columns: 1fr;
+  }
+
+  .profile h1,
+  .system-message h1 {
+    font-size: clamp(4rem, 20vw, 7rem);
+  }
+
+  .product-card {
+    grid-column: 1 / -1;
+    grid-template-columns: 2.5rem 5rem minmax(0, 1fr);
+  }
+
+  .card-copy {
+    padding: 1.25rem;
+  }
+
+  .card-copy h3 {
+    font-size: clamp(3rem, 15vw, 5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
