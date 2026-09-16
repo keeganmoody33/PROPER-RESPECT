@@ -1,0 +1,121 @@
+{
+  "date": "2026-09-16",
+  "cases": [
+    "studio-1440 initial: no horizontal overflow",
+    "studio-1440 consent: no horizontal overflow",
+    "studio-1440 review: no horizontal overflow",
+    "studio-1440 reviewed: no horizontal overflow",
+    "studio-1440 dark: no horizontal overflow",
+    "studio-320 dark reviewed: no horizontal overflow",
+    "studio-768 dark reviewed: no horizontal overflow",
+    "studio-1440: multi-account; decline and retry; modal focus trap and Escape return; Enter saves with and without activity evidence; email hints not usage; evidence addition; active/tried; private save; dismiss/restore; API activity; cadence proposal; private preview; disconnect retention",
+    "studio-390 initial: no horizontal overflow",
+    "studio-390 consent: no horizontal overflow",
+    "studio-390 review: no horizontal overflow",
+    "studio-390 reviewed: no horizontal overflow",
+    "studio-390 dark: no horizontal overflow",
+    "studio-320 dark reviewed: no horizontal overflow",
+    "studio-768 dark reviewed: no horizontal overflow",
+    "studio-390: multi-account; decline and retry; modal focus trap and Escape return; Enter saves with and without activity evidence; email hints not usage; evidence addition; active/tried; private save; dismiss/restore; API activity; cadence proposal; private preview; disconnect retention",
+    "collection-1440 initial: no horizontal overflow",
+    "collection-1440 consent: no horizontal overflow",
+    "collection-1440 review: no horizontal overflow",
+    "collection-1440 reviewed: no horizontal overflow",
+    "collection-1440 dark: no horizontal overflow",
+    "collection-320 dark reviewed: no horizontal overflow",
+    "collection-768 dark reviewed: no horizontal overflow",
+    "collection-1440: multi-account; decline and retry; modal focus trap and Escape return; Enter saves with and without activity evidence; email hints not usage; evidence addition; active/tried; private save; dismiss/restore; API activity; cadence proposal; private preview; disconnect retention",
+    "collection-390 initial: no horizontal overflow",
+    "collection-390 consent: no horizontal overflow",
+    "collection-390 review: no horizontal overflow",
+    "collection-390 reviewed: no horizontal overflow",
+    "collection-390 dark: no horizontal overflow",
+    "collection-320 dark reviewed: no horizontal overflow",
+    "collection-768 dark reviewed: no horizontal overflow",
+    "collection-390: multi-account; decline and retry; modal focus trap and Escape return; Enter saves with and without activity evidence; email hints not usage; evidence addition; active/tried; private save; dismiss/restore; API activity; cadence proposal; private preview; disconnect retention"
+  ],
+  "errors": [],
+  "accessibility": [
+    {
+      "label": "studio-1440 initial light",
+      "violations": []
+    },
+    {
+      "label": "studio-1440 declined consent",
+      "violations": []
+    },
+    {
+      "label": "studio-1440 review",
+      "violations": []
+    },
+    {
+      "label": "studio-1440 reviewed light",
+      "violations": []
+    },
+    {
+      "label": "studio-1440 reviewed dark",
+      "violations": []
+    },
+    {
+      "label": "studio-390 initial light",
+      "violations": []
+    },
+    {
+      "label": "studio-390 declined consent",
+      "violations": []
+    },
+    {
+      "label": "studio-390 review",
+      "violations": []
+    },
+    {
+      "label": "studio-390 reviewed light",
+      "violations": []
+    },
+    {
+      "label": "studio-390 reviewed dark",
+      "violations": []
+    },
+    {
+      "label": "collection-1440 initial light",
+      "violations": []
+    },
+    {
+      "label": "collection-1440 declined consent",
+      "violations": []
+    },
+    {
+      "label": "collection-1440 review",
+      "violations": []
+    },
+    {
+      "label": "collection-1440 reviewed light",
+      "violations": []
+    },
+    {
+      "label": "collection-1440 reviewed dark",
+      "violations": []
+    },
+    {
+      "label": "collection-390 initial light",
+      "violations": []
+    },
+    {
+      "label": "collection-390 declined consent",
+      "violations": []
+    },
+    {
+      "label": "collection-390 review",
+      "violations": []
+    },
+    {
+      "label": "collection-390 reviewed light",
+      "violations": []
+    },
+    {
+      "label": "collection-390 reviewed dark",
+      "violations": []
+    }
+  ],
+  "network": []
+}

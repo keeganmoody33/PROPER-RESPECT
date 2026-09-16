@@ -1,0 +1,80 @@
+{
+  "capturedAt": "2026-09-16T21:05:37.654476+00:00",
+  "meaning": "Read-only working-file snapshot. HEAD identifies ancestry; hashes identify inspected local bytes. Neither checkout is certified as a committed implementation.",
+  "implementation": {
+    "path": "/Users/keeganmoody/Downloads/PROPER-RESPECT-self-test-20260916",
+    "head": "4d2171badc0cd9ea310a2c5a615a9313085ccde4",
+    "files": [
+      {
+        "path": "convex/schema.ts",
+        "sha256": "1f16a521e61459f04a6f8b279baecf38ba6498a94fcdc9a4f4eeef0afb2f80cd"
+      },
+      {
+        "path": "convex/discovery.ts",
+        "sha256": "240fb66ddae70e4229a599a30ddbf077ac0f20c78cd5bc19cdd4d22bc8e119a4"
+      },
+      {
+        "path": "convex/connectors.ts",
+        "sha256": "23bf6db8eb62595675e5cf7d7a24ffd67cb9a51198274408fd7c81a07f07d1ce"
+      },
+      {
+        "path": "convex/onboarding.ts",
+        "sha256": "bbe81562d520f93e0fabbd83506a7f99bc51a4c4793129646f1edcc0c4bc769d"
+      },
+      {
+        "path": "convex/multipleSources.test.ts",
+        "sha256": "f19f546657ae03a5873cab685f9b52bdf7fafff2ca3bd24ba2bef3b74137201b"
+      },
+      {
+        "path": "convex/evidenceClaims.test.ts",
+        "sha256": "53bf3020b96bbc869b48b09c6c455eb5a142587e099026b1763259c4898d7f26"
+      },
+      {
+        "path": "src/domain/discovery.ts",
+        "sha256": "08dc1f4c818eceba9e2fc61f85d27a3aba518f3efadde6f37307f87841ca07cc"
+      },
+      {
+        "path": "src/domain/review.ts",
+        "sha256": "6128fd93760e0ef398887d1b5c196e7a876a4468b7a700a8f97726cfe3c17509"
+      },
+      {
+        "path": "convex/validators.ts",
+        "sha256": "e0c66c8386b0a31f4a420b0ab3a7cc1f9ad4f03017a2ce9e00773d74e4a8da55"
+      }
+    ]
+  },
+  "prototype": {
+    "path": "/Users/keeganmoody/.codex/worktrees/4b19/PROPER-RESPECT/prototypes/onboarding-2026-09-16",
+    "head": "4bc8cc81d90be9c5520cae4675573da5bce70e09",
+    "files": [
+      {
+        "path": "src/main.jsx",
+        "sha256": "edbdcb15b36f01c3d04b20689d8785b284c08dbdf0797903e6a689ada09a443e"
+      },
+      {
+        "path": "src/data.js",
+        "sha256": "b8f410247b5695bb637c76014e6effb9dde77ddb3550fe0056a5286418806287"
+      },
+      {
+        "path": "src/styles.css",
+        "sha256": "bf90e85c5fda607e356be3a48db1822b2bcc0f7453e1dfa138562967cd9e8f18"
+      },
+      {
+        "path": "src/introducer.js",
+        "sha256": "5b5bc22855fe0b583ef74df379cc4c3d407dfc7b279cdcc125c2e403398b0068"
+      },
+      {
+        "path": "src/introducer-field.jsx",
+        "sha256": "7daf2da0942dac862d752a249db243b4e9549e817410237dd8bfd38ce72797d1"
+      },
+      {
+        "path": "checks/verification-2026-09-16.json",
+        "sha256": "e213b2d8a38201ba40503ecfebfdbfc16092fff9a2b91f1f17c8a54a8a3e0f34"
+      },
+      {
+        "path": "checks/introducer-verification-2026-09-16.json",
+        "sha256": "1868f9e70485974ccc3498993a3cce0a9ac5ec0f9066ce50ea5b71a15fbcc848"
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "createdAt": "2026-09-16T20:05:57.601Z",
+  "baseCommit": "4bc8cc81d90be9c5520cae4675573da5bce70e09",
+  "status": "Uncommitted standalone prototype files",
+  "files": [
+    {
+      "path": "index.html",
+      "sha256": "87519a38b321c30e8f546216bd1b364df6d549ba7e761b4498c6869be697715d"
+    },
+    {
+      "path": "src/main.jsx",
+      "sha256": "d7ff1fedd5fee6b358434661ad71c5ad60a6ebea039a27b95c7f74510c157408"
+    },
+    {
+      "path": "src/styles.css",
+      "sha256": "357134fa1d294d4b76f10c75f672650e1095bd279b3ed96a1480cf21cd64f44e"
+    },
+    {
+      "path": "src/data.js",
+      "sha256": "b8f410247b5695bb637c76014e6effb9dde77ddb3550fe0056a5286418806287"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2b80c9f4b3f1c0d1b69111f1b56aadfa98e2f5c963a2fa4249080771126bbf66"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "b45f082ceac88741e119326bdfd22e55b5673281223f00f0448fae7900a7a1b9"
+    },
+    {
+      "path": "checks/flows.mjs",
+      "sha256": "1fcf569ab58f793437aa88f2587e73e38a5fe368af53d3cc3b5a7c38caf8ea90"
+    }
+  ]
+}

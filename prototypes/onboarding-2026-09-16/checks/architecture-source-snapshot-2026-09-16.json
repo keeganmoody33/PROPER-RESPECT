@@ -1,0 +1,84 @@
+{
+  "capturedAt": "2026-09-16T21:19:36.897507+00:00",
+  "implementationPath": "/Users/keeganmoody/Downloads/PROPER-RESPECT-self-test-20260916",
+  "implementationHead": "4d2171badc0cd9ea310a2c5a615a9313085ccde4",
+  "implementationStatus": " M convex/connectors.ts\n M convex/discovery.ts\n M convex/evidenceClaims.test.ts\n M convex/onboarding.ts\n M convex/schema.ts\n M docs/000-current-product-thesis.md\n M src/domain/discovery.ts\n?? convex/multipleSources.test.ts\n?? docs/feedback/\n?? docs/ideation/\n?? docs/plans/2026-09-16-multiple-mailboxes-and-native-cards.md\n",
+  "files": [
+    {
+      "path": "app/api/connect/github/route.ts",
+      "sha256": "674af8a6f434d76f25c76f91973bf0dd33a035c11a877a72ad093aaf08b2a161"
+    },
+    {
+      "path": "app/[handle]/page.tsx",
+      "sha256": "70df0c1bc9d6c166617f93dfe0cca3ac1cb8571408b9c4fe200e18d7c3043071"
+    },
+    {
+      "path": "components/onboarding-client.tsx",
+      "sha256": "747a77772efcaaa69ffc76001e0cdf1d9ce87c0a2d2e1db8ed21affd7079bd81"
+    },
+    {
+      "path": "components/private-evidence-panel.tsx",
+      "sha256": "ddd935921bf6eb8b7cf6f4bebd3bac82ddc98780e35b7a97e5746b517fa2c4f1"
+    },
+    {
+      "path": "components/product-card.tsx",
+      "sha256": "252be7a8ff869661eef3b67221cab2f9c487a717f852276f8c540724910001ec"
+    },
+    {
+      "path": "convex/authHelpers.ts",
+      "sha256": "bedfb9d0d39fc08de85a63003a137dce529daf89fb854b85319d24578d884a20"
+    },
+    {
+      "path": "convex/onboarding.ts",
+      "sha256": "bbe81562d520f93e0fabbd83506a7f99bc51a4c4793129646f1edcc0c4bc769d"
+    },
+    {
+      "path": "convex/connectors.ts",
+      "sha256": "23bf6db8eb62595675e5cf7d7a24ffd67cb9a51198274408fd7c81a07f07d1ce"
+    },
+    {
+      "path": "convex/crons.ts",
+      "sha256": "13c60ec458985f8b633f1abae75b2ad9538aedf394f80cc60d78db6f1beeae25"
+    },
+    {
+      "path": "convex/discovery.ts",
+      "sha256": "240fb66ddae70e4229a599a30ddbf077ac0f20c78cd5bc19cdd4d22bc8e119a4"
+    },
+    {
+      "path": "convex/schema.ts",
+      "sha256": "1f16a521e61459f04a6f8b279baecf38ba6498a94fcdc9a4f4eeef0afb2f80cd"
+    },
+    {
+      "path": "convex/validators.ts",
+      "sha256": "e0c66c8386b0a31f4a420b0ab3a7cc1f9ad4f03017a2ce9e00773d74e4a8da55"
+    },
+    {
+      "path": "convex/publicProfiles.ts",
+      "sha256": "1458eb624b1fea4191de9a79fee3b51243a04e7af8b7fd98449ee93a219f71f9"
+    },
+    {
+      "path": "src/domain/onboarding.ts",
+      "sha256": "64d973b1c102e3f5a71c7f58e091760b0058ab3e159a933ef6484c9786bb1697"
+    },
+    {
+      "path": "src/domain/discovery.ts",
+      "sha256": "08dc1f4c818eceba9e2fc61f85d27a3aba518f3efadde6f37307f87841ca07cc"
+    },
+    {
+      "path": "src/domain/public-profile.ts",
+      "sha256": "a4b8b3fa799e0dbcc22275d3ce78bb4aac18790f4d0de8f5cb0aafbb1ad49377"
+    },
+    {
+      "path": "src/domain/review.ts",
+      "sha256": "6128fd93760e0ef398887d1b5c196e7a876a4468b7a700a8f97726cfe3c17509"
+    },
+    {
+      "path": "src/data/get-public-profile.ts",
+      "sha256": "385de6fd0bbdd12a5f2bd0e284d0530ec8b0e948d95e2cfcb74d420e29f3072f"
+    },
+    {
+      "path": "docs/plans/2026-09-16-multiple-mailboxes-and-native-cards.md",
+      "sha256": "c3c707ea29458943ccf78a9ebb05c11bd6195e23ad6bc9b2442c373cc89ff100"
+    }
+  ]
+}

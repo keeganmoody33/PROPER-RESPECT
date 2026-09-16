@@ -1,0 +1,34 @@
+{
+  "createdAt": "2026-09-16T21:20:00.567Z",
+  "cases": [
+    "14 interpretation cases: empty, text, handle, federated handle, URL/domain, known host, deceptive hostname, credentials, unsupported schemes, email, malformed URL; manual override and unspecified preserve distinction",
+    "studio 1242px: raw text retained, platform suggested/overridden/omitted, handle unresolved unless selected, Enter saves, separate destinations, dangerous schemes remain text, optional blank, Escape restores focus, no overflow",
+    "studio 390px: raw text retained, platform suggested/overridden/omitted, handle unresolved unless selected, Enter saves, separate destinations, dangerous schemes remain text, optional blank, Escape restores focus, no overflow",
+    "collection 1242px: raw text retained, platform suggested/overridden/omitted, handle unresolved unless selected, Enter saves, separate destinations, dangerous schemes remain text, optional blank, Escape restores focus, no overflow",
+    "collection 390px: raw text retained, platform suggested/overridden/omitted, handle unresolved unless selected, Enter saves, separate destinations, dangerous schemes remain text, optional blank, Escape restores focus, no overflow"
+  ],
+  "accessibility": [
+    {
+      "variant": "studio",
+      "width": 1242,
+      "violations": []
+    },
+    {
+      "variant": "studio",
+      "width": 390,
+      "violations": []
+    },
+    {
+      "variant": "collection",
+      "width": 1242,
+      "violations": []
+    },
+    {
+      "variant": "collection",
+      "width": 390,
+      "violations": []
+    }
+  ],
+  "errors": [],
+  "externalRequests": []
+}

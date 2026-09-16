@@ -1,0 +1,25 @@
+{
+  "createdAt": "2026-09-16T20:58:52.578Z",
+  "files": [
+    {
+      "path": "src/main.jsx",
+      "sha256": "edbdcb15b36f01c3d04b20689d8785b284c08dbdf0797903e6a689ada09a443e"
+    },
+    {
+      "path": "src/styles.css",
+      "sha256": "bf90e85c5fda607e356be3a48db1822b2bcc0f7453e1dfa138562967cd9e8f18"
+    },
+    {
+      "path": "src/introducer.js",
+      "sha256": "5b5bc22855fe0b583ef74df379cc4c3d407dfc7b279cdcc125c2e403398b0068"
+    },
+    {
+      "path": "src/introducer-field.jsx",
+      "sha256": "7daf2da0942dac862d752a249db243b4e9549e817410237dd8bfd38ce72797d1"
+    },
+    {
+      "path": "checks/introducer-2026-09-16.mjs",
+      "sha256": "03fe90e0a58de9ec97fee17abcedc0fc3c875d491378b4dbd7b98353d9fa8100"
+    }
+  ]
+}
