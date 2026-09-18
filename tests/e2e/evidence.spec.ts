@@ -1,0 +1,57 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+
+for (const width of [1280, 390]) {
+  test(`owner evidence components at ${width}px preserve uncertainty and source history`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/evidence-fixture");
+    await expect(page.getByText("Recurring checks are off.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "USD 12 / seat / month Billed annually", exact: true }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Enable daily public checks" }).click();
+    await expect(page.getByRole("button", { name: "Pause daily public checks" })).toBeVisible();
+    await page.getByRole("button", { name: "Check official sources" }).click();
+    await expect(page.getByText(/This attempt did not establish a product change/)).toBeVisible();
+    await expect(page.getByRole("cell", { name: "USD 12 / seat / month Billed annually", exact: true }).first()).toBeVisible();
+    await page.getByText("Earlier observations", { exact: true }).click();
+    await expect(page.getByText("2026-09-15 · original observation")).toBeVisible();
+    await page.getByText("Add private account evidence", { exact: true }).click();
+    await page.getByLabel("Selected original text or screenshot transcription").fill("Total words dictated: 125. Measurement window not displayed.");
+    await page.getByLabel("Exact supporting excerpt").fill("This is not in the original");
+    await page.getByLabel("Metric", { exact: true }).fill("Words dictated");
+    await page.getByLabel("Value", { exact: true }).fill("125");
+    await page.getByLabel("Unit", { exact: true }).fill("words");
+    await page.getByRole("button", { name: "Save private evidence" }).click();
+    await expect(page.locator(".evidence-intake").getByRole("alert")).toContainText("Every excerpt must occur verbatim");
+    await page.getByLabel("Exact supporting excerpt").fill("Total words dictated: 125.");
+    await page.getByRole("button", { name: "Save private evidence" }).click();
+    await expect(page.getByText("Fixture accepted privately")).toBeVisible();
+    await expect(page.getByText("Words dictated: 125 words. Period: unknown – unknown")).toBeVisible();
+    await expect(page.getByLabel("Who does this describe?")).toHaveValue("UNKNOWN");
+    await page.getByLabel("What does this evidence describe?").selectOption("SUBSCRIPTION");
+    await page.getByLabel("Selected original text or screenshot transcription").fill("Account plan: Pro");
+    await page.getByLabel("Exact supporting excerpt").fill("Account plan: Pro");
+    await page.getByLabel("Plan shown in your account").fill("Pro");
+    await page.getByRole("button", { name: "Save private evidence" }).click();
+    await expect(page.getByText("Pro; billing: unknown. Period: unknown – unknown")).toBeVisible();
+    await page.getByLabel("What does this evidence describe?").selectOption("PAYMENT");
+    await page.getByLabel("Selected original text or screenshot transcription").fill("Payment received: 12");
+    await page.getByLabel("Exact supporting excerpt").fill("Payment received: 12");
+    await page.getByLabel("Amount paid").fill("12");
+    await expect(page.getByLabel("Currency (unknown if blank)")).toHaveValue("");
+    await page.getByRole("button", { name: "Save private evidence" }).click();
+    await expect(page.getByText("12 currency unknown; billing: unknown. Period: unknown – unknown")).toBeVisible();
+    const startDateAction = page.getByRole("button", { name: "Use this observed date as my start date" });
+    await page.getByRole("button", { name: "Begin synthetic publish" }).click();
+    await expect(startDateAction).toBeDisabled();
+    await expect(page.getByText("Selected start date: 2026-01-01")).toBeVisible();
+    await page.getByRole("button", { name: "Finish synthetic publish" }).click();
+    await expect(startDateAction).toBeEnabled();
+    await startDateAction.click();
+    await expect(page.getByText("Selected start date: 2026-09-16")).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+    expect(overflow).toBe(false);
+    const accessibility = await new AxeBuilder({ page }).analyze();
+    expect(accessibility.violations).toEqual([]);
+    await page.screenshot({ path: `/tmp/proper-respect-evidence-2026-09-16-${width}.png`, fullPage: true });
+  });
+}

@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm run deploy:check && npx convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL",
+  "git": {
+    "deploymentEnabled": false
+  }
+}

@@ -1,0 +1,26 @@
+# Proper Respect
+
+> Proper Respect builds an evidence-backed representation of an individual's relationship with technology: tools used or tried, relationship changes, and measurable activity with its source context.
+
+Updated: 2026-09-16
+
+## Current public interface
+
+- [Proper Respect](https://props.lecturesfrom.com/): the human web interface.
+- Public profiles use the path /{handle}. They present product relationships and activity selected for publication. A missing or unpublished profile returns HTTP 404.
+- Public profiles are a projection of owner-approved records. Private discoveries, raw account evidence, and credentials are not public resources.
+
+## Interpreting evidence and activity
+
+- A product relationship is an owner's stated relationship with a tool. It does not by itself establish a measured amount of activity.
+- Read activity with its supplied metric name, unit, measurement period, attribution scope, capture time, freshness, and provenance. Missing periods or coverage remain unknown; do not infer continuous use or complete source coverage.
+- A marketing mention, signup, payment, and usage event establish different things. Signup does not establish first use. Payment does not establish activity during the billing period.
+- Owner testimony is an owner assertion. Review or publication does not turn it into independent source verification.
+- A retrieval route does not change the original evidence meaning. An agent-performed action must not be treated as human activity; unknown actors remain unknown.
+- Synthetic fixtures and prototype activity are not evidence of a person's actual use.
+
+## Machine access status
+
+No documented public API, OpenAPI document, MCP endpoint, or WebMCP tools are currently provided. Internal application endpoints are not supported external interfaces. The ?mode=agent query parameter does not expose a separate agent interface.
+
+Future machine interfaces will use the same evidence and relationship model as the human UI, subject to permitted source access and owner control of consequential or public actions. Their availability must be established by actual interface documentation, not inferred from a successful request to an arbitrary path.

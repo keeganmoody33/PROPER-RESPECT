@@ -196,7 +196,7 @@ export enum EvidenceSourceType {
   BrowserHistory = "BROWSER_HISTORY",
   ScreenTime = "SCREEN_TIME",
   SocialMessages = "SOCIAL_MESSAGES",
-  Gmail = "GMAIL",                  // optional, later, never the spine
+  Gmail = "GMAIL",                  // planned read-only discovery; separate authorization
 }
 
 export enum LineageSourceType {
@@ -264,3 +264,7 @@ These are recommendations to stay "tapped in" as we build, not V1 requirements:
 
 - `000-current-product-thesis.md`, `001-git-for-product-attribution.md`, `002-v1-product-motion.md`, `003-evidence-surfaces.md`
 - `../PRD.md` (conceptual data model), `../CONTEXT.md` (domain language)
+
+## 2026-09-16 amendment: evidence-led review
+
+The current implementation extends `RawEvidence` with optional immutable structured observations (kind, date, paid-period end, verbatim excerpt, attribution scope, acquisition method). `claimReviews` appends owner verdicts and corrections against a specific evidence ID and observation index. Original suggestions remain intact. Only owner-authenticated queries expose these excerpts; public projections exclude them. Legacy evidence is not backfilled from capture timestamps. Mailbox OAuth and automated extraction remain unimplemented. The earlier interfaces above are conceptual, not a statement that every source connector exists.

@@ -1,0 +1,48 @@
+# Developing PROPER-RESPECT
+
+Updated: 2026-09-18. Start with [AGENTS.md](../AGENTS.md), the
+[Cursor handoff](CURSOR_HANDOFF.md), [deployment runbook](DEPLOYMENT.md), and
+[canonical Ref](https://plan.ref.tools/oUl8LCIQb32SAicK).
+
+## Current product
+
+The product represents tools a person has used or tested, what they are testing
+now, their explicitly selected go-to stack, and their changing relationship
+history. Evidence supports that story; activity does not rank importance.
+Private save and explicit publication remain separate.
+
+## Existing Tasks 1–4
+
+- Task 1: source/account identity and immutable retention are implemented.
+- Task 2: owner-bound Gmail OAuth, encrypted generation-bound credentials,
+  bounded discovery, provenance, private review and maintenance controls are
+  implemented. The authorized live capture/candidate gate passed. Further
+  mailbox reads are paused; recurring collection remains off. Historical depth,
+  live recovery and authorized hosted maintenance remain follow-up work.
+- Task 3: both prototypes are preserved. A/B remains unselected and nonblocking.
+- Task 4: private intake, manual product entry, owner relationships/go-to/history,
+  compact cards, retained branding, exact sharing preview and source controls
+  are integrated. Hosted owner association and full release acceptance remain.
+
+The existing direct GitHub connector is retained. The Composio evaluation is
+complete; production replacement is unaccepted and nonblocking. Reuse the current
+evidence model and read [source roles](003-evidence-surfaces.md). Email discovers
+possible relationships; product APIs/exports supply actual activity when exposed.
+Generic uploads retain originals but do not authenticate images or extract
+Screen Time automatically.
+
+## Work and verification
+
+Use Compound Engineering for scoped implementation, focused tests, browser
+verification and review. Use pstack only for a genuine unresolved architecture
+question. Preserve unrelated work and accepted checkpoints. Source, capture,
+observation, review and relationship remain distinct.
+
+[Source verification](verification/2026-09-18-main-consolidation.md) records
+current local checks. Detailed real-account operator receipts and originals are
+private; their public placeholders do not contain owner choices or account data.
+
+Git-triggered deployments are disabled. Backend synchronization, provider reads,
+recurrence, manual release and publication retain their exact-target gates.
+The owner reports owning proper-respect.com through Cloudflare; DNS, hosting,
+Clerk domains and OAuth callbacks have not been migrated.

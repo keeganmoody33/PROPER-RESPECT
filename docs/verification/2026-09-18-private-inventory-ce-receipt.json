@@ -1,0 +1,6 @@
+{
+  "privateOperatorReceipt": true,
+  "date": "2026-09-18",
+  "publicVerification": "docs/verification/2026-09-18-main-consolidation.md",
+  "note": "Detailed owner/account verification is retained privately and excluded from public Git history."
+}

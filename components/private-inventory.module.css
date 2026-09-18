@@ -1,0 +1,23 @@
+.inventory { margin-block: 2rem; padding-block: 1rem; }
+.views { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1.2rem .5rem; }
+.views button[aria-pressed="true"] { background: var(--ink, #191919); color: var(--paper, #fff); }
+.hint { font-size: .85rem; line-height: 1.5; opacity: .8; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 1.3rem; align-items: start; }
+.item { min-width: 0; }
+.item > details { margin-block: .8rem; border: 1px solid #8885; border-radius: .7rem; padding: .8rem; }
+.item summary, .intake summary { cursor: pointer; min-height: 2rem; line-height: 1.5; }
+.editor { margin-block: 1rem; }
+.editor fieldset { padding: 0; border: 0; min-width: 0; }
+.editor label, .intake label { display: grid; gap: .4rem; margin-block: .8rem; font-size: .9rem; }
+.editor input:not([type="checkbox"]), .editor select, .editor textarea, .intake input { width: 100%; min-width: 0; box-sizing: border-box; padding: .6rem; border: 1px solid #8888; border-radius: .35rem; font: inherit; color: inherit; background: transparent; }
+.editor .toggle { display: flex; align-items: center; gap: .5rem; }
+.source { padding-block: .8rem; border-block-start: 1px solid #8884; overflow-wrap: anywhere; }
+.source p, .source li { font-size: .85rem; line-height: 1.5; }
+.source ul { padding-inline-start: 1.2rem; }
+.source blockquote { margin-inline: 0; padding-inline-start: .8rem; border-inline-start: 2px solid currentColor; }
+.intake { margin-block: 1rem 1.5rem; }
+.brand { margin-block: 1.5rem .5rem; padding-top: 1rem; border-top: 1px solid #8884; }
+.brand > summary { font-weight: 600; cursor: pointer; }
+.brand > p { font-size: .85rem; line-height: 1.5; }
+.claims { margin-block: 1rem; }
+.claims > summary { font-weight: 600; }
