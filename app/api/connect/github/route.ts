@@ -2,7 +2,11 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (request.headers.get("origin") !== new URL(request.url).origin ||
+      (request.headers.has("sec-fetch-site") && request.headers.get("sec-fetch-site") !== "same-origin")) {
+    return Response.json({ error: "Same-origin POST required." }, { status: 403 });
+  }
   const { userId, getToken } = await auth();
   if (!userId) {
     return Response.json({ error: "Authentication required." }, { status: 401 });

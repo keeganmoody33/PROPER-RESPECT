@@ -64,7 +64,7 @@ PROPER-RESPECT is a product-stack profile. It is not trying to predict a person'
 
 The default motion is authorize sources → discover products and dated claims → review the evidence → publish. Manual entry is a fallback. The person controls source access and publication; the app should do the preparation.
 
-See [the current thesis](docs/000-current-product-thesis.md) for permission boundaries and claim semantics. Google sign-in is implemented; mailbox access and automatic email extraction are not. Structured dated observations can enter the internal evidence intake and be reviewed privately with original source excerpts and append-only corrections.
+See [the current thesis](docs/000-current-product-thesis.md) for permission boundaries and claim semantics. As of 2026-09-18, Google sign-in and separately consented Gmail OAuth, bounded header discovery/extraction, capture provenance, and private claim review are implemented; the authorized live capture/candidate gate passed. Google sign-in does not grant Gmail consent, and email evidence does not establish current or continuous use. The approved read budget is exhausted; additional mailbox reads are paused and recurring collection remains off. Historical expansion, live failure/recovery proof, and hosted release acceptance remain gated. Structured dated observations are reviewed privately with original source excerpts and append-only corrections; publication requires explicit approval.
 
 ## What Problem This Solves
 

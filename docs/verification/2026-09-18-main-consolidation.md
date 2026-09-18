@@ -44,10 +44,22 @@ and unique worktrees remain intact.
 - AGENTS, the inactive CE configuration example and dated ideation research
   are retained. No optional settings, schedules or prototype choice is activated.
 
+## Remote review corrections — September 18
+
+PR #20 review identified a missing same-origin guard on GitHub import, duplicate
+retained-brand reads, and four stale Gmail implementation-status paragraphs.
+The route now rejects missing/foreign Origin and non-same-origin Fetch Metadata
+before Clerk or Convex access. Public profiles hydrate each distinct product
+once using indexed reads; they do not scan the global catalog/history. A
+100-card regression proves duplicate read reuse, mismatched-domain fallback
+and unchanged stored publication. Documentation records the implemented bounded
+Gmail foundation, exhausted read authorization and remaining release gates.
+These source corrections have not been synchronized to any backend.
+
 ## Verification
 
 - `npm ci`: passed against the final lockfile.
-- `npm test`: 394 Vitest passed, one optional private-file check skipped;
+- `npm test`: 403 Vitest passed, one optional private-file check skipped;
   six Node checks passed. Existing real-file intake/replay proof remains in the
   separate product-delivery receipt.
 - `npm run test:e2e`: 19 passed, including desktop/mobile and accessibility checks.

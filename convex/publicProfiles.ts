@@ -13,7 +13,7 @@ const publicProfileV1Validator = v.object({
   })),
 });
 
-async function readPublishedProfile(ctx: QueryCtx, handle: string) {
+export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
   const published = await ctx.db
     .query("publishedProfiles")
     .withIndex("by_handle", (q) => q.eq("handle", handle))
@@ -22,12 +22,19 @@ async function readPublishedProfile(ctx: QueryCtx, handle: string) {
   if (!published) return null;
   // Only presentation is refreshed. The owner's published evidence and
   // relationship projection stays byte-for-byte unchanged in storage.
-  const cards = await Promise.all(published.profile.cards.map(async (card) => {
-    const product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", card.product.slug)).unique();
-    if (!product || product.domain !== card.product.domain) return card;
-    const brand = await retainedProductBrand(ctx, product);
-    return brand ? { ...card, product: { ...card.product, brand } } : card;
-  }));
+  // Read only the products in this profile, once per slug. Avoid scanning the
+  // global catalog or all historical snapshots to hydrate a public page.
+  const brands = new Map(await Promise.all(
+    [...new Set(published.profile.cards.map(card => card.product.slug))].map(async slug => {
+      const product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", slug)).unique();
+      return [slug, product ? { domain: product.domain, brand: await retainedProductBrand(ctx, product) } : null] as const;
+    }),
+  ));
+  const cards = published.profile.cards.map(card => {
+    const retained = brands.get(card.product.slug);
+    return retained?.brand && retained.domain === card.product.domain
+      ? { ...card, product: { ...card.product, brand: retained.brand } } : card;
+  });
   return { ...published.profile, cards };
 }
 
