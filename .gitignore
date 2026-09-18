@@ -1,10 +1,14 @@
 node_modules
+.DS_Store
 .next
 .cache
 coverage
 test-results
 playwright-report
 .env.local
+.env*.local
+.compound-engineering/config.local.yaml
 .convex
+.vercel
 *.log
 *.tsbuildinfo

@@ -1,0 +1,303 @@
+{
+  "kind": "BRAND_PRESENTATION_ONLY",
+  "product": {
+    "slug": "wisprflow",
+    "name": "Wispr Flow",
+    "domain": "wisprflow.ai",
+    "description": "Voice dictation for writing across apps."
+  },
+  "request": {
+    "provider": "context.dev",
+    "method": "POST",
+    "endpoint": "https://api.context.dev/v1/brand/retrieve",
+    "body": {
+      "type": "by_domain",
+      "domain": "wisprflow.ai"
+    },
+    "authentication": "REDACTED",
+    "optionalEndpoints": [
+      "/v1/web/fonts",
+      "/v1/web/styleguide"
+    ]
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "provider": "context.dev",
+    "adapterVersion": "context-brand-v1-2026-09-17",
+    "productSlug": "wisprflow",
+    "canonicalDomain": "wisprflow.ai",
+    "retrievalId": "d97a283c-d7f8-4d60-af5b-79ee8f9b7069",
+    "retrievedAt": "2026-09-17T23:12:06.674Z",
+    "partial": false,
+    "logos": [
+      {
+        "url": "https://media.brand.dev/b0184992-e1ed-4580-811f-262ab6791293.svg",
+        "mode": "light",
+        "type": "logo",
+        "width": 82,
+        "height": 23
+      },
+      {
+        "url": "https://media.brand.dev/868e2415-ffe3-4385-8a07-bf886b69860f.png",
+        "mode": "unknown",
+        "type": "icon",
+        "width": 256,
+        "height": 256
+      }
+    ],
+    "colors": [
+      {
+        "hex": "#f0d7ff",
+        "name": "Lavender Savor",
+        "source": "site"
+      },
+      {
+        "hex": "#1c1c1c",
+        "name": "Eerie Black",
+        "source": "logo"
+      },
+      {
+        "hex": "#8c8c8c",
+        "name": "More Than A Week",
+        "source": "logo"
+      },
+      {
+        "hex": "#d3d3d3",
+        "name": "Pinball",
+        "source": "logo"
+      }
+    ],
+    "fonts": [
+      {
+        "family": "Figtree",
+        "uses": [
+          "body",
+          "div",
+          "style",
+          "strong",
+          "a",
+          "svg",
+          "path",
+          "img",
+          "nav",
+          "main",
+          "section",
+          "p",
+          "br",
+          "text",
+          "textpath",
+          "animate",
+          "defs",
+          "clippath",
+          "rect",
+          "g",
+          "canvas",
+          "span",
+          "circle",
+          "script",
+          "ul",
+          "li",
+          "footer",
+          "mask",
+          "textarea",
+          "iframe"
+        ],
+        "fallbacks": [
+          "Arial",
+          "sans-serif"
+        ]
+      },
+      {
+        "family": "Eb garamond",
+        "uses": [
+          "h1",
+          "br",
+          "em",
+          "h2",
+          "div",
+          "h3",
+          "svg",
+          "path",
+          "p"
+        ],
+        "fallbacks": [
+          "Arial",
+          "sans-serif"
+        ]
+      }
+    ],
+    "styleguide": {
+      "mode": "light",
+      "colors": {
+        "accent": "#034f46",
+        "background": "#ffffeb",
+        "text": "#1a1a1a"
+      },
+      "headingFamily": "EB Garamond",
+      "bodyFamily": "Figtree"
+    },
+    "receipts": [
+      {
+        "endpoint": "brand",
+        "status": "ok",
+        "httpStatus": 200,
+        "requestId": "214f388e-b973-442e-bb9e-cec177374852"
+      },
+      {
+        "endpoint": "fonts",
+        "status": "ok",
+        "httpStatus": 200,
+        "requestId": "8f795917-26c6-471e-9667-ce2fac46450a"
+      },
+      {
+        "endpoint": "styleguide",
+        "status": "ok",
+        "httpStatus": 200,
+        "requestId": "b13166eb-8360-417d-9e42-8dab3565460b"
+      }
+    ],
+    "responseHash": "1b8f773b7a02dd50f0a16f951bfe38eb38aa83dc2e89e2f7d14d5b83cebb9ea7"
+  },
+  "response": {
+    "format": "context.dev/presentation-projection-v1",
+    "brand": {
+      "status": "ok",
+      "code": 200,
+      "request_id": "214f388e-b973-442e-bb9e-cec177374852",
+      "brand": {
+        "domain": "wisprflow.ai",
+        "logos": [
+          {
+            "url": "https://media.brand.dev/b0184992-e1ed-4580-811f-262ab6791293.svg",
+            "mode": "light",
+            "type": "logo",
+            "resolution": {
+              "width": 82,
+              "height": 23
+            }
+          },
+          {
+            "url": "https://media.brand.dev/868e2415-ffe3-4385-8a07-bf886b69860f.png",
+            "mode": "unknown",
+            "type": "icon",
+            "resolution": {
+              "width": 256,
+              "height": 256
+            }
+          }
+        ],
+        "colors": [
+          {
+            "hex": "#f0d7ff",
+            "name": "Lavender Savor",
+            "source": "site"
+          },
+          {
+            "hex": "#1c1c1c",
+            "name": "Eerie Black",
+            "source": "logo"
+          },
+          {
+            "hex": "#8c8c8c",
+            "name": "More Than A Week",
+            "source": "logo"
+          },
+          {
+            "hex": "#d3d3d3",
+            "name": "Pinball",
+            "source": "logo"
+          }
+        ]
+      }
+    },
+    "fonts": {
+      "status": "ok",
+      "code": 200,
+      "request_id": "8f795917-26c6-471e-9667-ce2fac46450a",
+      "domain": "wisprflow.ai",
+      "fonts": [
+        {
+          "font": "Figtree",
+          "uses": [
+            "body",
+            "div",
+            "style",
+            "strong",
+            "a",
+            "svg",
+            "path",
+            "img",
+            "nav",
+            "main",
+            "section",
+            "p",
+            "br",
+            "text",
+            "textpath",
+            "animate",
+            "defs",
+            "clippath",
+            "rect",
+            "g",
+            "canvas",
+            "span",
+            "circle",
+            "script",
+            "ul",
+            "li",
+            "footer",
+            "mask",
+            "textarea",
+            "iframe"
+          ],
+          "fallbacks": [
+            "Arial",
+            "sans-serif"
+          ]
+        },
+        {
+          "font": "Eb garamond",
+          "uses": [
+            "h1",
+            "br",
+            "em",
+            "h2",
+            "div",
+            "h3",
+            "svg",
+            "path",
+            "p"
+          ],
+          "fallbacks": [
+            "Arial",
+            "sans-serif"
+          ]
+        }
+      ]
+    },
+    "styleguide": {
+      "status": "ok",
+      "code": 200,
+      "request_id": "b13166eb-8360-417d-9e42-8dab3565460b",
+      "domain": "wisprflow.ai",
+      "styleguide": {
+        "mode": "light",
+        "colors": {
+          "accent": "#034f46",
+          "background": "#ffffeb",
+          "text": "#1a1a1a"
+        },
+        "typography": {
+          "headings": {
+            "h1": {
+              "fontFamily": "EB Garamond"
+            }
+          },
+          "p": {
+            "fontFamily": "Figtree"
+          }
+        }
+      }
+    }
+  }
+}

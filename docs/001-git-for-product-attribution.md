@@ -30,7 +30,7 @@ A person's relationship to a product is a record worth versioning: when they sta
 
 ## Why This Framing Helps Engineering
 
-1. **A hard staging boundary.** Just as Git separates the working tree, the index, and committed history, PROPER-RESPECT separates raw evidence, staged drafts, and published cards. Nothing crosses a boundary without an explicit user action. This is the manual-first rule expressed as architecture.
+1. **A hard staging boundary.** Just as Git separates the working tree, the index, and committed history, PROPER-RESPECT separates raw evidence, staged drafts, and published cards. Authorized automation can collect evidence and prepare drafts. Only the owner can approve claims and publish. This is the review-before-publication rule expressed as architecture.
 2. **Append-only history.** Adoption history is preserved. A product going Archived is like a later commit, not a deletion. Rebrands and sunsets keep history continuous (see `../docs/adr/008-product-rebrand-handling.md`, `../docs/adr/033-product-sunset.md`).
 3. **Attribution is first-class.** Lineage ("put on by") is `blame` for adoption. It is allowed to be self-attested, and it can point at people/content that are not on the platform (floating lineage, `../docs/adr/013-floating-lineage.md`).
 4. **Transformations, not magic.** Each step is an explicit, testable transformation:
@@ -40,7 +40,7 @@ RawEvidence  ->  DraftProp  ->  CuratedProp  ->  PublishedProfile
 (working)        (staged)       (committed)      (merged to main)
 ```
 
-The user is the only actor allowed to advance evidence from one stage to the next. Automation can populate `RawEvidence` and propose `DraftProp`s, but it can never merge to `main`.
+Authorized automation can populate `RawEvidence` and propose `DraftProp`s. The user controls review and publication; automation can never merge to `main`.
 
 ## What This Analogy Is NOT
 

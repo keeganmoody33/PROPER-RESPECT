@@ -1,7 +1,7 @@
 # ADR-006: User-Generated Data Retained Forever
 
 ## Status
-Accepted — 2026-06-05
+Accepted — revised 2026-09-16
 
 ## Context
 The core value of PROPER-RESPECT is the **timeline** — a user's complete product journey from first try to archive. This history is only valuable if it's preserved. Deleting old props destroys the narrative.
@@ -23,7 +23,8 @@ User-generated product data (props, content, lineage, profile information) is re
 
 | Data Type | Retention | Why |
 |-----------|-----------|-----|
-| **Email scan raw metadata** | Processed immediately, discarded | We only need to extract product signals. No value in keeping email headers. |
+| **Unselected mailbox data** | Do not retain | A future read-only connector must minimize collection. |
+| **Selected evidence backing a proposal** | Private, immutable until owner-requested deletion | Preserve the excerpt, source provenance, original proposal, and correction history needed to audit a claim. Do not retain an entire mailbox. |
 | **OAuth token refresh logs** | 90 days | Debugging only. Then purged. |
 | **Failed login attempts** | 30 days | Security monitoring. Then purged. |
 | **Analytics events** | 1 year | Product improvement. Then anonymized or purged. |
@@ -57,4 +58,4 @@ Users can request full account deletion at any time:
 
 ## Related
 - ADR-004 (Public Graph Privacy) — what is public vs. private
-- ADR-001 (Email Passport) — raw email data is ephemeral, not retained
+- ADR-001 (Email Passport) — selected claim evidence stays private and auditable

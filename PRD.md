@@ -1,7 +1,8 @@
 # PRD - PROPER-RESPECT MVP
 
 > Status: Current MVP direction  
-> Updated: 2026-06-06
+> Updated: 2026-09-16
+> Direction and implementation boundary: `docs/000-current-product-thesis.md`.
 
 ## 1. Overview
 
@@ -15,7 +16,7 @@ PROPER-RESPECT is a product-stack profile builder. A linker creates one public p
 2. Let each product card route visitors through the best available link.
 3. Let the linker attach proof: Loom, YouTube, screenshot, article, GitHub repo, receipt, or note.
 4. Let the linker record lineage: person, content, community, or event.
-5. Create draft props from low-friction imports where possible.
+5. Prepare evidence-backed product and date proposals from authorized sources; ask the person to review rather than transcribe.
 
 ### Non-Goals For MVP
 
@@ -26,7 +27,8 @@ PROPER-RESPECT is a product-stack profile builder. A linker creates one public p
 - Analytics dashboard
 - Mobile app
 - Screen-time tracking
-- Full email metadata scanning as primary onboarding
+- Sending email on a person's behalf or requesting mailbox write access
+- Claiming mailbox discovery exists before its read-only authorization and extraction pipeline is implemented
 - Holding or processing money
 
 ## 3. Users

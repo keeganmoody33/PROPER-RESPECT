@@ -1,0 +1,403 @@
+{
+  "kind": "BRAND_PRESENTATION_ONLY",
+  "product": {
+    "slug": "github",
+    "name": "GitHub",
+    "domain": "github.com",
+    "description": "The home base for code, collaboration, and shipped work."
+  },
+  "request": {
+    "provider": "context.dev",
+    "method": "POST",
+    "endpoint": "https://api.context.dev/v1/brand/retrieve",
+    "body": {
+      "type": "by_domain",
+      "domain": "github.com"
+    },
+    "authentication": "REDACTED",
+    "optionalEndpoints": [
+      "/v1/web/fonts",
+      "/v1/web/styleguide"
+    ]
+  },
+  "snapshot": {
+    "schemaVersion": 1,
+    "provider": "context.dev",
+    "adapterVersion": "context-brand-v1-2026-09-17",
+    "productSlug": "github",
+    "canonicalDomain": "github.com",
+    "retrievalId": "b9a13a5c-f5af-4895-93d3-6e57a959f43a",
+    "retrievedAt": "2026-09-17T23:13:19.234Z",
+    "partial": false,
+    "logos": [
+      {
+        "url": "https://media.brand.dev/e1503126-e8e3-4167-b330-5da8d55772db.png",
+        "mode": "dark",
+        "type": "icon",
+        "width": 512,
+        "height": 512
+      },
+      {
+        "url": "https://media.brand.dev/e75fa1ca-34ea-435f-8ef8-4d63b32cc7da.png",
+        "mode": "light",
+        "type": "icon",
+        "width": 128,
+        "height": 128
+      }
+    ],
+    "colors": [
+      {
+        "hex": "#08872b",
+        "name": "Broccoli Paradise",
+        "source": "site"
+      },
+      {
+        "hex": "#1e2327",
+        "name": "Noble Black",
+        "source": "site"
+      },
+      {
+        "hex": "#6a6a6d",
+        "name": "Liberty Bell Grey",
+        "source": "logo"
+      },
+      {
+        "hex": "#ebeaea",
+        "name": "Plaster",
+        "source": "logo"
+      }
+    ],
+    "fonts": [
+      {
+        "family": "Mona Sans VF",
+        "uses": [
+          "body",
+          "div",
+          "a",
+          "span",
+          "link",
+          "react-partial",
+          "script",
+          "global-banner",
+          "button",
+          "svg",
+          "path",
+          "active-global-banners",
+          "header",
+          "h2",
+          "tool-tip",
+          "template",
+          "main",
+          "react-app",
+          "section",
+          "form",
+          "input",
+          "video",
+          "ul",
+          "li",
+          "defs",
+          "lineargradient",
+          "stop",
+          "rect",
+          "title",
+          "g",
+          "clippath",
+          "img"
+        ],
+        "fallbacks": [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Noto Sans Backtick Fix",
+          "Noto Sans",
+          "Helvetica",
+          "Arial",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji"
+        ]
+      },
+      {
+        "family": "Mona Sans",
+        "uses": [
+          "span",
+          "nav",
+          "ul",
+          "li",
+          "div",
+          "button",
+          "svg",
+          "path",
+          "a",
+          "h1",
+          "p",
+          "section",
+          "label",
+          "input",
+          "h2",
+          "h3",
+          "sup",
+          "figure",
+          "blockquote",
+          "figcaption",
+          "img",
+          "ol",
+          "footer"
+        ],
+        "fallbacks": [
+          "MonaSansFallback",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Helvetica",
+          "Arial",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji"
+        ]
+      },
+      {
+        "family": "Mona Sans Mono",
+        "uses": [
+          "span",
+          "kbd",
+          "h2",
+          "h3",
+          "nav",
+          "ul",
+          "li",
+          "time",
+          "a",
+          "cookie-consent-link",
+          "button"
+        ],
+        "fallbacks": [
+          "monospace"
+        ]
+      }
+    ],
+    "styleguide": {
+      "mode": "dark",
+      "colors": {
+        "accent": "#5fed83",
+        "background": "#0d1117",
+        "text": "#ffffff"
+      },
+      "headingFamily": "Mona Sans",
+      "bodyFamily": "Mona Sans"
+    },
+    "receipts": [
+      {
+        "endpoint": "brand",
+        "status": "ok",
+        "httpStatus": 200,
+        "requestId": "e00d627b-5f1f-4dcc-9067-69f0bad1f126"
+      },
+      {
+        "endpoint": "fonts",
+        "status": "ok",
+        "httpStatus": 200,
+        "requestId": "3a6f7438-fa1f-40f9-8782-53c16315103e"
+      },
+      {
+        "endpoint": "styleguide",
+        "status": "ok",
+        "httpStatus": 200,
+        "requestId": "c313e84c-1d9a-44a4-a9d1-f865050f5728"
+      }
+    ],
+    "responseHash": "74fe1be2e35852c094c523d00abb80bb020ae03663e528d275767e2401e078ce"
+  },
+  "response": {
+    "format": "context.dev/presentation-projection-v1",
+    "brand": {
+      "status": "ok",
+      "code": 200,
+      "request_id": "e00d627b-5f1f-4dcc-9067-69f0bad1f126",
+      "brand": {
+        "domain": "github.com",
+        "logos": [
+          {
+            "url": "https://media.brand.dev/e1503126-e8e3-4167-b330-5da8d55772db.png",
+            "mode": "dark",
+            "type": "icon",
+            "resolution": {
+              "width": 512,
+              "height": 512
+            }
+          },
+          {
+            "url": "https://media.brand.dev/e75fa1ca-34ea-435f-8ef8-4d63b32cc7da.png",
+            "mode": "light",
+            "type": "icon",
+            "resolution": {
+              "width": 128,
+              "height": 128
+            }
+          }
+        ],
+        "colors": [
+          {
+            "hex": "#08872b",
+            "name": "Broccoli Paradise",
+            "source": "site"
+          },
+          {
+            "hex": "#1e2327",
+            "name": "Noble Black",
+            "source": "site"
+          },
+          {
+            "hex": "#6a6a6d",
+            "name": "Liberty Bell Grey",
+            "source": "logo"
+          },
+          {
+            "hex": "#ebeaea",
+            "name": "Plaster",
+            "source": "logo"
+          }
+        ]
+      }
+    },
+    "fonts": {
+      "status": "ok",
+      "code": 200,
+      "request_id": "3a6f7438-fa1f-40f9-8782-53c16315103e",
+      "domain": "github.com",
+      "fonts": [
+        {
+          "font": "Mona Sans VF",
+          "uses": [
+            "body",
+            "div",
+            "a",
+            "span",
+            "link",
+            "react-partial",
+            "script",
+            "global-banner",
+            "button",
+            "svg",
+            "path",
+            "active-global-banners",
+            "header",
+            "h2",
+            "tool-tip",
+            "template",
+            "main",
+            "react-app",
+            "section",
+            "form",
+            "input",
+            "video",
+            "ul",
+            "li",
+            "defs",
+            "lineargradient",
+            "stop",
+            "rect",
+            "title",
+            "g",
+            "clippath",
+            "img"
+          ],
+          "fallbacks": [
+            "-apple-system",
+            "BlinkMacSystemFont",
+            "Segoe UI",
+            "Noto Sans Backtick Fix",
+            "Noto Sans",
+            "Helvetica",
+            "Arial",
+            "sans-serif",
+            "Apple Color Emoji",
+            "Segoe UI Emoji"
+          ]
+        },
+        {
+          "font": "Mona Sans",
+          "uses": [
+            "span",
+            "nav",
+            "ul",
+            "li",
+            "div",
+            "button",
+            "svg",
+            "path",
+            "a",
+            "h1",
+            "p",
+            "section",
+            "label",
+            "input",
+            "h2",
+            "h3",
+            "sup",
+            "figure",
+            "blockquote",
+            "figcaption",
+            "img",
+            "ol",
+            "footer"
+          ],
+          "fallbacks": [
+            "MonaSansFallback",
+            "-apple-system",
+            "BlinkMacSystemFont",
+            "Segoe UI",
+            "Helvetica",
+            "Arial",
+            "sans-serif",
+            "Apple Color Emoji",
+            "Segoe UI Emoji"
+          ]
+        },
+        {
+          "font": "Mona Sans Mono",
+          "uses": [
+            "span",
+            "kbd",
+            "h2",
+            "h3",
+            "nav",
+            "ul",
+            "li",
+            "time",
+            "a",
+            "cookie-consent-link",
+            "button"
+          ],
+          "fallbacks": [
+            "monospace"
+          ]
+        }
+      ]
+    },
+    "styleguide": {
+      "status": "ok",
+      "code": 200,
+      "request_id": "c313e84c-1d9a-44a4-a9d1-f865050f5728",
+      "domain": "github.com",
+      "styleguide": {
+        "mode": "dark",
+        "colors": {
+          "accent": "#5fed83",
+          "background": "#0d1117",
+          "text": "#ffffff"
+        },
+        "typography": {
+          "headings": {
+            "h1": {
+              "fontFamily": "Mona Sans"
+            }
+          },
+          "p": {
+            "fontFamily": "Mona Sans"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,9 +1,14 @@
 # PROPER-RESPECT
 
-PROPER-RESPECT is a manual-first product attribution profile. The first
+**Continue development here:** [Working guide and next deliverable](docs/DEVELOPMENT.md) · [September 17 browser dogfood](docs/dogfood-reports/2026-09-17-codex-proper-respect-self-test-20260916-dogfood.md) · [Canonical Ref](https://plan.ref.tools/oUl8LCIQb32SAicK). These dated records govern the current owner checkout; the initial bootstrap commands below are not continuation steps for its existing development data.
+
+PROPER-RESPECT prepares evidence-backed product profiles: evidence proposes, the person confirms. The first
 runnable slice serves Keegan's seeded public Product Usage Identity from
 Next.js and Convex while keeping draft and private source records out of the
-public read model.
+public read model. The current slice also includes Clerk-backed multi-user
+onboarding, retained private evidence uploads, bulk approval/publication,
+GitHub and Devin connectors, and daily refreshes limited to explicitly
+approved metrics.
 
 ## Run the first slice
 
@@ -16,6 +21,29 @@ npm run dev
 
 Convex writes `NEXT_PUBLIC_CONVEX_URL` to `.env.local`. Visit
 `http://localhost:3000/keegan`.
+
+## Configure accounts and connectors
+
+1. Copy `.env.example` to `.env.local` and add the Clerk publishable and secret
+   keys.
+2. Activate Clerk's Convex integration.
+3. Set `CLERK_FRONTEND_API_URL` and a long random
+   `CONNECTOR_ENCRYPTION_KEY` in the Convex dashboard.
+4. Enable GitHub as a Clerk social connection if the GitHub connector should be
+   available.
+5. Run `npx convex dev`, then visit `http://localhost:3000/onboarding`.
+
+Connector tokens are encrypted before persistence and are never returned by
+public or owner-facing queries. Screenshot and CSV originals remain private
+until their owner deletes them.
+
+For variable ownership, production commands, deployment order, smoke tests, and
+rollback guidance, see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Before a
+deployment, run:
+
+```bash
+npm run deploy:check
+```
 
 ## Verify
 
@@ -34,15 +62,9 @@ PROPER-RESPECT is a product-stack profile. It is not trying to predict a person'
 
 ## Current Direction
 
-The product starts as a manual-first profile builder:
+The default motion is authorize sources → discover products and dated claims → review the evidence → publish. Manual entry is a fallback. The person controls source access and publication; the app should do the preparation.
 
-1. Add a product you use or have tested.
-2. Add your affiliate link, referral code, or canonical link.
-3. Attach proof: Loom, YouTube, screenshot, article, GitHub repo, receipt, or API/OAuth evidence when available.
-4. Add lineage: who or what put you on.
-5. Publish a public product-stack page.
-
-Automation is additive. It should get a user more than halfway toward a useful profile, but it should not become the product's source of truth.
+See [the current thesis](docs/000-current-product-thesis.md) for permission boundaries and claim semantics. As of 2026-09-18, Google sign-in and separately consented Gmail OAuth, bounded header discovery/extraction, capture provenance, and private claim review are implemented; the authorized live capture/candidate gate passed. Google sign-in does not grant Gmail consent, and email evidence does not establish current or continuous use. The approved read budget is exhausted; additional mailbox reads are paused and recurring collection remains off. Historical expansion, live failure/recovery proof, and hosted release acceptance remain gated. Structured dated observations are reviewed privately with original source excerpts and append-only corrections; publication requires explicit approval.
 
 ## What Problem This Solves
 
@@ -82,7 +104,7 @@ The product should support multiple proof sources because no single source cover
 | Claim-on-visit extension | Web products | User clicks while on a product page and captures URL/screenshot | Next |
 | Public profile scan | GitHub repos, public articles, YouTube descriptions | Public evidence of usage or mention | Next |
 | Product API/OAuth | GitHub, Linear, Vercel, Notion, Figma | Product-specific verification | Later |
-| Email metadata scan | SaaS signup and receipt discovery | Broad but noisy | Later, optional |
+| Read-only email discovery | Signup, receipt, and dated evidence proposals | Broad but noisy | Planned; separate authorization required |
 
 ## MVP App Flow
 
@@ -122,6 +144,7 @@ This remains a small web app until the profile builder proves itself.
 
 - `CONTEXT.md` - domain language and product principles
 - `PRD.md` - current MVP requirements and architecture
+- `docs/DEPLOYMENT.md` - Clerk, Convex, connector, and Vercel deployment runbook
 - `GRILL-SESSION.md` - latest grilling decisions and unresolved questions
 - `INDEX.md` - active and future documentation map
 - `docs/adr/` - accepted active decisions
