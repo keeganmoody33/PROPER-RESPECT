@@ -6,11 +6,13 @@ export type ReviewCard = {
   prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & { relationshipVersion?: number };
   product: { domain: string };
   links: CuratedProp["links"];
+  isPublishedAtCurrentHandle?: boolean;
   publishedActivity?: ActivityModule;
 };
 
 function reviewBasis(card: ReviewCard) {
-  return canonicalJson({ version: card.prop.relationshipVersion ?? 0, activity: card.prop.activity, publishedActivity: card.publishedActivity });
+  return canonicalJson({ version: card.prop.relationshipVersion ?? 0, activity: card.prop.activity,
+    isPublishedAtCurrentHandle: card.isPublishedAtCurrentHandle === true, publishedActivity: card.publishedActivity });
 }
 
 export function isCurrentReview(card: ReviewCard, edit: ReviewEdit) {
@@ -34,12 +36,24 @@ export function explicitPublicationCards<T extends ReviewCard & { prop: { _id: s
   });
 }
 
+export function setReviewCostVisibility<T extends ReviewCard & { prop: { _id: string } }>(
+  cards: T[], current: Record<string, ReviewEdit>, visibility: CostVisibility,
+) {
+  const next = { ...current };
+  for (const card of cards) {
+    const prior = current[card.prop._id];
+    const edit = prior && isCurrentReview(card, prior) ? prior : defaultReview(card);
+    next[card.prop._id] = { ...edit, costVisibility: visibility };
+  }
+  return next;
+}
+
 // Opening review must not promote a proposed relationship or change the owner's link.
 export function defaultReview(card: ReviewCard) {
   const primary = card.links.find(link => link.isPrimary);
   return {
     basis: reviewBasis(card),
-    publish: card.prop.visibility === "PUBLIC",
+    publish: card.isPublishedAtCurrentHandle === true,
     status: card.prop.status,
     headline: card.prop.headline,
     note: card.prop.note,
@@ -47,7 +61,7 @@ export function defaultReview(card: ReviewCard) {
     linkUrl: primary?.url ?? (card.product.domain ? `https://${card.product.domain}` : ""),
     linkType: primary?.type ?? "CANONICAL" as const,
     linkLabel: primary?.label ?? "Open product",
-    approveActivity: card.prop.visibility === "PUBLIC" && Boolean(card.publishedActivity) &&
+    approveActivity: card.isPublishedAtCurrentHandle === true && Boolean(card.publishedActivity) &&
       canonicalJson(card.prop.activity) === canonicalJson(card.publishedActivity),
     autoRefresh: false,
     costAmount: card.prop.cost?.amount.toString() ?? "",

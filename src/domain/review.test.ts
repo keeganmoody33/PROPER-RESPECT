@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultReview, explicitPublicationCards, explicitPublicationReview, isCurrentReview, type ReviewCard } from "./review";
+import { defaultReview, explicitPublicationCards, explicitPublicationReview, isCurrentReview, setReviewCostVisibility, type ReviewCard } from "./review";
 import type { ActivityModule } from "./public-profile";
 
 const draft = {
@@ -38,6 +38,31 @@ const activity = (total: number): ActivityModule => ({ kind: "contributionCalend
   attributionScope: "PERSONAL", capturedAt: "2026-09-18T12:00:00.000Z", freshness: "STALE", provenanceLabel: "Synthetic retained snapshot" });
 const publishedFixture = { ...draft, isPublishedAtCurrentHandle: true, prop: { ...draft.prop, visibility: "PUBLIC" as const, relationshipVersion: 1, activity: activity(3) } };
 const published: ReviewCard = publishedFixture;
+
+describe("bulk cost review", () => {
+  it("changes only resolved public cards or existing explicit choices and preserves deselection", () => {
+    const resolved = { ...publishedFixture, prop: { ...publishedFixture.prop, _id: "resolved" } };
+    const unselected = { ...resolved, isPublishedAtCurrentHandle: false, prop: { ...resolved.prop, _id: "unselected" } };
+    const selected = { ...unselected, prop: { ...unselected.prop, _id: "selected" } };
+    const removed = { ...resolved, prop: { ...resolved.prop, _id: "removed" } };
+    const next = setReviewCostVisibility([resolved, unselected, selected, removed], {
+      selected: { ...defaultReview(selected), publish: true },
+      removed: { ...defaultReview(removed), publish: false },
+    }, "PUBLIC");
+    expect(Object.keys(next).sort()).toEqual(["removed", "resolved", "selected"]);
+    expect(next.resolved).toMatchObject({ publish: true, costVisibility: "PUBLIC" });
+    expect(next.selected).toMatchObject({ publish: true, costVisibility: "PUBLIC" });
+    expect(next.removed).toMatchObject({ publish: false, costVisibility: "PUBLIC" });
+  });
+  it("does not refresh stale publication consent through a bulk cost action", () => {
+    const card = { ...publishedFixture, prop: { ...publishedFixture.prop, _id: "changed" } };
+    const prior = { ...defaultReview(card), publish: false };
+    const changed = { ...card, prop: { ...card.prop, relationshipVersion: 2 } };
+    const next = setReviewCostVisibility([changed], { changed: prior }, "PUBLIC");
+    expect(next.changed).toEqual(prior);
+    expect(() => explicitPublicationCards([changed], next)).toThrow("changed");
+  });
+});
 
 describe("publication consent follows the approved snapshot", () => {
   it("does not approve activity that was withheld, even on a published relationship", () => {

@@ -4,7 +4,7 @@ import { convexTest } from "convex-test";
 import { expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
-import { defaultReview, explicitPublicationCards } from "../src/domain/review";
+import { defaultReview, explicitPublicationCards, setReviewCostVisibility } from "../src/domain/review";
 
 const modules = import.meta.glob("./**/*.ts");
 const timestamp = "2026-09-19T23:00:00.000Z";
@@ -40,6 +40,8 @@ async function fixture(handle = "original", count = 1) {
 test("four PUBLIC records under a renamed handle are not published or selected there", async () => {
   const { t, owner, reviewCards, publicationId } = await fixture("current", 4);
   const before = await t.run(ctx => ctx.db.get(publicationId));
+  expect(await owner.query(api.onboarding.getState, { includeClaims: false }))
+    .toMatchObject({ hasPublicationAtCurrentHandle: false });
   const cards = await reviewCards();
   expect(cards).toHaveLength(4);
   for (const card of cards) {
@@ -56,6 +58,8 @@ test.each(["explicit", "unique legacy"])("resolved %s membership retains an unto
   const { t, owner, reviewCards, publicationId, propIds } = await fixture();
   if (mapping === "explicit") await t.run(ctx => ctx.db.patch(publicationId, { cardPropIds: propIds }));
   const before = await t.run(ctx => ctx.db.get(publicationId));
+  expect(await owner.query(api.onboarding.getState, { includeClaims: false }))
+    .toMatchObject({ hasPublicationAtCurrentHandle: true });
   const cards = await reviewCards();
   expect(cards[0]).toMatchObject({ isPublishedAtCurrentHandle: true });
   expect(defaultReview(cards[0]).publish).toBe(true);
@@ -72,6 +76,8 @@ test("ambiguous legacy membership stays unselected while its approved snapshot i
     await ctx.db.insert("props", { userId, productId: prop.productId, visibility: "PRIVATE", status: "TESTING", headline: "Private sibling", note: "" });
   });
   const before = await t.run(ctx => ctx.db.get(publicationId));
+  expect(await owner.query(api.onboarding.getState, { includeClaims: false }))
+    .toMatchObject({ hasPublicationAtCurrentHandle: true });
   const cards = await reviewCards();
   for (const card of cards) {
     expect(card).toMatchObject({ isPublishedAtCurrentHandle: false });
@@ -79,5 +85,25 @@ test("ambiguous legacy membership stays unselected while its approved snapshot i
   }
   const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
   expect(preview.profile.cards).toEqual(before!.profile.cards);
+  expect(await t.run(ctx => ctx.db.get(publicationId))).toEqual(before);
+});
+
+test("keeping all costs private does not remove an unresolved legacy card through its private sibling", async () => {
+  const { t, owner, userId, reviewCards, publicationId, propIds: [propId] } = await fixture();
+  await t.run(async ctx => {
+    const prop = (await ctx.db.get(propId))!;
+    await ctx.db.insert("props", { userId, productId: prop.productId, visibility: "PRIVATE", status: "TESTING", headline: "Private sibling", note: "" });
+  });
+  const before = await t.run(ctx => ctx.db.get(publicationId));
+  const cards = await reviewCards();
+  const edits = setReviewCostVisibility(cards, {}, "PRIVATE");
+  const selections = explicitPublicationCards(cards, edits).map(({ card, edit }) => ({
+    propId: card.prop._id, expectedRelationshipVersion: card.prop.relationshipVersion ?? 0,
+    publish: edit.publish, status: edit.status, headline: edit.headline, note: edit.note,
+    startedAt: edit.startedAt || undefined, costVisibility: edit.costVisibility, autoRefresh: false,
+  }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections });
+  expect(preview.profile.cards).toEqual(before!.profile.cards);
+  expect(selections).toEqual([]);
   expect(await t.run(ctx => ctx.db.get(publicationId))).toEqual(before);
 });
