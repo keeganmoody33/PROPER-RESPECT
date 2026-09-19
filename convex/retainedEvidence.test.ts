@@ -6,6 +6,9 @@ import { expect, test } from "vitest";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { prepareGitHubActivity, RETAINED_PRODUCT_ADAPTER_VERSION, type RetainedProductArtifact } from "../src/domain/retained-product-evidence";
+import { privateCardPrimaryLink } from "../src/domain/product-destination";
+import { defaultReview } from "../src/domain/review";
+import { api } from "./_generated/api";
 
 const modules = import.meta.glob("./**/*.ts");
 const retain = makeFunctionReference<"mutation">("retainedEvidence:importPacket");
@@ -17,8 +20,8 @@ const history = makeFunctionReference<"query">("inventory:history");
 const review = makeFunctionReference<"mutation">("onboarding:reviewClaim");
 const firstPage = { paginationOpts: { numItems: 25, cursor: null } };
 
-async function packet(total = 7) {
-  const payload = JSON.stringify({ data: { viewer: { login: "synthetic-account", createdAt: "2020-01-01T00:00:00Z", contributionsCollection: { contributionCalendar: { totalContributions: total, weeks: [{ contributionDays: [{ date: "2025-01-01", contributionCount: total, contributionLevel: "FIRST_QUARTILE" }] }] } } } } });
+async function packet(total = 7, login = "synthetic-account") {
+  const payload = JSON.stringify({ data: { viewer: { login, createdAt: "2020-01-01T00:00:00Z", contributionsCollection: { contributionCalendar: { totalContributions: total, weeks: [{ contributionDays: [{ date: "2025-01-01", contributionCount: total, contributionLevel: "FIRST_QUARTILE" }] }] } } } } });
   const bytes = new TextEncoder().encode(payload);
   const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), b => b.toString(16).padStart(2, "0")).join("");
   const artifact: RetainedProductArtifact = { kind: "GITHUB_ACTIVITY", sourceFile: "synthetic.json", sha256, byteLength: bytes.length, sourceCapturedDate: "2025-01-02", sourceCaptureBasis: "RETAINED_SOURCE_DATE", preparedAt: "2025-01-03T00:00:00.000Z", adapterVersion: RETAINED_PRODUCT_ADAPTER_VERSION };
@@ -120,4 +123,117 @@ test("a selected older snapshot stays inspectable and can be detached idempotent
   expect(await t.run(async ctx => ({ raw: await ctx.db.query("rawEvidence").collect(), proofs: await ctx.db.query("proofs").collect(), public: await ctx.db.query("publishedProfiles").collect() }))).toEqual(retainedBefore);
   await owner.mutation(save, { ...base, expectedVersion: 2, operationId: "reattach", activityEvidenceId: original.rawEvidenceId });
   expect((await owner.query(selectedActivity, { propId: original.propId })).id).toBe(original.rawEvidenceId);
+});
+
+test("private GitHub destination uses owned account evidence and keeps the product website unpublished", async () => {
+  const { t, owner, other } = await fixture();
+  const owned = await owner.mutation(retain, { packet: await packet(7, "owner-account") });
+  const outsider = await other.mutation(retain, { packet: await packet(7, "other-account") });
+  const listed = await owner.query(list, firstPage);
+  const card = listed.page[0];
+  expect(card.links.find((link: { isPrimary: boolean }) => link.isPrimary)?.url).toBe("https://github.com");
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })).toMatchObject({ url: "https://github.com/owner-account", label: "Check out GitHub" });
+  expect(JSON.stringify(await t.run(ctx => ctx.db.query("publishedProfiles").collect()))).not.toContain("owner-account");
+
+  await t.run(async ctx => {
+    await ctx.db.insert("proofs", {
+      propId: owned.propId as Id<"props">, type: "GITHUB_REPO", label: "Cross-owner proof",
+      rawEvidenceId: outsider.rawEvidenceId as Id<"rawEvidence">,
+    });
+  });
+  const afterForgery = await owner.query(list, firstPage);
+  expect(privateCardPrimaryLink({
+    product: afterForgery.page[0].product, links: afterForgery.page[0].links,
+    associatedEvidence: afterForgery.page[0].associatedAccountEvidence,
+  })?.url).toBe("https://github.com/owner-account");
+
+  await owner.mutation(save, {
+    propId: owned.propId, expectedVersion: 0, operationId: "confirm-github",
+    status: "ACTIVE", goTo: false, headline: "Private GitHub relationship", note: "Owner statement",
+  });
+  const state = await owner.query(api.onboarding.getState, { includeClaims: false });
+  const reviewCard = state?.cards.find(entry => entry.prop._id === owned.propId);
+  if (!reviewCard?.product) throw new Error("GitHub review card unavailable");
+  expect(defaultReview({ ...reviewCard, product: reviewCard.product }).linkUrl).toBe("https://github.com");
+  const preview = await owner.query(api.onboarding.previewPublication, {
+    selections: [{
+      propId: owned.propId, expectedRelationshipVersion: 1, publish: true,
+      status: "ACTIVE", headline: "Private GitHub relationship", note: "Owner statement",
+      primaryLink: { type: "CANONICAL", url: "https://github.com", label: "Check out GitHub" },
+      autoRefresh: false,
+    }],
+  });
+  expect(preview.profile.cards[0].primaryLink?.url).toBe("https://github.com");
+  expect(JSON.stringify(preview.profile)).not.toContain("owner-account");
+  await owner.mutation(api.onboarding.publishSelected, {
+    selections: [{
+      propId: owned.propId, expectedRelationshipVersion: 1, publish: true,
+      status: "ACTIVE", headline: "Private GitHub relationship", note: "Owner statement",
+      primaryLink: { type: "CANONICAL", url: "https://github.com", label: "Check out GitHub" },
+      autoRefresh: false,
+    }],
+    expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+  });
+  const published = await t.run(ctx => ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique());
+  expect(published?.profile.cards[0].primaryLink?.url).toBe("https://github.com");
+  expect(JSON.stringify(published?.profile)).not.toContain("owner-account");
+  const privateAfterPublish = await owner.query(list, firstPage);
+  expect(privateCardPrimaryLink({
+    product: privateAfterPublish.page[0].product, links: privateAfterPublish.page[0].links,
+    associatedEvidence: privateAfterPublish.page[0].associatedAccountEvidence,
+  })?.url).toBe("https://github.com/owner-account");
+});
+
+test("missing GitHub account evidence and owner-selected custom links keep their destinations", async () => {
+  const { t, owner } = await fixture();
+  const missing = await t.run(async ctx => {
+    const user = await ctx.db.query("users").withIndex("by_auth_subject", q => q.eq("authSubject", "owner")).unique();
+    if (!user) throw new Error("Owner missing");
+    const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "Code" });
+    const propId = await ctx.db.insert("props", { userId: user._id, productId, visibility: "PRIVATE", status: "ACTIVE", headline: "", note: "" });
+    await ctx.db.insert("links", { propId, type: "CANONICAL", url: "https://github.com", label: "Check out GitHub", isPrimary: true });
+    return propId;
+  });
+  const listed = await owner.query(list, firstPage);
+  const card = listed.page.find((entry: { prop: { _id: string } }) => entry.prop._id === missing);
+  if (!card) throw new Error("Missing-evidence GitHub card unavailable");
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com");
+
+  const custom = await owner.mutation(retain, { packet: await packet(7, "custom-account") });
+  await t.run(async ctx => {
+    const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", custom.propId as Id<"props">)).collect();
+    const primary = links.find(link => link.isPrimary);
+    if (!primary) throw new Error("Primary link missing");
+    await ctx.db.patch(primary._id, { url: "https://github.com/custom-account/selected-work", label: "Selected work sample" });
+  });
+  const afterCustom = (await owner.query(list, firstPage)).page.find((entry: { prop: { _id: string } }) => entry.prop._id === custom.propId);
+  if (!afterCustom) throw new Error("Custom-link GitHub card unavailable");
+  expect(privateCardPrimaryLink({
+    product: afterCustom.product, links: afterCustom.links, associatedEvidence: afterCustom.associatedAccountEvidence,
+  })).toMatchObject({ url: "https://github.com/custom-account/selected-work", label: "Selected work sample" });
+});
+
+test("a connected GitHub account label supplies a private destination without publishing", async () => {
+  const { t, owner } = await fixture();
+  await t.run(async ctx => {
+    const user = await ctx.db.query("users").withIndex("by_auth_subject", q => q.eq("authSubject", "owner")).unique();
+    if (!user) throw new Error("Owner missing");
+    const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "Code" });
+    const propId = await ctx.db.insert("props", { userId: user._id, productId, visibility: "PRIVATE", status: "ACTIVE", headline: "", note: "" });
+    await ctx.db.insert("links", { propId, type: "CANONICAL", url: "https://github.com", label: "Check out GitHub", isPrimary: true });
+    await ctx.db.insert("connectorAccounts", {
+      userId: user._id, provider: "GITHUB", status: "CONNECTED",
+      accountLabel: "github.com/connector-account", attributionScope: "PERSONAL",
+      connectedAt: "2026-09-18T00:00:00.000Z",
+    });
+  });
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com/connector-account");
+  expect(JSON.stringify(await t.run(ctx => ctx.db.query("publishedProfiles").collect()))).not.toContain("connector-account");
 });

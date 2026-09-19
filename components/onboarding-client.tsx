@@ -16,6 +16,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
 import { defaultReview, explicitPublicationCards, isCurrentReview, type ReviewEdit } from "@/src/domain/review";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
+import { privateCardPrimaryLink } from "@/src/domain/product-destination";
 import { costSchema, type CostVisibility } from "@/src/domain/cost";
 import { ProductKnowledgePanel } from "./product-knowledge-panel";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
@@ -428,9 +429,11 @@ function Builder() {
                     startedAt: card.prop.startedAt,
                     activity: card.prop.activity,
                     cost: card.prop.cost,
-                    primaryLink: card.links.find(link => link.isPrimary) ?? (card.product.domain ? {
-                      type: "CANONICAL", url: `https://${card.product.domain}`, label: `Open ${card.product.name}`,
-                    } : undefined),
+                    primaryLink: privateCardPrimaryLink({
+                      product: card.product,
+                      links: card.links,
+                      associatedEvidence: card.associatedAccountEvidence ?? [],
+                    }),
                   }} />
                 </details>
                 <details><summary>Product and evidence records</summary>

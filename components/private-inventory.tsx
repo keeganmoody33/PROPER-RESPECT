@@ -6,6 +6,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
+import { privateCardPrimaryLink } from "@/src/domain/product-destination";
 import { ProductCard } from "./product-card";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { ProductBrandControls } from "./product-brand-controls";
@@ -187,7 +188,11 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
         <ProductCard index={index} relationshipConfirmed={confirmed} goTo={item.prop.goTo} card={{
           product: item.product, status: item.prop.status, headline: item.prop.headline, note: item.prop.note,
           startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
-          primaryLink: item.links.find(link => link.isPrimary) ?? (item.product.domain ? { type: "CANONICAL", url: `https://${item.product.domain}`, label: `Open ${item.product.name}` } : undefined),
+          primaryLink: privateCardPrimaryLink({
+            product: item.product,
+            links: item.links,
+            associatedEvidence: item.associatedAccountEvidence ?? [],
+          }),
         }} />
         <details onToggle={event => { const open = event.currentTarget.open; setOpened(current => ({ ...current, [item.prop._id]: open })); }}>
           <summary>{confirmed ? "Manage relationship and context" : "Review this discovery"}</summary>

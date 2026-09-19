@@ -1,8 +1,9 @@
 # Cursor continuation — Proper Respect
 
-Updated: 2026-09-18. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
-Use remote `main` after the consolidation PR merges; check GitHub rather than
-assuming an older local `main` checkout is current.
+Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
+Current public `main` at last checkout: `f808fc834c7900681d10b043a6bb09d4f8e76314`
+(PR #21 merge of `codex/personal-release-main`). Local SHAs `b028d904` and
+`6bf69c24` are not on origin and were not used.
 
 ## Open the working product
 
@@ -15,6 +16,10 @@ Production's existing records are preserved; newer development evidence and
 owner-saved selections have not been transferred. Finish that scoped transfer
 and hosted acceptance before expanding Composio. Clay branding now works for
 the existing manual card in development, without changing its relationship.
+
+The 2026-09-19 private GitHub destination correction is **not** on that hosted
+release. It lives on branch `cursor/github-card-account-destination-7318`. See
+[the destination receipt](verification/2026-09-19-github-card-destination.md).
 
 On this Mac, the accepted checkout is
 `/Users/keeganmoody/Downloads/PROPER-RESPECT-self-test-20260916`.
@@ -54,8 +59,19 @@ when available. Brand data supplies presentation only. See
 `docs/003-evidence-surfaces.md`; generic uploads do not yet authenticate images
 or extract Screen Time automatically.
 
+Private GitHub cards no longer treat the vendor homepage as the owner's account
+page when owned GitHub evidence or a connected `github.com/{login}` label is
+present. Explicit owner-selected links stay selected. Publication still uses
+stored primary links. Signed-out production `https://proper-respect.com/keegan`
+already has public GitHub href `https://github.com/keeganmoody33`; this
+correction does not rewrite that snapshot.
+
 ## Next unfinished work and exact gates
 
+- Merge and authorize a hosted production release of the GitHub destination
+  correction (application plus Convex `striped-chicken-693`) so the signed-in
+  private collection uses it. Git-triggered Vercel deployment remains disabled.
+  Do not transfer development data as part of that release.
 - Finish hosted acceptance and the scoped transfer of newer development-only
   private records and owner choices to the verified production owner. Never
   copy a development Clerk subject or replace the production database.
@@ -65,9 +81,6 @@ or extract Screen Time automatically.
 - Additional Gmail reads are paused: the approved four pages/twenty headers
   were exhausted. Recurring collection remains off. Source reads, recurrence,
   development sync, release and publication retain their existing gates.
-- Git-triggered Vercel deployment remains disabled in `vercel.json`. The
-  September 18 manual production release was authorized and completed;
-  subsequent releases retain their applicable approval boundary.
 - **proper-respect.com on Cloudflare** has verified DNS and HTTPS routing to
   the existing host. Making it the primary host still needs matching Clerk,
   callback and canonical/OpenGraph configuration; do not remove the working

@@ -116,6 +116,8 @@ describe("retained product evidence", () => {
 
   it("retains the reported GitHub total and returned calendar without fabricating request range or first use", () => {
     const packet = prepareGitHubActivity(githubInput());
+    expect(packet.signal.url).toBe("https://github.com/synthetic-account");
+    expect(packet.signal.captureProvenance?.origin.accountId).toBe("synthetic-account");
     expect(packet.signal.observations).toEqual([
       expect.objectContaining({ kind: "SIGNUP", date: "2020-01-02", excerpt: '"createdAt":"2020-01-02T03:04:05Z"' }),
       expect.objectContaining({ kind: "USAGE", value: 99, metric: "Reported contributions", excerpt: '"totalContributions":99' }),

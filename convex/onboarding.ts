@@ -11,6 +11,7 @@ import { costSchema } from "../src/domain/cost";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { resolvePublishedCardPropIds } from "./publication";
+import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
 import {
   activityModuleValidator,
   linkTypeValidator,
@@ -168,7 +169,10 @@ export const getState = query({
         const publishedActivity = approvedCards.length > 0 && approvedCards.every(card =>
           canonicalJson(card.activity) === canonicalJson(approvedCards[0].activity))
           ? approvedCards[0].activity : undefined;
-        return { prop, product: product && brand ? { ...product, brand } : product, links, claims, publishedActivity };
+        const associatedAccountEvidence = product
+          ? await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug)
+          : [];
+        return { prop, product: product && brand ? { ...product, brand } : product, links, claims, publishedActivity, associatedAccountEvidence };
       }),
     );
 
