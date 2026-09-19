@@ -1,3 +1,4 @@
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation, mutation, query } from "./_generated/server";
@@ -32,6 +33,8 @@ export const persistBatch = internalMutation({
     if (!job || job.accountId !== account._id || job.ownerId !== account.ownerId || job.generation !== account.generation) {
       throw new Error("Mailbox job ownership or generation mismatch.");
     }
+    const run = job.discoveryRunId ? await ctx.db.get(job.discoveryRunId) : null;
+    if (run && (!args.complete || args.readCount === undefined || args.signals.length > MAILBOX_PAGE_LIMIT)) throw new Error("Discovery requires a single bounded page.");
     const now = Date.now();
     if (job.status === "CANCELLED" || job.status === "EXPIRED" ||
         (job.status === "ACTIVE" && (account.activeJobId !== job._id || job.leaseExpiresAt <= now || (job.scheduled && !account.maintenanceEnabled)))) {
@@ -79,6 +82,7 @@ export const persistBatch = internalMutation({
       // It cannot mutate evidence, extend a lease or advance a cursor a second time.
       return receipt.result;
     }
+    if (job.discoveryRunId && (!run || run.status !== "RUNNING" || run.activeJobId !== job._id || account.discoveryRunId !== run._id || run.generation !== account.generation)) throw new Error("Discovery run is no longer active.");
     if (job.status !== "ACTIVE" || account.activeJobId !== job._id) throw new Error("Mailbox job lease is no longer active.");
     const context = job.contextId ? await ctx.db.get(job.contextId) : null;
     if (job.contextId && (!context || context.accountId !== account._id || context.ownerId !== account.ownerId || context.queryKey !== job.queryKey || args.queryKey !== job.queryKey)) {
@@ -88,7 +92,7 @@ export const persistBatch = internalMutation({
     if (job.cursor !== args.expectedCursor || (context ? context.cursor : account.cursor) !== args.expectedCursor) {
       throw new Error("Mailbox cursor changed; discard stale page work.");
     }
-    if (!args.complete && args.nextCursor === args.expectedCursor) throw new Error("Mailbox cursor must advance or complete the scan.");
+    if (!run && !args.complete && args.nextCursor === args.expectedCursor) throw new Error("Mailbox cursor must advance or complete the scan.");
     const dedupKey = (recordId: string) => JSON.stringify(["source-v1", account.evidenceSourceId, ["record", recordId]]);
     let newlyRetained = 0;
     const countedRecords = new Set<string>();
@@ -142,6 +146,17 @@ export const persistBatch = internalMutation({
       ...(!context ? { cursor: args.nextCursor } : {}), activeJobId: args.complete ? undefined : job._id,
       updatedAt: timestamp, lastSyncedAt: timestamp, lastReadStatus: args.complete ? "COMPLETE" : "READING",
     });
+    if (run) {
+      const hashCursor = async (cursor: string) => sha256(new TextEncoder().encode(cursor).buffer);
+      const cursorHashes = [...run.cursorHashes];
+      if (args.expectedCursor !== null) cursorHashes.push(await hashCursor(args.expectedCursor));
+      const cyclic = args.nextCursor !== null && cursorHashes.includes(await hashCursor(args.nextCursor));
+      if (cyclic && context) await ctx.db.patch(context._id, { status: "FAILED", lastFailure: "CURSOR_EXPIRED" });
+      await ctx.db.patch(run._id, { activeJobId: undefined, leaseExpiresAt: undefined,
+        pagesRead: run.pagesRead + 1, messagesRead: run.messagesRead + args.readCount!, retainedRecords: run.retainedRecords + newlyRetained,
+        cursorHashes, updatedAt: timestamp, ...(cyclic ? { status: "FAILED" as const, failure: "CURSOR_CYCLE" as const } : {}) });
+      if (!cyclic) await ctx.scheduler.runAfter(0, internal.mailboxGoogle.discoveryPage, { runId: run._id, step: run.step });
+    }
     await ctx.db.insert("mailboxBatches", { jobId: job._id, batchId: args.batchId, digest, result, persistedAt: timestamp });
     return result;
   },

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { MailboxScanMode } from "@/src/server/mailbox-search";
+import { MailboxConnectionNotice, MailboxDiscoveryRun, discoveryRunOwnsSearch, type DiscoveryRunAction } from "./mailbox-discovery-run";
 
 type Account = FunctionReturnType<typeof api.mailboxes.listAccounts>[number];
 const modes: Array<{ mode: MailboxScanMode; title: string; action: string; continueAction: string; restartAction: string }> = [
@@ -99,6 +100,9 @@ export function MailboxManagement() {
   const disconnect = useMutation(api.mailboxes.disconnect);
   const maintenance = useMutation(api.mailboxes.setMaintenance);
   const restart = useMutation(api.mailboxes.restartSearch);
+  const startDiscoveryRun = useMutation(api.mailboxes.startDiscoveryRun);
+  const controlDiscoveryRun = useMutation(api.mailboxes.controlDiscoveryRun);
+  const startRequests = useRef(new Map<string, string>());
   const [busy, setBusy] = useState(false);
   const [showUnknown, setShowUnknown] = useState(false);
   const [notice, setNotice] = useState(() => {
@@ -124,6 +128,26 @@ export function MailboxManagement() {
     } catch { setNotice("Gmail read did not complete. Check the account's recovery message below. Retained evidence and your collection remain safe."); }
     finally { setBusy(false); }
   }
+  async function startRun(account: Account) {
+    const key = `${account.accountId}:${account.generation}`;
+    let requestId = startRequests.current.get(key);
+    if (!requestId) {
+      requestId = crypto.randomUUID();
+      startRequests.current.set(key, requestId);
+    }
+    await operation(async () => {
+      await startDiscoveryRun({ accountId: account.accountId, expectedGeneration: account.generation, requestId });
+      startRequests.current.delete(key);
+    }, "Bounded background discovery started. You can close this page and return to its progress. No recurring collection was enabled.");
+  }
+  async function controlRun(account: Account, action: DiscoveryRunAction) {
+    const run = account.discoveryRun;
+    if (!run) return;
+    await operation(() => controlDiscoveryRun({ runId: run.id, expectedGeneration: account.generation, action }),
+      action === "PAUSE" ? "Discovery paused. Already retained evidence is kept; further results will not be saved while paused." :
+        action === "CANCEL" ? "Discovery cancelled. Retained evidence and relationship choices are unchanged." : "Background discovery resumed within its remaining budget.");
+  }
+  const gmailAccounts = accounts?.filter(account => account.provider === "GOOGLE");
   return <div className="connector-card" aria-labelledby="gmail-management-title">
     <h3 id="gmail-management-title">Gmail discovery</h3>
     <p>Find product clues in read-only message headers. Email presence never establishes use, importance, or a recommendation. Every account keeps separate evidence and search progress.</p>
@@ -131,27 +155,28 @@ export function MailboxManagement() {
       <button className="secondary-action" disabled={busy || !isAuthenticated}>Add Gmail account</button>
     </form>
     <p role="status" aria-live="polite">{notice}</p>
-    {accounts === undefined && isAuthenticated && <p>Loading your mailbox connections…</p>}
-    {accounts?.filter(account => account.provider === "GOOGLE").map(account => <article key={account.accountId} style={{ borderTop: "1px solid currentColor", paddingBlock: "1rem", overflowWrap: "anywhere" }}>
+    {isAuthenticated && <MailboxConnectionNotice loading={accounts === undefined} gmailCount={gmailAccounts?.length ?? 0} connectedCount={gmailAccounts?.filter(account => account.status === "CONNECTED").length ?? 0}/>}
+    {gmailAccounts?.map(account => <article key={account.accountId} style={{ borderTop: "1px solid currentColor", paddingBlock: "1rem", overflowWrap: "anywhere" }}>
       <h4>{account.accountLabel}</h4>
       <p>{account.status === "CONNECTED" ? "Connected" : account.status === "NEEDS_REAUTH" ? "Reconnect required" : "Disconnected"} · read-only headers · {account.maintenanceEnabled ? "Daily hosted discovery enabled" : "Manual discovery"}</p>
       <p>{account.lastSyncedAt ? `Last successful read: ${date(account.lastSyncedAt)}.` : "No successful read recorded yet."}</p>
       {account.lastFailure === "TEMPORARY" && <p role="alert">The last read failed. Try again; if it keeps failing, reconnect. Your retained evidence and relationships are unchanged.</p>}
       {account.lastFailure === "REAUTHORIZE" && <p role="alert">Google access expired or was revoked. Reconnect this account. Daily discovery is off until you explicitly enable it again.</p>}
       {account.lastFailure === "CURSOR_EXPIRED" && <p role="alert">A saved search page expired. Restart that search below. Repeated messages will not create duplicate evidence.</p>}
+      <MailboxDiscoveryRun run={account.discoveryRun} connected={account.status === "CONNECTED"} busy={busy} onStart={() => void startRun(account)} onControl={action => void controlRun(account, action)}/>
       <div className="action-row">
         {modes.map(({ mode, action, continueAction, restartAction }) => {
           const progress = account.contexts?.find(context => context.mode === mode);
-          return progress?.lastFailure === "CURSOR_EXPIRED" ? <button key={mode} className="secondary-action" disabled={busy || account.status !== "CONNECTED"}
+          return progress?.lastFailure === "CURSOR_EXPIRED" ? <button key={mode} className="secondary-action" disabled={busy || account.status !== "CONNECTED" || discoveryRunOwnsSearch(account.discoveryRun)}
             onClick={() => void operation(() => restart({ accountId: account.accountId, expectedGeneration: account.generation, mode, expectedQueryKey: progress.queryKey }), "Search cursor reset. Choose its read button to retry; existing evidence was preserved.")}>{restartAction}</button> :
-            <button key={mode} className="secondary-action" disabled={busy || account.status !== "CONNECTED"}
+            <button key={mode} className="secondary-action" disabled={busy || account.status !== "CONNECTED" || discoveryRunOwnsSearch(account.discoveryRun)}
               onClick={() => void read(account, mode)}>{progress?.cursor ? continueAction : action}</button>;
         })}
       </div>
       <SourceProgress account={account}/>
       <details><summary>Automatic discovery and account controls</summary>
         <p>Optional daily discovery runs on the hosted backend, even when this page is closed. Enabling it authorizes the first bounded page within 15 minutes, then at most one page daily. Each run reads at most five recent message headers, retains private evidence, and suggests discoveries for review. It starts with approximately the last month and overlaps subsequent windows by two days. Backlogs remain visible until their pages finish; this is not a live usage tracker or an exhaustive change feed.</p>
-        <button className="secondary-action" disabled={busy || (account.status !== "CONNECTED" && !account.maintenanceEnabled)}
+        <button className="secondary-action" disabled={busy || (!account.maintenanceEnabled && (account.status !== "CONNECTED" || discoveryRunOwnsSearch(account.discoveryRun)))}
           onClick={() => void operation(() => maintenance({ accountId: account.accountId, expectedGeneration: account.generation, enabled: !account.maintenanceEnabled }), account.maintenanceEnabled ? "Daily hosted discovery disabled. Existing evidence is retained." : "Daily hosted discovery enabled for this account. The first bounded page will run within 15 minutes, then at most once daily.")}>{account.maintenanceEnabled ? "Stop daily discovery" : "Enable daily discovery for this account"}</button>
         {account.nextMaintenanceAt && <p>Next read due: {date(new Date(account.nextMaintenanceAt).toISOString())}.</p>}
         <form method="post" action="/api/connect/mailboxes/google/start">

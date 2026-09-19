@@ -15,6 +15,14 @@ open because the existing GitHub record selector overflows a narrow viewport.
 See [the current release receipt](verification/2026-09-19-membership-production-release.md).
 The older hosted-release paragraphs below are historical.
 
+Local continuation now fixes that mobile selector overflow and removes brand
+retrieval diagnostics from normal cards. Durable catalog/history discovery with
+pause/resume/cancel is implemented and fixture-verified, but not deployed.
+Hosted Gmail has no connected accounts or required mailbox configuration; prior
+Gmail proofs were development-only. Continue from local HEAD, not the older remote
+release. Read [the discovery receipt](verification/2026-09-19-durable-discovery.md)
+for exact limits, checks and pending setup/release/consent gates.
+
 The owner approved keeping the existing `lecturesfrom` account/site handle.
 The `/keegan` restoration is cancelled and its undeployed helper is retired from
 active source. Preserve the legacy four-card `/keegan` publication. At present,

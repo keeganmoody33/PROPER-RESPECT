@@ -46,14 +46,14 @@ products and remaining pages separately. Email identifies possible relationships
 owner decisions and stronger evidence establish the product story. A full run
 cannot promise products that never left evidence in either mailbox.
 
-The next local implementation should add a persistent run above `startLease`,
-`readLeasedPage` and `persistBatch`. Schedule one page at a time and commit run
-progress with evidence/cursor persistence. Bind it to owner/account/generation,
-reserve an explicit attempt budget before I/O, and stop on cancellation, expired
-credentials, cursor cycles or exhausted coverage. Keep catalog and history
-budgets separate. Resume must not reset a completed query into a new window.
-Test duplicate scheduling, interrupted runs, generation changes and replay counts.
-This orchestration is not implemented yet; no broad run has started.
+Local durable orchestration is now implemented and verified above the existing
+lease/read/persist seam. Catalog then history each allow 100 five-header attempts;
+the maximum is 1,000 header attempts per account/run, including failed allowances.
+Scheduled pages survive browser closure. Pause/resume/cancel, generation checks,
+atomic retention/continuation, crash recovery and cursor-cycle recovery are covered.
+A limit remains partial coverage; completed queries are not silently restarted.
+See [the local verification receipt](2026-09-19-durable-discovery.md).
+This source is not synchronized or deployed; no broad mailbox run has started.
 
 ## Card presentation correction
 

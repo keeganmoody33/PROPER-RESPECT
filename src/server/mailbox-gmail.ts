@@ -2,6 +2,10 @@ import { resolveProduct, type RawSignal } from "../domain/discovery";
 import { requestMailboxJson } from "./mailbox-provider-http";
 import { MAILBOX_PAGE_LIMIT } from "./mailbox-search";
 
+export class MailboxCursorError extends Error {
+  constructor() { super("Gmail cursor did not advance."); this.name = "MailboxCursorError"; }
+}
+
 const BASE = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
 const STORED_LIMIT = 65536;
 const idPattern = /^[a-zA-Z0-9_-]{1,512}$/;
@@ -90,7 +94,7 @@ export async function readGmailPage(
   const messages = list.messages === undefined ? [] : list.messages;
   if (!Array.isArray(messages) || messages.length > MAILBOX_PAGE_LIMIT) throw new Error("Invalid Gmail page size.");
   const nextCursor = cursorValue(list.nextPageToken);
-  if (nextCursor !== null && nextCursor === cursor) throw new Error("Gmail cursor did not advance.");
+  if (nextCursor !== null && nextCursor === cursor) throw new MailboxCursorError();
   const ids = messages.map(item => {
     const id = object(item).id;
     if (typeof id !== "string" || !idPattern.test(id)) throw new Error("Invalid Gmail message ID.");

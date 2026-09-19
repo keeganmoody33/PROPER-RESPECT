@@ -130,3 +130,46 @@ keeping assets and dedicated diagnostic previews. Root reviewed all five changed
 files. 58 focused unit and 11 browser tests, lint and TypeScript pass. Hosted
 configuration approval is pending; no reads or production writes occurred.
 See [the discovery gap](../../docs/verification/2026-09-19-hosted-discovery-gap.md).
+
+## Durable discovery run implementation
+
+Previous goal turn was progress: hosted source/configuration checks found the
+discovery gap and normal-card brand diagnostics were removed and tested. The
+hosted OAuth setup approval remains pending; local implementation can continue.
+
+Feature workflow:
+1. `how` over the affected subsystem. Complete via the retained page/lease/cursor
+   trace and focused source inspection.
+2. `architect` for parallel design exploration. Architect skipped: the owner
+   explicitly forbids reopening architecture; reuse the accepted per-page seam.
+   A browser loop loses continuation on close; a single long action loses
+   continuation between saves. Select persisted, scheduled per-page orchestration.
+3. Throughput checkpoint.
+   - Blocking first steps: establish existing ownership/lease/retention contracts
+     before changing source; production configuration and reads stay gated.
+   - Independent workstreams: backend state machine/tests and frontend controls
+     own separate files; root owns integration review and receipts.
+   - Shared mutable state: one active run owns an account's search contexts;
+     manual and daily requests cannot race its cursors.
+   - Smallest safe decomposition: one backend owner and one UI owner, with one
+     agreed API. No alternate ingestion adapter or new collector.
+4. Delegate implementation of the named discovery-run state machine. Complete locally.
+5. Verify with scheduler/provider fixtures and actual browser component rendering.
+   These do not establish a real mailbox run or hosted rollout.
+6. Commit the integrated local slice after review. No push/PR/release without its
+   existing authorization.
+
+Contract: one owner/account/generation-bound run, catalog followed by history,
+100 reserved five-header attempts per phase. Maximum 1,000 header attempts per
+account/run, including unsuccessful page allowances. Failed attempts are not
+refunded. Pause/resume/cancel preserve retained evidence and explicit decisions.
+Duplicate starts/scheduler deliveries must not spend the budget twice. Progress
+updates and continuation scheduling commit alongside evidence and cursor.
+Complete means both frozen queries exhausted, not merely reaching the cap.
+
+Local integration verification passed: 559 Vitest tests, six Node tests, 13 browser
+component cases, lint and production build. Final UI copy refinement passed its
+seven unit/two browser cases again. Independent review fixes and runtime limits
+are recorded in `docs/verification/2026-09-19-durable-discovery.md`. No hosted
+setup, backend synchronization, provider read or deployment occurred. Production
+configuration approval and separate source-release/read authorization remain gates.

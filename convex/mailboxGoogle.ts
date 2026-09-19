@@ -7,7 +7,7 @@ import type { Id } from "./_generated/dataModel";
 import { buildAuthorizationUrl, createMailboxOAuthConfig, createOAuthState, createPkce, parseOAuthCallback } from "../src/server/mailbox-oauth";
 import { exchangeMailboxAuthorization, refreshMailboxAuthorization, MailboxProviderError } from "../src/server/mailbox-provider-http";
 import { decryptMailboxCredential, encryptMailboxCredential, type MailboxKeyring } from "../src/server/mailbox-credentials";
-import { readGmailPage } from "../src/server/mailbox-gmail";
+import { readGmailPage, MailboxCursorError } from "../src/server/mailbox-gmail";
 import { mailboxScanModeValidator } from "./mailboxTables";
 
 function config() {
@@ -64,7 +64,7 @@ export const callback = action({
   },
 });
 
-type Scan = { jobId: Id<"mailboxScanJobs">; generation: number; cursor: string | null; query?: string; queryKey?: string };
+type Scan = { discoveryRunId?: Id<"mailboxDiscoveryRuns">; jobId: Id<"mailboxScanJobs">; generation: number; cursor: string | null; query?: string; queryKey?: string };
 type ReadResult = {
   readCount: number; proposals: number; hasMore: boolean; unmatchedCount?: number;
   ambiguousProducts?: Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }>;
@@ -101,7 +101,7 @@ async function readLeasedPage(ctx: ActionCtx, args: { accountId: Id<"mailboxAcco
     let page;
     try { page = await readPage(); }
     catch (error) {
-      if (!(error instanceof MailboxProviderError) || error.status !== 401 || refreshed) throw error;
+      if (!(error instanceof MailboxProviderError) || error.status !== 401 || refreshed || scan.discoveryRunId) throw error;
       await refresh();
       page = await readPage();
     }
@@ -119,7 +119,7 @@ async function readLeasedPage(ctx: ActionCtx, args: { accountId: Id<"mailboxAcco
   } catch (error) {
     const status = error instanceof MailboxProviderError ? error.status : undefined;
     const failure = status === 401 || (phase.value === "REFRESH" && status === 400) ? "REAUTHORIZE" :
-      phase.value === "READ" && scan.cursor !== null && status === 400 ? "CURSOR_EXPIRED" : "TEMPORARY";
+      (error instanceof MailboxCursorError || (phase.value === "READ" && scan.cursor !== null && status === 400)) ? "CURSOR_EXPIRED" : "TEMPORARY";
     await ctx.runMutation(internal.mailboxes.finishFailedJob, { ...lease, failure });
     throw new Error(failure === "REAUTHORIZE" ? "Gmail read failed. Reconnect this account to restore access." :
       failure === "CURSOR_EXPIRED" ? "Gmail read failed. This page cursor expired; restart this search. Retained evidence is safe." :
@@ -152,5 +152,15 @@ export const refreshDue = internalAction({
       catch { failed++; /* The account/search retain a sanitized recoverable failure. */ }
     }
     return { completed, failed };
+  },
+});
+
+export const discoveryPage = internalAction({
+  args: { runId: v.id("mailboxDiscoveryRuns"), step: v.number() },
+  handler: async (ctx, args): Promise<void> => {
+    const scan = await ctx.runMutation(internal.mailboxes.claimDiscoveryPage, args);
+    if (!scan) return;
+    try { await readLeasedPage(ctx, { accountId: scan.accountId, expectedGeneration: scan.expectedGeneration }, scan); }
+    catch { /* The bounded page records its sanitized failure; recovery is explicit. */ }
   },
 });
