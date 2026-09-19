@@ -2,18 +2,31 @@
 
 Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
 Remote `main` remains `f808fc834c7900681d10b043a6bb09d4f8e76314`.
-The four formerly local commits through `b028d904381c540245beea8d7516bb3460ce2434`
-are now published on `codex/cursor-handoff-20260919`. The accepted local delivery
-branch combines them with PR #22 at `bc2900073bf524df850a07707f700e5d298e0d40`.
-Production has not changed. The combined upload scope requires release approval.
+Baseline SHAs `b028d904381c540245beea8d7516bb3460ce2434` and upload-format
+`6bf69c2476c8f4eb0e94136b9c893c23ca3c878e` are now reachable on origin and on
+[PR #22](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22)
+(`cursor/github-card-account-destination-7318`). Reconciled source is
+`d2266faff48bf764e56e93a8536d0fba9ab3783b`, not the previously authorized merge
+SHA `bc2900073bf524df850a07707f700e5d298e0d40`. Extra commits: the four
+accepted-checkout commits through `b028d904` (test `d428ba59`, upload fix
+`6bf69c24`, sync docs `b7f0fba7`, handoff `b028d904`), merge `74f6c1cb`, and
+provenance tighten `d2266faf`. Merge to `main` waits on owner approval of that
+additional SHA and diff. This cloud agent did not merge or deploy.
 
 ## Open the working product
 
 **September 18 hosted release:** open https://proper-respect.com/onboarding.
 The domain forwards to the existing Clerk-compatible host, `props.lecturesfrom.com`.
-Application `adfc813268eb0c90a85b6440982315a94a83ab8a` is deployed to Vercel
-`dpl_7Um2KmrvNPajDaUyFPgudX6stvn5` and production `striped-chicken-693`.
+The September 18 rollback identifiers remain application
+`adfc813268eb0c90a85b6440982315a94a83ab8a`, Vercel
+`dpl_7Um2KmrvNPajDaUyFPgudX6stvn5`, and Convex `striped-chicken-693`.
 See [the release receipt](verification/2026-09-18-hosted-release.md).
+Read-only check on 2026-09-19: project `groundskeep/proper-respect`
+(`prj_yxsUnnPW0ka8mkFr7l66eUSzJgT8`) currently serves
+`props.lecturesfrom.com` and `proper-respect.com` from CLI deployment
+`dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6` (SHA `d2266faf`). That build pushed
+functions to Convex production `striped-chicken-693`. This cloud agent did
+not create that deployment. Convex MCP was not logged in here.
 Production's existing records are preserved; newer development evidence and
 owner-saved selections have not been transferred. Finish that scoped transfer
 and hosted acceptance before expanding Composio. Clay branding now works for
@@ -65,15 +78,15 @@ or extract Screen Time automatically.
 
 PR #22 implements private GitHub account destinations, optional account-link
 sharing through explicit preview, and selectable connector activity snapshots.
-Those changes are integrated locally with the upload correction. The sole merge
-conflict was this handoff document. Production acceptance remains unproven.
+Those changes are on the PR with the upload correction. The sole merge conflict
+was this handoff document. Merge to `main` is not done; reconciled source is `d2266faf`.
 An added regression reproduced an unrelated source account identifier becoming
 a GitHub profile. The correction requires both GitHub source type and GitHub
 origin issuer before deriving an account destination from retained evidence. Do not publish private URLs or change owner choices during verification.
 
 ## Branch disposition checked September 19
 
-PR #22 remains open at the recorded head. Keep one active delivery branch, `codex/personal-release-main`.
+PR #22 remains open at reconciled source `d2266faf` plus this handoff record. Keep one active delivery branch, `codex/personal-release-main`.
 Do not merge every branch to make the list shorter.
 
 - `codex/composio-integration-20260918` at `00a097f` preserves explicitly incomplete
@@ -88,6 +101,9 @@ Do not merge every branch to make the list shorter.
 
 ## Next unfinished work and exact gates
 
+- Owner approval of additional release SHA `d2266faf` versus authorized
+  `bc29000` (upload-format + provenance tighten), then merge PR #22 to `main`
+  if that extra scope is accepted. Do not squash the needed history.
 - Finish hosted acceptance and the scoped transfer of newer development-only
   private records and owner choices to the verified production owner. Never
   copy a development Clerk subject or replace the production database.
