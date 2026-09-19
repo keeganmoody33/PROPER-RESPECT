@@ -7,6 +7,14 @@ are reconciled. Verify current main/PR state before further Git operations.
 
 ## Open the working product
 
+Latest local application checkpoint: `a2539b91e84cd93271daa71550430e32fc95e24e`.
+It is ahead of the approved development backend `e8834be` and the hosted release
+below. Publication guards, Copilot assets, public heading and private evidence
+reconciliation pass local checks. A new development synchronization request is
+pending; no release, transfer or publication is approved by that request. Read
+[the dated readiness receipt](verification/2026-09-19-public-profile-readiness.md)
+before restarting the local authenticated application or changing environments.
+
 **September 19 hosted release:** https://proper-respect.com/onboarding forwards
 to `props.lecturesfrom.com`. Application/backend `d2266faff48bf764e56e93a8536d0fba9ab3783b`
 is deployed to Vercel `dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6` and production Convex
