@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyEvidenceUpload, EVIDENCE_UPLOAD_ACCEPT } from "@/src/domain/evidence-upload";
 import {
   SignInButton,
   Show,
@@ -137,10 +138,11 @@ function Builder() {
   async function uploadEvidence(form: FormData) {
     const file = form.get("evidence");
     if (!(file instanceof File) || file.size === 0) {
-      setMessage("Choose a screenshot or CSV first.");
+      setMessage("Choose an export or screenshot first.");
       return;
     }
     await run("Original file retained privately. Review the product in your collection; add selected observations only if the original supports them.", async () => {
+      const { sourceType } = classifyEvidenceUpload({ filename: file.name, mimeType: file.type, byteSize: file.size });
       const vendor = String(form.get("vendor"));
       const uploadUrl = await generateUploadUrl({});
       const response = await fetch(uploadUrl, {
@@ -157,9 +159,7 @@ function Builder() {
         filename: file.name,
         mimeType: file.type || "application/octet-stream",
         byteSize: file.size,
-        sourceType: file.name.toLowerCase().endsWith(".csv")
-          ? "CSV"
-          : "SCREENSHOT",
+        sourceType,
         vendor,
       });
     });
@@ -357,13 +357,14 @@ function Builder() {
             </button>
           </form>
           <form className="connector-card" action={uploadEvidence}>
-            <strong>Screenshot or CSV</strong>
-            <p>The original is retained privately. This upload does not read the image or CSV automatically. You can add selected observations with their period and scope from the product’s supporting details.</p>
+            <strong>Upload an export or screenshot</strong>
+            <p>Retain an original privately, up to 25 MiB. Supports PNG/JPEG/WebP/HEIC/HEIF, CSV/TSV, JSON/JSONL/NDJSON, PDF, XLS/XLSX/ODS, TXT/XML/HTML, and ZIP. Files are not parsed or unpacked automatically. Add selected observations with their period and scope from the product’s supporting details.</p>
             <label className="review-field">
               Product
               <select name="vendor" required defaultValue="Wispr Flow">
                 <option>Wispr Flow</option>
                 <option>NotebookLM</option>
+                <option value="Devin">Devin (cloud)</option>
                 <option>Devin Desktop</option>
                 <option>Windsurf</option>
                 <option>Greptile</option>
@@ -374,7 +375,7 @@ function Builder() {
               <input
                 name="evidence"
                 type="file"
-                accept="image/*,.csv,text/csv"
+                accept={EVIDENCE_UPLOAD_ACCEPT}
                 required
               />
             </label>

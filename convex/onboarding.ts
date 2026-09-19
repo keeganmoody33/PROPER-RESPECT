@@ -6,6 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireIdentity, requireUser } from "./authHelpers";
 import { claimableHandleSchema } from "../src/domain/onboarding";
 import { projectPublicProfile, publicProfileSchema } from "../src/domain/public-profile";
+import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evidence-upload";
 import { resolveProduct } from "../src/domain/discovery";
 import { costSchema } from "../src/domain/cost";
 import { canonicalJson } from "../src/domain/canonical-json";
@@ -240,24 +241,38 @@ export const retainUpload = mutation({
     filename: v.string(),
     mimeType: v.string(),
     byteSize: v.number(),
-    sourceType: v.union(v.literal("SCREENSHOT"), v.literal("CSV")),
+    sourceType: v.union(v.literal("SCREENSHOT"), v.literal("CSV"), v.literal("FILE_UPLOAD")),
     vendor: v.optional(v.string()),
     activity: v.optional(activityModuleValidator),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
+    if (args.activity) throw new Error("Upload retention cannot add measurements. Review selected observations separately.");
+    const { sourceType } = classifyEvidenceUpload(args);
+    const storage = await ctx.db.system.get(args.storageId);
+    if (!storage || storage.size !== args.byteSize || normalizeUploadMime(storage.contentType ?? "") !== normalizeUploadMime(args.mimeType)) {
+      throw new Error("Stored file metadata does not match this upload.");
+    }
+    const existing = await ctx.db.query("rawEvidence").withIndex("by_storage", q => q.eq("storageId", args.storageId)).first();
+    if (existing) {
+      if (existing.userId !== user._id || existing.deletedAt) throw new Error("Upload unavailable.");
+      if (existing.filename !== args.filename || existing.mimeType !== args.mimeType || existing.byteSize !== args.byteSize || existing.detectedVendor !== args.vendor) {
+        throw new Error("This upload was already retained with different metadata.");
+      }
+      return existing._id;
+    }
     const now = new Date().toISOString();
     let source = await ctx.db
       .query("evidenceSources")
       .withIndex("by_user_type_sourceKey", (q) =>
-        q.eq("userId", user._id).eq("type", args.sourceType).eq("sourceKey", undefined),
+        q.eq("userId", user._id).eq("type", sourceType).eq("sourceKey", undefined),
       )
       .first();
     if (!source) {
       const sourceId = await ctx.db.insert("evidenceSources", {
         userId: user._id,
-        type: args.sourceType,
-        label: `${args.sourceType.toLowerCase()} uploads`,
+        type: sourceType,
+        label: `${sourceType.toLowerCase()} uploads`,
         connectedAt: now,
         lastSyncedAt: now,
       });
@@ -274,11 +289,17 @@ export const retainUpload = mutation({
       detectedVendor: args.vendor,
       capturedAt: now,
       dedupKey: `${user._id}:${args.storageId}`,
+      captureProvenance: {
+        version: 1, route: "UPLOAD", adapter: { id: "evidence-upload", version: "1" },
+        origin: { issuer: "OWNER_SUPPLIED_FILE", artifactRef: args.storageId },
+        collector: { kind: "UNKNOWN" }, activityActor: { kind: "UNKNOWN" },
+      },
+      limitations: ["Retained original only. File contents and publisher authenticity have not been verified; no usage has been extracted."],
     });
 
     if (args.vendor) {
       const proposed = resolveProduct({
-        sourceType: args.sourceType,
+        sourceType,
         vendor: args.vendor,
         capturedAt: now,
         payload: "",
@@ -308,9 +329,8 @@ export const retainUpload = mutation({
             productId: product._id,
             status: "TESTING",
             visibility: "DRAFT",
-            headline: `${product.name} is in my stack.`,
-            note: "Imported evidence is private until I approve this card.",
-            activity: args.activity,
+            headline: `${product.name}: uploaded evidence to review.`,
+            note: "This file has not been interpreted as product use. Review it before describing your relationship.",
           });
           prop = (await ctx.db.get(propId))!;
           await ctx.db.insert("links", {
@@ -320,9 +340,12 @@ export const retainUpload = mutation({
             label: `Open ${product.name}`,
             isPrimary: true,
           });
-        } else if (prop.visibility === "DRAFT" && args.activity) {
-          await ctx.db.patch(prop._id, { activity: args.activity });
         }
+        await ctx.db.insert("proofs", {
+          propId: prop._id, rawEvidenceId: evidenceId,
+          type: sourceType === "SCREENSHOT" ? "SCREENSHOT" : "FILE_UPLOAD",
+          label: "Private uploaded original", text: "Original retained without extracting usage.",
+        });
         await ensureProductBrand(ctx, product);
         const draft = await ctx.db
           .query("draftImports")
@@ -334,7 +357,6 @@ export const retainUpload = mutation({
           .first();
         if (draft) {
           await ctx.db.patch(draft._id, {
-            status: "PENDING",
             resultPropId: prop._id,
             rawEvidenceIds: [
               ...new Set([...draft.rawEvidenceIds, evidenceId]),

@@ -1,6 +1,6 @@
 # Developing PROPER-RESPECT
 
-Updated: 2026-09-18. Start with [AGENTS.md](../AGENTS.md), the
+Updated: 2026-09-19. Start with [AGENTS.md](../AGENTS.md), the
 [Cursor handoff](CURSOR_HANDOFF.md), [deployment runbook](DEPLOYMENT.md), and
 [canonical Ref](https://plan.ref.tools/oUl8LCIQb32SAicK).
 
@@ -33,9 +33,10 @@ Screen Time automatically.
 
 ## Work and verification
 
-Use Compound Engineering for scoped implementation, focused tests, browser
-verification and review. Use pstack only for a genuine unresolved architecture
-question. Preserve unrelated work and accepted checkpoints. Source, capture,
+Use pstack-codex as the primary workflow for scoped implementation, focused tests,
+browser verification and review, per the September 19 owner direction. Compound
+Engineering remains available for focused supporting work. Preserve the existing
+Ref, Tasks 1–4, unrelated work and accepted checkpoints. Source, capture,
 observation, review and relationship remain distinct.
 
 [Source verification](verification/2026-09-18-main-consolidation.md) records

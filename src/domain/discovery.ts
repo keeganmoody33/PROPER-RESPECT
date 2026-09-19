@@ -14,6 +14,7 @@ export const evidenceSourceTypeSchema = z.enum([
   "MICROSOFT_MAIL",
   "SCREENSHOT",
   "CSV",
+  "FILE_UPLOAD",
   "URL_IMPORT",
   "DEVIN",
   "DEVIN_DESKTOP",

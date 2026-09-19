@@ -116,7 +116,10 @@ test("private collection and simple owner-described product entry precede option
   expect(html).toContain("Preview sharing");
   expect(html).not.toContain("Publish selected cards");
   expect(html).not.toContain('name="primaryMetric"');
-  expect(html).toContain("This upload does not read the image or CSV automatically");
+  expect(html).toContain("Files are not parsed or unpacked automatically");
+  expect(html).toMatch(/accept="[^"]*\.json,[^"]*\.xlsx,[^"]*\.zip"[^>]*name="evidence"/);
+  expect(html).toContain('<option value="Devin">Devin (cloud)</option>');
+  expect(html).toContain('<option>Devin Desktop</option>');
 });
 
 test("sharing preview renders only the server-projected profile and requires a separate owner approval", () => {

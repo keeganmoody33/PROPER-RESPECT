@@ -162,7 +162,8 @@ export default defineSchema({
     deletedAt: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
-    .index("by_dedup_key", ["dedupKey"]),
+    .index("by_dedup_key", ["dedupKey"])
+    .index("by_storage", ["storageId"]),
 
   claimReviews: defineTable({
     userId: v.id("users"),
@@ -199,6 +200,7 @@ export default defineSchema({
     type: v.union(
       v.literal("NOTE"),
       v.literal("SCREENSHOT"),
+      v.literal("FILE_UPLOAD"),
       v.literal("RECEIPT"),
       v.literal("GITHUB_REPO"),
       v.literal("EMAIL_EVIDENCE"),

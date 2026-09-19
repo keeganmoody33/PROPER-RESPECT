@@ -125,6 +125,7 @@ export function InventoryRelationshipDetails({ item, evidence, selectedEvidence,
     {sources.length === 0 && <p>{hasMoreEvidence ? "No available sources in the loaded evidence pages. More sources may be available below." : "No retained source is attached. Your explanation is an owner statement."}</p>}
     {sources.map(source => <div className={styles.source} key={source.id}>
       <strong>{source.sourceLabel}</strong>
+      {source.uploadedFile && <p>Original file: {source.uploadedFile.filename ?? "Filename unavailable"} · {source.uploadedFile.mimeType ?? "Format unavailable"} · {source.uploadedFile.byteSize === undefined ? "Size unavailable" : `${source.uploadedFile.byteSize.toLocaleString()} bytes`}. Retained privately; contents have not been parsed or authenticated.</p>}
       {source.id === item.prop.activityEvidenceId && <p>Saved supporting snapshot</p>}
       <p>{source.artifact ? `Static capture · source date ${source.artifact.sourceCapturedDate} · ${source.artifact.kind === "WISPR_OWNER_REVIEW" ? "recorded time retained in original" : "original time unknown"} · imported ${source.capturedAt.slice(0, 10)}.` : `Retained evidence · captured ${source.capturedAt}.`}</p>
       <p>{source.artifact ? "Refresh: manual import. This is not live usage tracking." : "This capture alone does not establish continuous source coverage."}</p>

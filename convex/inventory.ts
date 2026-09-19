@@ -37,7 +37,8 @@ async function evidenceEntry(ctx: QueryCtx, userId: Id<"users">, rawEvidenceId: 
     artifact: raw.retainedArtifact, limitations: raw.limitations ?? [],
     suggestedActivity: raw.suggestedActivity, ownerStatement: ownerReview?.answer,
     ownerStatementQuestion: ownerReview?.question, observationCount: raw.observations?.length ?? 0,
-    originalText: raw.payload };
+    originalText: raw.payload,
+    ...(raw.storageId ? { uploadedFile: { filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize } } : {}) };
 }
 
 export const save = mutation({
