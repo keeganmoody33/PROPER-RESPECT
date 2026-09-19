@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
-import { defaultReview, explicitPublicationCards, isCurrentReview, type ReviewEdit } from "@/src/domain/review";
+import { defaultReview, explicitPublicationCards, isCurrentReview, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
 import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/domain/product-destination";
 import { costSchema, type CostVisibility } from "@/src/domain/cost";
@@ -300,18 +300,12 @@ function Builder() {
     });
   }
 
-  function setAllCostVisibility(visibility: CostVisibility) {
+  function setSelectedCostVisibility(visibility: CostVisibility) {
     if (!state) return;
-    setReviewEdits(current => {
-      const next = { ...current };
-      for (const card of state.cards) {
-        if (!card.product) continue;
-        const prior = current[card.prop._id];
-        const edit = prior && isCurrentReview({ ...card, product: card.product }, prior) ? prior : defaultReview({ ...card, product: card.product });
-        next[card.prop._id] = { ...edit, costVisibility: visibility };
-      }
-      return next;
-    });
+    setReviewEdits(current => setReviewCostVisibility(
+      state.cards.flatMap(card => card.product ? [{ ...card, product: card.product }] : []),
+      current, visibility,
+    ));
   }
 
   function connectorStatus(provider: "GITHUB" | "DEVIN") {
@@ -436,10 +430,10 @@ function Builder() {
         </details>
         <fieldset>
           <legend>Cost visibility</legend>
-          <p>Keep every cost private, show all costs, or choose on each card. Changes apply when you publish selected cards.</p>
+          <p>Apply cost choices to selected cards, then review before publishing. Unmatched older public cards stay unchanged unless you explicitly select their saved relationships.</p>
           <div className="action-row">
-            <button type="button" className="secondary-action" disabled={busy} onClick={() => setAllCostVisibility("PUBLIC")}>Show all costs</button>
-            <button type="button" className="secondary-action" disabled={busy} onClick={() => setAllCostVisibility("PRIVATE")}>Keep all costs private</button>
+            <button type="button" className="secondary-action" disabled={busy} onClick={() => setSelectedCostVisibility("PUBLIC")}>Show costs on selected cards</button>
+            <button type="button" className="secondary-action" disabled={busy} onClick={() => setSelectedCostVisibility("PRIVATE")}>Keep selected costs private</button>
           </div>
         </fieldset>
         <div className="review-grid">
@@ -494,8 +488,8 @@ function Builder() {
                   />
                     Share this saved card
                 </label>
-                {card.prop.visibility === "PUBLIC" && <>
-                  <p>Already public. Its approved version stays unchanged until you include saved edits or change these publication choices.</p>
+                {card.isPublishedAtCurrentHandle === true && <>
+                  <p>Already public at /{state.user.handle}. Its approved version stays unchanged until you include saved edits or change these publication choices.</p>
                   <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, { publish: true })}>Include saved version</button>
                 </>}
                 <details><summary>Information to include</summary>
@@ -658,8 +652,9 @@ function Builder() {
             Preview sharing
           </button>
           <span className="sharing-selection-count">{Object.keys(reviewEdits).length} card choice{Object.keys(reviewEdits).length === 1 ? "" : "s"} to review</span>
-          {!state.user.handle.startsWith("pending-") && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
+          {state.hasPublicationAtCurrentHandle === true && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
         </div>
+        {state.hasPublicationAtCurrentHandle === false && <p>Nothing is published at /{state.user.handle} yet.</p>}
         {preview && <SharingPreview key={preview.basis} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
       </section>
     </main>

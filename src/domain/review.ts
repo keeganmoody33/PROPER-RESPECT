@@ -42,7 +42,9 @@ export function setReviewCostVisibility<T extends ReviewCard & { prop: { _id: st
   const next = { ...current };
   for (const card of cards) {
     const prior = current[card.prop._id];
-    const edit = prior && isCurrentReview(card, prior) ? prior : defaultReview(card);
+    if (prior && !isCurrentReview(card, prior)) continue;
+    if (!prior && card.isPublishedAtCurrentHandle !== true) continue;
+    const edit = prior ?? defaultReview(card);
     next[card.prop._id] = { ...edit, costVisibility: visibility };
   }
   return next;

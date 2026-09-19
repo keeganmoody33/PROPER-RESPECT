@@ -152,28 +152,26 @@ vertical scroller. Static capture freshness and the unknown measurement period
 remained visible. No sharing selections, saves or provider controls were changed.
 The temporary viewport override was reset afterward.
 
-Both binary diff hashes and file counts in the release manifest still match
-Git. Current application source is identical to `a2539b9`; newer commits contain
-documentation only. The owner selected `proper-respect.com/keegan` as the
-canonical public address on September 19. Preserve the existing publication at
-that address. Production release was subsequently approved and verified; see
-[the release receipt](2026-09-19-profile-production-release.md). The URL choice does
-not authorize record transfer, ownership reassignment or publication.
+## Current handle decision — September 19
 
-The retained production export contains one `/keegan` publication, no current
-`users.handle = keegan` record, and one `/lecturesfrom` account with one matching
-site. Each of the four published products has one public relationship under that
-account. Headline, note, status and start date match the retained public cards.
-The legacy publication has no explicit `cardPropIds`; these comparisons are
-candidate evidence, not authority to assign mappings or merge private records.
+The owner said, “We can leave mine as lecturesfrom handle. I approve”. Retain the
+existing account/site handle `lecturesfrom`. No restoration is needed.
+Overruled: the earlier `/keegan` account-restoration proposal. Its helper and tests are removed from active source and preserved in Git at
+`ed0962d`; they were never deployed.
 
-A private reconciliation proposal records the exact user/site IDs, expected
-record fingerprints and two proposed handle restorations to `/keegan`.
-It proposes no change to the public snapshot. The original export and proposal
-remain outside Git. Before any write, recheck a fresh production snapshot,
-authenticated ownership and exact authorization for the two handle changes.
-Source-release approval alone does not authorize that operation. No write or
-development-to-production transfer occurred while preparing this proposal.
+The existing four-card `/keegan` publication remains unchanged. Keeping the
+account handle does not migrate that snapshot or approve a new public selection.
+The current hosted sharing form links to `/lecturesfrom`. A read-only sharing
+preview under the existing signed-in session shows `@lecturesfrom` and “No
+products will be public.” Its four “Already public” labels come from relationship
+visibility, not an actual publication at this handle. The verified [local correction](2026-09-19-publication-membership.md) makes
+labels/defaults follow the actual current publication and preserves publication
+intent during bulk cost changes. It is not yet synchronized or deployed. No checkbox,
+relationship choice, public identity or publication was saved during this check.
+
+The prior private transfer comparison is still a proposal. Cross-environment
+owner binding and the GitHub destination record must be confirmed separately.
+No data transfer or new production synchronization accompanies this decision.
 
 ## Code-generation boundary check
 
@@ -203,11 +201,10 @@ belongs to rollback. Git-triggered deployments remain disabled.
 - Existing-session authenticated loading now passes in development. Fresh
   sign-in and a real owner-directed attachment remain unexercised; retain local
   synthetic mutation/browser checks as such.
-- Guarded `/keegan` restoration is locally implemented and verified; see
-  [the recovery receipt](2026-09-19-handle-restoration.md). Production execution
-  still needs exact authorization. Legacy GitHub mapping remains unresolved.
+- Keep the approved `lecturesfrom` handle. The prior restoration is withdrawn;
+  current-profile publication labels are locally corrected and verified.
 - Production code release is verified. Obtain exact authorization for any
-  private transfer or account/site restoration before changing those records.
+  private transfer before changing those records.
 - Let the owner preview and approve new public fields; verify the final signed-out
   hosted page on desktop and mobile. Missing coverage and static captures remain
   labeled. No inference of current use, go-to or recommended products is permitted.
@@ -226,15 +223,14 @@ This audit does not close the full profile goal.
 | Required outcome | Evidence and disposition |
 | --- | --- |
 | Hosted collection and existing public profile | Release receipt proves existing-session loading and signed-out desktop/mobile rendering. Fresh sign-in is still unproven. |
-| Owner controls use selected `/keegan` address | Local restoration tests/review pass; new backend sync and exact two-field production write need approval. |
+| Owner controls use selected handle | Owner approved keeping `lecturesfrom`. No handle write is needed. Legacy `/keegan` publication is preserved. |
 | Richer saved evidence reaches the correct hosted owner | Private transfer proposal remains read-only. Cross-environment owner binding is not automatically established. Two Wispr packets and one GitHub packet await authorized transfer. |
 | No invented target or relationship decision | GitHub has four possible production relationships; the owner must choose the target. Clerk/Clay have no existing target and need scoped private transfer authorization. |
 | Current activity and coverage | Existing captures remain historical. New provider reads and recurring collection are not authorized. No current-activity claim follows from this release. |
 | Correct presentation for every selected product | Copilot is verified; NotebookLM rebrand/product asset and Devin Desktop asset identity remain unresolved under the retained source investigation. |
 | Exact owner-approved public output | No new selection/publication approval or write exists. Public information remains the previous four-card snapshot. |
 
-Immediate gate remains approval of the internal restoration checkpoint and its
-exact two-handle mutation on `striped-chicken-693`. It must not be combined with
-an implicit evidence transfer, relationship target choice or publication. After
-that, resolve the private transfer's owner/target choices and show the resulting
-exact publication preview. Do not rerun completed checks merely to wait for consent.
+The handle-restoration gate is withdrawn. The sharing-label/default
+mismatch is corrected locally. Next resolve the private transfer's owner/target choices and
+show the exact publication preview for `lecturesfrom`. No automatic migration,
+transfer or publication follows from retaining the existing account handle.

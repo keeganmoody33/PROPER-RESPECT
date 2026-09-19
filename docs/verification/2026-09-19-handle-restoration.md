@@ -60,7 +60,14 @@ prove historical link or activity equivalence. Separate links/evidence records
 are outside the fingerprints. Internal access supplies operator privileges;
 fingerprints do not prove human approval. No live restoration was exercised.
 
-## Execution gate
+## Owner decision superseding execution
+
+The owner subsequently approved retaining the existing `lecturesfrom` account
+and site handles. Do not synchronize or execute this helper as a requirement for
+the current profile. The helper and its tests are removed from active source. The reviewed
+implementation remains recoverable at `ed0962d` in local Git history.
+
+## Superseded execution proposal
 
 Production still serves approved application `a2539b9`; its release is recorded
 in [the production receipt](2026-09-19-profile-production-release.md). No new

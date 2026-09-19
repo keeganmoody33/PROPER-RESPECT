@@ -197,13 +197,15 @@ export const getState = query({
         const associatedAccountEvidence = product
           ? await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug)
           : [];
-        return { prop, product: product && brand ? { ...product, brand } : product, links, claims, publishedActivity, associatedAccountEvidence };
+        return { prop, product: product && brand ? { ...product, brand } : product, links, claims,
+          isPublishedAtCurrentHandle: approvedCards.length > 0, publishedActivity, associatedAccountEvidence };
       }),
     );
 
     return {
       user,
       cards,
+      hasPublicationAtCurrentHandle: published !== null,
       brandEnrichmentAvailable: true,
       privateInventoryAvailable: true,
       drafts,

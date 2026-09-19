@@ -14,11 +14,14 @@ desktop/mobile checks passed; all 32 application tables remained unchanged.
 See [the current release receipt](verification/2026-09-19-profile-production-release.md).
 The older hosted-release paragraphs below are historical.
 
-The owner selected `proper-respect.com/keegan` as the canonical public address
-on September 19. Preserve that publication while preparing ownership-safe
-account reconciliation. This choice does not authorize transfer or publication.
+The owner approved keeping the existing `lecturesfrom` account/site handle.
+The `/keegan` restoration is cancelled and its undeployed helper is retired from
+active source. Preserve the legacy four-card `/keegan` publication. At present,
+`/lecturesfrom` has no published snapshot. Do not silently migrate or publish one.
+See [the local sharing correction](verification/2026-09-19-publication-membership.md).
 
-Latest local application checkpoint: `a2539b91e84cd93271daa71550430e32fc95e24e`.
+Latest synchronized application checkpoint: `a2539b91e84cd93271daa71550430e32fc95e24e`.
+Local sharing-membership corrections are ahead of that source; inspect HEAD.
 It is synchronized to development `utmost-mongoose-374` and production
 `striped-chicken-693`. Existing-session development loading and anonymous query
 rejection passed; all 32 application tables remained unchanged. No production

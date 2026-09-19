@@ -67,3 +67,22 @@ Independent read-only review found no concrete blocker; separate links/evidence
 are outside fingerprints and human approval remains an operator gate. No remote
 execution or new browser proof. PR/push steps remain outside this unit's scope.
 See [the recovery receipt](../../docs/verification/2026-09-19-handle-restoration.md).
+
+## Owner correction and hosted sharing reproduction
+
+The owner approved keeping `lecturesfrom`. The account/site restoration proposal
+is withdrawn; no production handle write is needed. Read-only hosted Preview
+sharing produced zero cards at this handle while four rows claimed “Already
+public”. Their visibility flags are not proof of current-profile membership.
+Run the bounded bug-fix workflow on membership projection/defaults and UI; root
+owns docs/Ref and the existing worker owns the implementation/tests. Preserve the
+legacy `/keegan` snapshot and every owner choice. New source synchronization and
+publication remain separate from this local correction.
+
+RED checkpoints `cf4ac5f` and `7861653` precede the final membership/bulk-cost fix.
+Final local verification passes 535 Vitest tests plus six Node checks, lint,
+TypeScript and build. Independent review closed the observed bulk-cost regression.
+The cancelled restoration helper and 31 tests are removed from active source,
+with their prior commit preserved. Production stays at `a2539b9`; no handle,
+relationship, transfer or publication mutation occurred. Browser reproduction is
+hosted; corrected component/backend checks are local and synthetic.
