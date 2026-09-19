@@ -50,11 +50,19 @@ metadata. An independent static review found no blocking introduced defect.
 
 ## Release boundary and remaining limits
 
-No backend sync, provider read, push, deployment or publication occurred. Deploy
-the additive FILE_UPLOAD enum/index and updated functions before releasing the
-frontend. The next gated target is development `utmost-mongoose-374` only.
-After synchronization, verify a bounded upload through the actual signed-in
-form before proposing a production release to `striped-chicken-693`.
+The owner approved development synchronization of application commit
+`6bf69c2476c8f4eb0e94136b9c893c23ca3c878e`. The explicit target was verified as
+`dev:utmost-mongoose-374` before running `convex dev --once` with codegen disabled
+and a target-only temporary environment file. The CLI confirmed that exact
+deployment and added `rawEvidence.by_storage`. Function-spec readback exposes
+FILE_UPLOAD on retainUpload and the private evidence query. All 32 preexisting
+application tables are byte-identical in private before/after exports. The
+authenticated local upload form loads after synchronization.
+
+No provider read, data import, push, production deployment or publication
+occurred. Next, upload the real Devin export through the signed-in local form.
+The original has not been located or imported by the agent. Verify its private
+retention before proposing a production release to `striped-chicken-693`.
 
 The owner's previously reported Devin JSON is not proven retained. No private
 original is included in this commit. Upload classification checks metadata,
