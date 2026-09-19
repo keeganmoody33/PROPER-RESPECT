@@ -43,7 +43,7 @@ without replacing the saved card automatically or publishing.
   selecting a later GitHub connector snapshot as supporting activity.
 - Full Vitest: 418 passed, 1 skipped. Node script tests: 6 passed.
 - `npm run typecheck` and `npm run lint` passed.
-- Playwright fixture e2e: 19 passed after this sharing opt-in. Fixture data
+- Playwright fixture e2e: 19 passed after this snapshot change. Fixture data
   still has no GitHub account evidence, so those checks use generic product
   websites.
 - Signed-in hosted private collection was not exercised here. No Clerk or
