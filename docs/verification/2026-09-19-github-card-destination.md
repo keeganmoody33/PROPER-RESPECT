@@ -30,12 +30,18 @@ until the owner clicks “Use the private account page in this preview” and
 approves a visitor preview. Missing evidence, cross-owner proofs, and
 owner-selected custom links produce no offer.
 
+Live GitHub connector snapshots now retain `suggestedActivity`, the account
+URL, and capture provenance on the private original. After the owner saves
+the relationship, a later refresh can be selected as supporting activity
+without replacing the saved card automatically or publishing.
+
 ## Checks
 
 - Domain, Convex, and rendered-card tests for owned account destination,
   missing evidence, cross-owner rejection, custom-link preservation, connected
-  account labels, unpublished public projections, and the sharing opt-in.
-- Full Vitest: 417 passed, 1 skipped. Node script tests: 6 passed.
+  account labels, unpublished public projections, the sharing opt-in, and
+  selecting a later GitHub connector snapshot as supporting activity.
+- Full Vitest: 418 passed, 1 skipped. Node script tests: 6 passed.
 - `npm run typecheck` and `npm run lint` passed.
 - Playwright fixture e2e: 19 passed after this sharing opt-in. Fixture data
   still has no GitHub account evidence, so those checks use generic product

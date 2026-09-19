@@ -65,18 +65,21 @@ Private GitHub cards no longer treat the vendor homepage as the owner's account
 page when owned GitHub evidence or a connected `github.com/{login}` label is
 present. Explicit owner-selected links stay selected. Publication still uses
 stored primary links unless the owner opts into the private account page in
-sharing review, then previews and approves it. Signed-out production
+sharing review, then previews and approves it. Live GitHub connector snapshots
+retain the contribution preview, account URL, and provenance so a later refresh
+can be chosen as supporting activity after a private save. Signed-out production
 `https://proper-respect.com/keegan` already has public GitHub href
 `https://github.com/keeganmoody33`; this correction does not rewrite that
 snapshot.
 
 ## Next unfinished work and exact gates
 
-- Merge and authorize a hosted production release of the GitHub destination
-  and sharing opt-in (application plus Convex `striped-chicken-693`) so the
-  signed-in private collection and sharing review use them. Git-triggered
-  Vercel deployment remains disabled. Do not transfer development data as part
-  of that release.
+- Merge and authorize a hosted production release of the GitHub destination,
+  sharing opt-in, and connector-snapshot supporting activity (application plus
+  Convex `striped-chicken-693`) so the signed-in private collection, sharing
+  review, and GitHub supporting-details path use them. Git-triggered Vercel
+  deployment remains disabled. Do not transfer development data as part of
+  that release.
 - Finish hosted acceptance and the scoped transfer of newer development-only
   private records and owner choices to the verified production owner. Never
   copy a development Clerk subject or replace the production database.
