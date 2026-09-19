@@ -193,6 +193,37 @@ main {
   background: #ffffff;
 }
 
+.product-logo[data-logo-layout="wordmark"] {
+  background: transparent;
+  border-radius: 0;
+  color: inherit;
+  display: block;
+  font: inherit;
+  height: auto;
+  max-width: 18rem;
+  padding-block: 0.35rem;
+  width: 100%;
+}
+
+.product-logo[data-logo-layout="wordmark"] img {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.product-card[data-verified-brand] :where(*) {
+  font-family: inherit;
+}
+
+.card-title .card-product-name {
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
 .card-title {
   display: block;
   flex: 1;

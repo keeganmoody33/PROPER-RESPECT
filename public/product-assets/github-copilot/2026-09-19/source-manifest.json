@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "provider": "official-vendor",
+  "revision": "2026-09-19",
+  "productSlug": "github-copilot",
+  "canonicalDomain": "github.com",
+  "productUrl": "https://github.com/features/copilot",
+  "verifiedAt": "2026-09-19T20:48:30Z",
+  "manifestPath": "/product-assets/github-copilot/2026-09-19/source-manifest.json",
+  "logoSource": {
+    "pageUrl": "https://brand.github.com/foundations/logo",
+    "productGuidanceUrl": "https://brand.github.com/brand-identity/copilot",
+    "archiveUrl": "https://brand.github.com/GitHub_Logos.zip",
+    "archiveSha256": "e2a67d6cc51d990a52c46c1cf6bcab688db4830982174bca50e0be7a5c2f3194",
+    "useBasis": "Unmodified product lockup identifying and linking to GitHub Copilot, secondary to Proper Respect; no affiliation or endorsement implied."
+  },
+  "logos": [
+    {
+      "mode": "light",
+      "path": "/product-assets/github-copilot/2026-09-19/GitHub_Copilot_Lockup_Black.svg",
+      "width": 734,
+      "height": 95,
+      "sha256": "204fcf55a8e36a3e233483561ec80d4c025c997d04cd37a13941b8fe2c976f1b",
+      "archiveMember": "GitHub Logos/SVG/GitHub_Copilot_Lockup_Black.svg"
+    },
+    {
+      "mode": "dark",
+      "path": "/product-assets/github-copilot/2026-09-19/GitHub_Copilot_Lockup_White.svg",
+      "width": 734,
+      "height": 95,
+      "sha256": "e5cebbd6ebaa4dcc11ffb1f400e1e0fa2b319395e88d084f17464d412fed2a96",
+      "archiveMember": "GitHub Logos/SVG/GitHub_Copilot_Lockup_White.svg"
+    }
+  ],
+  "typography": {
+    "family": "Mona Sans",
+    "cssFamily": "PRVerified-github-copilot-20260919",
+    "fallbacks": [
+      "Arial",
+      "Helvetica",
+      "sans-serif"
+    ],
+    "sourceUrl": "https://brand.github.com/foundations/typography",
+    "sourceRevision": "0f7dc66ddd766605eb0e75c3f47bf9d1dd38ceca",
+    "files": [
+      {
+        "path": "/product-assets/github-copilot/2026-09-19/MonaSans-Regular.woff2",
+        "weight": 400,
+        "format": "woff2",
+        "sha256": "c87e8077d26694c2c41596475d2948cf3e697852db7e75e40a953e9baae7c02b",
+        "sourceUrl": "https://raw.githubusercontent.com/github/mona-sans/0f7dc66ddd766605eb0e75c3f47bf9d1dd38ceca/fonts/webfonts/static/MonaSans-Regular.woff2"
+      },
+      {
+        "path": "/product-assets/github-copilot/2026-09-19/MonaSans-Medium.woff2",
+        "weight": 500,
+        "format": "woff2",
+        "sha256": "c5a156a8a830ac392eda1abda25fff2f5564e6c2c568868a79aed8979cbce2e4",
+        "sourceUrl": "https://raw.githubusercontent.com/github/mona-sans/0f7dc66ddd766605eb0e75c3f47bf9d1dd38ceca/fonts/webfonts/static/MonaSans-Medium.woff2"
+      },
+      {
+        "path": "/product-assets/github-copilot/2026-09-19/MonaSans-Bold.woff2",
+        "weight": 700,
+        "format": "woff2",
+        "sha256": "c9ab2a28f7f44972d94c7732d17b35e9fb0bad732bfefc4dc38fdf2a7053dafc",
+        "sourceUrl": "https://raw.githubusercontent.com/github/mona-sans/0f7dc66ddd766605eb0e75c3f47bf9d1dd38ceca/fonts/webfonts/static/MonaSans-Bold.woff2"
+      }
+    ],
+    "license": {
+      "name": "SIL Open Font License 1.1",
+      "path": "/product-assets/github-copilot/2026-09-19/OFL.txt",
+      "sourceUrl": "https://raw.githubusercontent.com/github/mona-sans/0f7dc66ddd766605eb0e75c3f47bf9d1dd38ceca/OFL.txt",
+      "sha256": "9261dcb61fb5e3c587d50d7a9fdae12bc7422d8822d7ac06b8f34550479575de"
+    }
+  }
+}
