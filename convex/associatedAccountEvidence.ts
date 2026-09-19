@@ -2,13 +2,18 @@ import type { QueryCtx, MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { AssociatedAccountEvidence } from "../src/domain/product-destination";
 
+const DEFAULT_PROOF_SCAN_LIMIT = 25;
+/** Later GitHub snapshots can follow earlier non-GitHub proofs on the same card. */
+const GITHUB_PROOF_SCAN_LIMIT = 200;
+
 export async function associatedAccountEvidenceForProp(
   ctx: QueryCtx | MutationCtx,
   userId: Id<"users">,
   propId: Id<"props">,
   productSlug: string,
 ): Promise<AssociatedAccountEvidence[]> {
-  const proofs = await ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", propId)).take(25);
+  const scanLimit = productSlug === "github" ? GITHUB_PROOF_SCAN_LIMIT : DEFAULT_PROOF_SCAN_LIMIT;
+  const proofs = await ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", propId)).take(scanLimit);
   const items: AssociatedAccountEvidence[] = [];
   for (const proof of proofs) {
     if (!proof.rawEvidenceId) continue;

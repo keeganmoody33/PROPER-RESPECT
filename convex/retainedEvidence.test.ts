@@ -253,3 +253,37 @@ test("a GitHub mention from another source cannot establish an owned GitHub acco
   const card = listed.page[0];
   expect(privateCardPrimaryLink({ product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence })?.url).toBe("https://github.com");
 });
+
+test("a GitHub snapshot after 25 other proofs still supplies the private account destination", async () => {
+  const { t, owner } = await fixture();
+  await t.run(async ctx => {
+    const user = await ctx.db.query("users").withIndex("by_auth_subject", q => q.eq("authSubject", "owner")).unique();
+    if (!user) throw new Error("Owner missing");
+    const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "Code" });
+    const propId = await ctx.db.insert("props", { userId: user._id, productId, visibility: "PRIVATE", status: "ACTIVE", headline: "", note: "" });
+    await ctx.db.insert("links", { propId, type: "CANONICAL", url: "https://github.com", label: "Check out GitHub", isPrimary: true });
+    const fillerSource = await ctx.db.insert("evidenceSources", { userId: user._id, type: "MANUAL", connectedAt: "2026-09-19T00:00:00.000Z" });
+    for (let index = 0; index < 25; index++) {
+      const rawEvidenceId = await ctx.db.insert("rawEvidence", {
+        userId: user._id, evidenceSourceId: fillerSource, capturedAt: "2026-09-19T00:00:00.000Z",
+        dedupKey: `filler-${index}`, payload: "synthetic filler",
+      });
+      await ctx.db.insert("proofs", { propId, type: "NOTE", rawEvidenceId, label: "Filler" });
+    }
+    const githubSource = await ctx.db.insert("evidenceSources", { userId: user._id, type: "GITHUB", connectedAt: "2026-09-19T00:00:01.000Z" });
+    const rawEvidenceId = await ctx.db.insert("rawEvidence", {
+      userId: user._id, evidenceSourceId: githubSource, capturedAt: "2026-09-19T00:00:01.000Z",
+      dedupKey: "late-github-snapshot", detectedUrl: "https://github.com/late-account",
+      captureProvenance: {
+        version: 1, route: "DIRECT_API", adapter: { id: "github-connector", version: "provider-v1" },
+        origin: { issuer: "GITHUB", accountId: "late-account", recordId: "2026-09-19T00:00:01.000Z" },
+        collector: { kind: "SYSTEM" }, activityActor: { kind: "UNKNOWN" },
+      },
+    });
+    await ctx.db.insert("proofs", { propId, type: "API_OAUTH", rawEvidenceId, label: "Private GitHub snapshot" });
+  });
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com/late-account");
+});
