@@ -1,8 +1,11 @@
 # Cursor continuation — Proper Respect
 
-Updated: 2026-09-18. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
-Use remote `main` after the consolidation PR merges; check GitHub rather than
-assuming an older local `main` checkout is current.
+Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
+Remote `main` is `f808fc834c7900681d10b043a6bb09d4f8e76314`. The accepted
+local branch `codex/personal-release-main` has three additional committed changes
+through `b7f0fba70fc48d6e9200b4da8def35649a42ba92`, plus this handoff update.
+Open the accepted folder below in Cursor to retain those changes. A fresh clone
+does not include them until a separately authorized push/merge.
 
 ## Open the working product
 
@@ -19,7 +22,7 @@ the existing manual card in development, without changing its relationship.
 On this Mac, the accepted checkout is
 `/Users/keeganmoody/Downloads/PROPER-RESPECT-self-test-20260916`.
 Its ignored `.env.local` already contains development configuration.
-Use the public consolidation branch or current remote main. The original
+Continue on `codex/personal-release-main`; do not switch to older local main. The original
 `codex/proper-respect-self-test-20260916` branch retains private operator history
 and must not be pushed to the public repository. Open this
 folder in Cursor. Do not substitute the older dirty `Downloads/PROPER-RESPECT`
@@ -27,8 +30,8 @@ checkout or a frozen Codex worktree.
 
 Read `AGENTS.md`, `docs/DEVELOPMENT.md`, this file, and the
 [existing Ref](https://plan.ref.tools/oUl8LCIQb32SAicK). Inspect `git status` and
-`git log -5 --oneline` before editing. Keep Compound Engineering as the workflow;
-pstack is for a concrete unresolved architecture question, not another program.
+`git log -5 --oneline` before editing. Use pstack-codex as the primary workflow, per the September 19 owner correction.
+Compound Engineering is available for focused supporting work.
 
 For a fresh machine, clone the canonical repository's `main` branch, run
 `npm ci`, and configure approved development credentials privately using
@@ -40,8 +43,12 @@ session may need Google/Clerk consent. Do not seed or reimport to populate it.
 
 ## Continue from proven work
 
-Application checkpoint `c79067d6de4459d53097e7873548a152ce2139b3` is synchronized
-to development `utmost-mongoose-374`. The private collection already contains owner-saved
+Application checkpoint `6bf69c2476c8f4eb0e94136b9c893c23ca3c878e` is synchronized
+to development `utmost-mongoose-374` under the completed exact-target approval.
+The upload fix retains JSON and other accepted exports as FILE_UPLOAD rather
+than screenshots, with private supporting context. It does not parse usage.
+See [the upload verification receipt](verification/2026-09-19-export-uploads.md).
+The owner's actual Devin JSON retention remains unverified. The private collection already contains owner-saved
 relationships. Real retained intake, owner review/save, reload, fresh sign-in,
 Context.dev card branding and bounded Gmail discovery were verified. Exact
 receipts are in `docs/verification/2026-09-18-personal-product-delivery.md` and
@@ -53,6 +60,37 @@ Email discovers possible relationships; product APIs/exports supply activity
 when available. Brand data supplies presentation only. See
 `docs/003-evidence-surfaces.md`; generic uploads do not yet authenticate images
 or extract Screen Time automatically.
+
+## First Cursor task
+
+Fix the private GitHub card's destination. The owner reported that "Check out
+GitHub" opens the vendor site instead of their account/activity page. In
+`convex/discovery.ts`, ingestion creates a CANONICAL product-homepage link;
+`components/private-inventory.tsx` selects that link. The retained GitHub adapter
+already records a profile URL from `viewer.login` in
+`src/domain/retained-product-evidence.ts`. No fix has been implemented yet.
+
+Test the smallest correction against owned, selected GitHub evidence. Distinguish
+the vendor website from the account profile, preserve explicit owner links, and
+reject cross-owner or unrelated evidence. Do not infer identity from Clerk or
+email, or publish a private account URL. Run focused regression tests and inspect
+the actual rendered href. Request exact backend synchronization approval only
+if the fix changes backend code. Keep public sharing independently controlled.
+
+## Branch disposition checked September 19
+
+GitHub has no open PRs. Keep one active delivery branch, `codex/personal-release-main`.
+Do not merge every branch to make the list shorter.
+
+- `codex/composio-integration-20260918` at `00a097f` preserves explicitly incomplete
+  integration work; consult `docs/COMPOSIO_CURSOR_HANDOFF.md` on that branch before
+  resuming it. It is not an accepted production replacement.
+- The Composio spike and onboarding prototype branches are retained references.
+- `codex/proper-respect-self-test-20260916` contains private operator history and
+  must never be pushed to the public remote.
+- The original `Downloads/PROPER-RESPECT` checkout is dirty with local agent setup
+  and generated files. Preserve it; do not sweep those files into this release.
+- Frozen worktrees have Finder metadata changes. Leave them alone.
 
 ## Next unfinished work and exact gates
 
