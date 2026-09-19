@@ -1,8 +1,9 @@
 # Private GitHub card destination
 
 Date: 2026-09-19. Starting remote: `origin/main` `f808fc834c7900681d10b043a6bb09d4f8e76314`.
-Local SHAs `b028d904` and `6bf69c24` were not present on this checkout and were
-not used.
+Correction commit: `f3353d31084e3f5561f692f417c67553db939e0f` on
+`cursor/github-card-account-destination-7318`. Local SHAs `b028d904` and
+`6bf69c24` were not present on this checkout and were not used.
 
 ## Problem
 
