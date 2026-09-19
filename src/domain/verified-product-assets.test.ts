@@ -65,16 +65,27 @@ describe("verified official product assets", () => {
     expect(typography["--brand-card-body-font"]).toContain("Arial, Helvetica, sans-serif");
   });
 
-  it("renders official provenance and accessible product naming without manufacturing evidence", () => {
+  it("keeps official source provenance inspectable in the dedicated brand preview", () => {
     const $ = load(renderToStaticMarkup(createElement(ProductCard, {
-      card: { product, status: "TESTING", headline: "", note: "Supplied owner note." }, index: 0,
+      card: { product, status: "TESTING", headline: "", note: "Supplied owner note." },
+      index: 0, displayMode: "brand-preview",
+    })));
+    expect($("a[href='" + assets.manifestPath + "']")).toHaveLength(1);
+    expect($(".card-brand-provenance").text()).toContain("Official brand assets");
+    expect($.text()).not.toContain("Supplied owner note.");
+  });
+
+  it.each(["owner", "visitor"] as const)("renders official assets and accessible naming without diagnostics for %s", (audience) => {
+    const $ = load(renderToStaticMarkup(createElement(ProductCard, {
+      card: { product, status: "TESTING", headline: "", note: "Supplied owner note." }, index: 0, audience,
     })));
     expect($(".card-title h2").text()).toBe("GitHub Copilot");
     expect($(".product-logo").attr("data-logo-provider")).toBe("official-vendor");
     expect($(".product-logo img").attr("src")).toBe(selectVerifiedProductLogo(assets, "dark")?.path);
     expect($(".product-logo img").attr("width")).toBe("734");
     expect($(".product-logo img").attr("height")).toBe("95");
-    expect($("a[href='" + assets.manifestPath + "']")).toHaveLength(1);
+    expect($("a[href='" + assets.manifestPath + "']")).toHaveLength(0);
+    expect($(".card-brand-provenance")).toHaveLength(0);
     expect($(".card-headline").text()).toBe("Supplied owner note.");
     expect($.text()).not.toContain("Context.dev");
     expect($(".card-activity-preview")).toHaveLength(0);

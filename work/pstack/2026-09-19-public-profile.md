@@ -115,3 +115,18 @@ RED `99fd951` reproduces long-option overflow with real CSS modules. GREEN
 browser tests, focused ESLint and nonincremental TypeScript pass. Root reviewed
 the diff and 320px screenshot. No deployment or data operation. See
 [the mobile receipt](../../docs/verification/2026-09-19-mobile-record-selector.md).
+
+## Full discovery priority and product-native cards
+
+Owner asks for the full personal collection, not a four-card release checkpoint.
+Read-only inspection establishes the immediate gap: hosted Gmail is unconfigured
+and disconnected, while development search contexts contain only 15 and 25
+processed headers, all partial. Five-header paging is a proof mechanism, not a
+finished first-user discovery experience. Prioritize hosted setup, account consent
+and resumable bounded discovery before further publication decoration.
+
+A separate worker removed brand retrieval diagnostics from normal cards while
+keeping assets and dedicated diagnostic previews. Root reviewed all five changed
+files. 58 focused unit and 11 browser tests, lint and TypeScript pass. Hosted
+configuration approval is pending; no reads or production writes occurred.
+See [the discovery gap](../../docs/verification/2026-09-19-hosted-discovery-gap.md).

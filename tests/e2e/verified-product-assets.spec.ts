@@ -65,7 +65,7 @@ async function mount(page: Page, fail?: "logos" | "fonts") {
   return externalRequests;
 }
 
-for (const width of [1280, 390]) test(`official Copilot lockups, scoped fonts and provenance at ${width}px`, async ({ page }, testInfo) => {
+for (const width of [1280, 390]) test(`official Copilot lockups and scoped fonts without card diagnostics at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 1000 });
   const externalRequests = await mount(page);
   await page.evaluate(async family => {
@@ -91,9 +91,9 @@ for (const width of [1280, 390]) test(`official Copilot lockups, scoped fonts an
   await page.screenshot({ path: testInfo.outputPath(`2026-09-19-copilot-front-${width}.png`), fullPage: true, animations: "disabled" });
   for (const card of await page.locator(".product-card").all()) {
     await card.getByRole("button", { name: "Details", exact: true }).click();
-    await card.locator("summary").filter({ hasText: "Official brand assets" }).click();
-    await expect(card.getByRole("link", { name: "Source URLs and SHA-256 hashes" })).toHaveAttribute("href", assets.manifestPath);
-    await expect(card.getByRole("link", { name: "Source URLs and SHA-256 hashes" })).toBeVisible();
+    await expect(card.locator(".card-brand-provenance")).toHaveCount(0);
+    await expect(card.getByRole("link", { name: "Source URLs and SHA-256 hashes" })).toHaveCount(0);
+    await expect(card.locator(".activity-meta")).toContainText("Synthetic fixture");
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath(`2026-09-19-copilot-details-${width}.png`), fullPage: true, animations: "disabled" });

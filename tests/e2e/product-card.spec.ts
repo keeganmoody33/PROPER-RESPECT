@@ -62,6 +62,8 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   await trigger.focus();
   await page.keyboard.press("Enter");
   await expect(first.locator(".card-back h2")).toBeFocused();
+  await expect(first.locator(".card-brand-provenance")).toHaveCount(0);
+  await expect(first.locator(".card-back")).not.toContainText("Context.dev");
   const content = first.locator(".card-back-content");
   await expect(content).toHaveCSS("overflow-y", "visible");
   expect((await first.boundingBox())!.height).toBeGreaterThan(frontHeight);

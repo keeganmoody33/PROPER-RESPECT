@@ -496,11 +496,11 @@ export function ProductCard({
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
             <ActivityView activity={card.activity} />
           </>}
-          {brand && <details className="card-brand-provenance" open={brandPreview}>
+          {brandPreview && brand && <details className="card-brand-provenance" open>
             <summary>Brand provenance</summary>
             <ProductBrandDetails snapshot={brand} />
           </details>}
-          {verifiedAssets && <details className="card-brand-provenance" open={brandPreview}>
+          {brandPreview && verifiedAssets && <details className="card-brand-provenance" open>
             <summary>Official brand assets</summary>
             <section className="product-brand-details" aria-label="Official brand provenance">
               <p>Official vendor assets identify the product. They do not verify ownership or use.</p>

@@ -122,6 +122,18 @@ test("uses a retained brand logo for the actual dark card surface without changi
   expect($(".product-card").attr("style") ?? "").not.toContain("#FF0000");
 });
 
+test.each(["owner", "visitor"] as const)("%s cards use retained branding without exposing retrieval diagnostics", (audience) => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, {
+    card: { ...baseCard, product: { ...baseCard.product, brand } }, index: 0, audience,
+  })));
+  expect($(".product-logo img").attr("src")).toBe("https://example.com/dark.svg");
+  expect($(".card-brand-provenance")).toHaveLength(0);
+  expect($.text()).not.toContain(brand.provider);
+  expect($.text()).not.toContain(brand.retrievalId);
+  expect($.text()).not.toContain(brand.responseHash);
+  expect($(".card-back blockquote").text()).toBe(baseCard.note);
+});
+
 test("uses explicit readable styleguide roles and chooses a logo for that surface", () => {
   const $ = renderCard({ product: { ...baseCard.product, brand: {
     ...brand,
