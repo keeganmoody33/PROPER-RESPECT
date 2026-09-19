@@ -1,0 +1,79 @@
+{
+  "recordedAt": "2026-09-19T23:18:58.696436+00:00",
+  "status": "AWAITING_EXACT_PRODUCTION_RELEASE_APPROVAL",
+  "baseSourceSha": "a2539b91e84cd93271daa71550430e32fc95e24e",
+  "candidateSourceSha": "8b6aa9a2cd4fb452d7e5c54d54371f4a7580d594",
+  "binaryDiffSha256": "d1e18b65a7079f1838e4c96ceb0922c131fcbcb20a398b3acae5bcb1c6714243",
+  "runtimeFiles": [
+    "components/onboarding-client.tsx",
+    "convex/onboarding.ts",
+    "src/domain/review.ts"
+  ],
+  "testFiles": [
+    "convex/publicationMembership.test.ts",
+    "src/client/onboarding-auth.test.ts",
+    "src/domain/review.test.ts"
+  ],
+  "allFiles": [
+    "components/onboarding-client.tsx",
+    "convex/onboarding.ts",
+    "convex/publicationMembership.test.ts",
+    "docs/CURSOR_HANDOFF.md",
+    "docs/DEPLOYMENT.md",
+    "docs/DEVELOPMENT.md",
+    "docs/verification/2026-09-19-handle-restoration.md",
+    "docs/verification/2026-09-19-profile-development-sync.md",
+    "docs/verification/2026-09-19-profile-production-release.md",
+    "docs/verification/2026-09-19-profile-release-candidate.json",
+    "docs/verification/2026-09-19-public-profile-readiness.md",
+    "docs/verification/2026-09-19-publication-membership.md",
+    "src/client/onboarding-auth.test.ts",
+    "src/domain/review.test.ts",
+    "src/domain/review.ts",
+    "work/pstack/2026-09-19-public-profile-decisions.tsv",
+    "work/pstack/2026-09-19-public-profile.md"
+  ],
+  "targets": {
+    "vercelProject": "groundskeep/proper-respect",
+    "vercelProjectId": "prj_yxsUnnPW0ka8mkFr7l66eUSzJgT8",
+    "convexDeployment": "striped-chicken-693"
+  },
+  "scope": [
+    "Read-only onboarding publication-existence and membership fields",
+    "Sharing defaults, membership labels and public-page link",
+    "Bulk cost controls preserving explicit publication intent"
+  ],
+  "excluded": [
+    "Handle restoration or renaming",
+    "Private data transfer",
+    "Provider reads",
+    "Recurring collection",
+    "Relationship changes",
+    "Publication",
+    "Seeds",
+    "Destructive migration",
+    "Git push"
+  ],
+  "verification": {
+    "vitestPassed": 535,
+    "vitestSkipped": 1,
+    "nodeTestsPassed": 6,
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed",
+    "independentReview": "No outstanding blocker after bulk-cost regression fixed",
+    "hostedCorrectedJourney": "not yet exercised"
+  },
+  "rollout": [
+    "Verify both exact targets and retain fresh private before snapshot",
+    "Synchronize backend query projection before frontend",
+    "Deploy exact source archive, excluding private env and Git history",
+    "Verify no application data changed, current-handle labels and link match actual publication, legacy signed-out page unchanged"
+  ],
+  "rollback": {
+    "frontendDeployment": "dpl_yek1HfE7u8QNa4E1cfWoCiopCnRU",
+    "sourceSha": "a2539b91e84cd93271daa71550430e32fc95e24e",
+    "backend": "Keep existing publication guards and additive fields; no data restoration or seed rerun"
+  },
+  "mutationsPerformed": false
+}
