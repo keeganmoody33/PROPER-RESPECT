@@ -86,3 +86,13 @@ The cancelled restoration helper and 31 tests are removed from active source,
 with their prior commit preserved. Production stays at `a2539b9`; no handle,
 relationship, transfer or publication mutation occurred. Browser reproduction is
 hosted; corrected component/backend checks are local and synthetic.
+
+## Approved membership release
+
+Released exact `8b6aa9a` backend first to `striped-chicken-693`, then Vercel
+`dpl_4oRkjCrgWWbTJYkDJCYyxmXD4ZN2`. Existing-session sharing proof passed; all 32
+application tables stayed identical. Cancelled restoration functions remain
+absent. Anonymous legacy `/keegan` is unchanged; `/lecturesfrom` remains unpublished.
+Mobile inspection found an existing GitHub source-selector overflow, recorded for
+local follow-up. No transfer, provider read, relationship edit or publication.
+No-progress classification: meaningful release and runtime verification progress.

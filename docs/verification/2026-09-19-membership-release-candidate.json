@@ -1,6 +1,6 @@
 {
   "recordedAt": "2026-09-19T23:18:58.696436+00:00",
-  "status": "AWAITING_EXACT_PRODUCTION_RELEASE_APPROVAL",
+  "status": "PRODUCTION_RELEASE_VERIFIED_PROFILE_ACCEPTANCE_OPEN",
   "baseSourceSha": "a2539b91e84cd93271daa71550430e32fc95e24e",
   "candidateSourceSha": "8b6aa9a2cd4fb452d7e5c54d54371f4a7580d594",
   "binaryDiffSha256": "d1e18b65a7079f1838e4c96ceb0922c131fcbcb20a398b3acae5bcb1c6714243",
@@ -75,5 +75,9 @@
     "sourceSha": "a2539b91e84cd93271daa71550430e32fc95e24e",
     "backend": "Keep existing publication guards and additive fields; no data restoration or seed rerun"
   },
-  "mutationsPerformed": false
+  "mutationsPerformed": true,
+  "releasedAt": "2026-09-19T23:28:07.622582+00:00",
+  "deploymentId": "dpl_4oRkjCrgWWbTJYkDJCYyxmXD4ZN2",
+  "applicationTablesUnchanged": 32,
+  "releaseReceipt": "docs/verification/2026-09-19-membership-production-release.md"
 }

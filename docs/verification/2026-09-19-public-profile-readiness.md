@@ -1,5 +1,12 @@
 # Public profile readiness
 
+Current release is `8b6aa9a` on production Convex `striped-chicken-693` and Vercel
+`dpl_4oRkjCrgWWbTJYkDJCYyxmXD4ZN2`. [Hosted verification](2026-09-19-membership-production-release.md)
+proves corrected sharing membership with unchanged application data. Keep
+`lecturesfrom`; no new profile has been published there. The narrow-screen GitHub
+record selector, retained-evidence transfer and owner-reviewed publication remain
+open. Earlier sections preserve the dated evidence trail.
+
 Updated 2026-09-19. Continues Tasks 2/4 in the existing Ref.
 
 ## Observed baseline
@@ -166,7 +173,7 @@ preview under the existing signed-in session shows `@lecturesfrom` and “No
 products will be public.” Its four “Already public” labels come from relationship
 visibility, not an actual publication at this handle. The verified [local correction](2026-09-19-publication-membership.md) makes
 labels/defaults follow the actual current publication and preserves publication
-intent during bulk cost changes. It is not yet synchronized or deployed. No checkbox,
+intent during bulk cost changes. It is now released and verified; the production receipt above records its limits. No checkbox,
 relationship choice, public identity or publication was saved during this check.
 
 The prior private transfer comparison is still a proposal. Cross-environment

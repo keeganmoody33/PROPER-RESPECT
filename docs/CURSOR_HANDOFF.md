@@ -7,11 +7,12 @@ are reconciled. Verify current main/PR state before further Git operations.
 
 ## Open the working product
 
-Current production source is `a2539b91e84cd93271daa71550430e32fc95e24e`, released
-with explicit owner approval to Vercel `dpl_yek1HfE7u8QNa4E1cfWoCiopCnRU` and
-Convex `striped-chicken-693`. Existing-session hosted reload and public
-desktop/mobile checks passed; all 32 application tables remained unchanged.
-See [the current release receipt](verification/2026-09-19-profile-production-release.md).
+Current production source is `8b6aa9a2cd4fb452d7e5c54d54371f4a7580d594`, released
+with explicit owner approval to Vercel `dpl_4oRkjCrgWWbTJYkDJCYyxmXD4ZN2` and
+Convex `striped-chicken-693`. Hosted sharing membership checks passed; all 32
+application tables remained unchanged. Full mobile collection acceptance remains
+open because the existing GitHub record selector overflows a narrow viewport.
+See [the current release receipt](verification/2026-09-19-membership-production-release.md).
 The older hosted-release paragraphs below are historical.
 
 The owner approved keeping the existing `lecturesfrom` account/site handle.
@@ -20,10 +21,8 @@ active source. Preserve the legacy four-card `/keegan` publication. At present,
 `/lecturesfrom` has no published snapshot. Do not silently migrate or publish one.
 See [the local sharing correction](verification/2026-09-19-publication-membership.md).
 
-Latest synchronized application checkpoint: `a2539b91e84cd93271daa71550430e32fc95e24e`.
-Local sharing-membership corrections are ahead of that source; inspect HEAD.
-It is synchronized to development `utmost-mongoose-374` and production
-`striped-chicken-693`. Existing-session development loading and anonymous query
+Production is synchronized at `8b6aa9a`; development remains at `a2539b9`.
+This release did not authorize or perform a development synchronization. Existing-session development loading and anonymous query
 rejection passed; all 32 application tables remained unchanged. No production
 release, transfer or publication accompanied that earlier development synchronization.
 The separately approved production release is recorded above. Read

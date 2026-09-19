@@ -63,8 +63,9 @@ synchronization to `utmost-mongoose-374` and existing-session authenticated relo
 passed; all 32 application tables remained unchanged. See
 [the development sync receipt](verification/2026-09-19-profile-development-sync.md) and
 [public profile readiness](verification/2026-09-19-public-profile-readiness.md)
-for exact commits, checks and remaining owner actions. Production now uses the
-same application source; no transfer or publication accompanied either operation.
+for exact commits, checks and remaining owner actions. Production now runs the separately approved `8b6aa9a` sharing-membership fix;
+development remains `a2539b9`. See [the release receipt](verification/2026-09-19-membership-production-release.md).
+No transfer or publication accompanied these operations.
 Clerk's primary domain and OAuth callbacks have not been migrated.
 Git-triggered deployments remain disabled; subsequent backend synchronization,
 provider reads, recurrence, releases and publication retain their applicable gates.
