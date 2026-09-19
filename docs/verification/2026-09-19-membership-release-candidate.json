@@ -62,7 +62,7 @@
     "typecheck": "passed",
     "build": "passed",
     "independentReview": "No outstanding blocker after bulk-cost regression fixed",
-    "hostedCorrectedJourney": "not yet exercised"
+    "hostedCorrectedJourney": "passed in existing signed-in session; fresh sign-in and mobile selector acceptance remain open"
   },
   "rollout": [
     "Verify both exact targets and retain fresh private before snapshot",

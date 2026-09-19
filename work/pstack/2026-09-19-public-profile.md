@@ -96,3 +96,22 @@ absent. Anonymous legacy `/keegan` is unchanged; `/lecturesfrom` remains unpubli
 Mobile inspection found an existing GitHub source-selector overflow, recorded for
 local follow-up. No transfer, provider read, relationship edit or publication.
 No-progress classification: meaningful release and runtime verification progress.
+
+## Mobile record selector follow-up
+
+The hosted dropdown overflow has a retained DOM reproduction. Keep native record
+selection and existing private decisions; constrain the control to its container.
+The worker owns CSS and component regression files; root owns the receipt and Ref.
+Use the real CSS-module output in the browser regression. No new release or
+backend synchronization is included.
+
+Bug-fix steps 1 and 2 use the hosted reproduction above. Step 3 is a scoped CSS
+fix. Step 4 requires browser layout and record-switching checks. Step 5 records a
+failing test before the fix. Step 6 is skipped because Git push/PR creation is
+outside this local follow-up.
+
+RED `99fd951` reproduces long-option overflow with real CSS modules. GREEN
+`d5df93b` constrains the native selector with one CSS rule. All 11 component
+browser tests, focused ESLint and nonincremental TypeScript pass. Root reviewed
+the diff and 320px screenshot. No deployment or data operation. See
+[the mobile receipt](../../docs/verification/2026-09-19-mobile-record-selector.md).
