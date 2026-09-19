@@ -36,7 +36,7 @@ These component screenshots contain synthetic fixtures, not owner usage:
 
 ## Residual limits and next operation
 
-New application/backend code is not synchronized or deployed. Hosted production remains application `d2266fa`, Vercel `dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6`, Convex `striped-chicken-693`. A new exact-source release requires its applicable approval. No data migration, record deletion, development evidence transfer, recurrence, provider usage read or publication was performed.
+The owner subsequently approved development-only synchronization of this checkpoint; [the sync receipt](2026-09-19-card-development-sync.md) records successful installation and authenticated runtime verification. The new application/backend code is not deployed to production. Hosted production remains application `d2266fa`, Vercel `dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6`, Convex `striped-chicken-693`. A new exact-source release requires its applicable approval. No data migration, record deletion, development evidence transfer, recurrence, provider usage read or publication was performed.
 
 The owner must supply their actual Wispr affiliate URL in the sharing editor; none was present in the inspected records. Richer development activity is not copied to production. The current hosted GitHub record lacks an attached activity capture, so no real usage graph was manufactured. Existing contribution data must remain labeled contributions, not commits.
 

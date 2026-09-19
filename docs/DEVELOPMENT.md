@@ -52,8 +52,9 @@ The September 19 combined release at `d2266fa` includes the private GitHub
 destination, sharing opt-in and connector snapshot correction. Its actual
 hosted journey and residual limits are recorded in the release receipt.
 Subsequent card preparation, duplicate grouping and presentation corrections
-are local until separately synchronized and released; see
-[card feedback](feedback/2026-09-19-hosted-card-comments.md).
+are now synchronized to development only at `e8834be`; see
+[the synchronization receipt](verification/2026-09-19-card-development-sync.md).
+Production release remains separately gated.
 Clerk's primary domain and OAuth callbacks have not been migrated.
 Git-triggered deployments remain disabled; subsequent backend synchronization,
 provider reads, recurrence, releases and publication retain their applicable gates.
