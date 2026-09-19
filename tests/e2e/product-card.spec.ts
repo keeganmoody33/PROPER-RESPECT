@@ -90,7 +90,8 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test("grouped private records switch the inspected card and editor without saving or merging same-domain products", async ({ page }) => {
+for (const width of [320, 390, 1280]) test(`grouped private records fit and switch without saving or merging same-domain products at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 1000 });
   const grouped = buildSync({
     stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { PrivateInventoryView } from "./components/private-inventory";
       const item = (id, status, headline, note) => ({
@@ -98,7 +99,7 @@ test("grouped private records switch the inspected card and editor without savin
         product: { _id: "synthetic-github", _creationTime: 1, name: "GitHub", slug: "github", domain: "github.com", description: "Synthetic GitHub fixture" },
         links: [], previousStatuses: [], associatedAccountEvidence: [],
       });
-      const active = item("synthetic-active", "ACTIVE", "Current GitHub workflow", "Synthetic current note.");
+      const active = item("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
       const testing = item("synthetic-testing", "TESTING", "Testing a GitHub workflow", "Synthetic testing note.");
       const archived = item("synthetic-archived", "ARCHIVED", "Earlier GitHub workflow", "Synthetic archived note.");
       const copilot = { ...item("synthetic-copilot", "ACTIVE", "Separate Copilot workflow", "Synthetic Copilot note."),
@@ -111,12 +112,14 @@ test("grouped private records switch the inspected card and editor without savin
         onSave: async () => { document.getElementById("save-count").textContent = String(Number(document.getElementById("save-count").textContent) + 1); throw new Error("Unexpected fixture save"); },
       }));`, resolveDir: process.cwd() },
     bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
-    loader: { ".css": "empty", ".module.css": "empty" },
+    outfile: "private-inventory-fixture.js",
+    loader: { ".module.css": "local-css" },
     define: { "process.env.NODE_ENV": '"production"' },
   });
-  await page.setContent('<main id="root"></main><output id="save-count">0</output>');
+  await page.setContent('<main id="root" class="onboarding-shell"></main><output id="save-count">0</output>');
   await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
-  await page.addScriptTag({ content: grouped.outputFiles[0].text });
+  await page.addStyleTag({ content: grouped.outputFiles.find(file => file.path.endsWith(".css"))!.text });
+  await page.addScriptTag({ content: grouped.outputFiles.find(file => file.path.endsWith(".js"))!.text });
   const github = page.locator('section[aria-label="GitHub in your collection"]');
   const copilot = page.locator('section[aria-label="Copilot in your collection"]');
   const selector = github.getByRole("combobox", { name: "Record to inspect for GitHub", exact: true });
@@ -134,14 +137,22 @@ test("grouped private records switch the inspected card and editor without savin
   await expect(page.locator(".product-card")).toHaveCount(2);
   await expect(copilot.locator(".card-title h2")).toHaveText("Copilot");
   await expect(selector.locator("option")).toHaveCount(3);
-  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow", "Synthetic current note.");
+  await page.screenshot({ path: testInfo.outputPath(`2026-09-19-record-selector-${width}.png`), fullPage: true, animations: "disabled" });
+  const selectorBounds = (await selector.boundingBox())!;
+  const groupBounds = (await github.boundingBox())!;
+  await testInfo.attach("record-selector-layout", { body: JSON.stringify({ viewport: page.viewportSize(), selector: selectorBounds, group: groupBounds }), contentType: "application/json" });
+  expect(selectorBounds.width).toBeGreaterThan(0);
+  expect(selectorBounds.x).toBeGreaterThanOrEqual(groupBounds.x);
+  expect(selectorBounds.x + selectorBounds.width).toBeLessThanOrEqual(groupBounds.x + groupBounds.width + 1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
   await note.fill("An unsaved synthetic edit.");
   await selector.selectOption("synthetic-testing");
   await assertInspected("synthetic-testing", "TESTING", "Testing a GitHub workflow", "Synthetic testing note.");
   await selector.selectOption("synthetic-archived");
   await assertInspected("synthetic-archived", "ARCHIVED", "Earlier GitHub workflow", "Synthetic archived note.");
   await page.getByRole("button", { name: "Current", exact: true }).click();
-  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow", "Synthetic current note.");
+  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
   await expect(copilot).toBeVisible();
   await page.getByRole("button", { name: "Testing", exact: true }).click();
   await assertInspected("synthetic-testing", "TESTING", "Testing a GitHub workflow", "Synthetic testing note.");
@@ -149,7 +160,7 @@ test("grouped private records switch the inspected card and editor without savin
   await page.getByRole("button", { name: "Archived", exact: true }).click();
   await assertInspected("synthetic-archived", "ARCHIVED", "Earlier GitHub workflow", "Synthetic archived note.");
   await page.getByRole("button", { name: "All", exact: true }).click();
-  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow", "Synthetic current note.");
+  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
   await expect(page.locator(".product-card")).toHaveCount(2);
   await expect(copilot.locator(".card-headline")).toHaveText("Separate Copilot workflow");
   await expect(page.locator("#save-count")).toHaveText("0");
