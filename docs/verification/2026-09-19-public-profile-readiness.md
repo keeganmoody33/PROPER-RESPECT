@@ -141,6 +141,30 @@ continues. Detailed raw receipts remain outside Git.
 
 ## Remaining acceptance
 
+The [release comparison](2026-09-19-profile-release-candidate.json) binds the
+candidate to exact development and production baselines, file lists and binary
+diff hashes. Read-only `vercel inspect https://props.lecturesfrom.com --scope
+groundskeep --no-color` reverified production READY deployment
+`dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6` on September 19. No release began.
+
+The production diff includes earlier development-only card preparation, duplicate
+grouping, ambiguity-safe ingestion, mailbox ambiguity reporting, natural-height
+cards, affiliate/referral disclosure and avatar sizing. It is broader than the
+last GitHub-destination release and needs its own exact approval. Publication
+selection, owner records, credentials and provider cursors are not migrated by
+deploying this source. Collection enrollment can request missing presentation
+brands after loading; it does not read usage providers. Existing Context.dev
+authorization remains separate from the paused usage-source reads.
+
+For a future approved rollout, verify the targets again and synchronize the
+backend before the frontend. The fallback frontend is the currently observed
+READY deployment above. Its sharing client already supplies both required
+preview fields. Retain the new backend guards and optional receipt fields during
+a frontend rollback; removing the receipt schema after attachments exist can
+reject retained records. Preserve the optional mailbox ambiguity result field
+as well. Do not reset data, rerun seeds, rotate credentials or activate collectors
+as part of rollback. Git-triggered deployments remain disabled.
+
 - Verify authenticated loading after approved development synchronization;
   retain local synthetic mutation/browser checks as such.
 - Obtain the owner's canonical public URL choice and prepare an ownership-safe
