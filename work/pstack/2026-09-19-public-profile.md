@@ -44,3 +44,26 @@ The preceding goal turn made progress by completing the explicitly approved deve
 ## Production release
 
 Owner-approved a2539b9 is READY at Vercel dpl_yek1HfE7u8QNa4E1cfWoCiopCnRU with production Convex striped-chicken-693. All 32 application tables are unchanged. Existing-session hosted collection and public desktop/mobile checks passed. Git push/PR landing steps were skipped because this authorization covered an exact-source deployment, not branch consolidation. Fresh sign-in, richer retained evidence and the final owner-approved publication remain open. See the dated profile production release receipt.
+
+## Guarded handle restoration — local continuation
+
+Observed hosted account/site handle drift prevents the selected `/keegan` address
+from matching the authenticated owner's sharing controls. Extend the existing
+operator recovery module, preserving the public handle reservation rule. Root
+owns regression coverage; the existing grounding worker owns only
+`convex/accountRecovery.ts`. RED is committed at `0e76ae0` before implementation.
+
+The read-only preview binds the exact account, site, publication and reviewed
+PUBLIC relationships to before/after fingerprints. The mutation may patch only
+the two handles and must reject collisions, stale state and inconsistent retries.
+It leaves the legacy card mapping absent: private/draft GitHub siblings still make
+that separate mapping ambiguous. No profile publication or evidence transfer is
+part of this unit. Runtime synchronization and exact production writes remain
+gated; local tests cannot establish a hosted restoration.
+
+GREEN: 31 restoration tests, 552 full Vitest tests and six Node checks pass;
+one optional private-file test is skipped. Lint, strict TypeScript and build pass.
+Independent read-only review found no concrete blocker; separate links/evidence
+are outside fingerprints and human approval remains an operator gate. No remote
+execution or new browser proof. PR/push steps remain outside this unit's scope.
+See [the recovery receipt](../../docs/verification/2026-09-19-handle-restoration.md).

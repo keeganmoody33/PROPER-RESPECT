@@ -127,3 +127,30 @@ test("already-restored replay still rejects later drift and a changed approval",
   await expect(t.mutation(restore, request)).rejects.toThrow();
   expect(await snapshot()).toEqual(before);
 });
+
+test.each(["expectedBeforeFingerprint", "expectedAfterFingerprint"] as const)("rejects an incorrect %s before making either change", async field => {
+  const { t, snapshot, approval } = await fixture();
+  const request = await approval();
+  const before = await snapshot();
+  await expect(t.mutation(restore, { ...request, [field]: "0".repeat(64) })).rejects.toThrow();
+  expect(await snapshot()).toEqual(before);
+});
+
+test("preserves an existing explicit card mapping", async () => {
+  const { t, ids, snapshot, approval } = await fixture();
+  await t.run(ctx => ctx.db.patch(ids.publicationId, { cardPropIds: [ids.propId] }));
+  const before = await snapshot();
+  await t.mutation(restore, await approval());
+  expect((await snapshot()).publications).toEqual(before.publications);
+});
+
+test("rejects duplicate reviewed correspondence even when the stored cards repeat", async () => {
+  const { t, ids, args, snapshot } = await fixture();
+  await t.run(async ctx => {
+    const publication = (await ctx.db.get(ids.publicationId))!;
+    await ctx.db.patch(ids.publicationId, { profile: { ...publication.profile, cards: [...publication.profile.cards, ...publication.profile.cards] } });
+  });
+  const before = await snapshot();
+  await expect(t.query(preview, { ...args, expectedCardPropIds: [ids.propId, ids.propId] })).rejects.toThrow();
+  expect(await snapshot()).toEqual(before);
+});

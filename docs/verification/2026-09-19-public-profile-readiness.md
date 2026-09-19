@@ -188,35 +188,24 @@ receipts remain outside Git.
 
 ## Remaining acceptance
 
-The [release comparison](2026-09-19-profile-release-candidate.json) binds the
-candidate to exact development and production baselines, file lists and binary
-diff hashes. Read-only `vercel inspect https://props.lecturesfrom.com --scope
-groundskeep --no-color` reverified production READY deployment
-`dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6` on September 19. No release began.
+The [release comparison](2026-09-19-profile-release-candidate.json) binds approved
+application `a2539b9` to both prior baselines and binary diff hashes. The owner
+approved this source, and production release verification is complete:
+[exact targets and hosted proof](2026-09-19-profile-production-release.md).
+Vercel `dpl_yek1HfE7u8QNa4E1cfWoCiopCnRU` is READY with production Convex
+`striped-chicken-693`. All 32 application tables stayed unchanged.
 
-The production diff includes earlier development-only card preparation, duplicate
-grouping, ambiguity-safe ingestion, mailbox ambiguity reporting, natural-height
-cards, affiliate/referral disclosure and avatar sizing. It is broader than the
-last GitHub-destination release and needs its own exact approval. Publication
-selection, owner records, credentials and provider cursors are not migrated by
-deploying this source. Collection enrollment can request missing presentation
-brands after loading; it does not read usage providers. Existing Context.dev
-authorization remains separate from the paused usage-source reads.
-
-For a future approved rollout, verify the targets again and synchronize the
-backend before the frontend. The fallback frontend is the currently observed
-READY deployment above. Its sharing client already supplies both required
-preview fields. Retain the new backend guards and optional receipt fields during
-a frontend rollback; removing the receipt schema after attachments exist can
-reject retained records. Preserve the optional mailbox ambiguity result field
-as well. Do not reset data, rerun seeds, rotate credentials or activate collectors
-as part of rollback. Git-triggered deployments remain disabled.
+Rollback uses the preceding compatible frontend `dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6`.
+Preserve additive receipt/FILE_UPLOAD schema, mailbox ambiguity fields and
+publication guards. No data restore, seeding, key rotation or collector activation
+belongs to rollback. Git-triggered deployments remain disabled.
 
 - Existing-session authenticated loading now passes in development. Fresh
   sign-in and a real owner-directed attachment remain unexercised; retain local
   synthetic mutation/browser checks as such.
-- Prepare an ownership-safe reconciliation for the owner's selected `/keegan`
-  address, without automatic merges or changes to published selections.
+- Guarded `/keegan` restoration is locally implemented and verified; see
+  [the recovery receipt](2026-09-19-handle-restoration.md). Production execution
+  still needs exact authorization. Legacy GitHub mapping remains unresolved.
 - Production code release is verified. Obtain exact authorization for any
   private transfer or account/site restoration before changing those records.
 - Let the owner preview and approve new public fields; verify the final signed-out
