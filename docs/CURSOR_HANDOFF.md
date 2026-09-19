@@ -1,11 +1,11 @@
 # Cursor continuation — Proper Respect
 
 Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
-Remote `main` is `f808fc834c7900681d10b043a6bb09d4f8e76314`. The accepted
-local branch `codex/personal-release-main` has three additional committed changes
-through `b7f0fba70fc48d6e9200b4da8def35649a42ba92`, plus this handoff update.
-Open the accepted folder below in Cursor to retain those changes. A fresh clone
-does not include them until a separately authorized push/merge.
+Remote `main` remains `f808fc834c7900681d10b043a6bb09d4f8e76314`.
+The four formerly local commits through `b028d904381c540245beea8d7516bb3460ce2434`
+are now published on `codex/cursor-handoff-20260919`. The accepted local delivery
+branch combines them with PR #22 at `bc2900073bf524df850a07707f700e5d298e0d40`.
+Production has not changed. The combined upload scope requires release approval.
 
 ## Open the working product
 
@@ -61,25 +61,19 @@ when available. Brand data supplies presentation only. See
 `docs/003-evidence-surfaces.md`; generic uploads do not yet authenticate images
 or extract Screen Time automatically.
 
-## First Cursor task
+## Current integration
 
-Fix the private GitHub card's destination. The owner reported that "Check out
-GitHub" opens the vendor site instead of their account/activity page. In
-`convex/discovery.ts`, ingestion creates a CANONICAL product-homepage link;
-`components/private-inventory.tsx` selects that link. The retained GitHub adapter
-already records a profile URL from `viewer.login` in
-`src/domain/retained-product-evidence.ts`. No fix has been implemented yet.
-
-Test the smallest correction against owned, selected GitHub evidence. Distinguish
-the vendor website from the account profile, preserve explicit owner links, and
-reject cross-owner or unrelated evidence. Do not infer identity from Clerk or
-email, or publish a private account URL. Run focused regression tests and inspect
-the actual rendered href. Request exact backend synchronization approval only
-if the fix changes backend code. Keep public sharing independently controlled.
+PR #22 implements private GitHub account destinations, optional account-link
+sharing through explicit preview, and selectable connector activity snapshots.
+Those changes are integrated locally with the upload correction. The sole merge
+conflict was this handoff document. Production acceptance remains unproven.
+Review evidence-kind eligibility for account destinations before release: ownership
+alone must not allow an unrelated source account identifier to become a GitHub
+profile. Do not publish private URLs or change owner choices during verification.
 
 ## Branch disposition checked September 19
 
-GitHub has no open PRs. Keep one active delivery branch, `codex/personal-release-main`.
+PR #22 remains open at the recorded head. Keep one active delivery branch, `codex/personal-release-main`.
 Do not merge every branch to make the list shorter.
 
 - `codex/composio-integration-20260918` at `00a097f` preserves explicitly incomplete

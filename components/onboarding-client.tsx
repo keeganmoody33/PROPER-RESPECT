@@ -17,6 +17,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
 import { defaultReview, explicitPublicationCards, isCurrentReview, type ReviewEdit } from "@/src/domain/review";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
+import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/domain/product-destination";
 import { costSchema, type CostVisibility } from "@/src/domain/cost";
 import { ProductKnowledgePanel } from "./product-knowledge-panel";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
@@ -416,6 +417,13 @@ function Builder() {
             const priorEdit = reviewEdits[card.prop._id];
             const edit = priorEdit && isCurrentReview(savedCard, priorEdit) ? priorEdit : defaultReview(savedCard);
             const confirmed = isRelationshipConfirmed(card.prop);
+            const destinationInput = {
+              product: card.product,
+              links: card.links,
+              associatedEvidence: card.associatedAccountEvidence ?? [],
+            };
+            const privateDestination = privateCardPrimaryLink(destinationInput);
+            const publicationOffer = offeredPrivatePublicationLink(destinationInput);
             return (
               <fieldset className="review-card" key={card.prop._id} disabled={busy} aria-label={`${card.product.name} review`}>
                 <h3>{card.product.name}</h3>
@@ -429,9 +437,7 @@ function Builder() {
                     startedAt: card.prop.startedAt,
                     activity: card.prop.activity,
                     cost: card.prop.cost,
-                    primaryLink: card.links.find(link => link.isPrimary) ?? (card.product.domain ? {
-                      type: "CANONICAL", url: `https://${card.product.domain}`, label: `Open ${card.product.name}`,
-                    } : undefined),
+                    primaryLink: privateDestination,
                   }} />
                 </details>
                 <details><summary>Product and evidence records</summary>
@@ -527,6 +533,14 @@ function Builder() {
                     }
                   />
                 </label>
+                {publicationOffer && publicationOffer.url !== edit.linkUrl && <>
+                  <p>Your private card opens {publicationOffer.url}. Visitors will use the primary link above until you choose otherwise and approve a preview.</p>
+                  <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, {
+                    linkUrl: publicationOffer.url,
+                    linkType: publicationOffer.type,
+                    linkLabel: publicationOffer.label,
+                  })}>Use the private account page in this preview</button>
+                </>}
                 <fieldset>
                   <legend>Cost (optional)</legend>
                   <label className="review-field">

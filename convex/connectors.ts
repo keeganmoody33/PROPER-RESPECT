@@ -360,9 +360,25 @@ export const saveConnectedSnapshot = internalMutation({
       const payload = JSON.stringify(args.activity);
       const observations = githubDateObservations(args.activity);
       if (observations.some(observation => !payload.includes(observation.excerpt))) throw new Error("Snapshot excerpt mismatch.");
+      const login = args.accountLabel.match(/^(?:https:\/\/)?github\.com\/([^/]+)$/i)?.[1];
       const rawId = await ctx.db.insert("rawEvidence", {
         userId: user._id, evidenceSourceId: source._id, payload, observations,
-        detectedVendor: "GitHub", capturedAt: args.activity.capturedAt,
+        detectedVendor: "GitHub",
+        detectedUrl: login ? `https://github.com/${login}` : undefined,
+        suggestedActivity: args.activity,
+        captureProvenance: {
+          version: 1,
+          route: "DIRECT_API",
+          adapter: { id: "github-connector", version: "provider-v1" },
+          origin: {
+            issuer: "GITHUB",
+            ...(login ? { accountId: login } : {}),
+            recordId: args.activity.capturedAt,
+          },
+          collector: { kind: "SYSTEM" },
+          activityActor: { kind: "UNKNOWN" },
+        },
+        capturedAt: args.activity.capturedAt,
         dedupKey: `${user._id}:github-snapshot:${args.activity.capturedAt}`,
       });
       snapshotEvidenceIds.push(rawId);

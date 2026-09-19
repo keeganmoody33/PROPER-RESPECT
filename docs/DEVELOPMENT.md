@@ -48,6 +48,10 @@ is live at https://proper-respect.com/onboarding, forwarding to the existing
 Clerk-compatible host. Cloudflare DNS, HTTPS, production synchronization and
 authenticated collection reload are verified. Transfer of newer development
 evidence/owner choices and full hosted maintenance acceptance remain open.
+The 19 September private GitHub destination, sharing opt-in, and connector
+snapshot supporting-activity correction are verified in source and tests, not
+on that hosted release; see
+[the destination receipt](verification/2026-09-19-github-card-destination.md).
 Clerk's primary domain and OAuth callbacks have not been migrated.
 Git-triggered deployments remain disabled; subsequent backend synchronization,
 provider reads, recurrence, releases and publication retain their applicable gates.
