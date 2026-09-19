@@ -67,9 +67,9 @@ PR #22 implements private GitHub account destinations, optional account-link
 sharing through explicit preview, and selectable connector activity snapshots.
 Those changes are integrated locally with the upload correction. The sole merge
 conflict was this handoff document. Production acceptance remains unproven.
-Review evidence-kind eligibility for account destinations before release: ownership
-alone must not allow an unrelated source account identifier to become a GitHub
-profile. Do not publish private URLs or change owner choices during verification.
+An added regression reproduced an unrelated source account identifier becoming
+a GitHub profile. The correction requires both GitHub source type and GitHub
+origin issuer before deriving an account destination from retained evidence. Do not publish private URLs or change owner choices during verification.
 
 ## Branch disposition checked September 19
 

@@ -16,6 +16,7 @@ export async function associatedAccountEvidenceForProp(
     if (!raw || raw.deletedAt) continue;
     const source = await ctx.db.get(raw.evidenceSourceId);
     if (!source || source.userId !== userId) continue;
+    if (productSlug === "github" && (source.type !== "GITHUB" || raw.captureProvenance?.origin.issuer !== "GITHUB")) continue;
     items.push({
       relationshipOwnerId: userId,
       evidenceOwnerId: raw.userId,

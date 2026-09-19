@@ -240,3 +240,16 @@ test("a connected GitHub account label supplies a private destination without pu
   })?.url).toBe("https://github.com/connector-account");
   expect(JSON.stringify(await t.run(ctx => ctx.db.query("publishedProfiles").collect()))).not.toContain("connector-account");
 });
+
+test("a GitHub mention from another source cannot establish an owned GitHub account destination", async () => {
+  const { t, owner } = await fixture();
+  const retained = await owner.mutation(retain, { packet: await packet(7, "mentioned-account") });
+  await t.run(async ctx => {
+    const raw = (await ctx.db.get(retained.rawEvidenceId as Id<"rawEvidence">))!;
+    await ctx.db.patch(raw.evidenceSourceId, { type: "GMAIL" });
+    await ctx.db.patch(raw._id, { captureProvenance: { ...raw.captureProvenance!, origin: { issuer: "GMAIL", accountId: "mailbox-account" } } });
+  });
+  const listed = await owner.query(list, firstPage);
+  const card = listed.page[0];
+  expect(privateCardPrimaryLink({ product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence })?.url).toBe("https://github.com");
+});
