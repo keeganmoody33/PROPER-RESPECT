@@ -120,7 +120,7 @@ reset, visible rejection, fixed-target continuation and completion at 1280px and
 390px with no external requests or browser errors. They use synthetic callbacks;
 they do not prove an authenticated deployed mutation. Coordinator reviewed the
 source and mobile screenshot. The publication unit has a separate independent
-review; no independent review verdict covers this reconciliation unit.
+review. A subsequent independent reconciliation review is recorded below.
 
 The owner subsequently approved development-only synchronization of
 `a2539b91e84cd93271daa71550430e32fc95e24e`. It completed on `utmost-mongoose-374`:
@@ -129,6 +129,33 @@ authenticated loading and anonymous-query rejection verified. All 32 application
 tables remained unchanged, including after browser verification. See the
 [sync receipt](2026-09-19-profile-development-sync.md). No evidence attachment,
 owner choice, production release or publication accompanied this synchronization.
+
+## Post-sync release review
+
+An independent read-only review of `a2539b9` found no concrete release-blocking
+defect. Its focused local run passed 56 tests across seven files. The reviewer
+checked ownership, same-product targets, frozen batches, replay handling, stale
+UI selections and preservation of saved decisions and publications. The
+205-original regression continues across three batches while interleaved
+ingestion adds a separate 206th proof to the explicitly chosen target.
+
+This review used the inherited model route, not cross-provider validation.
+Interleaved test transactions do not prove real server contention behavior or
+large-payload production transaction limits. Existing component browser tests
+were inspected rather than rerun. The added-code comment scan recommended no
+deletions; its two directives select the test environment and Vite types.
+
+Coordinator inspected the actual signed-in development collection at a measured
+325 CSS-pixel viewport. All four visible product logos loaded, cards had no
+horizontal overflow, and expanded Wispr supporting details had no internal
+vertical scroller. Static capture freshness and the unknown measurement period
+remained visible. No sharing selections, saves or provider controls were changed.
+The temporary viewport override was reset afterward.
+
+Both binary diff hashes and file counts in the release manifest still match
+Git. Current application source is identical to `a2539b9`; newer commits contain
+documentation only. Exact production release approval and the canonical public
+URL choice have been requested. Neither is inferred from development approval.
 
 ## Code-generation boundary check
 

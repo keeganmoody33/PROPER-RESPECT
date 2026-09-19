@@ -1,6 +1,6 @@
 {
-  "recordedAt": "2026-09-19T21:17:26.168992+00:00",
-  "status": "AWAITING_DEVELOPMENT_SYNC_APPROVAL",
+  "recordedAt": "2026-09-19T22:26:18.599977+00:00",
+  "status": "DEVELOPMENT_VERIFIED_AWAITING_PRODUCTION_APPROVAL",
   "development": {
     "target": "utmost-mongoose-374",
     "comparison": {
@@ -46,7 +46,9 @@
         "tests/e2e/discovery-review.spec.ts",
         "tests/e2e/verified-product-assets.spec.ts"
       ]
-    }
+    },
+    "synchronizedApplicationSha": "a2539b91e84cd93271daa71550430e32fc95e24e",
+    "receipt": "2026-09-19-profile-development-sync.md"
   },
   "production": {
     "target": "striped-chicken-693",
@@ -123,10 +125,17 @@
   },
   "operationsPerformed": [
     "local git diff inspection",
-    "read-only Vercel inspect"
+    "read-only Vercel inspect",
+    "owner-approved development-only synchronization",
+    "authenticated development reload",
+    "read-only application table comparison",
+    "independent local reconciliation review",
+    "narrow-screen development card inspection"
   ],
-  "backendSynchronizationPerformed": false,
+  "backendSynchronizationPerformed": true,
   "dataTransferPerformed": false,
   "providerUsageReadPerformed": false,
-  "publicationPerformed": false
+  "publicationPerformed": false,
+  "preparedAt": "2026-09-19T21:17:26.168992+00:00",
+  "productionSynchronizationPerformed": false
 }

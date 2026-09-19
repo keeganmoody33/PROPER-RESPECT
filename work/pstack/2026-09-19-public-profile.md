@@ -33,9 +33,10 @@ Two read-only investigations run independently: public projection/review correct
 - [x] Verify product-specific logo sources and wire justified retained Copilot presentation support. NotebookLM/Devin Desktop remain explicit gaps.
 - [x] Fix proven public review/projection defects and cover regressions. Committed at 50267f8.
 - [x] Compare hosted selections with retained private choices without modifying either. Private transfer proposal prepared; no writes.
-- [ ] Prepare exact production release and any private transfer diff for approval. Development-only a2539b9 synchronization request is pending first.
+- [x] Prepare exact production release and private transfer comparison. Application a2539b9 is synchronized to approved development only; both release diff hashes are reverified. Production release approval and the public URL choice are pending. Private transfer remains separately gated and unresolved targets are not chosen by the agent.
+- [x] Independently review retained-discovery reconciliation. No concrete release blocker found; 56 focused tests passed. Real server contention and live owner attachment remain unproven.
 - [ ] Verify approved final signed-out output at hosted URL on desktop/mobile.
 
 ## No-progress audit
 
-The preceding goal turn verified the unchanged remote function specification, updated the Ref and resumed the live worker. This continuation committed two verified local units and exercised the updated public layout. Evidence reconciliation remains in progress; release and owner choices remain gated.
+The preceding goal turn made progress by completing the explicitly approved development synchronization and proving authenticated loading with 32 unchanged application tables. This continuation obtained an independent reconciliation verdict, inspected actual narrow-screen card behavior and reverified both exact release comparisons. Production approval and the canonical public URL choice are pending. The full hosted public-profile goal remains incomplete.
