@@ -8,10 +8,11 @@ are reconciled. Verify current main/PR state before further Git operations.
 ## Open the working product
 
 Latest local application checkpoint: `a2539b91e84cd93271daa71550430e32fc95e24e`.
-It is ahead of the approved development backend `e8834be` and the hosted release
-below. Publication guards, Copilot assets, public heading and private evidence
-reconciliation pass local checks. A new development synchronization request is
-pending; no release, transfer or publication is approved by that request. Read
+It is synchronized to development `utmost-mongoose-374` and remains ahead of the
+hosted release below. Existing-session authenticated loading and anonymous query
+rejection passed; all 32 application tables remained unchanged. No production
+release, transfer or publication accompanied the synchronization. Read
+[the synchronization receipt](verification/2026-09-19-profile-development-sync.md) and
 [the dated readiness receipt](verification/2026-09-19-public-profile-readiness.md)
 before restarting the local authenticated application or changing environments.
 

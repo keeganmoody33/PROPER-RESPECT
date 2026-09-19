@@ -122,11 +122,13 @@ they do not prove an authenticated deployed mutation. Coordinator reviewed the
 source and mobile screenshot. The publication unit has a separate independent
 review; no independent review verdict covers this reconciliation unit.
 
-No new functions have been synchronized. An exact request for development-only
-synchronization of `a2539b91e84cd93271daa71550430e32fc95e24e` is pending. It does
-not authorize evidence attachment or owner choices. The local build is ahead of
-the development backend; restart it for authenticated verification only after
-approved synchronization. Production and published information remain unchanged.
+The owner subsequently approved development-only synchronization of
+`a2539b91e84cd93271daa71550430e32fc95e24e`. It completed on `utmost-mongoose-374`:
+77 exposed functions, required publication preview fields, existing-session
+authenticated loading and anonymous-query rejection verified. All 32 application
+tables remained unchanged, including after browser verification. See the
+[sync receipt](2026-09-19-profile-development-sync.md). No evidence attachment,
+owner choice, production release or publication accompanied this synchronization.
 
 ## Code-generation boundary check
 
@@ -135,9 +137,9 @@ server analysis despite describing itself as not modifying running code. The
 installed CLI path calls `start_push`, not `finishPush`. A subsequent read-only
 function-spec from exactly `utmost-mongoose-374` is JSON-identical to the approved
 development baseline: 73 functions, no discovery-review functions, and unchanged
-publication validators. No activation is claimed or authorized. Further remote
-generation/synchronization is withheld pending exact approval; local source work
-continues. Detailed raw receipts remain outside Git.
+publication validators. No activation occurred at that earlier analysis step.
+The later explicitly approved synchronization is recorded above. Detailed raw
+receipts remain outside Git.
 
 ## Remaining acceptance
 
@@ -165,8 +167,9 @@ reject retained records. Preserve the optional mailbox ambiguity result field
 as well. Do not reset data, rerun seeds, rotate credentials or activate collectors
 as part of rollback. Git-triggered deployments remain disabled.
 
-- Verify authenticated loading after approved development synchronization;
-  retain local synthetic mutation/browser checks as such.
+- Existing-session authenticated loading now passes in development. Fresh
+  sign-in and a real owner-directed attachment remain unexercised; retain local
+  synthetic mutation/browser checks as such.
 - Obtain the owner's canonical public URL choice and prepare an ownership-safe
   reconciliation, without automatic merges or changes to published selections.
 - Obtain exact release and private-transfer approval before changing production.
