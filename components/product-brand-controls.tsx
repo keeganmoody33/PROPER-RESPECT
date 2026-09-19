@@ -13,6 +13,7 @@ export function ProductBrandControls({ propId }: { propId: Id<"props"> }) {
   const [error, setError] = useState(false);
   const running = state?.status === "PENDING" || state?.status === "RUNNING";
   if (!state) return null;
+  if (state.status === "PRODUCT_IDENTITY_REQUIRED") return <p className="product-brand-controls">This product needs a verified product-specific brand. Its parent company’s logo will not be used in its place.</p>;
   if (state.status === "UNVERIFIED_DOMAIN") return <p className="product-brand-controls">This product’s website has not yet been verified for brand retrieval. Your saved product and history are unaffected.</p>;
 
   return <div className="product-brand-controls">

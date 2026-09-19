@@ -65,7 +65,10 @@ export const callback = action({
 });
 
 type Scan = { jobId: Id<"mailboxScanJobs">; generation: number; cursor: string | null; query?: string; queryKey?: string };
-type ReadResult = { readCount: number; proposals: number; hasMore: boolean; unmatchedCount?: number };
+type ReadResult = {
+  readCount: number; proposals: number; hasMore: boolean; unmatchedCount?: number;
+  ambiguousProducts?: Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }>;
+};
 
 async function readLeasedPage(ctx: ActionCtx, args: { accountId: Id<"mailboxAccounts">; expectedGeneration: number }, scan: Scan): Promise<ReadResult> {
   const lease = { ...args, jobId: scan.jobId };
@@ -111,6 +114,7 @@ async function readLeasedPage(ctx: ActionCtx, args: { accountId: Id<"mailboxAcco
     // One action owns one bounded page/job. Further pages use the persisted
     // query-specific cursor and never borrow historical/incremental tokens.
     return { readCount: page.readCount, proposals: result.proposals, hasMore: !page.complete,
+      ...(result.ambiguousProducts?.length ? { ambiguousProducts: result.ambiguousProducts } : {}),
       ...(scan.queryKey ? { unmatchedCount: page.unknown?.length ?? 0 } : {}) };
   } catch (error) {
     const status = error instanceof MailboxProviderError ? error.status : undefined;

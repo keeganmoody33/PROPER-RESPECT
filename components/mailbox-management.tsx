@@ -15,6 +15,17 @@ const modes: Array<{ mode: MailboxScanMode; title: string; action: string; conti
 ];
 const date = (value: string) => new Date(value).toLocaleString();
 
+export function mailboxReadNotice(result: {
+  readCount: number; proposals: number; unmatchedCount?: number; hasMore: boolean;
+  ambiguousProducts?: Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }>;
+}) {
+  const pending = result.ambiguousProducts ?? [];
+  const review = pending.length > 0
+    ? `Evidence for ${pending.map(item => item.productSlug).join(", ")} was retained privately but is not attached to a card. These products have multiple existing records that need to be reconciled before the evidence can be attached. No record was chosen and no duplicate card was added for them.`
+    : "Review private discoveries in your collection.";
+  return `Examined ${result.readCount} headers; ${result.proposals} catalog product matches and ${result.unmatchedCount ?? 0} unmatched records on this page. ${result.hasMore ? "More pages remain in this search." : "This query reached its final page."} ${review} Your saved relationship decisions and public information are unchanged.`;
+}
+
 function SourceProgress({ account }: { account: Account }) {
   return <div style={{ display: "grid", gap: "0.75rem", marginBlock: "1rem" }}>
     {modes.map(({ mode, title }) => {
@@ -109,7 +120,7 @@ export function MailboxManagement() {
         body: new URLSearchParams({ accountId: account.accountId, expectedGeneration: String(account.generation), mode }) });
       const result = await response.json();
       if (!response.ok) throw new Error();
-      setNotice(`Examined ${result.readCount} headers; ${result.proposals} catalog product matches and ${result.unmatchedCount ?? 0} unmatched records on this page. ${result.hasMore ? "More pages remain in this search." : "This query reached its final page."} Review private discoveries in your collection. No relationship or public information was changed.`);
+      setNotice(mailboxReadNotice(result));
     } catch { setNotice("Gmail read did not complete. Check the account's recovery message below. Retained evidence and your collection remain safe."); }
     finally { setBusy(false); }
   }

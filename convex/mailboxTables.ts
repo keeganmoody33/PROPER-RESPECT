@@ -11,6 +11,9 @@ export const mailboxCredentialValidator = v.object({
 });
 export const mailboxBatchResultValidator = v.object({
   ingestedSignals: v.number(), proposals: v.number(), createdDrafts: v.array(v.string()),
+  ambiguousProducts: v.optional(v.array(v.object({
+    productSlug: v.string(), reason: v.literal("MULTIPLE_OWNER_RELATIONSHIPS"),
+  }))),
 });
 
 export const mailboxTables = {

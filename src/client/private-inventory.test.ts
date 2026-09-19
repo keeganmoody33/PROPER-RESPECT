@@ -62,3 +62,30 @@ test("the private GitHub card opens the associated account instead of the vendor
   expect($("a.outbound-link").text()).toContain("Check out GitHub");
   expect($('a[href="https://github.com"]')).toHaveLength(0);
 });
+
+test("one visible product retains every record and keeps same-domain products separate", () => {
+  const sibling = { ...item, prop: { ...item.prop, _id: "second-prop" as Id<"props">, headline: "Different retained decision", visibility: "PRIVATE" as const, status: "ACTIVE" as const } };
+  const separate = { ...item, prop: { ...item.prop, _id: "copilot-prop" as Id<"props">, productId: "copilot-product" as Id<"products"> }, product: { ...item.product, _id: "copilot-product" as Id<"products">, name: "Copilot", slug: "github-copilot" } };
+  const before = JSON.stringify([item, sibling, separate]);
+  const save = vi.fn();
+  const $ = load(renderToStaticMarkup(createElement(PrivateInventoryView, {
+    data: { cards: [item, sibling, separate], hasMore: true }, onSave: save, onImport: vi.fn(),
+  })));
+  expect($("article.product-card")).toHaveLength(2);
+  expect($("select option").map((_, node) => $(node).attr("value")).get()).toEqual(["test-prop", "second-prop"]);
+  expect($.text()).toContain("Different retained decision");
+  expect($.text()).toContain("Selecting a record does not merge, confirm, or publish it");
+  expect($.text()).toContain("More records, including other records for these products");
+  expect(save).not.toHaveBeenCalled();
+  expect(JSON.stringify([item, sibling, separate])).toBe(before);
+});
+
+test("accumulated pages never render a second card for the same owner and product", () => {
+  const laterPage = { ...item, prop: { ...item.prop, _id: "later-prop" as Id<"props"> } };
+  for (const cards of [[item], [item, laterPage]]) {
+    const $ = load(renderToStaticMarkup(createElement(PrivateInventoryView, {
+      data: { cards, hasMore: cards.length === 1 }, onSave: vi.fn(), onImport: vi.fn(),
+    })));
+    expect($("article.product-card")).toHaveLength(1);
+  }
+});

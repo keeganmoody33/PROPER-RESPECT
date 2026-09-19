@@ -1,7 +1,7 @@
 import { query, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { publicProfileValidator } from "./validators";
-import { retainedProductBrand } from "./productBrands";
+import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1 } from "../src/domain/public-profile";
 
 const cardValidator = publicProfileValidator.fields.cards.element;
@@ -31,6 +31,11 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
     }),
   ));
   const cards = published.profile.cards.map(card => {
+    if (card.product.brand?.provider === "context.dev" && productBrandEligibility(card.product) === "PRODUCT_IDENTITY_REQUIRED") {
+      const product = { ...card.product };
+      delete product.brand;
+      return { ...card, product };
+    }
     const retained = brands.get(card.product.slug);
     return retained?.brand && retained.domain === card.product.domain
       ? { ...card, product: { ...card.product, brand: retained.brand } } : card;

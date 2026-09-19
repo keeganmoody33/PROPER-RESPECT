@@ -151,6 +151,7 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
   });
   const proposals = proposeDrafts(proposalSignals);
   const createdDrafts: string[] = [];
+  const ambiguousProducts: Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }> = [];
 
   for (const proposal of proposals) {
     const rawEvidenceIds = proposal.signalIndexes.map(
@@ -213,17 +214,27 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       product = (await ctx.db.get(productId))!;
     }
 
-    // A handle can be renamed or reassigned. Follow the owner's existing
-    // draft relationship, and key any new relationship by immutable owner ID.
+    // Explicit draft mappings win. Without one, seed identity cannot choose
+    // between existing owner decisions for the same product.
     const newPropSeedKey = JSON.stringify(["owner-import-v1", user._id, proposal.product.slug]);
     if (!prop) {
-      prop = await ctx.db.query("props")
-        .withIndex("by_seed_key", (q) => q.eq("seedKey", newPropSeedKey)).unique();
+      const candidates = await ctx.db.query("props")
+        .withIndex("by_user_product", (q) => q.eq("userId", user._id).eq("productId", product._id))
+        .take(2);
+      if (candidates.length > 1) {
+        await ctx.db.patch(draft._id, {
+          rawEvidenceIds: [...new Set([...draft.rawEvidenceIds, ...rawEvidenceIds])],
+        });
+        ambiguousProducts.push({ productSlug: product.slug, reason: "MULTIPLE_OWNER_RELATIONSHIPS" });
+        continue;
+      }
+      prop = candidates[0] ?? null;
     }
     if (prop && (prop.userId !== user._id || prop.productId !== product._id)) {
       throw new Error("Relationship owner or product mismatch.");
     }
     const propSeedKey = prop?.seedKey ?? newPropSeedKey;
+    const creatingProp = !prop;
     if (!prop) {
       const propId = await ctx.db.insert("props", {
         seedKey: propSeedKey,
@@ -245,7 +256,7 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       .withIndex("by_prop", (q) => q.eq("propId", prop._id))
       .filter((q) => q.eq(q.field("isPrimary"), true))
       .first();
-    if (!existingLink) {
+    if (creatingProp && !existingLink) {
       await ctx.db.insert("links", {
         seedKey: linkSeedKey,
         propId: prop._id,
@@ -289,6 +300,7 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
     ingestedSignals: args.signals.length,
     proposals: proposals.length,
     createdDrafts,
+    ambiguousProducts,
   };
 }
 
@@ -321,6 +333,7 @@ type IngestResult = {
   ingestedSignals: number;
   proposals: number;
   createdDrafts: string[];
+  ambiguousProducts: Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }>;
 };
 
 export const syncGithub = internalAction({

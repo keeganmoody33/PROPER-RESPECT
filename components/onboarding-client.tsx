@@ -25,8 +25,39 @@ import { ProductCard } from "./product-card";
 import { ProductBrandControls } from "./product-brand-controls";
 import { PrivateInventory } from "./private-inventory";
 import { MailboxManagement } from "./mailbox-management";
+import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 
 type ManualProductInput = { name: string; website?: string; description?: string; operationId: string };
+
+function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
+  const convex = useConvex();
+  const [attempt, setAttempt] = useState(0);
+  const attemptedRetry = useRef(0);
+  const [progress, setProgress] = useState<{ items: BrandPreparationItem[]; done: boolean }>({ items: [], done: false });
+  const selection = JSON.stringify([...new Set(propIds)].sort());
+  useEffect(() => {
+    const controller = new AbortController();
+    const retryFailed = attempt > attemptedRetry.current;
+    attemptedRetry.current = attempt;
+    void prepareCollectionBrands({
+      propIds: JSON.parse(selection), signal: controller.signal,
+      prepare: ids => convex.mutation(api.productBrands.prepareForProps, { propIds: ids as Id<"props">[], retryFailed }),
+      read: ids => convex.query(api.productBrands.getPreparationForProps, { propIds: ids as Id<"props">[] }),
+      report: (items, done) => setProgress({ items, done }),
+    });
+    return () => controller.abort();
+  }, [convex, selection, attempt]);
+  if (!propIds.length) return null;
+  const ready = progress.items.filter(item => item.status === "READY").length;
+  const pending = progress.items.filter(item => ["PENDING", "RUNNING", "NOT_REQUESTED"].includes(item.status)).length;
+  const failed = progress.items.filter(item => item.status === "FAILED").length;
+  const unverified = progress.items.length - ready - pending - failed;
+  return <div className="product-brand-controls" aria-label="Collection appearance">
+    <p role="status">Card appearance: {ready} ready, {pending} pending, {failed} unavailable{unverified ? `, ${unverified} awaiting verified product identity` : ""}.</p>
+    {(pending > 0 || failed > 0) && <p>Your products remain available while their appearance is prepared.</p>}
+    {progress.done && (failed > 0 || pending > 0) && <><p>Unavailable appearance can be retried after one minute.</p><button type="button" className="secondary-action" onClick={() => setAttempt(value => value + 1)}>Retry unfinished appearance</button></>}
+  </div>;
+}
 
 export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) => Promise<unknown> }) {
   const [busy, setBusy] = useState(false);
@@ -302,11 +333,11 @@ function Builder() {
           <h1>Your tools. Your track record.</h1>
         </div>
         <div>
-          <UserButton />
+          <UserButton appearance={{ elements: { avatarBox: { width: "3rem", height: "3rem" } } }} />
         </div>
         <p>
-          The tools you’ve tested and used, what’s in your stack now, and why you
-          moved on. A record of your changing stack, shared on your terms.
+          Technology moves fast. Keep a record of the tools you’ve tested and used,
+          how you’ve used them, and why your stack changed. Share the history and supporting evidence you choose.
         </p>
       </div>
 
@@ -317,6 +348,7 @@ function Builder() {
         <a href="#collection-sharing">Sharing</a>
       </nav>
       {message && <p className="message" role="status">{message}</p>}
+      {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <PrivateInventory brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} />
 
@@ -429,7 +461,7 @@ function Builder() {
                 <h3>{card.product.name}</h3>
                 <details>
                   <summary>Preview private card</summary>
-                  <ProductCard index={index} relationshipConfirmed={confirmed} goTo={card.prop.goTo} card={{
+                  <ProductCard audience="owner" index={index} relationshipConfirmed={confirmed} goTo={card.prop.goTo} card={{
                     product: card.product,
                     status: card.prop.status,
                     headline: card.prop.headline,
@@ -533,6 +565,16 @@ function Builder() {
                     }
                   />
                 </label>
+                <label className="review-field">
+                  Link purpose
+                  <select value={edit.linkType} onChange={event => updateReview(card.prop._id, edit, { linkType: event.target.value as ReviewEdit["linkType"] })}>
+                    <option value="CANONICAL">Product or account page</option>
+                    <option value="AFFILIATE">My affiliate link</option>
+                    <option value="REFERRAL">My referral link</option>
+                    <option value="INVITE">My invite link</option>
+                  </select>
+                </label>
+                <p>Use your own affiliate or referral URL. It appears publicly only after you approve the sharing preview.</p>
                 {publicationOffer && publicationOffer.url !== edit.linkUrl && <>
                   <p>Your private card opens {publicationOffer.url}. Visitors will use the primary link above until you choose otherwise and approve a preview.</p>
                   <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, {

@@ -327,14 +327,19 @@ export function ProductCard({
   displayMode = "relationship",
   relationshipConfirmed = true,
   goTo = false,
+  audience = "visitor",
 }: {
   card: Card;
   index: number;
   displayMode?: "relationship" | "brand-preview";
   relationshipConfirmed?: boolean;
   goTo?: boolean;
+  audience?: "owner" | "visitor";
 }) {
   const brandPreview = displayMode === "brand-preview";
+  const linkDisclosure = card.primaryLink?.type === "AFFILIATE" ? "Affiliate link"
+    : card.primaryLink?.type === "REFERRAL" ? "Referral link" : undefined;
+  const linkRel = linkDisclosure ? "noopener noreferrer sponsored" : "noopener noreferrer";
   const cardStatus = brandPreview ? "BRAND PREVIEW" : relationshipConfirmed ? card.status : "PRIVATE DISCOVERY";
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
   const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : "Relationship & evidence";
@@ -394,15 +399,15 @@ export function ProductCard({
             </p>
             <h2>{card.product.name}</h2>
           </div>
-          {card.primaryLink && <a
+          {card.primaryLink && <div className="card-destination"><a
             className="card-visit"
             href={card.primaryLink.url}
             target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${card.primaryLink.label} (opens in a new tab)`}
+            rel={linkRel}
+            aria-label={`${card.primaryLink.label}${linkDisclosure ? ` · ${linkDisclosure}` : ""} (opens in a new tab)`}
           >
             ↗
-          </a>}
+          </a>{linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}</div>}
         </div>
 
         <p className="card-headline">
@@ -411,11 +416,11 @@ export function ProductCard({
 
         {!brandPreview && card.activity ? (
           <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} />
-        ) : (
+        ) : (brandPreview || audience === "owner") ? (
           <p className="activity-placeholder">
-            {brandPreview ? "No personal activity is included in this brand preview." : "Your relationship does not require activity tracking."}
+            {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}
           </p>
-        )}
+        ) : null}
 
         <div className="card-footer">
           <span className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
@@ -445,7 +450,7 @@ export function ProductCard({
             Close details
           </button>
         </div>
-        <div className="card-back-content" tabIndex={0} role="group" aria-label="Card evidence">
+        <div className="card-back-content" role="group" aria-label="Card evidence">
           <div className="status-row">
             <span>{cardStatus}</span>
             {card.primaryLink && <span>{card.primaryLink.type}</span>}
@@ -478,10 +483,11 @@ export function ProductCard({
           {card.primaryLink && <a
             className="outbound-link"
             href={card.primaryLink.url}
-            rel="noopener noreferrer"
+            rel={linkRel}
             target="_blank"
           >
             {card.primaryLink.label} ↗
+            {linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}
           </a>}
         </div>
       </section>
