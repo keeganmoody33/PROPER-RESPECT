@@ -130,3 +130,16 @@ export function privateCardPrimaryLink(input: {
   }
   return undefined;
 }
+
+/** Stored primary stays the publication default. Owner may opt into this private destination. */
+export function offeredPrivatePublicationLink(input: {
+  product: DestinationProduct;
+  links: DestinationLink[];
+  associatedEvidence: AssociatedAccountEvidence[];
+}): DestinationLink | undefined {
+  const stored = input.links.find(link => link.isPrimary);
+  const storedUrl = stored?.url ?? (input.product.domain ? `https://${input.product.domain}` : undefined);
+  const privateLink = privateCardPrimaryLink(input);
+  if (!privateLink || !storedUrl || privateLink.url === storedUrl) return undefined;
+  return privateLink;
+}

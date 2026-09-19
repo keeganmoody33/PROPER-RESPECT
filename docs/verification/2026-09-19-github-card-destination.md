@@ -24,15 +24,22 @@ relationship-associated GitHub account evidence. It does not read Clerk,
 email, branding, or the product display name. Publication and
 `defaultReview` still use stored primary links.
 
+Sharing now *offers* that private account URL as an explicit publication
+choice. Checking “Share this saved card” still previews the stored website
+until the owner clicks “Use the private account page in this preview” and
+approves a visitor preview. Missing evidence, cross-owner proofs, and
+owner-selected custom links produce no offer.
+
 ## Checks
 
 - Domain, Convex, and rendered-card tests for owned account destination,
   missing evidence, cross-owner rejection, custom-link preservation, connected
-  account labels, and unpublished public projections.
-- Full Vitest: 414 passed, 1 skipped. Node script tests: 6 passed.
+  account labels, unpublished public projections, and the sharing opt-in.
+- Full Vitest: 417 passed, 1 skipped. Node script tests: 6 passed.
 - `npm run typecheck` and `npm run lint` passed.
-- Playwright fixture e2e: 19 passed. Fixture data has no GitHub account
-  evidence, so those checks still use generic product websites.
+- Playwright fixture e2e: 19 passed after this sharing opt-in. Fixture data
+  still has no GitHub account evidence, so those checks use generic product
+  websites.
 - Signed-in hosted private collection was not exercised here. No Clerk or
   Convex credentials are present in this environment. Production was not
   synchronized or released.

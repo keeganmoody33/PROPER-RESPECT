@@ -6,7 +6,7 @@ import { expect, test } from "vitest";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { prepareGitHubActivity, RETAINED_PRODUCT_ADAPTER_VERSION, type RetainedProductArtifact } from "../src/domain/retained-product-evidence";
-import { privateCardPrimaryLink } from "../src/domain/product-destination";
+import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "../src/domain/product-destination";
 import { defaultReview } from "../src/domain/review";
 import { api } from "./_generated/api";
 
@@ -135,6 +135,9 @@ test("private GitHub destination uses owned account evidence and keeps the produ
   expect(privateCardPrimaryLink({
     product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
   })).toMatchObject({ url: "https://github.com/owner-account", label: "Check out GitHub" });
+  expect(offeredPrivatePublicationLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })).toMatchObject({ url: "https://github.com/owner-account" });
   expect(JSON.stringify(await t.run(ctx => ctx.db.query("publishedProfiles").collect()))).not.toContain("owner-account");
 
   await t.run(async ctx => {

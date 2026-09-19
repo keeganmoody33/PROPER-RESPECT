@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isProductWebsite, privateCardPrimaryLink } from "./product-destination";
+import { isProductWebsite, offeredPrivatePublicationLink, privateCardPrimaryLink } from "./product-destination";
 
 const github = { name: "GitHub", slug: "github", domain: "github.com" };
 const copilot = { name: "GitHub Copilot", slug: "github-copilot", domain: "github.com" };
@@ -98,6 +98,38 @@ describe("privateCardPrimaryLink", () => {
       url: "https://github.com/synthetic-account/selected-work",
       label: "Selected work sample",
     });
+  });
+
+  it("offers the private GitHub account as a publication choice without selecting it", () => {
+    expect(offeredPrivatePublicationLink({
+      product: github,
+      links: [homepage],
+      associatedEvidence: [ownerEvidence],
+    })).toEqual({
+      type: "CANONICAL",
+      url: "https://github.com/synthetic-account",
+      label: "Check out GitHub",
+    });
+    expect(offeredPrivatePublicationLink({
+      product: github,
+      links: [homepage],
+      associatedEvidence: [],
+    })).toBeUndefined();
+    expect(offeredPrivatePublicationLink({
+      product: github,
+      links: [homepage],
+      associatedEvidence: [{ ...ownerEvidence, evidenceOwnerId: "other" }],
+    })).toBeUndefined();
+    expect(offeredPrivatePublicationLink({
+      product: github,
+      links: [{
+        type: "REFERRAL",
+        url: "https://github.com/synthetic-account/selected-work",
+        label: "Selected work sample",
+        isPrimary: true,
+      }],
+      associatedEvidence: [ownerEvidence],
+    })).toBeUndefined();
   });
 
   it("treats www and trailing-slash homepages as the vendor site", () => {

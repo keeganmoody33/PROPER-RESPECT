@@ -119,6 +119,34 @@ test("private collection and simple owner-described product entry precede option
   expect(html).toContain("This upload does not read the image or CSV automatically");
 });
 
+test("sharing keeps the stored GitHub website until the owner opts into the private account page", () => {
+  auth.convex = { isLoading: false, isAuthenticated: true };
+  auth.ownerState = {
+    user: { handle: "owner", displayName: "Owner", bio: "" },
+    cards: [{
+      prop: { _id: "github-prop", visibility: "PRIVATE", status: "ACTIVE", headline: "Private GitHub", note: "Owner statement", relationshipVersion: 1 },
+      product: { slug: "github", name: "GitHub", domain: "github.com", description: "Code" },
+      links: [{ type: "CANONICAL", url: "https://github.com", label: "Check out GitHub", isPrimary: true }],
+      claims: [],
+      associatedAccountEvidence: [{
+        relationshipOwnerId: "owner-user",
+        evidenceOwnerId: "owner-user",
+        productSlug: "github",
+        accountId: "synthetic-account",
+        url: "https://github.com/synthetic-account",
+      }],
+    }],
+    connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
+  };
+  const html = render();
+  expect(html).toContain('value="https://github.com"');
+  expect(html).toContain("https://github.com/synthetic-account");
+  expect(html).toContain("Use the private account page in this preview");
+  expect(html).toContain("Visitors will use the primary link above until you choose otherwise and approve a preview.");
+  expect(html).not.toMatch(/value="https:\/\/github\.com\/synthetic-account"/);
+  expect(html).not.toContain("I approve making exactly this preview visible");
+});
+
 test("sharing preview renders only the server-projected profile and requires a separate owner approval", () => {
   const profile = {
     handle: "owner", displayName: "Owner", bio: "An explicitly shared footer.", cards: [{
