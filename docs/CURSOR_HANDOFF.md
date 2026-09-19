@@ -19,7 +19,8 @@ the existing manual card in development, without changing its relationship.
 
 The 2026-09-19 private GitHub destination correction is **not** on that hosted
 release. Source commit `f3353d31084e3f5561f692f417c67553db939e0f` is on branch
-`cursor/github-card-account-destination-7318`. See
+`cursor/github-card-account-destination-7318`, draft
+[PR #22](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22). See
 [the destination receipt](verification/2026-09-19-github-card-destination.md).
 
 On this Mac, the accepted checkout is
