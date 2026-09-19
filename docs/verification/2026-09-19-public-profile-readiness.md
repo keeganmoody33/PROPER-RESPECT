@@ -215,3 +215,26 @@ belongs to rollback. Git-triggered deployments remain disabled.
 Decision trail: [pstack progress](../../work/pstack/2026-09-19-public-profile.md)
 and [decisions](../../work/pstack/2026-09-19-public-profile-decisions.tsv).
 The private comparison is a proposal, not a transfer or a completed public profile.
+
+## Post-release completion audit — September 19, 19:06 America/New_York
+
+Read-only Vercel inspection still reports production READY at
+`dpl_yek1HfE7u8QNa4E1cfWoCiopCnRU`. Accepted local HEAD is `ed0962d`, clean.
+The preceding turn made progress by committing and checking guarded restoration.
+This audit does not close the full profile goal.
+
+| Required outcome | Evidence and disposition |
+| --- | --- |
+| Hosted collection and existing public profile | Release receipt proves existing-session loading and signed-out desktop/mobile rendering. Fresh sign-in is still unproven. |
+| Owner controls use selected `/keegan` address | Local restoration tests/review pass; new backend sync and exact two-field production write need approval. |
+| Richer saved evidence reaches the correct hosted owner | Private transfer proposal remains read-only. Cross-environment owner binding is not automatically established. Two Wispr packets and one GitHub packet await authorized transfer. |
+| No invented target or relationship decision | GitHub has four possible production relationships; the owner must choose the target. Clerk/Clay have no existing target and need scoped private transfer authorization. |
+| Current activity and coverage | Existing captures remain historical. New provider reads and recurring collection are not authorized. No current-activity claim follows from this release. |
+| Correct presentation for every selected product | Copilot is verified; NotebookLM rebrand/product asset and Devin Desktop asset identity remain unresolved under the retained source investigation. |
+| Exact owner-approved public output | No new selection/publication approval or write exists. Public information remains the previous four-card snapshot. |
+
+Immediate gate remains approval of the internal restoration checkpoint and its
+exact two-handle mutation on `striped-chicken-693`. It must not be combined with
+an implicit evidence transfer, relationship target choice or publication. After
+that, resolve the private transfer's owner/target choices and show the resulting
+exact publication preview. Do not rerun completed checks merely to wait for consent.
