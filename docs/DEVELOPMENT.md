@@ -43,7 +43,7 @@ observation, review and relationship remain distinct.
 current local checks. Detailed real-account operator receipts and originals are
 private; their public placeholders do not contain owner choices or account data.
 
-The [September 18 hosted release](verification/2026-09-18-hosted-release.md)
+The [September 19 hosted release](verification/2026-09-19-hosted-release.md)
 is live at https://proper-respect.com/onboarding, forwarding to the existing
 Clerk-compatible host. Cloudflare DNS, HTTPS, production synchronization and
 authenticated collection reload are verified. Transfer of newer development

@@ -1,23 +1,19 @@
 # Cursor continuation — Proper Respect
 
 Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
-Remote `main` remains `f808fc834c7900681d10b043a6bb09d4f8e76314`.
-The four formerly local commits through `b028d904381c540245beea8d7516bb3460ce2434`
-are now published on `codex/cursor-handoff-20260919`. The accepted local delivery
-branch combines them with PR #22 at `bc2900073bf524df850a07707f700e5d298e0d40`.
-Production has not changed. The combined upload scope requires release approval.
+Released source: `d2266faff48bf764e56e93a8536d0fba9ab3783b`, available on
+`origin/codex/cursor-handoff-20260919` and PR #22. The upload and GitHub branches
+are reconciled. Verify current main/PR state before further Git operations.
 
 ## Open the working product
 
-**September 18 hosted release:** open https://proper-respect.com/onboarding.
-The domain forwards to the existing Clerk-compatible host, `props.lecturesfrom.com`.
-Application `adfc813268eb0c90a85b6440982315a94a83ab8a` is deployed to Vercel
-`dpl_7Um2KmrvNPajDaUyFPgudX6stvn5` and production `striped-chicken-693`.
-See [the release receipt](verification/2026-09-18-hosted-release.md).
-Production's existing records are preserved; newer development evidence and
-owner-saved selections have not been transferred. Finish that scoped transfer
-and hosted acceptance before expanding Composio. Clay branding now works for
-the existing manual card in development, without changing its relationship.
+**September 19 hosted release:** https://proper-respect.com/onboarding forwards
+to `props.lecturesfrom.com`. Application/backend `d2266faff48bf764e56e93a8536d0fba9ab3783b`
+is deployed to Vercel `dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6` and production Convex
+`striped-chicken-693`. All 32 existing tables are unchanged. Existing signed-in
+collection reload, export controls and sharing preview pass; private originals,
+newer owner choices and live maintenance remain separate acceptance work.
+See [the release receipt](verification/2026-09-19-hosted-release.md).
 
 On this Mac, the accepted checkout is
 `/Users/keeganmoody/Downloads/PROPER-RESPECT-self-test-20260916`.
@@ -65,15 +61,15 @@ or extract Screen Time automatically.
 
 PR #22 implements private GitHub account destinations, optional account-link
 sharing through explicit preview, and selectable connector activity snapshots.
-Those changes are integrated locally with the upload correction. The sole merge
-conflict was this handoff document. Production acceptance remains unproven.
+Those changes are deployed with the upload correction. The sole merge conflict
+was this handoff document. Full personal-release acceptance remains unfinished.
 An added regression reproduced an unrelated source account identifier becoming
 a GitHub profile. The correction requires both GitHub source type and GitHub
 origin issuer before deriving an account destination from retained evidence. Do not publish private URLs or change owner choices during verification.
 
 ## Branch disposition checked September 19
 
-PR #22 remains open at the recorded head. Keep one active delivery branch, `codex/personal-release-main`.
+PR #22 carries the reconciled release; verify its current review/merge status. Keep one active delivery branch, `codex/personal-release-main`.
 Do not merge every branch to make the list shorter.
 
 - `codex/composio-integration-20260918` at `00a097f` preserves explicitly incomplete

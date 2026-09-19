@@ -3,9 +3,9 @@
 ## Code synchronization and the owner's domain — September 18, 2026
 
 The owner reports owning **proper-respect.com**, registered through Cloudflare.
-DNS, hosting attachment, Clerk domains, OAuth callbacks and any migration from
-`props.lecturesfrom.com` have not been changed or verified for that domain.
-Treat the new domain as owner-supplied release input, not a live application URL.
+DNS and HTTPS redirect to `props.lecturesfrom.com` are verified. The September 19
+release is live; see [the current receipt](verification/2026-09-19-hosted-release.md).
+Clerk domain/OAuth callback migration remains separate from this working redirect.
 
 GitHub consolidation is separate from a hosted release. `vercel.json` sets
 `git.deploymentEnabled` to `false`, disabling automatic preview and production
