@@ -42,7 +42,11 @@ observation, review and relationship remain distinct.
 current local checks. Detailed real-account operator receipts and originals are
 private; their public placeholders do not contain owner choices or account data.
 
-Git-triggered deployments are disabled. Backend synchronization, provider reads,
-recurrence, manual release and publication retain their exact-target gates.
-The owner reports owning proper-respect.com through Cloudflare; DNS, hosting,
-Clerk domains and OAuth callbacks have not been migrated.
+The [September 18 hosted release](verification/2026-09-18-hosted-release.md)
+is live at https://proper-respect.com/onboarding, forwarding to the existing
+Clerk-compatible host. Cloudflare DNS, HTTPS, production synchronization and
+authenticated collection reload are verified. Transfer of newer development
+evidence/owner choices and full hosted maintenance acceptance remain open.
+Clerk's primary domain and OAuth callbacks have not been migrated.
+Git-triggered deployments remain disabled; subsequent backend synchronization,
+provider reads, recurrence, releases and publication retain their applicable gates.
