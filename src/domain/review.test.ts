@@ -13,18 +13,31 @@ describe("review defaults", () => {
     expect(defaultReview(draft)).toMatchObject({ publish: false, status: "TESTING", approveActivity: false });
   });
   it("keeps a published archived product and its referral destination intact", () => {
-    expect(defaultReview({ ...draft, prop: { ...draft.prop, visibility: "PUBLIC", status: "ARCHIVED" } })).toMatchObject({
+    const card = { ...draft, isPublishedAtCurrentHandle: true, prop: { ...draft.prop, visibility: "PUBLIC" as const, status: "ARCHIVED" as const } };
+    expect(defaultReview(card)).toMatchObject({
       publish: true, status: "ARCHIVED", linkType: "REFERRAL", linkLabel: "My referral", linkUrl: "https://example.com/referral",
     });
   });
   it("does not infer public cost permission from a public card", () => {
     expect(defaultReview({ ...draft, prop: { ...draft.prop, visibility: "PUBLIC" } }).costVisibility).toBe("PRIVATE");
   });
+  it.each([false, undefined])("does not preselect PUBLIC records when current-handle membership is %s", membership => {
+    const card = { ...draft, isPublishedAtCurrentHandle: membership, prop: { ...draft.prop, visibility: "PUBLIC" as const, activity: activity(3) }, publishedActivity: activity(3) };
+    expect(defaultReview(card)).toMatchObject({ publish: false, approveActivity: false });
+  });
+  it("invalidates a saved review when current-handle membership changes without a private edit", () => {
+    const card = { ...draft, isPublishedAtCurrentHandle: true, prop: { ...draft.prop, visibility: "PUBLIC" as const } };
+    const edit = defaultReview(card);
+    const changed = { ...card, isPublishedAtCurrentHandle: false };
+    expect(isCurrentReview(changed, edit)).toBe(false);
+    expect(() => explicitPublicationReview(changed, edit)).toThrow("changed");
+  });
 });
 
 const activity = (total: number): ActivityModule => ({ kind: "contributionCalendar", total, days: [],
   attributionScope: "PERSONAL", capturedAt: "2026-09-18T12:00:00.000Z", freshness: "STALE", provenanceLabel: "Synthetic retained snapshot" });
-const published: ReviewCard = { ...draft, prop: { ...draft.prop, visibility: "PUBLIC", relationshipVersion: 1, activity: activity(3) } };
+const publishedFixture = { ...draft, isPublishedAtCurrentHandle: true, prop: { ...draft.prop, visibility: "PUBLIC" as const, relationshipVersion: 1, activity: activity(3) } };
+const published: ReviewCard = publishedFixture;
 
 describe("publication consent follows the approved snapshot", () => {
   it("does not approve activity that was withheld, even on a published relationship", () => {
