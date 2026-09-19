@@ -90,12 +90,12 @@ describe("resolveProduct", () => {
 
   it("derives an identity from the domain for unknown vendors", () => {
     const product = resolveProduct(
-      signal({ url: "https://clay.com/workbook", sourceType: "GMAIL" }),
+      signal({ url: "https://example.com/workbook", sourceType: "GMAIL" }),
     );
     expect(product).toEqual({
-      slug: "clay",
-      name: "Clay",
-      domain: "clay.com",
+      slug: "example",
+      name: "Example",
+      domain: "example.com",
       description: "Discovered via gmail evidence.",
     });
   });

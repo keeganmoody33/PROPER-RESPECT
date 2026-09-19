@@ -4,7 +4,7 @@ import { internalAction, internalMutation, mutation, query } from "./_generated/
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
-import { canonicalCatalogProduct } from "../src/domain/discovery";
+import { canonicalCatalogProduct, resolveCatalogProduct } from "../src/domain/discovery";
 import { productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
 import { productBrandSnapshotValidator } from "./productBrandTables";
 import { retrieveProductBrand } from "../src/server/context-brand";
@@ -14,7 +14,10 @@ const REFRESH_COOLDOWN_MS = 60_000;
 const refreshReference = makeFunctionReference<"action">("productBrands:refresh");
 
 function verifiedDomain(product: Doc<"products">): string | null {
-  const canonical = canonicalCatalogProduct(product.slug);
+  // Older manual entries keep their identity and relationship history. A later
+  // catalog verification can authorize presentation without rewriting evidence.
+  const canonical = canonicalCatalogProduct(product.slug) ?? (product.slug.startsWith("manual-")
+    ? resolveCatalogProduct({ vendor: product.name })?.product : undefined);
   return canonical && canonical.domain === product.domain ? canonical.domain : null;
 }
 

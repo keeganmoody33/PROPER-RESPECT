@@ -15,6 +15,28 @@ const get = makeFunctionReference<"query">("productBrands:getForProp");
 const history = makeFunctionReference<"query">("productBrands:historyForProp");
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
+test("a previously manual Clay entry can load its verified brand without rewriting owner history", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  const { productId, propId } = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const productId = await ctx.db.insert("products", { slug: "manual-clay-existing", name: "Clay", domain: "clay.com", description: "" });
+    const propId = await ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: "", note: "Owner explanation" });
+    return { productId, propId };
+  });
+  const before = await t.run(ctx => ctx.db.get(propId));
+  const owner = t.withIdentity({ subject: "owner" });
+  expect(await owner.mutation(request, { propId })).toMatchObject({ status: "PENDING" });
+  expect(await t.mutation(claim, { productId, generation: 1 })).toMatchObject({ productSlug: "manual-clay-existing", canonicalDomain: "clay.com" });
+  expect(await t.run(ctx => ctx.db.get(propId))).toEqual(before);
+  expect(await t.run(ctx => ctx.db.query("rawEvidence").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
+  await t.run(ctx => ctx.db.patch(productId, { domain: "clay.com.attacker.example" }));
+  expect((await owner.query(get, { propId })).status).toBe("UNVERIFIED_DOMAIN");
+  await t.run(ctx => ctx.db.patch(productId, { domain: "clay.com", name: "Different product" }));
+  expect((await owner.query(get, { propId })).status).toBe("UNVERIFIED_DOMAIN");
+});
+
 test("only an owned, verified canonical product can queue presentation enrichment", async () => {
   vi.useFakeTimers();
   const t = convexTest(schema, modules);
