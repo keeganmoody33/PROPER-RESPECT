@@ -7,6 +7,10 @@ are reconciled. Verify current main/PR state before further Git operations.
 
 ## Open the working product
 
+The owner selected `proper-respect.com/keegan` as the canonical public address
+on September 19. Preserve that publication while preparing ownership-safe
+account reconciliation. This choice does not authorize transfer or publication.
+
 Latest local application checkpoint: `a2539b91e84cd93271daa71550430e32fc95e24e`.
 It is synchronized to development `utmost-mongoose-374` and remains ahead of the
 hosted release below. Existing-session authenticated loading and anonymous query

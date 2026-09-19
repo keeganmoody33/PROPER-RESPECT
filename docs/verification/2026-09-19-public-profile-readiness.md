@@ -154,8 +154,10 @@ The temporary viewport override was reset afterward.
 
 Both binary diff hashes and file counts in the release manifest still match
 Git. Current application source is identical to `a2539b9`; newer commits contain
-documentation only. Exact production release approval and the canonical public
-URL choice have been requested. Neither is inferred from development approval.
+documentation only. The owner selected `proper-respect.com/keegan` as the
+canonical public address on September 19. Preserve the existing publication at
+that address. Production release approval remains pending. The URL choice does
+not authorize record transfer, ownership reassignment or publication.
 
 ## Code-generation boundary check
 
@@ -197,8 +199,8 @@ as part of rollback. Git-triggered deployments remain disabled.
 - Existing-session authenticated loading now passes in development. Fresh
   sign-in and a real owner-directed attachment remain unexercised; retain local
   synthetic mutation/browser checks as such.
-- Obtain the owner's canonical public URL choice and prepare an ownership-safe
-  reconciliation, without automatic merges or changes to published selections.
+- Prepare an ownership-safe reconciliation for the owner's selected `/keegan`
+  address, without automatic merges or changes to published selections.
 - Obtain exact release and private-transfer approval before changing production.
 - Let the owner preview and approve new public fields; verify the final signed-out
   hosted page on desktop and mobile. Missing coverage and static captures remain
