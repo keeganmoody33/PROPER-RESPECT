@@ -6,6 +6,16 @@ assuming an older local `main` checkout is current.
 
 ## Open the working product
 
+**September 18 hosted release:** open https://proper-respect.com/onboarding.
+The domain forwards to the existing Clerk-compatible host, `props.lecturesfrom.com`.
+Application `adfc813268eb0c90a85b6440982315a94a83ab8a` is deployed to Vercel
+`dpl_7Um2KmrvNPajDaUyFPgudX6stvn5` and production `striped-chicken-693`.
+See [the release receipt](verification/2026-09-18-hosted-release.md).
+Production's existing records are preserved; newer development evidence and
+owner-saved selections have not been transferred. Finish that scoped transfer
+and hosted acceptance before expanding Composio. Clay branding now works for
+the existing manual card in development, without changing its relationship.
+
 On this Mac, the accepted checkout is
 `/Users/keeganmoody/Downloads/PROPER-RESPECT-self-test-20260916`.
 Its ignored `.env.local` already contains development configuration.
@@ -46,20 +56,22 @@ or extract Screen Time automatically.
 
 ## Next unfinished work and exact gates
 
-- Prepare the existing hosted personal release and verify the production owner
-  association before moving private records. Never copy a development Clerk
-  subject or replace the production database.
+- Finish hosted acceptance and the scoped transfer of newer development-only
+  private records and owner choices to the verified production owner. Never
+  copy a development Clerk subject or replace the production database.
 - Use the existing direct GitHub connector for the next supported activity
   refresh proof under exact source authorization. The retained GitHub/Wispr
   captures remain historical. No personal Wispr usage API is established.
 - Additional Gmail reads are paused: the approved four pages/twenty headers
   were exhausted. Recurring collection remains off. Source reads, recurrence,
   development sync, release and publication retain their existing gates.
-- Git-triggered Vercel deployment is disabled in `vercel.json`; code on GitHub
-  is not a hosted release. Manual builds still deploy Convex and need approval.
-- The owner reports owning **proper-respect.com on Cloudflare**. DNS, hosting,
-  Clerk domains and OAuth callbacks have not been migrated. Include canonical
-  and OpenGraph origin metadata in the selected-domain release acceptance.
+- Git-triggered Vercel deployment remains disabled in `vercel.json`. The
+  September 18 manual production release was authorized and completed;
+  subsequent releases retain their applicable approval boundary.
+- **proper-respect.com on Cloudflare** has verified DNS and HTTPS routing to
+  the existing host. Making it the primary host still needs matching Clerk,
+  callback and canonical/OpenGraph configuration; do not remove the working
+  redirect before authentication is ready there.
 - Production remains `props.lecturesfrom.com` / Convex `striped-chicken-693`.
   Preserve its four curated public cards. Hosting does not approve publication;
   sharing needs the owner's exact preview approval and signed-out verification.
