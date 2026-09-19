@@ -193,6 +193,14 @@ export default defineSchema({
     suggestedUrl: v.string(),
     rawEvidenceIds: v.array(v.id("rawEvidence")),
     resultPropId: v.optional(v.id("props")),
+    evidenceResolution: v.optional(v.object({
+      targetPropId: v.id("props"),
+      rawEvidenceIds: v.array(v.id("rawEvidence")),
+      nextOffset: v.number(),
+      skippedDeleted: v.number(),
+      startedAt: v.string(),
+      appliedHashes: v.array(v.string()),
+    })),
   }).index("by_user_slug", ["userId", "suggestedProductSlug"]),
 
   proofs: defineTable({

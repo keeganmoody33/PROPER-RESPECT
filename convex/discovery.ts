@@ -14,7 +14,7 @@ import {
 
 type ProofType = Doc<"proofs">["type"];
 
-const PROOF_TYPE_BY_SOURCE: Record<RawSignal["sourceType"], ProofType> = {
+export const PROOF_TYPE_BY_SOURCE: Record<RawSignal["sourceType"], ProofType> = {
   MANUAL: "NOTE",
   PUBLIC_PROFILE: "NOTE",
   GITHUB: "GITHUB_REPO",

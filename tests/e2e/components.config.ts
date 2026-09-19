@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: ["product-card.spec.ts", "verified-product-assets.spec.ts"],
+  testMatch: ["product-card.spec.ts", "verified-product-assets.spec.ts", "discovery-review.spec.ts"],
   outputDir: "../../test-results/components",
   reporter: "list",
   use: {

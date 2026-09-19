@@ -10,6 +10,7 @@ import { privateCardPrimaryLink } from "@/src/domain/product-destination";
 import { ProductCard } from "./product-card";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { ProductBrandControls } from "./product-brand-controls";
+import { DiscoveryReview } from "./discovery-review";
 import styles from "./private-inventory.module.css";
 
 export type InventoryData = {
@@ -238,7 +239,7 @@ export function PrivateInventory({ brandEnrichmentAvailable = false }: { brandEn
   const save = useMutation(api.inventory.save);
   const importPacket = useMutation(api.retainedEvidence.importPacket);
   if (inventory.status === "LoadingFirstPage") return <p role="status">Loading your private collection…</p>;
-  return <PrivateInventoryView data={{ cards: inventory.results, hasMore: inventory.status !== "Exhausted", loadingMore: inventory.status === "LoadingMore" }}
+  return <><DiscoveryReview /><PrivateInventoryView data={{ cards: inventory.results, hasMore: inventory.status !== "Exhausted", loadingMore: inventory.status === "LoadingMore" }}
     onLoadMore={() => inventory.loadMore(25)} onSave={save} onImport={packet => importPacket({ packet })}
-    renderDetails={item => <InventoryDetails item={item} onSave={save} brandEnrichmentAvailable={brandEnrichmentAvailable} />} />;
+    renderDetails={item => <InventoryDetails item={item} onSave={save} brandEnrichmentAvailable={brandEnrichmentAvailable} />} /></>;
 }

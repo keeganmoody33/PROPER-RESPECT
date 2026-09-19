@@ -9,10 +9,12 @@
  */
 
 import type * as accountRecovery from "../accountRecovery.js";
+import type * as associatedAccountEvidence from "../associatedAccountEvidence.js";
 import type * as authHelpers from "../authHelpers.js";
 import type * as connectors from "../connectors.js";
 import type * as crons from "../crons.js";
 import type * as discovery from "../discovery.js";
+import type * as discoveryReview from "../discoveryReview.js";
 import type * as inventory from "../inventory.js";
 import type * as inventoryTables from "../inventoryTables.js";
 import type * as mailboxDiscovery from "../mailboxDiscovery.js";
@@ -41,10 +43,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accountRecovery: typeof accountRecovery;
+  associatedAccountEvidence: typeof associatedAccountEvidence;
   authHelpers: typeof authHelpers;
   connectors: typeof connectors;
   crons: typeof crons;
   discovery: typeof discovery;
+  discoveryReview: typeof discoveryReview;
   inventory: typeof inventory;
   inventoryTables: typeof inventoryTables;
   mailboxDiscovery: typeof mailboxDiscovery;
