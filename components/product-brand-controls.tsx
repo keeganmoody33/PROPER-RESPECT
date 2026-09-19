@@ -12,7 +12,8 @@ export function ProductBrandControls({ propId }: { propId: Id<"props"> }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
   const running = state?.status === "PENDING" || state?.status === "RUNNING";
-  if (!state || state.status === "UNVERIFIED_DOMAIN") return null;
+  if (!state) return null;
+  if (state.status === "UNVERIFIED_DOMAIN") return <p className="product-brand-controls">This product’s website has not yet been verified for brand retrieval. Your saved product and history are unaffected.</p>;
 
   return <div className="product-brand-controls">
     <p>{state.current ? "Retained brand identity is available for this card." : "Brand identity has not been loaded."}</p>

@@ -71,6 +71,12 @@ type CatalogEntry = ProductIdentity & {
 };
 
 const VENDOR_CATALOG: CatalogEntry[] = [
+  // Official product identity verified at https://www.clay.com on 2026-09-18.
+  {
+    slug: "clay", name: "Clay", domain: "clay.com",
+    description: "Data enrichment and go-to-market workflows.",
+    domains: ["clay.com"], aliases: ["clay"],
+  },
   {
     slug: "github",
     name: "GitHub",
