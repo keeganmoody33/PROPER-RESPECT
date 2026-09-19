@@ -1,21 +1,29 @@
 # Cursor continuation — Proper Respect
 
 Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
-Released source: `d2266faff48bf764e56e93a8536d0fba9ab3783b`, available on
+Earlier released source: `d2266faff48bf764e56e93a8536d0fba9ab3783b`, available on
 `origin/codex/cursor-handoff-20260919` and PR #22. The upload and GitHub branches
 are reconciled. Verify current main/PR state before further Git operations.
 
 ## Open the working product
+
+Current production source is `a2539b91e84cd93271daa71550430e32fc95e24e`, released
+with explicit owner approval to Vercel `dpl_yek1HfE7u8QNa4E1cfWoCiopCnRU` and
+Convex `striped-chicken-693`. Existing-session hosted reload and public
+desktop/mobile checks passed; all 32 application tables remained unchanged.
+See [the current release receipt](verification/2026-09-19-profile-production-release.md).
+The older hosted-release paragraphs below are historical.
 
 The owner selected `proper-respect.com/keegan` as the canonical public address
 on September 19. Preserve that publication while preparing ownership-safe
 account reconciliation. This choice does not authorize transfer or publication.
 
 Latest local application checkpoint: `a2539b91e84cd93271daa71550430e32fc95e24e`.
-It is synchronized to development `utmost-mongoose-374` and remains ahead of the
-hosted release below. Existing-session authenticated loading and anonymous query
+It is synchronized to development `utmost-mongoose-374` and production
+`striped-chicken-693`. Existing-session development loading and anonymous query
 rejection passed; all 32 application tables remained unchanged. No production
-release, transfer or publication accompanied the synchronization. Read
+release, transfer or publication accompanied that earlier development synchronization.
+The separately approved production release is recorded above. Read
 [the synchronization receipt](verification/2026-09-19-profile-development-sync.md) and
 [the dated readiness receipt](verification/2026-09-19-public-profile-readiness.md)
 before restarting the local authenticated application or changing environments.

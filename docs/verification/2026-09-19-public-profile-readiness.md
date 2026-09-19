@@ -156,7 +156,8 @@ Both binary diff hashes and file counts in the release manifest still match
 Git. Current application source is identical to `a2539b9`; newer commits contain
 documentation only. The owner selected `proper-respect.com/keegan` as the
 canonical public address on September 19. Preserve the existing publication at
-that address. Production release approval remains pending. The URL choice does
+that address. Production release was subsequently approved and verified; see
+[the release receipt](2026-09-19-profile-production-release.md). The URL choice does
 not authorize record transfer, ownership reassignment or publication.
 
 The retained production export contains one `/keegan` publication, no current
@@ -216,7 +217,8 @@ as part of rollback. Git-triggered deployments remain disabled.
   synthetic mutation/browser checks as such.
 - Prepare an ownership-safe reconciliation for the owner's selected `/keegan`
   address, without automatic merges or changes to published selections.
-- Obtain exact release and private-transfer approval before changing production.
+- Production code release is verified. Obtain exact authorization for any
+  private transfer or account/site restoration before changing those records.
 - Let the owner preview and approve new public fields; verify the final signed-out
   hosted page on desktop and mobile. Missing coverage and static captures remain
   labeled. No inference of current use, go-to or recommended products is permitted.

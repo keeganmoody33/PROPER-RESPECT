@@ -54,7 +54,8 @@ hosted journey and residual limits are recorded in the release receipt.
 Subsequent card preparation, duplicate grouping and presentation corrections
 are now synchronized to development only at `e8834be`; see
 [the synchronization receipt](verification/2026-09-19-card-development-sync.md).
-Production release remains separately gated.
+The later explicitly approved `a2539b9` production release is now verified; see
+[the current receipt](verification/2026-09-19-profile-production-release.md).
 The current development application checkpoint is `a2539b9`. It adds mandatory
 publication preview guards, handle reservations, official Copilot assets, the
 public owner heading and explicit retained-discovery reconciliation. The owner-approved
@@ -62,8 +63,8 @@ synchronization to `utmost-mongoose-374` and existing-session authenticated relo
 passed; all 32 application tables remained unchanged. See
 [the development sync receipt](verification/2026-09-19-profile-development-sync.md) and
 [public profile readiness](verification/2026-09-19-public-profile-readiness.md)
-for exact commits, checks and remaining owner actions. Production remains on its
-separately recorded release; no transfer or publication accompanied this sync.
+for exact commits, checks and remaining owner actions. Production now uses the
+same application source; no transfer or publication accompanied either operation.
 Clerk's primary domain and OAuth callbacks have not been migrated.
 Git-triggered deployments remain disabled; subsequent backend synchronization,
 provider reads, recurrence, releases and publication retain their applicable gates.
