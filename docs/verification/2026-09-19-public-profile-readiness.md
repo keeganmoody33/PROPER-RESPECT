@@ -159,6 +159,21 @@ canonical public address on September 19. Preserve the existing publication at
 that address. Production release approval remains pending. The URL choice does
 not authorize record transfer, ownership reassignment or publication.
 
+The retained production export contains one `/keegan` publication, no current
+`users.handle = keegan` record, and one `/lecturesfrom` account with one matching
+site. Each of the four published products has one public relationship under that
+account. Headline, note, status and start date match the retained public cards.
+The legacy publication has no explicit `cardPropIds`; these comparisons are
+candidate evidence, not authority to assign mappings or merge private records.
+
+A private reconciliation proposal records the exact user/site IDs, expected
+record fingerprints and two proposed handle restorations to `/keegan`.
+It proposes no change to the public snapshot. The original export and proposal
+remain outside Git. Before any write, recheck a fresh production snapshot,
+authenticated ownership and exact authorization for the two handle changes.
+Source-release approval alone does not authorize that operation. No write or
+development-to-production transfer occurred while preparing this proposal.
+
 ## Code-generation boundary check
 
 The official `convex codegen --typecheck disable` command uploaded source for
