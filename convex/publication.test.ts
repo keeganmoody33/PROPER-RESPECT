@@ -1,6 +1,6 @@
 // @vitest-environment edge-runtime
 /// <reference types="vite/client" />
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import type { FunctionArgs } from "convex/server";
 import { expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
@@ -59,6 +59,11 @@ async function fixture(count = 2) {
   return { t, owner, ...ids, selection, published, reviewCards };
 }
 
+async function reviewedPublication(owner: Pick<TestConvex<typeof schema>, "query">, args: { selections: Selection[] }) {
+  const preview = await owner.query(api.onboarding.previewPublication, args);
+  return { ...args, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash };
+}
+
 function fromReview(cards: Awaited<ReturnType<Awaited<ReturnType<typeof fixture>>["reviewCards"]>>, edits: Record<string, ReviewEdit>): Selection[] {
   return explicitPublicationCards(cards, edits).map(({ card, edit }) => ({
     propId: card.prop._id, expectedRelationshipVersion: card.prop.relationshipVersion ?? 0,
@@ -93,7 +98,7 @@ test("a sharing approval rejects publication or identity changes after preview w
   await expect(owner.mutation(api.onboarding.publishSelected, { selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash })).rejects.toThrow("preview");
   expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
   const fresh = await owner.query(api.onboarding.previewPublication, { selections });
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(b)] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(b)] }));
   const before = await published();
   await expect(owner.mutation(api.onboarding.publishSelected, { selections, expectedPublicationRevision: fresh.revision, expectedPreviewHash: fresh.previewHash })).rejects.toThrow("publication changed");
   expect(await published()).toEqual(before);
@@ -102,7 +107,7 @@ test("a sharing approval rejects publication or identity changes after preview w
 
 test("editing A privately then publishing only reviewed B preserves A's exact same-product snapshot", async () => {
   const { t, owner, propIds: [a, b], selection, published, reviewCards } = await fixture();
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a), await selection(b, { activity: activity(2) })] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b, { activity: activity(2) })] }));
   const before = await published();
   expect(before.cardPropIds).toEqual([a, b]);
   const approvedA = before.profile.cards[0];
@@ -119,7 +124,7 @@ test("editing A privately then publishing only reviewed B preserves A's exact sa
   expect(cardB.publishedActivity).toEqual(activity(2));
   const selections = fromReview(cards, { [b]: { ...defaultReview(cardB), linkLabel: "Reconfirmed B" } });
   expect(selections.map(item => item.propId)).toEqual([b]);
-  await owner.mutation(api.onboarding.publishSelected, { selections });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
   const after = await published();
   expect(after.cardPropIds).toEqual([a, b]);
   expect(after.profile.cards[0]).toEqual(approvedA);
@@ -135,12 +140,12 @@ test("editing A privately then publishing only reviewed B preserves A's exact sa
 
 test("reopening and publishing a withheld activity through actual getState and review defaults keeps it withheld", async () => {
   const { owner, propIds: [a, b], selection, published, reviewCards } = await fixture();
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a), await selection(b, { activity: activity(2) })] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b, { activity: activity(2) })] }));
   const cards = await reviewCards();
   const cardA = cards.find(card => card.prop._id === a)!;
   const selections = fromReview(cards, { [a]: { ...defaultReview(cardA), linkLabel: "Review without activity consent" } });
   expect(selections[0].activity).toBeUndefined();
-  await owner.mutation(api.onboarding.publishSelected, { selections });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
   const after = await published();
   const aIndex = after.cardPropIds!.indexOf(a);
   expect(after.profile.cards[aIndex].activity).toBeUndefined();
@@ -150,9 +155,9 @@ test("reopening and publishing a withheld activity through actual getState and r
 
 test("removing a selected relationship preserves the other same-product card and its approved activity", async () => {
   const { t, owner, propIds: [a, b], selection, published } = await fixture();
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a, { activity: activity(1) }), await selection(b)] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { activity: activity(1) }), await selection(b)] }));
   const before = await published();
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(b, { publish: false })] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(b, { publish: false })] }));
   const after = await published();
   expect(after.cardPropIds).toEqual([a]);
   expect(after.profile.cards).toEqual([before.profile.cards[0]]);
@@ -167,19 +172,19 @@ test.each(["withheld", "fixed", "removed"] as const)("a %s public snapshot revok
     attributionScope: "PERSONAL", connectedAt: capturedAt,
   }));
   const refresh = { autoRefresh: true, connectorId, metricKey: "github.contributions" };
-  await owner.mutation(api.onboarding.publishSelected, { selections: [
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [
     await selection(a, { ...refresh, activity: activity(1) }),
     await selection(b, { ...refresh, activity: activity(2) }),
-  ] });
+  ] }));
   const subscriptions = await t.run(ctx => ctx.db.query("metricSubscriptions").collect());
   const selectedSubscription = subscriptions.find(item => item.propId === a)!;
   const omittedSubscription = subscriptions.find(item => item.propId === b)!;
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a, {
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, {
     ...refresh,
     publish: mode !== "removed",
     autoRefresh: mode !== "fixed",
     activity: mode === "fixed" ? activity(1) : undefined,
-  })] });
+  })] }));
   const beforeLateRefresh = await published();
   const privateBefore = await t.run(ctx => ctx.db.get(a));
   expect(await t.run(ctx => ctx.db.get(selectedSubscription._id))).toMatchObject({ revokedAt: expect.any(String) });
@@ -205,7 +210,7 @@ test.each(["withheld", "fixed", "removed"] as const)("a %s public snapshot revok
 
 test.each(["empty", "removal"] as const)("an invalid profile identity rejects an %s sharing change before preview or publication writes", async mode => {
   const { t, owner, userId, propIds: [a, b], selection } = await fixture();
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a), await selection(b)] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
   await owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "   ", bio: "Private draft bio" });
   const selections = mode === "empty" ? [] : [await selection(a, { publish: false })];
   const state = () => t.run(async ctx => ({
@@ -220,55 +225,56 @@ test.each(["empty", "removal"] as const)("an invalid profile identity rejects an
   const before = await state();
   await expect(owner.query(api.onboarding.previewPublication, { selections })).rejects.toThrow("displayName");
   expect(await state()).toEqual(before);
-  await expect(owner.mutation(api.onboarding.publishSelected, { selections })).rejects.toThrow("displayName");
+  await expect(owner.mutation(api.onboarding.publishSelected, { expectedPublicationRevision: 0, expectedPreviewHash: "invalid-input-never-approved", selections })).rejects.toThrow("displayName");
   expect(await state()).toEqual(before);
 });
 
 test("a stale removal rejects without changing either public card or the latest private decisions", async () => {
   const { t, owner, propIds: [a, b], selection, published } = await fixture();
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a), await selection(b)] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
   const staleRemoval = await selection(a, { publish: false });
+  const removalApproval = await reviewedPublication(owner, { selections: [staleRemoval] });
   await owner.mutation(api.inventory.save, { propId: a, expectedVersion: 1, operationId: "private-before-removal-20260918", status: "ACTIVE", headline: "New private headline", note: "New private note", goTo: false });
   const before = await published();
   const privateBefore = await t.run(ctx => ctx.db.get(a));
-  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [staleRemoval] })).rejects.toThrow("changed");
+  await expect(owner.mutation(api.onboarding.publishSelected, removalApproval)).rejects.toThrow("changed");
   expect(await published()).toEqual(before);
   expect(await t.run(ctx => ctx.db.get(a))).toEqual(privateBefore);
 });
 
 test("legacy unique relationships resolve safely and acquire private identity metadata on republish", async () => {
   const { t, owner, propIds: [a], otherPropId, selection, published, reviewCards } = await fixture(1);
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a, { activity: activity(1) })] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { activity: activity(1) })] }));
   const before = await published();
   await t.run(ctx => ctx.db.patch(before._id, { cardPropIds: undefined }));
   expect((await reviewCards())[0].publishedActivity).toEqual(activity(1));
   expect(await t.run(async ctx => publishedCardIndicesForProp(ctx, (await ctx.db.get(before._id))!, (await ctx.db.get(a))!))).toEqual([0]);
   expect(await t.run(async ctx => publishedCardIndicesForProp(ctx, (await ctx.db.get(before._id))!, (await ctx.db.get(otherPropId))!))).toEqual([]);
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a)] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
   expect((await published()).cardPropIds).toEqual([a]);
 });
 
 test("ambiguous legacy same-product subsets fail closed; unrelated publication preserves them; explicit full selection repairs identity", async () => {
   const { t, owner, userId, propIds: [a, b], selection, published, reviewCards } = await fixture();
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a, { activity: activity(1) }), await selection(b, { activity: activity(2) })] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { activity: activity(1) }), await selection(b, { activity: activity(2) })] }));
   const initial = await published();
   await t.run(ctx => ctx.db.patch(initial._id, { cardPropIds: undefined }));
   const before = await published();
   expect((await reviewCards()).map(card => card.publishedActivity)).toEqual([undefined, undefined]);
   expect(await t.run(async ctx => publishedCardIndicesForProp(ctx, (await ctx.db.get(before._id))!, (await ctx.db.get(a))!))).toEqual([]);
-  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a)] })).rejects.toThrow("Select all of its relationships together");
-  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a, { publish: false })] })).rejects.toThrow("Select all of its relationships together");
+  await expect(owner.mutation(api.onboarding.publishSelected, { expectedPublicationRevision: 0, expectedPreviewHash: "invalid-input-never-approved", selections: [await selection(a)] })).rejects.toThrow("Select all of its relationships together");
+  await expect(owner.mutation(api.onboarding.publishSelected, { expectedPublicationRevision: 0, expectedPreviewHash: "invalid-input-never-approved", selections: [await selection(a, { publish: false })] })).rejects.toThrow("Select all of its relationships together");
   expect(await published()).toEqual(before);
   expect(await t.run(ctx => ctx.db.get(a))).toMatchObject({ visibility: "PUBLIC" });
   const c = await t.run(async ctx => {
     const productId = await ctx.db.insert("products", { name: "Other Tool", slug: "other-tool", domain: "other.example", description: "Synthetic unrelated product" });
     return ctx.db.insert("props", { userId, productId, visibility: "PRIVATE", status: "ACTIVE", headline: "Unrelated relationship", note: "" });
   });
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(c)] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(c)] }));
   const unrelated = await published();
   expect(unrelated.profile.cards.slice(0, 2)).toEqual(before.profile.cards);
   expect(unrelated.cardPropIds).toEqual([null, null, c]);
-  await owner.mutation(api.onboarding.publishSelected, { selections: [await selection(a, { activity: activity(1) }), await selection(b, { publish: false })] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { activity: activity(1) }), await selection(b, { publish: false })] }));
   const resolved = await published();
   expect(resolved.cardPropIds).toEqual([c, a]);
   expect(resolved.profile.cards[0]).toEqual(unrelated.profile.cards[2]);

@@ -1,6 +1,6 @@
 // @vitest-environment edge-runtime
 /// <reference types="vite/client" />
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
 import { makeFunctionReference, type FunctionReturnType } from "convex/server";
 import { expect, test } from "vitest";
 import schema from "./schema";
@@ -13,6 +13,11 @@ const history = makeFunctionReference<"query">("inventory:history");
 const evidence = makeFunctionReference<"query">("inventory:evidence");
 const selectedActivity = makeFunctionReference<"query">("inventory:selectedActivity");
 const firstPage = { paginationOpts: { numItems: 25, cursor: null } };
+
+async function reviewedPublication(owner: Pick<TestConvex<typeof schema>, "query">, args: { selections: unknown[] }) {
+  const preview = await owner.query(makeFunctionReference<"query">("onboarding:previewPublication"), args);
+  return { ...args, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash };
+}
 
 async function fixture() {
   const t = convexTest(schema, modules);
@@ -82,10 +87,10 @@ test("publishing other selected cards cannot erase a privately saved relationshi
   const { t, owner, propId } = await fixture();
   await owner.mutation(save, { propId, expectedVersion: 0, operationId: "save", status: "ACTIVE", goTo: true, headline: "My saved context", note: "Private explanation" });
   const before = await t.run(ctx => ctx.db.get(propId));
-  await owner.mutation(makeFunctionReference<"mutation">("onboarding:publishSelected"), { selections: [{
+  await owner.mutation(makeFunctionReference<"mutation">("onboarding:publishSelected"), await reviewedPublication(owner, { selections: [{
     propId, publish: false, status: "TESTING", headline: "Stale edit", note: "Stale note",
     primaryLink: { type: "CANONICAL", url: "https://wisprflow.ai", label: "Visit" }, autoRefresh: false,
-  }] });
+  }] }));
   expect(await t.run(ctx => ctx.db.get(propId))).toEqual(before);
   expect((await t.run(ctx => ctx.db.query("draftImports").collect()))[0].status).toBe("APPROVED");
 });
@@ -95,11 +100,12 @@ test("private edits to a published card stay private when another publication om
   const publish = makeFunctionReference<"mutation">("onboarding:publishSelected");
   await owner.mutation(save, { propId, expectedVersion: 0, operationId: "first", status: "ACTIVE", goTo: false, headline: "Approved headline", note: "Approved public note" });
   const selection = { propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "Approved headline", note: "Approved public note", primaryLink: { type: "CANONICAL", url: "https://wisprflow.ai", label: "Visit" }, autoRefresh: false };
-  await owner.mutation(publish, { selections: [selection] });
+  const approval = await reviewedPublication(owner, { selections: [selection] });
+  await owner.mutation(publish, approval);
   const before = (await t.run(ctx => ctx.db.query("publishedProfiles").collect()))[0].profile.cards;
   await owner.mutation(save, { propId, expectedVersion: 1, operationId: "private-edit", status: "ARCHIVED", goTo: true, headline: "Private headline", note: "Private note" });
-  await expect(owner.mutation(publish, { selections: [selection] })).rejects.toThrow("changed");
-  await owner.mutation(publish, { selections: [] });
+  await expect(owner.mutation(publish, approval)).rejects.toThrow("changed");
+  await owner.mutation(publish, await reviewedPublication(owner, { selections: [] }));
   expect((await t.run(ctx => ctx.db.query("publishedProfiles").collect()))[0].profile.cards).toEqual(before);
   expect(await t.run(ctx => ctx.db.get(propId))).toMatchObject({ note: "Private note", status: "ARCHIVED", relationshipVersion: 2 });
 });
@@ -109,10 +115,10 @@ test("the latest primary link stays available after more than 25 publications", 
   const publish = makeFunctionReference<"mutation">("onboarding:publishSelected");
   await owner.mutation(save, { propId, expectedVersion: 0, operationId: "first", status: "ACTIVE", goTo: false, headline: "", note: "" });
   for (let revision = 1; revision <= 26; revision++) {
-    await owner.mutation(publish, { selections: [{
+    await owner.mutation(publish, await reviewedPublication(owner, { selections: [{
       propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "", note: "",
       primaryLink: { type: "CANONICAL", url: `https://wisprflow.ai/?revision=${revision}`, label: `Published link ${revision}` }, autoRefresh: false,
-    }] });
+    }] }));
   }
   const inventory: FunctionReturnType<typeof api.inventory.list> = await owner.query(list, firstPage);
   const card = inventory.page[0];

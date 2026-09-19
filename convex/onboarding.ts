@@ -27,6 +27,23 @@ function pendingHandle(subject: string) {
   return `pending-${suffix || "account"}`;
 }
 
+async function ownersForHandle(ctx: QueryCtx | MutationCtx, handle: string) {
+  return ctx.db.query("users").withIndex("by_handle", q => q.eq("handle", handle)).take(2);
+}
+
+async function availablePendingHandle(ctx: MutationCtx, subject: string) {
+  const base = pendingHandle(subject);
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const handle = attempt === 0 ? base : `${base}-${attempt}`;
+    const owners = await ownersForHandle(ctx, handle);
+    if (owners.length > 0) continue;
+    const publication = await ctx.db.query("publishedProfiles")
+      .withIndex("by_handle", q => q.eq("handle", handle)).first();
+    if (!publication) return handle;
+  }
+  throw new Error("An available account handle could not be reserved. No account was created.");
+}
+
 export const ensureAccount = mutation({
   args: {
     displayName: v.optional(v.string()),
@@ -42,10 +59,11 @@ export const ensureAccount = mutation({
       .unique();
     if (existing) return existing._id;
 
+    const handle = await availablePendingHandle(ctx, identity.subject);
     const now = new Date().toISOString();
     return await ctx.db.insert("users", {
       authSubject: identity.subject,
-      handle: pendingHandle(identity.subject),
+      handle,
       displayName:
         args.displayName ?? identity.name ?? identity.email ?? "New linker",
       bio: "",
@@ -66,12 +84,18 @@ export const claimHandle = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const handle = claimableHandleSchema.parse(args.handle);
-    const owner = await ctx.db
-      .query("users")
-      .withIndex("by_handle", (q) => q.eq("handle", handle))
-      .unique();
-    if (owner && owner._id !== user._id) {
+    const owners = await ownersForHandle(ctx, handle);
+    if (owners.some(owner => owner._id !== user._id)) {
       throw new Error("That handle is already claimed.");
+    }
+
+    if (handle !== user.handle) {
+      const currentPublication = await ctx.db.query("publishedProfiles")
+        .withIndex("by_handle", q => q.eq("handle", user.handle)).unique();
+      if (currentPublication) throw new Error("A published handle cannot be changed here. Its public identity requires a separate owner-verified migration.");
+      const targetPublication = await ctx.db.query("publishedProfiles")
+        .withIndex("by_handle", q => q.eq("handle", handle)).unique();
+      if (targetPublication) throw new Error("That handle already has a published profile and cannot be claimed here.");
     }
 
     const now = new Date().toISOString();
@@ -441,6 +465,8 @@ type PublicationSelection = Infer<typeof selectionValidator>;
 
 /** Both preview and commit use this projection, before any write occurs. */
 async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users">, selections: PublicationSelection[]) {
+  const owners = await ownersForHandle(ctx, user.handle);
+  if (owners.length !== 1 || owners[0]._id !== user._id) throw new Error("Publication requires the unique owner of this handle. Resolve account ownership before sharing.");
   if (selections.length > 100) throw new Error("Select at most 100 relationships to change.");
   const selectedIds = new Set(selections.map(selection => selection.propId));
   if (selectedIds.size !== selections.length) throw new Error("Select each relationship only once.");
@@ -522,12 +548,12 @@ export const previewPublication = query({
 });
 
 export const publishSelected = mutation({
-  args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.optional(v.number()), expectedPreviewHash: v.optional(v.string()) },
+  args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.number(), expectedPreviewHash: v.string() },
   handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash }) => {
     const user = await requireUser(ctx);
     const prepared = await preparePublication(ctx, user, selections);
-    if (expectedPublicationRevision !== undefined && expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");
-    if (expectedPreviewHash !== undefined && expectedPreviewHash !== prepared.previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
+    if (expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");
+    if (expectedPreviewHash !== prepared.previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
     const now = new Date().toISOString();
     const brandProductIds = new Set<Id<"products">>();
     for (const selection of selections) {

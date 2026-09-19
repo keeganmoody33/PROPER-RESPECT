@@ -142,10 +142,12 @@ test("discovery reuses the sole existing relationship without changing decisions
   const { t, propIds: [propId] } = await existingRelationships();
   const owner = t.withIdentity({ subject: "owner" });
   const prop = (await t.run(ctx => ctx.db.get(propId)))!;
-  await owner.mutation(api.onboarding.publishSelected, { selections: [{
+  const publication = { selections: [{
     propId, expectedRelationshipVersion: 2, publish: true, status: prop.status,
     headline: prop.headline, note: prop.note, autoRefresh: false,
-  }] });
+  }] } as const;
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [...publication.selections] });
+  await owner.mutation(api.onboarding.publishSelected, { selections: [...publication.selections], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
   const before = await t.run(async ctx => ({
     prop: await ctx.db.get(propId), links: await ctx.db.query("links").collect(),
     published: await ctx.db.query("publishedProfiles").collect(),

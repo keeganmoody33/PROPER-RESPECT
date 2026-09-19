@@ -175,10 +175,12 @@ test("publishing a collection with duplicate product relationships queues one br
     return [await ctx.db.insert("props", prop), await ctx.db.insert("props", prop)];
   });
   const owner = t.withIdentity({ subject: "owner" });
-  await owner.mutation(makeFunctionReference<"mutation">("onboarding:publishSelected"), { selections: propIds.map(propId => ({
+  const publication = { selections: propIds.map(propId => ({
     propId, publish: true, status: "TESTING", headline: "Private candidate", note: "", autoRefresh: false,
     primaryLink: { type: "CANONICAL", url: "https://wisprflow.ai", label: "Visit" },
-  })) });
+  })) } as const;
+  const preview = await owner.query(makeFunctionReference<"query">("onboarding:previewPublication"), { selections: [...publication.selections] });
+  await owner.mutation(makeFunctionReference<"mutation">("onboarding:publishSelected"), { selections: [...publication.selections], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
   expect(await t.run(ctx => ctx.db.query("productBrandJobs").collect())).toHaveLength(1);
   const scheduled = await t.run(ctx => ctx.db.system.query("_scheduled_functions").collect());
   expect(scheduled.filter(job => job.name === "productBrands:refresh")).toHaveLength(1);
