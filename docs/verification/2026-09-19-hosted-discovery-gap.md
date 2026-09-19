@@ -39,12 +39,21 @@ owner approval, then Google consent for each account. Do not transfer developmen
 OAuth tokens or silently copy private evidence.
 
 Complete resumable bounded multi-page discovery using existing query-specific
-cursors, generation checks and atomic retention. Catalog search only finds known
+cursors, generation checks and atomic retention. The current catalog has only 16 products. Catalog search only finds its known
 sender domains; historical discovery must also retain unknown senders for review.
 Show actual coverage, processed headers, unique retained evidence, candidate
 products and remaining pages separately. Email identifies possible relationships;
 owner decisions and stronger evidence establish the product story. A full run
 cannot promise products that never left evidence in either mailbox.
+
+The next local implementation should add a persistent run above `startLease`,
+`readLeasedPage` and `persistBatch`. Schedule one page at a time and commit run
+progress with evidence/cursor persistence. Bind it to owner/account/generation,
+reserve an explicit attempt budget before I/O, and stop on cancellation, expired
+credentials, cursor cycles or exhausted coverage. Keep catalog and history
+budgets separate. Resume must not reset a completed query into a new window.
+Test duplicate scheduling, interrupted runs, generation changes and replay counts.
+This orchestration is not implemented yet; no broad run has started.
 
 ## Card presentation correction
 
