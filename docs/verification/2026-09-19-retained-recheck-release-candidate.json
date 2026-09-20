@@ -1,0 +1,80 @@
+{
+  "preparedAt": "2026-09-20T01:30:02.804021+00:00",
+  "status": "AWAITING_OWNER_AUTHORIZATION",
+  "baseSource": "5a0b77fe936c62df60b5a1924c2161b097288006",
+  "candidateSource": "0d9a3d7d017551065fffd53e3909328e61f34c6d",
+  "runtimeFiles": [
+    "components/mailbox-management.tsx",
+    "components/retained-mailbox-recheck.tsx",
+    "convex/discovery.ts",
+    "convex/mailboxDiscovery.ts",
+    "src/domain/discovery.ts",
+    "src/server/mailbox-gmail.ts"
+  ],
+  "runtimeDiffSha256": "1dc7ebf946023ada6c80f4657e197b8e6a47deadd76fd214a9ef8c694ed5fec6",
+  "allChangedFiles": [
+    "components/mailbox-management.tsx",
+    "components/retained-mailbox-recheck.tsx",
+    "convex/discovery.ts",
+    "convex/mailboxDiscovery.ts",
+    "convex/mailboxRetainedRecheck.local.test.ts",
+    "convex/mailboxRetainedRecheck.test.ts",
+    "docs/CURSOR_HANDOFF.md",
+    "docs/DEVELOPMENT.md",
+    "docs/verification/2026-09-19-catalog-identities.md",
+    "docs/verification/2026-09-19-hosted-discovery-proof.md",
+    "docs/verification/2026-09-19-hosted-gmail-release.md",
+    "docs/verification/2026-09-19-retained-mailbox-recheck.md",
+    "src/domain/discovery.test.ts",
+    "src/domain/discovery.ts",
+    "src/server/mailbox-gmail.ts",
+    "tests/e2e/components.config.ts",
+    "tests/e2e/retained-mailbox-recheck.spec.ts",
+    "work/pstack/2026-09-19-public-profile.md"
+  ],
+  "targets": {
+    "vercel": "groundskeep/proper-respect",
+    "convex": "striped-chicken-693",
+    "host": "https://props.lecturesfrom.com"
+  },
+  "verifiedRollbackDeployment": "dpl_AJeXca75XZNAhM3NYuhRfYRDcdLX",
+  "intendedOperation": "Release candidate source, then one retained-only recheck of up to1000 already stored pending mailbox headers for authenticated owner; existing public-domain brand preparation may run.",
+  "excluded": [
+    "New mailbox/provider usage reads",
+    "Development-to-production data transfer",
+    "Recurring collection",
+    "Saved relationship edits",
+    "Publication",
+    "Destructive migration"
+  ],
+  "checks": {
+    "vitestPassed": 590,
+    "optionalPrivateTestsSkippedByDefault": 2,
+    "privateRetainedTestPassed": true,
+    "nodePassed": 6,
+    "componentBrowserPassed": 16,
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "build": "PASS",
+    "independentBackendReview": "No remaining blocking finding"
+  },
+  "localRealInputResult": {
+    "headersExamined": 969,
+    "headersMatched": 118,
+    "candidateProducts": 20,
+    "replayNewDrafts": 0
+  },
+  "rollout": [
+    "Reverify target deployment and source diff hash immediately before mutation.",
+    "Export production backup privately; record saved relationships/publication/retained evidence baselines.",
+    "Synchronize candidate Convex functions to striped-chicken-693 only; no schema change.",
+    "Deploy exact candidate archive to existing Vercel project with its existing approved environment.",
+    "Verify owner authentication and collection, new retained-recheck control, preserved saved choices/publication.",
+    "Run only approved retained-header pass; verify original/source/cursor/run/publication preservation and actual pending candidates."
+  ],
+  "rollback": [
+    "Frontend can return to dpl_AJeXca75XZNAhM3NYuhRfYRDcdLX while additive backend function remains unused.",
+    "If backend rollback is needed, re-synchronize baseSource to the same target under rollback authorization.",
+    "Retained recheck creates pending drafts/proofs and presentation rows; source rollback does not delete them. Never restore old backups over later owner saves."
+  ]
+}

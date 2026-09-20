@@ -1,3 +1,17 @@
+<!-- Retained recheck continuation updated 2026-09-19 -->
+## Latest local candidate
+
+`0d9a3d7d017551065fffd53e3909328e61f34c6d` adds retained-only mailbox
+reclassification and 20 verified catalog identities. Production remains `5a0b77f`;
+development remains `a2539b9`. No further mailbox reads are authorized. Local
+real-retained-data replay produces 20 pending candidates from 118 of 969 headers;
+none are claimed hosted yet. Full checks pass. See
+[release scope and rollback](verification/2026-09-19-retained-recheck-release-candidate.json)
+and [verification](verification/2026-09-19-retained-mailbox-recheck.md).
+Exact release plus one bounded retained-only hosted recheck awaits owner approval.
+Private save/publication separation and the owner's three verified saves remain
+intact. Do not replay provider reads or import the private test input into a backend.
+
 # Cursor continuation — Proper Respect
 
 Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
