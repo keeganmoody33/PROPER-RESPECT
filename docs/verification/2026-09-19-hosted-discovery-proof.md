@@ -83,3 +83,55 @@ No implementation code changed during this live proof. Runtime regression/build
 results remain in the [authentication release receipt](2026-09-19-hosted-gmail-release.md).
 Private backups and machine verification remain outside Git. The next run, any
 refresh, recurrence, transfer or publication is not authorized by this receipt.
+
+## Personal mailbox and combined proof — September 19, 20:58 EDT
+
+The owner completed personal Gmail consent and explicitly approved one separate
+catalog/history run capped at 1,000 header attempts on the same production backend.
+Read-only preflight verified the same authenticated owner but distinct Google
+account IDs, evidence sources and generation-bound AES-256-GCM credentials. The
+first mailbox, its prior captures and publication remained unchanged.
+
+The personal run stopped at LIMIT_REACHED: 200 attempts, 197 successful pages,
+985 examined headers and 978 source-distinct retained captures. Three unsuccessful
+attempts consumed budget. The observed resume actions used the same run; no new
+run or recurrence was started. Catalog retained 490 headers across 98 successful
+pages; history examined 495 across 99 pages and retained 488 new records. Both
+contexts remain PARTIAL with distinct query keys and continuation cursors.
+Catalog mail dates reach June 17, 2025; examined historical pages reach only
+September 9, 2026. These are email coverage bounds, never use dates.
+
+New personal-account evidence links: GitHub 329, Notion 78, Clay 60, Wispr Flow 13,
+and Greptile 10. Greptile renders as a new unconfirmed private card; the other
+products reuse existing identity/review paths. All linked candidates remain
+PENDING. There are 488 unmatched records from this account across 135 distinct
+sender domains; domains and messages are not product counts.
+
+Combined authorized result: 1,619 examined headers and 1,603 retained records
+scoped to their original account/message identity. There are 969 unmatched
+records for review. Cross-account captures remain separate and are not independent
+corroboration merely because the same correspondence might reach both accounts.
+
+Final backup checks pass for all 978 new captures: owner/source/origin identity,
+DIRECT_API lineage, UNKNOWN activity actor, no usage observations, headers-only
+payload, unique source record IDs and matching page-query bindings. The original
+625 captures and first run/account are byte-identical. Every preexisting product
+relationship and the published snapshot are byte-identical. New Greptile visibility
+is DRAFT without confirmation or activity; both accounts retain generation 1 and
+recurrence off. Both approved runs are terminal.
+
+Actual hosted UI reports both limits and partial coverage. The discovered cards
+render retained logos with no brand diagnostics or internal vertical scrolling.
+A requested 390px responsive override yielded an actual 325px browser viewport;
+the document width was 312px and no visible card overflowed. The override was
+reset. Font-family metadata is applied; all vendor font binaries are not claimed
+verified by this check. NotebookLM and Devin Desktop still have identity fallbacks.
+
+The Discoveries filter is open and the owner has been asked to review actual
+relationships and save privately. This is the next gate for a truthful public
+profile, alongside triaging existing unmatched evidence. Neither email nor an
+agent chooses current use, go-to, recommendation or publication. Additional
+provider reads require new scope; no automatic next run is scheduled.
+
+Source remains `5a0b77f`; this pass changed documentation only. Private backup and
+machine checks remain outside Git. No fresh sign-in or publication is claimed.

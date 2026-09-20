@@ -14,14 +14,15 @@ complete. The real OAuth start exposed an invalid server Clerk key, now repaired
 then native Convex integration versus legacy-template incompatibility. Fix
 `5a0b77fe936c62df60b5a1924c2161b097288006` passes all final checks and was released
 with exact owner approval. Actual Add Gmail account reaches Google account selection.
-Hosted Lectures From consent/callback and one separately authorized bounded run
-are now proven: 634 headers examined, 625 retained, four new private review cards.
-History remains partial; the personal Gmail account is still unconnected.
+Both hosted Gmail accounts completed consent and separately approved bounded runs.
+Lectures From: 634 headers examined, 625 retained. Personal: 985 examined, 978
+retained. Five new private product cards await review. Both runs are terminal
+LIMIT_REACHED; historical coverage remains partial. No next run is authorized.
 See [the live proof](verification/2026-09-19-hosted-discovery-proof.md).
 Do not repeat setup approval or start a mailbox read without its bounded authorization.
 The live run changed only permitted discovery/presentation state; preexisting
 relationships and the published snapshot remain unchanged. No recurrence, private
-transfer or publication occurred. Do not restart the completed run.
+transfer or publication occurred. Do not restart either completed run.
 Read [the release receipt](verification/2026-09-19-hosted-gmail-release.md).
 Older release details below are historical; development remains at `a2539b9`.
 

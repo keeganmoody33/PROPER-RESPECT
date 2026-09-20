@@ -210,3 +210,14 @@ unchanged public snapshot verified in private backups. Continuation after leavin
 the collection is live-proven. No recurrence or new run enabled. Personal Gmail
 consent/read, owner choices and exact publication approval remain gates. See
 `docs/verification/2026-09-19-hosted-discovery-proof.md`.
+
+## Personal mailbox proof — September 19, 20:58 EDT
+
+Second account consent and separately approved capped run verified. Terminal
+LIMIT_REACHED: 985 headers examined, 978 retained, 197 successful pages / 200
+attempts. Both personal search contexts remain partial. Greptile is newly
+reviewable; existing candidates gained supporting evidence. Combined retained
+records: 1,603, including 969 unmatched records. Records are source-scoped, not
+usage counts or verified product counts. Both accounts/sources remain distinct;
+first-run data, all saved relationships and public snapshot unchanged. Owner
+review requested in hosted Discoveries. No further read or publication authorized.
