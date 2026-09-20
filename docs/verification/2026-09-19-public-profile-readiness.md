@@ -1,6 +1,6 @@
 # Public profile readiness
 
-> **Status correction — 2026-09-20:** Historical rolling receipt: its dated 8b6aa9a/empty-target/mobile-gate statements are not current release instructions. Latest recorded production is 32aa043; current source is 4df11b5. Owner-selected publication and fresh-session acceptance remain explicit #24 gates. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](2026-09-20-devin-triage-and-phase0-closure.md).
+> **Status correction — 2026-09-20:** All content below this notice is a preserved historical record, including present-tense release, deployment, acceptance and remaining-work statements. Those statements apply only to their original checkpoints; they are not current status, instructions or authorization. Latest recorded production is 32aa043; current source is 4df11b5. Owner-selected publication and fresh-session acceptance remain explicit #24 gates. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](2026-09-20-devin-triage-and-phase0-closure.md).
 
 Current release is `8b6aa9a` on production Convex `striped-chicken-693` and Vercel
 `dpl_4oRkjCrgWWbTJYkDJCYyxmXD4ZN2`. [Hosted verification](2026-09-19-membership-production-release.md)

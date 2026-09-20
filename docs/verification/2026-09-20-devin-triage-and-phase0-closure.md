@@ -149,14 +149,14 @@ not treated as deployed features.
 | File | Status correction |
 | --- | --- |
 | `docs/000-current-product-thesis.md` | Product intent remains relevant; implementation-status paragraphs below are historical. September source is reconciled to main, and multi-user release gaps are tracked in #24. |
-| `docs/002-v1-product-motion.md` | Superseded as the active motion document by [002-v2-product-motion.md](002-v2-product-motion.md). The prior private-discovery principles remain historical context; do not reimplement completed email discovery. |
+| `docs/002-v1-product-motion.md` | Superseded as the active motion document by [002-v2-product-motion.md](../002-v2-product-motion.md). The prior private-discovery principles remain historical context; do not reimplement completed email discovery. |
 | `docs/003-evidence-surfaces.md` | Current source includes separately authorized Gmail discovery, private uploads and retained review. The old four-page continuation below is historical; both hosted bounded runs and retained-only recheck completed, and further reads remain paused. |
 | `docs/CURSOR_HANDOFF.md` | Source main is 4df11b5 (PR #23 and #22 merged). Production remains the last recorded 32aa043 release; no release follows from merge. Earlier branch/gate narratives below are dated history. Continue through #24 and the September 20 triage receipt. |
 | `docs/DEPLOYMENT.md` | Current source main is 4df11b5; last recorded production is 32aa043. Existing two-account hosted Gmail consent and bounded reads completed; further reads and recurrence remain paused. Older live-release/consent statements below are historical. New upload release requires issuer-replay correction and separate backend-first authorization (#24). |
 | `docs/DEVELOPMENT.md` | Main is 4df11b5 after owner-approved merges #23/#22. Earlier local-only and development-only implementation statements below are historical. Production is still the last recorded 32aa043 source; current unresolved acceptance and review findings are #24. |
 | `docs/plans/2026-09-16-multiple-mailboxes-and-native-cards.md` | Tasks 1–4 and their checkpoints remain preserved. Earlier zero-match, unimplemented intake and development-sync gates below are historical; the September private collection/discovery source has landed. Remaining acceptance is #24; A/B remains unselected and nonblocking. |
 | `docs/plans/2026-09-16-wispr-product-and-usage-plan.md` | The canonical knowledge/evidence/review foundations described below now exist. Remaining hosted selections, transfer reconciliation and coverage gates are #24. No personal Wispr API or complete usage telemetry is established by the implementation. |
-| `docs/verification/2026-09-19-public-profile-readiness.md` | Historical rolling receipt: its dated 8b6aa9a/empty-target/mobile-gate statements are not current release instructions. Latest recorded production is 32aa043; current source is 4df11b5. Owner-selected publication and fresh-session acceptance remain explicit #24 gates. |
+| `docs/verification/2026-09-19-public-profile-readiness.md` | Historical rolling receipt: all body content is preserved historical evidence, including present-tense release and acceptance claims; it is not current release guidance. Latest recorded production is 32aa043; current source is 4df11b5. Owner-selected publication and fresh-session acceptance remain explicit #24 gates. |
 | `docs/adr/004-public-graph-privacy.md` | Privacy intent is retained. Account-wide export/deletion and lineage controls described below are not all implemented; do not advertise them as delivered. |
 | `docs/adr/005-manual-product-database.md` | Identity intent is retained. Generic persisted aliases/community merge/admin tooling is not implemented; current catalog and ambiguity-safe private review are authoritative. |
 | `docs/adr/006-data-retention-forever.md` | Retention intent needs reconciliation with ADR 012 and current private retention. The proposed expiry/deletion schedules are not implemented and do not authorize deleting existing evidence. |
@@ -184,3 +184,30 @@ not treated as deployed features.
 The concurrent-review protocol is also retained in existing `AGENTS.md` so
 future contributors see it before writing. This is contributor guidance only;
 no executable source or release configuration changed in the documentation PR.
+
+## PR #25 documentation review correction — 2026-09-20
+
+Owner authorized correcting the five open comments on reviewed head
+`2c48a3246a873f7fe2a69626ad50530460c69b23`, branch
+`codex/phase0-closure-ticket-recut-20260920`. Dispositions recorded before edits:
+
+| Review comment | Disposition and correction |
+| --- | --- |
+| [Devin r4057352180](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057352180) | Fix now: move the Wispr status note outside YAML frontmatter; preserve its metadata values. |
+| [Devin r4057352216](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057352216) | Fix now: resolve the V2 motion link relative to this receipt's directory. |
+| [Devin r4057352253](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057352253) | Fix now: point the README-linked root index to active V2 motion and label V1 references historical. |
+| [Copilot r4057356764](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057356764) | Superseded by the identical frontmatter finding above; verified with the same parse check. |
+| [Copilot r4057356789](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057356789) | Fix now: explicitly qualify the entire preserved rolling receipt body as historical, including present-tense release claims. |
+
+This is one documentation correction on #25. PR #26 remains separate. A new
+commit restarts exact-head CI and owner review; neither merge nor deployment
+is authorized by these corrections.
+
+Verification: four focused document checks failed before correction and pass
+afterward. `js-yaml` now parses the Wispr frontmatter with every original
+metadata value unchanged; the receipt's V2 link and all Markdown links in
+INDEX.md resolve to existing files; the index identifies V2 as active; the
+historical notice covers the whole rolling receipt while its original body
+remains byte-for-byte unchanged. `git diff --check` passes. Only these four
+Markdown files changed. Application CI must rerun on this correction commit;
+the preceding head's green result is not reused as its CI proof.
