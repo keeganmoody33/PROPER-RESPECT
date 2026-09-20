@@ -5,6 +5,7 @@ import { makeFunctionReference } from "convex/server";
 import { expect, test } from "vitest";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { prepareGitHubActivity, RETAINED_PRODUCT_ADAPTER_VERSION, type RetainedProductArtifact } from "../src/domain/retained-product-evidence";
 import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "../src/domain/product-destination";
 import { defaultReview } from "../src/domain/review";
@@ -34,6 +35,48 @@ async function fixture() {
     await ctx.db.insert("publishedProfiles", { handle: "owner", revision: 2, publishedAt: "2025-01-01", profile: { handle: "owner", displayName: "owner", bio: "", cards: [] } });
   });
   return { t, owner: t.withIdentity({ subject: "owner" }), other: t.withIdentity({ subject: "other" }) };
+}
+
+async function seedPrivateGithubCard(ctx: MutationCtx, input: {
+  fillerCount: number;
+  snapshotLogin?: string;
+  snapshotCapturedAt?: string;
+  connectorLogin?: string;
+  connectorConnectedAt?: string;
+}) {
+  const user = await ctx.db.query("users").withIndex("by_auth_subject", q => q.eq("authSubject", "owner")).unique();
+  if (!user) throw new Error("Owner missing");
+  const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "Code" });
+  const propId = await ctx.db.insert("props", { userId: user._id, productId, visibility: "PRIVATE", status: "ACTIVE", headline: "", note: "" });
+  await ctx.db.insert("links", { propId, type: "CANONICAL", url: "https://github.com", label: "Check out GitHub", isPrimary: true });
+  const fillerSource = await ctx.db.insert("evidenceSources", { userId: user._id, type: "MANUAL", connectedAt: "2026-09-19T00:00:00.000Z" });
+  for (let index = 0; index < input.fillerCount; index++) {
+    const rawEvidenceId = await ctx.db.insert("rawEvidence", {
+      userId: user._id, evidenceSourceId: fillerSource, capturedAt: "2026-09-19T00:00:00.000Z",
+      dedupKey: `filler-${index}`, payload: "synthetic filler",
+    });
+    await ctx.db.insert("proofs", { propId, type: "NOTE", rawEvidenceId, label: "Filler" });
+  }
+  if (input.snapshotLogin && input.snapshotCapturedAt) {
+    const githubSource = await ctx.db.insert("evidenceSources", { userId: user._id, type: "GITHUB", connectedAt: input.snapshotCapturedAt });
+    const rawEvidenceId = await ctx.db.insert("rawEvidence", {
+      userId: user._id, evidenceSourceId: githubSource, capturedAt: input.snapshotCapturedAt,
+      dedupKey: `${input.snapshotLogin}-github-snapshot`, detectedUrl: `https://github.com/${input.snapshotLogin}`,
+      captureProvenance: {
+        version: 1, route: "DIRECT_API", adapter: { id: "github-connector", version: "provider-v1" },
+        origin: { issuer: "GITHUB", accountId: input.snapshotLogin, recordId: input.snapshotCapturedAt },
+        collector: { kind: "SYSTEM" }, activityActor: { kind: "UNKNOWN" },
+      },
+    });
+    await ctx.db.insert("proofs", { propId, type: "API_OAUTH", rawEvidenceId, label: "Private GitHub snapshot" });
+  }
+  if (input.connectorLogin && input.connectorConnectedAt) {
+    await ctx.db.insert("connectorAccounts", {
+      userId: user._id, provider: "GITHUB", status: "CONNECTED",
+      accountLabel: `github.com/${input.connectorLogin}`, attributionScope: "PERSONAL",
+      connectedAt: input.connectorConnectedAt,
+    });
+  }
 }
 
 test("retained original becomes a private candidate, reviewed context and an explicitly saved card across sessions", async () => {
@@ -252,4 +295,58 @@ test("a GitHub mention from another source cannot establish an owned GitHub acco
   const listed = await owner.query(list, firstPage);
   const card = listed.page[0];
   expect(privateCardPrimaryLink({ product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence })?.url).toBe("https://github.com");
+});
+
+test("a GitHub snapshot after 25 other proofs still supplies the private account destination", async () => {
+  const { t, owner } = await fixture();
+  await t.run(async ctx => {
+    await seedPrivateGithubCard(ctx, {
+      fillerCount: 25,
+      snapshotLogin: "late-account",
+      snapshotCapturedAt: "2026-09-19T00:00:01.000Z",
+    });
+  });
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com/late-account");
+});
+
+test("a GitHub snapshot after 200 earlier proofs still supplies the private account destination", async () => {
+  const { t, owner } = await fixture();
+  await t.run(async ctx => {
+    await seedPrivateGithubCard(ctx, {
+      fillerCount: 200,
+      snapshotLogin: "late-account",
+      snapshotCapturedAt: "2026-09-19T00:00:01.000Z",
+    });
+  });
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com/late-account");
+});
+
+test("a current connected GitHub account outranks a later historical snapshot", async () => {
+  const { t, owner } = await fixture();
+  await t.run(async ctx => {
+    await seedPrivateGithubCard(ctx, {
+      fillerCount: 25,
+      snapshotLogin: "late-account",
+      snapshotCapturedAt: "2026-09-19T00:00:01.000Z",
+      connectorLogin: "current-account",
+      connectorConnectedAt: "2026-09-20T00:00:00.000Z",
+    });
+  });
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(card.links.find((link: { isPrimary: boolean }) => link.isPrimary)?.url).toBe("https://github.com");
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com/current-account");
+  expect(offeredPrivatePublicationLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com/current-account");
+  const published = JSON.stringify(await t.run(ctx => ctx.db.query("publishedProfiles").collect()));
+  expect(published).not.toContain("current-account");
+  expect(published).not.toContain("late-account");
 });
