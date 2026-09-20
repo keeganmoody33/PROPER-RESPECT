@@ -105,7 +105,21 @@ test("legacy retained files stay explicitly unverified without rewriting or back
   const state = await f.owner.query(api.onboarding.getState, {});
   expect(state!.evidence.find(item => item._id === id)?.uploadAttribution).toBe("UNVERIFIED_LEGACY");
   await expect(f.other.mutation(api.onboarding.retainUpload, { ...f.metadata, storageId, sourceType: "FILE_UPLOAD" })).rejects.toThrow("unavailable");
+  expect(await f.owner.mutation(api.onboarding.retainUpload, { ...f.metadata, storageId, sourceType: "FILE_UPLOAD" })).toBe(id);
+  const sameSubjectOtherIssuer = f.t.withIdentity({ subject: "uploader", issuer: "https://other.example" });
+  expect(await sameSubjectOtherIssuer.mutation(api.onboarding.retainUpload, { ...f.metadata, storageId, sourceType: "FILE_UPLOAD" })).toBe(id);
   expect(await f.t.run(ctx => ctx.db.get(id))).toEqual(before);
+});
+
+test("verified upload replay rejects the same subject from another issuer", async () => {
+  const f = await fixture();
+  const { storageId } = await (await f.owner.fetch(f.path, f.request())).json() as { storageId: Id<"_storage"> };
+  const args = { ...f.metadata, storageId, sourceType: "FILE_UPLOAD" as const };
+  const id = await f.owner.mutation(api.onboarding.retainUpload, args);
+  const sameSubjectOtherIssuer = f.t.withIdentity({ subject: "uploader", issuer: "https://other.example" });
+  await expect(sameSubjectOtherIssuer.mutation(api.onboarding.retainUpload, args)).rejects.toThrow("unavailable");
+  expect(await f.owner.mutation(api.onboarding.retainUpload, args)).toBe(id);
+  expect(await f.t.run(ctx => ctx.db.query("rawEvidence").collect())).toHaveLength(1);
 });
 
 test("deleted evidence cannot be resurrected by replaying its upload ticket", async () => {
