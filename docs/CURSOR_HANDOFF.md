@@ -7,13 +7,17 @@ are reconciled. Verify current main/PR state before further Git operations.
 
 ## Current release — hosted discovery
 
-Production application/backend now runs `7fa18a79cf07a9129955c7926d02fe85eeec90e1`,
-Vercel `dpl_DRFWzieUj8ioeyPjXpQuXeZYpzUf`, Convex `striped-chicken-693`.
+Production application/backend now runs `5a0b77fe936c62df60b5a1924c2161b097288006`,
+Vercel `dpl_AJeXca75XZNAhM3NYuhRfYRDcdLX`, Convex `striped-chicken-693`.
 The owner approved hosted setup and this release. Origin, encryption and separate hosted Google OAuth client configuration are
-complete. The in-app browser blocked the automated OAuth start POST with
-ERR_BLOCKED_BY_CLIENT; the owner must click Add Gmail account and complete consent.
+complete. The real OAuth start exposed an invalid server Clerk key, now repaired,
+then native Convex integration versus legacy-template incompatibility. Fix
+`5a0b77fe936c62df60b5a1924c2161b097288006` passes all final checks and was released
+with exact owner approval. Actual Add Gmail account reaches Google account selection.
+Owner consent and callback completion remain pending.
 Do not repeat setup approval or start a mailbox read without its bounded authorization.
-No mailbox read, transfer or publication occurred; 32 existing tables are unchanged.
+No mailbox read, transfer or publication occurred; 32 tables are unchanged.
+Only one expiring pending OAuth state was created by the verified start.
 Read [the release receipt](verification/2026-09-19-hosted-gmail-release.md).
 Older release details below are historical; development remains at `a2539b9`.
 

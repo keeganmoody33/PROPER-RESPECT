@@ -186,6 +186,14 @@ receipt for deployment ID, exact checks and remaining live proof.
 
 Hosted Google setup completed after owner passkey sign-in. Separate hosted client
 created with exact callback; all five production settings privately verified.
-Existing localhost client and Testing audience preserved. Programmatic hosted
-OAuth start was blocked by the in-app browser (ERR_BLOCKED_BY_CLIENT); manual
-Add Gmail account and consent are next. No source change, read or publication.
+Existing localhost client and Testing audience preserved. The real hosted OAuth start subsequently exposed a server
+401 with `secret-key-invalid`; the browser error obscured the response. The
+production key is repaired and unchanged source redeployed as
+`dpl_7mt8iWx5Awhqvjw8JfvpDpW3XzkS`. A second 400 revealed that production native
+Convex sessions cannot use the absent legacy JWT template. Local fix `5a0b77f`
+passes 565 Vitest and six Node tests, lint, TypeScript and build. The owner approved the exact release, now READY as
+`dpl_AJeXca75XZNAhM3NYuhRfYRDcdLX`. Actual Add Gmail account reaches Google
+account selection with the correct client and callback. Owner consent is next.
+All 33 application tables were unchanged before successful OAuth start; afterward
+only one expiring unconsumed pending OAuth state changed; the other 32 tables
+remain identical. No mailbox read or publication.
