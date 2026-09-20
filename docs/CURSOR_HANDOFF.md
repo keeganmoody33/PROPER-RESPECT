@@ -8,7 +8,14 @@ real-retained-data replay produces 20 pending candidates from 118 of 969 headers
 none are claimed hosted yet. Full checks pass. See
 [release scope and rollback](verification/2026-09-19-retained-recheck-release-candidate.json)
 and [verification](verification/2026-09-19-retained-mailbox-recheck.md).
-Exact release plus one bounded retained-only hosted recheck awaits owner approval.
+The owner approved that source and one bounded retained-only hosted recheck.
+Its Convex dry run caught a Node-only dependency in the retained mutation.
+Correction `32aa043c48ee32686b3c656127f2d58ed7d1388b` moves the unchanged sender
+parser into a pure module and passes the deployment dry run. Approval of this
+additional exact source remains pending. Production has not changed.
+See [the runtime correction](verification/2026-09-19-retained-recheck-runtime-boundary.md).
+The subsequent local GitHub native-session correction is separate and is not
+included in the pending release. Deploy the exact approved archive, not HEAD.
 Private save/publication separation and the owner's three verified saves remain
 intact. Do not replay provider reads or import the private test input into a backend.
 

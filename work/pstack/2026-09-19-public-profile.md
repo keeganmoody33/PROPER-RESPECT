@@ -273,3 +273,37 @@ lint, TypeScript and build. Two private-input tests skip by default; this slice'
 real-retained-input test was separately run and passes. No remote data mutation,
 new mailbox read, release or publication occurred. Next gate is exact release
 and retained-only hosted recheck approval, with brand preparation disclosed.
+
+## GitHub native-session compatibility, September 19, 21:45 EDT
+
+The previous turn fixed the retained-recheck Convex runtime boundary at
+`32aa043`. That exact source remains pending release approval. This independent
+local correction must not be included silently in that release.
+
+Data shape is the existing authenticated Clerk session with `userId`,
+`sessionClaims.aud` and `getToken`. Keep native and legacy token selection inside
+the existing route, matching the deployed mailbox path. No new auth abstraction.
+
+- [x] Reproduce it yourself on the matching surface via the control skill.
+  Use the exported POST handler with option-sensitive Clerk stubs. Live POST is
+  excluded because connecting invokes a new provider activity read.
+- [x] Binary-search the cause. Installed Convex adapter and GitHub route differ
+  in native audience selection. The earlier Gmail diagnosis establishes the
+  mechanism; no new architecture or multi-agent research program is needed.
+- [x] Plan the fix. Existing owner investigates and edits only the GitHub route
+  and its tests. Root owns documentation and final integration.
+- [x] Verify on the same surface. A local handler result cannot establish a real
+  hosted connection or provider read.
+- [x] Stage the commits so the failing repro lands before the fix in git history.
+- [x] Run **Opening a PR**. Skip push and PR creation under the current release
+  boundary. Keep the local correction separate from the approved scope.
+
+Fix Root Causes directs the correction to token selection, not a broader catch
+or a request to provision an unnecessary legacy template. Model the Domain keeps
+the existing native/legacy session distinction without introducing a new model.
+
+Tests-only RED checkpoint `0288860` returns 409 instead of 200 for the native
+session. The corrected route passes all 35 GitHub/Gmail route tests. Final
+checks pass 601 Vitest tests, six Node tests, lint, TypeScript and build. Two
+optional private-input tests skip. Actual hosted GitHub import remains unproven.
+No application comments were added; comment-agent fanout was unnecessary.

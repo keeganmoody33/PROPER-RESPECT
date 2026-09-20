@@ -52,6 +52,18 @@ test("native Convex session authenticates the GitHub import without a legacy tem
   expect(mocks.action.mock.calls[0][1]).toEqual({ token: "test-only-github-token" });
 });
 
+test("native session import works when requesting a nonexistent legacy template would throw", async () => {
+  const getToken = vi.fn(async (options?: { template?: string }) => {
+    if (options?.template) throw new Error("JWT template does not exist");
+    return "native-convex-jwt";
+  });
+  mocks.auth.mockResolvedValueOnce({ userId: "owner", sessionClaims: { aud: "convex" }, getToken });
+  expect((await POST(request({ origin: "https://props.example.test" }))).status).toBe(200);
+  expect(getToken).toHaveBeenCalledExactlyOnceWith();
+  expect(mocks.setAuth).toHaveBeenCalledWith("native-convex-jwt");
+  expect(mocks.action).toHaveBeenCalledOnce();
+});
+
 test.each([undefined, {}, { aud: "another-service" }, { aud: ["convex"] }])(
   "requires the legacy Convex template without the native integration audience: %j", async sessionClaims => {
     const getToken = vi.fn(async (options?: { template?: string }) => options?.template === "convex" ? "template-convex-jwt" : "wrong-audience-jwt");

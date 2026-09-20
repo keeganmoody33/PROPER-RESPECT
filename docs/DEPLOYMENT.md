@@ -104,8 +104,12 @@ Use a production Clerk instance for the production domain.
 2. Copy the displayed Frontend API URL. Production normally uses
    `https://clerk.<your-domain>.com`; development normally uses
    `https://<instance>.clerk.accounts.dev`.
-3. Confirm the integration exposes the `convex` session-token template. The
-   GitHub connector's server route requests that template by name.
+3. With the native Convex integration, Clerk session claims contain
+   `aud: "convex"`; use the session token directly. A legacy setup instead needs
+   a JWT template named `convex`. Do not create a legacy template just to work
+   around a route that ignores native sessions. Hosted Gmail already handles
+   both modes. The GitHub route correction remains a separate local follow-up
+   until explicitly released and verified.
 4. Enable GitHub under Clerk social connections and configure its production
    OAuth callback/domain settings.
 5. Copy the matching production publishable and secret keys. Both keys must be

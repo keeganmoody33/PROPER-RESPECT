@@ -7,7 +7,7 @@ export async function POST(request: Request) {
       (request.headers.has("sec-fetch-site") && request.headers.get("sec-fetch-site") !== "same-origin")) {
     return Response.json({ error: "Same-origin POST required." }, { status: 403 });
   }
-  const { userId, getToken } = await auth();
+  const { userId, sessionClaims, getToken } = await auth();
   if (!userId) {
     return Response.json({ error: "Authentication required." }, { status: 401 });
   }
@@ -25,7 +25,9 @@ export async function POST(request: Request) {
     "oauth_github",
   );
   const githubToken = oauthTokens.data[0]?.token;
-  const convexToken = await getToken({ template: "convex" });
+  const convexToken = sessionClaims?.aud === "convex"
+    ? await getToken()
+    : await getToken({ template: "convex" });
   if (!githubToken || !convexToken) {
     return Response.json(
       { error: "Link GitHub to your account before connecting it." },
