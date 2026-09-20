@@ -106,3 +106,19 @@ requested effort was high, actual effort was not verified. Two advisory items:
 
 The independent review inspected the correction against `56900a0`, including
 uncommitted changes. Exact final-head CI and owner review remain separate gates.
+
+## Pushed correction and exact-head verification
+
+Correction head `8ac5de51c9d83b0bca14914f2a31c86cacf18392` on
+`cursor/github-capture-chronology-7318` passed
+[CI run 35533768709](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/35533768709).
+The three original comments received commit-linked replies. Fresh Devin review
+added two informational comments, both classified NOT A BUG with source evidence:
+
+- [r4057920572](https://github.com/keeganmoody33/PROPER-RESPECT/pull/27#discussion_r4057920572): `sourceDay` is compared before same-day priority, so the comparator uses a transitive tuple.
+- [r4057920591](https://github.com/keeganmoody33/PROPER-RESPECT/pull/27#discussion_r4057920591): non-finite parsed instants receive an empty source day and deterministic account key. No runtime change requested.
+
+This receipt-only follow-up preserves the reviewed executable diff. Its final
+head must independently pass CI; the canonical Ref and PR checks carry that
+result. Owner merge remains required. Phase 2 stays clean at
+`5935783154d3c575d72a92d31ceaf8317aaad813` and has not been rebased or tested.
