@@ -135,3 +135,15 @@ provider reads require new scope; no automatic next run is scheduled.
 
 Source remains `5a0b77f`; this pass changed documentation only. Private backup and
 machine checks remain outside Git. No fresh sign-in or publication is claimed.
+
+## Reported save verification — September 19, 21:00 EDT
+
+The owner reported “Saved.” A fresh production backup compared with the final
+discovery backup shows zero changed product relationships; raw evidence and the
+public snapshot also remain unchanged. Authenticated reload still labels Clerk,
+Convex, Clay, Notion, Greptile and Copilot as needing review. Opening Clerk's form
+shows “Choose a relationship” and “Confirm and save privately.” No server or
+client save defect has yet been reproduced; do not infer one from this mismatch.
+The owner was asked which product and environment were used. No agent-selected
+relationship or publication choice was written. Saved-choice persistence remains
+unproven for this reported action.
