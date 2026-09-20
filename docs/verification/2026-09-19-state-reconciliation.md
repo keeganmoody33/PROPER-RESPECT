@@ -727,3 +727,9 @@ it is not a waived defect or a claim of merge readiness. Branch/worktree/source
 reconciliation is complete for owner review; launch work and Phase 1 remain
 unstarted. This documentation qualification follows the previously recorded
 `838f662` head; the final PR body and Ref identify its exact successor SHA.
+
+The owner later authorized the Devin findings with review body “Devin fixes”.
+The lookup correction that followed is recorded in
+[the connector-precedence receipt](2026-09-20-github-connector-precedence.md).
+That later source still requires a separate owner merge and production release;
+this Phase 0 receipt does not merge or deploy it.

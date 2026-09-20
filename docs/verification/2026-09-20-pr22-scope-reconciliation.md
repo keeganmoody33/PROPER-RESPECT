@@ -110,3 +110,13 @@ implemented. The next owner decision is whether to authorize the focused lookup
 correction before merging #22. Repository cleanup remains complete; Phase 1 and
 all deployment operations remain gated. Production/main behavior wins the
 comparison; the regression is explicitly not accepted by this receipt.
+
+## Owner-authorized lookup correction — September 20, 2026
+
+The owner later authorized those Devin findings with PR review body
+“Devin fixes”. The focused correction is recorded in
+[the connector-precedence receipt](2026-09-20-github-connector-precedence.md):
+CONNECTED GitHub connector first, newest 200 proofs for GitHub cards, no new
+index or current-account table. Owner-selected links and publication stay on
+stored primaries. The scan remains bounded. Merge, deploy, and Convex sync
+were not performed from that authorization.

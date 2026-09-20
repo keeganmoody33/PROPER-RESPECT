@@ -14,6 +14,24 @@ Do not treat branch HEAD as hosted. Fresh sign-in, remaining owner review and an
 exact approved public projection remain open. The retained-only authorization
 is exhausted; do not rerun it or start a new provider read automatically.
 
+## PR #22 GitHub lookup correction — September 20, 2026
+
+The owner authorized the Devin findings on
+[PR #22](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22) with review body
+“Devin fixes”. GitHub private-card lookup now prefers a CONNECTED connector
+account over historical proofs, and GitHub cards scan the newest 200 proofs
+instead of the oldest 200. Owner-selected non-homepage links and publication
+remain on stored primaries. This is still a bounded scan, not an exhaustive
+search: a GitHub snapshot older than the newest 200 proofs can still be missed
+when no CONNECTED connector exists. No new evidence index or current-account
+table was added.
+
+This correction is on `cursor/github-card-account-destination-7318` only. It is
+not merged to `main` and not deployed. Production remains `32aa043` /
+`dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh` / Convex `striped-chicken-693`. Do not merge,
+deploy, or sync Convex from this note. See
+[the lookup receipt](verification/2026-09-20-github-connector-precedence.md).
+
 # Cursor continuation — Proper Respect
 
 Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
@@ -127,13 +145,14 @@ or extract Screen Time automatically.
 
 ## Current integration
 
-PR #22 implements private GitHub account destinations, optional account-link
-sharing through explicit preview, and selectable connector activity snapshots.
-Those changes are deployed with the upload correction. The sole merge conflict
-was this handoff document. Full personal-release acceptance remains unfinished.
-An added regression reproduced an unrelated source account identifier becoming
-a GitHub profile. The correction requires both GitHub source type and GitHub
-origin issuer before deriving an account destination from retained evidence. Do not publish private URLs or change owner choices during verification.
+Private GitHub account destinations, optional account-link sharing through
+explicit preview, selectable connector snapshots, and first-upload owner
+binding are on `main` via PR #23 / recorded hosted lineage. PR #22 now holds
+only the leftover GitHub proof-scan correction: CONNECTED connector first,
+newest 200 proofs, owner-selected links and publication unchanged. That lookup
+is not merged or deployed. Full personal-release acceptance remains unfinished.
+GitHub destinations still require GitHub source type and GitHub origin issuer.
+Do not publish private URLs or change owner choices during verification.
 
 ## Branch disposition checked September 19
 
