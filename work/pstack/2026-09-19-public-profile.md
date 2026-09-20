@@ -173,3 +173,13 @@ seven unit/two browser cases again. Independent review fixes and runtime limits
 are recorded in `docs/verification/2026-09-19-durable-discovery.md`. No hosted
 setup, backend synchronization, provider read or deployment occurred. Production
 configuration approval and separate source-release/read authorization remain gates.
+
+## Approved hosted discovery release
+
+Owner approved hosted setup and source `7fa18a7`. Production backend and Vercel
+release succeeded; existing-session collection and mobile correction passed.
+All 32 prior application tables are unchanged, new run table empty. Origin and
+initial production encryption keyring are configured. Google client creation is
+blocked on the owner's passkey prompt, not a missing authorization. No provider
+reads, transfer, recurrence or publication occurred. See the hosted Gmail release
+receipt for deployment ID, exact checks and remaining live proof.

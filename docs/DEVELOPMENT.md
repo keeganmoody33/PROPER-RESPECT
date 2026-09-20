@@ -4,6 +4,13 @@ Updated: 2026-09-19. Start with [AGENTS.md](../AGENTS.md), the
 [Cursor handoff](CURSOR_HANDOFF.md), [deployment runbook](DEPLOYMENT.md), and
 [canonical Ref](https://plan.ref.tools/oUl8LCIQb32SAicK).
 
+## Latest deployed state
+
+Production runs `7fa18a7` with bounded background discovery and the card/mobile
+corrections. Development remains `a2539b9`. Hosted Gmail setup is owner-approved
+but waiting for Google Cloud passkey verification; no hosted Gmail read has run.
+See [the September 19 release receipt](verification/2026-09-19-hosted-gmail-release.md).
+
 ## Current product
 
 The product represents tools a person has used or tested, what they are testing

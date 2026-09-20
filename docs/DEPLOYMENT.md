@@ -4,8 +4,9 @@
 
 The owner reports owning **proper-respect.com**, registered through Cloudflare.
 DNS and HTTPS redirect to `props.lecturesfrom.com` are verified. The September 19
-release of `8b6aa9a` is live; see
-[the current receipt](verification/2026-09-19-membership-production-release.md).
+release of `7fa18a7` is live; hosted Gmail client setup is waiting for the
+owner’s Google Cloud passkey verification. See
+[the current receipt](verification/2026-09-19-hosted-gmail-release.md).
 Clerk domain/OAuth callback migration remains separate from this working redirect.
 
 GitHub consolidation is separate from a hosted release. `vercel.json` sets
