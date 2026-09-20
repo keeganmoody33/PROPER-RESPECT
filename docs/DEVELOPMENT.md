@@ -12,8 +12,10 @@ server key and an unsupported native-token path. Both are repaired and deployed
 with exact owner approval. Add Gmail account reaches Google account selection;
 both Gmail accounts completed hosted consent and separately approved bounded
 runs. Together they retained 1,603 source-scoped header records; five new product
-cards await review. Both runs are stopped; history remains partial. Owner review
-and exact publication approval remain open.
+cards entered private review. Three owner saves are now verified in production
+and after authenticated reload, including two newly confirmed discoveries. Other
+discoveries remain pending. Both runs are stopped; history remains partial.
+Fresh sign-in and an owner-selected, approved sharing preview remain open.
 See [the live discovery proof](verification/2026-09-19-hosted-discovery-proof.md).
 See [the September 19 release receipt](verification/2026-09-19-hosted-gmail-release.md).
 

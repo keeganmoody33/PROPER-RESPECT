@@ -221,3 +221,12 @@ records: 1,603, including 969 unmatched records. Records are source-scoped, not
 usage counts or verified product counts. Both accounts/sources remain distinct;
 first-run data, all saved relationships and public snapshot unchanged. Owner
 review requested in hosted Discoveries. No further read or publication authorized.
+
+## Owner persistence proof — September 19, 21:09 EDT
+
+Prove It Works applied to the live backend snapshot and authenticated reload.
+Three owner saves and matching history events verified; no other relationships,
+evidence, mailbox progress or public snapshot changed. The earlier timing
+mismatch is resolved. Empty sharing preview verified with no choices selected
+and publication disabled. Fresh sign-in and owner-selected sharing approval remain
+open. No source code, deployment, provider read or publication in this pass.

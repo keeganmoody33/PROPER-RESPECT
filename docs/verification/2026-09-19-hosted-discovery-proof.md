@@ -147,3 +147,25 @@ client save defect has yet been reproduced; do not infer one from this mismatch.
 The owner was asked which product and environment were used. No agent-selected
 relationship or publication choice was written. Saved-choice persistence remains
 unproven for this reported action.
+
+## Owner save persistence verified — September 19, 21:09 EDT
+
+A later production snapshot resolves the earlier observation mismatch. Three
+owner relationship saves now exist with matching owner IDs, confirmation times,
+version 1 and three new relationship-history events. All other relationships,
+raw evidence, publication, mailbox accounts, scan contexts and background runs
+are byte-identical to the earlier snapshot. Exact choices and the comparison
+receipt remain in the private operator directory, outside Git.
+
+The hosted collection was reloaded. Two newly confirmed discoveries render in
+Testing and the existing current relationship renders in Current. Their review
+controls are now relationship-management controls. This proves persistence in
+an existing authenticated session; a new sign-in was not exercised.
+
+Sharing preview was opened without selecting any cards. It reports zero public
+products for the unpublished current handle; approval is unchecked and Publish
+this preview is disabled. The older public snapshot remains preserved. No owner
+choice was supplied by the agent, and no publication or mailbox read occurred.
+The remaining discovery reviews and a deliberately selected sharing preview are
+still owner actions. The earlier save mismatch is resolved, not a reproduced
+application defect. Runtime source remains `5a0b77f`.
