@@ -3,7 +3,7 @@ import type { Id } from "./_generated/dataModel";
 import type { AssociatedAccountEvidence } from "../src/domain/product-destination";
 
 const DEFAULT_PROOF_SCAN_LIMIT = 25;
-/** Newest proofs on the card. Older GitHub snapshots outside this window are not searched. */
+/** Newest-attached proofs on the card. GitHub destinations then rank those by capturedAt, not attachment time. */
 const GITHUB_PROOF_SCAN_LIMIT = 200;
 const GITHUB_ACCOUNT_LABEL = /^(?:https:\/\/)?github\.com\/([^/]+)$/i;
 
@@ -37,6 +37,7 @@ export async function associatedAccountEvidenceForProp(
   const proofs = productSlug === "github"
     ? await proofQuery.order("desc").take(scanLimit)
     : await proofQuery.take(scanLimit);
+  const fromProofs: Array<{ capturedAt: string; evidence: AssociatedAccountEvidence }> = [];
   for (const proof of proofs) {
     if (!proof.rawEvidenceId) continue;
     const raw = await ctx.db.get(proof.rawEvidenceId);
@@ -44,13 +45,23 @@ export async function associatedAccountEvidenceForProp(
     const source = await ctx.db.get(raw.evidenceSourceId);
     if (!source || source.userId !== userId) continue;
     if (productSlug === "github" && (source.type !== "GITHUB" || raw.captureProvenance?.origin.issuer !== "GITHUB")) continue;
-    items.push({
-      relationshipOwnerId: userId,
-      evidenceOwnerId: raw.userId,
-      productSlug,
-      accountId: raw.captureProvenance?.origin.accountId,
-      url: raw.detectedUrl,
+    fromProofs.push({
+      capturedAt: raw.capturedAt,
+      evidence: {
+        relationshipOwnerId: userId,
+        evidenceOwnerId: raw.userId,
+        productSlug,
+        accountId: raw.captureProvenance?.origin.accountId,
+        url: raw.detectedUrl,
+      },
     });
   }
+  if (productSlug === "github") {
+    fromProofs.sort((left, right) => {
+      if (left.capturedAt === right.capturedAt) return 0;
+      return left.capturedAt < right.capturedAt ? 1 : -1;
+    });
+  }
+  for (const entry of fromProofs) items.push(entry.evidence);
   return items;
 }
