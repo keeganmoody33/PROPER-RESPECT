@@ -28,11 +28,20 @@ search: a GitHub snapshot older than the newest 200 proofs can still be missed
 when no CONNECTED connector exists. No new evidence index or current-account
 table was added.
 
-This correction is on `cursor/github-card-account-destination-7318` only. It is
-not merged to `main` and not deployed. Production remains `32aa043` /
-`dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh` / Convex `striped-chicken-693`. Do not merge,
-deploy, or sync Convex from this note. See
+This correction is merged to `main` as `4df11b5fd3ff4e4747f61fa2d72998842970fd7b`
+(head `a29ceab24db4a0bd3ac34e69e5140f6398937963`). It is **not deployed**.
+Production remains `32aa043` / `dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh` / Convex
+`striped-chicken-693`. Do not deploy or sync Convex from this note. See
 [the lookup receipt](verification/2026-09-20-github-connector-precedence.md).
+
+## Upload replay issuer binding — September 20, 2026
+
+[Issue #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) first
+item: verified `retainUpload` replay now requires the current
+`tokenIdentifier` to match stored `uploadAttribution`. Legacy rows without
+attribution still replay for the same owner. This is source-only; it does not
+release the upload boundary. See
+[the replay receipt](verification/2026-09-20-upload-replay-issuer.md).
 
 # Cursor continuation — Proper Respect
 
@@ -148,12 +157,12 @@ or extract Screen Time automatically.
 ## Current integration
 
 Private GitHub account destinations, optional account-link sharing through
-explicit preview, selectable connector snapshots, and first-upload owner
-binding are on `main` via PR #23 / recorded hosted lineage. PR #22 now holds
-only the leftover GitHub proof-scan correction: CONNECTED connector first,
-newest 200 proofs, owner-selected links and publication unchanged. That lookup
-is not merged or deployed. Full personal-release acceptance remains unfinished.
-GitHub destinations still require GitHub source type and GitHub origin issuer.
+explicit preview, selectable connector snapshots, first-upload owner binding,
+and CONNECTED-first / newest-200 GitHub lookup are on `main` via PRs #23 and
+#22 / recorded hosted lineage. They are not a production deploy of that tree.
+Verified upload replay now also requires the original issuer on that source
+lineage. Full personal-release acceptance remains unfinished. GitHub
+destinations still require GitHub source type and GitHub origin issuer.
 Do not publish private URLs or change owner choices during verification.
 
 ## Branch disposition checked September 19

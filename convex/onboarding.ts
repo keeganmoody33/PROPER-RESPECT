@@ -287,6 +287,19 @@ export const beginUpload = mutation({
   },
 });
 
+async function assertRetainableExistingUpload(
+  ctx: MutationCtx,
+  existing: Doc<"rawEvidence">,
+  user: Doc<"users">,
+) {
+  if (existing.userId !== user._id || existing.deletedAt) throw new Error("Upload unavailable.");
+  if (!existing.uploadAttribution) return;
+  const identity = await requireIdentity(ctx);
+  if (existing.uploadAttribution.tokenIdentifier !== identity.tokenIdentifier) {
+    throw new Error("Upload unavailable.");
+  }
+}
+
 async function ownedUploadTicket(ctx: QueryCtx | MutationCtx, ticketId: Id<"uploadTickets">) {
   const user = await requireUser(ctx);
   const identity = await requireIdentity(ctx);
@@ -342,7 +355,7 @@ export const retainUpload = mutation({
     }
     const existing = await ctx.db.query("rawEvidence").withIndex("by_storage", q => q.eq("storageId", args.storageId)).first();
     if (existing) {
-      if (existing.userId !== user._id || existing.deletedAt) throw new Error("Upload unavailable.");
+      await assertRetainableExistingUpload(ctx, existing, user);
       if (existing.filename !== args.filename || existing.mimeType !== args.mimeType || existing.byteSize !== args.byteSize || existing.detectedVendor !== args.vendor) {
         throw new Error("This upload was already retained with different metadata.");
       }
