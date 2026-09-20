@@ -89,3 +89,14 @@ test("accumulated pages never render a second card for the same owner and produc
     expect($("article.product-card")).toHaveLength(1);
   }
 });
+
+test.each(["UNVERIFIED_LEGACY", "VERIFIED_OWNER_SESSION"] as const)("uploaded context distinguishes %s without claiming usage or authorship", (attribution) => {
+  const source: InventoryEvidence[number] = {
+    ...testimony, sourceType: "FILE_UPLOAD", sourceLabel: "Private uploaded original",
+    ownerStatement: undefined, ownerStatementQuestion: undefined,
+    uploadedFile: { filename: "export.json", mimeType: "application/json", byteSize: 100, attribution },
+  };
+  const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item, evidence: [source], onSave: vi.fn() })));
+  expect($.text()).toContain(attribution === "UNVERIFIED_LEGACY" ? "original uploader is unverified" : "authorship and product usage are not verified");
+  expect($('input[name="goTo"]').attr("checked")).toBeUndefined();
+});

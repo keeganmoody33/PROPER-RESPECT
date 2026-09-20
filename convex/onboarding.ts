@@ -1,7 +1,8 @@
+import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { addManualProductArgs, addManualProductHandler } from "./manualProducts";
 import { ensureProductBrand, retainedProductBrand } from "./productBrands";
 import { v, type Infer } from "convex/values";
-import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireIdentity, requireUser } from "./authHelpers";
 import { claimableHandleSchema } from "../src/domain/onboarding";
@@ -227,6 +228,7 @@ export const getState = query({
         evidenceSourceId: item.evidenceSourceId,
         userId: item.userId,
         storageId: item.storageId,
+        uploadAttribution: item.storageId ? uploadAttributionStatus(item.uploadAttribution) : undefined,
         filename: item.filename,
         mimeType: item.mimeType,
         byteSize: item.byteSize,
@@ -257,11 +259,67 @@ export const reviewClaim = mutation({
   },
 });
 
+// Old clients must reload instead of creating new storage objects with no owner binding.
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
     await requireUser(ctx);
-    return await ctx.storage.generateUploadUrl();
+    throw new Error("Reload the application to use authenticated file uploads.");
+  },
+});
+
+export const beginUpload = mutation({
+  args: { filename: v.string(), mimeType: v.string(), byteSize: v.number(), vendor: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const identity = await requireIdentity(ctx);
+    const { mimeType } = classifyEvidenceUpload(args);
+    if ((args.vendor?.length ?? 0) > 200) throw new Error("Invalid product name.");
+    const site = process.env.CONVEX_SITE_URL;
+    if (!site) throw new Error("Authenticated upload endpoint is not configured.");
+    const id = await ctx.db.insert("uploadTickets", {
+      ...args, mimeType, userId: user._id, tokenIdentifier: identity.tokenIdentifier,
+      createdAt: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000,
+    });
+    const url = new URL("/evidence-upload", site);
+    url.searchParams.set("ticket", id);
+    return { ticketId: id, uploadUrl: url.toString() };
+  },
+});
+
+async function ownedUploadTicket(ctx: QueryCtx | MutationCtx, ticketId: Id<"uploadTickets">) {
+  const user = await requireUser(ctx);
+  const identity = await requireIdentity(ctx);
+  const ticket = await ctx.db.get(ticketId);
+  if (!ticket || ticket.userId !== user._id || ticket.tokenIdentifier !== identity.tokenIdentifier)
+    throw new Error("Upload unavailable.");
+  if (ticket.expiresAt <= Date.now() && !ticket.evidenceId) throw new Error("Upload expired. Choose the file again.");
+  if (ticket.evidenceId) {
+    const evidence = await ctx.db.get(ticket.evidenceId);
+    if (!evidence || evidence.deletedAt) throw new Error("Upload unavailable.");
+  }
+  return ticket;
+}
+
+export const uploadTicket = internalQuery({
+  args: { ticketId: v.id("uploadTickets") },
+  handler: (ctx, args) => ownedUploadTicket(ctx, args.ticketId),
+});
+
+// Only the HTTP byte-receiving handler calls this; a client cannot bind a supplied ID.
+export const bindUploadedFile = internalMutation({
+  args: { ticketId: v.id("uploadTickets"), storageId: v.id("_storage"), sha256: v.string() },
+  handler: async (ctx, args) => {
+    const ticket = await ownedUploadTicket(ctx, args.ticketId);
+    if (ticket.storageId) {
+      if (ticket.sha256 !== args.sha256) throw new Error("Upload already used for different bytes.");
+      return ticket.storageId;
+    }
+    const file = await ctx.db.system.get(args.storageId);
+    if (!file || file.size !== ticket.byteSize || normalizeUploadMime(file.contentType ?? "") !== ticket.mimeType)
+      throw new Error("Stored file metadata does not match this upload.");
+    await ctx.db.patch(ticket._id, { storageId: args.storageId, sha256: args.sha256, receivedAt: new Date().toISOString() });
+    return args.storageId;
   },
 });
 
@@ -278,7 +336,6 @@ export const retainUpload = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     if (args.activity) throw new Error("Upload retention cannot add measurements. Review selected observations separately.");
-    const { sourceType } = classifyEvidenceUpload(args);
     const storage = await ctx.db.system.get(args.storageId);
     if (!storage || storage.size !== args.byteSize || normalizeUploadMime(storage.contentType ?? "") !== normalizeUploadMime(args.mimeType)) {
       throw new Error("Stored file metadata does not match this upload.");
@@ -291,6 +348,13 @@ export const retainUpload = mutation({
       }
       return existing._id;
     }
+    const { sourceType } = classifyEvidenceUpload(args);
+    const ticket = await ctx.db.query("uploadTickets").withIndex("by_storage", q => q.eq("storageId", args.storageId)).unique();
+    if (!ticket) throw new Error("Upload unavailable. Choose the file again through authenticated upload.");
+    await ownedUploadTicket(ctx, ticket._id);
+    if (ticket.evidenceId || !ticket.sha256 || !ticket.receivedAt) throw new Error("Upload unavailable.");
+    if (ticket.filename !== args.filename || ticket.mimeType !== normalizeUploadMime(args.mimeType) || ticket.byteSize !== args.byteSize || ticket.vendor !== args.vendor)
+      throw new Error("Upload metadata differs from the authenticated upload.");
     const now = new Date().toISOString();
     let source = await ctx.db
       .query("evidenceSources")
@@ -313,6 +377,11 @@ export const retainUpload = mutation({
       evidenceSourceId: source._id,
       userId: user._id,
       storageId: args.storageId,
+      uploadAttribution: {
+        status: "VERIFIED_OWNER_SESSION", userId: user._id,
+        tokenIdentifier: ticket.tokenIdentifier, ticketId: ticket._id,
+        receivedAt: ticket.receivedAt, sha256: ticket.sha256,
+      },
       filename: args.filename,
       mimeType: args.mimeType,
       byteSize: args.byteSize,
@@ -320,7 +389,7 @@ export const retainUpload = mutation({
       capturedAt: now,
       dedupKey: `${user._id}:${args.storageId}`,
       captureProvenance: {
-        version: 1, route: "UPLOAD", adapter: { id: "evidence-upload", version: "1" },
+        version: 1, route: "UPLOAD", adapter: { id: "evidence-upload", version: "2" },
         origin: { issuer: "OWNER_SUPPLIED_FILE", artifactRef: args.storageId },
         collector: { kind: "UNKNOWN" }, activityActor: { kind: "UNKNOWN" },
       },
@@ -408,6 +477,7 @@ export const retainUpload = mutation({
       }
     }
 
+    await ctx.db.patch(ticket._id, { evidenceId });
     await ctx.db.patch(user._id, {
       onboardingStatus: "REVIEW",
       updatedAt: now,

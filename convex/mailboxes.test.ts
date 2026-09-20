@@ -89,6 +89,9 @@ test.each(["manual", "upload"] as const)("mailbox discovery preserves an existin
     const storageId = await t.run(ctx => ctx.storage.store(new Blob(["upload fixture"], { type: "image/png" })));
     // convex-test store() omits the contentType recorded by a real HTTP upload.
     await t.run(ctx => ctx.db.patch(storageId as unknown as Id<"rawEvidence">, { contentType: "image/png" } as never));
+    vi.stubEnv("CONVEX_SITE_URL", "https://test.convex.site");
+    const { ticketId } = await owner.mutation(api.onboarding.beginUpload, { filename: "github.png", mimeType: "image/png", byteSize: 14, vendor: "GitHub" });
+    await owner.mutation(internal.onboarding.bindUploadedFile, { ticketId, storageId, sha256: "c".repeat(64) });
     await owner.mutation(api.onboarding.retainUpload, {
       storageId, filename: "github.png", mimeType: "image/png", byteSize: 14, sourceType: "SCREENSHOT", vendor: "GitHub",
     });

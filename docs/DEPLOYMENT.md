@@ -326,3 +326,15 @@ stubbed provider HTTP. Microsoft, full-body/attachment extraction, generic
 re-extraction versions and complete historical coverage remain outside this
 slice. The real known-product capture/candidate gate is closed, without
 converting mailbox evidence into signup, payment or human-usage claims.
+
+## Authenticated file uploads — September 19 PR #23, not yet deployed
+
+The first-upload ownership fix replaces exposed storage upload URLs with an
+owner-bound ticket and authenticated Convex HTTP action. Deploy its additive
+schema/functions/HTTP action before the matching frontend, only with release
+authorization. Convex supplies `CONVEX_SITE_URL`; no additional secret is needed.
+Old clients receive a reload instruction. New uploads accept the same formats
+up to **19 MiB**, below the HTTP action's 20 MB request limit. Existing retained
+files are unchanged. The private UI explicitly marks legacy uploader attribution
+unverified; do not backfill it from the old account association. See the
+[first-upload verification receipt](verification/2026-09-19-first-upload-ownership.md).

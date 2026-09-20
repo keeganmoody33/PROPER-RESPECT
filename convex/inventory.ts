@@ -1,3 +1,4 @@
+import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { paginationOptsValidator, type PaginationOptions } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
@@ -39,7 +40,7 @@ async function evidenceEntry(ctx: QueryCtx, userId: Id<"users">, rawEvidenceId: 
     suggestedActivity: raw.suggestedActivity, ownerStatement: ownerReview?.answer,
     ownerStatementQuestion: ownerReview?.question, observationCount: raw.observations?.length ?? 0,
     originalText: raw.payload,
-    ...(raw.storageId ? { uploadedFile: { filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize } } : {}) };
+    ...(raw.storageId ? { uploadedFile: { attribution: uploadAttributionStatus(raw.uploadAttribution), filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize } } : {}) };
 }
 
 export const save = mutation({

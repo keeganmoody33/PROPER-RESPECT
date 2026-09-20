@@ -167,3 +167,30 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
   await expect(copilot.locator(".card-headline")).toHaveText("Separate Copilot workflow");
   await expect(page.locator("#save-count")).toHaveText("0");
 });
+
+for (const width of [390, 1280]) test(`upload attribution stays honest in supporting details at ${width}px`, async ({ page }, testInfo) => {
+  const compiled = buildSync({
+    stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { InventoryRelationshipDetails } from "./components/private-inventory";
+      const item = {
+        prop: { _id: "synthetic-prop", _creationTime: 1, userId: "synthetic-owner", productId: "synthetic-product", visibility: "DRAFT", status: "TESTING", headline: "Unreviewed upload", note: "" },
+        product: { _id: "synthetic-product", _creationTime: 1, name: "Synthetic product", slug: "synthetic", domain: "example.com", description: "" }, links: [], previousStatuses: [], associatedAccountEvidence: [],
+      };
+      const evidence = ["UNVERIFIED_LEGACY", "VERIFIED_OWNER_SESSION"].map((attribution, i) => ({
+        id: "synthetic-evidence-" + i, capturedAt: "2026-09-19T12:00:00Z", sourceType: "FILE_UPLOAD", sourceLabel: "Synthetic private export", limitations: [], observationCount: 0,
+        uploadedFile: { filename: "export.json", mimeType: "application/json", byteSize: 100, attribution },
+      }));
+      createRoot(document.getElementById("root")).render(createElement(InventoryRelationshipDetails, { item, evidence, onSave: async () => { throw new Error("No owner choices in fixture"); } }));`, resolveDir: process.cwd() },
+    bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+    outfile: "upload-attribution.js", loader: { ".module.css": "local-css" },
+    define: { "process.env.NODE_ENV": '"production"' },
+  });
+  await page.setViewportSize({ width, height: 1000 });
+  await page.setContent('<main class="onboarding-shell" id="root"></main>');
+  await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
+  await page.addStyleTag({ content: compiled.outputFiles.find(file => file.path.endsWith(".css"))!.text });
+  await page.addScriptTag({ content: compiled.outputFiles.find(file => file.path.endsWith(".js"))!.text });
+  await expect(page.getByText(/original uploader is unverified/)).toBeVisible();
+  await expect(page.getByText(/authorship and product usage are not verified/)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath(`2026-09-19-upload-attribution-${width}.png`), fullPage: true });
+});

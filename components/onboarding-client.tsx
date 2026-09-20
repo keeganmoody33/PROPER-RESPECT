@@ -115,17 +115,18 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
 function Builder() {
   const convex = useConvex();
   const { user: clerkUser } = useUser();
-  const { getToken } = useAuth();
+  const { getToken, sessionClaims } = useAuth();
   const { openUserProfile } = useClerk();
   const ensureAccount = useMutation(api.onboarding.ensureAccount);
   const claimHandle = useMutation(api.onboarding.claimHandle);
-  const generateUploadUrl = useMutation(api.onboarding.generateUploadUrl);
+  const beginUpload = useMutation(api.onboarding.beginUpload);
   const retainUpload = useMutation(api.onboarding.retainUpload);
   const addManualProduct = useMutation(api.onboarding.addManualProduct);
   const publishSelected = useMutation(api.onboarding.publishSelected);
   const revokeConnector = useMutation(api.connectors.revokeConnector);
   const connectDevin = useAction(api.connectors.connectDevin);
   const state = useQuery(api.onboarding.getState, { includeClaims: false });
+  const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [reviewEdits, setReviewEdits] = useState<
@@ -176,13 +177,22 @@ function Builder() {
     await run("Original file retained privately. Review the product in your collection; add selected observations only if the original supports them.", async () => {
       const { sourceType } = classifyEvidenceUpload({ filename: file.name, mimeType: file.type, byteSize: file.size });
       const vendor = String(form.get("vendor"));
-      const uploadUrl = await generateUploadUrl({});
-      const response = await fetch(uploadUrl, {
+      const token = sessionClaims?.aud === "convex" ? await getToken() : await getToken({ template: "convex" });
+      if (!token) throw new Error("Sign in again before uploading evidence.");
+      if (uploadAttempt.current?.file !== file || uploadAttempt.current.vendor !== vendor) {
+        const { uploadUrl } = await beginUpload({ filename: file.name, mimeType: file.type || "application/octet-stream", byteSize: file.size, vendor });
+        uploadAttempt.current = { file, vendor, uploadUrl };
+      }
+      const response = await fetch(uploadAttempt.current.uploadUrl, {
         method: "POST",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
+        credentials: "omit",
+        headers: { "Content-Type": file.type || "application/octet-stream", Authorization: `Bearer ${token}` },
         body: file,
       });
-      if (!response.ok) throw new Error("Evidence upload failed.");
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 409) uploadAttempt.current = null;
+        throw new Error("Evidence upload failed. Retry the file; expired uploads start again.");
+      }
       const { storageId } = (await response.json()) as {
         storageId: Id<"_storage">;
       };
@@ -194,6 +204,7 @@ function Builder() {
         sourceType,
         vendor,
       });
+      uploadAttempt.current = null;
     });
   }
 
@@ -385,7 +396,7 @@ function Builder() {
           </form>
           <form className="connector-card" action={uploadEvidence}>
             <strong>Upload an export or screenshot</strong>
-            <p>Retain an original privately, up to 25 MiB. Supports PNG/JPEG/WebP/HEIC/HEIF, CSV/TSV, JSON/JSONL/NDJSON, PDF, XLS/XLSX/ODS, TXT/XML/HTML, and ZIP. Files are not parsed or unpacked automatically. Add selected observations with their period and scope from the product’s supporting details.</p>
+            <p>Retain an original privately, up to 19 MiB. Supports PNG/JPEG/WebP/HEIC/HEIF, CSV/TSV, JSON/JSONL/NDJSON, PDF, XLS/XLSX/ODS, TXT/XML/HTML, and ZIP. Files are not parsed or unpacked automatically. Add selected observations with their period and scope from the product’s supporting details.</p>
             <label className="review-field">
               Product
               <select name="vendor" required defaultValue="Wispr Flow">

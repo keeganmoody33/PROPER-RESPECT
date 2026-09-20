@@ -567,3 +567,15 @@ profiles, with net-new Domain routing gating custom domains only and the old
 host continuing as today; triage the 31 flagged documents individually as an
 in-place status correction, superseded-with-pointer, or proposed deletion for
 sign-off. Those later operations have not started in this source-recovery step.
+
+## Step 2 implementation — September 19, 2026
+
+The owner directed the ownership fix onto PR #23's reconcile branch and reserved
+its first merge for personal review. The first-claim attack was reproduced and
+fixed; [the ownership receipt](2026-09-19-first-upload-ownership.md) records the
+new byte-receiving boundary, legacy uncertainty, 19 MiB limit, checks and limits.
+No existing attribution was backfilled and no backend was synchronized.
+PR #22 remains at `a174fc6b74663f165e8469f9778f6972aeb93c86` until #23 merges.
+Its missing later-proof fix has not been silently imported during this step.
+The final main SHA, PR #22 rebase/scope receipt and branch/checkpoint dispositions
+remain pending; Phase 0 is not closed. The owner merges #23 before anything else.

@@ -30,5 +30,5 @@ test("rejects contradictory MIME metadata", () => {
 });
 
 test.each([0, -1, 1.5, NaN, MAX_EVIDENCE_UPLOAD_BYTES + 1])("rejects unsupported size %s", byteSize => {
-  expect(() => classifyEvidenceUpload({ filename: "export.json", mimeType: "", byteSize })).toThrow("25 MiB");
+  expect(() => classifyEvidenceUpload({ filename: "export.json", mimeType: "", byteSize })).toThrow("19 MiB");
 });

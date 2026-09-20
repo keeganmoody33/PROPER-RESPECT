@@ -1,4 +1,4 @@
-export const MAX_EVIDENCE_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const MAX_EVIDENCE_UPLOAD_BYTES = 19 * 1024 * 1024;
 
 const formats = {
   png: ["image/png"], jpg: ["image/jpeg"], jpeg: ["image/jpeg"], webp: ["image/webp"],
@@ -24,7 +24,7 @@ export function normalizeUploadMime(mimeType: string) {
 
 export function classifyEvidenceUpload(input: { filename: string; mimeType: string; byteSize: number }) {
   if (!input.filename.trim() || input.filename.length > 255 || /[\x00-\x1f/\\]/.test(input.filename)) throw new Error("Choose a file with a valid filename.");
-  if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > MAX_EVIDENCE_UPLOAD_BYTES) throw new Error("Choose a nonempty file of 25 MiB or less.");
+  if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > MAX_EVIDENCE_UPLOAD_BYTES) throw new Error("Choose a nonempty file of 19 MiB or less.");
   const extension = input.filename.toLowerCase().split(".").at(-1)!;
   if (!input.filename.includes(".") || !Object.hasOwn(formats, extension)) throw new Error("Unsupported export format. Choose an image, CSV/TSV, JSON/JSONL, PDF, spreadsheet, text/XML/HTML, or ZIP file.");
   const mimeType = normalizeUploadMime(input.mimeType);
@@ -32,4 +32,8 @@ export function classifyEvidenceUpload(input: { filename: string; mimeType: stri
   const sourceType = ["png", "jpg", "jpeg", "webp", "heic", "heif"].includes(extension)
     ? "SCREENSHOT" : extension === "csv" ? "CSV" : "FILE_UPLOAD";
   return { extension, mimeType, sourceType } as const;
+}
+
+export function uploadAttributionStatus(attribution: { status: "VERIFIED_OWNER_SESSION" } | undefined) {
+  return attribution?.status ?? "UNVERIFIED_LEGACY";
 }
