@@ -1,4 +1,5 @@
 import { resolveProduct, type RawSignal } from "../domain/discovery";
+import { senderDomain } from "../domain/mailbox-sender";
 import { requestMailboxJson } from "./mailbox-provider-http";
 import { MAILBOX_PAGE_LIMIT } from "./mailbox-search";
 
@@ -26,14 +27,6 @@ function requestJson(url: URL, token: string, fetcher: typeof fetch): Promise<un
     url: url.toString(), method: "GET", headers: { Authorization: `Bearer ${token}` },
     redirect: "error", cache: "no-store",
   }, fetcher);
-}
-
-export function senderDomain(from: string): string | null {
-  // Deliberately narrow: a single plain mailbox or display-name <mailbox>.
-  // Sender headers are unverified source text; they establish no account or usage claim.
-  const match = from.match(/^(?:[^<>\r\n,]*<)?[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,})(>)?$/);
-  if (!match || from.includes("<") !== Boolean(match[2])) return null;
-  return match[1].toLowerCase();
 }
 
 function signalFromMessage(value: unknown, expectedId: string, account: string, retainUnknown: boolean) {

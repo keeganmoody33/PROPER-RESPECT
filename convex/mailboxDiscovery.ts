@@ -11,7 +11,7 @@ import { rawSignalSchema, resolveCatalogProduct } from "../src/domain/discovery"
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { MAILBOX_PAGE_LIMIT } from "../src/server/mailbox-search";
-import { senderDomain } from "../src/server/mailbox-gmail";
+import { senderDomain } from "../src/domain/mailbox-sender";
 
 /** Revisit retained headers only. Its pagination cursor is never a provider cursor. */
 export const recheckRetained = mutation({
