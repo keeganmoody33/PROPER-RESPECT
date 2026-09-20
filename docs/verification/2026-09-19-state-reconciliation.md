@@ -709,3 +709,21 @@ working as before. No new architecture, onboarding shell choice, domain change,
 recurrence or feature scope was introduced. Owner review of this receipt is the
 next gate before Phase 1. The product and hosted upload boundary are not claimed
 finished by repository cleanup.
+
+
+### Review qualification discovered before handoff
+
+Final-source CI passed on `838f662964a6229e4146d105d8ca924184686a9a`, but a new
+review finding was reproduced: the 200-proof expansion can let an older GitHub
+account override the current connector account. A focused synthetic probe fails
+on the rebased implementation and passes with main's exact helper. The
+[scope receipt's final-review section](2026-09-20-pr22-scope-reconciliation.md#final-review-finding--confirmed-not-waived)
+records the scenario, output and boundary. The probe was restored and no new
+runtime policy was implemented without owner direction.
+
+PR #22 is non-draft and ready for **review**, but **must not merge unchanged**.
+This is an explicit unresolved review disposition, alongside the 200-proof cap;
+it is not a waived defect or a claim of merge readiness. Branch/worktree/source
+reconciliation is complete for owner review; launch work and Phase 1 remain
+unstarted. This documentation qualification follows the previously recorded
+`838f662` head; the final PR body and Ref identify its exact successor SHA.

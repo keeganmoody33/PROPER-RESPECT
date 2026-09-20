@@ -79,3 +79,34 @@ last recorded release `32aa043c48ee32686b3c656127f2d58ed7d1388b`; this operation
 does not independently re-prove the hosted journey. A later upload-boundary
 release must be separately authorized, with schema/functions/HTTP action first
 and frontend second.
+
+
+## Final review finding — confirmed, not waived
+
+After final-head CI run `35519114748` passed on `838f662964a6229e4146d105d8ca924184686a9a`,
+Devin's new review raised [historical-account precedence](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22#discussion_r4057273533)
+as well as the already recorded 200-proof bound. The precedence finding is real:
+
+- Extend the existing later-proof fixture with a CONNECTED GitHub connector
+  labeled `github.com/current-account`, connected September 20.
+- Keep 25 manual proofs followed by the existing September 19 GitHub snapshot
+  for `late-account`; the stored primary remains the vendor homepage.
+- Expect the current connector destination `https://github.com/current-account`.
+- Rebased 200-proof implementation: **FAIL**, returned
+  `https://github.com/late-account` because proof entries precede connector data.
+- Same fixture with main's exact `associatedAccountEvidence.ts`: **PASS**.
+
+This is a concrete behavior regression from widening the prefix, not merely
+another hypothetical cap. The temporary focused probe and main-control swap
+were restored byte-for-byte; no failing temporary test or extra runtime change
+was committed. Local raw probe logs remain under
+`/tmp/proper-respect-phase0-20260920/connector-precedence-*.log`.
+
+**PR #22 is ready for review, not ready to merge unchanged.** Its original suite
+and CI pass, but do not cover this combination. Both new review threads remain
+open. Per the owner's instruction to record newly discovered drift and ask
+before acting, no new account-precedence rule or index strategy was silently
+implemented. The next owner decision is whether to authorize the focused lookup
+correction before merging #22. Repository cleanup remains complete; Phase 1 and
+all deployment operations remain gated. Production/main behavior wins the
+comparison; the regression is explicitly not accepted by this receipt.
