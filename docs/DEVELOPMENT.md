@@ -6,21 +6,17 @@ Updated: 2026-09-19. Start with [AGENTS.md](../AGENTS.md), the
 
 ## Latest deployed state
 
-Production runs `5a0b77f` with bounded background discovery and the card/mobile
-corrections. Development remains `a2539b9`. Hosted Google setup is complete. The real OAuth start exposed an invalid Clerk
-server key and an unsupported native-token path. Both are repaired and deployed
-with exact owner approval. Add Gmail account reaches Google account selection;
-both Gmail accounts completed hosted consent and separately approved bounded
-runs. Together they retained 1,603 source-scoped header records; five new product
-cards entered private review. Three owner saves are now verified in production
-and after authenticated reload, including two newly confirmed discoveries. Other
-discoveries remain pending. Both runs are stopped; history remains partial.
-Fresh sign-in and an owner-selected, approved sharing preview remain open.
-See [the live discovery proof](verification/2026-09-19-hosted-discovery-proof.md).
-Local follow-up expands the catalog from 16 to 36 identities and rechecks existing
-headers without rereading Gmail. Local real-data replay produces 20 pending
-candidates from 118 of the 969 retained unmatched headers; these are not yet
-hosted or owner-confirmed. See [the retained recheck receipt](verification/2026-09-19-retained-mailbox-recheck.md).
+Production runs `32aa043` on Vercel `dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh`
+and Convex `striped-chicken-693`. Development remains `a2539b9`. Both Gmail
+accounts completed their separately approved bounded reads. The later approved
+retained-only pass checked 969 existing headers, matched 118 and retained 20 new
+private candidates with brand snapshots. No new mailbox read occurred. Original
+evidence, saved choices, mailbox state and publication stayed unchanged.
+The new cards survive authenticated reload; use Load more products after the
+first 25 records. Fresh sign-in, additional owner reviews and exact sharing
+selection/approval remain open. Historical coverage is still partial and
+recurrence is off. The later GitHub native-session fix at `82faddf` is local only.
+See [the production recheck receipt](verification/2026-09-19-retained-recheck-production.md).
 
 See [the September 19 release receipt](verification/2026-09-19-hosted-gmail-release.md).
 

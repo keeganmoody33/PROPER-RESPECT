@@ -307,3 +307,19 @@ session. The corrected route passes all 35 GitHub/Gmail route tests. Final
 checks pass 601 Vitest tests, six Node tests, lint, TypeScript and build. Two
 optional private-input tests skip. Actual hosted GitHub import remains unproven.
 No application comments were added; comment-agent fanout was unnecessary.
+
+## Approved release and retained-only proof, September 19, 21:56 EDT
+
+Source `32aa043` is READY on Vercel `dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh`
+and synchronized to production `striped-chicken-693`. Exact archived source and
+targets verified, private backup taken, backend synchronized first. All 33
+application tables were unchanged after deployment. One approved UI pass checked
+969 retained headers and created 20 pending candidates from 118 matches.
+Every original row remains unchanged. Owner/source bindings and unique proof
+pairs pass. Twenty brand jobs and retained snapshots are READY. Reload and Load
+more products reveal all candidates. Desktop/narrow-screen rendering and empty
+sharing preview pass. No new mailbox read, owner choice, recurrence or publication.
+
+Prove It Works required deployed UI and snapshot comparison, rather than a local
+test result. The goal is not complete. Fresh sign-in, owner relationship review
+and exact sharing approval remain. GitHub correction `82faddf` stays local.

@@ -1,17 +1,18 @@
 {
   "preparedAt": "2026-09-20T01:30:02.804021+00:00",
-  "status": "AWAITING_OWNER_AUTHORIZATION",
+  "status": "RELEASED_AND_RETAINED_RECHECK_VERIFIED",
   "baseSource": "5a0b77fe936c62df60b5a1924c2161b097288006",
-  "candidateSource": "0d9a3d7d017551065fffd53e3909328e61f34c6d",
+  "candidateSource": "32aa043c48ee32686b3c656127f2d58ed7d1388b",
   "runtimeFiles": [
     "components/mailbox-management.tsx",
     "components/retained-mailbox-recheck.tsx",
     "convex/discovery.ts",
     "convex/mailboxDiscovery.ts",
     "src/domain/discovery.ts",
-    "src/server/mailbox-gmail.ts"
+    "src/server/mailbox-gmail.ts",
+    "src/domain/mailbox-sender.ts"
   ],
-  "runtimeDiffSha256": "1dc7ebf946023ada6c80f4657e197b8e6a47deadd76fd214a9ef8c694ed5fec6",
+  "runtimeDiffSha256": "e3bd76bca714bab324331363a714e1e48725b6c929a7643f5935fa66fc4cc184",
   "allChangedFiles": [
     "components/mailbox-management.tsx",
     "components/retained-mailbox-recheck.tsx",
@@ -25,9 +26,13 @@
     "docs/verification/2026-09-19-hosted-discovery-proof.md",
     "docs/verification/2026-09-19-hosted-gmail-release.md",
     "docs/verification/2026-09-19-retained-mailbox-recheck.md",
+    "docs/verification/2026-09-19-retained-recheck-release-candidate.json",
+    "docs/verification/2026-09-19-retained-recheck-runtime-boundary.md",
     "src/domain/discovery.test.ts",
     "src/domain/discovery.ts",
+    "src/domain/mailbox-sender.ts",
     "src/server/mailbox-gmail.ts",
+    "src/server/mailbox-runtime.test.ts",
     "tests/e2e/components.config.ts",
     "tests/e2e/retained-mailbox-recheck.spec.ts",
     "work/pstack/2026-09-19-public-profile.md"
@@ -48,7 +53,7 @@
     "Destructive migration"
   ],
   "checks": {
-    "vitestPassed": 590,
+    "vitestPassed": 591,
     "optionalPrivateTestsSkippedByDefault": 2,
     "privateRetainedTestPassed": true,
     "nodePassed": 6,
@@ -56,7 +61,8 @@
     "lint": "PASS",
     "typecheck": "PASS",
     "build": "PASS",
-    "independentBackendReview": "No remaining blocking finding"
+    "independentBackendReview": "No remaining blocking finding",
+    "convexDryRun": "PASS after parser extraction"
   },
   "localRealInputResult": {
     "headersExamined": 969,
@@ -76,5 +82,33 @@
     "Frontend can return to dpl_AJeXca75XZNAhM3NYuhRfYRDcdLX while additive backend function remains unused.",
     "If backend rollback is needed, re-synchronize baseSource to the same target under rollback authorization.",
     "Retained recheck creates pending drafts/proofs and presentation rows; source rollback does not delete them. Never restore old backups over later owner saves."
-  ]
+  ],
+  "previousApprovedSource": "0d9a3d7d017551065fffd53e3909328e61f34c6d",
+  "correctionFiles": [
+    "convex/mailboxDiscovery.ts",
+    "src/server/mailbox-gmail.ts",
+    "src/domain/mailbox-sender.ts",
+    "src/server/mailbox-runtime.test.ts"
+  ],
+  "correctionDiffSha256": "fcc0cc732c4bd1a875bf4c6b63e45a0a8ee829ddaf012d8b17d0105db79e0efe",
+  "approvedAt": "2026-09-20T01:48:17.257285+00:00",
+  "verifiedAt": "2026-09-20T02:02:48.677834+00:00",
+  "deploymentId": "dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh",
+  "hostedResult": {
+    "verifiedAt": "2026-09-20T01:52:52.267951+00:00",
+    "releaseSource": "32aa043c48ee32686b3c656127f2d58ed7d1388b",
+    "deploymentId": "dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh",
+    "target": "striped-chicken-693",
+    "checked": 969,
+    "matched": 118,
+    "newPendingProducts": 20,
+    "unmatched": 851,
+    "allOriginalRowsUnchanged": true,
+    "mailboxStateUnchanged": true,
+    "publicationUnchanged": true,
+    "ownerHistoryUnchanged": true,
+    "privateCandidateBindingsPassed": true,
+    "duplicateProofPairs": 0,
+    "brandSnapshotsAdded": 20
+  }
 }
