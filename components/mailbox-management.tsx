@@ -8,6 +8,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { MailboxScanMode } from "@/src/server/mailbox-search";
 import { MailboxConnectionNotice, MailboxDiscoveryRun, discoveryRunOwnsSearch, type DiscoveryRunAction } from "./mailbox-discovery-run";
 
+import { RetainedMailboxRecheck } from "./retained-mailbox-recheck";
+
 type Account = FunctionReturnType<typeof api.mailboxes.listAccounts>[number];
 const modes: Array<{ mode: MailboxScanMode; title: string; action: string; continueAction: string; restartAction: string }> = [
   { mode: "KNOWN_PRODUCTS", title: "Known products", action: "Find known products", continueAction: "Continue known products", restartAction: "Restart known-product search" },
@@ -53,6 +55,7 @@ function UnmatchedRecords() {
   const records = usePaginatedQuery(api.mailboxDiscovery.listUnknown, {}, { initialNumItems: 10 });
   const choices = usePaginatedQuery(api.inventory.list, {}, { initialNumItems: 25 });
   const review = useMutation(api.mailboxDiscovery.reviewUnknown);
+  const recheckRetained = useMutation(api.mailboxDiscovery.recheckRetained);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(id: Id<"mailboxUnknownRecords">, decision: "LINKED" | "DISMISSED", propId?: Id<"props">) {
@@ -64,7 +67,8 @@ function UnmatchedRecords() {
     finally { setBusy(false); }
   }
   return <div>
-    <p>These headers did not match the product catalog. Their senders are unverified source text. Inspect them before choosing whether they support a product already in your collection; add or correct that product first if necessary.</p>
+    <RetainedMailboxRecheck onRecheck={cursor => recheckRetained({ paginationOpts: { cursor, numItems: 10 } })}/>
+    <p>These headers were unmatched when first captured. Rechecking may already have proposed some products for private review. They remain here until you attach or dismiss them. Their senders are unverified source text. Inspect them before choosing whether they support a product already in your collection; add or correct that product first if necessary.</p>
     <p role="status">{notice}</p>
     {records.status === "LoadingFirstPage" && <p>Loading private discoveries…</p>}
     {records.status !== "LoadingFirstPage" && records.results.length === 0 && <p>No unmatched headers awaiting review.</p>}

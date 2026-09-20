@@ -47,7 +47,10 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
   signals: RawSignal[];
   // Later catalog recognition describes a linked proposal, not a new capture.
   catalogClassifications?: ReadonlyMap<number, { vendor: string; url: string }>;
+  // Reclassify originals without claiming a new capture or source refresh.
+  retainedOnly?: boolean;
 }) {
+  if (args.retainedOnly && (!args.evidenceSourceId || !args.sourceKey)) throw new Error("Retained reclassification requires an existing source.");
   if (args.sourceKey !== undefined && (!args.sourceKey.trim() || args.sourceKey.length > 512)) {
     throw new Error("A stable source account key is required and must fit within 512 characters.");
   }
@@ -82,8 +85,9 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
     if (source.userId !== user._id || source.type !== args.sourceType || source.sourceKey !== args.sourceKey) {
       throw new Error("Evidence source identity mismatch.");
     }
-    await ctx.db.patch(source._id, { lastSyncedAt: now });
+    if (!args.retainedOnly) await ctx.db.patch(source._id, { lastSyncedAt: now });
   } else {
+    if (args.retainedOnly) throw new Error("Retained reclassification requires an existing source.");
     const sourceId = await ctx.db.insert("evidenceSources", {
       userId: user._id,
       type: args.sourceType,
@@ -111,6 +115,9 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       .withIndex("by_dedup_key", (q) => q.eq("dedupKey", dedupKey))
       .unique();
     if (existing) {
+      if (args.retainedOnly && (existing.userId !== user._id || existing.evidenceSourceId !== source._id || existing.deletedAt)) {
+        throw new Error("Retained evidence identity mismatch.");
+      }
       if (canonicalPrivateEvidence({ payload: existing.payload ?? "", observations: existing.observations ?? [] }) !== canonicalPrivateEvidence({ payload: signal.payload, observations: signal.observations ?? [] }) ||
         (args.sourceKey !== undefined && (existing.detectedVendor !== signal.vendor || existing.detectedUrl !== signal.url))) {
         throw new Error("Evidence identity collision: changed extraction requires a linked versioned capture; never overwrite the original.");
@@ -130,6 +137,7 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       evidenceIds.push(existing._id);
       continue;
     }
+    if (args.retainedOnly) throw new Error("Retained reclassification cannot create a capture.");
     const evidenceId = await ctx.db.insert("rawEvidence", {
       evidenceSourceId: source._id,
       userId: user._id,
@@ -267,17 +275,18 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       });
     }
 
-    const existingProofs = await ctx.db
-      .query("proofs")
-      .withIndex("by_prop", (q) => q.eq("propId", prop._id))
-      .collect();
-    const proofEvidenceIds = new Set(existingProofs.map(proof => proof.rawEvidenceId));
+    const proofEvidenceIds = new Set<Id<"rawEvidence">>();
     for (const index of proposal.signalIndexes) {
       const signal = proposalSignals[index];
       const rawEvidenceId = evidenceIds[index];
       if (proofEvidenceIds.has(rawEvidenceId)) {
         continue;
       }
+      proofEvidenceIds.add(rawEvidenceId);
+      const existingProof = await ctx.db.query("proofs")
+        .withIndex("by_propId_and_rawEvidenceId", q => q.eq("propId", prop._id).eq("rawEvidenceId", rawEvidenceId))
+        .first();
+      if (existingProof) continue;
       await ctx.db.insert("proofs", {
         propId: prop._id,
         type: PROOF_TYPE_BY_SOURCE[signal.sourceType],
@@ -285,7 +294,6 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
         label: signal.vendor,
         rawEvidenceId,
       });
-      proofEvidenceIds.add(rawEvidenceId);
     }
 
     await ctx.db.patch(draft._id, {

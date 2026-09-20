@@ -230,3 +230,46 @@ evidence, mailbox progress or public snapshot changed. The earlier timing
 mismatch is resolved. Empty sharing preview verified with no choices selected
 and publication disabled. Fresh sign-in and owner-selected sharing approval remain
 open. No source code, deployment, provider read or publication in this pass.
+
+## Retained mailbox recognition — September 19, 21:15 EDT
+
+The previous turn made progress by proving three real owner saves. Current
+catalog inspection confirms only 16 identities. Unknown retained headers cannot
+currently acquire a later trusted catalog classification without a new mailbox
+page. The next unit reuses the existing separate-classification ingestion seam.
+
+- [x] `how` over the affected subsystem.
+- [x] `architect` for parallel design exploration. architect skipped: the existing
+  catalogClassifications seam already preserves capture versus interpretation;
+  this unit uses it rather than introducing a competing design.
+- [x] Write the throughput checkpoint as four todo items.
+  - Blocking first steps. Verify pending-only replay, owner/source invariants,
+    and source freshness semantics before implementation.
+  - Independent workstreams. Catalog identities/tests and retained-recheck
+    backend/UI/tests have separate file owners.
+  - Shared mutable state. Do not mutate hosted records or schema; root alone
+    integrates documentation, verification and commits.
+  - Smallest safe decomposition. One owner for recheck backend/UI; one for the
+    registry. No additional architecture program or provider collector.
+- [x] Delegate code-writing to a subagent using your configured feature model.
+- [x] Verify on the matching surface. Local fixtures and real-retained-input
+  replay pass; hosted execution remains gated.
+- [x] Rebase into small, ordered commits. Registry is committed at a77fb0d.
+  Retained recheck follows as a separate verified unit. Preserve this accepted checkout;
+  skip rebasing onto main because it would replace newer accepted source.
+- [x] If the design is contested, `interrogate` before shipping. Not contested;
+  independent backend review caught and verified the indexed proof-query fix.
+- [x] Run **Opening a PR**. Skip external push/PR pending release scope;
+  local verified commits only.
+
+Bounded page rechecks must retain raw bytes/provenance, source freshness, mailbox
+cursor/run state, owner decisions, dismissals and publication. New catalog matches
+are private pending discoveries. A replay cannot inflate captures or proofs.
+Local verification does not authorize development sync, production release or
+running a retained-evidence mutation in production.
+
+Final checks pass 590 Vitest plus six Node tests, 16 component browser checks,
+lint, TypeScript and build. Two private-input tests skip by default; this slice's
+real-retained-input test was separately run and passes. No remote data mutation,
+new mailbox read, release or publication occurred. Next gate is exact release
+and retained-only hosted recheck approval, with brand preparation disclosed.

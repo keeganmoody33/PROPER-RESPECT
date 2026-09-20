@@ -11,6 +11,68 @@ import { rawSignalSchema, resolveCatalogProduct } from "../src/domain/discovery"
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { MAILBOX_PAGE_LIMIT } from "../src/server/mailbox-search";
+import { senderDomain } from "../src/server/mailbox-gmail";
+
+/** Revisit retained headers only. Its pagination cursor is never a provider cursor. */
+export const recheckRetained = mutation({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    const owner = await requireUser(ctx);
+    if (!Number.isSafeInteger(args.paginationOpts.numItems) || args.paginationOpts.numItems < 1) throw new Error("Invalid page size.");
+    const page = await ctx.db.query("mailboxUnknownRecords")
+      .withIndex("by_owner_status", q => q.eq("ownerId", owner._id).eq("status", "PENDING"))
+      .order("asc").paginate({ ...args.paginationOpts, numItems: Math.min(10, args.paginationOpts.numItems), maximumRowsRead: 10 });
+    const result = { continueCursor: page.continueCursor, isDone: page.isDone, examined: page.page.length,
+      matched: 0, createdDrafts: 0, alreadyClassified: 0, unmatched: 0, skipped: 0,
+      ambiguousProducts: [] as Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }> };
+    for (const record of page.page) {
+      const raw = await ctx.db.get(record.rawEvidenceId);
+      const account = await ctx.db.get(record.accountId);
+      const source = raw ? await ctx.db.get(raw.evidenceSourceId) : null;
+      if (!raw || !account || !source || record.ownerId !== owner._id || raw.userId !== owner._id ||
+          account.ownerId !== owner._id || source.userId !== owner._id || raw.evidenceSourceId !== account.evidenceSourceId ||
+          source.type !== mailboxSourceType(account.provider) || source.sourceKey !== mailboxSourceKey(account.provider, account.providerAccountId) ||
+          raw.sourceRecordId !== record.sourceRecordId || raw.dedupKey !== JSON.stringify(["source-v1", source._id, ["record", record.sourceRecordId]])) {
+        throw new Error("Retained mailbox integrity mismatch.");
+      }
+      if (raw.deletedAt) { result.skipped++; continue; }
+      const provenance = raw.captureProvenance;
+      if (!provenance || provenance.origin.issuer !== account.provider || provenance.origin.accountId !== account.providerAccountId ||
+          provenance.origin.recordId !== record.sourceRecordId || !["DIRECT_API", "MCP", "WEBMCP", "BROWSER_AGENT"].includes(provenance.route) ||
+          raw.detectedVendor !== undefined || raw.detectedUrl !== undefined || (raw.observations?.length ?? 0) !== 0) {
+        throw new Error("Retained mailbox integrity mismatch.");
+      }
+      // Only this known metadata shape can supply a sender. Other retained
+      // formats stay available for owner review instead of blocking later pages.
+      let metadata: { id?: unknown; headers?: { from?: unknown } };
+      try { metadata = JSON.parse(raw.payload ?? ""); } catch { result.skipped++; continue; }
+      if (!metadata || typeof metadata !== "object" || !metadata.headers || typeof metadata.headers.from !== "string") {
+        result.skipped++; continue;
+      }
+      if (metadata.id !== record.sourceRecordId || senderDomain(metadata.headers.from) !== (record.senderDomain ?? null)) {
+        throw new Error("Retained mailbox integrity mismatch.");
+      }
+      const classification = record.senderDomain ? resolveCatalogProduct({ url: `https://${record.senderDomain}` }) : null;
+      if (!classification) { result.unmatched++; continue; }
+      result.matched++;
+      const draft = await ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", owner._id).eq("suggestedProductSlug", classification.product.slug)).first();
+      if (draft && !["PENDING", "APPROVED", "MERGED"].includes(draft.status)) { result.skipped++; continue; }
+      if (draft?.rawEvidenceIds.includes(raw._id)) { result.alreadyClassified++; continue; }
+      const ingested = await ingestSignalsForOwner(ctx, {
+        ownerId: owner._id, sourceType: source.type, evidenceSourceId: source._id, sourceKey: source.sourceKey,
+        retainedOnly: true,
+        signals: [{ sourceType: source.type, sourceRecordId: raw.sourceRecordId, vendor: raw.detectedVendor, url: raw.detectedUrl,
+          payload: raw.payload!, capturedAt: raw.capturedAt, observations: raw.observations, captureProvenance: provenance }],
+        catalogClassifications: new Map([[0, { vendor: classification.product.name, url: classification.canonicalUrl }]]),
+      });
+      result.createdDrafts += ingested.createdDrafts.length;
+      for (const ambiguous of ingested.ambiguousProducts) {
+        if (!result.ambiguousProducts.some(item => item.productSlug === ambiguous.productSlug)) result.ambiguousProducts.push(ambiguous);
+      }
+    }
+    return result;
+  },
+});
 
 // Worker seam only: no browser-provided payload or mutable handle determines
 // ownership. All validation, originals, private drafts, receipt and cursor live

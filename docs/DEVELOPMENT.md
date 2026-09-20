@@ -17,6 +17,11 @@ and after authenticated reload, including two newly confirmed discoveries. Other
 discoveries remain pending. Both runs are stopped; history remains partial.
 Fresh sign-in and an owner-selected, approved sharing preview remain open.
 See [the live discovery proof](verification/2026-09-19-hosted-discovery-proof.md).
+Local follow-up expands the catalog from 16 to 36 identities and rechecks existing
+headers without rereading Gmail. Local real-data replay produces 20 pending
+candidates from 118 of the 969 retained unmatched headers; these are not yet
+hosted or owner-confirmed. See [the retained recheck receipt](verification/2026-09-19-retained-mailbox-recheck.md).
+
 See [the September 19 release receipt](verification/2026-09-19-hosted-gmail-release.md).
 
 ## Current product
