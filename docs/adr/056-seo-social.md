@@ -1,5 +1,7 @@
 # ADR-056: SEO and Social Sharing
 
+> **Status correction — 2026-09-20:** OG/share generation and host-derived sitemap remain unimplemented intent. Custom-domain canonical routing belongs to #13; the path-based launch does not assume that subsystem exists. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

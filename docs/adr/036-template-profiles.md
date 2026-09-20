@@ -1,5 +1,7 @@
 # ADR-036: Template Profiles
 
+> **Status correction — 2026-09-20:** Historical manual-first rationale is superseded; templates are not delivered. Current private discovery/review flow and #24 acceptance take precedence. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

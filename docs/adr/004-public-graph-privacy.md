@@ -1,5 +1,7 @@
 # ADR-004: Public Profile With Private Draft Boundaries
 
+> **Status correction — 2026-09-20:** Privacy intent is retained. Account-wide export/deletion and lineage controls described below are not all implemented; do not advertise them as delivered. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

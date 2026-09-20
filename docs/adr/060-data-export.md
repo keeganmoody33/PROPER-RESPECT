@@ -1,5 +1,7 @@
 # ADR-060: Data Export and Portability — The Right to Take Your Data
 
+> **Status correction — 2026-09-20:** Account export/restore/merge remains unimplemented intent. Universal-score examples are superseded; retained originals and provenance must not be rewritten to match a proposal. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted — 2026-06-05
 

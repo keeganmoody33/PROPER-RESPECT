@@ -1,5 +1,7 @@
 # ADR-013: Floating Lineage Hardening — When Tagged Person Joins
 
+> **Status correction — 2026-09-20:** Proposed floating attribution matching and confirmation lifecycle remain unimplemented; no current data mutation follows from this intent document. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted — 2026-06-05
 

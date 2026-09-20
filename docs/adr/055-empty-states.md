@@ -1,5 +1,7 @@
 # ADR-055: Empty States
 
+> **Status correction — 2026-09-20:** Historical manual/public-link-first sample copy is superseded by private discovery/review and visible source failures. Samples below are not current UI acceptance proof. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

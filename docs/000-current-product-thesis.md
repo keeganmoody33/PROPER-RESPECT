@@ -1,5 +1,7 @@
 # 000 - Current Product Thesis
 
+> **Status correction — 2026-09-20:** Product intent remains relevant; implementation-status paragraphs below are historical. September source is reconciled to main, and multi-user release gaps are tracked in #24. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 > Updated: 2026-09-18. This is the current product direction. Email is one discovery source; its real private-candidate proof now passes. Hosted product delivery remains open.
 
 The owner's product direction is:

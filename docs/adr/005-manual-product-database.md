@@ -1,5 +1,7 @@
 # ADR-005: User-Driven Product Database
 
+> **Status correction — 2026-09-20:** Identity intent is retained. Generic persisted aliases/community merge/admin tooling is not implemented; current catalog and ambiguity-safe private review are authoritative. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

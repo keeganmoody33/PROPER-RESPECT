@@ -1,5 +1,7 @@
 # Deployment runbook
 
+> **Status correction — 2026-09-20:** Current source main is 4df11b5; last recorded production is 32aa043. Existing two-account hosted Gmail consent and bounded reads completed; further reads and recurrence remain paused. Older live-release/consent statements below are historical. New upload release requires issuer-replay correction and separate backend-first authorization (#24). See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Code synchronization and the owner's domain — September 18, 2026
 
 The owner reports owning **proper-respect.com**, registered through Cloudflare.

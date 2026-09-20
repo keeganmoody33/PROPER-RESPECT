@@ -1,5 +1,7 @@
 # ADR-034: Duplicate Product Prevention and Merge Tool
 
+> **Status correction — 2026-09-20:** Fuzzy/admin merge and score examples below are unimplemented or superseded. Current ambiguity-safe review must preserve distinct subproducts and source accounts; same-domain equality is not a merge rule. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted — 2026-06-05
 

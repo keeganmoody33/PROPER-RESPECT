@@ -1,5 +1,7 @@
 # ADR-037: Import From Existing Public Surfaces
 
+> **Status correction — 2026-09-20:** Broad public URL importers described below are unimplemented future intent, distinct from existing direct connectors, manual entry and private retained uploads. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

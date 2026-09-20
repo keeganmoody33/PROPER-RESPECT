@@ -1,5 +1,7 @@
 # ADR-022: MVP Risk Register
 
+> **Status correction — 2026-09-20:** Historical manual-first/API-not-foundation priorities below are superseded by current authorized-source discovery and owner review. Current release gates are #24. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

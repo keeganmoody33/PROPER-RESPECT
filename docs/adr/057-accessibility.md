@@ -1,5 +1,7 @@
 # ADR-057: Accessibility — WCAG 2.1 AA Compliance
 
+> **Status correction — 2026-09-20:** Accessibility remains a target requiring real checks. Credibility-score examples are superseded; proposed shadcn/shortcuts are not installed features or evidence of compliance. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted — 2026-06-05
 
