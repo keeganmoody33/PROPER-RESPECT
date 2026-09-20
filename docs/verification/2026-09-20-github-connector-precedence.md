@@ -45,14 +45,13 @@ relationship-to-current-account reference were not implemented.
 
 ## Checks
 
-Recorded after the local run on this correction:
+Local on `5fc8f9ea6e554a1aabfb72ef840afe4dcc0cc83b`:
 
-- Focused Vitest: `convex/retainedEvidence.test.ts` (includes the reproduced
-  connector-precedence fixture and a 200-earlier-proof later-snapshot case).
-- Full `npm test`, `npm run lint`, and `npm run typecheck` counts are filled
-  after those commands complete.
+- Focused Vitest `convex/retainedEvidence.test.ts`: 11 passed, including the reproduced connector-precedence fixture and a GitHub snapshot after 200 earlier proofs.
+- `npm test`: 615 Vitest passed, 2 skipped; 6 Node script checks passed.
+- `npm run lint` and `npm run typecheck` passed.
 
-No Playwright hosted signed-in pass. No Vercel or Convex mutation.
+No Playwright hosted signed-in pass. No Vercel or Convex mutation. No GitHub review-thread comment.
 
 ## Hosted gate
 
