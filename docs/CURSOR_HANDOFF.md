@@ -9,9 +9,10 @@ are reconciled. Verify current main/PR state before further Git operations.
 
 Production application/backend now runs `7fa18a79cf07a9129955c7926d02fe85eeec90e1`,
 Vercel `dpl_DRFWzieUj8ioeyPjXpQuXeZYpzUf`, Convex `striped-chicken-693`.
-The owner approved hosted setup and this release. Origin and initial mailbox
-encryption configuration are complete; the Google client still requires the owner's
-Cloud passkey sign-in. Continue that approved setup without re-requesting approval.
+The owner approved hosted setup and this release. Origin, encryption and separate hosted Google OAuth client configuration are
+complete. The in-app browser blocked the automated OAuth start POST with
+ERR_BLOCKED_BY_CLIENT; the owner must click Add Gmail account and complete consent.
+Do not repeat setup approval or start a mailbox read without its bounded authorization.
 No mailbox read, transfer or publication occurred; 32 existing tables are unchanged.
 Read [the release receipt](verification/2026-09-19-hosted-gmail-release.md).
 Older release details below are historical; development remains at `a2539b9`.

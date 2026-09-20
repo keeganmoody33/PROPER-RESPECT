@@ -7,8 +7,8 @@ Updated: 2026-09-19. Start with [AGENTS.md](../AGENTS.md), the
 ## Latest deployed state
 
 Production runs `7fa18a7` with bounded background discovery and the card/mobile
-corrections. Development remains `a2539b9`. Hosted Gmail setup is owner-approved
-but waiting for Google Cloud passkey verification; no hosted Gmail read has run.
+corrections. Development remains `a2539b9`. Hosted Gmail setup is complete; manual account consent remains pending after
+the in-app browser blocked the automated OAuth start. No hosted Gmail read has run.
 See [the September 19 release receipt](verification/2026-09-19-hosted-gmail-release.md).
 
 ## Current product

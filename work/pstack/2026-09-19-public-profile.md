@@ -183,3 +183,9 @@ initial production encryption keyring are configured. Google client creation is
 blocked on the owner's passkey prompt, not a missing authorization. No provider
 reads, transfer, recurrence or publication occurred. See the hosted Gmail release
 receipt for deployment ID, exact checks and remaining live proof.
+
+Hosted Google setup completed after owner passkey sign-in. Separate hosted client
+created with exact callback; all five production settings privately verified.
+Existing localhost client and Testing audience preserved. Programmatic hosted
+OAuth start was blocked by the in-app browser (ERR_BLOCKED_BY_CLIENT); manual
+Add Gmail account and consent are next. No source change, read or publication.

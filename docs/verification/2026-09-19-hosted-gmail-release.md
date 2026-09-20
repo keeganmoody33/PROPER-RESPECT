@@ -1,8 +1,8 @@
 # Hosted Gmail discovery release
 
 Verified 2026-09-19. The owner approved hosted setup and the exact prepared release.
-Application/backend release succeeded. Hosted Google OAuth client creation remains
-blocked on the owner's Google Cloud passkey verification.
+Application/backend release and hosted OAuth configuration succeeded. The next
+gate is manual hosted Gmail authorization; no mailbox read has started.
 
 ## Released source and targets
 
@@ -32,13 +32,18 @@ active version were configured in Convex. Private readback matched. The pre-writ
 snapshot contained no mailbox accounts or secrets, and no previous mailbox key was
 replaced. No development OAuth tokens or private evidence were copied.
 
-The separate hosted Google client has NOT been created. Its client ID and secret
-remain unset. Google Cloud requires passkey verification for the project owner's
-account before the approved `proper-respect-dev-20260917` client page is accessible.
-The requested callback remains
+After the owner completed Google passkey verification, the separate Web application
+client `Proper Respect Hosted Gmail — 2026-09-19` was created in the approved
+`proper-respect-dev-20260917` project. The saved callback exactly matches
 `https://props.lecturesfrom.com/api/connect/mailboxes/google/callback`.
-No new setup approval is needed; complete Google verification, then continue that
-already-authorized configuration and validate callback equality before consent.
+The existing localhost client was not changed. Credentials are retained privately
+outside Git and installed only on Convex production `striped-chicken-693`.
+All five mailbox settings pass private readback; the active encryption key exists
+and loopback HTTP is disabled. No further frontend deployment was necessary.
+
+Google's audience remains External / Testing with the two intended Gmail accounts
+already listed as test users. The app was not published or broadened to other users.
+Testing-mode limitations remain relevant to future unattended maintenance.
 
 ## Hosted verification
 
@@ -63,10 +68,16 @@ configuration recovery files and comparison results remain outside Git.
 
 ## Next owner action and remaining proof
 
-Complete the Google Cloud passkey prompt for `keeganmoody33@gmail.com`. Then finish
-the approved hosted client setup, obtain consent for each Gmail account, and request
-an explicit bounded real-read scope before starting discovery. This release itself
-performed no provider reads, recurrence, relationship edits, transfer or publication.
+Click Add Gmail account in the hosted collection and complete Google consent,
+starting with the personal Gmail account. The automated form click was blocked by
+the in-app browser: network diagnostics recorded the OAuth start POST and
+`net::ERR_BLOCKED_BY_CLIENT`, with no successful Google navigation. This does not
+establish a server defect or successful OAuth state/callback proof. Manual consent
+and verified callback completion remain pending.
+
+Obtain an explicit bounded real-read scope before starting discovery. Configuration
+and release performed no provider reads, recurrence, relationship edits, evidence
+transfer or publication. No setup approval needs to be repeated.
 
 Fresh sign-in, real hosted mailbox retention, background continuation after browser
 closure, broad discovery coverage and final approved public profile remain unproven.
