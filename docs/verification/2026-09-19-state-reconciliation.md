@@ -579,3 +579,133 @@ PR #22 remains at `a174fc6b74663f165e8469f9778f6972aeb93c86` until #23 merges.
 Its missing later-proof fix has not been silently imported during this step.
 The final main SHA, PR #22 rebase/scope receipt and branch/checkpoint dispositions
 remain pending; Phase 0 is not closed. The owner merges #23 before anything else.
+
+
+## Phase 0 closure — September 20, 2026
+
+**Repository reconciliation is complete and submitted for owner review.**
+PR #23 is merged. PR #22 is rebased and remains the one open feature branch,
+ready for owner review rather than silently merged. The earlier audit and its
+appendices above remain dated evidence, not current-state instructions.
+Phase 1 issue/doc recutting has not started. No deployment occurred.
+
+### Final SHA map and release distinction
+
+| Reference | Full SHA / disposition |
+| --- | --- |
+| Remote and local `main`; owner-merged PR #23 | `69ef335af9dd8b43dc1c178695e51a34d3943f2a` |
+| PR #23 expected head, verified merge parent | `6936c39eedcf110aa6d4899853dd0f4791913c06` |
+| Prior main, other merge parent | `f808fc834c7900681d10b043a6bb09d4f8e76314` |
+| Latest recorded production source | `32aa043c48ee32686b3c656127f2d58ed7d1388b`; now an ancestor of main |
+| Original Phase 0 receipt | `8de6604bda9232e463abbb6aa8907acc6fbadfd3`; now an ancestor of main |
+| Original release docs | `a19928ddfca25c9345cb271bd05fb14125138839`; now an ancestor of main |
+| PR #22 old tip | `a174fc6b74663f165e8469f9778f6972aeb93c86`; archived before rebase |
+| PR #22 reconciled runtime | `6b0c4bef8839f926463578604c3f55fe7feea58e` |
+| PR #22 scope receipt | `2f0d3bc53a45bb9bc59bc945f07487bb6de591ec` |
+| PR #22 closure receipt | The documentation commit containing this section follows `2f0d3bc`; its exact final SHA is recorded in the PR body and canonical Ref, avoiding a self-referential commit hash. |
+| Local tooling checkpoint, not pushed | `3415a8b71f5ef13d603a08eb4cd90e3088fb3dbe` |
+
+GitHub confirms #23 merged at `2026-09-20T15:07:28Z`. Main now contains the
+previously unpushed deployed lineage and the unreleased owner-upload fix.
+Source reconciliation does **not** mean main and the running production tree
+are identical. Last recorded Vercel deployment remains
+`dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh`, Convex `striped-chicken-693`; no hosted or
+backend mutation was made. A new upload-boundary release requires separate
+approval and must synchronize schema/functions/HTTP action before frontend.
+
+### PR #22 disposition and verification
+
+[PR #22](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22) was rebased with
+an exact old-head force-with-lease. [Its scope receipt](2026-09-20-pr22-scope-reconciliation.md)
+reconciles every upload/provenance extra and the two unique commits. The old
+docs patch conflicted with newer handoff state; main's file won unchanged.
+The later-proof code/test applied cleanly. No other runtime diff remains.
+
+Local integration checks: 613 Vitest tests and six Node tests passed; two
+optional private-input tests skipped. Lint, strict TypeScript, production build,
+and 18 component-browser checks passed. Upload ownership, isolation, expiry,
+legacy uncertainty and replay regressions remain green. No live account or
+provider data was exercised. GitHub CI runs the same checks on the final pushed
+PR head; its exact run/result is attached in the PR body and canonical Ref.
+
+The first-upload review thread is resolved by owner-merged #23. The later-proof
+thread remains open: 200 proofs fixes the reported 25-proof case, but is still
+a pre-filter bound, not exhaustive lookup. It is explicitly a review limitation,
+not silently declared fully resolved. PR readiness is a request for review,
+not a claim that every review comment was satisfied or permission to merge.
+
+### Branch and tag cleanup actually executed
+
+Every deletion used the audited expected SHA; archive tags were pushed and
+verified by their peeled remote targets **before** branch deletion. No private
+history was made newly reachable on GitHub.
+
+| Removed remote branch | Preserved annotated tag | Exact target |
+| --- | --- | --- |
+| `codex/onboarding-prototype-checkpoint-20260916` | `checkpoint/2026-09-16-onboarding-prototypes` | `b19ab3ea7b2c69ab5bdf7bc1089241ed94118b6e` |
+| `codex/cursor-handoff-20260919` | `checkpoint/2026-09-19-cursor-handoff` | `833b1574c67bc93727c3e0df3f704e66ebd912d8` |
+| `agent/canonical-products-tracer` | `archive/canonical-products-tracer-20260920` | `82aad4406a320965d47cfa09e021714e7b9b3f1b` |
+| `agent/issue-5-public-product-identity` | `archive/public-product-identity-20260920` | `2119382431c1be6f1d93168ed779a9571b96c29c` |
+| `agent/setup-ai-hero-skills` | `archive/ai-hero-skills-20260920` | `cb0425c1394612eac7470fc36b519d8a80ea8d07` |
+| `devin/1788345545-unique-card-keys` | `archive/unique-card-keys-20260920` | `008e2887a00eea68e63778c7777597357b71ec3b` |
+| `codex/reconcile-deployed-release-20260919` | Preserved by merged #23 / main ancestry | `6936c39eedcf110aa6d4899853dd0f4791913c06` |
+
+`archive/pr22-before-rebase-20260920` also preserves old PR #22 exactly.
+Unique July metadata and optional AI Hero workflow work remain reference
+archives, not silently discarded or adopted. The React same-slug key correction
+was rechecked in main. No old application code was cherry-picked.
+
+Removed the corresponding local prototype/reconcile branches and redundant
+local `codex/personal-release-main` at `8de6604`, now an ancestor of main.
+Advanced the unoccupied local `main` to the verified remote merge. Pruned only
+obsolete tracking refs (`origin/pr-22`, deleted Dependabot ref) and the stale
+registration for the already-missing `/private/tmp/proper-respect-prod.CHwiEd/repo`.
+No existing worktree directory was removed. Remote heads are now exactly:
+
+- `main`
+- `cursor/github-card-account-destination-7318` (PR #22)
+
+Private-history branches stay **local only**, as the owner directed:
+`codex/proper-respect-evidence-lifecycle-20260916` at `7e352ba4e91a6ffbac33405a530e9019c6c522c4`;
+`codex/proper-respect-self-test-20260916` at `9b86837e46ff677d16bfc9103670e452c52f1d04`;
+`codex/composio-github-spike-20260917` at `b562bf0a6d6f296a62f2d1a5ea827e985f1177b3`;
+`codex/composio-integration-20260918` at `00a097fd7f8c40591b580c45f15c27964d047056`.
+These are preserved historical exceptions, not parallel active work programs.
+
+### Dirty worktree dispositions
+
+All six existing worktrees were checked with `git status --porcelain=v1 -uall`
+and are clean after these dispositions (the accepted checkout's receipt edit
+is committed as part of this closure). Ignored credentials, local originals,
+dependencies and build output are intentionally untouched, not a “clean” claim
+about ignored data.
+
+| Worktree | Disposition |
+| --- | --- |
+| `/Users/keeganmoody/Downloads/PROPER-RESPECT` | 87 untracked Convex tooling/configuration files (296,579 bytes) checkpointed byte-for-byte at `3415a8b71f5ef13d603a08eb4cd90e3088fb3dbe`, annotated **local-only** tag `checkpoint/local-tooling-20260920`; worktree detached at that tag. Pattern scan found no credential signatures; this is not a guarantee or public-push approval. Staged and unstaged `.DS_Store` changes explicitly discarded, restoring HEAD's Finder metadata. |
+| `/Users/keeganmoody/.codex/worktrees/33b8/PROPER-RESPECT` | Only modified `.DS_Store` discarded; restored HEAD metadata. Runtime and private lifecycle branch unchanged. |
+| `/Users/keeganmoody/.codex/worktrees/3799/PROPER-RESPECT` | Already clean, detached `5ade174d5fb783aa80fbcc661988aa5cc1eee42f`; unchanged. |
+| `/Users/keeganmoody/.codex/worktrees/4b19/PROPER-RESPECT` | Modified root `.DS_Store` restored; untracked `prototypes/.DS_Store` and `prototypes/onboarding-2026-09-16/.DS_Store` explicitly discarded. Clean worktree detached at the published prototype checkpoint tag before branch deletion. No prototype choice made. |
+| `/Users/keeganmoody/Downloads/PROPER-RESPECT-composio-spike-20260917` | Already clean at `b562bf0a6d6f296a62f2d1a5ea827e985f1177b3`; unchanged, local only. |
+| `/Users/keeganmoody/Downloads/PROPER-RESPECT-self-test-20260916` | Accepted owner checkout now holds PR #22, based on merged main. All reconciliation edits committed and pushed. |
+
+Only the five named Finder-metadata files were discarded. No source, notes,
+private originals or generated tooling files were discarded. A local manifest
+records SHA-256 hashes for the tooling files and before/after metadata at
+`/tmp/proper-respect-phase0-20260920/`; the durable tooling originals are in the
+local checkpoint, and this committed receipt is the durable discard record.
+
+### Scope held for owner review
+
+The 31 flagged documents and their individual one-line reasons remain listed
+in Appendix B. Their Phase 1 triage remains: correct status in place, mark
+superseded with a pointer, or propose deletion for owner sign-off. None were
+bulk edited or deleted. All ten issue dispositions remain inputs for Phase 1;
+no ticket was changed during cleanup.
+
+Launch remains path-based `proper-respect.com/handle`; verified Domain routing
+is a net-new, separate milestone gating custom domains. The existing host keeps
+working as before. No new architecture, onboarding shell choice, domain change,
+recurrence or feature scope was introduced. Owner review of this receipt is the
+next gate before Phase 1. The product and hosted upload boundary are not claimed
+finished by repository cleanup.
