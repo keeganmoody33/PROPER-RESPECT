@@ -133,6 +133,21 @@ export default defineSchema({
     .index("by_user_type", ["userId", "type"])
     .index("by_user_type_sourceKey", ["userId", "type", "sourceKey"]),
 
+  uploadTickets: defineTable({
+    userId: v.id("users"),
+    tokenIdentifier: v.string(),
+    filename: v.string(),
+    mimeType: v.string(),
+    byteSize: v.number(),
+    vendor: v.optional(v.string()),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    storageId: v.optional(v.id("_storage")),
+    sha256: v.optional(v.string()),
+    receivedAt: v.optional(v.string()),
+    evidenceId: v.optional(v.id("rawEvidence")),
+  }).index("by_storage", ["storageId"]),
+
   rawEvidence: defineTable({
     evidenceSourceId: v.id("evidenceSources"),
     userId: v.id("users"),
@@ -143,6 +158,14 @@ export default defineSchema({
     // Legacy originals remain absent/unknown; new mailbox captures require it.
     captureProvenance: v.optional(captureProvenanceValidator),
     storageId: v.optional(v.id("_storage")),
+    uploadAttribution: v.optional(v.object({
+      status: v.literal("VERIFIED_OWNER_SESSION"),
+      userId: v.id("users"),
+      tokenIdentifier: v.string(),
+      ticketId: v.id("uploadTickets"),
+      receivedAt: v.string(),
+      sha256: v.string(),
+    })),
     filename: v.optional(v.string()),
     mimeType: v.optional(v.string()),
     byteSize: v.optional(v.number()),
@@ -162,7 +185,8 @@ export default defineSchema({
     deletedAt: v.optional(v.string()),
   })
     .index("by_user", ["userId"])
-    .index("by_dedup_key", ["dedupKey"]),
+    .index("by_dedup_key", ["dedupKey"])
+    .index("by_storage", ["storageId"]),
 
   claimReviews: defineTable({
     userId: v.id("users"),
@@ -192,6 +216,14 @@ export default defineSchema({
     suggestedUrl: v.string(),
     rawEvidenceIds: v.array(v.id("rawEvidence")),
     resultPropId: v.optional(v.id("props")),
+    evidenceResolution: v.optional(v.object({
+      targetPropId: v.id("props"),
+      rawEvidenceIds: v.array(v.id("rawEvidence")),
+      nextOffset: v.number(),
+      skippedDeleted: v.number(),
+      startedAt: v.string(),
+      appliedHashes: v.array(v.string()),
+    })),
   }).index("by_user_slug", ["userId", "suggestedProductSlug"]),
 
   proofs: defineTable({
@@ -199,6 +231,7 @@ export default defineSchema({
     type: v.union(
       v.literal("NOTE"),
       v.literal("SCREENSHOT"),
+      v.literal("FILE_UPLOAD"),
       v.literal("RECEIPT"),
       v.literal("GITHUB_REPO"),
       v.literal("EMAIL_EVIDENCE"),

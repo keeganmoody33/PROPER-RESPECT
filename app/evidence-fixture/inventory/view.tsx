@@ -10,7 +10,7 @@ const initial: InventoryData = { hasMore: false, cards: [{
   prop: { _id: "synthetic-prop" as Id<"props">, _creationTime: 1, userId: "synthetic-owner" as Id<"users">,
     productId: "synthetic-product" as Id<"products">, status: "TESTING", visibility: "DRAFT", headline: "Synthetic suggestion", note: "" },
   product: { _id: "synthetic-product" as Id<"products">, _creationTime: 1, name: "Example Tool", slug: "example", domain: "example.com", description: "Synthetic interaction fixture", brand: undefined },
-  links: [], previousStatuses: [],
+  links: [], previousStatuses: [], associatedAccountEvidence: [],
 }] };
 
 const syntheticEvidence: InventoryEvidence[number] = {

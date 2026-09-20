@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ZodError } from "zod";
 import { ProductCard } from "@/components/product-card";
 import { getPublicProfile } from "@/src/data/get-public-profile";
+import styles from "./profile.module.css";
 
 type ProfilePageProps = {
   params: Promise<{ handle: string }>;
@@ -50,8 +51,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       <section className="stack" aria-labelledby="stack-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">PRODUCTS & THEIR PLACE IN MY WORK</p>
-            <h1 id="stack-heading">Tools with a track record.</h1>
+            <p className="eyebrow">@{profile.handle} / TOOLS WITH A TRACK RECORD</p>
+            <h1 id="stack-heading" className={styles.name}>{profile.displayName}</h1>
+            {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
           </div>
           <p>{profile.cards.length.toString().padStart(2, "0")} PRODUCTS</p>
         </div>
@@ -77,10 +79,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
       <footer className="profile-footer">
         <div>
-          <strong>{profile.displayName}</strong>
           <span>@{profile.handle}</span>
         </div>
-        <p>{profile.bio}</p>
         <Link href="/onboarding">Open your private collection →</Link>
       </footer>
     </main>

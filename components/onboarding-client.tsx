@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyEvidenceUpload, EVIDENCE_UPLOAD_ACCEPT } from "@/src/domain/evidence-upload";
 import {
   SignInButton,
   Show,
@@ -14,8 +15,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
-import { defaultReview, explicitPublicationCards, isCurrentReview, type ReviewEdit } from "@/src/domain/review";
+import { defaultReview, explicitPublicationCards, isCurrentReview, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
+import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/domain/product-destination";
 import { costSchema, type CostVisibility } from "@/src/domain/cost";
 import { ProductKnowledgePanel } from "./product-knowledge-panel";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
@@ -23,8 +25,39 @@ import { ProductCard } from "./product-card";
 import { ProductBrandControls } from "./product-brand-controls";
 import { PrivateInventory } from "./private-inventory";
 import { MailboxManagement } from "./mailbox-management";
+import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 
 type ManualProductInput = { name: string; website?: string; description?: string; operationId: string };
+
+function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
+  const convex = useConvex();
+  const [attempt, setAttempt] = useState(0);
+  const attemptedRetry = useRef(0);
+  const [progress, setProgress] = useState<{ items: BrandPreparationItem[]; done: boolean }>({ items: [], done: false });
+  const selection = JSON.stringify([...new Set(propIds)].sort());
+  useEffect(() => {
+    const controller = new AbortController();
+    const retryFailed = attempt > attemptedRetry.current;
+    attemptedRetry.current = attempt;
+    void prepareCollectionBrands({
+      propIds: JSON.parse(selection), signal: controller.signal,
+      prepare: ids => convex.mutation(api.productBrands.prepareForProps, { propIds: ids as Id<"props">[], retryFailed }),
+      read: ids => convex.query(api.productBrands.getPreparationForProps, { propIds: ids as Id<"props">[] }),
+      report: (items, done) => setProgress({ items, done }),
+    });
+    return () => controller.abort();
+  }, [convex, selection, attempt]);
+  if (!propIds.length) return null;
+  const ready = progress.items.filter(item => item.status === "READY").length;
+  const pending = progress.items.filter(item => ["PENDING", "RUNNING", "NOT_REQUESTED"].includes(item.status)).length;
+  const failed = progress.items.filter(item => item.status === "FAILED").length;
+  const unverified = progress.items.length - ready - pending - failed;
+  return <div className="product-brand-controls" aria-label="Collection appearance">
+    <p role="status">Card appearance: {ready} ready, {pending} pending, {failed} unavailable{unverified ? `, ${unverified} awaiting verified product identity` : ""}.</p>
+    {(pending > 0 || failed > 0) && <p>Your products remain available while their appearance is prepared.</p>}
+    {progress.done && (failed > 0 || pending > 0) && <><p>Unavailable appearance can be retried after one minute.</p><button type="button" className="secondary-action" onClick={() => setAttempt(value => value + 1)}>Retry unfinished appearance</button></>}
+  </div>;
+}
 
 export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) => Promise<unknown> }) {
   const [busy, setBusy] = useState(false);
@@ -82,17 +115,18 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
 function Builder() {
   const convex = useConvex();
   const { user: clerkUser } = useUser();
-  const { getToken } = useAuth();
+  const { getToken, sessionClaims } = useAuth();
   const { openUserProfile } = useClerk();
   const ensureAccount = useMutation(api.onboarding.ensureAccount);
   const claimHandle = useMutation(api.onboarding.claimHandle);
-  const generateUploadUrl = useMutation(api.onboarding.generateUploadUrl);
+  const beginUpload = useMutation(api.onboarding.beginUpload);
   const retainUpload = useMutation(api.onboarding.retainUpload);
   const addManualProduct = useMutation(api.onboarding.addManualProduct);
   const publishSelected = useMutation(api.onboarding.publishSelected);
   const revokeConnector = useMutation(api.connectors.revokeConnector);
   const connectDevin = useAction(api.connectors.connectDevin);
   const state = useQuery(api.onboarding.getState, { includeClaims: false });
+  const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [reviewEdits, setReviewEdits] = useState<
@@ -137,18 +171,28 @@ function Builder() {
   async function uploadEvidence(form: FormData) {
     const file = form.get("evidence");
     if (!(file instanceof File) || file.size === 0) {
-      setMessage("Choose a screenshot or CSV first.");
+      setMessage("Choose an export or screenshot first.");
       return;
     }
     await run("Original file retained privately. Review the product in your collection; add selected observations only if the original supports them.", async () => {
+      const { sourceType } = classifyEvidenceUpload({ filename: file.name, mimeType: file.type, byteSize: file.size });
       const vendor = String(form.get("vendor"));
-      const uploadUrl = await generateUploadUrl({});
-      const response = await fetch(uploadUrl, {
+      const token = sessionClaims?.aud === "convex" ? await getToken() : await getToken({ template: "convex" });
+      if (!token) throw new Error("Sign in again before uploading evidence.");
+      if (uploadAttempt.current?.file !== file || uploadAttempt.current.vendor !== vendor) {
+        const { uploadUrl } = await beginUpload({ filename: file.name, mimeType: file.type || "application/octet-stream", byteSize: file.size, vendor });
+        uploadAttempt.current = { file, vendor, uploadUrl };
+      }
+      const response = await fetch(uploadAttempt.current.uploadUrl, {
         method: "POST",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
+        credentials: "omit",
+        headers: { "Content-Type": file.type || "application/octet-stream", Authorization: `Bearer ${token}` },
         body: file,
       });
-      if (!response.ok) throw new Error("Evidence upload failed.");
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 409) uploadAttempt.current = null;
+        throw new Error("Evidence upload failed. Retry the file; expired uploads start again.");
+      }
       const { storageId } = (await response.json()) as {
         storageId: Id<"_storage">;
       };
@@ -157,11 +201,10 @@ function Builder() {
         filename: file.name,
         mimeType: file.type || "application/octet-stream",
         byteSize: file.size,
-        sourceType: file.name.toLowerCase().endsWith(".csv")
-          ? "CSV"
-          : "SCREENSHOT",
+        sourceType,
         vendor,
       });
+      uploadAttempt.current = null;
     });
   }
 
@@ -268,18 +311,12 @@ function Builder() {
     });
   }
 
-  function setAllCostVisibility(visibility: CostVisibility) {
+  function setSelectedCostVisibility(visibility: CostVisibility) {
     if (!state) return;
-    setReviewEdits(current => {
-      const next = { ...current };
-      for (const card of state.cards) {
-        if (!card.product) continue;
-        const prior = current[card.prop._id];
-        const edit = prior && isCurrentReview({ ...card, product: card.product }, prior) ? prior : defaultReview({ ...card, product: card.product });
-        next[card.prop._id] = { ...edit, costVisibility: visibility };
-      }
-      return next;
-    });
+    setReviewEdits(current => setReviewCostVisibility(
+      state.cards.flatMap(card => card.product ? [{ ...card, product: card.product }] : []),
+      current, visibility,
+    ));
   }
 
   function connectorStatus(provider: "GITHUB" | "DEVIN") {
@@ -301,11 +338,11 @@ function Builder() {
           <h1>Your tools. Your track record.</h1>
         </div>
         <div>
-          <UserButton />
+          <UserButton appearance={{ elements: { avatarBox: { width: "3rem", height: "3rem" } } }} />
         </div>
         <p>
-          The tools you’ve tested and used, what’s in your stack now, and why you
-          moved on. A record of your changing stack, shared on your terms.
+          Technology moves fast. Keep a record of the tools you’ve tested and used,
+          how you’ve used them, and why your stack changed. Share the history and supporting evidence you choose.
         </p>
       </div>
 
@@ -316,6 +353,7 @@ function Builder() {
         <a href="#collection-sharing">Sharing</a>
       </nav>
       {message && <p className="message" role="status">{message}</p>}
+      {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <PrivateInventory brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} />
 
@@ -357,13 +395,14 @@ function Builder() {
             </button>
           </form>
           <form className="connector-card" action={uploadEvidence}>
-            <strong>Screenshot or CSV</strong>
-            <p>The original is retained privately. This upload does not read the image or CSV automatically. You can add selected observations with their period and scope from the product’s supporting details.</p>
+            <strong>Upload an export or screenshot</strong>
+            <p>Retain an original privately, up to 19 MiB. Supports PNG/JPEG/WebP/HEIC/HEIF, CSV/TSV, JSON/JSONL/NDJSON, PDF, XLS/XLSX/ODS, TXT/XML/HTML, and ZIP. Files are not parsed or unpacked automatically. Add selected observations with their period and scope from the product’s supporting details.</p>
             <label className="review-field">
               Product
               <select name="vendor" required defaultValue="Wispr Flow">
                 <option>Wispr Flow</option>
                 <option>NotebookLM</option>
+                <option value="Devin">Devin (cloud)</option>
                 <option>Devin Desktop</option>
                 <option>Windsurf</option>
                 <option>Greptile</option>
@@ -374,7 +413,7 @@ function Builder() {
               <input
                 name="evidence"
                 type="file"
-                accept="image/*,.csv,text/csv"
+                accept={EVIDENCE_UPLOAD_ACCEPT}
                 required
               />
             </label>
@@ -402,10 +441,10 @@ function Builder() {
         </details>
         <fieldset>
           <legend>Cost visibility</legend>
-          <p>Keep every cost private, show all costs, or choose on each card. Changes apply when you publish selected cards.</p>
+          <p>Apply cost choices to selected cards, then review before publishing. Unmatched older public cards stay unchanged unless you explicitly select their saved relationships.</p>
           <div className="action-row">
-            <button type="button" className="secondary-action" disabled={busy} onClick={() => setAllCostVisibility("PUBLIC")}>Show all costs</button>
-            <button type="button" className="secondary-action" disabled={busy} onClick={() => setAllCostVisibility("PRIVATE")}>Keep all costs private</button>
+            <button type="button" className="secondary-action" disabled={busy} onClick={() => setSelectedCostVisibility("PUBLIC")}>Show costs on selected cards</button>
+            <button type="button" className="secondary-action" disabled={busy} onClick={() => setSelectedCostVisibility("PRIVATE")}>Keep selected costs private</button>
           </div>
         </fieldset>
         <div className="review-grid">
@@ -415,12 +454,19 @@ function Builder() {
             const priorEdit = reviewEdits[card.prop._id];
             const edit = priorEdit && isCurrentReview(savedCard, priorEdit) ? priorEdit : defaultReview(savedCard);
             const confirmed = isRelationshipConfirmed(card.prop);
+            const destinationInput = {
+              product: card.product,
+              links: card.links,
+              associatedEvidence: card.associatedAccountEvidence ?? [],
+            };
+            const privateDestination = privateCardPrimaryLink(destinationInput);
+            const publicationOffer = offeredPrivatePublicationLink(destinationInput);
             return (
               <fieldset className="review-card" key={card.prop._id} disabled={busy} aria-label={`${card.product.name} review`}>
                 <h3>{card.product.name}</h3>
                 <details>
                   <summary>Preview private card</summary>
-                  <ProductCard index={index} relationshipConfirmed={confirmed} goTo={card.prop.goTo} card={{
+                  <ProductCard audience="owner" index={index} relationshipConfirmed={confirmed} goTo={card.prop.goTo} card={{
                     product: card.product,
                     status: card.prop.status,
                     headline: card.prop.headline,
@@ -428,9 +474,7 @@ function Builder() {
                     startedAt: card.prop.startedAt,
                     activity: card.prop.activity,
                     cost: card.prop.cost,
-                    primaryLink: card.links.find(link => link.isPrimary) ?? (card.product.domain ? {
-                      type: "CANONICAL", url: `https://${card.product.domain}`, label: `Open ${card.product.name}`,
-                    } : undefined),
+                    primaryLink: privateDestination,
                   }} />
                 </details>
                 <details><summary>Product and evidence records</summary>
@@ -455,8 +499,8 @@ function Builder() {
                   />
                     Share this saved card
                 </label>
-                {card.prop.visibility === "PUBLIC" && <>
-                  <p>Already public. Its approved version stays unchanged until you include saved edits or change these publication choices.</p>
+                {card.isPublishedAtCurrentHandle === true && <>
+                  <p>Already public at /{state.user.handle}. Its approved version stays unchanged until you include saved edits or change these publication choices.</p>
                   <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, { publish: true })}>Include saved version</button>
                 </>}
                 <details><summary>Information to include</summary>
@@ -526,6 +570,24 @@ function Builder() {
                     }
                   />
                 </label>
+                <label className="review-field">
+                  Link purpose
+                  <select value={edit.linkType} onChange={event => updateReview(card.prop._id, edit, { linkType: event.target.value as ReviewEdit["linkType"] })}>
+                    <option value="CANONICAL">Product or account page</option>
+                    <option value="AFFILIATE">My affiliate link</option>
+                    <option value="REFERRAL">My referral link</option>
+                    <option value="INVITE">My invite link</option>
+                  </select>
+                </label>
+                <p>Use your own affiliate or referral URL. It appears publicly only after you approve the sharing preview.</p>
+                {publicationOffer && publicationOffer.url !== edit.linkUrl && <>
+                  <p>Your private card opens {publicationOffer.url}. Visitors will use the primary link above until you choose otherwise and approve a preview.</p>
+                  <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, {
+                    linkUrl: publicationOffer.url,
+                    linkType: publicationOffer.type,
+                    linkLabel: publicationOffer.label,
+                  })}>Use the private account page in this preview</button>
+                </>}
                 <fieldset>
                   <legend>Cost (optional)</legend>
                   <label className="review-field">
@@ -601,8 +663,9 @@ function Builder() {
             Preview sharing
           </button>
           <span className="sharing-selection-count">{Object.keys(reviewEdits).length} card choice{Object.keys(reviewEdits).length === 1 ? "" : "s"} to review</span>
-          {!state.user.handle.startsWith("pending-") && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
+          {state.hasPublicationAtCurrentHandle === true && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
         </div>
+        {state.hasPublicationAtCurrentHandle === false && <p>Nothing is published at /{state.user.handle} yet.</p>}
         {preview && <SharingPreview key={preview.basis} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
       </section>
     </main>

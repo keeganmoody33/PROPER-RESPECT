@@ -14,6 +14,7 @@ export const evidenceSourceTypeSchema = z.enum([
   "MICROSOFT_MAIL",
   "SCREENSHOT",
   "CSV",
+  "FILE_UPLOAD",
   "URL_IMPORT",
   "DEVIN",
   "DEVIN_DESKTOP",
@@ -181,6 +182,108 @@ const VENDOR_CATALOG: CatalogEntry[] = [
     slug: "typescript", name: "TypeScript", domain: "typescriptlang.org",
     description: "Static type checking for JavaScript.",
     domains: ["typescriptlang.org"], aliases: ["typescript"],
+  },
+  // Public identities verified 2026-09-19; sources and limits are recorded in
+  // docs/verification/2026-09-19-catalog-identities.md. These are not usage claims.
+  {
+    slug: "cursor", name: "Cursor", domain: "cursor.com",
+    description: "AI-assisted software development.",
+    domains: ["cursor.com"], aliases: ["cursor"],
+  },
+  {
+    slug: "cloudflare", name: "Cloudflare", domain: "cloudflare.com",
+    description: "Connectivity, security, and application infrastructure platform.",
+    domains: ["cloudflare.com"], aliases: ["cloudflare"],
+  },
+  {
+    slug: "searchable", name: "Searchable", domain: "searchable.com",
+    description: "AI search visibility and analytics.",
+    domains: ["searchable.com"], aliases: ["searchable"],
+  },
+  {
+    slug: "smartlead", name: "Smartlead", domain: "smartlead.ai",
+    description: "Outbound email and sales workflows.",
+    domains: ["smartlead.ai"], aliases: ["smartlead"],
+  },
+  {
+    slug: "findymail", name: "Findymail", domain: "findymail.com",
+    description: "Business contact finding and email verification.",
+    domains: ["findymail.com"], aliases: ["findymail"],
+  },
+  {
+    slug: "hunter", name: "Hunter", domain: "hunter.io",
+    description: "Email finding, verification, and outreach.",
+    domains: ["hunter.io"], aliases: ["hunter"],
+  },
+  {
+    slug: "supabase", name: "Supabase", domain: "supabase.com",
+    description: "Postgres-based application backend platform.",
+    domains: ["supabase.com"], aliases: ["supabase"],
+  },
+  {
+    slug: "neon", name: "Neon", domain: "neon.com",
+    description: "Managed serverless Postgres.",
+    domains: ["neon.com", "neon.tech"], aliases: ["neon"],
+  },
+  {
+    slug: "upstash", name: "Upstash", domain: "upstash.com",
+    description: "Serverless data and messaging infrastructure.",
+    domains: ["upstash.com"], aliases: ["upstash"],
+  },
+  {
+    slug: "posthog", name: "PostHog", domain: "posthog.com",
+    description: "Product analytics and development tools.",
+    domains: ["posthog.com"], aliases: ["posthog"],
+  },
+  {
+    slug: "elevenlabs", name: "ElevenLabs", domain: "elevenlabs.io",
+    description: "AI voice and audio tools.",
+    domains: ["elevenlabs.io"], aliases: ["elevenlabs"],
+  },
+  {
+    slug: "browserbase", name: "Browserbase", domain: "browserbase.com",
+    description: "Browser automation infrastructure.",
+    domains: ["browserbase.com"], aliases: ["browserbase"],
+  },
+  {
+    slug: "ref", name: "Ref", domain: "ref.tools",
+    description: "Documentation tools for software development.",
+    domains: ["ref.tools"], aliases: ["ref"],
+  },
+  {
+    slug: "context7", name: "Context7", domain: "context7.com",
+    description: "Library documentation for coding assistants.",
+    domains: ["context7.com"], aliases: ["context7"],
+  },
+  {
+    slug: "figma", name: "Figma", domain: "figma.com",
+    description: "Collaborative product design tools.",
+    domains: ["figma.com"], aliases: ["figma"],
+  },
+  {
+    slug: "readwise", name: "Readwise", domain: "readwise.io",
+    description: "Highlight collection and review.",
+    domains: ["readwise.io"], aliases: ["readwise"],
+  },
+  {
+    slug: "firecrawl", name: "Firecrawl", domain: "firecrawl.dev",
+    description: "Web crawling and data extraction.",
+    domains: ["firecrawl.dev"], aliases: ["firecrawl"],
+  },
+  {
+    slug: "openrouter", name: "OpenRouter", domain: "openrouter.ai",
+    description: "Unified access to AI model APIs.",
+    domains: ["openrouter.ai"], aliases: ["openrouter"],
+  },
+  {
+    slug: "tailscale", name: "Tailscale", domain: "tailscale.com",
+    description: "Private networking and access control.",
+    domains: ["tailscale.com"], aliases: ["tailscale"],
+  },
+  {
+    slug: "exa", name: "Exa", domain: "exa.ai",
+    description: "Web search and retrieval for AI applications.",
+    domains: ["exa.ai"], aliases: ["exa"],
   },
 ];
 

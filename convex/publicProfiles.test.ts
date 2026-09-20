@@ -65,6 +65,42 @@ test("neither public query version creates a profile for an unknown handle", asy
   expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
 });
 
+test("public reads omit unsupported embedded parent brands without rewriting published records", async () => {
+  const receipt = (await import("../docs/verification/fixtures/2026-09-17-context-brands/github.json")).default;
+  const t = convexTest(schema, modules);
+  const identities = [
+    { slug: "github-copilot", name: "GitHub Copilot", domain: "github.com" },
+    { slug: "devin-desktop", name: "Devin Desktop", domain: "devin.ai" },
+    { slug: "notebooklm", name: "NotebookLM", domain: "notebooklm.google.com" },
+    { slug: "manual-notebooklm-existing", name: "NotebookLM", domain: "notebooklm.google.com" },
+  ];
+  const cards: PublicProfile["cards"] = identities.map(identity => ({
+    product: { ...identity, description: "Saved product description", brand: productBrandSnapshotSchema.parse({ ...receipt.snapshot, productSlug: identity.slug, canonicalDomain: identity.domain }) },
+    status: "TESTING", headline: "Owner explanation", note: "Owner history",
+    primaryLink: { type: "CANONICAL", url: `https://${identity.domain}`, label: "Visit" },
+  }));
+  const ordinary = e2eReferenceProfile.cards[0];
+  const unknown = { ...cards[0], product: { ...cards[0].product, slug: "unknown-tool", name: "Unknown tool", domain: "unknown.example" } };
+  const knownUnbranded = { ...cards[2], product: { ...identities[2], description: "Unbranded existing card" } };
+  const profile: PublicProfile = { handle: "owner", displayName: "Owner", bio: "", cards: [...cards, ordinary, unknown, knownUnbranded] };
+  // Published snapshots can outlive catalog rows: eligibility must use the saved identity too.
+  const id = await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 7, publishedAt: "2026-09-19T00:00:00.000Z", profile }));
+  const before = await t.run(ctx => ctx.db.get(id));
+  for (const endpoint of [api.publicProfiles.getByHandle, api.publicProfiles.getByHandleV2]) {
+    const displayed = await t.query(endpoint, { handle: "owner" });
+    expect(displayed?.cards).toHaveLength(profile.cards.length);
+    for (const [index, card] of cards.entries()) {
+      const product = { ...card.product };
+      delete product.brand;
+      expect(displayed?.cards[index]).toEqual({ ...card, product });
+    }
+    expect(displayed?.cards.slice(cards.length)).toEqual([ordinary, unknown, knownUnbranded]);
+  }
+  expect(await t.run(ctx => ctx.db.get(id))).toEqual(before);
+  expect(await t.run(ctx => ctx.db.query("productBrandSnapshots").collect())).toEqual([]);
+  expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").collect())).toEqual([]);
+});
+
 
 test("100 repeated cards share retained brand reads while mismatched domains remain untouched", async () => {
   const { readPublishedProfile } = await import("./publicProfiles");

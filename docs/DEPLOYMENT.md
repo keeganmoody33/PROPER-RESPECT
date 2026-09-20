@@ -3,9 +3,11 @@
 ## Code synchronization and the owner's domain — September 18, 2026
 
 The owner reports owning **proper-respect.com**, registered through Cloudflare.
-DNS, hosting attachment, Clerk domains, OAuth callbacks and any migration from
-`props.lecturesfrom.com` have not been changed or verified for that domain.
-Treat the new domain as owner-supplied release input, not a live application URL.
+DNS and HTTPS redirect to `props.lecturesfrom.com` are verified. The September 19
+release of `7fa18a7` is live; hosted Gmail client configuration is complete.
+Manual account consent remains pending. See
+[the current receipt](verification/2026-09-19-hosted-gmail-release.md).
+Clerk domain/OAuth callback migration remains separate from this working redirect.
 
 GitHub consolidation is separate from a hosted release. `vercel.json` sets
 `git.deploymentEnabled` to `false`, disabling automatic preview and production
@@ -102,8 +104,12 @@ Use a production Clerk instance for the production domain.
 2. Copy the displayed Frontend API URL. Production normally uses
    `https://clerk.<your-domain>.com`; development normally uses
    `https://<instance>.clerk.accounts.dev`.
-3. Confirm the integration exposes the `convex` session-token template. The
-   GitHub connector's server route requests that template by name.
+3. With the native Convex integration, Clerk session claims contain
+   `aud: "convex"`; use the session token directly. A legacy setup instead needs
+   a JWT template named `convex`. Do not create a legacy template just to work
+   around a route that ignores native sessions. Hosted Gmail already handles
+   both modes. The GitHub route correction remains a separate local follow-up
+   until explicitly released and verified.
 4. Enable GitHub under Clerk social connections and configure its production
    OAuth callback/domain settings.
 5. Copy the matching production publishable and secret keys. Both keys must be
@@ -320,3 +326,15 @@ stubbed provider HTTP. Microsoft, full-body/attachment extraction, generic
 re-extraction versions and complete historical coverage remain outside this
 slice. The real known-product capture/candidate gate is closed, without
 converting mailbox evidence into signup, payment or human-usage claims.
+
+## Authenticated file uploads — September 19 PR #23, not yet deployed
+
+The first-upload ownership fix replaces exposed storage upload URLs with an
+owner-bound ticket and authenticated Convex HTTP action. Deploy its additive
+schema/functions/HTTP action before the matching frontend, only with release
+authorization. Convex supplies `CONVEX_SITE_URL`; no additional secret is needed.
+Old clients receive a reload instruction. New uploads accept the same formats
+up to **19 MiB**, below the HTTP action's 20 MB request limit. Existing retained
+files are unchanged. The private UI explicitly marks legacy uploader attribution
+unverified; do not backfill it from the old account association. See the
+[first-upload verification receipt](verification/2026-09-19-first-upload-ownership.md).

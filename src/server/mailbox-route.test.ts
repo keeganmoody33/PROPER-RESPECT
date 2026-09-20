@@ -11,6 +11,36 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllEnvs(); });
 const request = (body = "", origin = "https://props.example.test") => new Request("https://props.example.test/api/connect/mailboxes/google/start", { method: "POST", headers: { origin, "content-type": "application/x-www-form-urlencoded" }, body });
+test.each(["start", "callback", "read"] as const)("%s supports native Clerk Convex sessions without a legacy JWT template", async route => {
+  const getToken = vi.fn(async (options?: { template?: string }) => {
+    if (options?.template) throw new Error("JWT template does not exist");
+    return "native-convex-session";
+  });
+  mocks.auth.mockResolvedValueOnce({ userId: "owner", sessionClaims: { aud: "convex" }, getToken });
+  mocks.action.mockResolvedValueOnce({ url: "https://accounts.google.com/o/oauth2/v2/auth", readCount: 0 });
+  const response = route === "start" ? await mailboxStart(request()) : route === "callback"
+    ? await mailboxCallback(new Request("https://props.example.test/api/connect/mailboxes/google/callback?code=test&state=test"))
+    : await mailboxRead(request("accountId=account&expectedGeneration=1"));
+  expect(response.status).toBe(route === "read" ? 200 : 303);
+  if (route === "callback") expect(response.headers.get("location")).toBe("https://props.example.test/onboarding?gmail=connected");
+  expect(getToken).toHaveBeenCalledWith();
+  expect(mocks.setAuth).toHaveBeenCalledWith("native-convex-session");
+  expect(mocks.action).toHaveBeenCalledOnce();
+});
+test.each([undefined, "another-service"])("non-native sessions still require the Convex template: %s", async audience => {
+  const getToken = vi.fn(async () => "template-convex-token");
+  mocks.auth.mockResolvedValueOnce({ userId: "owner", sessionClaims: { aud: audience }, getToken });
+  mocks.action.mockResolvedValueOnce({ url: "https://accounts.google.com/o/oauth2/v2/auth" });
+  expect((await mailboxStart(request())).status).toBe(303);
+  expect(getToken).toHaveBeenCalledWith({ template: "convex" });
+  expect(mocks.setAuth).toHaveBeenCalledWith("template-convex-token");
+});
+test("missing native token fails closed before invoking Convex", async () => {
+  mocks.auth.mockResolvedValueOnce({ userId: "owner", sessionClaims: { aud: "convex" }, getToken: async () => null });
+  expect((await mailboxStart(request())).status).toBe(401);
+  expect(mocks.setAuth).not.toHaveBeenCalled();
+  expect(mocks.action).not.toHaveBeenCalled();
+});
 test("start requires same-origin POST and never reaches the action for a foreign origin", async () => {
   expect((await mailboxStart(request("", "https://attacker.test"))).status).toBe(403);
   expect(mocks.action).not.toHaveBeenCalled();

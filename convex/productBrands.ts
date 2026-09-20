@@ -12,13 +12,31 @@ import { internal } from "./_generated/api";
 
 const REFRESH_COOLDOWN_MS = 60_000;
 const refreshReference = makeFunctionReference<"action">("productBrands:refresh");
+const PREPARATION_BATCH_SIZE = 25;
+
+type BrandProductIdentity = Pick<Doc<"products">, "slug" | "name" | "domain">;
+
+function catalogIdentity(product: BrandProductIdentity) {
+  return canonicalCatalogProduct(product.slug) ?? (product.slug.startsWith("manual-")
+    ? resolveCatalogProduct({ vendor: product.name })?.product : undefined);
+}
+
+export function productBrandEligibility(product: BrandProductIdentity) {
+  const canonical = catalogIdentity(product);
+  if (!canonical || canonical.domain !== product.domain) return "UNVERIFIED_DOMAIN" as const;
+  // Verified 2026-09-19: this subdomain's provider result carries Google branding.
+  // An exact domain match cannot establish NotebookLM's product-specific identity.
+  if (canonical.slug === "notebooklm") return "PRODUCT_IDENTITY_REQUIRED" as const;
+  // Root-domain retrieval cannot distinguish a catalog subproduct from its parent.
+  const domainProduct = resolveCatalogProduct({ url: `https://${canonical.domain}` })?.product;
+  if (domainProduct?.slug !== canonical.slug) return "PRODUCT_IDENTITY_REQUIRED" as const;
+  return null;
+}
 
 function verifiedDomain(product: Doc<"products">): string | null {
   // Older manual entries keep their identity and relationship history. A later
   // catalog verification can authorize presentation without rewriting evidence.
-  const canonical = canonicalCatalogProduct(product.slug) ?? (product.slug.startsWith("manual-")
-    ? resolveCatalogProduct({ vendor: product.name })?.product : undefined);
-  return canonical && canonical.domain === product.domain ? canonical.domain : null;
+  return productBrandEligibility(product) === null ? product.domain : null;
 }
 
 async function ownedProduct(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
@@ -31,15 +49,17 @@ async function ownedProduct(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
 }
 
 /** Product presentation only. Call when a relationship becomes displayable. */
-export async function ensureProductBrand(ctx: MutationCtx, product: Doc<"products">, refresh = false) {
+export async function ensureProductBrand(ctx: MutationCtx, product: Doc<"products">, refresh = false, retryFailed = false) {
   const canonicalDomain = verifiedDomain(product);
-  if (!canonicalDomain) return { status: "UNVERIFIED_DOMAIN" as const };
+  if (!canonicalDomain) return { status: productBrandEligibility(product)! };
   const existing = await ctx.db.query("productBrandJobs")
     .withIndex("by_product", q => q.eq("productId", product._id)).unique();
   const now = Date.now();
   if (existing && existing.canonicalDomain === canonicalDomain) {
+    if (existing.status === "FAILED" && !refresh && !retryFailed) return { status: existing.status };
     const pending = (existing.status === "PENDING" && now - existing.requestedAt < 180_000) || (existing.status === "RUNNING" && (existing.leaseUntil ?? 0) > now);
-    if (pending || (!refresh && existing.status === "READY") || now - (existing.completedAt ?? existing.requestedAt) < REFRESH_COOLDOWN_MS) {
+    const retained = existing.status === "READY" && !refresh && Boolean(await retainedProductBrand(ctx, product, existing));
+    if (pending || retained || now - (existing.completedAt ?? existing.requestedAt) < REFRESH_COOLDOWN_MS) {
       return { status: existing.status };
     }
   }
@@ -54,7 +74,47 @@ export async function ensureProductBrand(ctx: MutationCtx, product: Doc<"product
 
 export const requestForProp = mutation({
   args: { propId: v.id("props"), refresh: v.optional(v.boolean()) },
-  handler: async (ctx, args) => ensureProductBrand(ctx, await ownedProduct(ctx, args.propId), args.refresh),
+  handler: async (ctx, args) => ensureProductBrand(ctx, await ownedProduct(ctx, args.propId), args.refresh, true),
+});
+
+async function ownedProducts(ctx: QueryCtx | MutationCtx, propIds: Id<"props">[]) {
+  const user = await requireUser(ctx);
+  if (propIds.length > PREPARATION_BATCH_SIZE) throw new Error("Prepare at most 25 products at a time.");
+  const products = [];
+  for (const propId of new Set(propIds)) {
+    const prop = await ctx.db.get(propId);
+    if (!prop || prop.userId !== user._id) throw new Error("Product unavailable.");
+    const product = await ctx.db.get(prop.productId);
+    if (!product) throw new Error("Product unavailable.");
+    products.push({ propId, product });
+  }
+  return products;
+}
+
+/** One bounded enrollment operation for existing displayable owner relationships. */
+export const prepareForProps = mutation({
+  args: { propIds: v.array(v.id("props")), retryFailed: v.optional(v.boolean()) },
+  handler: async (ctx, { propIds, retryFailed }) => {
+    const products = await ownedProducts(ctx, propIds);
+    const seen = new Set<Id<"products">>();
+    for (const { product } of products) {
+      if (seen.has(product._id)) continue;
+      seen.add(product._id);
+      await ensureProductBrand(ctx, product, false, retryFailed);
+    }
+    return { prepared: seen.size };
+  },
+});
+
+export const getPreparationForProps = query({
+  args: { propIds: v.array(v.id("props")) },
+  handler: async (ctx, { propIds }) => Promise.all((await ownedProducts(ctx, propIds)).map(async ({ propId, product }) => {
+    const reason = productBrandEligibility(product);
+    if (reason) return { propId, status: reason };
+    const job = await ctx.db.query("productBrandJobs").withIndex("by_product", q => q.eq("productId", product._id)).unique();
+    const status = job?.status === "READY" && !(await retainedProductBrand(ctx, product, job)) ? "FAILED" : job?.status ?? "NOT_REQUESTED";
+    return { propId, status } as const;
+  })),
 });
 
 export async function retainedProductBrand(ctx: QueryCtx | MutationCtx, product: Doc<"products">, knownJob?: Doc<"productBrandJobs"> | null): Promise<ProductBrandSnapshot | undefined> {
@@ -73,7 +133,7 @@ export const getForProp = query({
   handler: async (ctx, { propId }) => {
     const product = await ownedProduct(ctx, propId);
     const job = await ctx.db.query("productBrandJobs").withIndex("by_product", q => q.eq("productId", product._id)).unique();
-    return { status: !verifiedDomain(product) ? "UNVERIFIED_DOMAIN" : job?.status ?? "NOT_REQUESTED",
+    return { status: productBrandEligibility(product) ?? job?.status ?? "NOT_REQUESTED",
       current: (await retainedProductBrand(ctx, product, job)) ?? null, lastError: job?.lastError ?? null };
   },
 });

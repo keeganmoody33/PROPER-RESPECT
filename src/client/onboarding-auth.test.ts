@@ -116,7 +116,38 @@ test("private collection and simple owner-described product entry precede option
   expect(html).toContain("Preview sharing");
   expect(html).not.toContain("Publish selected cards");
   expect(html).not.toContain('name="primaryMetric"');
-  expect(html).toContain("This upload does not read the image or CSV automatically");
+  expect(html).toContain("Files are not parsed or unpacked automatically");
+  expect(html).toMatch(/accept="[^"]*\.json,[^"]*\.xlsx,[^"]*\.zip"[^>]*name="evidence"/);
+  expect(html).toContain('<option value="Devin">Devin (cloud)</option>');
+  expect(html).toContain('<option>Devin Desktop</option>');
+});
+
+test("sharing keeps the stored GitHub website until the owner opts into the private account page", () => {
+  auth.convex = { isLoading: false, isAuthenticated: true };
+  auth.ownerState = {
+    user: { handle: "owner", displayName: "Owner", bio: "" },
+    cards: [{
+      prop: { _id: "github-prop", visibility: "PRIVATE", status: "ACTIVE", headline: "Private GitHub", note: "Owner statement", relationshipVersion: 1 },
+      product: { slug: "github", name: "GitHub", domain: "github.com", description: "Code" },
+      links: [{ type: "CANONICAL", url: "https://github.com", label: "Check out GitHub", isPrimary: true }],
+      claims: [],
+      associatedAccountEvidence: [{
+        relationshipOwnerId: "owner-user",
+        evidenceOwnerId: "owner-user",
+        productSlug: "github",
+        accountId: "synthetic-account",
+        url: "https://github.com/synthetic-account",
+      }],
+    }],
+    connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
+  };
+  const html = render();
+  expect(html).toContain('value="https://github.com"');
+  expect(html).toContain("https://github.com/synthetic-account");
+  expect(html).toContain("Use the private account page in this preview");
+  expect(html).toContain("Visitors will use the primary link above until you choose otherwise and approve a preview.");
+  expect(html).not.toMatch(/value="https:\/\/github\.com\/synthetic-account"/);
+  expect(html).not.toContain("I approve making exactly this preview visible");
 });
 
 test("sharing preview renders only the server-projected profile and requires a separate owner approval", () => {
@@ -132,4 +163,43 @@ test("sharing preview renders only the server-projected profile and requires a s
   expect(html).toContain("An explicitly shared footer.");
   expect(html).toMatch(/<button[^>]*disabled[^>]*>Publish this preview/);
   expect(html).not.toContain("Private candidate");
+});
+
+test.each([
+  { label: "unpublished current handle", membership: false, publication: false },
+  { label: "resolved current publication", membership: true, publication: true },
+  { label: "missing backend membership", membership: undefined, publication: undefined },
+  { label: "ambiguous retained publication", membership: false, publication: true },
+])("sharing labels, checkbox, and public link follow $label", ({ membership, publication }) => {
+  auth.convex = { isLoading: false, isAuthenticated: true };
+  auth.ownerState = {
+    user: { handle: "current", displayName: "Owner", bio: "" },
+    hasPublicationAtCurrentHandle: publication,
+    cards: [{
+      prop: { _id: "saved-prop", visibility: "PUBLIC", status: "ACTIVE", headline: "Saved relationship", note: "Saved note", relationshipVersion: 1, confirmedAt: "2026-09-19T23:00:00.000Z" },
+      product: { slug: "saved-tool", name: "Saved tool", domain: "saved.example", description: "" },
+      isPublishedAtCurrentHandle: membership,
+      links: [], claims: [],
+    }],
+    connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
+  };
+  const html = render().replace(/<!--.*?-->/g, "");
+  const checkbox = html.match(/<input[^>]*type="checkbox"[^>]*\/>\s*Share this saved card/)?.[0];
+  expect(checkbox).toBeDefined();
+  if (membership === true) {
+    expect(checkbox).toContain('checked=""');
+    expect(html).toContain("Already public at /current.");
+    expect(html).toContain("Include saved version");
+  } else {
+    expect(checkbox).not.toContain('checked=""');
+    expect(html).not.toContain("Already public");
+    expect(html).not.toContain("Include saved version");
+  }
+  if (publication === true) {
+    expect(html).toMatch(/<a href="\/current"[^>]*>Open current public page/);
+  } else {
+    expect(html).not.toContain("Open current public page");
+  }
+  if (publication === false) expect(html).toContain("Nothing is published at /current yet.");
+  else expect(html).not.toContain("Nothing is published at /current yet.");
 });

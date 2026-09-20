@@ -6,9 +6,11 @@ import { useRef, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
+import { privateCardPrimaryLink } from "@/src/domain/product-destination";
 import { ProductCard } from "./product-card";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { ProductBrandControls } from "./product-brand-controls";
+import { DiscoveryReview } from "./discovery-review";
 import styles from "./private-inventory.module.css";
 
 export type InventoryData = {
@@ -125,6 +127,7 @@ export function InventoryRelationshipDetails({ item, evidence, selectedEvidence,
     {sources.length === 0 && <p>{hasMoreEvidence ? "No available sources in the loaded evidence pages. More sources may be available below." : "No retained source is attached. Your explanation is an owner statement."}</p>}
     {sources.map(source => <div className={styles.source} key={source.id}>
       <strong>{source.sourceLabel}</strong>
+      {source.uploadedFile && <p>Original file: {source.uploadedFile.filename ?? "Filename unavailable"} · {source.uploadedFile.mimeType ?? "Format unavailable"} · {source.uploadedFile.byteSize === undefined ? "Size unavailable" : `${source.uploadedFile.byteSize.toLocaleString()} bytes`}. Retained privately; contents have not been parsed or authenticated. {source.uploadedFile.attribution === "VERIFIED_OWNER_SESSION" ? "Uploaded through your verified owner session; authorship and product usage are not verified." : "Legacy upload: stored account ownership is known, but the original uploader is unverified."}</p>}
       {source.id === item.prop.activityEvidenceId && <p>Saved supporting snapshot</p>}
       <p>{source.artifact ? `Static capture · source date ${source.artifact.sourceCapturedDate} · ${source.artifact.kind === "WISPR_OWNER_REVIEW" ? "recorded time retained in original" : "original time unknown"} · imported ${source.capturedAt.slice(0, 10)}.` : `Retained evidence · captured ${source.capturedAt}.`}</p>
       <p>{source.artifact ? "Refresh: manual import. This is not live usage tracking." : "This capture alone does not establish continuous source coverage."}</p>
@@ -162,6 +165,7 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
   const [view, setView] = useState<InventoryView>("All");
   const [notice, setNotice] = useState("");
   const [importing, setImporting] = useState(false);
+  const [inspectedRecords, setInspectedRecords] = useState<Record<string, string>>({});
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   async function importFiles(form: FormData) {
     setImporting(true);
@@ -173,30 +177,53 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
     } catch { setNotice("Import did not complete. Successfully retained originals remain private; retrying the same files will not duplicate them."); }
     finally { setImporting(false); }
   }
-  const cards = data.cards.filter(item => inInventoryView(view, item));
+  // usePaginatedQuery accumulates pages: regroup the whole loaded collection on
+  // every update so a later page cannot create a second visible product card.
+  const groups = new Map<string, Item[]>();
+  for (const item of data.cards) {
+    const key = `${item.prop.userId}:${item.prop.productId}`;
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  const cards = [...groups.entries()].filter(([, members]) => members.some(item => inInventoryView(view, item)));
   return <section className={styles.inventory} aria-labelledby="private-collection-title">
     <p className="onboarding-kicker">YOUR PRIVATE COLLECTION</p>
     <h2 id="private-collection-title">What you use, test, and come back to.</h2>
     <p>Your go-to stack is your choice. Evidence and work context support the story; saving here keeps it private.</p>
-    <nav className={styles.views} aria-label="Collection views">{inventoryViews.map(option => <button type="button" className="secondary-action" key={option} aria-pressed={view === option} onClick={() => setView(option)}>{option}</button>)}</nav>
+    <nav className={styles.views} aria-label="Collection views">{inventoryViews.map(option => <button type="button" className="secondary-action" key={option} aria-pressed={view === option} onClick={() => { setView(option); setInspectedRecords({}); }}>{option}</button>)}</nav>
     <p className={styles.hint}>Views can overlap. History preserves earlier decisions when a tool becomes go-to, is archived, or returns to your stack.</p>
     {!cards.length && <p>{data.hasMore ? "No matches among the products loaded so far." : "No products in this view yet."}</p>}
-    <div className={styles.grid}>{cards.map((item, index) => {
+    <div className={styles.grid}>{cards.map(([groupId, members], index) => {
+      const matching = members.filter(item => inInventoryView(view, item));
+      const item = members.find(member => member.prop._id === inspectedRecords[groupId]) ?? matching[0];
       const confirmed = isRelationshipConfirmed(item.prop);
-      return <section className={styles.item} key={item.prop._id} aria-label={`${item.product.name} in your collection`}>
-        <ProductCard index={index} relationshipConfirmed={confirmed} goTo={item.prop.goTo} card={{
+      return <section className={styles.item} key={groupId} aria-label={`${item.product.name} in your collection`}>
+        {members.length > 1 && <div className={styles.source}>
+          <label>Record to inspect for {item.product.name}
+            <select value={item.prop._id} onChange={event => setInspectedRecords(current => ({ ...current, [groupId]: event.target.value }))}>
+              {members.map((member, recordIndex) => <option key={member.prop._id} value={member.prop._id}>
+                {`Record ${recordIndex + 1} · ${isRelationshipConfirmed(member.prop) ? member.prop.status.toLowerCase() : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
+              </option>)}
+            </select>
+          </label>
+          <p>{members.length} retained records for this product. Inspect each record’s decisions and evidence here. Selecting a record does not merge, confirm, or publish it.</p>
+        </div>}
+        <ProductCard key={item.prop._id} audience="owner" index={index} relationshipConfirmed={confirmed} goTo={item.prop.goTo} card={{
           product: item.product, status: item.prop.status, headline: item.prop.headline, note: item.prop.note,
           startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
-          primaryLink: item.links.find(link => link.isPrimary) ?? (item.product.domain ? { type: "CANONICAL", url: `https://${item.product.domain}`, label: `Open ${item.product.name}` } : undefined),
+          primaryLink: privateCardPrimaryLink({
+            product: item.product,
+            links: item.links,
+            associatedEvidence: item.associatedAccountEvidence ?? [],
+          }),
         }} />
-        <details onToggle={event => { const open = event.currentTarget.open; setOpened(current => ({ ...current, [item.prop._id]: open })); }}>
+        <details key={`details:${item.prop._id}`} onToggle={event => { const open = event.currentTarget.open; setOpened(current => ({ ...current, [item.prop._id]: open })); }}>
           <summary>{confirmed ? "Manage relationship and context" : "Review this discovery"}</summary>
           {opened[item.prop._id] && (renderDetails?.(item) ?? <InventoryRelationshipDetails item={item} evidence={[]} onSave={onSave} renderHistory={renderHistory} />)}
         </details>
       </section>;
     })}</div>
     {data.hasMore && <>
-      <p>Views apply to the {data.cards.length} products loaded so far. More products are available.</p>
+      <p>Views group the {data.cards.length} records loaded so far by product. More records, including other records for these products, may be available.</p>
       <button type="button" className="secondary-action" disabled={data.loadingMore} onClick={onLoadMore}>{data.loadingMore ? "Loading products…" : "Load more products"}</button>
     </>}
     <details className={styles.intake}><summary>Bring in retained evidence</summary>
@@ -212,7 +239,7 @@ export function PrivateInventory({ brandEnrichmentAvailable = false }: { brandEn
   const save = useMutation(api.inventory.save);
   const importPacket = useMutation(api.retainedEvidence.importPacket);
   if (inventory.status === "LoadingFirstPage") return <p role="status">Loading your private collection…</p>;
-  return <PrivateInventoryView data={{ cards: inventory.results, hasMore: inventory.status !== "Exhausted", loadingMore: inventory.status === "LoadingMore" }}
+  return <><DiscoveryReview /><PrivateInventoryView data={{ cards: inventory.results, hasMore: inventory.status !== "Exhausted", loadingMore: inventory.status === "LoadingMore" }}
     onLoadMore={() => inventory.loadMore(25)} onSave={save} onImport={packet => importPacket({ packet })}
-    renderDetails={item => <InventoryDetails item={item} onSave={save} brandEnrichmentAvailable={brandEnrichmentAvailable} />} />;
+    renderDetails={item => <InventoryDetails item={item} onSave={save} brandEnrichmentAvailable={brandEnrichmentAvailable} />} /></>;
 }

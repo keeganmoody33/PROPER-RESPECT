@@ -11,6 +11,13 @@ import type {
 } from "@/src/domain/public-profile";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
+import {
+  verifiedProductAssets,
+  selectVerifiedProductLogo,
+  verifiedProductTypography,
+  verifiedProductFontFaces,
+  type VerifiedProductAssets,
+} from "@/src/domain/verified-product-assets";
 
 type Card = PublicProfile["cards"][number];
 
@@ -53,26 +60,31 @@ function brandAppearance(brand?: ProductBrandSnapshot) {
 
 function ProductLogo({
   brand,
+  verifiedAssets,
   logoUrl,
   mark,
   surface,
 }: {
   brand?: ProductBrandSnapshot;
+  verifiedAssets?: VerifiedProductAssets;
   logoUrl?: string;
   mark: string;
   surface: "light" | "dark";
 }) {
   const [failedUrls, setFailedUrls] = useState<string[]>([]);
-  const logo = brand && selectProductBrandLogo({
+  const verifiedLogo = verifiedAssets && selectVerifiedProductLogo(verifiedAssets, surface, failedUrls);
+  const logo = !verifiedAssets && brand ? selectProductBrandLogo({
     logos: brand.logos.filter((candidate) => !failedUrls.includes(candidate.url)),
-  }, surface);
-  const imageUrl = logo?.url ?? (logoUrl && !failedUrls.includes(logoUrl) ? logoUrl : undefined);
+  }, surface) : undefined;
+  const imageUrl = verifiedAssets ? verifiedLogo?.path
+    : logo?.url ?? (logoUrl && !failedUrls.includes(logoUrl) ? logoUrl : undefined);
 
   return (
-    <div
+    <span
       className="product-logo"
-      data-logo-mode={logo?.mode}
-      data-logo-provider={logo ? brand?.provider : undefined}
+      data-logo-layout={verifiedAssets ? "wordmark" : undefined}
+      data-logo-mode={verifiedLogo?.mode ?? (logo ? logo.mode : undefined)}
+      data-logo-provider={verifiedLogo ? verifiedAssets?.provider : logo ? brand?.provider : undefined}
       aria-hidden="true"
     >
       {imageUrl ? (
@@ -82,11 +94,13 @@ function ProductLogo({
         <img
           src={imageUrl}
           alt=""
+          width={verifiedLogo?.width}
+          height={verifiedLogo?.height}
           referrerPolicy="no-referrer"
           onError={() => setFailedUrls((urls) => urls.includes(imageUrl) ? urls : [...urls, imageUrl])}
         />
       ) : mark}
-    </div>
+    </span>
   );
 }
 
@@ -327,14 +341,19 @@ export function ProductCard({
   displayMode = "relationship",
   relationshipConfirmed = true,
   goTo = false,
+  audience = "visitor",
 }: {
   card: Card;
   index: number;
   displayMode?: "relationship" | "brand-preview";
   relationshipConfirmed?: boolean;
   goTo?: boolean;
+  audience?: "owner" | "visitor";
 }) {
   const brandPreview = displayMode === "brand-preview";
+  const linkDisclosure = card.primaryLink?.type === "AFFILIATE" ? "Affiliate link"
+    : card.primaryLink?.type === "REFERRAL" ? "Referral link" : undefined;
+  const linkRel = linkDisclosure ? "noopener noreferrer sponsored" : "noopener noreferrer";
   const cardStatus = brandPreview ? "BRAND PREVIEW" : relationshipConfirmed ? card.status : "PRIVATE DISCOVERY";
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
   const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : "Relationship & evidence";
@@ -349,6 +368,7 @@ export function ProductCard({
     ? card.product.brand
     : undefined;
   const appearance = brandAppearance(brand);
+  const verifiedAssets = verifiedProductAssets(card.product);
   const mark = card.product.name
     .split(/\s+/)
     .map((word) => word[0])
@@ -372,7 +392,9 @@ export function ProductCard({
   return (
     <article
       className="product-card"
-      style={{ ...appearance.style, ...productBrandTypography(brand) }}
+      style={{ ...appearance.style, ...(verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand)) }}
+      data-verified-brand={verifiedAssets?.productSlug}
+      data-brand-revision={verifiedAssets?.revision}
       data-side={isFlipped ? "back" : "front"}
       aria-label={`${card.product.name} card`}
       onKeyDown={(event) => {
@@ -383,26 +405,29 @@ export function ProductCard({
         }
       }}
     >
-      <ProductBrandFonts snapshot={brand} />
+      {verifiedAssets
+        ? <style data-verified-product-fonts={verifiedAssets.productSlug}>{verifiedProductFontFaces(verifiedAssets)}</style>
+        : <ProductBrandFonts snapshot={brand} />}
       <div className="card-front" aria-hidden={isFlipped} inert={isFlipped}>
         <div className="card-topline">
-          <ProductLogo brand={brand} logoUrl={card.product.logoUrl} mark={mark} surface={appearance.surface} />
+          {!verifiedAssets && <ProductLogo brand={brand} logoUrl={card.product.logoUrl} mark={mark} surface={appearance.surface} />}
           <div className="card-title">
             <p className="eyebrow">
               {cardStatus}
               {!brandPreview && relationshipConfirmed && card.startedAt ? ` · SINCE ${card.startedAt.slice(0, 4)}` : ""}
             </p>
-            <h2>{card.product.name}</h2>
+            <h2 className={verifiedAssets ? "card-product-name" : undefined}>{card.product.name}</h2>
+            {verifiedAssets && <ProductLogo verifiedAssets={verifiedAssets} mark={card.product.name} surface={appearance.surface} />}
           </div>
-          {card.primaryLink && <a
+          {card.primaryLink && <div className="card-destination"><a
             className="card-visit"
             href={card.primaryLink.url}
             target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${card.primaryLink.label} (opens in a new tab)`}
+            rel={linkRel}
+            aria-label={`${card.primaryLink.label}${linkDisclosure ? ` · ${linkDisclosure}` : ""} (opens in a new tab)`}
           >
             ↗
-          </a>}
+          </a>{linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}</div>}
         </div>
 
         <p className="card-headline">
@@ -411,11 +436,11 @@ export function ProductCard({
 
         {!brandPreview && card.activity ? (
           <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} />
-        ) : (
+        ) : (brandPreview || audience === "owner") ? (
           <p className="activity-placeholder">
-            {brandPreview ? "No personal activity is included in this brand preview." : "Your relationship does not require activity tracking."}
+            {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}
           </p>
-        )}
+        ) : null}
 
         <div className="card-footer">
           <span className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
@@ -445,7 +470,7 @@ export function ProductCard({
             Close details
           </button>
         </div>
-        <div className="card-back-content" tabIndex={0} role="group" aria-label="Card evidence">
+        <div className="card-back-content" role="group" aria-label="Card evidence">
           <div className="status-row">
             <span>{cardStatus}</span>
             {card.primaryLink && <span>{card.primaryLink.type}</span>}
@@ -471,17 +496,33 @@ export function ProductCard({
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
             <ActivityView activity={card.activity} />
           </>}
-          {brand && <details className="card-brand-provenance" open={brandPreview}>
+          {brandPreview && brand && <details className="card-brand-provenance" open>
             <summary>Brand provenance</summary>
             <ProductBrandDetails snapshot={brand} />
+          </details>}
+          {brandPreview && verifiedAssets && <details className="card-brand-provenance" open>
+            <summary>Official brand assets</summary>
+            <section className="product-brand-details" aria-label="Official brand provenance">
+              <p>Official vendor assets identify the product. They do not verify ownership or use.</p>
+              <dl className="brand-provenance">
+                <div><dt>Source</dt><dd>{verifiedAssets.provider}</dd></div>
+                <div><dt>Product</dt><dd><a href={verifiedAssets.productUrl} target="_blank" rel="noopener noreferrer">{card.product.name}</a></dd></div>
+                <div><dt>Verified</dt><dd><time dateTime={verifiedAssets.verifiedAt}>{verifiedAssets.verifiedAt}</time></dd></div>
+                <div><dt>Revision</dt><dd>{verifiedAssets.revision}</dd></div>
+                <div><dt>Logo</dt><dd><a href={verifiedAssets.logoSource.productGuidanceUrl} target="_blank" rel="noopener noreferrer">Official product brand guide</a></dd></div>
+                <div><dt>Font</dt><dd>{verifiedAssets.typography.family} · <a href={verifiedAssets.typography.license.path}>{verifiedAssets.typography.license.name}</a></dd></div>
+                <div><dt>Asset record</dt><dd><a href={verifiedAssets.manifestPath}>Source URLs and SHA-256 hashes</a></dd></div>
+              </dl>
+            </section>
           </details>}
           {card.primaryLink && <a
             className="outbound-link"
             href={card.primaryLink.url}
-            rel="noopener noreferrer"
+            rel={linkRel}
             target="_blank"
           >
             {card.primaryLink.label} ↗
+            {linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}
           </a>}
         </div>
       </section>

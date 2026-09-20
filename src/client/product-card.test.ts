@@ -62,7 +62,7 @@ test("an owner-described product without a website needs neither an invented lin
   const card = renderCard({ product: { ...baseCard.product, domain: "" }, primaryLink: undefined, activity: undefined });
   expect(card("a")).toHaveLength(0);
   expect(card(".card-headline").text()).toBe(baseCard.headline);
-  expect(card(".activity-placeholder").text()).toBe("Your relationship does not require activity tracking.");
+  expect(card(".activity-placeholder")).toHaveLength(0);
 });
 
 test("a brand preview makes no owner relationship or activity claim", () => {
@@ -117,9 +117,21 @@ test("uses a retained brand logo for the actual dark card surface without changi
   expect($(".product-logo img").attr("src")).toBe("https://example.com/dark.svg");
   expect($(".product-logo").attr("data-logo-mode")).toBe("dark");
   expect($(".card-title .eyebrow").text()).toBe("TESTING");
-  expect($(".activity-placeholder").text()).toBe("Your relationship does not require activity tracking.");
+  expect($(".activity-placeholder")).toHaveLength(0);
   expect($(".card-headline").text()).toBe(baseCard.headline);
   expect($(".product-card").attr("style") ?? "").not.toContain("#FF0000");
+});
+
+test.each(["owner", "visitor"] as const)("%s cards use retained branding without exposing retrieval diagnostics", (audience) => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, {
+    card: { ...baseCard, product: { ...baseCard.product, brand } }, index: 0, audience,
+  })));
+  expect($(".product-logo img").attr("src")).toBe("https://example.com/dark.svg");
+  expect($(".card-brand-provenance")).toHaveLength(0);
+  expect($.text()).not.toContain(brand.provider);
+  expect($.text()).not.toContain(brand.retrievalId);
+  expect($.text()).not.toContain(brand.responseHash);
+  expect($(".card-back blockquote").text()).toBe(baseCard.note);
 });
 
 test("uses explicit readable styleguide roles and chooses a logo for that surface", () => {
@@ -444,4 +456,40 @@ test("brand preview suppresses private discovery and go-to state", () => {
   expect($.text()).not.toContain("Owner-selected go-to");
   expect($.text()).not.toContain("Unreviewed evidence");
   expect($(".activity-module, .card-activity-preview")).toHaveLength(0);
+});
+
+test("only the private card offers an activity next step when no snapshot is selected", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, {
+    card: baseCard, index: 0, audience: "owner",
+  })));
+  expect($(".activity-placeholder").text()).toBe("Add a usage snapshot or describe your history.");
+  expect($(".activity-module, .card-activity-preview")).toHaveLength(0);
+  expect($.text()).not.toContain("does not require activity tracking");
+});
+
+test("a contribution calendar renders only supplied days and never relabels contributions as commits", () => {
+  const $ = renderCard({ activity: activityExamples[0] });
+  expect($(".activity-calendar span")).toHaveLength(1);
+  expect($(".activity-calendar span").attr("title")).toBe("2026-09-15: 3 contributions");
+  expect($(".activity-hero").text()).toBe("37contributions");
+  expect($.text()).not.toContain("commits");
+});
+
+
+test.each(["AFFILIATE", "REFERRAL"] as const)("%s destinations remain visibly disclosed on both card faces", (type) => {
+  const $ = renderCard({ primaryLink: { type, url: "https://example.com/owner-selected", label: "Visit Example Product" } });
+  const disclosure = type === "AFFILIATE" ? "Affiliate link" : "Referral link";
+  expect($(".card-front .card-link-disclosure").text()).toBe(disclosure);
+  expect($(".card-back .card-link-disclosure").text()).toBe(disclosure);
+  expect($(".card-visit").attr("aria-label")).toContain(disclosure);
+  for (const element of $(".card-visit, .outbound-link").toArray()) {
+    expect($(element).attr("href")).toBe("https://example.com/owner-selected");
+    expect($(element).attr("rel")).toBe("noopener noreferrer sponsored");
+  }
+});
+
+test("a canonical destination receives no invented affiliate disclosure", () => {
+  const $ = renderCard();
+  expect($(".card-link-disclosure")).toHaveLength(0);
+  expect($(".card-visit").attr("rel")).toBe("noopener noreferrer");
 });

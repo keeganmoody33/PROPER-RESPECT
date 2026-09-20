@@ -11,6 +11,9 @@ export const mailboxCredentialValidator = v.object({
 });
 export const mailboxBatchResultValidator = v.object({
   ingestedSignals: v.number(), proposals: v.number(), createdDrafts: v.array(v.string()),
+  ambiguousProducts: v.optional(v.array(v.object({
+    productSlug: v.string(), reason: v.literal("MULTIPLE_OWNER_RELATIONSHIPS"),
+  }))),
 });
 
 export const mailboxTables = {
@@ -32,6 +35,7 @@ export const mailboxTables = {
     cursor: mailboxCursorValidator,
     lastReadStatus: v.optional(v.union(v.literal("READING"), v.literal("COMPLETE"), v.literal("FAILED"))),
     activeJobId: v.optional(v.id("mailboxScanJobs")),
+    discoveryRunId: v.optional(v.id("mailboxDiscoveryRuns")),
     lastFailure: v.optional(mailboxFailureValidator),
     maintenanceEnabled: v.optional(v.boolean()),
     maintenanceApprovedAt: v.optional(v.string()),
@@ -40,6 +44,17 @@ export const mailboxTables = {
   }).index("by_owner", ["ownerId"])
     .index("by_maintenance_due", ["maintenanceEnabled", "nextMaintenanceAt"])
     .index("by_owner_provider_account", ["ownerId", "provider", "providerAccountId"]),
+
+  mailboxDiscoveryRuns: defineTable({
+    ownerId: v.id("users"), accountId: v.id("mailboxAccounts"), generation: v.number(), requestId: v.string(),
+    status: v.union(v.literal("RUNNING"), v.literal("PAUSED"), v.literal("FAILED"), v.literal("COMPLETE"), v.literal("LIMIT_REACHED"), v.literal("CANCELLED")),
+    phase: v.union(v.literal("KNOWN_PRODUCTS"), v.literal("HISTORY")),
+    phaseAttempts: v.number(), totalAttempts: v.number(), pagesRead: v.number(), messagesRead: v.number(), retainedRecords: v.number(),
+    limited: v.boolean(), step: v.number(), cursorHashes: v.array(v.string()),
+    activeJobId: v.optional(v.id("mailboxScanJobs")), leaseExpiresAt: v.optional(v.number()),
+    failure: v.optional(v.union(mailboxFailureValidator, v.literal("LEASE_EXPIRED"), v.literal("CURSOR_CYCLE"))),
+    startedAt: v.string(), updatedAt: v.string(),
+  }).index("by_account_request", ["accountId", "requestId"]),
 
   mailboxSecrets: defineTable({
     accountId: v.id("mailboxAccounts"), generation: v.number(),
@@ -53,6 +68,7 @@ export const mailboxTables = {
     cursor: mailboxCursorValidator, leaseExpiresAt: v.number(),
     contextId: v.optional(v.id("mailboxScanContexts")), queryKey: v.optional(v.string()),
     credentialRevision: v.optional(v.number()), scheduled: v.optional(v.boolean()),
+    discoveryRunId: v.optional(v.id("mailboxDiscoveryRuns")),
     startedAt: v.string(), updatedAt: v.string(),
   }).index("by_account", ["accountId"]),
 

@@ -1,6 +1,6 @@
 # 003 - Evidence Surfaces
 
-> Updated: 2026-09-18. Current source roles and verified implementation limits; Tasks 1–4 and accepted checkpoints stay fixed.
+> Updated: 2026-09-19. Current source roles and verified implementation limits; Tasks 1–4 and accepted checkpoints stay fixed.
 
 ## Source roles
 
@@ -47,7 +47,7 @@ Screenshot support should preserve the artifact and explain what was checked, ra
 
 Even signed provenance is not a universal truth test: the [C2PA explainer](https://c2pa.org/specifications/specifications/2.2/explainer/Explainer.html) says it “cannot tell you whether the digital content is true”. No C2PA or image-forensics subsystem is required for this release.
 
-**Implemented now:** authenticated private file upload retains the original storage object, filename, MIME type, byte size and server capture time. The interface explicitly says it does not read the image or CSV automatically. Selected observations can be supplied for private review. Prepared retained packets separately verify their expected content hashes before canonical intake.
+**Implemented now:** authenticated private file upload retains the original storage object, filename, MIME type, byte size and server capture time. Common image, tabular, JSON, document, text and archive exports are accepted up to 25 MiB; non-image/non-CSV exports retain FILE_UPLOAD classification. Retaining a file does not parse its contents automatically. Selected observations can be supplied for private review. Prepared retained packets separately verify their expected content hashes before canonical intake.
 
 **Not implemented in the generic upload path:** image OCR, EXIF validation, content-based replay identity, screenshot authenticity verification or automatic Screen Time extraction. Do not describe the prepared-packet checks as a generic screenshot verifier. These are bounded follow-ups within the existing intake work when needed; no new collector or architecture program starts with this document correction.
 
@@ -69,6 +69,21 @@ A proof/supporting record can remain private. Evidence can support an existing r
 Retain metric definition, value/units, measurement period, actual coverage, freshness, source lineage, transformation/version, known actor and capture method where applicable. `capturedAt` is collection time, not first use. SOURCE_REPORTED, ASSISTANT_EXTRACTED and USER_SUPPLIED remain different acquisition labels. Account creation, signup and payment cannot populate a use-start date without separate support. Corrections and earlier relationship decisions remain available.
 
 The [runtime validators](../convex/validators.ts) and [schema](../convex/schema.ts) define implemented enums and storage; earlier conceptual lists are not additional implemented connectors. The current [delivery receipt](verification/2026-09-18-personal-product-delivery.md) records actual account/source proof.
+
+## Portable history across personal and work accounts
+
+September 19 decision within Tasks 2/4. The owner supplied an outside discussion after clarifying that telemetry, exports/screenshots and honest owner-described tenure can each support a relationship. Its recommendations are external proposals, not authorizations or verified vendor capabilities. The original discussion remains private outside Git.
+
+- **Attribution:** the discussion proposes “actor (which human performed it) and payer (which account/org owned the seat or key)”. Preserve the distinction, but an actor may be human, agent or unknown; account ownership and payment are also different facts. Never attribute a workspace or organization's entire usage to one member. Existing owner/account isolation, capture collector/activityActor and attribution scopes support this boundary. A dedicated payer/employment-context model is deferred until a real source requires it.
+- **Identity:** reject “Email is your join key and primary source” and “then you collapse variants automatically”. Email addresses, aliases and shared payment instruments do not establish identical actors or accounts. Preserve provider identities and separately verified, reversible owner associations. Email remains discovery and supporting evidence, not the universal identity or activity source.
+- **Coverage:** reject “your worst-case data loss equals your sync interval”. Reporting delays, failures, provider retention and incomplete source coverage can leave larger gaps. Show last successful retrieval separately from the measurement period and last covered event where supplied. Never promise complete history through account revocation.
+- **Lifecycle:** reject “that auth error itself becomes the context_end event”. Record connection failure and recovery requirements independently of employment dates, account ownership and product relationships. Preserve legitimately retained history when access ends, subject to applicable retention/deletion rules; never convert missing records into zero usage or an invented estimate.
+- **Permission:** reject “you don't need employer approval” as an authorization rule. Personal hardware, a successful login and content-free metadata do not themselves establish permission to export, retain or share organization-associated records. Use permitted scopes; stop source access when revoked. Do not promise universal recovery through subject-access requests.
+- **Measurement and replay:** retain provider-reported usage, billed amounts and any versioned pricing estimates as separate facts. An API-equivalent estimate is not a bill or proof of waste. Hashes identify captured bytes, not authenticity; copies of an invoice can differ. Deduplicate supported source events without discarding distinct acquisition provenance or assuming all repeated counts are new activity.
+
+**Acceptance in the existing collection:** a card can show a supported provider metric, an explicitly attributed uploaded observation, or an owner-described history. Label its basis and known period; prompt for missing context without requiring telemetry or inventing dates. API availability, collection permission, historical coverage and relationship state remain distinct. The owner still controls go-to, relationship changes and sharing.
+
+**Deferred:** new metering proxies, device agents, billing optimization, employer-context tables and automatic collection schedules. OpenTelemetry may inform a future AI-metric adapter; it does not replace the canonical evidence/relationship model. This decision changes no application behavior, records, source permissions or release gates.
 
 ## Continuation inside the existing tasks
 

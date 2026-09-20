@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Updated: 2026-09-18.
+Updated: 2026-09-19.
 
 ## Project Structure & Module Organization
 
@@ -37,7 +37,7 @@ Follow existing imperative prefixes: `fix:` and `docs:`; use `feat:` for new cap
 
 Keep source, capture, observation, review, relationship, and publication distinct. Email discovers candidates; brand data supplies presentation; neither proves usage. Go-to requires an owner decision.
 
-Keep secrets in ignored configuration and private originals outside Git. Follow `docs/DEPLOYMENT.md`; verify target and authorization before backend synchronization, real reads, recurrence, deployment, or publication. Never seed over owner data. Continue the accepted checkout and Tasks 1–4 using Compound Engineering; do not reset to main or restart completed slices.
+Keep secrets in ignored configuration and private originals outside Git. Follow `docs/DEPLOYMENT.md`; verify target and authorization before backend synchronization, real reads, recurrence, deployment, or publication. Never seed over owner data. Use pstack-codex as the primary execution workflow per the September 19 owner direction. Preserve the accepted checkout, existing Ref and Tasks 1–4; do not reset to main or restart completed slices. Compound Engineering remains available for focused supporting work.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

@@ -5,7 +5,7 @@ export const evidenceSourceTypeValidator = v.union(
   v.literal("MANUAL"), v.literal("PUBLIC_PROFILE"), v.literal("GITHUB"),
   v.literal("BILLING"), v.literal("BROWSER_HISTORY"), v.literal("SCREEN_TIME"),
   v.literal("SOCIAL_MESSAGES"), v.literal("GMAIL"), v.literal("MICROSOFT_MAIL"),
-  v.literal("SCREENSHOT"), v.literal("CSV"), v.literal("URL_IMPORT"),
+  v.literal("SCREENSHOT"), v.literal("CSV"), v.literal("FILE_UPLOAD"), v.literal("URL_IMPORT"),
   v.literal("DEVIN"), v.literal("DEVIN_DESKTOP"), v.literal("WINDSURF"),
   v.literal("WISPR_FLOW"), v.literal("NOTEBOOKLM"), v.literal("GREPTILE"),
 );

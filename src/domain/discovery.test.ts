@@ -1,13 +1,39 @@
 import { describe, expect, it } from "vitest";
 import {
+  canonicalCatalogProduct,
+  canonicalCatalogSenderDomains,
   extractDomain,
   normalizeVendorName,
   prepareImportedProp,
   proposeDrafts,
+  resolveCatalogProduct,
   resolveCatalogProductWebsite,
   resolveProduct,
   type RawSignal,
 } from "./discovery";
+
+const expandedCatalog = [
+  ["cursor", "Cursor", "cursor.com"],
+  ["cloudflare", "Cloudflare", "cloudflare.com"],
+  ["searchable", "Searchable", "searchable.com"],
+  ["smartlead", "Smartlead", "smartlead.ai"],
+  ["findymail", "Findymail", "findymail.com"],
+  ["hunter", "Hunter", "hunter.io"],
+  ["supabase", "Supabase", "supabase.com"],
+  ["neon", "Neon", "neon.com"],
+  ["upstash", "Upstash", "upstash.com"],
+  ["posthog", "PostHog", "posthog.com"],
+  ["elevenlabs", "ElevenLabs", "elevenlabs.io"],
+  ["browserbase", "Browserbase", "browserbase.com"],
+  ["ref", "Ref", "ref.tools"],
+  ["context7", "Context7", "context7.com"],
+  ["figma", "Figma", "figma.com"],
+  ["readwise", "Readwise", "readwise.io"],
+  ["firecrawl", "Firecrawl", "firecrawl.dev"],
+  ["openrouter", "OpenRouter", "openrouter.ai"],
+  ["tailscale", "Tailscale", "tailscale.com"],
+  ["exa", "Exa", "exa.ai"],
+] as const;
 
 function signal(overrides: Partial<RawSignal>): RawSignal {
   return {
@@ -17,6 +43,65 @@ function signal(overrides: Partial<RawSignal>): RawSignal {
     ...overrides,
   };
 }
+
+describe("verified catalog expansion", () => {
+  it("resolves verified roots and sender subdomains with a stable Gmail name round trip", () => {
+    for (const [slug, name, domain] of expandedCatalog) {
+      for (const senderDomain of [domain, `mail.${domain}`]) {
+        const product = resolveProduct(signal({ sourceType: "GMAIL", url: `https://${senderDomain}` }));
+        expect(product).toMatchObject({ slug, name, domain });
+        const roundTrip = resolveProduct(signal({ sourceType: "GMAIL", vendor: product!.name }));
+        expect(roundTrip).toEqual(product);
+      }
+      expect(resolveCatalogProductWebsite(`https://www.${domain}`)).toMatchObject({
+        product: { slug, name, domain }, canonicalUrl: `https://${domain}`,
+      });
+      expect(canonicalCatalogSenderDomains()).toContain(domain);
+    }
+    expect(resolveCatalogProduct({ url: "https://mail.neon.tech" })).toMatchObject({
+      product: { slug: "neon", name: "Neon", domain: "neon.com" }, canonicalUrl: "https://neon.com",
+    });
+    expect(canonicalCatalogSenderDomains()).toContain("neon.tech");
+  });
+
+  it("rejects lookalike suffixes and does not catalog unverified subproducts or shared hosting domains", () => {
+    for (const [, , domain] of expandedCatalog) {
+      for (const host of [`${domain}.example.com`, `not${domain}`]) {
+        expect(resolveCatalogProduct({ url: `https://${host}` })).toBeNull();
+      }
+      expect(resolveCatalogProductWebsite(`https://mail.${domain}`)).toBeNull();
+      expect(resolveCatalogProductWebsite(`https://${domain}/unverified-product`)).toBeNull();
+    }
+    for (const domain of ["workers.dev", "pages.dev", "supabase.co", "neon.build", "example.com"]) {
+      expect(resolveCatalogProduct({ url: `https://${domain}` })).toBeNull();
+    }
+    for (const vendor of ["Cloudflare Workers", "Readwise Reader", "Cloudflare Pages"]) {
+      expect(resolveCatalogProduct({ vendor })).toBeNull();
+    }
+  });
+
+  it("leaves mail matches as private pending proposals without usage or owner confirmation", () => {
+    for (const [, name, domain] of expandedCatalog) {
+      const input = signal({ sourceType: "GMAIL", url: `https://mail.${domain}`, observations: [] });
+      const before = structuredClone(input);
+      const proposals = proposeDrafts([input]);
+      expect(proposals).toHaveLength(1);
+      expect(proposals[0].canonicalUrl).toBe(`https://${domain}`);
+      expect(prepareImportedProp(proposals[0], "GMAIL")).toEqual({
+        visibility: "DRAFT", status: "TESTING", draftStatus: "PENDING",
+        headline: `${name} may be in your stack.`,
+        note: "Proposed from gmail evidence. Review before publishing.",
+      });
+      expect(input).toEqual(before);
+    }
+  });
+
+  it("preserves all existing catalog identities", () => {
+    for (const slug of ["clay", "github", "github-copilot", "wisprflow", "notebooklm", "notion", "devin", "devin-desktop", "windsurf", "greptile", "clerk", "convex", "nextjs", "react", "zod", "typescript"]) {
+      expect(canonicalCatalogProduct(slug)?.slug).toBe(slug);
+    }
+  });
+});
 
 describe("normalizeVendorName", () => {
   it("strips corporate suffixes and punctuation", () => {

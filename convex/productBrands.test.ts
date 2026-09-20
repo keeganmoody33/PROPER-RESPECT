@@ -6,6 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import schema from "./schema";
 import wisprReceipt from "../docs/verification/fixtures/2026-09-17-context-brands/wisprflow.json";
 import githubReceipt from "../docs/verification/fixtures/2026-09-17-context-brands/github.json";
+import { productBrandSnapshotSchema } from "../src/domain/product-brand";
 
 const modules = import.meta.glob("./**/*.ts");
 const request = makeFunctionReference<"mutation">("productBrands:requestForProp");
@@ -13,7 +14,111 @@ const claim = makeFunctionReference<"mutation">("productBrands:claim");
 const retain = makeFunctionReference<"mutation">("productBrands:retain");
 const get = makeFunctionReference<"query">("productBrands:getForProp");
 const history = makeFunctionReference<"query">("productBrands:historyForProp");
+const prepare = makeFunctionReference<"mutation">("productBrands:prepareForProps");
+const preparation = makeFunctionReference<"query">("productBrands:getPreparationForProps");
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+test("bounded preparation enrolls existing owner cards once and preserves their evidence and choices", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  const { propIds, outsiderPropId } = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const outsiderId = await ctx.db.insert("users", { authSubject: "outsider", handle: "outsider", displayName: "Other", bio: "" });
+    const productId = await ctx.db.insert("products", wisprReceipt.product);
+    const prop = { userId, productId, visibility: "PRIVATE" as const, status: "TESTING" as const, headline: "My saved words", note: "Keep my history" };
+    return { propIds: [await ctx.db.insert("props", prop), await ctx.db.insert("props", prop)], outsiderPropId: await ctx.db.insert("props", { ...prop, userId: outsiderId }) };
+  });
+  const unchanged = () => t.run(async ctx => ({ props: await ctx.db.query("props").collect(), products: await ctx.db.query("products").collect(), raw: await ctx.db.query("rawEvidence").collect(), published: await ctx.db.query("publishedProfiles").collect() }));
+  const before = await unchanged();
+  await expect(t.mutation(prepare, { propIds })).rejects.toThrow("Authentication required");
+  await expect(t.query(preparation, { propIds })).rejects.toThrow("Authentication required");
+  const owner = t.withIdentity({ subject: "owner" });
+  await expect(owner.mutation(prepare, { propIds: [...propIds, outsiderPropId] })).rejects.toThrow("Product unavailable");
+  await expect(owner.query(preparation, { propIds: [outsiderPropId] })).rejects.toThrow("Product unavailable");
+  await expect(owner.mutation(prepare, { propIds: Array(26).fill(propIds[0]) })).rejects.toThrow("at most 25");
+  expect(await t.run(ctx => ctx.db.query("productBrandJobs").collect())).toHaveLength(0);
+  expect(await owner.query(preparation, { propIds })).toEqual(propIds.map(propId => ({ propId, status: "NOT_REQUESTED" })));
+  expect(await owner.mutation(prepare, { propIds: [...propIds, propIds[0]] })).toEqual({ prepared: 1 });
+  await owner.mutation(prepare, { propIds });
+  expect(await owner.query(preparation, { propIds })).toEqual(propIds.map(propId => ({ propId, status: "PENDING" })));
+  expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").collect())).toHaveLength(1);
+  const job = (await t.run(ctx => ctx.db.query("productBrandJobs").unique()))!;
+  await t.mutation(claim, { productId: job.productId, generation: 1 });
+  await t.mutation(retain, { productId: job.productId, generation: 1, snapshot: wisprReceipt.snapshot, responseJson: JSON.stringify(wisprReceipt.response) });
+  vi.setSystemTime(Date.now() + 60_001);
+  await owner.mutation(prepare, { propIds });
+  expect(await owner.query(preparation, { propIds })).toEqual(propIds.map(propId => ({ propId, status: "READY" })));
+  expect((await t.run(ctx => ctx.db.query("productBrandJobs").unique()))?.generation).toBe(1);
+  expect(await unchanged()).toEqual(before);
+});
+
+test("preparation failures respect cooldown and an explicit later retry queues one generation", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  const propId = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const productId = await ctx.db.insert("products", wisprReceipt.product);
+    return ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: "", note: "" });
+  });
+  const owner = t.withIdentity({ subject: "owner" });
+  await owner.mutation(prepare, { propIds: [propId] });
+  const job = (await t.run(ctx => ctx.db.query("productBrandJobs").unique()))!;
+  await t.mutation(claim, { productId: job.productId, generation: 1 });
+  await t.mutation(makeFunctionReference<"mutation">("productBrands:fail"), { productId: job.productId, generation: 1, reason: "RETRIEVAL_FAILED" });
+  await owner.mutation(prepare, { propIds: [propId] });
+  expect(await owner.query(preparation, { propIds: [propId] })).toEqual([{ propId, status: "FAILED" }]);
+  expect((await t.run(ctx => ctx.db.query("productBrandJobs").unique()))?.generation).toBe(1);
+  vi.setSystemTime(Date.now() + 60_001);
+  await owner.mutation(prepare, { propIds: [propId] });
+  expect((await t.run(ctx => ctx.db.query("productBrandJobs").unique()))?.generation).toBe(1);
+  await owner.mutation(prepare, { propIds: [propId], retryFailed: true });
+  await owner.mutation(prepare, { propIds: [propId], retryFailed: true });
+  expect((await t.run(ctx => ctx.db.query("productBrandJobs").unique()))?.generation).toBe(2);
+});
+
+test("subproducts cannot enroll or display parent domain branding, including older retained snapshots", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  const propIds = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const ids = [];
+    for (const [slug, name, domain] of [["github-copilot", "GitHub Copilot", "github.com"], ["manual-copilot-existing", "GitHub Copilot", "github.com"], ["devin-desktop", "Devin Desktop", "devin.ai"], ["notebooklm", "NotebookLM", "notebooklm.google.com"], ["manual-notebooklm-existing", "NotebookLM", "notebooklm.google.com"]]) {
+      const productId = await ctx.db.insert("products", { slug, name, domain, description: "AI coding" });
+      const snapshotId = await ctx.db.insert("productBrandSnapshots", { productId, generation: 1, snapshot: productBrandSnapshotSchema.parse({ ...githubReceipt.snapshot, productSlug: slug, canonicalDomain: domain,
+        ...(name === "NotebookLM" ? { logos: [{ url: "https://example.com/google-parent-logo.svg", mode: "unknown", type: "icon" }] } : {}),
+      }), responseJson: JSON.stringify(githubReceipt.response) });
+      await ctx.db.insert("productBrandJobs", { productId, canonicalDomain: domain, generation: 1, status: "READY", requestedAt: Date.now(), currentSnapshotId: snapshotId });
+      ids.push(await ctx.db.insert("props", { userId, productId, visibility: "PRIVATE", status: "TESTING", headline: "", note: "" }));
+    }
+    return ids;
+  });
+  const owner = t.withIdentity({ subject: "owner" });
+  await owner.mutation(prepare, { propIds });
+  for (const propId of propIds) {
+    expect(await owner.mutation(request, { propId })).toEqual({ status: "PRODUCT_IDENTITY_REQUIRED" });
+    expect(await owner.query(get, { propId })).toMatchObject({ status: "PRODUCT_IDENTITY_REQUIRED", current: null });
+  }
+  expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").collect())).toHaveLength(0);
+});
+
+test("NotebookLM does not request domain-only enrichment even for its exact catalog subdomain", async () => {
+  vi.useFakeTimers();
+  vi.stubEnv("CONTEXT_DEV_API_KEY", "synthetic-test-key");
+  const t = convexTest(schema, modules);
+  const propId = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const productId = await ctx.db.insert("products", { slug: "notebooklm", name: "NotebookLM", domain: "notebooklm.google.com", description: "Research" });
+    return ctx.db.insert("props", { userId, productId, visibility: "PRIVATE", status: "TESTING", headline: "", note: "" });
+  });
+  const fetcher = vi.fn(async () => Response.json({ status: "ok", brand: { domain: "google.com", logos: [], colors: [] } }));
+  vi.stubGlobal("fetch", fetcher);
+  const owner = t.withIdentity({ subject: "owner" });
+  await owner.mutation(prepare, { propIds: [propId] });
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await owner.query(get, { propId })).toMatchObject({ status: "PRODUCT_IDENTITY_REQUIRED", current: null });
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(await t.run(ctx => ctx.db.query("productBrandSnapshots").collect())).toHaveLength(0);
+});
 
 test("a previously manual Clay entry can load its verified brand without rewriting owner history", async () => {
   vi.useFakeTimers();
@@ -70,10 +175,12 @@ test("publishing a collection with duplicate product relationships queues one br
     return [await ctx.db.insert("props", prop), await ctx.db.insert("props", prop)];
   });
   const owner = t.withIdentity({ subject: "owner" });
-  await owner.mutation(makeFunctionReference<"mutation">("onboarding:publishSelected"), { selections: propIds.map(propId => ({
+  const publication = { selections: propIds.map(propId => ({
     propId, publish: true, status: "TESTING", headline: "Private candidate", note: "", autoRefresh: false,
     primaryLink: { type: "CANONICAL", url: "https://wisprflow.ai", label: "Visit" },
-  })) });
+  })) } as const;
+  const preview = await owner.query(makeFunctionReference<"query">("onboarding:previewPublication"), { selections: [...publication.selections] });
+  await owner.mutation(makeFunctionReference<"mutation">("onboarding:publishSelected"), { selections: [...publication.selections], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
   expect(await t.run(ctx => ctx.db.query("productBrandJobs").collect())).toHaveLength(1);
   const scheduled = await t.run(ctx => ctx.db.system.query("_scheduled_functions").collect());
   expect(scheduled.filter(job => job.name === "productBrands:refresh")).toHaveLength(1);

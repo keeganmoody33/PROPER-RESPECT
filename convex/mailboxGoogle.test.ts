@@ -73,6 +73,26 @@ test("cross-owner and expired OAuth states fail before provider I/O", async () =
   expect(fetcher).not.toHaveBeenCalled();
 });
 
+test("Gmail read returns pending relationship ambiguity to its caller without choosing an existing record", async () => {
+  const { t, owner, ownerId } = await setup();
+  provider();
+  await t.run(async ctx => {
+    const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "" });
+    for (const status of ["ACTIVE", "ARCHIVED"] as const) await ctx.db.insert("props", {
+      userId: ownerId, productId, status, visibility: "PRIVATE", headline: "Saved choice", note: "Preserve",
+    });
+  });
+  const before = await t.run(ctx => ctx.db.query("props").collect());
+  const connection = await owner.action(callback, reply(stateFrom(await owner.action(start, {}))));
+  expect(await owner.action(read, { accountId: connection.accountId, expectedGeneration: 1 })).toMatchObject({
+    readCount: 1, proposals: 1, hasMore: false,
+    ambiguousProducts: [{ productSlug: "github", reason: "MULTIPLE_OWNER_RELATIONSHIPS" }],
+  });
+  expect(await t.run(ctx => ctx.db.query("props").collect())).toEqual(before);
+  expect(await t.run(ctx => ctx.db.query("rawEvidence").collect())).toHaveLength(1);
+  expect(await t.run(ctx => ctx.db.query("proofs").collect())).toEqual([]);
+});
+
 test.each(["openid email", `${scope} https://www.googleapis.com/auth/gmail.modify`])("partial or broad grant cannot create an account: %s", async granted => {
   const { t, owner } = await setup();
   provider("google-sub", granted);

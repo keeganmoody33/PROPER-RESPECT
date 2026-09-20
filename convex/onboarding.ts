@@ -1,16 +1,19 @@
+import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { addManualProductArgs, addManualProductHandler } from "./manualProducts";
 import { ensureProductBrand, retainedProductBrand } from "./productBrands";
 import { v, type Infer } from "convex/values";
-import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireIdentity, requireUser } from "./authHelpers";
 import { claimableHandleSchema } from "../src/domain/onboarding";
 import { projectPublicProfile, publicProfileSchema } from "../src/domain/public-profile";
+import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evidence-upload";
 import { resolveProduct } from "../src/domain/discovery";
 import { costSchema } from "../src/domain/cost";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { resolvePublishedCardPropIds } from "./publication";
+import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
 import {
   activityModuleValidator,
   linkTypeValidator,
@@ -23,6 +26,23 @@ import {
 function pendingHandle(subject: string) {
   const suffix = subject.toLowerCase().replace(/[^a-z0-9]/g, "").slice(-24);
   return `pending-${suffix || "account"}`;
+}
+
+async function ownersForHandle(ctx: QueryCtx | MutationCtx, handle: string) {
+  return ctx.db.query("users").withIndex("by_handle", q => q.eq("handle", handle)).take(2);
+}
+
+async function availablePendingHandle(ctx: MutationCtx, subject: string) {
+  const base = pendingHandle(subject);
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const handle = attempt === 0 ? base : `${base}-${attempt}`;
+    const owners = await ownersForHandle(ctx, handle);
+    if (owners.length > 0) continue;
+    const publication = await ctx.db.query("publishedProfiles")
+      .withIndex("by_handle", q => q.eq("handle", handle)).first();
+    if (!publication) return handle;
+  }
+  throw new Error("An available account handle could not be reserved. No account was created.");
 }
 
 export const ensureAccount = mutation({
@@ -40,10 +60,11 @@ export const ensureAccount = mutation({
       .unique();
     if (existing) return existing._id;
 
+    const handle = await availablePendingHandle(ctx, identity.subject);
     const now = new Date().toISOString();
     return await ctx.db.insert("users", {
       authSubject: identity.subject,
-      handle: pendingHandle(identity.subject),
+      handle,
       displayName:
         args.displayName ?? identity.name ?? identity.email ?? "New linker",
       bio: "",
@@ -64,12 +85,18 @@ export const claimHandle = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const handle = claimableHandleSchema.parse(args.handle);
-    const owner = await ctx.db
-      .query("users")
-      .withIndex("by_handle", (q) => q.eq("handle", handle))
-      .unique();
-    if (owner && owner._id !== user._id) {
+    const owners = await ownersForHandle(ctx, handle);
+    if (owners.some(owner => owner._id !== user._id)) {
       throw new Error("That handle is already claimed.");
+    }
+
+    if (handle !== user.handle) {
+      const currentPublication = await ctx.db.query("publishedProfiles")
+        .withIndex("by_handle", q => q.eq("handle", user.handle)).unique();
+      if (currentPublication) throw new Error("A published handle cannot be changed here. Its public identity requires a separate owner-verified migration.");
+      const targetPublication = await ctx.db.query("publishedProfiles")
+        .withIndex("by_handle", q => q.eq("handle", handle)).unique();
+      if (targetPublication) throw new Error("That handle already has a published profile and cannot be claimed here.");
     }
 
     const now = new Date().toISOString();
@@ -168,13 +195,18 @@ export const getState = query({
         const publishedActivity = approvedCards.length > 0 && approvedCards.every(card =>
           canonicalJson(card.activity) === canonicalJson(approvedCards[0].activity))
           ? approvedCards[0].activity : undefined;
-        return { prop, product: product && brand ? { ...product, brand } : product, links, claims, publishedActivity };
+        const associatedAccountEvidence = product
+          ? await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug)
+          : [];
+        return { prop, product: product && brand ? { ...product, brand } : product, links, claims,
+          isPublishedAtCurrentHandle: approvedCards.length > 0, publishedActivity, associatedAccountEvidence };
       }),
     );
 
     return {
       user,
       cards,
+      hasPublicationAtCurrentHandle: published !== null,
       brandEnrichmentAvailable: true,
       privateInventoryAvailable: true,
       drafts,
@@ -196,6 +228,7 @@ export const getState = query({
         evidenceSourceId: item.evidenceSourceId,
         userId: item.userId,
         storageId: item.storageId,
+        uploadAttribution: item.storageId ? uploadAttributionStatus(item.uploadAttribution) : undefined,
         filename: item.filename,
         mimeType: item.mimeType,
         byteSize: item.byteSize,
@@ -226,11 +259,67 @@ export const reviewClaim = mutation({
   },
 });
 
+// Old clients must reload instead of creating new storage objects with no owner binding.
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
     await requireUser(ctx);
-    return await ctx.storage.generateUploadUrl();
+    throw new Error("Reload the application to use authenticated file uploads.");
+  },
+});
+
+export const beginUpload = mutation({
+  args: { filename: v.string(), mimeType: v.string(), byteSize: v.number(), vendor: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const identity = await requireIdentity(ctx);
+    const { mimeType } = classifyEvidenceUpload(args);
+    if ((args.vendor?.length ?? 0) > 200) throw new Error("Invalid product name.");
+    const site = process.env.CONVEX_SITE_URL;
+    if (!site) throw new Error("Authenticated upload endpoint is not configured.");
+    const id = await ctx.db.insert("uploadTickets", {
+      ...args, mimeType, userId: user._id, tokenIdentifier: identity.tokenIdentifier,
+      createdAt: Date.now(), expiresAt: Date.now() + 10 * 60 * 1000,
+    });
+    const url = new URL("/evidence-upload", site);
+    url.searchParams.set("ticket", id);
+    return { ticketId: id, uploadUrl: url.toString() };
+  },
+});
+
+async function ownedUploadTicket(ctx: QueryCtx | MutationCtx, ticketId: Id<"uploadTickets">) {
+  const user = await requireUser(ctx);
+  const identity = await requireIdentity(ctx);
+  const ticket = await ctx.db.get(ticketId);
+  if (!ticket || ticket.userId !== user._id || ticket.tokenIdentifier !== identity.tokenIdentifier)
+    throw new Error("Upload unavailable.");
+  if (ticket.expiresAt <= Date.now() && !ticket.evidenceId) throw new Error("Upload expired. Choose the file again.");
+  if (ticket.evidenceId) {
+    const evidence = await ctx.db.get(ticket.evidenceId);
+    if (!evidence || evidence.deletedAt) throw new Error("Upload unavailable.");
+  }
+  return ticket;
+}
+
+export const uploadTicket = internalQuery({
+  args: { ticketId: v.id("uploadTickets") },
+  handler: (ctx, args) => ownedUploadTicket(ctx, args.ticketId),
+});
+
+// Only the HTTP byte-receiving handler calls this; a client cannot bind a supplied ID.
+export const bindUploadedFile = internalMutation({
+  args: { ticketId: v.id("uploadTickets"), storageId: v.id("_storage"), sha256: v.string() },
+  handler: async (ctx, args) => {
+    const ticket = await ownedUploadTicket(ctx, args.ticketId);
+    if (ticket.storageId) {
+      if (ticket.sha256 !== args.sha256) throw new Error("Upload already used for different bytes.");
+      return ticket.storageId;
+    }
+    const file = await ctx.db.system.get(args.storageId);
+    if (!file || file.size !== ticket.byteSize || normalizeUploadMime(file.contentType ?? "") !== ticket.mimeType)
+      throw new Error("Stored file metadata does not match this upload.");
+    await ctx.db.patch(ticket._id, { storageId: args.storageId, sha256: args.sha256, receivedAt: new Date().toISOString() });
+    return args.storageId;
   },
 });
 
@@ -240,24 +329,44 @@ export const retainUpload = mutation({
     filename: v.string(),
     mimeType: v.string(),
     byteSize: v.number(),
-    sourceType: v.union(v.literal("SCREENSHOT"), v.literal("CSV")),
+    sourceType: v.union(v.literal("SCREENSHOT"), v.literal("CSV"), v.literal("FILE_UPLOAD")),
     vendor: v.optional(v.string()),
     activity: v.optional(activityModuleValidator),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
+    if (args.activity) throw new Error("Upload retention cannot add measurements. Review selected observations separately.");
+    const storage = await ctx.db.system.get(args.storageId);
+    if (!storage || storage.size !== args.byteSize || normalizeUploadMime(storage.contentType ?? "") !== normalizeUploadMime(args.mimeType)) {
+      throw new Error("Stored file metadata does not match this upload.");
+    }
+    const existing = await ctx.db.query("rawEvidence").withIndex("by_storage", q => q.eq("storageId", args.storageId)).first();
+    if (existing) {
+      if (existing.userId !== user._id || existing.deletedAt) throw new Error("Upload unavailable.");
+      if (existing.filename !== args.filename || existing.mimeType !== args.mimeType || existing.byteSize !== args.byteSize || existing.detectedVendor !== args.vendor) {
+        throw new Error("This upload was already retained with different metadata.");
+      }
+      return existing._id;
+    }
+    const { sourceType } = classifyEvidenceUpload(args);
+    const ticket = await ctx.db.query("uploadTickets").withIndex("by_storage", q => q.eq("storageId", args.storageId)).unique();
+    if (!ticket) throw new Error("Upload unavailable. Choose the file again through authenticated upload.");
+    await ownedUploadTicket(ctx, ticket._id);
+    if (ticket.evidenceId || !ticket.sha256 || !ticket.receivedAt) throw new Error("Upload unavailable.");
+    if (ticket.filename !== args.filename || ticket.mimeType !== normalizeUploadMime(args.mimeType) || ticket.byteSize !== args.byteSize || ticket.vendor !== args.vendor)
+      throw new Error("Upload metadata differs from the authenticated upload.");
     const now = new Date().toISOString();
     let source = await ctx.db
       .query("evidenceSources")
       .withIndex("by_user_type_sourceKey", (q) =>
-        q.eq("userId", user._id).eq("type", args.sourceType).eq("sourceKey", undefined),
+        q.eq("userId", user._id).eq("type", sourceType).eq("sourceKey", undefined),
       )
       .first();
     if (!source) {
       const sourceId = await ctx.db.insert("evidenceSources", {
         userId: user._id,
-        type: args.sourceType,
-        label: `${args.sourceType.toLowerCase()} uploads`,
+        type: sourceType,
+        label: `${sourceType.toLowerCase()} uploads`,
         connectedAt: now,
         lastSyncedAt: now,
       });
@@ -268,17 +377,28 @@ export const retainUpload = mutation({
       evidenceSourceId: source._id,
       userId: user._id,
       storageId: args.storageId,
+      uploadAttribution: {
+        status: "VERIFIED_OWNER_SESSION", userId: user._id,
+        tokenIdentifier: ticket.tokenIdentifier, ticketId: ticket._id,
+        receivedAt: ticket.receivedAt, sha256: ticket.sha256,
+      },
       filename: args.filename,
       mimeType: args.mimeType,
       byteSize: args.byteSize,
       detectedVendor: args.vendor,
       capturedAt: now,
       dedupKey: `${user._id}:${args.storageId}`,
+      captureProvenance: {
+        version: 1, route: "UPLOAD", adapter: { id: "evidence-upload", version: "2" },
+        origin: { issuer: "OWNER_SUPPLIED_FILE", artifactRef: args.storageId },
+        collector: { kind: "UNKNOWN" }, activityActor: { kind: "UNKNOWN" },
+      },
+      limitations: ["Retained original only. File contents and publisher authenticity have not been verified; no usage has been extracted."],
     });
 
     if (args.vendor) {
       const proposed = resolveProduct({
-        sourceType: args.sourceType,
+        sourceType,
         vendor: args.vendor,
         capturedAt: now,
         payload: "",
@@ -308,9 +428,8 @@ export const retainUpload = mutation({
             productId: product._id,
             status: "TESTING",
             visibility: "DRAFT",
-            headline: `${product.name} is in my stack.`,
-            note: "Imported evidence is private until I approve this card.",
-            activity: args.activity,
+            headline: `${product.name}: uploaded evidence to review.`,
+            note: "This file has not been interpreted as product use. Review it before describing your relationship.",
           });
           prop = (await ctx.db.get(propId))!;
           await ctx.db.insert("links", {
@@ -320,9 +439,12 @@ export const retainUpload = mutation({
             label: `Open ${product.name}`,
             isPrimary: true,
           });
-        } else if (prop.visibility === "DRAFT" && args.activity) {
-          await ctx.db.patch(prop._id, { activity: args.activity });
         }
+        await ctx.db.insert("proofs", {
+          propId: prop._id, rawEvidenceId: evidenceId,
+          type: sourceType === "SCREENSHOT" ? "SCREENSHOT" : "FILE_UPLOAD",
+          label: "Private uploaded original", text: "Original retained without extracting usage.",
+        });
         await ensureProductBrand(ctx, product);
         const draft = await ctx.db
           .query("draftImports")
@@ -334,7 +456,6 @@ export const retainUpload = mutation({
           .first();
         if (draft) {
           await ctx.db.patch(draft._id, {
-            status: "PENDING",
             resultPropId: prop._id,
             rawEvidenceIds: [
               ...new Set([...draft.rawEvidenceIds, evidenceId]),
@@ -356,6 +477,7 @@ export const retainUpload = mutation({
       }
     }
 
+    await ctx.db.patch(ticket._id, { evidenceId });
     await ctx.db.patch(user._id, {
       onboardingStatus: "REVIEW",
       updatedAt: now,
@@ -415,6 +537,8 @@ type PublicationSelection = Infer<typeof selectionValidator>;
 
 /** Both preview and commit use this projection, before any write occurs. */
 async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users">, selections: PublicationSelection[]) {
+  const owners = await ownersForHandle(ctx, user.handle);
+  if (owners.length !== 1 || owners[0]._id !== user._id) throw new Error("Publication requires the unique owner of this handle. Resolve account ownership before sharing.");
   if (selections.length > 100) throw new Error("Select at most 100 relationships to change.");
   const selectedIds = new Set(selections.map(selection => selection.propId));
   if (selectedIds.size !== selections.length) throw new Error("Select each relationship only once.");
@@ -496,12 +620,12 @@ export const previewPublication = query({
 });
 
 export const publishSelected = mutation({
-  args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.optional(v.number()), expectedPreviewHash: v.optional(v.string()) },
+  args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.number(), expectedPreviewHash: v.string() },
   handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash }) => {
     const user = await requireUser(ctx);
     const prepared = await preparePublication(ctx, user, selections);
-    if (expectedPublicationRevision !== undefined && expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");
-    if (expectedPreviewHash !== undefined && expectedPreviewHash !== prepared.previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
+    if (expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");
+    if (expectedPreviewHash !== prepared.previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
     const now = new Date().toISOString();
     const brandProductIds = new Set<Id<"products">>();
     for (const selection of selections) {

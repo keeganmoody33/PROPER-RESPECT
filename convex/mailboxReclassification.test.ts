@@ -107,6 +107,32 @@ test.each(["PENDING", "DISMISSED", "LINKED"] as const)("later catalog recognitio
   for (const table of ["usageSignals", "claimReviews", "publishedProfiles"] as const) expect(await t.run(ctx => ctx.db.query(table).collect())).toEqual([]);
 });
 
+test("ambiguous discovery is retained in the mailbox receipt and replays without changing relationships or originals", async () => {
+  const { t, owner, ownerId, accountId, original } = await fixture();
+  await t.run(async ctx => {
+    const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "" });
+    for (const status of ["ACTIVE", "ARCHIVED"] as const) await ctx.db.insert("props", {
+      userId: ownerId, productId, status, visibility: "PRIVATE", headline: "Saved choice", note: "Preserve",
+    });
+  });
+  const props = await t.run(ctx => ctx.db.query("props").collect());
+  const scan = await owner.mutation(startScan, { accountId, expectedGeneration: 1, mode: "KNOWN_PRODUCTS" });
+  const batch = page(accountId, scan, [recognized()]);
+  const result = await t.mutation(persist, batch);
+  expect(result).toMatchObject({
+    createdDrafts: [], ambiguousProducts: [{ productSlug: "github", reason: "MULTIPLE_OWNER_RELATIONSHIPS" }],
+  });
+  const context = await t.run(ctx => ctx.db.get(scan.contextId!));
+  expect(await t.mutation(persist, batch)).toEqual(result);
+  expect(await t.run(ctx => ctx.db.get(scan.contextId!))).toEqual(context);
+  expect(await t.run(ctx => ctx.db.query("props").collect())).toEqual(props);
+  expect(await t.run(ctx => ctx.db.query("rawEvidence").collect())).toEqual([original]);
+  expect(await t.run(ctx => ctx.db.query("proofs").collect())).toEqual([]);
+  const draft = (await t.run(ctx => ctx.db.query("draftImports").unique()))!;
+  expect(draft).toMatchObject({ status: "PENDING", rawEvidenceIds: [original._id] });
+  expect(draft.resultPropId).toBeUndefined();
+});
+
 test.each(["payload", "observations", "actor", "origin"] as const)("catalog recognition cannot bypass the original %s collision guard", async changed => {
   const { t, owner, accountId, original, unmatched } = await fixture();
   const scan = await owner.mutation(startScan, { accountId, expectedGeneration: 1, mode: "KNOWN_PRODUCTS" });

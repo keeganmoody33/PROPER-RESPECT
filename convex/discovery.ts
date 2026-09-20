@@ -14,7 +14,7 @@ import {
 
 type ProofType = Doc<"proofs">["type"];
 
-const PROOF_TYPE_BY_SOURCE: Record<RawSignal["sourceType"], ProofType> = {
+export const PROOF_TYPE_BY_SOURCE: Record<RawSignal["sourceType"], ProofType> = {
   MANUAL: "NOTE",
   PUBLIC_PROFILE: "NOTE",
   GITHUB: "GITHUB_REPO",
@@ -26,6 +26,7 @@ const PROOF_TYPE_BY_SOURCE: Record<RawSignal["sourceType"], ProofType> = {
   MICROSOFT_MAIL: "EMAIL_EVIDENCE",
   SCREENSHOT: "SCREENSHOT",
   CSV: "BROWSER_HISTORY_EXPORT",
+  FILE_UPLOAD: "FILE_UPLOAD",
   URL_IMPORT: "NOTE",
   DEVIN: "API_OAUTH",
   DEVIN_DESKTOP: "SCREENSHOT",
@@ -46,7 +47,10 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
   signals: RawSignal[];
   // Later catalog recognition describes a linked proposal, not a new capture.
   catalogClassifications?: ReadonlyMap<number, { vendor: string; url: string }>;
+  // Reclassify originals without claiming a new capture or source refresh.
+  retainedOnly?: boolean;
 }) {
+  if (args.retainedOnly && (!args.evidenceSourceId || !args.sourceKey)) throw new Error("Retained reclassification requires an existing source.");
   if (args.sourceKey !== undefined && (!args.sourceKey.trim() || args.sourceKey.length > 512)) {
     throw new Error("A stable source account key is required and must fit within 512 characters.");
   }
@@ -81,8 +85,9 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
     if (source.userId !== user._id || source.type !== args.sourceType || source.sourceKey !== args.sourceKey) {
       throw new Error("Evidence source identity mismatch.");
     }
-    await ctx.db.patch(source._id, { lastSyncedAt: now });
+    if (!args.retainedOnly) await ctx.db.patch(source._id, { lastSyncedAt: now });
   } else {
+    if (args.retainedOnly) throw new Error("Retained reclassification requires an existing source.");
     const sourceId = await ctx.db.insert("evidenceSources", {
       userId: user._id,
       type: args.sourceType,
@@ -110,6 +115,9 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       .withIndex("by_dedup_key", (q) => q.eq("dedupKey", dedupKey))
       .unique();
     if (existing) {
+      if (args.retainedOnly && (existing.userId !== user._id || existing.evidenceSourceId !== source._id || existing.deletedAt)) {
+        throw new Error("Retained evidence identity mismatch.");
+      }
       if (canonicalPrivateEvidence({ payload: existing.payload ?? "", observations: existing.observations ?? [] }) !== canonicalPrivateEvidence({ payload: signal.payload, observations: signal.observations ?? [] }) ||
         (args.sourceKey !== undefined && (existing.detectedVendor !== signal.vendor || existing.detectedUrl !== signal.url))) {
         throw new Error("Evidence identity collision: changed extraction requires a linked versioned capture; never overwrite the original.");
@@ -129,6 +137,7 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       evidenceIds.push(existing._id);
       continue;
     }
+    if (args.retainedOnly) throw new Error("Retained reclassification cannot create a capture.");
     const evidenceId = await ctx.db.insert("rawEvidence", {
       evidenceSourceId: source._id,
       userId: user._id,
@@ -150,6 +159,7 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
   });
   const proposals = proposeDrafts(proposalSignals);
   const createdDrafts: string[] = [];
+  const ambiguousProducts: Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }> = [];
 
   for (const proposal of proposals) {
     const rawEvidenceIds = proposal.signalIndexes.map(
@@ -212,17 +222,27 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       product = (await ctx.db.get(productId))!;
     }
 
-    // A handle can be renamed or reassigned. Follow the owner's existing
-    // draft relationship, and key any new relationship by immutable owner ID.
+    // Explicit draft mappings win. Without one, seed identity cannot choose
+    // between existing owner decisions for the same product.
     const newPropSeedKey = JSON.stringify(["owner-import-v1", user._id, proposal.product.slug]);
     if (!prop) {
-      prop = await ctx.db.query("props")
-        .withIndex("by_seed_key", (q) => q.eq("seedKey", newPropSeedKey)).unique();
+      const candidates = await ctx.db.query("props")
+        .withIndex("by_user_product", (q) => q.eq("userId", user._id).eq("productId", product._id))
+        .take(2);
+      if (candidates.length > 1) {
+        await ctx.db.patch(draft._id, {
+          rawEvidenceIds: [...new Set([...draft.rawEvidenceIds, ...rawEvidenceIds])],
+        });
+        ambiguousProducts.push({ productSlug: product.slug, reason: "MULTIPLE_OWNER_RELATIONSHIPS" });
+        continue;
+      }
+      prop = candidates[0] ?? null;
     }
     if (prop && (prop.userId !== user._id || prop.productId !== product._id)) {
       throw new Error("Relationship owner or product mismatch.");
     }
     const propSeedKey = prop?.seedKey ?? newPropSeedKey;
+    const creatingProp = !prop;
     if (!prop) {
       const propId = await ctx.db.insert("props", {
         seedKey: propSeedKey,
@@ -244,7 +264,7 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       .withIndex("by_prop", (q) => q.eq("propId", prop._id))
       .filter((q) => q.eq(q.field("isPrimary"), true))
       .first();
-    if (!existingLink) {
+    if (creatingProp && !existingLink) {
       await ctx.db.insert("links", {
         seedKey: linkSeedKey,
         propId: prop._id,
@@ -255,17 +275,18 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
       });
     }
 
-    const existingProofs = await ctx.db
-      .query("proofs")
-      .withIndex("by_prop", (q) => q.eq("propId", prop._id))
-      .collect();
-    const proofEvidenceIds = new Set(existingProofs.map(proof => proof.rawEvidenceId));
+    const proofEvidenceIds = new Set<Id<"rawEvidence">>();
     for (const index of proposal.signalIndexes) {
       const signal = proposalSignals[index];
       const rawEvidenceId = evidenceIds[index];
       if (proofEvidenceIds.has(rawEvidenceId)) {
         continue;
       }
+      proofEvidenceIds.add(rawEvidenceId);
+      const existingProof = await ctx.db.query("proofs")
+        .withIndex("by_propId_and_rawEvidenceId", q => q.eq("propId", prop._id).eq("rawEvidenceId", rawEvidenceId))
+        .first();
+      if (existingProof) continue;
       await ctx.db.insert("proofs", {
         propId: prop._id,
         type: PROOF_TYPE_BY_SOURCE[signal.sourceType],
@@ -273,7 +294,6 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
         label: signal.vendor,
         rawEvidenceId,
       });
-      proofEvidenceIds.add(rawEvidenceId);
     }
 
     await ctx.db.patch(draft._id, {
@@ -288,6 +308,7 @@ export async function ingestSignalsForOwner(ctx: MutationCtx, args: {
     ingestedSignals: args.signals.length,
     proposals: proposals.length,
     createdDrafts,
+    ambiguousProducts,
   };
 }
 
@@ -320,6 +341,7 @@ type IngestResult = {
   ingestedSignals: number;
   proposals: number;
   createdDrafts: string[];
+  ambiguousProducts: Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }>;
 };
 
 export const syncGithub = internalAction({

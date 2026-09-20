@@ -1,3 +1,4 @@
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation, mutation, query } from "./_generated/server";
@@ -10,6 +11,68 @@ import { rawSignalSchema, resolveCatalogProduct } from "../src/domain/discovery"
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { MAILBOX_PAGE_LIMIT } from "../src/server/mailbox-search";
+import { senderDomain } from "../src/domain/mailbox-sender";
+
+/** Revisit retained headers only. Its pagination cursor is never a provider cursor. */
+export const recheckRetained = mutation({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    const owner = await requireUser(ctx);
+    if (!Number.isSafeInteger(args.paginationOpts.numItems) || args.paginationOpts.numItems < 1) throw new Error("Invalid page size.");
+    const page = await ctx.db.query("mailboxUnknownRecords")
+      .withIndex("by_owner_status", q => q.eq("ownerId", owner._id).eq("status", "PENDING"))
+      .order("asc").paginate({ ...args.paginationOpts, numItems: Math.min(10, args.paginationOpts.numItems), maximumRowsRead: 10 });
+    const result = { continueCursor: page.continueCursor, isDone: page.isDone, examined: page.page.length,
+      matched: 0, createdDrafts: 0, alreadyClassified: 0, unmatched: 0, skipped: 0,
+      ambiguousProducts: [] as Array<{ productSlug: string; reason: "MULTIPLE_OWNER_RELATIONSHIPS" }> };
+    for (const record of page.page) {
+      const raw = await ctx.db.get(record.rawEvidenceId);
+      const account = await ctx.db.get(record.accountId);
+      const source = raw ? await ctx.db.get(raw.evidenceSourceId) : null;
+      if (!raw || !account || !source || record.ownerId !== owner._id || raw.userId !== owner._id ||
+          account.ownerId !== owner._id || source.userId !== owner._id || raw.evidenceSourceId !== account.evidenceSourceId ||
+          source.type !== mailboxSourceType(account.provider) || source.sourceKey !== mailboxSourceKey(account.provider, account.providerAccountId) ||
+          raw.sourceRecordId !== record.sourceRecordId || raw.dedupKey !== JSON.stringify(["source-v1", source._id, ["record", record.sourceRecordId]])) {
+        throw new Error("Retained mailbox integrity mismatch.");
+      }
+      if (raw.deletedAt) { result.skipped++; continue; }
+      const provenance = raw.captureProvenance;
+      if (!provenance || provenance.origin.issuer !== account.provider || provenance.origin.accountId !== account.providerAccountId ||
+          provenance.origin.recordId !== record.sourceRecordId || !["DIRECT_API", "MCP", "WEBMCP", "BROWSER_AGENT"].includes(provenance.route) ||
+          raw.detectedVendor !== undefined || raw.detectedUrl !== undefined || (raw.observations?.length ?? 0) !== 0) {
+        throw new Error("Retained mailbox integrity mismatch.");
+      }
+      // Only this known metadata shape can supply a sender. Other retained
+      // formats stay available for owner review instead of blocking later pages.
+      let metadata: { id?: unknown; headers?: { from?: unknown } };
+      try { metadata = JSON.parse(raw.payload ?? ""); } catch { result.skipped++; continue; }
+      if (!metadata || typeof metadata !== "object" || !metadata.headers || typeof metadata.headers.from !== "string") {
+        result.skipped++; continue;
+      }
+      if (metadata.id !== record.sourceRecordId || senderDomain(metadata.headers.from) !== (record.senderDomain ?? null)) {
+        throw new Error("Retained mailbox integrity mismatch.");
+      }
+      const classification = record.senderDomain ? resolveCatalogProduct({ url: `https://${record.senderDomain}` }) : null;
+      if (!classification) { result.unmatched++; continue; }
+      result.matched++;
+      const draft = await ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", owner._id).eq("suggestedProductSlug", classification.product.slug)).first();
+      if (draft && !["PENDING", "APPROVED", "MERGED"].includes(draft.status)) { result.skipped++; continue; }
+      if (draft?.rawEvidenceIds.includes(raw._id)) { result.alreadyClassified++; continue; }
+      const ingested = await ingestSignalsForOwner(ctx, {
+        ownerId: owner._id, sourceType: source.type, evidenceSourceId: source._id, sourceKey: source.sourceKey,
+        retainedOnly: true,
+        signals: [{ sourceType: source.type, sourceRecordId: raw.sourceRecordId, vendor: raw.detectedVendor, url: raw.detectedUrl,
+          payload: raw.payload!, capturedAt: raw.capturedAt, observations: raw.observations, captureProvenance: provenance }],
+        catalogClassifications: new Map([[0, { vendor: classification.product.name, url: classification.canonicalUrl }]]),
+      });
+      result.createdDrafts += ingested.createdDrafts.length;
+      for (const ambiguous of ingested.ambiguousProducts) {
+        if (!result.ambiguousProducts.some(item => item.productSlug === ambiguous.productSlug)) result.ambiguousProducts.push(ambiguous);
+      }
+    }
+    return result;
+  },
+});
 
 // Worker seam only: no browser-provided payload or mutable handle determines
 // ownership. All validation, originals, private drafts, receipt and cursor live
@@ -32,6 +95,8 @@ export const persistBatch = internalMutation({
     if (!job || job.accountId !== account._id || job.ownerId !== account.ownerId || job.generation !== account.generation) {
       throw new Error("Mailbox job ownership or generation mismatch.");
     }
+    const run = job.discoveryRunId ? await ctx.db.get(job.discoveryRunId) : null;
+    if (run && (!args.complete || args.readCount === undefined || args.signals.length > MAILBOX_PAGE_LIMIT)) throw new Error("Discovery requires a single bounded page.");
     const now = Date.now();
     if (job.status === "CANCELLED" || job.status === "EXPIRED" ||
         (job.status === "ACTIVE" && (account.activeJobId !== job._id || job.leaseExpiresAt <= now || (job.scheduled && !account.maintenanceEnabled)))) {
@@ -79,6 +144,7 @@ export const persistBatch = internalMutation({
       // It cannot mutate evidence, extend a lease or advance a cursor a second time.
       return receipt.result;
     }
+    if (job.discoveryRunId && (!run || run.status !== "RUNNING" || run.activeJobId !== job._id || account.discoveryRunId !== run._id || run.generation !== account.generation)) throw new Error("Discovery run is no longer active.");
     if (job.status !== "ACTIVE" || account.activeJobId !== job._id) throw new Error("Mailbox job lease is no longer active.");
     const context = job.contextId ? await ctx.db.get(job.contextId) : null;
     if (job.contextId && (!context || context.accountId !== account._id || context.ownerId !== account.ownerId || context.queryKey !== job.queryKey || args.queryKey !== job.queryKey)) {
@@ -88,7 +154,7 @@ export const persistBatch = internalMutation({
     if (job.cursor !== args.expectedCursor || (context ? context.cursor : account.cursor) !== args.expectedCursor) {
       throw new Error("Mailbox cursor changed; discard stale page work.");
     }
-    if (!args.complete && args.nextCursor === args.expectedCursor) throw new Error("Mailbox cursor must advance or complete the scan.");
+    if (!run && !args.complete && args.nextCursor === args.expectedCursor) throw new Error("Mailbox cursor must advance or complete the scan.");
     const dedupKey = (recordId: string) => JSON.stringify(["source-v1", account.evidenceSourceId, ["record", recordId]]);
     let newlyRetained = 0;
     const countedRecords = new Set<string>();
@@ -142,6 +208,17 @@ export const persistBatch = internalMutation({
       ...(!context ? { cursor: args.nextCursor } : {}), activeJobId: args.complete ? undefined : job._id,
       updatedAt: timestamp, lastSyncedAt: timestamp, lastReadStatus: args.complete ? "COMPLETE" : "READING",
     });
+    if (run) {
+      const hashCursor = async (cursor: string) => sha256(new TextEncoder().encode(cursor).buffer);
+      const cursorHashes = [...run.cursorHashes];
+      if (args.expectedCursor !== null) cursorHashes.push(await hashCursor(args.expectedCursor));
+      const cyclic = args.nextCursor !== null && cursorHashes.includes(await hashCursor(args.nextCursor));
+      if (cyclic && context) await ctx.db.patch(context._id, { status: "FAILED", lastFailure: "CURSOR_EXPIRED" });
+      await ctx.db.patch(run._id, { activeJobId: undefined, leaseExpiresAt: undefined,
+        pagesRead: run.pagesRead + 1, messagesRead: run.messagesRead + args.readCount!, retainedRecords: run.retainedRecords + newlyRetained,
+        cursorHashes, updatedAt: timestamp, ...(cyclic ? { status: "FAILED" as const, failure: "CURSOR_CYCLE" as const } : {}) });
+      if (!cyclic) await ctx.scheduler.runAfter(0, internal.mailboxGoogle.discoveryPage, { runId: run._id, step: run.step });
+    }
     await ctx.db.insert("mailboxBatches", { jobId: job._id, batchId: args.batchId, digest, result, persistedAt: timestamp });
     return result;
   },

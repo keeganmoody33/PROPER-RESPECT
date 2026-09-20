@@ -1,3 +1,4 @@
+import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { paginationOptsValidator, type PaginationOptions } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
@@ -6,6 +7,7 @@ import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
 import { statusValidator } from "./validators";
 import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
+import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
 
 async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   const user = await requireUser(ctx);
@@ -37,7 +39,8 @@ async function evidenceEntry(ctx: QueryCtx, userId: Id<"users">, rawEvidenceId: 
     artifact: raw.retainedArtifact, limitations: raw.limitations ?? [],
     suggestedActivity: raw.suggestedActivity, ownerStatement: ownerReview?.answer,
     ownerStatementQuestion: ownerReview?.question, observationCount: raw.observations?.length ?? 0,
-    originalText: raw.payload };
+    originalText: raw.payload,
+    ...(raw.storageId ? { uploadedFile: { attribution: uploadAttributionStatus(raw.uploadAttribution), filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize } } : {}) };
 }
 
 export const save = mutation({
@@ -104,7 +107,8 @@ export const list = query({
       const brand = await retainedProductBrand(ctx, product);
       const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").take(25);
       const latestEvent = await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").first();
-      return { prop, product: { ...product, brand }, links,
+      const associatedAccountEvidence = await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug);
+      return { prop, product: { ...product, brand }, links, associatedAccountEvidence,
         // Only the immediately preceding decision is needed by the History view.
         // Full append-only history is read separately when the card is opened.
         previousStatuses: latestEvent?.before.confirmed ? [latestEvent.before.status] : [],
