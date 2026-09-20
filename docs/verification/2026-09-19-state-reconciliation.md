@@ -532,3 +532,38 @@ this report supplies discrepancies and capability gaps only, not a replacement
 architecture or execution program.
 
 Audit UTC: 2026-09-20T02:18:53.242128+00:00
+
+## Owner-approved source recovery — September 19, 2026
+
+The owner approved option A with an explicit first operation: push the deployed
+source and this Phase 0 receipt before starting PR #22's ownership fix.
+
+- Created and pushed `codex/reconcile-deployed-release-20260919`, initially at
+  `8de6604bda9232e463abbb6aa8907acc6fbadfd3`.
+- GitHub commit API confirms deployed `32aa043c48ee32686b3c656127f2d58ed7d1388b`
+  is now reachable. `git ls-remote` confirms the initial branch SHA exactly.
+- Opened [PR #23](https://github.com/keeganmoody33/PROPER-RESPECT/pull/23) against
+  `main`. It is draft pending the already-identified integration/ownership gates;
+  this source-recovery operation does not merge or deploy it.
+- The branch also preserves local-only native-session fix `82faddf` through the
+  requested receipt's ancestry. Therefore PR HEAD is not the deployed tree.
+  Production and main are not yet synchronized; the deployed source is now safe
+  on GitHub for the next reconciliation operation.
+- PR #22 remains unchanged at `a174fc6b74663f165e8469f9778f6972aeb93c86`.
+  No ownership fix has begun and no further commits were added to that branch.
+- A bounded pre-push scan checked 222 outgoing blobs for credential patterns,
+  with no findings; private self-test/lifecycle/Composio historical ancestry is
+  excluded. No ignored originals or environment files were staged.
+- Git-triggered deployments remain disabled. No deployment, backend sync,
+  provider read, transfer, recurrence, personal-choice edit or publication.
+
+This documentation-only follow-up records the push and PR; its SHA is available
+in Git and the PR, without rewriting the original audit's pre-push findings.
+
+Owner conditions retained for the following operations: fix first-upload
+ownership before reconciliation/merge; checkpoint or explicitly discard every
+dirty worktree with a receipt; launch path-based `proper-respect.com/handle`
+profiles, with net-new Domain routing gating custom domains only and the old
+host continuing as today; triage the 31 flagged documents individually as an
+in-place status correction, superseded-with-pointer, or proposed deletion for
+sign-off. Those later operations have not started in this source-recovery step.
