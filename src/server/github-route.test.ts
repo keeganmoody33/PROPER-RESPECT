@@ -40,3 +40,50 @@ test("same-origin does not bypass owner authentication", async () => {
   expect(mocks.clerkClient).not.toHaveBeenCalled();
   expect(mocks.action).not.toHaveBeenCalled();
 });
+
+test("native Convex session authenticates the GitHub import without a legacy template", async () => {
+  const getToken = vi.fn(async (options?: { template?: string }) => options?.template ? null : "native-convex-jwt");
+  mocks.auth.mockResolvedValueOnce({ userId: "owner", sessionClaims: { aud: "convex" }, getToken });
+  const response = await POST(request({ origin: "https://props.example.test" }));
+  expect(response.status).toBe(200);
+  expect(getToken).toHaveBeenCalledWith();
+  expect(mocks.setAuth).toHaveBeenCalledWith("native-convex-jwt");
+  expect(mocks.oauth).toHaveBeenCalledWith("owner", "oauth_github");
+  expect(mocks.action.mock.calls[0][1]).toEqual({ token: "test-only-github-token" });
+});
+
+test.each([undefined, {}, { aud: "another-service" }, { aud: ["convex"] }])(
+  "requires the legacy Convex template without the native integration audience: %j", async sessionClaims => {
+    const getToken = vi.fn(async (options?: { template?: string }) => options?.template === "convex" ? "template-convex-jwt" : "wrong-audience-jwt");
+    mocks.auth.mockResolvedValueOnce({ userId: "owner", sessionClaims, getToken });
+    const response = await POST(request({ origin: "https://props.example.test" }));
+    expect(response.status).toBe(200);
+    expect(getToken).toHaveBeenCalledWith({ template: "convex" });
+    expect(mocks.setAuth).toHaveBeenCalledWith("template-convex-jwt");
+    expect(mocks.setAuth).not.toHaveBeenCalledWith("wrong-audience-jwt");
+  },
+);
+
+test.each([{ aud: "convex" }, { aud: "another-service" }])(
+  "missing Convex token never imports GitHub activity: %j", async sessionClaims => {
+    const getToken = vi.fn(async () => null);
+    mocks.auth.mockResolvedValueOnce({ userId: "owner", sessionClaims, getToken });
+    expect((await POST(request({ origin: "https://props.example.test" }))).status).toBe(409);
+    expect(mocks.setAuth).not.toHaveBeenCalled();
+    expect(mocks.action).not.toHaveBeenCalled();
+  },
+);
+
+test("an authenticated Convex owner still needs a GitHub credential", async () => {
+  mocks.oauth.mockResolvedValueOnce({ data: [] });
+  expect((await POST(request({ origin: "https://props.example.test" }))).status).toBe(409);
+  expect(mocks.setAuth).not.toHaveBeenCalled();
+  expect(mocks.action).not.toHaveBeenCalled();
+});
+
+test("missing Convex configuration stops before accessing GitHub credentials", async () => {
+  vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "");
+  expect((await POST(request({ origin: "https://props.example.test" }))).status).toBe(503);
+  expect(mocks.clerkClient).not.toHaveBeenCalled();
+  expect(mocks.action).not.toHaveBeenCalled();
+});
