@@ -4,8 +4,9 @@ Verified 2026-09-19. The owner approved hosted setup and the exact prepared rele
 Application/backend release and hosted Google OAuth configuration succeeded. The
 real connection attempt exposed two server-authentication defects. Both the invalid
 production key and native-token code path are repaired and released. Real hosted
-Add Gmail account now reaches Google account selection. Owner consent and callback
-completion remain pending. No mailbox read has started.
+Add Gmail account now reaches Google account selection. The subsequent owner-completed consent and separately approved live discovery
+are recorded in [the hosted discovery proof](2026-09-19-hosted-discovery-proof.md).
+The consent-pending details below describe this release handoff, before that proof.
 
 ## Released source and targets
 

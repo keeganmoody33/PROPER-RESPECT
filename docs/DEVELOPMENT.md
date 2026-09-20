@@ -10,7 +10,10 @@ Production runs `5a0b77f` with bounded background discovery and the card/mobile
 corrections. Development remains `a2539b9`. Hosted Google setup is complete. The real OAuth start exposed an invalid Clerk
 server key and an unsupported native-token path. Both are repaired and deployed
 with exact owner approval. Add Gmail account reaches Google account selection;
-owner consent and callback completion are next. No hosted Gmail read has run.
+the Lectures From mailbox completed consent and its separately approved run
+retained 625 private records. Four new product cards await review. History is
+partial; personal-account consent/read and publication approval remain open.
+See [the live discovery proof](verification/2026-09-19-hosted-discovery-proof.md).
 See [the September 19 release receipt](verification/2026-09-19-hosted-gmail-release.md).
 
 ## Current product

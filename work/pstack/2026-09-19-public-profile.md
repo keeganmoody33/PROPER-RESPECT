@@ -197,3 +197,16 @@ account selection with the correct client and callback. Owner consent is next.
 All 33 application tables were unchanged before successful OAuth start; afterward
 only one expiring unconsumed pending OAuth state changed; the other 32 tables
 remain identical. No mailbox read or publication.
+
+## Hosted discovery proof — September 19, 20:48 EDT
+
+Owner completed hosted Lectures From consent and approved one capped run. It
+reached LIMIT_REACHED with 634 examined headers and 625 unique retained records;
+catalog complete, history partial. Two temporary failures recovered through the
+same run's resume control. Four new cards (Notion, Clay, Clerk, Convex) render for
+private review; GitHub evidence stays pending. 481 unmatched records are reviewable.
+Capture provenance, no usage claims, unchanged prior owner relationships and
+unchanged public snapshot verified in private backups. Continuation after leaving
+the collection is live-proven. No recurrence or new run enabled. Personal Gmail
+consent/read, owner choices and exact publication approval remain gates. See
+`docs/verification/2026-09-19-hosted-discovery-proof.md`.
