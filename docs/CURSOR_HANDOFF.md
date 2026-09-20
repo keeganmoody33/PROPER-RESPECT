@@ -1,4 +1,6 @@
 <!-- Retained recheck release verified 2026-09-19 -->
+
+> **Status correction — 2026-09-20:** Source main is 4df11b5 (PR #23 and #22 merged). Production remains the last recorded 32aa043 release; no release follows from merge. Earlier branch/gate narratives below are dated history. Continue through #24 and the September 20 triage receipt. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
 ## Latest hosted checkpoint
 
 `32aa043c48ee32686b3c656127f2d58ed7d1388b` is deployed to Vercel

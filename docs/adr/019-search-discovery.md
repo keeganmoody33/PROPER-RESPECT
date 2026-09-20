@@ -1,5 +1,7 @@
 # ADR-019: Search and Discovery - Simple Public Search First
 
+> **Status correction — 2026-09-20:** Public people/product search is future intent, distinct from the implemented private product discovery/review flow. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

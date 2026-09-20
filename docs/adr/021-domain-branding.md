@@ -1,5 +1,7 @@
 # ADR-021: Naming and Domain Are Not Blocking
 
+> **Status correction — 2026-09-20:** Domain interchangeability below is intent only. Auth/callback origin remains explicitly configured; net-new verified Domain routing is separate milestone #13. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted - revised 2026-06-06
 

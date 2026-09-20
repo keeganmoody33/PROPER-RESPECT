@@ -1,5 +1,7 @@
 # Export upload correction
 
+> **Historical receipt qualification — 2026-09-20:** The 25 MiB statements below describe the earlier upload implementation. Main now caps authenticated HTTP uploads at 19 MiB; see the first-upload ownership receipt. The new boundary is not deployed and its issuer-bound replay gap must be fixed before release (#24).
+
 Verified: 2026-09-19. Base: `f808fc834c7900681d10b043a6bb09d4f8e76314`.
 Test-first commit: `d428ba5`.
 Existing Ref: https://plan.ref.tools/oUl8LCIQb32SAicK.

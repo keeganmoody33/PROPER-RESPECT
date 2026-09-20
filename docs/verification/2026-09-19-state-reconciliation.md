@@ -733,3 +733,26 @@ The lookup correction that followed is recorded in
 [the connector-precedence receipt](2026-09-20-github-connector-precedence.md).
 That later source still requires a separate owner merge and production release;
 this Phase 0 receipt does not merge or deploy it.
+
+
+## Final closure after PR #22 merge — September 20, 2026
+
+**Phase 0 is closed.** Main is `4df11b5fd3ff4e4747f61fa2d72998842970fd7b`.
+PR #23 merged at `69ef335af9dd8b43dc1c178695e51a34d3943f2a`; PR #22 merged
+at `4df11b5` with the owner's exact reviewed head
+`a29ceab24db4a0bd3ac34e69e5140f6398937963` as its second parent. GitHub merge
+time is `2026-09-20T15:46:55Z`. The current-account correction is verified;
+remaining finite lookup, read-budget and capture-order findings are explicitly
+deferred in [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24).
+The same-subject/different-issuer upload replay gap already on main is separately
+reproduced and must be fixed before releasing the upload boundary.
+
+[The September 20 Devin triage/closure receipt](2026-09-20-devin-triage-and-phase0-closure.md)
+records every current and historical reviewed finding, evidence and disposition,
+the pre-merge report, exact merge map, unchanged privacy/operational boundaries,
+and Phase 1 ticket/document recut. No code was changed during that triage.
+PR #22's branch was deleted after its merge; the only active follow-up is the
+one documentation branch named in that receipt. Historical checkpoint tags and
+local-only private branches remain as recorded above. No deployment occurred;
+last recorded production remains 32aa043. Owner review of the documentation
+follow-up is distinct from approval to release source or publish evidence.

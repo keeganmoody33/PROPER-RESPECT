@@ -1,5 +1,7 @@
 # Developing PROPER-RESPECT
 
+> **Status correction — 2026-09-20:** Main is 4df11b5 after owner-approved merges #23/#22. Earlier local-only and development-only implementation statements below are historical. Production is still the last recorded 32aa043 source; current unresolved acceptance and review findings are #24. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 Updated: 2026-09-19. Start with [AGENTS.md](../AGENTS.md), the
 [Cursor handoff](CURSOR_HANDOFF.md), [deployment runbook](DEPLOYMENT.md), and
 [canonical Ref](https://plan.ref.tools/oUl8LCIQb32SAicK).

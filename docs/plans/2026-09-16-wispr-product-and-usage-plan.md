@@ -7,6 +7,8 @@ product_contract_source: ce-plan-bootstrap
 execution: code
 ---
 
+> **Status correction — 2026-09-20:** The canonical knowledge/evidence/review foundations described below now exist. Remaining hosted selections, transfer reconciliation and coverage gates are #24. No personal Wispr API or complete usage telemetry is established by the implementation. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 # Wispr Product and Usage Evidence - Plan
 
 ## Goal Capsule

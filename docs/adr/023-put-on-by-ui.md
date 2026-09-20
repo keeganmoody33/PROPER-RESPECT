@@ -1,5 +1,7 @@
 # ADR-023: The "Put On By" UI — Exact Specification
 
+> **Status correction — 2026-09-20:** Historical UI proposal is not a delivered lineage workflow. Credibility-score examples are superseded and must not be implemented; no universal activity or credibility ranking is permitted. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted — 2026-06-05
 

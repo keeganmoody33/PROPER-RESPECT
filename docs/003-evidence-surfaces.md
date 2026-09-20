@@ -1,5 +1,7 @@
 # 003 - Evidence Surfaces
 
+> **Status correction — 2026-09-20:** Current source includes separately authorized Gmail discovery, private uploads and retained review. The old four-page continuation below is historical; both hosted bounded runs and retained-only recheck completed, and further reads remain paused. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 > Updated: 2026-09-19. Current source roles and verified implementation limits; Tasks 1–4 and accepted checkpoints stay fixed.
 
 ## Source roles
@@ -47,7 +49,7 @@ Screenshot support should preserve the artifact and explain what was checked, ra
 
 Even signed provenance is not a universal truth test: the [C2PA explainer](https://c2pa.org/specifications/specifications/2.2/explainer/Explainer.html) says it “cannot tell you whether the digital content is true”. No C2PA or image-forensics subsystem is required for this release.
 
-**Implemented now:** authenticated private file upload retains the original storage object, filename, MIME type, byte size and server capture time. Common image, tabular, JSON, document, text and archive exports are accepted up to 25 MiB; non-image/non-CSV exports retain FILE_UPLOAD classification. Retaining a file does not parse its contents automatically. Selected observations can be supplied for private review. Prepared retained packets separately verify their expected content hashes before canonical intake.
+**Implemented now:** authenticated private file upload retains the original storage object, filename, MIME type, byte size and server capture time. Common image, tabular, JSON, document, text and archive exports are accepted up to 19 MiB; non-image/non-CSV exports retain FILE_UPLOAD classification. Retaining a file does not parse its contents automatically. Selected observations can be supplied for private review. Prepared retained packets separately verify their expected content hashes before canonical intake.
 
 **Not implemented in the generic upload path:** image OCR, EXIF validation, content-based replay identity, screenshot authenticity verification or automatic Screen Time extraction. Do not describe the prepared-packet checks as a generic screenshot verifier. These are bounded follow-ups within the existing intake work when needed; no new collector or architecture program starts with this document correction.
 

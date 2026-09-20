@@ -39,6 +39,17 @@ Keep source, capture, observation, review, relationship, and publication distinc
 
 Keep secrets in ignored configuration and private originals outside Git. Follow `docs/DEPLOYMENT.md`; verify target and authorization before backend synchronization, real reads, recurrence, deployment, or publication. Never seed over owner data. Use pstack-codex as the primary execution workflow per the September 19 owner direction. Preserve the accepted checkout, existing Ref and Tasks 1–4; do not reset to main or restart completed slices. Compound Engineering remains available for focused supporting work.
 
+## Concurrent Review Protocol
+
+Devin reports; Codex writes. Do not build on a Devin-pushed branch or commit;
+report it to the owner first. Record every review comment in the current dated
+verification receipt as fix now, deferred with reason, superseded, or not a bug
+with evidence before changing code. Resolve contradictory findings by regression
+test. Valid bugs join release-gaps issue #24. After PR #22, use one small branch
+off main per concern; do not interleave unrelated remediation. Start fixes with
+a RED regression. Name the inspected branch/head in reports; any new commit
+restarts review and exact-head merge authorization must be rechecked.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

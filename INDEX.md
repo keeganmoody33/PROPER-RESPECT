@@ -1,32 +1,41 @@
 # PROPER-RESPECT - Documentation Index
 
-> Updated: 2026-06-06  
-> Current scope: manual-first product-stack profile with affiliate/referral links, proof, and lineage.
+> Updated: 2026-09-20
+>
+> Current scope: [V2 product motion](docs/002-v2-product-motion.md) — multi-user on proper-respect.com, preserving private evidence, owner-selected relationships and explicit publication.
 
 ## Core Documents
 
 | File | Purpose |
 | --- | --- |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Current continuation guide and execution boundaries |
+| [docs/002-v2-product-motion.md](docs/002-v2-product-motion.md) | Active scope and acceptance; remaining release gaps are tracked in issue #24 |
 | `README.md` | Product overview and current build target |
 | `CONTEXT.md` | Domain language and product principles |
-| `PRD.md` | MVP requirements and architecture |
-| `GRILL-SESSION.md` | Latest decision record and active questions |
+| `PRD.md` | Historical MVP requirements and architecture; not the active release checklist |
+| `GRILL-SESSION.md` | Historical decision record and questions |
 
-## V1 Product Direction
+## Product Direction and Historical Contracts
 
-These docs are the current source of truth for the V1 build. If an ADR conflicts with `docs/000-current-product-thesis.md`, the thesis wins.
+[V2 motion](docs/002-v2-product-motion.md) defines the active scope. The earlier
+documents below preserve product principles and implementation history; read
+their status corrections before treating a proposal as delivered or still
+required. If an ADR conflicts with `docs/000-current-product-thesis.md`, the
+thesis wins; V2 motion governs current sequencing and acceptance.
 
 | # | File | Purpose |
 | --- | --- | --- |
-| 000 | `docs/000-current-product-thesis.md` | What V1 is and is not; manual-first rule |
+| 000 | `docs/000-current-product-thesis.md` | Product intent and evidence boundaries; earlier implementation status is historical |
 | 001 | `docs/001-git-for-product-attribution.md` | The Git-for-adoption mental model |
-| 002 | `docs/002-v1-product-motion.md` | V1 user motion and capability sequencing |
+| 002 | [docs/002-v2-product-motion.md](docs/002-v2-product-motion.md) | Active V2 motion; supersedes [V1 motion](docs/002-v1-product-motion.md) |
 | 003 | `docs/003-evidence-surfaces.md` | Proof types and evidence sources |
 | 004 | `docs/004-v1-technical-contract.md` | Entities, types, pipeline, and owed tests |
 
-## Active ADRs
+## Decision References
 
-These decisions are relevant to the current MVP.
+These decisions preserve the earlier rationale. Their status corrections and
+V2 motion determine current applicability; listing an ADR here does not claim
+its proposed feature is implemented or a launch requirement.
 
 | # | File | Decision |
 | --- | --- | --- |

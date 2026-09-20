@@ -1,5 +1,7 @@
 # Multiple mailboxes and native product cards
 
+> **Status correction — 2026-09-20:** Tasks 1–4 and their checkpoints remain preserved. Earlier zero-match, unimplemented intake and development-sync gates below are historical; the September private collection/discovery source has landed. Remaining acceptance is #24; A/B remains unselected and nonblocking. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 Contract dated September 16, 2026; implementation status and owner product direction corrected September 18. The [canonical Updated Proper Respect Ref](https://plan.ref.tools/oUl8LCIQb32SAicK) holds current execution guidance; the [delivery record](../verification/2026-09-17-product-delivery-state.md) distinguishes committed code, live proof, retained private sources and unfinished integration. The [six original browser comments](../feedback/2026-09-16-onboarding-browser-comments.md) remain verbatim below.
 
 Owner correction, September 18:

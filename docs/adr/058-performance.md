@@ -1,5 +1,7 @@
 # ADR-058: Performance and Speed — Load Times, Caching, Optimization
 
+> **Status correction — 2026-09-20:** Prisma/Neon/system-font-only and monitoring descriptions below are historical proposals. Runtime uses Convex and retained brand fonts; performance targets are not measured results. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted — 2026-06-05
 

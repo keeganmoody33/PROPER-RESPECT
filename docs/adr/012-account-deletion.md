@@ -1,5 +1,7 @@
 # ADR-012: Account Deletion and Lineage Integrity
 
+> **Status correction — 2026-09-20:** Proposed account-deletion/grace/ghost lifecycle remains unimplemented and conflicts with parts of ADR 006. No deletion is authorized by this document. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+
 ## Status
 Accepted — 2026-06-05
 
