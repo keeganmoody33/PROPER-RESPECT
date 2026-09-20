@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { OnboardingClient } from "@/components/onboarding-client";
 
+export const metadata = { robots: { index: false, follow: false } };
+
 export default function OnboardingPage() {
   const configured =
     Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) &&

@@ -1,6 +1,45 @@
 # Deployment runbook
 
-> **Status correction — 2026-09-20:** Current source main is 4df11b5; last recorded production is 32aa043. Existing two-account hosted Gmail consent and bounded reads completed; further reads and recurrence remain paused. Older live-release/consent statements below are historical. New upload release requires issuer-replay correction and separate backend-first authorization (#24). See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
+> **Status correction — 2026-09-20:** Main is d27920a after owner merges #25/#26; last recorded production is 32aa043. The issuer-replay correction is merged but not deployed. Older live-release/consent statements below are historical; additional reads and recurrence remain paused. Upload release still requires separate backend-first authorization. Phase 2 source preparation is recorded in [canonical-origin verification](verification/2026-09-20-canonical-public-origin.md); no hosting or authentication migration has occurred.
+
+## Phase 2 canonical public origin — source preparation
+
+`PUBLIC_SITE_ORIGIN` controls canonical URLs, OpenGraph/Twitter URLs, the generic
+share image and root sitemap. It is server-side, must be an HTTPS origin in
+production, and does not infer authority from Host or forwarded headers.
+Production rendering and deployment preflight reject missing/invalid values.
+Preview pages are noindex. The sitemap lists only the public landing page; it
+does not enumerate owners or privately saved profiles. Profile metadata uses
+the existing published-only read model. The share image contains no user data.
+
+For a separately approved release before cutover, use
+`PUBLIC_SITE_ORIGIN=https://props.lecturesfrom.com`. Change it to
+`https://proper-respect.com` only as part of the approved native-host cutover.
+This variable does not change `MAILBOX_APPLICATION_ORIGIN`, Clerk domains,
+Google redirect URIs, Convex auth issuers or allowed origins.
+
+Required cutover sequence (not authorization):
+
+1. Verify existing Vercel project `groundskeep/proper-respect`, old-host TLS,
+   public profile and signed-in owner access. Record the working deployment and
+   current redirect/configuration for rollback.
+2. Obtain separate exact-target authorization for Clerk/OAuth/domain changes.
+   Preserve the old host as a working fallback while configuring and verifying
+   the new host. Do not replace an issuer in a way that creates new owner
+   identities or silently rebinds existing accounts.
+3. Configure and verify the new application's Clerk origin, callback allowlists
+   and Convex alignment. A callback URI registration is not permission for a
+   provider read. Old-host sign-in and callbacks must remain valid during this
+   stage; do not redirect callback traffic before verification.
+4. Release the approved source, respecting backend-first upload synchronization,
+   remove the apex's 307 in Vercel, and verify native apex TLS, owner sign-in,
+   published metadata/share image, and unchanged private/public state. Only then
+   demote the old host to the approved redirect policy. Verify fallback and avoid
+   opposing redirects that loop.
+5. On failure, remove any old-host redirect before restoring the apex-to-old-host
+   307, restore the previous approved origin/auth settings and compatible release,
+   then reverify old-host public and authenticated behavior. No database restore,
+   seeding, owner transfer or publication belongs to this rollback.
 
 ## Code synchronization and the owner's domain — September 18, 2026
 
@@ -37,6 +76,7 @@ use a `NEXT_PUBLIC_` prefix.
 
 | Variable | Location | Secret | Purpose |
 | --- | --- | --- | --- |
+| `PUBLIC_SITE_ORIGIN` | Vercel | No | Verified public origin for canonical metadata; separate from OAuth callback origin |
 | `NEXT_PUBLIC_CONVEX_URL` | Vercel | No | Production Convex client URL |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Vercel | No | Clerk browser key |
 | `CLERK_SECRET_KEY` | Vercel | Yes | Clerk server API and GitHub OAuth token retrieval |
