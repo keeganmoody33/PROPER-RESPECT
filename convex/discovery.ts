@@ -350,6 +350,9 @@ export const syncGithub = internalAction({
     githubLogin: v.string(),
   },
   handler: async (ctx, args): Promise<IngestResult> => {
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$/i.test(args.githubLogin) || /\s/.test(args.githubLogin)) {
+      throw new Error("Invalid GitHub login.");
+    }
     const response = await fetch(
       `https://api.github.com/users/${args.githubLogin}/repos?sort=pushed&per_page=25`,
       { headers: { Accept: "application/vnd.github+json" } },
