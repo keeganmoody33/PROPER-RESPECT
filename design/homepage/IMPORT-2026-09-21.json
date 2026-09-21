@@ -1,0 +1,53 @@
+{
+  "archive": "proper-respect-homepage-codex.zip",
+  "archiveSha256": "b4611b8fe7cada6f08b28d8cb046d5b0bd0cf7f38fc37b5c7e269e4a3e562a2f",
+  "files": [
+    {
+      "path": "assets/PR-icon.png",
+      "bytes": 30964,
+      "sha256": "17a7f7d3fcd0fadd9d8844fe6bd245d9cda083372913b7c5cca80e47b1da4bfa"
+    },
+    {
+      "path": "assets/PR-mark-black.png",
+      "bytes": 22553,
+      "sha256": "5dd6297fbc16f5c036e78d6bb802b6fe5313cf5a2901cea61e80da2d39dcf5ce"
+    },
+    {
+      "path": "assets/PR-mark-white.png",
+      "bytes": 19615,
+      "sha256": "fa49ea040f156c481ea6c49634baf486c98baaf29bad24fbf7a7988582e3df5f"
+    },
+    {
+      "path": "assets/bump-art.png",
+      "bytes": 1664120,
+      "sha256": "d22c33b5098a17109613696e404aad00e691d259a46591900f2dde73fd31edbd"
+    },
+    {
+      "path": "assets/fists-blueprint.png",
+      "bytes": 2596995,
+      "sha256": "ab029fd174a7524d2eac512e30bf5ebd12af6ef9c6593cba61f1a106e5bde5a6"
+    },
+    {
+      "path": "HANDOFF.md",
+      "bytes": 7310,
+      "sha256": "e00b39917044d866d95fc4fd39f91a6a52f7e4fffdfbec3e442b35673aa9211f"
+    },
+    {
+      "path": "brand-manifest.schema.json",
+      "bytes": 7174,
+      "sha256": "a27cb2a160a1f8d9b9de6c58bc5654d51b7f777db2775f3e9ff80414a07ab939"
+    },
+    {
+      "path": "competitive-notes.md",
+      "bytes": 2622,
+      "sha256": "447b119de77a25f740c1abd56b514979f6fe1ee993d14c31b9edef092d418ccd"
+    },
+    {
+      "path": "index.html",
+      "bytes": 26845,
+      "sha256": "f1d9a7e62d88da936124804c0ccfb90892cb80f7fb73fac2fd199fc151cc1de2"
+    }
+  ],
+  "importedAt": "2026-09-21",
+  "baseHead": "3a1413f3deb34c417cb9bdbdbfa4d34096e47e77"
+}
