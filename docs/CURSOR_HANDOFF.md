@@ -1,6 +1,6 @@
 <!-- Retained recheck release verified 2026-09-19 -->
 
-> **Status correction — 2026-09-20:** Source main is 4df11b5 (PR #23 and #22 merged). Production remains the last recorded 32aa043 release; no release follows from merge. Earlier branch/gate narratives below are dated history. Continue through #24 and the September 20 triage receipt. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
+> **Status correction — 2026-09-21:** Inspected remote main is `3a1413f3deb34c417cb9bdbdbfa4d34096e47e77` after owner merges through #31. This PR #28 branch retains its earlier e086131 base; it does not contain the later merged work. Production remains the last recorded 32aa043 release; no release follows from merge. Earlier branch/gate narratives below are dated history. Continue through #24 and the September 20 triage receipt. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
 ## Latest hosted checkpoint
 
 `32aa043c48ee32686b3c656127f2d58ed7d1388b` is deployed to Vercel
@@ -46,11 +46,20 @@ the upload boundary. See
 
 ## GitHub capture chronology — September 20, 2026
 
-Next #24 item that does not need a new evidence index: without a live
-connector, GitHub snapshots inside the existing 200-proof window rank by
-`capturedAt`, not proof attachment time. CONNECTED connector and owner-selected
-links still win. See
+Without a live connector, GitHub snapshots inside the existing 200-proof
+window rank by capture time, not proof attachment time. CONNECTED connector
+and owner-selected links still win. Merged to `main` as
+`e086131a03d7a68ea50b2feca298a11d152a40f5`. See
 [the chronology receipt](verification/2026-09-20-github-capture-chronology.md).
+
+## Unknown-product identity collisions — September 20, 2026
+
+Next #24 item that does not need a new evidence index: unknown `app.*` hosts
+no longer share the first hostname label as a slug. Derived identities use a
+37-character SHA-256-derived key of the normalized full hostname, preserving
+DNS label boundaries without exceeding the card key limit. Catalog matches are
+unchanged. See
+[the identity receipt](verification/2026-09-20-unknown-product-identity.md).
 
 # Cursor continuation — Proper Respect
 
@@ -167,12 +176,12 @@ or extract Screen Time automatically.
 
 Private GitHub account destinations, optional account-link sharing through
 explicit preview, selectable connector snapshots, first-upload owner binding,
-CONNECTED-first / newest-200 GitHub lookup, and verified upload-replay issuer
-binding are on `main` via PRs #23, #22 and #26. They are not a production
-deploy of that tree. GitHub snapshots without a live connector now rank by
-`capturedAt` on this follow-up branch only. Full personal-release acceptance
-remains unfinished. Do not publish private URLs or change owner choices during
-verification.
+CONNECTED-first / newest-200 GitHub lookup, verified upload-replay issuer
+binding, and capture-time GitHub chronology are on `main` via PRs #23, #22,
+#26 and #27. They are not a production deploy of that tree. Unknown-product
+hostname identity is on this follow-up branch only. Full personal-release
+acceptance remains unfinished. Do not publish private URLs or change owner
+choices during verification.
 
 ## Branch disposition checked September 19
 

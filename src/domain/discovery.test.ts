@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { handleSchema } from "./public-profile";
 import {
   canonicalCatalogProduct,
   canonicalCatalogSenderDomains,
@@ -192,7 +193,7 @@ describe("resolveProduct", () => {
       signal({ url: "https://example.com/workbook", sourceType: "GMAIL" }),
     );
     expect(product).toEqual({
-      slug: "example",
+      slug: "host-a379a6f6eeafb9a55e378c118034e275",
       name: "Example",
       domain: "example.com",
       description: "Discovered via gmail evidence.",
@@ -222,6 +223,19 @@ describe("resolveCatalogProductWebsite", () => {
 });
 
 describe("proposeDrafts", () => {
+  it("keeps long unknown host identities valid for the public card contract", () => {
+    const product = resolveProduct(signal({ url: `https://${"a".repeat(50)}.example` }));
+    expect(product).not.toBeNull();
+    expect(handleSchema.safeParse(product!.slug).success).toBe(true);
+  });
+  it("does not collapse a hostname label boundary into an existing hyphen", () => {
+    const proposals = proposeDrafts([
+      signal({ url: "https://app.foobaz.example", sourceType: "GMAIL" }),
+      signal({ url: "https://app-foobaz.example", sourceType: "GMAIL" }),
+    ]);
+    expect(proposals).toHaveLength(2);
+    expect(new Set(proposals.map(proposal => proposal.product.slug)).size).toBe(2);
+  });
   it("keeps GitHub and Copilot receipt lines separate with useful product destinations", () => {
     const proposals = proposeDrafts([
       signal({ vendor: "GitHub", url: "https://github.com", sourceType: "BILLING" }),
@@ -267,5 +281,66 @@ describe("proposeDrafts", () => {
 
   it("skips unresolvable signals", () => {
     expect(proposeDrafts([signal({ vendor: "???" })])).toEqual([]);
+  });
+
+  it("keeps unknown products on distinct hosts reviewable instead of merging on the first hostname label", () => {
+    const proposals = proposeDrafts([
+      signal({ url: "https://app.linear.app/team", sourceType: "GMAIL" }),
+      signal({ url: "https://app.clickup.com/inbox", sourceType: "GMAIL" }),
+      signal({ url: "https://app.herokuapp.com/dashboard", sourceType: "BROWSER_HISTORY" }),
+      signal({ url: "https://other.herokuapp.com/dashboard", sourceType: "BROWSER_HISTORY" }),
+      signal({ url: "https://app.linear.app/settings", sourceType: "BROWSER_HISTORY" }),
+    ]);
+
+    expect(proposals).toEqual([
+      {
+        product: {
+          slug: "host-62301f53620822a846f417d59e0a3e06",
+          name: "App",
+          domain: "app.linear.app",
+          description: "Discovered via gmail evidence.",
+        },
+        canonicalUrl: "https://app.linear.app",
+        signalIndexes: [0, 4],
+      },
+      {
+        product: {
+          slug: "host-22da1e7696f4d2a0ebee166d25b23d8c",
+          name: "App",
+          domain: "app.clickup.com",
+          description: "Discovered via gmail evidence.",
+        },
+        canonicalUrl: "https://app.clickup.com",
+        signalIndexes: [1],
+      },
+      {
+        product: {
+          slug: "host-31e138fc839d80f22cf10ccdc6a7d6f6",
+          name: "App",
+          domain: "app.herokuapp.com",
+          description: "Discovered via browser history evidence.",
+        },
+        canonicalUrl: "https://app.herokuapp.com",
+        signalIndexes: [2],
+      },
+      {
+        product: {
+          slug: "host-681b6150264437483434959cfd5317fd",
+          name: "Other",
+          domain: "other.herokuapp.com",
+          description: "Discovered via browser history evidence.",
+        },
+        canonicalUrl: "https://other.herokuapp.com",
+        signalIndexes: [3],
+      },
+    ]);
+    expect(prepareImportedProp(proposals[0]!, "GMAIL")).toEqual({
+      visibility: "DRAFT",
+      status: "TESTING",
+      draftStatus: "PENDING",
+      headline: "App may be in your stack.",
+      note: "Proposed from gmail evidence. Review before publishing.",
+    });
+    expect(resolveProduct(signal({ url: "https://app.devin.ai" }))?.slug).toBe("devin");
   });
 });
