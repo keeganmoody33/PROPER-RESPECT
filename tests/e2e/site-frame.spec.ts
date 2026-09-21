@@ -14,7 +14,9 @@ for (const width of [1440, 460, 390, 320]) test(`Origins and branded footer rema
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await navigation.getByRole("link", { name: "Origins", exact: true }).click();
   await expect(page).toHaveURL(/\/about\/origins$/);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Where itcomes from.");
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(heading).toHaveText("Where it comes from.");
+  await expect(heading).toHaveAccessibleName("Where it comes from.");
   await expect(page.getByText("The story behind Proper Respect belongs here. Coming soon.")).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/about/origins");

@@ -14,7 +14,7 @@ export function generateMetadata(): Metadata {
 export default function OriginsPage() {
   return <main className="origins-shell">
     <p className="eyebrow">Origins / Lineage</p>
-    <h1>Where it<br />comes from.</h1>
+    <h1>Where it<br />{" "}comes from.</h1>
     <p>The story behind Proper Respect belongs here. Coming soon.</p>
     <Link href="/">Back to Proper Respect →</Link>
   </main>;

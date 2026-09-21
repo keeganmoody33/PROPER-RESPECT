@@ -1,10 +1,13 @@
 # Calendar, Origins and footer verification
 
 Date: 2026-09-21 (America/New_York).
-Application head: `c64ce6c6bbf0c2d3f969a7250e9ca6a25b04277d`.
+Tested application snapshot: `c64ce6c6bbf0c2d3f969a7250e9ca6a25b04277d`.
+Original reviewed PR head: `51c220a630d6808a114eefc4cd3ca000e2d630cb`.
 Base: `6cc9533367759892973784438075f8ef14ee1709`.
 Ref: https://plan.ref.tools/aGrDHnZ8uoiYcMlA (Task 4).
 Branch: `codex/calendar-origins-footer-20260921`.
+
+These SHAs intentionally differ: the original reviewed PR head adds this receipt and four fixture screenshots to the tested application snapshot. `git diff --name-only c64ce6c6bbf0c2d3f969a7250e9ca6a25b04277d 51c220a630d6808a114eefc4cd3ca000e2d630cb` confirms that only this Markdown file and the four PNGs linked below changed. No application or test code changed between those commits. The results below document that original verification; subsequent PR revisions require their own verification receipt.
 
 ## Owner comments and disposition
 
@@ -27,7 +30,7 @@ Branch: `codex/calendar-origins-footer-20260921`.
 - https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference — contributions include more than commits.
 - https://hex.tech/ — footer hierarchy: brand, grouped navigation, bottom information row. No Hex assets or copy reused.
 
-## Verification
+## Original verification
 
 All checks ran in an isolated worktree with synthetic fixtures, without live Clerk or Convex credentials.
 

@@ -24,7 +24,16 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   expect(geometry.cellHeight).toBe(10);
   expect(Math.abs(geometry.mondayY - geometry.firstY)).toBeLessThan(1);
   expect(Math.abs(geometry.octoberX - geometry.labelX)).toBeLessThan(1);
-  if (width <= 390) expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
+  if (width <= 390) {
+    expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
+    const scroll = calendar.getByRole("region", { name: "Contribution calendar; scroll horizontally to see the full period" });
+    await scroll.focus();
+    await expect(scroll).toBeFocused();
+    const initialScrollLeft = await scroll.evaluate(element => element.scrollLeft);
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => scroll.evaluate(element => element.scrollLeft)).toBeGreaterThan(initialScrollLeft);
+    expect(await page.evaluate(() => window.scrollX)).toBe(0);
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
   for (const [name, text, caveat] of [
