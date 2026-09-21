@@ -125,7 +125,7 @@ function Builder() {
   const publishSelected = useMutation(api.onboarding.publishSelected);
   const revokeConnector = useMutation(api.connectors.revokeConnector);
   const connectDevin = useAction(api.connectors.connectDevin);
-  const state = useQuery(api.onboarding.getState, { includeClaims: false });
+  const state = useQuery(api.onboarding.getState, { includeClaims: false, includeLegacyCollections: false });
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
