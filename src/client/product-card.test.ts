@@ -52,6 +52,19 @@ function renderCard(overrides: Partial<Card> = {}) {
   })));
 }
 
+test.each([
+  { name: "Wispr Flow", slug: "wisprflow", domain: "wisprflow.ai", path: "/product-assets/wisprflow/2026-09-21/app-icon.jpg" },
+  { name: "Clay", slug: "clay", domain: "clay.com", path: "/product-assets/clay/2026-09-21/app-icon.png" },
+])("$name uses the reviewed app icon even when a card has no logo or an old favicon", ({ path, ...product }) => {
+  for (const logoUrl of [undefined, "/old-32px-favicon.png"]) {
+    const $ = renderCard({ product: { ...product, description: "Synthetic product", logoUrl } });
+    expect($(".product-logo img").attr("src")).toBe(path);
+    expect($(".product-logo").attr("data-logo-layout")).toBe("app-icon");
+    expect($(".product-logo img").attr("width")).toBe("512");
+    expect($(".product-logo img").attr("height")).toBe("512");
+  }
+});
+
 test("an optional headline falls back to the saved owner explanation on the compact front", () => {
   const card = renderCard({ headline: "", note: "Essential for an occasional workflow." });
   expect(card(".card-headline").text()).toBe("Essential for an occasional workflow.");

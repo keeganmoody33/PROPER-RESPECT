@@ -11,6 +11,7 @@ import type {
 } from "@/src/domain/public-profile";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
+import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
 import {
   verifiedProductAssets,
   selectVerifiedProductLogo,
@@ -61,30 +62,37 @@ function brandAppearance(brand?: ProductBrandSnapshot) {
 function ProductLogo({
   brand,
   verifiedAssets,
+  icon,
   logoUrl,
   mark,
   surface,
 }: {
   brand?: ProductBrandSnapshot;
   verifiedAssets?: VerifiedProductAssets;
+  icon?: ProductIcon;
   logoUrl?: string;
   mark: string;
   surface: "light" | "dark";
 }) {
   const [failedUrls, setFailedUrls] = useState<string[]>([]);
   const verifiedLogo = verifiedAssets && selectVerifiedProductLogo(verifiedAssets, surface, failedUrls);
-  const logo = !verifiedAssets && brand ? selectProductBrandLogo({
+  const appIcon = icon && !failedUrls.includes(icon.path) ? icon : undefined;
+  const logo = !verifiedAssets && !icon && brand ? selectProductBrandLogo({
     logos: brand.logos.filter((candidate) => !failedUrls.includes(candidate.url)),
   }, surface) : undefined;
   const imageUrl = verifiedAssets ? verifiedLogo?.path
+    : icon ? appIcon?.path
     : logo?.url ?? (logoUrl && !failedUrls.includes(logoUrl) ? logoUrl : undefined);
+  function markFailed() {
+    if (imageUrl) setFailedUrls(urls => urls.includes(imageUrl) ? urls : [...urls, imageUrl]);
+  }
 
   return (
     <span
       className="product-logo"
-      data-logo-layout={verifiedAssets ? "wordmark" : undefined}
+      data-logo-layout={verifiedAssets ? "wordmark" : appIcon ? "app-icon" : undefined}
       data-logo-mode={verifiedLogo?.mode ?? (logo ? logo.mode : undefined)}
-      data-logo-provider={verifiedLogo ? verifiedAssets?.provider : logo ? brand?.provider : undefined}
+      data-logo-provider={appIcon ? "official-vendor" : verifiedLogo ? verifiedAssets?.provider : logo ? brand?.provider : undefined}
       aria-hidden="true"
     >
       {imageUrl ? (
@@ -92,12 +100,15 @@ function ProductLogo({
         // preserve onError fallback without a remote image-loader allowlist.
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={element => {
+            if (element?.complete && element.naturalWidth === 0) markFailed();
+          }}
           src={imageUrl}
           alt=""
-          width={verifiedLogo?.width}
-          height={verifiedLogo?.height}
+          width={verifiedLogo?.width ?? appIcon?.width}
+          height={verifiedLogo?.height ?? appIcon?.height}
           referrerPolicy="no-referrer"
-          onError={() => setFailedUrls((urls) => urls.includes(imageUrl) ? urls : [...urls, imageUrl])}
+          onError={markFailed}
         />
       ) : mark}
     </span>
@@ -445,7 +456,7 @@ export function ProductCard({
         : <ProductBrandFonts snapshot={brand} />}
       <div className="card-front" aria-hidden={isFlipped} inert={isFlipped}>
         <div className="card-topline">
-          {!verifiedAssets && <ProductLogo brand={brand} logoUrl={card.product.logoUrl} mark={mark} surface={appearance.surface} />}
+          {!verifiedAssets && <ProductLogo brand={brand} icon={officialProductIcon(card.product)} logoUrl={card.product.logoUrl} mark={mark} surface={appearance.surface} />}
           <div className="card-title">
             <p className="eyebrow">
               {cardStatus}

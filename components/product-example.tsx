@@ -24,7 +24,7 @@ const examples: Example[] = [
     id: "clay", source: "https://university.clay.com/docs/credit-usage", sourceLabel: "Clay usage and CSV exports",
     caveat: "Concept example. Distinct enriched rows need row-level success records and deduplication. Actions and credits are separate. Clay import is not available here yet.",
     card: {
-      product: { name: "Clay", slug: "clay", domain: "clay.com", logoUrl: "/brand/clay/2026-09-21/favicon.png", description: "Data enrichment and GTM workflows." },
+      product: { name: "Clay", slug: "clay", domain: "clay.com", description: "Data enrichment and GTM workflows." },
       status: "ACTIVE", headline: "From research to enriched records.", note: "Example rule: count each table and row identity once after a successful enrichment in the selected period. Repeated runs and multiple columns do not create more distinct rows. Workspace activity is not automatically personal activity.",
       activity: { ...capture, kind: "headlineMetrics", attributionScope: "WORKSPACE", primary: { label: "Distinct rows enriched", value: 1200 }, supporting: [{ label: "Enrichment actions", value: 3400 }, { label: "Data credits", value: 5100 }] },
     },
@@ -33,7 +33,7 @@ const examples: Example[] = [
     id: "wispr", source: "https://docs.wisprflow.ai/articles/8760230576-your-usage-tab-track-your-dictation-stats-in-wispr-flow", sourceLabel: "Wispr Flow Insights",
     caveat: "A personal Insights snapshot. Total words are cumulative; a monthly comparison does not make the lifetime total a monthly count. No dictation text is needed for this card.",
     card: {
-      product: { name: "Wispr Flow", slug: "wisprflow", domain: "wisprflow.ai", logoUrl: "/brand/wisprflow/2026-09-21/favicon.png", description: "Voice dictation across your apps." },
+      product: { name: "Wispr Flow", slug: "wisprflow", domain: "wisprflow.ai", description: "Voice dictation across your apps." },
       status: "ACTIVE", headline: "Put your voice to work.", note: "Illustrative cumulative Insights totals. Device coverage and capture date should stay attached to the imported snapshot.",
       activity: { capturedAt: capture.capturedAt, freshness: capture.freshness, provenanceLabel: capture.provenanceLabel, kind: "headlineMetrics", attributionScope: "PERSONAL", primary: { label: "Total words dictated", value: 28400 }, supporting: [{ label: "Average speed", value: 116, unit: "WPM" }, { label: "Current streak", value: 12, unit: "days" }, { label: "Apps used", value: 8 }] },
     },
