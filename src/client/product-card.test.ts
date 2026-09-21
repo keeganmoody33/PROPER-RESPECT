@@ -505,7 +505,7 @@ test.each([
   const $ = renderCard({ activity: { ...activityEvidence, kind: "contributionCalendar", total: 21, period: { start, end }, days } });
   for (const side of [".card-front", ".card-back"]) {
     expect($(`${side} .activity-calendar span`)).toHaveLength(21);
-    expect($(`${side} .activity-calendar`).attr("style")).toContain(`repeat(${weeks}, minmax(0, 1fr))`);
+    expect($(`${side} .activity-calendar`).attr("style")).toContain(`repeat(${weeks}, var(--contribution-cell))`);
     expect($(`${side} .contribution-gap`).text()).toBe(`${missing} days have no supplied count; blank spaces are not zero activity.`);
     expect($(`${side} .contribution-range`).text()).toBe("Daily counts: 2026-09-05 – 2026-09-25");
     expect($(`${side} [data-date="2026-09-01"], ${side} [data-date="2026-09-30"]`)).toHaveLength(0);
@@ -535,7 +535,7 @@ test.each([
   } });
   for (const side of [".card-front", ".card-back"]) {
     expect($(`${side} .activity-calendar span`)).toHaveLength(2);
-    expect($(`${side} .activity-calendar`).attr("style")).toContain("repeat(1, minmax(0, 1fr))");
+    expect($(`${side} .activity-calendar`).attr("style")).toContain("repeat(1, var(--contribution-cell))");
     expect($(`${side} [data-date="2026-09-15"]`).attr("style")).toContain("grid-column:1");
     expect($(`${side} .contribution-gap`).text()).toContain("1 day has no supplied count");
     expect($(`${side} .contribution-range`).text()).toBe("Daily counts: 2026-09-15 – 2026-09-17");
@@ -548,6 +548,27 @@ test("a contribution calendar with a period but no supplied days remains explici
   for (const side of [".card-front", ".card-back"]) {
     expect($(`${side} .activity-empty`).text()).toBe("No daily contribution counts supplied");
   }
+});
+
+test("calendar month labels follow UTC week columns across a year boundary", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "contributionCalendar", total: 2,
+    period: { start: "2025-12-28", end: "2026-02-01" },
+    days: [{ date: "2025-12-28", count: 1, level: 1 }, { date: "2026-01-01", count: 0, level: 0 }, { date: "2026-02-01", count: 1, level: 1 }],
+  } });
+  const labels = $(".card-front .contribution-months span");
+  expect(labels.map((_, label) => $(label).text()).get()).toEqual(["Jan", "Feb"]);
+  expect(labels.first().attr("style")).toContain("grid-column:1");
+  expect(labels.last().attr("style")).toContain("grid-column:6");
+});
+
+test("sparse multi-year captures derive month labels only from supplied dates", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "contributionCalendar", total: 4,
+    period: { start: "2000-01-01", end: "2026-09-30" },
+    days: [{ date: "2000-01-01", count: 0, level: 0 }, { date: "2026-09-30", count: 4, level: 3 }],
+  } });
+  expect($(".card-front .activity-calendar span")).toHaveLength(2);
+  expect($(".card-front .contribution-months span")).toHaveLength(2);
+  expect($(".card-front .contribution-gap").text()).toContain("blank spaces are not zero activity");
 });
 
 

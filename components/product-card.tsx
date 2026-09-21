@@ -152,21 +152,31 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
   const last = (enclosingPeriod ? periodEnd : lastSupplied).getTime();
   const firstSunday = first.getTime() - first.getUTCDay() * 86_400_000;
   const weeks = Math.floor((last - firstSunday) / (7 * 86_400_000)) + 1;
-  const gaps = weeks - 1;
   const missingDays = Math.round((last - first.getTime()) / 86_400_000) + 1 - new Set(days.map(day => day.date)).size;
+  const months = [...new Set(days.map(day => day.date.slice(0, 7)))].map(month => {
+    const monthStart = new Date(`${month}-01T00:00:00Z`);
+    const column = Math.max(1, Math.floor((monthStart.getTime() - firstSunday) / (7 * 86_400_000)) + 1);
+    return { month, column, label: monthStart.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }) };
+  }).filter((month, index, all) => index === all.length - 1 || all[index + 1].column - month.column >= 3);
+  const columns = { gridTemplateColumns: `repeat(${weeks}, var(--contribution-cell))` };
   return (
     <div className="contribution-calendar">
-      <div className="contribution-calendar-layout">
-        <div className="contribution-weekdays" aria-hidden="true">
-          {["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => <span key={index}>{label}</span>)}
-        </div>
-        <div className="activity-calendar contribution-grid" role="group" aria-label="Daily contributions, Sunday to Saturday in each column" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`, maxWidth: `calc(${weeks * 0.7}rem + clamp(${gaps}px, ${gaps * 0.25}vw, ${gaps * 3}px))` }}>
-          {days.map(day => {
-            const date = new Date(`${day.date}T00:00:00Z`);
-            const label = `${day.date}: ${day.count} ${day.count === 1 ? "contribution" : "contributions"}`;
-            return <span key={day.date} role="img" aria-label={label} title={label} data-date={day.date} data-level={day.level}
-              style={{ gridColumn: Math.floor((date.getTime() - firstSunday) / (7 * 86_400_000)) + 1, gridRow: date.getUTCDay() + 1 }} />;
-          })}
+      <div className="contribution-scroll" tabIndex={0} role="region" aria-label="Contribution calendar; scroll horizontally to see the full period">
+        <div className="contribution-calendar-layout">
+          <div className="contribution-months" aria-hidden="true" style={columns}>
+            {months.map(month => <span key={month.month} style={{ gridColumn: month.column }}>{month.label}</span>)}
+          </div>
+          <div className="contribution-weekdays" aria-hidden="true">
+            {["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => <span key={index}>{label}</span>)}
+          </div>
+          <div className="activity-calendar contribution-grid" role="group" aria-label="Daily contributions, Sunday to Saturday in each column" style={columns}>
+            {days.map(day => {
+              const date = new Date(`${day.date}T00:00:00Z`);
+              const label = `${day.date}: ${day.count} ${day.count === 1 ? "contribution" : "contributions"}`;
+              return <span key={day.date} role="img" aria-label={label} title={label} data-date={day.date} data-level={day.level}
+                style={{ gridColumn: Math.floor((date.getTime() - firstSunday) / (7 * 86_400_000)) + 1, gridRow: date.getUTCDay() + 1 }} />;
+            })}
+          </div>
         </div>
       </div>
       <div className="contribution-legend" aria-hidden="true">Less {[0, 1, 2, 3, 4].map(level => <i key={level} data-level={level} />)} More</div>

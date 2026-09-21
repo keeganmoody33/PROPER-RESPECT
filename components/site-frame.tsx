@@ -10,16 +10,42 @@ export function SiteHeader() {
     <nav className="site-navigation" aria-label="Main navigation">
       <Link href="/#how-it-works">How it works</Link>
       <Link href="/#example">Example</Link>
+      <Link href="/about/origins">Origins</Link>
       <Link href="/sign-in">Sign in</Link>
       <Link className="site-start" href="/app/collection">Your collection</Link>
     </nav>
   </header></>;
 }
 
+const footerGroups = [
+  { title: "Product", links: [{ label: "How it works", href: "/#how-it-works" }, { label: "Usage examples", href: "/#example" }, { label: "Your collection", href: "/app/collection" }] },
+  { title: "Company", links: [{ label: "Origins", href: "/about/origins" }, { label: "Contact" }, { label: "Social" }] },
+  { title: "Resources", links: [{ label: "Help" }, { label: "Privacy" }, { label: "Terms" }] },
+];
+
 export function SiteFooter() {
   return <footer className="site-footer">
-    <span>Proper Respect / Give props. Get props.</span>
-    <span>Private by default. Shared by choice.</span>
+    <div className="site-footer-main">
+      <div className="site-footer-brand">
+        <Link href="/" className="site-wordmark" aria-label="Proper Respect home">
+          <Image src="/brand/homepage/PR-mark-black.png" alt="" width={56} height={48} />
+          <span>Proper Respect</span>
+        </Link>
+        <p>Give props.<br />Get props.</p>
+      </div>
+      <nav className="site-footer-navigation" aria-label="Footer navigation">
+        {footerGroups.map(group => <div className="site-footer-group" key={group.title}>
+          <h2>{group.title}</h2>
+          <ul>{group.links.map(item => <li key={item.label}>
+            {"href" in item && item.href ? <Link href={item.href}>{item.label}</Link> : <span className="site-footer-placeholder">{item.label}<small>Coming soon</small></span>}
+          </li>)}</ul>
+        </div>)}
+      </nav>
+    </div>
+    <div className="site-footer-bottom">
+      <span>Proper Respect</span>
+      <span>Private by default. Shared by choice.</span>
+    </div>
   </footer>;
 }
 

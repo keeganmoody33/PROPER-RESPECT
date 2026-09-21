@@ -259,16 +259,13 @@ for (const width of [320, 1280]) test(`contribution calendar retains missing per
     await expect(grid.locator('[data-date="2026-09-01"], [data-date="2026-09-30"]')).toHaveCount(0);
     const geometry = await grid.evaluate(element => {
       const computed = getComputedStyle(element);
-      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
       return {
         columns: computed.gridTemplateColumns.split(" ").length,
         width: element.getBoundingClientRect().width,
-        expectedWidth: 5 * 0.7 * rem + 4 * Math.max(1, Math.min(innerWidth * 0.0025, 3)),
-        supportedWidth: CSS.supports("max-width", (element as HTMLElement).style.maxWidth),
+        expectedWidth: 5 * 10 + 4 * 3,
       };
     });
     expect(geometry.columns).toBe(5);
-    expect(geometry.supportedWidth).toBe(true);
     expect(Math.abs(geometry.width - geometry.expectedWidth)).toBeLessThanOrEqual(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`2026-09-21-calendar-boundaries-${side.slice(1)}-${width}.png`), fullPage: true, animations: "disabled" });
