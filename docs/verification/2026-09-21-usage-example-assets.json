@@ -1,0 +1,18 @@
+[
+  {
+    "product": "clay",
+    "sourcePage": "https://www.clay.com",
+    "sourceUrl": "https://cdn.prod.website-files.com/61477f2c24a826836f969afe/6a3a92ab841a6313dc068fb8_dot-com_favicon_2026_512.png",
+    "path": "/brand/clay/2026-09-21/favicon.png",
+    "sha256": "20f16816c73ec5d08af1319ee44e7168a70377b794047a1b1ed381eda244b1af",
+    "retrievedAt": "2026-09-21"
+  },
+  {
+    "product": "wisprflow",
+    "sourcePage": "https://wisprflow.ai",
+    "sourceUrl": "https://cdn.prod.website-files.com/682f84b3838c89f8ff7667db/6a8406645defe8dfdb19c7f3_flow-favicon.png",
+    "path": "/brand/wisprflow/2026-09-21/favicon.png",
+    "sha256": "123ed328a5cf244545547172ddf666849f27a50ed8fc70ad77cb425375813324",
+    "retrievedAt": "2026-09-21"
+  }
+]
