@@ -104,6 +104,20 @@ describe("verified catalog expansion", () => {
 });
 
 describe("normalizeVendorName", () => {
+  it.each([["Cisco", "cisco"], ["Fresco", "fresco"], ["Bronco", "bronco"], ["Zinc", "zinc"]])("preserves suffix-like letters within %s", (name, expected) => {
+    expect(normalizeVendorName(name)).toBe(expected);
+  });
+
+  it.each([
+    ["Cisco, Inc.", "cisco"],
+    ["Fresco LLC", "fresco"],
+    ["Bronco Ltd.", "bronco"],
+    ["Zinc Corp", "zinc"],
+    ["Acme Co.", "acme"],
+  ])("removes the separate corporate suffix from %s", (name, expected) => {
+    expect(normalizeVendorName(name)).toBe(expected);
+  });
+
   it("strips corporate suffixes and punctuation", () => {
     expect(normalizeVendorName("Notion Labs, Inc.")).toBe("notion labs");
     expect(normalizeVendorName("GitHub, Inc")).toBe("github");
