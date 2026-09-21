@@ -105,3 +105,30 @@ Copilot review with no findings. Configured Clerk appearance remains unverified.
 This local fixture proof does not establish production deployment, fresh-user
 signup, two-user isolation or real connector lifecycle acceptance. Those gates
 remain separate from this public read-only tool.
+
+## Merge preparation and CI corrections
+
+The owner authorized merge on September 21, 2026. PR #41 merged as
+`277055506f97a0493ededab9076f154a0796a56f` after independent shipping verification.
+The WebMCP branch was rebased onto that exact commit. Its original and rebased
+diffs share stable patch ID `92f9d4316a0f28256c7359a6939bfd030573ed8b`.
+Rebased application commit: `c65c023269374039949ad51844fad509fdf1bfbd`.
+Rebased receipt commit before CI corrections: `5397675c31fe773822c475e9476a0bbc5c6e7112`.
+
+A subsequent full browser recheck on original head
+`285b2278914278a35332fded7dee40d5eff89dfc` passed all 91 tests in 23.6 seconds,
+followed by a successful production build and typecheck. Native invocation also
+passed again. That closes the earlier distinction between the full browser run
+and the later bridge fix.
+
+Copilot then identified two missing CI gates. The application workflow now runs
+for pull requests targeting every branch, includes `discovery.spec.ts` and
+`webmcp-contract.spec.ts`, and has a separate `Native Chrome WebMCP` job.
+That job installs Chrome and dependencies with Playwright, then runs the eight
+native tests. An unavailable API fails explicitly; no skip or continue-on-error
+is configured. No deployment command or credential was added.
+
+Workflow validation parsed the YAML, enumerated 29 selected browser tests and
+eight native tests, and checked the Chrome installation command with a dry run.
+Actual hosted CI and the independent final shipping verdict must pass before
+PR #42 merges. The coordinator records the merged SHA and verdict in the Ref.
