@@ -30,3 +30,7 @@ If denormalization is chosen instead, audit all creation/attachment paths: disco
 ## Required acceptance before opening the full correction PR
 
 RED/GREEN regressions for actual no-payload main-list reads, safe per-transaction lookup budget, valid current connector, missing/invalid connector fallback, >200 proofs, adversarial owner/issuer/deletion, original chronology and reversed attachment ties. Preserve legacy metadata contract and owner-selected sharing preview. Verify new/current empty accounts and large synthetic collections. Run full suite, lint/typecheck/build, desktop/mobile UI and record exact head. Keep source and hosted proof separate. PRs #28/#30/#31/#32 are independent and must not be adopted or merged by the agent.
+
+## Review disposition — September 21
+
+Devin r4058967862 is confirmed at head 4757755815f2617f5e822590308ff5fb28018bd6: UnmatchedRecords still passes empty options to inventory.list. Its picker consumes only product/relationship fields. Correct that caller and reproduce the resource-sensitive picker failure in a rendered test before the fix. The production caller audit finds exactly the picker and PrivateInventory; the latter already opts out. This correction is within the existing read-budget PR, not new scope.
