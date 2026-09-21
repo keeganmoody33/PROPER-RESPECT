@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { handleSchema } from "./public-profile";
 import {
   canonicalCatalogProduct,
   canonicalCatalogSenderDomains,
@@ -208,6 +209,19 @@ describe("resolveCatalogProductWebsite", () => {
 });
 
 describe("proposeDrafts", () => {
+  it("keeps long unknown host identities valid for the public card contract", () => {
+    const product = resolveProduct(signal({ url: `https://${"a".repeat(50)}.example` }));
+    expect(product).not.toBeNull();
+    expect(handleSchema.safeParse(product!.slug).success).toBe(true);
+  });
+  it("does not collapse a hostname label boundary into an existing hyphen", () => {
+    const proposals = proposeDrafts([
+      signal({ url: "https://app.foobaz.example", sourceType: "GMAIL" }),
+      signal({ url: "https://app-foobaz.example", sourceType: "GMAIL" }),
+    ]);
+    expect(proposals).toHaveLength(2);
+    expect(new Set(proposals.map(proposal => proposal.product.slug)).size).toBe(2);
+  });
   it("keeps GitHub and Copilot receipt lines separate with useful product destinations", () => {
     const proposals = proposeDrafts([
       signal({ vendor: "GitHub", url: "https://github.com", sourceType: "BILLING" }),
