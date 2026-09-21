@@ -1,7 +1,8 @@
 # Canonical public origin — source preparation
 
 Date: 2026-09-20. Branch: `codex/canonical-public-origin-20260920`.
-Base: `d27920adc5c0e6af3b7597a6e93126df0c5af490`.
+Original base: `d27920adc5c0e6af3b7597a6e93126df0c5af490`.
+Current rebased base: `e086131a03d7a68ea50b2feca298a11d152a40f5`.
 
 ## Merge and hosting baseline
 
@@ -94,3 +95,70 @@ Then approve source release with backend-first upload synchronization, native
 apex verification, and only afterward old-host redirect demotion. Never set both
 hosts to redirect to each other. Rollback preserves data and previous auth/origin
 configuration. The generic image does not publish any owner's profile.
+
+## September 20 owner-authorized continuation
+
+Owner merged #27 at `e086131a03d7a68ea50b2feca298a11d152a40f5`.
+The existing Phase 2 branch rebased cleanly from `5935783154d3c575d72a92d31ceaf8317aaad813`
+to `8ea5384cf1a1f173237ad33b8af5f22b7d18a73d` on that main.
+
+Before edits, full browser verification returned 40 passes and one failure:
+`public-profile.spec.ts` expects the obsolete heading “Tools with a track record.”
+Main already renders the owner's display name as its h1. FIX NOW: correct this
+stale test assertion; preserve the rendered product and privacy/accessibility
+assertions. A trial link-label adjustment failed because card details retain
+the original link label; it was reverted. The only final test repair is the h1
+expectation. This is verification repair, not a UI change.
+
+Owner-authorized remote cleanup used `git merge-base --is-ancestor <head> origin/main`
+for each branch and deletion pushes guarded by exact-head leases:
+
+- `codex/phase0-closure-ticket-recut-20260920`: `5c84e5baef172d5d14e357131f88ef916a8941c9`.
+- `cursor/upload-replay-issuer-7318`: `5be36742576892849bc208e18614be22264b1260`.
+- `cursor/github-capture-chronology-7318`: `d024b6c3fff05f5c904d58420d1fd7bae4ba4b53`.
+
+GitHub listing confirmed all three absent. Local branches and worktrees remain.
+Issue #24 now marks #26/#27 as merged, not deployed, and reconciles #25 status;
+remaining issue scope stays intact. The before/after issue bodies and verification
+logs are machine-local under `/tmp/proper-respect-phase2-20260920` (temporary).
+Concurrent Cursor PR #28 at `bfb0e2eed99288192b1662ec746bd06d51afdfb0`
+was observed and preserved; it is not incorporated in this source slice.
+
+### Rebased verification results
+
+September 20 America/New_York / September 21 UTC. Executable source head:
+`8ea5384cf1a1f173237ad33b8af5f22b7d18a73d`; the follow-up changes only this
+receipt, the runbook baseline, one stale test assertion, and the generic image
+verification artifact. Final pushed SHA is recorded in the PR and canonical Ref.
+
+- `npm test`: 638 Vitest passed, two optional skips; seven Node checks passed.
+- `npm run lint`: passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed with CI synthetic Convex/Clerk/public-origin settings.
+- `npm run test:e2e`: 41 passed after the h1 assertion repair, including desktop,
+  mobile, public projection accessibility, canonical/OG/Twitter metadata,
+  1200×630 image bytes, missing-profile privacy, private noindex and root sitemap.
+- Separate browser inspection with `VERCEL_ENV=preview`: `/`, `/keegan` and
+  `/onboarding` each render `noindex, nofollow`.
+- `git diff --check`: passed.
+- Diff against main contains no Clerk/OAuth, application-provider, proxy or
+  Convex changes. No environment values or deployed settings were changed.
+
+The generic share image was fetched from the local synthetic preview, visually
+inspected for legibility and absence of owner content, and retained below.
+
+![Generic 1200 by 630 share image with synthetic public.example origin](assets/2026-09-20-canonical-share-image.png)
+
+These checks are synthetic local verification, not hosted authentication or
+cutover proof. The runbook preserves old-host TLS, profile, sign-in and callbacks
+before and after separately authorized Clerk/OAuth cutover, with explicit
+redirect ordering and rollback. No deployment or backend synchronization ran.
+
+After this PR is owner-merged, the next authorized source slice is the fresh-user
+journey: signup → private collection → first evidence source or manual entry →
+first useful card → exact sharing preview. Acceptance requires two-user isolation,
+fresh login, reconnect/revocation, no accidental publication and preservation of
+the existing profile. Clerk/OAuth cutover still requires separate exact-target
+authorization and before/after old-host fallback verification. Personal AI usage
+wording remains gated on a privately validated Codex metadata-only import with
+visible coverage and caveats. No new slice was implemented in this PR.

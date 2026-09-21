@@ -1,6 +1,6 @@
 # Deployment runbook
 
-> **Status correction — 2026-09-20:** Main is d27920a after owner merges #25/#26; last recorded production is 32aa043. The issuer-replay correction is merged but not deployed. Older live-release/consent statements below are historical; additional reads and recurrence remain paused. Upload release still requires separate backend-first authorization. Phase 2 source preparation is recorded in [canonical-origin verification](verification/2026-09-20-canonical-public-origin.md); no hosting or authentication migration has occurred.
+> **Status correction — 2026-09-20:** Main is e086131 after owner merges #25/#26/#27; last recorded production is 32aa043. The issuer-replay correction is merged but not deployed. Older live-release/consent statements below are historical; additional reads and recurrence remain paused. Upload release still requires separate backend-first authorization. Phase 2 source preparation is recorded in [canonical-origin verification](verification/2026-09-20-canonical-public-origin.md); no hosting or authentication migration has occurred.
 
 ## Phase 2 canonical public origin — source preparation
 

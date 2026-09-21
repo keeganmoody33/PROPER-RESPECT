@@ -9,7 +9,7 @@ test("visitor sees the approved public reference projection", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Tools with a track record.",
+      name: "Keegan Moody",
     }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "GitHub" })).toBeVisible();
