@@ -1018,7 +1018,10 @@ main {
 .site-wordmark { display: inline-flex; align-items: center; gap: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: -.03em; text-decoration: none; }
 .site-wordmark img { width: 32px; height: auto; }
 .site-navigation, .site-footer, .profile-context, .collection-navigation, .auth-intro figcaption { font-family: var(--homepage-mono), monospace; font-size: .7rem; line-height: 1.6; }
-.site-navigation { padding-block: .5rem; }
+.site-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.4rem; padding-block: .5rem; }
+.site-start { border: 1px solid var(--ink); padding: .55rem .8rem; text-decoration: none; }
+.auth-steps { padding-left: 1.3rem; line-height: 1.6; }
+.auth-steps li { padding: .6rem 0; }
 .site-footer { border-top: 1.5px solid var(--ink); border-bottom: 0; flex-wrap: wrap; }
 .profile-context { padding: .6rem clamp(1.25rem, 4vw, 5rem); border-bottom: 1px solid var(--line); }
 .section-heading h1, .system-message h1, .onboarding-shell h1, .onboarding-panel > h2 { font-weight: 900; line-height: .98; letter-spacing: -.045em; }
@@ -1039,7 +1042,8 @@ main {
   .auth-intro figure { display: none; }
 }
 @media (max-width: 600px) {
-  .site-header { padding-block: .8rem; }
+  .site-header { padding-block: .8rem; flex-wrap: wrap; }
+  .site-navigation { width: 100%; justify-content: space-between; gap: .6rem; }
   .site-wordmark { font-size: .8rem; gap: .4rem; }
   .site-wordmark img { width: 26px; }
   .site-navigation { font-size: .65rem; }
@@ -1048,3 +1052,24 @@ main {
 
 .site-skip { position: absolute; top: .5rem; left: 1rem; padding: .75rem; background: var(--panel); z-index: 100; transform: translateY(-200%); }
 .site-skip:focus { transform: translateY(0); outline: 3px solid var(--respect-red); }
+
+/* Contribution calendars retain GitHub's activity palette inside the product card. */
+.contribution-calendar { min-width: 0; }
+.contribution-calendar-layout { display: flex; align-items: stretch; gap: 0.4rem; }
+.contribution-weekdays { display: grid; grid-template-rows: repeat(7, 1fr); flex: 0 0 1.6rem; font-size: 0.5rem; line-height: 1; }
+.contribution-weekdays span { align-self: center; }
+.contribution-grid { flex: 1; min-width: 0; align-content: start; grid-template-rows: repeat(7, minmax(0, 1fr)); }
+.contribution-grid span { background: #161b22; border: 1px solid #30363d; max-width: 0.7rem; align-self: start; }
+.contribution-grid span[data-level="1"], .contribution-legend i[data-level="1"] { background: #0e4429; }
+.contribution-grid span[data-level="2"], .contribution-legend i[data-level="2"] { background: #006d32; }
+.contribution-grid span[data-level="3"], .contribution-legend i[data-level="3"] { background: #26a641; }
+.contribution-grid span[data-level="4"], .contribution-legend i[data-level="4"] { background: #39d353; }
+.contribution-range, .contribution-gap { font-size: 0.65rem; line-height: 1.5; margin: 0.4rem 0 0; }
+
+.profile-links-fields { min-width: 0; }
+.profile-links-fields input { min-width: 0; }
+.profile-links-fields .profile-link-choice { flex-direction: row; align-items: center; }
+.profile-links-fields input[type="radio"] { width: auto; flex: 0 0 auto; padding: 0; }
+
+.contribution-legend { display: flex; align-items: center; gap: 0.2rem; font-size: 0.6rem; margin-top: 0.4rem; }
+.contribution-legend i { display: block; width: 0.45rem; height: 0.45rem; border-radius: 1px; border: 1px solid #30363d; background: #161b22; }

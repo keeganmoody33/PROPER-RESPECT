@@ -1,3 +1,4 @@
+import { validateProfileLinks } from "../src/domain/profile-links";
 import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { addManualProductArgs, addManualProductHandler } from "./manualProducts";
 import { ensureProductBrand, retainedProductBrand } from "./productBrands";
@@ -15,6 +16,7 @@ import { sha256 } from "../src/domain/product-knowledge";
 import { resolvePublishedCardPropIds } from "./publication";
 import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
 import {
+  profileLinkValidator,
   activityModuleValidator,
   linkTypeValidator,
   statusValidator,
@@ -81,10 +83,15 @@ export const claimHandle = mutation({
     handle: v.string(),
     displayName: v.string(),
     bio: v.string(),
+    profileLinks: v.optional(v.array(profileLinkValidator)),
+    preferredLinkUrl: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const handle = claimableHandleSchema.parse(args.handle);
+    const linkFields = args.profileLinks !== undefined || args.preferredLinkUrl !== undefined
+      ? validateProfileLinks(args.profileLinks ?? user.profileLinks ?? [], args.preferredLinkUrl === null ? undefined : args.preferredLinkUrl ?? user.preferredLinkUrl)
+      : {};
     const owners = await ownersForHandle(ctx, handle);
     if (owners.some(owner => owner._id !== user._id)) {
       throw new Error("That handle is already claimed.");
@@ -102,6 +109,7 @@ export const claimHandle = mutation({
     const now = new Date().toISOString();
     await ctx.db.patch(user._id, {
       handle,
+      ...linkFields,
       displayName: args.displayName.trim(),
       bio: args.bio.trim(),
       onboardingStatus: "IMPORT",
@@ -592,7 +600,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     }
     return [{ card, propId: null }];
   });
-  const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl: user.avatarUrl };
+  const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl: user.avatarUrl, profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl };
   const replacements = selections.filter(selection => selection.publish).flatMap(selection => {
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);

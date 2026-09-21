@@ -5,6 +5,7 @@ const RESERVED_HANDLES = new Set([
   "api",
   "admin",
   "onboarding",
+  "collection",
   "sign-in",
   "sign-up",
 ]);

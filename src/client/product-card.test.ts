@@ -469,8 +469,13 @@ test("only the private card offers an activity next step when no snapshot is sel
 
 test("a contribution calendar renders only supplied days and never relabels contributions as commits", () => {
   const $ = renderCard({ activity: activityExamples[0] });
-  expect($(".activity-calendar span")).toHaveLength(1);
-  expect($(".activity-calendar span").attr("title")).toBe("2026-09-15: 3 contributions");
+  for (const side of [".card-front", ".card-back"]) {
+    const days = $(`${side} .activity-calendar span`);
+    expect(days).toHaveLength(1);
+    expect(days.attr("title")).toBe("2026-09-15: 3 contributions");
+    expect(days.attr("aria-label")).toBe("2026-09-15: 3 contributions");
+    expect(days.attr("data-date")).toBe("2026-09-15");
+  }
   expect($(".activity-hero").text()).toBe("37contributions");
   expect($.text()).not.toContain("commits");
 });

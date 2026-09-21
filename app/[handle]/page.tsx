@@ -1,3 +1,4 @@
+import { ProfileName, ProfileLinks } from "@/components/profile-identity";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -45,8 +46,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <div className="section-heading">
           <div>
             <p className="eyebrow">@{profile.handle} / TOOLS WITH A TRACK RECORD</p>
-            <h1 id="stack-heading" className={styles.name}>{profile.displayName}</h1>
+            <h1 id="stack-heading" className={styles.name}><ProfileName profile={profile} /></h1>
             {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
+            <ProfileLinks profile={profile} />
           </div>
           <p>{profile.cards.length.toString().padStart(2, "0")} PRODUCTS</p>
         </div>
@@ -74,7 +76,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <div>
           <span>@{profile.handle}</span>
         </div>
-        <Link href="/onboarding">Open your private collection →</Link>
+        <Link href="/collection">Open your private collection →</Link>
       </footer>
     </main>
   );
