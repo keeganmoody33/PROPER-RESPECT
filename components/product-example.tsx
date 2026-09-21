@@ -8,7 +8,12 @@ import styles from "./product-example.module.css";
 type Example = { id: string; card: PublicProfile["cards"][number]; source: string; sourceLabel: string; caveat: string };
 const period = { start: "2026-08-01", end: "2026-08-28" };
 const capture = { capturedAt: "2026-08-29T00:00:00.000Z", freshness: "STALE" as const, provenanceLabel: "Illustrative sample, not account data", period };
-const counts = [0, 2, 4, 1, 0, 6, 2, 3, 0, 0, 4, 7, 1, 2, 5, 0, 3, 2, 1, 0, 4, 6, 2, 0, 3, 1, 4, 2];
+const countPattern = [0, 2, 4, 1, 0, 6, 2, 3, 0, 0, 4, 7, 1, 2, 5, 0, 3, 2, 1, 0, 4, 6, 2, 0, 3, 1, 4, 2];
+const githubPeriod = { start: "2025-09-01", end: "2026-08-31" };
+const githubDays = Array.from({ length: 365 }, (_, index) => {
+  const count = countPattern[(index * 11 + Math.floor(index / 7)) % countPattern.length];
+  return { date: new Date(Date.UTC(2025, 8, 1 + index)).toISOString().slice(0, 10), count, level: Math.min(count, 4) };
+});
 // These examples never enter an owner's collection or published profile.
 const examples: Example[] = [
   {
@@ -17,7 +22,7 @@ const examples: Example[] = [
     card: {
       product: { name: "GitHub", slug: "github", domain: "github.com", logoUrl: "/brand/github/2026-09-21/favicon.svg", description: "Code hosting and collaboration." },
       status: "ACTIVE", headline: "The work behind the code.", note: "Example only. Contribution totals do not measure code quality or hours worked.",
-      activity: { ...capture, kind: "contributionCalendar", attributionScope: "PERSONAL", total: counts.reduce((sum, count) => sum + count, 0), days: counts.map((count, index) => ({ date: `2026-08-${String(index + 1).padStart(2, "0")}`, count, level: Math.min(count, 4) })) },
+      activity: { ...capture, capturedAt: "2026-09-01T00:00:00.000Z", period: githubPeriod, kind: "contributionCalendar", attributionScope: "PERSONAL", total: githubDays.reduce((sum, day) => sum + day.count, 0), days: githubDays },
     },
   },
   {

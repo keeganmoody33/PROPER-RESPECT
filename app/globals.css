@@ -1033,7 +1033,31 @@ main {
 .site-start { border: 1px solid var(--ink); padding: .55rem .8rem; text-decoration: none; }
 .auth-steps { padding-left: 1.3rem; line-height: 1.6; }
 .auth-steps li { padding: .6rem 0; }
-.site-footer { border-top: 1.5px solid var(--ink); border-bottom: 0; flex-wrap: wrap; }
+.site-footer { display: block; padding-block: clamp(2.5rem, 6vw, 5rem) 1.25rem; border-top: 1.5px solid var(--ink); border-bottom: 0; }
+.site-footer-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 3rem; }
+.site-footer-brand .site-wordmark { font-family: var(--homepage-sans), sans-serif; font-size: clamp(.95rem, 1.7vw, 1.35rem); }
+.site-footer-brand .site-wordmark img { width: 48px; }
+.site-footer-brand > p { font-family: var(--homepage-sans), sans-serif; font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 800; letter-spacing: -.04em; line-height: 1.05; margin: 1.5rem 0 0; }
+.site-footer-navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
+.site-footer-group h2 { font-size: .7rem; margin: 0 0 1.2rem; text-transform: uppercase; letter-spacing: .08em; }
+.site-footer-group ul { list-style: none; padding: 0; margin: 0; }
+.site-footer-group li { margin: 0 0 1rem; }
+.site-footer-group a { text-underline-offset: .2em; }
+.site-footer-placeholder { display: block; color: #5b5951; }
+.site-footer-placeholder small { display: block; font-size: .6rem; font-weight: 400; }
+.site-footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .6rem 1.5rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1.2rem; }
+.origins-shell { max-width: 70rem; min-height: 55vh; padding: clamp(3rem, 8vw, 7rem) clamp(1.25rem, 4vw, 5rem); }
+.origins-shell .eyebrow { font-family: var(--homepage-mono), monospace; color: var(--respect-red); }
+.origins-shell h1 { font-size: clamp(3rem, 8vw, 7rem); font-weight: 900; letter-spacing: -.05em; line-height: .95; margin: 1.5rem 0; }
+.origins-shell > p:not(.eyebrow) { max-width: 38rem; font-size: 1.1rem; line-height: 1.7; }
+.origins-shell > a { display: inline-block; margin-top: 1.5rem; text-underline-offset: .25em; }
+@media (max-width: 900px) {
+  .site-header { flex-wrap: wrap; }
+  .site-footer-main { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 400px) {
+  .site-footer-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .profile-context { padding: .6rem clamp(1.25rem, 4vw, 5rem); border-bottom: 1px solid var(--line); }
 .section-heading h1, .system-message h1, .onboarding-shell h1, .onboarding-panel > h2 { font-weight: 900; line-height: .98; letter-spacing: -.045em; }
 .onboarding-kicker, .onboarding-panel > .eyebrow { color: var(--respect-red); }
@@ -1054,23 +1078,27 @@ main {
 }
 @media (max-width: 600px) {
   .site-header { padding-block: .8rem; flex-wrap: wrap; }
-  .site-navigation { width: 100%; justify-content: space-between; gap: .6rem; }
+  .site-navigation { width: 100%; justify-content: flex-start; gap: .6rem 1rem; }
   .site-wordmark { font-size: .8rem; gap: .4rem; }
   .site-wordmark img { width: 26px; }
   .site-navigation { font-size: .65rem; }
-  .site-footer { align-items: flex-start; flex-direction: column; gap: .4rem; }
+  .site-footer-brand .site-wordmark { font-size: 1rem; }
 }
 
 .site-skip { position: absolute; top: .5rem; left: 1rem; padding: .75rem; background: var(--panel); z-index: 100; transform: translateY(-200%); }
 .site-skip:focus { transform: translateY(0); outline: 3px solid var(--respect-red); }
 
 /* Contribution calendars retain GitHub's activity palette inside the product card. */
-.contribution-calendar { min-width: 0; }
-.contribution-calendar-layout { display: flex; align-items: stretch; gap: 0.4rem; }
-.contribution-weekdays { display: grid; grid-template-rows: repeat(7, 1fr); flex: 0 0 1.6rem; font-size: 0.5rem; line-height: 1; }
+.contribution-calendar { --contribution-cell: 10px; --contribution-gap: 3px; min-width: 0; }
+.contribution-scroll { max-width: 100%; overflow-x: auto; padding: 0 0 .4rem; scrollbar-width: thin; scrollbar-color: #6e7681 #0d1117; color-scheme: dark; }
+.contribution-scroll:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.contribution-calendar-layout { display: grid; grid-template-columns: 26px max-content; grid-template-rows: 16px auto; gap: 4px 6px; width: max-content; padding-right: 14px; }
+.contribution-months { grid-column: 2; display: grid; gap: var(--contribution-gap); font-size: 10px; line-height: 16px; }
+.contribution-months span { grid-row: 1; white-space: nowrap; }
+.contribution-weekdays { grid-row: 2; display: grid; grid-template-rows: repeat(7, var(--contribution-cell)); gap: var(--contribution-gap); font-size: 9px; line-height: var(--contribution-cell); }
 .contribution-weekdays span { align-self: center; }
-.contribution-grid { flex: 1; min-width: 0; align-content: start; grid-template-rows: repeat(7, minmax(0, 1fr)); }
-.contribution-grid span { background: #161b22; border: 1px solid #30363d; max-width: 0.7rem; align-self: start; }
+.contribution-grid { grid-column: 2; grid-row: 2; display: grid; gap: var(--contribution-gap); grid-template-rows: repeat(7, var(--contribution-cell)); margin-top: 0; }
+.contribution-grid span { background: #161b22; border: 1px solid #30363d; width: var(--contribution-cell); height: var(--contribution-cell); border-radius: 2px; }
 .contribution-grid span[data-level="1"], .contribution-legend i[data-level="1"] { background: #0e4429; }
 .contribution-grid span[data-level="2"], .contribution-legend i[data-level="2"] { background: #006d32; }
 .contribution-grid span[data-level="3"], .contribution-legend i[data-level="3"] { background: #26a641; }
@@ -1082,5 +1110,5 @@ main {
 .profile-links-fields .profile-link-choice { flex-direction: row; align-items: center; }
 .profile-links-fields input[type="radio"] { width: auto; flex: 0 0 auto; padding: 0; }
 
-.contribution-legend { display: flex; align-items: center; gap: 0.2rem; font-size: 0.6rem; margin-top: 0.4rem; }
+.contribution-legend { display: flex; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.6rem; margin-top: 0.4rem; }
 .contribution-legend i { display: block; width: 0.45rem; height: 0.45rem; border-radius: 1px; border: 1px solid #30363d; background: #161b22; }

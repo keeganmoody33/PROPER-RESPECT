@@ -7,7 +7,26 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
-  await expect(carousel.getByRole("article", { name: "GitHub card" })).toContainText("65 contributions");
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toContainText("contributions");
+  const calendar = carousel.locator(".card-front .contribution-calendar");
+  await expect(calendar.locator("[data-date]")).toHaveCount(365);
+  await expect(calendar.locator(".contribution-months span")).toHaveText(["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"]);
+  const geometry = await calendar.evaluate(element => {
+    const scroll = element.querySelector(".contribution-scroll")!;
+    const cells = [...element.querySelectorAll("[data-date]")];
+    const first = cells[0].getBoundingClientRect();
+    const monday = element.querySelector(".contribution-weekdays span:nth-child(2)")!.getBoundingClientRect();
+    const october = element.querySelector('[data-date="2025-10-01"]')!.getBoundingClientRect();
+    const octoberLabel = element.querySelector(".contribution-months span:nth-child(2)")!.getBoundingClientRect();
+    return { cellWidth: first.width, cellHeight: first.height, mondayY: monday.y, firstY: first.y, octoberX: october.x, labelX: octoberLabel.x, scrollWidth: scroll.scrollWidth, clientWidth: scroll.clientWidth };
+  });
+  expect(geometry.cellWidth).toBe(10);
+  expect(geometry.cellHeight).toBe(10);
+  expect(Math.abs(geometry.mondayY - geometry.firstY)).toBeLessThan(1);
+  expect(Math.abs(geometry.octoberX - geometry.labelX)).toBeLessThan(1);
+  if (width <= 390) expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
   for (const [name, text, caveat] of [
     ["Clay", "1,200 Distinct rows enriched", "Clay import is not available here yet."],
     ["Wispr Flow", "28.4K Total words dictated", "Total words are cumulative"],

@@ -13,7 +13,7 @@ export async function getPublicProfile(
 ): Promise<PublicProfile | null> {
   const handle = handleSchema.parse(rawHandle);
   if (process.env.PROPER_RESPECT_E2E_REFERENCE === "1") {
-    if (handle === "collection" || handle === "app") {
+    if (["collection", "app", "about", "origins"].includes(handle)) {
       return { handle, displayName: `Existing ${handle} owner`, bio: "Synthetic published profile for route compatibility checks.", cards: [] };
     }
     return handle === e2eReferenceProfile.handle
