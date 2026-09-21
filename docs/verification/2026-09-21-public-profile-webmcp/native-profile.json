@@ -1,0 +1,147 @@
+{
+  "url": "http://127.0.0.1:8826/keegan",
+  "tools": [
+    {
+      "name": "get_current_public_profile",
+      "description": "Returns only the published profile and its evidence caveats—the same information visitors can see.",
+      "annotations": {
+        "readOnlyHint": true,
+        "untrustedContentHint": true
+      },
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  ],
+  "lint": [],
+  "execution": {
+    "tool": "get_current_public_profile",
+    "ok": true,
+    "result": {
+      "raw": "{\"handle\":\"keegan\",\"displayName\":\"Keegan Moody\",\"bio\":\"GTM engineer, system builder, ideator, and hip-hop evangelist.\",\"profileLinks\":[],\"cards\":[{\"product\":{\"name\":\"GitHub\",\"description\":\"Code, collaboration, and shipped work.\"},\"status\":\"ACTIVE\",\"ownerSelectedGoTo\":false,\"headline\":\"Where the receipts live.\",\"note\":\"I use GitHub to turn product thinking into inspectable, attributable work.\",\"startedAt\":\"2024-01-01\",\"activity\":{\"attributionScope\":\"PERSONAL\",\"capturedOn\":\"2026-07-26\",\"freshness\":\"FRESH\",\"provenanceLabel\":\"GitHub account\",\"period\":{\"start\":\"2026-07-20\",\"end\":\"2026-07-26\"},\"kind\":\"contributionCalendar\",\"total\":{\"label\":\"contributions\",\"displayValue\":\"523\"},\"memberSinceYear\":\"2024\",\"days\":[{\"date\":\"2026-07-20\",\"count\":1},{\"date\":\"2026-07-21\",\"count\":4},{\"date\":\"2026-07-22\",\"count\":2},{\"date\":\"2026-07-23\",\"count\":7},{\"date\":\"2026-07-24\",\"count\":2},{\"date\":\"2026-07-25\",\"count\":5},{\"date\":\"2026-07-26\",\"count\":1}]},\"cost\":{\"displayAmount\":\"$12.34\",\"basis\":\"ESTIMATE\",\"cadence\":\"MONTHLY\",\"asOf\":\"2026-07-26\"},\"primaryLink\":{\"type\":\"CANONICAL\",\"label\":\"See Keegan on GitHub\",\"url\":\"https://github.com/keeganmoody33\"}},{\"product\":{\"name\":\"Wispr Flow\",\"description\":\"Voice dictation at the speed of thought.\"},\"status\":\"ACTIVE\",\"ownerSelectedGoTo\":false,\"headline\":\"Talking is faster than typing.\",\"note\":\"I use Wispr Flow to dictate specs, notes, and messages.\",\"startedAt\":\"2025-01-01\",\"activity\":{\"attributionScope\":\"PERSONAL\",\"capturedOn\":\"2026-07-26\",\"freshness\":\"STALE\",\"provenanceLabel\":\"Wispr Flow Insights snapshot\",\"note\":\"Measurement period not supplied\",\"kind\":\"headlineMetrics\",\"primary\":{\"label\":\"Total words dictated\",\"displayValue\":\"373.7K\",\"unit\":\"words\"},\"supporting\":[{\"label\":\"Average speed\",\"displayValue\":\"113\",\"unit\":\"WPM\"},{\"label\":\"Current streak\",\"displayValue\":\"9\",\"unit\":\"days\"},{\"label\":\"Apps used\",\"displayValue\":\"65\"}]},\"primaryLink\":{\"type\":\"CANONICAL\",\"label\":\"Open Wispr Flow\",\"url\":\"https://wisprflow.ai\"}}]}",
+      "parsed": {
+        "handle": "keegan",
+        "displayName": "Keegan Moody",
+        "bio": "GTM engineer, system builder, ideator, and hip-hop evangelist.",
+        "profileLinks": [],
+        "cards": [
+          {
+            "product": {
+              "name": "GitHub",
+              "description": "Code, collaboration, and shipped work."
+            },
+            "status": "ACTIVE",
+            "ownerSelectedGoTo": false,
+            "headline": "Where the receipts live.",
+            "note": "I use GitHub to turn product thinking into inspectable, attributable work.",
+            "startedAt": "2024-01-01",
+            "activity": {
+              "attributionScope": "PERSONAL",
+              "capturedOn": "2026-07-26",
+              "freshness": "FRESH",
+              "provenanceLabel": "GitHub account",
+              "period": {
+                "start": "2026-07-20",
+                "end": "2026-07-26"
+              },
+              "kind": "contributionCalendar",
+              "total": {
+                "label": "contributions",
+                "displayValue": "523"
+              },
+              "memberSinceYear": "2024",
+              "days": [
+                {
+                  "date": "2026-07-20",
+                  "count": 1
+                },
+                {
+                  "date": "2026-07-21",
+                  "count": 4
+                },
+                {
+                  "date": "2026-07-22",
+                  "count": 2
+                },
+                {
+                  "date": "2026-07-23",
+                  "count": 7
+                },
+                {
+                  "date": "2026-07-24",
+                  "count": 2
+                },
+                {
+                  "date": "2026-07-25",
+                  "count": 5
+                },
+                {
+                  "date": "2026-07-26",
+                  "count": 1
+                }
+              ]
+            },
+            "cost": {
+              "displayAmount": "$12.34",
+              "basis": "ESTIMATE",
+              "cadence": "MONTHLY",
+              "asOf": "2026-07-26"
+            },
+            "primaryLink": {
+              "type": "CANONICAL",
+              "label": "See Keegan on GitHub",
+              "url": "https://github.com/keeganmoody33"
+            }
+          },
+          {
+            "product": {
+              "name": "Wispr Flow",
+              "description": "Voice dictation at the speed of thought."
+            },
+            "status": "ACTIVE",
+            "ownerSelectedGoTo": false,
+            "headline": "Talking is faster than typing.",
+            "note": "I use Wispr Flow to dictate specs, notes, and messages.",
+            "startedAt": "2025-01-01",
+            "activity": {
+              "attributionScope": "PERSONAL",
+              "capturedOn": "2026-07-26",
+              "freshness": "STALE",
+              "provenanceLabel": "Wispr Flow Insights snapshot",
+              "note": "Measurement period not supplied",
+              "kind": "headlineMetrics",
+              "primary": {
+                "label": "Total words dictated",
+                "displayValue": "373.7K",
+                "unit": "words"
+              },
+              "supporting": [
+                {
+                  "label": "Average speed",
+                  "displayValue": "113",
+                  "unit": "WPM"
+                },
+                {
+                  "label": "Current streak",
+                  "displayValue": "9",
+                  "unit": "days"
+                },
+                {
+                  "label": "Apps used",
+                  "displayValue": "65"
+                }
+              ]
+            },
+            "primaryLink": {
+              "type": "CANONICAL",
+              "label": "Open Wispr Flow",
+              "url": "https://wisprflow.ai"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
