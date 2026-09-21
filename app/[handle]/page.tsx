@@ -76,7 +76,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <div>
           <span>@{profile.handle}</span>
         </div>
-        <Link href="/collection">Open your private collection →</Link>
+        <Link href="/app/collection">Open your private collection →</Link>
       </footer>
     </main>
   );

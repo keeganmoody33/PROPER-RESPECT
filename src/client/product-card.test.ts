@@ -481,6 +481,63 @@ test("a contribution calendar renders only supplied days and never relabels cont
 });
 
 
+test.each([
+  { start: "2026-09-01", end: "2026-09-25", missing: 4, weeks: 4 },
+  { start: "2026-09-05", end: "2026-09-30", missing: 5, weeks: 5 },
+  { start: "2026-09-01", end: "2026-09-30", missing: 9, weeks: 5 },
+])("a contribution calendar retains boundary gaps from $start to $end", ({ start, end, missing, weeks }) => {
+  const days = Array.from({ length: 21 }, (_, index) => ({
+    date: `2026-09-${String(index + 5).padStart(2, "0")}`, count: 1, level: 1,
+  }));
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "contributionCalendar", total: 21, period: { start, end }, days } });
+  for (const side of [".card-front", ".card-back"]) {
+    expect($(`${side} .activity-calendar span`)).toHaveLength(21);
+    expect($(`${side} .activity-calendar`).attr("style")).toContain(`repeat(${weeks}, minmax(0, 1fr))`);
+    expect($(`${side} .contribution-gap`).text()).toBe(`${missing} days have no supplied count; blank spaces are not zero activity.`);
+    expect($(`${side} .contribution-range`).text()).toBe("Daily counts: 2026-09-05 – 2026-09-25");
+    expect($(`${side} [data-date="2026-09-01"], ${side} [data-date="2026-09-30"]`)).toHaveLength(0);
+  }
+});
+
+test("a contribution calendar positions supplied days after missing initial weeks", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "contributionCalendar", total: 1,
+    period: { start: "2026-09-01", end: "2026-09-30" }, days: [{ date: "2026-09-15", count: 1, level: 1 }],
+  } });
+  for (const side of [".card-front", ".card-back"]) {
+    expect($(`${side} [data-date="2026-09-15"]`).attr("style")).toContain("grid-column:3");
+    expect($(`${side} .contribution-gap`).text()).toContain("29 days have no supplied count");
+  }
+});
+
+test.each([
+  undefined,
+  { start: "2026-09-30", end: "2026-09-01" },
+  { start: "2026-09-16", end: "2026-09-30" },
+  { start: "2026-09-01", end: "2026-09-14" },
+  { start: "invalid", end: "2026-09-30" },
+  { start: "2026-09-01", end: "2026-09-31" },
+])("a contribution calendar falls back to supplied dates when period %j cannot enclose them", (period) => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "contributionCalendar", total: 1, period,
+    days: [{ date: "2026-09-15", count: 0, level: 0 }, { date: "2026-09-17", count: 1, level: 1 }],
+  } });
+  for (const side of [".card-front", ".card-back"]) {
+    expect($(`${side} .activity-calendar span`)).toHaveLength(2);
+    expect($(`${side} .activity-calendar`).attr("style")).toContain("repeat(1, minmax(0, 1fr))");
+    expect($(`${side} [data-date="2026-09-15"]`).attr("style")).toContain("grid-column:1");
+    expect($(`${side} .contribution-gap`).text()).toContain("1 day has no supplied count");
+    expect($(`${side} .contribution-range`).text()).toBe("Daily counts: 2026-09-15 – 2026-09-17");
+  }
+});
+
+test("a contribution calendar with a period but no supplied days remains explicitly empty", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "contributionCalendar", total: 0, days: [] } });
+  expect($(".activity-calendar span")).toHaveLength(0);
+  for (const side of [".card-front", ".card-back"]) {
+    expect($(`${side} .activity-empty`).text()).toBe("No daily contribution counts supplied");
+  }
+});
+
+
 test.each(["AFFILIATE", "REFERRAL"] as const)("%s destinations remain visibly disclosed on both card faces", (type) => {
   const $ = renderCard({ primaryLink: { type, url: "https://example.com/owner-selected", label: "Visit Example Product" } });
   const disclosure = type === "AFFILIATE" ? "Affiliate link" : "Referral link";

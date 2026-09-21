@@ -161,3 +161,14 @@ test("name destination must be explicitly selected from bounded profile links", 
   const other = t.withIdentity({ subject: "other" });
   await expect(other.mutation(api.onboarding.claimHandle, { ...values, profileLinks: [] })).rejects.toThrow("already claimed");
 });
+
+test.each(["collection", "app"])("existing %s owners can edit their private identity while preserving their publication", async handle => {
+  const { t, owner, userId } = await fixture();
+  await t.run(ctx => ctx.db.patch(userId, { handle }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  await owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  const publishedBefore = await t.query(api.publicProfiles.getByHandleV2, { handle });
+  expect(await owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Private updated name", bio: "Private updated bio" })).toEqual({ handle });
+  expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Private updated name" });
+  expect(await t.query(api.publicProfiles.getByHandleV2, { handle })).toEqual(publishedBefore);
+});

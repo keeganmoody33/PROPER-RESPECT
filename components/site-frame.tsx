@@ -11,7 +11,7 @@ export function SiteHeader() {
       <Link href="/#how-it-works">How it works</Link>
       <Link href="/#example">Example</Link>
       <Link href="/sign-in">Sign in</Link>
-      <Link className="site-start" href="/collection">Your collection</Link>
+      <Link className="site-start" href="/app/collection">Your collection</Link>
     </nav>
   </header></>;
 }

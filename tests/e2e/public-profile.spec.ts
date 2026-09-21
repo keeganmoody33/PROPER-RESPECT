@@ -41,3 +41,21 @@ test("unknown handles receive a privacy-safe not-found state", async ({
   ).toBeVisible();
   await expect(page.getByText(/source record/i)).toHaveCount(0);
 });
+
+for (const handle of ["collection", "app"]) test(`existing /${handle} public profiles remain reachable`, async ({ page }, testInfo) => {
+  const response = await page.goto(`/${handle}`);
+  expect(response?.status()).toBe(200);
+  await expect(page.getByRole("heading", { level: 1, name: `Existing ${handle} owner` })).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://public.example/${handle}`);
+  await expect(page.getByRole("link", { name: "Open your private collection →" })).toHaveAttribute("href", "/app/collection");
+  await page.screenshot({ path: testInfo.outputPath(`2026-09-21-legacy-${handle}-profile.png`), fullPage: true });
+});
+
+test("private collection has a separate noindex route", async ({ page }, testInfo) => {
+  const response = await page.goto("/app/collection");
+  expect(response?.status()).toBe(200);
+  await expect(page.getByRole("heading", { level: 1, name: "Authentication is ready to configure." })).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.getByText("Synthetic published profile for route compatibility checks.")).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath("2026-09-21-private-collection.png"), fullPage: true });
+});

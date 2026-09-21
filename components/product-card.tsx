@@ -129,10 +129,19 @@ function activityHighlight(activity: ActivityModule) {
 function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
   if (activity.days.length === 0) return <p className="activity-empty">No daily contribution counts supplied</p>;
   const days = [...activity.days].sort((a, b) => a.date.localeCompare(b.date));
-  const first = new Date(`${days[0].date}T00:00:00Z`);
+  const firstSupplied = new Date(`${days[0].date}T00:00:00Z`);
+  const lastSupplied = new Date(`${days.at(-1)!.date}T00:00:00Z`);
+  const periodStart = new Date(`${activity.period?.start}T00:00:00Z`);
+  const periodEnd = new Date(`${activity.period?.end}T00:00:00Z`);
+  const enclosingPeriod = Number.isFinite(periodStart.getTime()) && Number.isFinite(periodEnd.getTime())
+    && periodStart.toISOString().slice(0, 10) === activity.period?.start
+    && periodEnd.toISOString().slice(0, 10) === activity.period?.end
+    && periodStart <= firstSupplied && periodEnd >= lastSupplied;
+  const first = enclosingPeriod ? periodStart : firstSupplied;
+  const last = (enclosingPeriod ? periodEnd : lastSupplied).getTime();
   const firstSunday = first.getTime() - first.getUTCDay() * 86_400_000;
-  const last = new Date(`${days.at(-1)!.date}T00:00:00Z`).getTime();
   const weeks = Math.floor((last - firstSunday) / (7 * 86_400_000)) + 1;
+  const gaps = weeks - 1;
   const missingDays = Math.round((last - first.getTime()) / 86_400_000) + 1 - new Set(days.map(day => day.date)).size;
   return (
     <div className="contribution-calendar">
@@ -140,7 +149,7 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
         <div className="contribution-weekdays" aria-hidden="true">
           {["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => <span key={index}>{label}</span>)}
         </div>
-        <div className="activity-calendar contribution-grid" role="group" aria-label="Daily contributions, Sunday to Saturday in each column" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`, maxWidth: `calc(${weeks * 0.7}rem + ${weeks - 1} * clamp(1px, 0.25vw, 3px))` }}>
+        <div className="activity-calendar contribution-grid" role="group" aria-label="Daily contributions, Sunday to Saturday in each column" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`, maxWidth: `calc(${weeks * 0.7}rem + clamp(${gaps}px, ${gaps * 0.25}vw, ${gaps * 3}px))` }}>
           {days.map(day => {
             const date = new Date(`${day.date}T00:00:00Z`);
             const label = `${day.date}: ${day.count} ${day.count === 1 ? "contribution" : "contributions"}`;

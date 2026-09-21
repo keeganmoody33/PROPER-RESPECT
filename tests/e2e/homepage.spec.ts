@@ -35,7 +35,7 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await expect(page.locator("#page-content")).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toBeFocused();
-  await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toHaveAttribute("href", "/collection");
+  await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toHaveAttribute("href", "/app/collection");
   await expect(page.getByRole("link", { name: "View Keegan’s shared collection" })).toHaveAttribute("href", "/keegan");
   expect(external).toEqual([]);
   expect(errors).toEqual([]);
@@ -46,12 +46,12 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Keegan Moody");
   await page.goto("/");
   await page.getByRole("link", { name: "Start your collection", exact: true }).first().click();
-  await expect(page).toHaveURL(/\/collection$/);
+  await expect(page).toHaveURL(/\/app\/collection$/);
 });
 
 
 test("existing collection links retain callback query values", async ({ page }) => {
   await page.goto("/onboarding?gmail=connected");
-  await expect(page).toHaveURL(/\/collection\?gmail=connected$/);
+  await expect(page).toHaveURL(/\/app\/collection\?gmail=connected$/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });

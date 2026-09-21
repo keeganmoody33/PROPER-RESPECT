@@ -1,1 +1,1 @@
-export { default, metadata } from "../collection/page";
+export { default, metadata } from "../app/collection/page";
