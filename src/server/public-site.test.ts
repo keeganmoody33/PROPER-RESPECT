@@ -37,5 +37,5 @@ it("marks preview pages noindex and limits the sitemap to the public root", () =
   vi.stubEnv("VERCEL_ENV", "preview");
   vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://public.example");
   expect(layoutMetadata().robots).toEqual({ index: false, follow: false });
-  expect(sitemap()).toEqual([{ url: "https://public.example/" }]);
+  expect(sitemap()).toEqual([{ url: "https://public.example/", lastModified: "2026-09-21T00:00:00.000Z" }]);
 });

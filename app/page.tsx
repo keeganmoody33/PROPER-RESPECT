@@ -2,15 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
+import { productIdentity } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
-  return publicPageMetadata("Your tools. Your track record.", "What you use, test, and come back to, with the history and context behind your choices.");
+  const metadata = publicPageMetadata("Your tools. Your track record.", "What you use, test, and come back to, with the history and context behind your choices.");
+  return { ...metadata, alternates: { ...metadata.alternates, types: { "text/markdown": "/index.md" } } };
 }
 
 export default function HomePage() {
   return (
     <div className={styles.homepage}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productIdentity()).replace(/</g, "\\u003c") }} />
       <main id="homepage-content" className={styles.main} tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="homepage-title">
           <div className={styles.intro}>
