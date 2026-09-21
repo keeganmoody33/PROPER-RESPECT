@@ -37,7 +37,8 @@ Required cutover sequence (not authorization):
    demote the old host to the approved redirect policy. Verify fallback and avoid
    opposing redirects that loop.
 5. On failure, remove any old-host redirect before restoring the apex-to-old-host
-   307, restore the previous approved origin/auth settings and compatible release,
+   307, restore the previous approved origin/auth settings and compatible frontend
+   using the [rollback procedure](#rollback),
    then reverify old-host public and authenticated behavior. No database restore,
    seeding, owner transfer or publication belongs to this rollback.
 
@@ -261,12 +262,26 @@ After an explicitly approved application/backend release:
 
 ## Rollback
 
-- Roll back the Vercel deployment to the last known-good commit.
-- Redeploy the matching Convex code from that commit.
-- Do not delete tables or rotate `CONNECTOR_ENCRYPTION_KEY` as part of an
-  application rollback.
-- The current schema evolution is additive; handle any future destructive data
-  migration with a separate, reversible migration plan.
+Updated: 2026-09-21 UTC.
+
+- Roll back the frontend first to an approved, known-good Vercel deployment,
+  retaining the secured Convex backend and additive schema. Restoring a frontend
+  artifact must not rerun an older build command that redeploys Convex.
+- Keep `uploadTickets`, `rawEvidence.uploadAttribution`, the authenticated upload
+  handlers, and the compatible query functions/arguments. New uploads write fields
+  absent from the old schema; additive forward changes do not make an old backend
+  schema safe to restore. Do not redeploy backend `32aa043` as a blanket rollback.
+- Older frontends can still use the compatible collection queries, but their old
+  `generateUploadUrl` flow deliberately fails closed with a reload instruction.
+  Verify this limitation and existing collection/profile access after rollback;
+  do not reopen unbound uploads to make the old UI work.
+- If a backend correction is required, prepare and separately authorize a reviewed
+  compatible patch that preserves stored records, upload ownership enforcement,
+  and the query contracts needed by the selected frontend. Record its exact SHA
+  and target before synchronization.
+- Do not delete tables or attribution fields, restore a database, seed owner data,
+  or rotate `CONNECTOR_ENCRYPTION_KEY` as part of application rollback. Any data
+  migration requires its own reversible plan and authorization.
 
 ## Gmail configuration and operation — September 18, 2026
 
