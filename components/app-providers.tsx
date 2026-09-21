@@ -12,7 +12,14 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   if (!clerkKey || !convex) return children;
 
   return (
-    <ClerkProvider publishableKey={clerkKey}>
+    <ClerkProvider publishableKey={clerkKey} appearance={{ variables: {
+      colorPrimary: "#171713",
+      colorForeground: "#171713",
+      colorBackground: "#fbfaf6",
+      colorInput: "#ffffff",
+      borderRadius: "0.125rem",
+      fontFamily: "var(--homepage-sans), Arial, sans-serif",
+    } }}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         {children}
       </ConvexProviderWithClerk>

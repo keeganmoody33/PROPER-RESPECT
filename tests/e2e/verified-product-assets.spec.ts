@@ -48,7 +48,7 @@ async function mount(page: Page, fail?: "logos" | "fonts") {
     }
     if (url.pathname === "/") return route.fulfill({
       contentType: "text/html; charset=utf-8",
-      body: '<meta charset="utf-8"><p id="fixture-label">Synthetic activity · verified official assets · local fixture</p><main id="root"></main>',
+      body: '<meta charset="utf-8"><style>body { --homepage-sans: Courier; }</style><p id="fixture-label">Synthetic activity · verified official assets · local fixture</p><main class="onboarding-panel"><div class="review-card" id="root"></div></main>',
     });
     if (!localPaths.has(url.pathname)) return route.abort();
     if ((fail === "logos" && url.pathname.endsWith(".svg")) || (fail === "fonts" && url.pathname.endsWith(".woff2"))) return route.abort();
@@ -85,7 +85,7 @@ for (const width of [1280, 390]) test(`official Copilot lockups and scoped fonts
       .map(node => getComputedStyle(node).fontFamily));
     expect(families.every(family => family.includes(assets.typography.cssFamily))).toBe(true);
   }
-  await expect(page.locator("#fixture-label")).toHaveCSS("font-family", "Arial, Helvetica, sans-serif");
+  await expect(page.locator("#fixture-label")).toHaveCSS("font-family", "Courier, Helvetica, sans-serif");
   expect(await page.evaluate(() => [...document.fonts].filter(face => face.family.includes("PRVerified-")).every(face => face.status === "loaded"))).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath(`2026-09-19-copilot-front-${width}.png`), fullPage: true, animations: "disabled" });

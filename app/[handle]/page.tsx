@@ -39,12 +39,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   return (
     <main>
-      <header className="masthead">
-        <Link className="brand" href="/" aria-label="PROPER—RESPECT home">
-          PROPER—RESPECT
-        </Link>
-        <p>@{profile.handle} / SHARED PRODUCT COLLECTION</p>
-      </header>
+      <div className="profile-context"><p>@{profile.handle} / SHARED PRODUCT COLLECTION</p></div>
 
       <section className="stack" aria-labelledby="stack-heading">
         <div className="section-heading">

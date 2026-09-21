@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
+import { SiteFooter, SiteHeader } from "@/components/site-frame";
 import { AppProviders } from "@/components/app-providers";
 import { publicSiteOrigin } from "@/src/server/public-site";
 import "./globals.css";
+
+const archivo = localFont({ src: "./_homepage-fonts/Archivo.ttf", variable: "--homepage-sans", display: "swap", weight: "100 900" });
+const mono = localFont({ src: "./_homepage-fonts/IBMPlexMono-Bold.ttf", variable: "--homepage-mono", display: "swap", weight: "700" });
 
 export function generateMetadata(): Metadata {
   return {
@@ -20,8 +25,8 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>
-        <AppProviders>{children}</AppProviders>
+      <body className={`${archivo.variable} ${mono.variable}`}>
+        <AppProviders><SiteHeader /><div id="page-content" tabIndex={-1}>{children}</div><SiteFooter /></AppProviders>
       </body>
     </html>
   );

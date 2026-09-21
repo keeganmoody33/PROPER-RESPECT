@@ -1,11 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import localFont from "next/font/local";
 import { publicPageMetadata } from "@/src/server/public-site";
 import styles from "./homepage.module.css";
-
-const archivo = localFont({ src: "./_homepage-fonts/Archivo.ttf", variable: "--homepage-sans", display: "swap", weight: "100 900" });
-const mono = localFont({ src: "./_homepage-fonts/IBMPlexMono-Bold.ttf", variable: "--homepage-mono", display: "swap", weight: "700" });
 
 export function generateMetadata() {
   return publicPageMetadata("Your tools. Your track record.", "What you use, test, and come back to, with the history and context behind your choices.");
@@ -13,15 +9,7 @@ export function generateMetadata() {
 
 export default function HomePage() {
   return (
-    <div className={`${styles.homepage} ${archivo.variable} ${mono.variable}`}>
-      <a className={styles.skip} href="#homepage-content">Skip to content</a>
-      <header className={styles.header}>
-        <Link href="/" className={styles.wordmark} aria-label="Proper Respect home">
-          <Image src="/brand/homepage/PR-mark-black.png" alt="" width={40} height={34} />
-          <span>Proper Respect</span>
-        </Link>
-        <Link className={styles.navLink} href="/onboarding">Your collection</Link>
-      </header>
+    <div className={styles.homepage}>
       <main id="homepage-content" className={styles.main} tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="homepage-title">
           <div className={styles.intro}>
@@ -50,12 +38,29 @@ export default function HomePage() {
             <li><span className={styles.stepNumber} aria-hidden="true">03 / Share deliberately</span><h3>Preview every choice.</h3><p>Select the saved cards and details you want to share. Review the exact preview before you approve publication.</p></li>
           </ol>
         </section>
-        <section className={styles.close} aria-label="Start your collection">
-          <p>Your tools.<br />Your point of view.</p>
-          <Link className={styles.lightLink} href="/onboarding">Open your collection</Link>
+        <section className={styles.respect} aria-labelledby="respect-title">
+          <div className={styles.respectInner}>
+            <figure className={styles.bump}>
+              <Image src="/brand/homepage/bump-art.png" alt="Two fists meeting at a bright red diamond" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 45vw" />
+              <figcaption>Fig. 02 / Credit changes hands</figcaption>
+            </figure>
+            <div className={styles.respectCopy}>
+              <p className={styles.label}>Respect / Goes both ways</p>
+              <h2 id="respect-title">Give props.<br /><span>Get props.</span></h2>
+              <p>Record why you use a tool and what changed when you tried it. Add notes or supporting evidence. Choose which saved cards and details appear on your public page.</p>
+              <p className={styles.kicker}>Your tools. Your point of view.</p>
+            </div>
+          </div>
+        </section>
+        <section className={styles.close} aria-labelledby="start-title">
+          <h2 id="start-title">Make it<br /><span>your collection.</span></h2>
+          <div className={styles.actions}>
+            <Link className={styles.primary} href="/onboarding">Open your collection</Link>
+            <Link className={styles.secondary} href="/keegan">See the shared collection →</Link>
+            <p className={styles.privacy}>Private by default. Shared by choice.</p>
+          </div>
         </section>
       </main>
-      <footer className={styles.footer}><span>Proper Respect</span><span>Private by default. Shared by choice.</span></footer>
     </div>
   );
 }
