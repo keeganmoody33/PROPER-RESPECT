@@ -1,6 +1,6 @@
 # Collection read-budget work — 2026-09-21 UTC
 
-Status: LOCAL IN PROGRESS. No PR, push, deployment or backend synchronization.
+Status update: implementation complete at d84180eb7722c2e9a9b76f53dae8928f6ec232e1; full local verification recorded in docs/verification/2026-09-21-collection-read-budget.md. Preparing owner-reviewed PR; no deployment or backend synchronization. Earlier checkpoint details below are historical.
 Base: bb108413d937abb9082f88fd3ded3e168f93e574.
 Checkpoint: 2fde7ef4cc7e51f523b44d3ac896f450648978ee.
 Worktree: /tmp/proper-respect-read-budget-20260920.
