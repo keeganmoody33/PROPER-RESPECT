@@ -155,11 +155,15 @@ export const activityModuleValidator = v.union(
   }),
 );
 
+export const profileLinkValidator = v.object({ label: v.string(), url: v.string() });
+
 export const publicProfileValidator = v.object({
   handle: v.string(),
   displayName: v.string(),
   bio: v.string(),
   avatarUrl: v.optional(v.string()),
+  profileLinks: v.optional(v.array(profileLinkValidator)),
+  preferredLinkUrl: v.optional(v.string()),
   cards: v.array(
     v.object({
       product: v.object({

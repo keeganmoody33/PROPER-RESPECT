@@ -12,6 +12,7 @@ import {
   activityModuleValidator,
   attributionScopeValidator,
   publicProfileValidator,
+  profileLinkValidator,
   statusValidator,
   visibilityValidator,
   costValidator,
@@ -30,6 +31,8 @@ export default defineSchema({
     displayName: v.string(),
     bio: v.string(),
     avatarUrl: v.optional(v.string()),
+    profileLinks: v.optional(v.array(profileLinkValidator)),
+    preferredLinkUrl: v.optional(v.string()),
     onboardingStatus: v.optional(
       v.union(
         v.literal("PROFILE"),

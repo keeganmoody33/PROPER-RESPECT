@@ -1,5 +1,7 @@
 "use client";
 
+import { ProfileName, ProfileLinks } from "./profile-identity";
+import { ProfileLinksFields } from "./profile-links-fields";
 import { classifyEvidenceUpload, EVIDENCE_UPLOAD_ACCEPT } from "@/src/domain/evidence-upload";
 import {
   SignInButton,
@@ -107,7 +109,7 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
     {!current && <p role="status">Your saved collection or sharing choices changed. Preview again before publishing.</p>}
     <div className="card-grid">{profile.cards.map((card, index) => <ProductCard key={`${card.product.slug}-${index}`} card={card} index={index} goTo={card.goTo} />)}</div>
     {!profile.cards.length && <p>No products will be public.</p>}
-    <footer className="profile-footer"><div><strong>{profile.displayName}</strong><span>@{profile.handle}</span></div><p>{profile.bio}</p></footer>
+    <footer className="profile-footer"><div><strong><ProfileName profile={profile} /></strong><span>@{profile.handle}</span></div><p>{profile.bio}</p><ProfileLinks profile={profile} /></footer>
     <label className="sharing-preview-confirmation"><input type="checkbox" checked={approved} disabled={!current || busy} onChange={event => setApproved(event.target.checked)} />I approve making exactly this preview visible to anyone with the public link.</label>
     <button type="button" className="primary-action" disabled={!current || busy || !approved} onClick={onPublish}>{busy ? "Publishing…" : "Publish this preview"}</button>
   </section>;
@@ -176,10 +178,14 @@ function Builder() {
 
   async function submitProfile(form: FormData) {
     await run("Public identity saved. Your private collection has not been published.", async () => {
+      const urls = form.getAll("profileLinkUrl").map(String);
+      const preferred = String(form.get("preferredProfileLink") ?? "");
       await claimHandle({
         handle: String(form.get("handle")),
         displayName: String(form.get("displayName")),
         bio: String(form.get("bio")),
+        profileLinks: form.getAll("profileLinkLabel").map((label, index) => ({ label: String(label), url: urls[index] })),
+        preferredLinkUrl: preferred === "" ? null : urls[Number(preferred)],
       });
     });
   }
@@ -375,6 +381,7 @@ function Builder() {
         <a href="#private-collection-title">Collection</a>
         <a href="#add-product">Add a product</a>
         <a href="#collection-sources">Sources</a>
+        <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Profile and links</a>
         <a href="#collection-sharing">Sharing</a>
       </nav>
       {message && <p className="message" role="status">{message}</p>}
@@ -454,13 +461,14 @@ function Builder() {
         <p className="onboarding-kicker">SHARING / YOUR CHOICE</p>
         <h2 id="collection-sharing-title">Choose what to share</h2>
         <p>Private saving never publishes. Select saved cards, preview the information a visitor will see, and approve that version. Existing public cards stay unchanged unless you include or remove them here.</p>
-        <details className="collection-identity" open={state.user.handle.startsWith("pending-")}>
+        <details id="collection-profile" className="collection-identity" open={state.user.handle.startsWith("pending-")}>
           <summary>Public identity</summary>
           <p>A handle is needed only when you choose to share. It is not required to build your private collection.</p>
           <form onSubmit={event => { event.preventDefault(); void submitProfile(new FormData(event.currentTarget)); }} className="form-grid">
             <label>Handle<input name="handle" defaultValue={state.user.handle.startsWith("pending-") ? "" : state.user.handle} placeholder="your-handle" required /></label>
             <label>Display name<input name="displayName" defaultValue={state.user.displayName ?? clerkUser?.fullName ?? ""} required /></label>
             <label className="full">Short footer bio (optional)<textarea name="bio" defaultValue={state.user.bio} rows={2} /></label>
+            <ProfileLinksFields links={state.user.profileLinks} preferredLinkUrl={state.user.preferredLinkUrl} />
             <div className="action-row full"><button className="secondary-action" disabled={busy}>Save public identity</button></div>
           </form>
         </details>

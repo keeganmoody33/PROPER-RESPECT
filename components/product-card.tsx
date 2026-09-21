@@ -126,6 +126,38 @@ function activityHighlight(activity: ActivityModule) {
   }
 }
 
+function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
+  if (activity.days.length === 0) return <p className="activity-empty">No daily contribution counts supplied</p>;
+  const days = [...activity.days].sort((a, b) => a.date.localeCompare(b.date));
+  const first = new Date(`${days[0].date}T00:00:00Z`);
+  const firstSunday = first.getTime() - first.getUTCDay() * 86_400_000;
+  const last = new Date(`${days.at(-1)!.date}T00:00:00Z`).getTime();
+  const weeks = Math.floor((last - firstSunday) / (7 * 86_400_000)) + 1;
+  const missingDays = Math.round((last - first.getTime()) / 86_400_000) + 1 - new Set(days.map(day => day.date)).size;
+  return (
+    <div className="contribution-calendar">
+      <div className="contribution-calendar-layout">
+        <div className="contribution-weekdays" aria-hidden="true">
+          {["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => <span key={index}>{label}</span>)}
+        </div>
+        <div className="activity-calendar contribution-grid" role="group" aria-label="Daily contributions, Sunday to Saturday in each column" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`, maxWidth: `calc(${weeks * 0.7}rem + ${weeks - 1} * clamp(1px, 0.25vw, 3px))` }}>
+          {days.map(day => {
+            const date = new Date(`${day.date}T00:00:00Z`);
+            const label = `${day.date}: ${day.count} ${day.count === 1 ? "contribution" : "contributions"}`;
+            return <span key={day.date} role="img" aria-label={label} title={label} data-date={day.date} data-level={day.level}
+              style={{ gridColumn: Math.floor((date.getTime() - firstSunday) / (7 * 86_400_000)) + 1, gridRow: date.getUTCDay() + 1 }} />;
+          })}
+        </div>
+      </div>
+      <div className="contribution-legend" aria-hidden="true">Less {[0, 1, 2, 3, 4].map(level => <i key={level} data-level={level} />)} More</div>
+      {(!activity.period || activity.period.start !== days[0].date || activity.period.end !== days.at(-1)!.date) && (
+        <p className="contribution-range">Daily counts: {days[0].date} – {days.at(-1)!.date}</p>
+      )}
+      {missingDays > 0 && <p className="contribution-gap">{missingDays} {missingDays === 1 ? "day has" : "days have"} no supplied count; blank spaces are not zero activity.</p>}
+    </div>
+  );
+}
+
 function ActivityPreview({ activity, unreviewed = false }: { activity: ActivityModule; unreviewed?: boolean }) {
   const metric = activityHighlight(activity);
   return (
@@ -138,6 +170,7 @@ function ActivityPreview({ activity, unreviewed = false }: { activity: ActivityM
           {activity.kind === "timeSeries" ? " · observation" : ""}
         </>}
       </p>
+      {activity.kind === "contributionCalendar" && <ContributionCalendar activity={activity} />}
       <p className="card-activity-coverage">
         {activity.attributionScope.toLowerCase()} activity ·{" "}
         {activity.period ? `${activity.period.start} to ${activity.period.end}` : "Measurement period not supplied"}
@@ -175,19 +208,7 @@ function ActivityView({ activity }: { activity: ActivityModule }) {
           <strong>{compactNumber(activity.total)}</strong>
           <span>contributions</span>
         </div>
-        {activity.days.length > 0 ? (
-          <div className="activity-calendar" aria-label="Contribution activity">
-            {activity.days.map((day) => (
-              <span
-                key={day.date}
-                data-level={day.level}
-                title={`${day.date}: ${day.count} contributions`}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="activity-empty">Calendar refresh pending</p>
-        )}
+        <ContributionCalendar activity={activity} />
         {activity.memberSince && (
           <p className="activity-caption">
             Member since {activity.memberSince.slice(0, 4)}
