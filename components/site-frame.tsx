@@ -1,12 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ThemeSelector } from "@/components/theme-selector";
 
 export function SiteHeader() {
   return <><a className="site-skip" href="#page-content">Skip to content</a><header className="site-header">
     <Link href="/" className="site-wordmark" aria-label="Proper Respect home">
-      <Image src="/brand/homepage/PR-mark-black.png" alt="" width={40} height={34} />
+      <span className="site-mark"><Image src="/brand/homepage/PR-mark-black.png" alt="" width={40} height={34} /></span>
       <span>Proper Respect</span>
     </Link>
+    <div className="site-theme"><ThemeSelector /></div>
     <nav className="site-navigation" aria-label="Main navigation">
       <Link href="/#how-it-works">How it works</Link>
       <Link href="/#example">Example</Link>
@@ -28,7 +30,7 @@ export function SiteFooter() {
     <div className="site-footer-main">
       <div className="site-footer-brand">
         <Link href="/" className="site-wordmark" aria-label="Proper Respect home">
-          <Image src="/brand/homepage/PR-mark-black.png" alt="" width={56} height={48} />
+          <span className="site-mark"><Image src="/brand/homepage/PR-mark-black.png" alt="" width={56} height={48} /></span>
           <span>Proper Respect</span>
         </Link>
         <p>Give props.<br />Get props.</p>
@@ -45,6 +47,7 @@ export function SiteFooter() {
     <div className="site-footer-bottom">
       <span>Proper Respect</span>
       <span>Private by default. Shared by choice.</span>
+      <ThemeSelector />
     </div>
   </footer>;
 }

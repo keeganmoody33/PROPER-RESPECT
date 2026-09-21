@@ -6,6 +6,35 @@
   --respect-red: #c72c39;
   --muted: #706f68;
   --line: rgba(23, 23, 19, 0.2);
+  --input: #ffffff;
+  --example-panel: #e4e1d7;
+  --control-line: #b7b3a6;
+  --secondary: #5b5951;
+  --sample-text: #45443e;
+  --action-text: #fbfaf6;
+  --feature-background: #171713;
+  --feature-text: #f0eee7;
+  --feature-muted: #ccc9be;
+  --feature-line: #797970;
+  --feature-accent: #ef6772;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --ink: #f0eee7;
+  --paper: #171713;
+  --panel: #24241f;
+  --respect-red: #ef6772;
+  --muted: #b8b6ac;
+  --line: rgba(240, 238, 231, 0.25);
+  --input: #171713;
+  --example-panel: #24241f;
+  --control-line: #77776d;
+  --secondary: #b8b6ac;
+  --sample-text: #b8b6ac;
+  --action-text: #171713;
+  --feature-background: #24241f;
+  color-scheme: dark;
 }
 
 * {
@@ -98,6 +127,12 @@ main {
 }
 
 .product-card {
+  --respect-red: #c72c39;
+  --ink: #171713;
+  --paper: #f0eee7;
+  --signal: #d8ff3e;
+  --line: rgba(23, 23, 19, 0.2);
+  color-scheme: light;
   --card-line: color-mix(in srgb, currentColor 22%, transparent);
   background: var(--brand-card-background, var(--ink));
   border-radius: 1rem;
@@ -848,7 +883,7 @@ main {
 .review-field input,
 .review-field textarea,
 .review-field select {
-  background: white;
+  background: var(--input);
   border: 1px solid var(--line);
   padding: 0.8rem;
 }
@@ -1006,7 +1041,7 @@ main {
 .offering-table caption { text-align: left; padding: .75rem 0; font-weight: 700; }
 .offering-table th, .offering-table td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: .75rem; }
 .offering-table small { display: block; margin-top: .3rem; font-weight: 400; }
-.evidence-meta { font-size: .8rem; color: #62615b; overflow-wrap: anywhere; }
+.evidence-meta { font-size: .8rem; color: var(--secondary); overflow-wrap: anywhere; }
 .evidence-claim { border-top: 1px solid var(--line); padding: 1rem 0; }
 .review-card blockquote { border-left: 3px solid var(--line); margin: .75rem 0; padding: .5rem .85rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .evidence-intake form, .evidence-claim form { display: grid; gap: 1rem; padding: 1rem 0; }
@@ -1043,7 +1078,7 @@ main {
 .site-footer-group ul { list-style: none; padding: 0; margin: 0; }
 .site-footer-group li { margin: 0 0 1rem; }
 .site-footer-group a { text-underline-offset: .2em; }
-.site-footer-placeholder { display: block; color: #5b5951; }
+.site-footer-placeholder { display: block; color: var(--secondary); }
 .site-footer-placeholder small { display: block; font-size: .6rem; font-weight: 400; }
 .site-footer-bottom { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .6rem 1.5rem; border-top: 1px solid var(--line); margin-top: 3rem; padding-top: 1.2rem; }
 .origins-shell { max-width: 70rem; min-height: 55vh; padding: clamp(3rem, 8vw, 7rem) clamp(1.25rem, 4vw, 5rem); }
@@ -1112,3 +1147,21 @@ main {
 
 .contribution-legend { display: flex; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.6rem; margin-top: 0.4rem; }
 .contribution-legend i { display: block; width: 0.45rem; height: 0.45rem; border-radius: 1px; border: 1px solid #30363d; background: #161b22; }
+
+.site-mark { display: inline-flex; flex: 0 0 auto; background: currentColor; mask: url("/brand/homepage/PR-mark-black.png") center / contain no-repeat; }
+.site-mark img { display: block; opacity: 0; }
+.site-theme { order: 3; }
+.theme-selector { display: flex; align-items: center; gap: .5rem; font: 700 .65rem/1.5 var(--homepage-mono), monospace; }
+.theme-selector select { min-height: 44px; max-width: 100%; padding: .5rem .35rem; background: var(--panel); color: var(--ink); border: 1px solid var(--control-line); border-radius: 0; cursor: pointer; }
+.theme-selector select:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 3px; }
+input, textarea, select { accent-color: var(--respect-red); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+@media (max-width: 1100px) {
+  .site-header { flex-wrap: wrap; }
+  .site-theme { order: 0; margin-left: auto; }
+  .site-header > .site-navigation { width: 100%; }
+}
+@media (max-width: 600px) {
+  .site-theme .theme-selector { gap: 0; }
+  .site-theme .theme-selector > span { position: absolute; clip-path: inset(50%); height: 1px; width: 1px; overflow: hidden; }
+}

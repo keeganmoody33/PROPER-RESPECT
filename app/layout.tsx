@@ -3,6 +3,8 @@ import localFont from "next/font/local";
 import { SiteFooter, SiteHeader } from "@/components/site-frame";
 import { AppProviders } from "@/components/app-providers";
 import { publicSiteOrigin } from "@/src/server/public-site";
+import { ThemeProvider } from "@/components/theme-provider";
+import { THEME_BOOTSTRAP } from "@/src/client/theme";
 import "./globals.css";
 
 const archivo = localFont({ src: "./_homepage-fonts/Archivo.ttf", variable: "--homepage-sans", display: "swap", weight: "100 900" });
@@ -24,9 +26,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} /></head>
       <body className={`${archivo.variable} ${mono.variable}`}>
-        <AppProviders><SiteHeader /><div id="page-content" tabIndex={-1}>{children}</div><SiteFooter /></AppProviders>
+        <ThemeProvider><AppProviders><SiteHeader /><div id="page-content" tabIndex={-1}>{children}</div><SiteFooter /></AppProviders></ThemeProvider>
       </body>
     </html>
   );
