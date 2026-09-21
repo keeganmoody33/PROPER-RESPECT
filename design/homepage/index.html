@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PROPER RESPECT. What you actually use.</title>
+<link rel="icon" type="image/png" href="assets/PR-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@500;700&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#171713;
+  --paper:#f0eee7;
+  --panel:#fbfaf6;
+  --red:#d93843;
+  --muted:#706f68;
+  --line:rgba(23,23,19,.85);
+  --hairline:rgba(23,23,19,.16);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--paper);color:var(--ink)}
+body{font-family:"Archivo",Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+::selection{background:var(--red);color:var(--paper)}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+
+.mono{font-family:"IBM Plex Mono","Courier New",monospace;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.diamond{display:inline-block;width:.55em;height:.55em;background:var(--red);transform:rotate(45deg);flex:0 0 auto}
+
+/* ---------- masthead ---------- */
+.masthead{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1.5px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem clamp(1rem,4vw,3.5rem)}
+.masthead-brand{display:flex;align-items:center;gap:.7rem}
+.masthead-brand img{width:32px;height:27px}
+.masthead-brand .wordmark{font-weight:900;font-size:.92rem;letter-spacing:.02em;white-space:nowrap}
+.masthead-right{display:flex;align-items:center;gap:1.4rem}
+.masthead-right .mono{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);
+  font-weight:800;font-size:.85rem;padding:.75rem 1.15rem;cursor:pointer;transition:background .12s,border-color .12s}
+.btn:hover{background:var(--red);border-color:var(--red);color:#fff}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.ghost:hover{background:var(--ink);color:var(--paper)}
+
+/* ---------- hero ---------- */
+.hero{padding:clamp(2.5rem,6vw,5rem) clamp(1rem,4vw,3.5rem) clamp(1.6rem,4vw,3rem);border-bottom:1.5px solid var(--line)}
+.hero-inner{max-width:1200px;margin:0 auto}
+.hero-eyebrow{display:flex;align-items:center;gap:.6rem;color:var(--muted);margin-bottom:1.6rem}
+.hero h1{font-weight:900;font-size:clamp(2.9rem,6.8vw,5.8rem);line-height:.93;letter-spacing:-.045em;text-transform:uppercase;max-width:14ch}
+.hero h1 em{font-style:normal;color:var(--red)}
+.hero-sub{margin-top:1.4rem;font-size:1.05rem;line-height:1.55;max-width:36rem}
+.hero-sub strong{border-bottom:2px solid var(--red)}
+.hero-proof{margin-top:1.3rem;display:flex;align-items:center;gap:.6rem;color:var(--muted)}
+.figure{margin-top:clamp(1.6rem,4vw,3rem);border:1.5px solid var(--line);background:var(--panel)}
+.figure img{width:100%}
+.figure .caption{border-top:1.5px solid var(--line);padding:.7rem 1rem;color:var(--muted);display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.figure .caption .spacer{flex:1}
+
+/* ---------- claim strip ---------- */
+.claim{background:var(--ink);color:var(--paper);border-bottom:1.5px solid var(--line);
+  padding:clamp(1.8rem,4vw,3rem) clamp(1rem,4vw,3.5rem)}
+.claim-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:clamp(1.5rem,3vw,3rem);flex-wrap:wrap}
+.claim-copy p:first-child{font-weight:900;font-size:clamp(1.4rem,2.6vw,2rem);letter-spacing:-.02em;text-transform:uppercase;line-height:1.05}
+.claim-copy p:last-child{margin-top:.5rem;color:rgba(240,238,231,.6)}
+.claim-form{display:flex;align-items:stretch;border:1.5px solid var(--paper);width:min(100%,30rem)}
+.claim-form .prefix{display:flex;align-items:center;padding:0 1rem;font-family:"IBM Plex Mono",monospace;font-size:.8rem;font-weight:700;color:rgba(240,238,231,.65);border-right:1.5px solid rgba(240,238,231,.3)}
+.claim-form input{flex:1;background:transparent;border:0;color:var(--paper);font-family:"IBM Plex Mono",monospace;font-size:.9rem;font-weight:700;padding:1rem .9rem;outline:none;min-width:6rem}
+.claim-form input::placeholder{color:rgba(240,238,231,.4)}
+.claim-form button{background:var(--red);color:#fff;border:0;font-family:"IBM Plex Mono",monospace;font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:0 1.3rem;cursor:pointer;white-space:nowrap;line-height:1.3}
+.claim-form button:hover{background:#fff;color:var(--ink)}
+.claim-note{margin-top:.7rem;color:rgba(240,238,231,.45);font-size:.8rem;line-height:1.5;max-width:30rem}
+
+/* ---------- sections ---------- */
+section.block{padding:clamp(2.6rem,6vw,5rem) clamp(1rem,4vw,3.5rem);border-bottom:1.5px solid var(--line)}
+.block-inner{max-width:1200px;margin:0 auto}
+.sec-head{display:flex;align-items:end;justify-content:space-between;gap:2rem;margin-bottom:clamp(1.6rem,3.5vw,2.8rem)}
+.sec-head .mono{color:var(--muted)}
+.sec-head h2{font-weight:900;font-size:clamp(2rem,4.4vw,3.8rem);line-height:.95;letter-spacing:-.035em;text-transform:uppercase;max-width:16ch;margin-top:.7rem}
+.sec-sub{font-size:1rem;line-height:1.6;max-width:40rem;margin:-1rem 0 2rem}
+
+/* ---------- branded cards ---------- */
+.bcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem}
+.bcard{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:.8rem;padding:1.3rem 1.4rem;min-height:16rem;
+  background:var(--bc-bg);color:var(--bc-text);font-family:var(--bc-body-font,var(--bc-head-font,inherit))}
+.bcard .bc-top{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.bcard .bc-status{font-family:"IBM Plex Mono",monospace;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.75;display:flex;align-items:center;gap:.5rem}
+.bcard .bc-status .diamond{background:var(--red)}
+.bcard h3{font-family:var(--bc-head-font,inherit);font-size:clamp(1.6rem,2.4vw,2.2rem);font-weight:var(--bc-head-weight,800);letter-spacing:-.03em;line-height:1;margin:0}
+.bcard .bc-headline{font-size:.95rem;line-height:1.5;opacity:.9}
+.bcard .bc-usage{display:flex;align-items:center;gap:.8rem;border-top:1px solid color-mix(in srgb,currentColor 18%,transparent);padding-top:.8rem;margin-top:auto}
+.bcard .bc-usage svg{flex:1;min-width:80px;height:26px}
+.bcard .bc-usage .k{font-family:"IBM Plex Mono",monospace;font-size:.62rem;font-weight:700;letter-spacing:.12em;opacity:.6;text-transform:uppercase}
+.bcard .bc-usage .v{font-family:"IBM Plex Mono",monospace;font-size:.7rem;font-weight:700}
+.bcard .bc-lineage{display:flex;justify-content:space-between;align-items:center;gap:.8rem;border-top:1px solid color-mix(in srgb,currentColor 18%,transparent);padding-top:.8rem;font-size:.82rem;flex-wrap:wrap}
+.bcard .bc-lineage .who{display:flex;align-items:center;gap:.5rem;font-weight:700}
+.bcard .bc-take{border:1.5px solid currentColor;background:transparent;color:inherit;font-family:"IBM Plex Mono",monospace;font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:.55rem .8rem;cursor:pointer}
+.bcard .bc-take:hover{background:var(--bc-text);color:var(--bc-bg)}
+.bcard .bc-mark{position:absolute;right:-.5rem;bottom:-1.2rem;font-family:var(--bc-head-font,inherit);font-size:9rem;font-weight:900;opacity:.07;line-height:1;pointer-events:none;user-select:none}
+.bcards-foot{margin-top:1.4rem;display:flex;align-items:center;gap:.6rem;color:var(--muted)}
+
+/* brand themes (what the manifest produces) */
+.b-wispr{--bc-bg:#f3efe4;--bc-text:#1d2b1e;--bc-head-font:"Figtree",sans-serif;--bc-head-weight:700;--bc-body-font:"Figtree",sans-serif;border:1.5px solid #d8d2bd}
+.b-gh{--bc-bg:#0d1117;--bc-text:#e6edf3;--bc-head-font:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;--bc-head-weight:600;--bc-body-font:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;border:1.5px solid #30363d}
+.b-gh .bc-usage svg polyline{stroke:#3fb950}
+.b-nlm{--bc-bg:#ffffff;--bc-text:#1f1f1f;--bc-head-font:"Google Sans","Archivo",sans-serif;--bc-head-weight:500;--bc-body-font:"Google Sans","Archivo",sans-serif;border:1.5px solid #e3e3e3}
+.b-devin{--bc-bg:#131316;--bc-text:#f5f4ef;--bc-head-font:"Archivo",sans-serif;--bc-head-weight:700;--bc-body-font:"Archivo",sans-serif;border:1.5px solid #2c2c31}
+
+/* ---------- ledger ---------- */
+.ledger{border:1.5px solid var(--line);background:var(--panel)}
+.ledger .lrow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.4fr);gap:1rem;padding:1rem 1.2rem;border-bottom:1px solid var(--hairline);align-items:baseline;font-size:.92rem}
+.ledger .lrow:last-child{border-bottom:0}
+.ledger .lrow.head{font-family:"IBM Plex Mono",monospace;font-size:.66rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-bottom:1.5px solid var(--line)}
+.ledger .t{font-weight:800}
+.ledger .fresh{color:var(--red);font-weight:700}
+.ledger .who{color:var(--muted)}
+
+/* ---------- graphs ---------- */
+.graphs{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:1.5rem}
+.gpanel{border:1.5px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+.gpanel .ghead{padding:.9rem 1.1rem;border-bottom:1.5px solid var(--line);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.gpanel .ghead .t{font-family:"IBM Plex Mono",monospace;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.gpanel .ghead .m{font-family:"IBM Plex Mono",monospace;font-size:.68rem;color:var(--muted);letter-spacing:.06em}
+.gpanel .gbody{padding:1.2rem 1.1rem;flex:1;display:flex;align-items:center}
+.gpanel .gbody svg{width:100%;height:auto}
+.gpanel .gfoot{padding:.7rem 1.1rem;border-top:1px solid var(--hairline);font-family:"IBM Plex Mono",monospace;font-size:.66rem;color:var(--muted);letter-spacing:.06em}
+
+/* ---------- lineage (dark) ---------- */
+.dark{background:var(--ink);color:var(--paper)}
+.dark .sec-head .mono{color:rgba(240,238,231,.55)}
+.dark .sec-head h2{color:var(--paper)}
+.dark-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(2rem,4vw,4rem);align-items:center}
+.dark-art{border:1.5px solid rgba(240,238,231,.3)}
+.dark-art img{width:100%}
+.dark-art .caption{border-top:1.5px solid rgba(240,238,231,.3);padding:.7rem 1rem;color:rgba(240,238,231,.6);display:flex;gap:.6rem;align-items:center}
+.dark-copy h2{font-weight:900;font-size:clamp(2rem,4.4vw,3.8rem);line-height:.95;letter-spacing:-.035em;text-transform:uppercase;margin:.7rem 0 1.2rem;max-width:12ch}
+.dark-copy h2 em{font-style:normal;color:var(--red)}
+.dark-copy p{font-size:1rem;line-height:1.65;max-width:32rem;color:rgba(240,238,231,.9)}
+.dark-copy .kicker{margin-top:1.6rem;display:flex;gap:.6rem;align-items:center;color:rgba(240,238,231,.6)}
+
+/* ---------- final ---------- */
+.final{padding:clamp(3.5rem,9vw,7rem) clamp(1rem,4vw,3.5rem);border-bottom:1.5px solid var(--line)}
+.final-inner{max-width:1200px;margin:0 auto}
+.final h2{font-weight:900;font-size:clamp(2.6rem,6.6vw,5.8rem);line-height:.93;letter-spacing:-.045em;text-transform:uppercase;max-width:14ch}
+.final h2 em{font-style:normal;color:var(--red)}
+.final .row{margin-top:2rem;display:flex;flex-wrap:wrap;gap:.8rem}
+.final .handle{margin-top:1.4rem;color:var(--muted);display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+
+footer{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.1rem clamp(1rem,4vw,3.5rem);flex-wrap:wrap}
+footer .mono{color:var(--muted)}
+footer .brandline{display:flex;align-items:center;gap:.6rem}
+
+@media (max-width:900px){
+  .bcards{grid-template-columns:1fr}
+  .graphs{grid-template-columns:1fr}
+  .dark-grid{grid-template-columns:1fr}
+  .masthead-right .mono{display:none}
+}
+@media (max-width:640px){
+  .claim-inner{flex-direction:column;align-items:stretch}
+  .claim-note{max-width:none}
+  .claim-form{width:100%;flex-wrap:wrap}
+  .claim-form .prefix{border-right:0;border-bottom:1.5px solid rgba(240,238,231,.3);padding:.55rem .9rem}
+  .claim-form input{flex:1 1 100%;padding:.9rem}
+  .claim-form button{width:100%;padding:.9rem 1rem}
+  .bcards-foot{flex-wrap:wrap}
+  .bcard .bc-lineage .who{flex:1 1 100%}
+  .bcard .bc-take{width:100%;margin-top:.2rem}
+  .hero-proof{flex-wrap:wrap}
+  .ledger .lrow{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"tool fresh" "proof proof" "who who";row-gap:.25rem;padding:1rem}
+  .ledger .lrow.head{display:none}
+  .ledger .t{grid-area:tool}
+  .ledger .fresh{grid-area:fresh;justify-self:end}
+  .ledger .who{grid-area:who;font-size:.82rem}
+  .ledger .lrow span:nth-child(2){grid-area:proof;font-size:.82rem;color:var(--muted)}
+  .sec-head{flex-direction:column;align-items:start;gap:.8rem}
+  .bcard{min-height:0}
+  .btn{width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- masthead -->
+<header class="masthead">
+  <a class="masthead-brand" href="#">
+    <img src="assets/PR-mark-black.png" alt="PR monogram: interlocked P and R knuckles">
+    <span class="wordmark">PROPER&nbsp;RESPECT</span>
+  </a>
+  <div class="masthead-right">
+    <span class="mono">proper-respect.com</span>
+    <a class="btn" href="#claim">Claim your handle</a>
+  </div>
+</header>
+
+<!-- hero -->
+<div class="hero">
+  <div class="hero-inner">
+    <p class="hero-eyebrow mono"><span class="diamond"></span>Objective, objective</p>
+    <h1>What you <em>actually</em> use.</h1>
+    <p class="hero-sub">An objective look at your stack. What you use, what you're testing, what you tested and dropped. Proof over promises, and <strong>who put you on</strong>. Share it so friends can keep up.</p>
+    <p class="hero-proof mono"><span class="diamond"></span>04 products · 03 sources connected · every card verified</p>
+
+    <div class="figure">
+      <img src="assets/fists-blueprint.png" alt="Technical drawing of two fists bumping, measurement lines around the contact point">
+      <p class="caption mono"><span class="diamond"></span>Fig. 01, the handoff<span class="spacer"></span>Scale 1:1 · who put you on</p>
+    </div>
+  </div>
+</div>
+
+<!-- claim -->
+<div class="claim" id="claim">
+  <div class="claim-inner">
+    <div class="claim-copy">
+      <p>Get your page.</p>
+      <p class="mono">Free · 90 seconds · you approve everything</p>
+    </div>
+    <div style="flex:1;min-width:min(100%,32rem)">
+      <form class="claim-form" action="#" onsubmit="return false">
+        <span class="prefix">proper-respect.com/</span>
+        <input type="text" placeholder="your-handle" aria-label="Choose your handle">
+        <button type="submit">Claim it →</button>
+      </form>
+      <p class="claim-note">Your handle is yours. Your collection stays private until you publish it. Later you can mount the whole thing on your own domain, like props.yoursite.com.</p>
+    </div>
+  </div>
+</div>
+
+<!-- branded cards -->
+<section class="block">
+  <div class="block-inner">
+    <div class="sec-head">
+      <div>
+        <p class="mono">The product / 02</p>
+        <h2>Give people a look at your stack.</h2>
+      </div>
+      <p class="mono">Using · testing · archived</p>
+    </div>
+    <p class="sec-sub">Every card wears the product's real identity: its colors, its type, its mark. Status says where it stands with you. Usage says how much. Lineage says who put you on. Friends land on your page and see exactly what you're running.</p>
+
+    <div class="bcards">
+      <article class="bcard b-wispr">
+        <div class="bc-top">
+          <span class="bc-status"><span class="diamond"></span>Active · since 2025</span>
+          <span class="mono" style="font-size:.62rem;opacity:.55">wisprflow.ai</span>
+        </div>
+        <h3>Wispr Flow</h3>
+        <p class="bc-headline">Talking is faster than typing.</p>
+        <div class="bc-usage">
+          <span class="k">Usage</span>
+          <svg viewBox="0 0 200 26" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="0,20 18,19 36,19 54,16 72,17 90,13 108,12 126,9 144,10 162,6 180,5 199,3" fill="none" stroke="#1d2b1e" stroke-width="2"/>
+            <circle cx="199" cy="3" r="3" fill="#d93843"/>
+          </svg>
+          <span class="v">14/14 days</span>
+        </div>
+        <div class="bc-lineage">
+          <span class="who"><span class="diamond"></span>Put on by Jordan Crawford</span>
+          <button class="bc-take">Take this card ↗</button>
+        </div>
+        <span class="bc-mark">W</span>
+      </article>
+
+      <article class="bcard b-gh">
+        <div class="bc-top">
+          <span class="bc-status"><span class="diamond"></span>Active · since 2024</span>
+          <span class="mono" style="font-size:.62rem;opacity:.55">github.com</span>
+        </div>
+        <h3>GitHub</h3>
+        <p class="bc-headline">Where the receipts live.</p>
+        <div class="bc-usage">
+          <span class="k">Usage</span>
+          <svg viewBox="0 0 200 26" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="0,14 18,10 36,16 54,8 72,12 90,7 108,11 126,5 144,9 162,4 180,7 199,3" fill="none" stroke="#e6edf3" stroke-width="2"/>
+            <circle cx="199" cy="3" r="3" fill="#d93843"/>
+          </svg>
+          <span class="v">312 commits / 90d</span>
+        </div>
+        <div class="bc-lineage">
+          <span class="who"><span class="diamond"></span>Put on by the craft itself</span>
+          <button class="bc-take">Take this card ↗</button>
+        </div>
+        <span class="bc-mark">G</span>
+      </article>
+
+      <article class="bcard b-nlm">
+        <div class="bc-top">
+          <span class="bc-status"><span class="diamond"></span>Testing · since 2026</span>
+          <span class="mono" style="font-size:.62rem;opacity:.55">notebooklm.google</span>
+        </div>
+        <h3>NotebookLM</h3>
+        <p class="bc-headline">Research grounded in my own sources.</p>
+        <div class="bc-usage">
+          <span class="k">Usage</span>
+          <svg viewBox="0 0 200 26" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="0,21 18,18 36,20 54,15 72,16 90,12 108,13 126,10 144,8 162,9 180,5 199,4" fill="none" stroke="#1f1f1f" stroke-width="2"/>
+            <circle cx="199" cy="4" r="3" fill="#d93843"/>
+          </svg>
+          <span class="v">11/14 days</span>
+        </div>
+        <div class="bc-lineage">
+          <span class="who"><span class="diamond"></span>Put on by a workflow video</span>
+          <button class="bc-take">Take this card ↗</button>
+        </div>
+        <span class="bc-mark">N</span>
+      </article>
+
+      <article class="bcard b-devin">
+        <div class="bc-top">
+          <span class="bc-status"><span class="diamond"></span>Active · since 2026</span>
+          <span class="mono" style="font-size:.62rem;opacity:.55">devin.ai</span>
+        </div>
+        <h3>Devin Desktop</h3>
+        <p class="bc-headline">Agent work with an IDE still in reach.</p>
+        <div class="bc-usage">
+          <span class="k">Usage</span>
+          <svg viewBox="0 0 200 26" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="0,22 18,20 36,18 54,19 72,15 90,14 108,11 126,12 144,8 162,9 180,6 199,4" fill="none" stroke="#f5f4ef" stroke-width="2"/>
+            <circle cx="199" cy="4" r="3" fill="#d93843"/>
+          </svg>
+          <span class="v">9/14 days</span>
+        </div>
+        <div class="bc-lineage">
+          <span class="who"><span class="diamond"></span>Put on by the operator Slack</span>
+          <button class="bc-take">Take this card ↗</button>
+        </div>
+        <span class="bc-mark">D</span>
+      </article>
+    </div>
+    <p class="bcards-foot mono"><span class="diamond"></span>From Keegan's live collection, proper-respect.com/keegan · brand assets via context.dev</p>
+  </div>
+</section>
+
+<!-- ledger -->
+<section class="block">
+  <div class="block-inner">
+    <div class="sec-head">
+      <div>
+        <p class="mono">Receipts / 03</p>
+        <h2>The proof ledger.</h2>
+      </div>
+      <p class="mono">Freshness is a feature</p>
+    </div>
+    <div class="ledger">
+      <div class="lrow head"><span>Tool</span><span>Proof attached</span><span>Last verified</span><span>Put on by</span></div>
+      <div class="lrow"><span class="t">Wispr Flow</span><span>3 items · loom, receipt, shot</span><span class="fresh">4 days ago</span><span class="who">Jordan Crawford</span></div>
+      <div class="lrow"><span class="t">GitHub</span><span>4 items · repos, calendar</span><span class="fresh">2 days ago</span><span class="who">The craft itself</span></div>
+      <div class="lrow"><span class="t">NotebookLM</span><span>2 items · notebook export</span><span class="fresh">6 days ago</span><span class="who">A workflow video</span></div>
+      <div class="lrow"><span class="t">Devin Desktop</span><span>2 items · session log</span><span class="fresh">1 day ago</span><span class="who">The operator Slack</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- usage -->
+<section class="block">
+  <div class="block-inner">
+    <div class="sec-head">
+      <div>
+        <p class="mono">Measurement / 04</p>
+        <h2>Usage, metered.</h2>
+      </div>
+      <p class="mono">Evidence → signal</p>
+    </div>
+    <p class="sec-sub">Anyone can claim a stack. Proper Respect shows the working: a usage signal per card, built from the proof you attach and the sources you connect. GitHub activity, receipts, screenshots. Automation proposes, you confirm.</p>
+
+    <div class="graphs">
+      <div class="gpanel">
+        <div class="ghead">
+          <span class="t">Usage signal, Wispr Flow</span>
+          <span class="m">LAST 12 WEEKS · USES / WEEK</span>
+        </div>
+        <div class="gbody">
+          <svg viewBox="0 0 660 260" role="img" aria-label="Line chart of weekly usage rising from 2 to 14 uses per week over 12 weeks">
+            <line x1="40" y1="38" x2="640" y2="38" stroke="rgba(23,23,19,.14)" stroke-dasharray="3 5"/>
+            <line x1="40" y1="98" x2="640" y2="98" stroke="rgba(23,23,19,.14)" stroke-dasharray="3 5"/>
+            <line x1="40" y1="158" x2="640" y2="158" stroke="rgba(23,23,19,.14)" stroke-dasharray="3 5"/>
+            <line x1="40" y1="218" x2="640" y2="218" stroke="rgba(23,23,19,.35)"/>
+            <text x="8" y="42" font-family="IBM Plex Mono, monospace" font-size="11" fill="#706f68">14</text>
+            <text x="8" y="102" font-family="IBM Plex Mono, monospace" font-size="11" fill="#706f68">9</text>
+            <text x="8" y="162" font-family="IBM Plex Mono, monospace" font-size="11" fill="#706f68">5</text>
+            <text x="8" y="222" font-family="IBM Plex Mono, monospace" font-size="11" fill="#706f68">0</text>
+            <polygon points="40,192 93,180 145,180 198,154 251,166 304,141 356,128 409,102 462,115 515,76 567,63 620,37 620,218 40,218" fill="rgba(23,23,19,.06)"/>
+            <polyline points="40,192 93,180 145,180 198,154 251,166 304,141 356,128 409,102 462,115 515,76 567,63 620,37" fill="none" stroke="#171713" stroke-width="2.5"/>
+            <circle cx="620" cy="37" r="4.5" fill="#d93843"/>
+            <text x="560" y="24" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="700" fill="#d93843">14 / WK</text>
+            <text x="40" y="245" font-family="IBM Plex Mono, monospace" font-size="10" fill="#706f68">W01</text>
+            <text x="304" y="245" font-family="IBM Plex Mono, monospace" font-size="10" fill="#706f68">W06</text>
+            <text x="588" y="245" font-family="IBM Plex Mono, monospace" font-size="10" fill="#706f68">W12</text>
+          </svg>
+        </div>
+        <div class="gfoot">SOURCES: RECEIPTS + GITHUB ACTIVITY · CONFIRMED BY KEEGAN · SEP 18</div>
+      </div>
+
+      <div class="gpanel">
+        <div class="ghead">
+          <span class="t">Proof cadence</span>
+          <span class="m">LAST 16 WEEKS · DAILY</span>
+        </div>
+        <div class="gbody">
+          <svg id="cadence" viewBox="0 0 340 150" role="img" aria-label="Activity grid showing verified daily usage across 16 weeks"></svg>
+        </div>
+        <div class="gfoot">EACH SQUARE = ONE DAY WITH VERIFIED USE · <span style="color:#d93843">◆</span> = TODAY</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- lineage -->
+<section class="block dark">
+  <div class="block-inner">
+    <div class="dark-grid">
+      <div class="dark-art">
+        <img src="assets/bump-art.png" alt="Illustration of two fists bumping, a red diamond at the contact point">
+        <p class="caption mono"><span class="diamond"></span>Fig. 02, credit changes hands</p>
+      </div>
+      <div class="dark-copy">
+        <p class="mono" style="color:rgba(240,238,231,.55)">Lineage / 05</p>
+        <h2>Put on <em>by.</em></h2>
+        <p>Stacks overlap. Lineage doesn't. Every card records who put you on, and when a friend takes your card, the chain extends through you. Dark social, made visible. Give props, get props.</p>
+        <p class="kicker mono"><span class="diamond"></span>Give props, get props</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- final -->
+<div class="final">
+  <div class="final-inner">
+    <h2>Give props.<br><em>Get props.</em></h2>
+    <div class="row">
+      <a class="btn" href="#claim">Claim your handle →</a>
+      <a class="btn ghost" href="#">See the live example ↗</a>
+    </div>
+    <p class="handle mono"><span class="diamond"></span>proper-respect.com/your-handle · or props.yourdomain.com</p>
+  </div>
+</div>
+
+<footer>
+  <div class="brandline">
+    <img src="assets/PR-mark-black.png" alt="" style="width:26px;height:22px">
+    <span class="mono">Proper Respect · objective, objective</span>
+  </div>
+  <span class="mono">© 2026 · Measured, not claimed</span>
+</footer>
+
+<script>
+(function(){
+  var svg = document.getElementById('cadence');
+  if(!svg) return;
+  var levels = [
+    0,1,2,1,3,2,4, 1,2,3,2,4,3,2, 2,3,4,3,2,4,3, 1,2,3,4,3,4,2,
+    2,3,2,4,3,4,3, 3,2,4,3,4,2,4, 2,4,3,4,3,4,3, 3,4,2,4,3,4,4,
+    2,3,4,3,4,3,4, 4,3,4,2,4,3,4, 3,4,3,4,4,3,4, 4,3,4,3,4,4,3,
+    3,4,4,3,4,4,4, 4,4,3,4,4,4,3, 4,4,4,3,4,4,4, 4,4,4,4,3,4,'t'
+  ];
+  var inks = ['rgba(23,23,19,.08)','rgba(23,23,19,.22)','rgba(23,23,19,.45)','rgba(23,23,19,.7)','#171713'];
+  var s = 15, g = 4, x0 = 8, y0 = 6, ns = 'http://www.w3.org/2000/svg';
+  for(var i=0;i<112;i++){
+    var col = Math.floor(i/7), row = i%7;
+    var r = document.createElementNS(ns,'rect');
+    r.setAttribute('x', x0 + col*(s+g));
+    r.setAttribute('y', y0 + row*(s+g));
+    r.setAttribute('width', s); r.setAttribute('height', s);
+    var lv = levels[i];
+    r.setAttribute('fill', lv === 't' ? '#d93843' : inks[lv]);
+    svg.appendChild(r);
+  }
+})();
+</script>
+
+</body>
+</html>

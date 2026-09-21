@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://proper-respect.com/schemas/brand-manifest.schema.json",
+  "title": "PropCardBrandManifest",
+  "description": "Everything a prop card needs to render a product in that product's own brand identity. Populated from context.dev (brand/retrieve + web/styleguide), validated, cached on the product record.",
+  "type": "object",
+  "required": ["version", "product", "fetchedAt", "sources", "card", "curationScore"],
+  "properties": {
+    "version": { "type": "integer", "const": 1 },
+
+    "product": {
+      "type": "object",
+      "required": ["slug", "name", "domain"],
+      "properties": {
+        "slug":    { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "name":    { "type": "string" },
+        "domain":  { "type": "string", "description": "Canonical domain, e.g. wisprflow.ai" },
+        "company": { "type": "string", "description": "Parent company if distinct, e.g. Google" }
+      }
+    },
+
+    "fetchedAt": { "type": "string", "format": "date-time" },
+    "revision":  { "type": "integer", "minimum": 1, "description": "Bumps when re-fetched and changed" },
+
+    "sources": {
+      "type": "object",
+      "required": ["brandRetrieve", "styleguide"],
+      "properties": {
+        "brandRetrieve": {
+          "type": "object",
+          "properties": {
+            "provider":  { "const": "context.dev" },
+            "endpoint":  { "const": "/v1/brand/retrieve" },
+            "status":    { "enum": ["ok", "partial", "failed"] },
+            "fetchedAt": { "type": "string", "format": "date-time" }
+          }
+        },
+        "styleguide": {
+          "type": "object",
+          "properties": {
+            "provider":  { "const": "context.dev" },
+            "endpoint":  { "const": "/v1/web/styleguide" },
+            "status":    { "enum": ["ok", "partial", "failed"] },
+            "fetchedAt": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    },
+
+    "card": {
+      "type": "object",
+      "required": ["surface", "logo", "typography"],
+      "properties": {
+
+        "surface": {
+          "type": "object",
+          "required": ["background", "text"],
+          "description": "Contrast-validated (WCAG AA >= 4.5 for text/background; accent >= 4.5 against background). If validation fails, omit the field — the card falls back to ink/paper. Never ship an unvalidated pair.",
+          "properties": {
+            "background": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+            "text":       { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+            "accent":     { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+            "mode":       { "enum": ["light", "dark"], "description": "Derived: luminance(background) > 0.179 → light" },
+            "radius":     { "type": "string", "description": "From styleguide components/radii, e.g. 0px, 12px. Optional." },
+            "validated":  { "type": "boolean", "description": "True only after the contrast rule passes" }
+          }
+        },
+
+        "logo": {
+          "type": "object",
+          "description": "All variants that exist; render picks by card surface mode. onError → initials tile.",
+          "properties": {
+            "icon": {
+              "type": "object",
+              "properties": {
+                "light": { "type": "string", "format": "uri", "description": "For dark card surfaces" },
+                "dark":  { "type": "string", "format": "uri", "description": "For light card surfaces" },
+                "format":{ "enum": ["svg", "png", "webp"] }
+              }
+            },
+            "wordmark": {
+              "type": "object",
+              "properties": {
+                "light": { "type": "string", "format": "uri" },
+                "dark":  { "type": "string", "format": "uri" },
+                "format":{ "enum": ["svg", "png", "webp"] }
+              }
+            },
+            "fallbackMonogram": { "type": "string", "maxLength": 2, "description": "Initials for the tile, e.g. WF" }
+          }
+        },
+
+        "typography": {
+          "type": "object",
+          "description": "Brand type for the card title/body. Only load fonts whose license permits web embedding (Google Fonts, OFL, vendor CDN). Never hotlink proprietary webfont files.",
+          "properties": {
+            "heading": {
+              "type": "object",
+              "properties": {
+                "family":   { "type": "string" },
+                "fallbacks":{ "type": "array", "items": { "type": "string" } },
+                "weight":   { "type": "integer" },
+                "source":   { "enum": ["google-fonts", "vendor-cdn", "system"] },
+                "license":  { "type": "string", "description": "e.g. OFL-1.1, proprietary-ok-web" }
+              }
+            },
+            "body": {
+              "type": "object",
+              "properties": {
+                "family":   { "type": "string" },
+                "fallbacks":{ "type": "array", "items": { "type": "string" } },
+                "weight":   { "type": "integer" },
+                "source":   { "enum": ["google-fonts", "vendor-cdn", "system"] }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "curationScore": {
+      "type": "number", "minimum": 0, "maximum": 1,
+      "description": "min(1, colors? .4 : 0 + typography? .3 : 0 + logo variants? .3 : 0). Below 0.5 → owner UI flags 'identity incomplete — add manually'. Never silently guess."
+    },
+
+    "overrides": {
+      "type": "object",
+      "description": "Owner-supplied corrections; win over fetched values field-by-field.",
+      "properties": {
+        "accent":    { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "background":{ "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "text":      { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+      }
+    },
+
+    "denylist": {
+      "type": "boolean",
+      "description": "Brand requested takedown → render initials tile and ink/paper, ignore all other fields. Honored permanently."
+    }
+  },
+
+  "examples": [{
+    "version": 1,
+    "product": { "slug": "wispr-flow", "name": "Wispr Flow", "domain": "wisprflow.ai", "company": "Wispr" },
+    "fetchedAt": "2026-09-21T00:00:00Z",
+    "revision": 1,
+    "sources": {
+      "brandRetrieve": { "provider": "context.dev", "endpoint": "/v1/brand/retrieve", "status": "ok", "fetchedAt": "2026-09-21T00:00:00Z" },
+      "styleguide":    { "provider": "context.dev", "endpoint": "/v1/web/styleguide", "status": "ok", "fetchedAt": "2026-09-21T00:00:00Z" }
+    },
+    "card": {
+      "surface": { "background": "#f3efe4", "text": "#1d2b1e", "mode": "light", "validated": true },
+      "logo": { "icon": { "dark": "https://media.context.dev/wisprflow/icon-dark.svg", "format": "svg" }, "fallbackMonogram": "WF" },
+      "typography": {
+        "heading": { "family": "Figtree", "fallbacks": ["sans-serif"], "weight": 700, "source": "google-fonts", "license": "OFL-1.1" },
+        "body":    { "family": "Figtree", "fallbacks": ["sans-serif"], "weight": 400, "source": "google-fonts" }
+      }
+    },
+    "curationScore": 1.0
+  }]
+}
