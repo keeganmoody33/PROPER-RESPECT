@@ -41,6 +41,7 @@ async function seedPrivateGithubCard(ctx: MutationCtx, input: {
   fillerCount: number;
   snapshotLogin?: string;
   snapshotCapturedAt?: string;
+  snapshots?: Array<{ login: string; capturedAt: string }>;
   connectorLogin?: string;
   connectorConnectedAt?: string;
 }) {
@@ -57,14 +58,19 @@ async function seedPrivateGithubCard(ctx: MutationCtx, input: {
     });
     await ctx.db.insert("proofs", { propId, type: "NOTE", rawEvidenceId, label: "Filler" });
   }
-  if (input.snapshotLogin && input.snapshotCapturedAt) {
-    const githubSource = await ctx.db.insert("evidenceSources", { userId: user._id, type: "GITHUB", connectedAt: input.snapshotCapturedAt });
+  const snapshots = input.snapshots ?? (
+    input.snapshotLogin && input.snapshotCapturedAt
+      ? [{ login: input.snapshotLogin, capturedAt: input.snapshotCapturedAt }]
+      : []
+  );
+  for (const snapshot of snapshots) {
+    const githubSource = await ctx.db.insert("evidenceSources", { userId: user._id, type: "GITHUB", connectedAt: snapshot.capturedAt });
     const rawEvidenceId = await ctx.db.insert("rawEvidence", {
-      userId: user._id, evidenceSourceId: githubSource, capturedAt: input.snapshotCapturedAt,
-      dedupKey: `${input.snapshotLogin}-github-snapshot`, detectedUrl: `https://github.com/${input.snapshotLogin}`,
+      userId: user._id, evidenceSourceId: githubSource, capturedAt: snapshot.capturedAt,
+      dedupKey: `${snapshot.login}-github-snapshot`, detectedUrl: `https://github.com/${snapshot.login}`,
       captureProvenance: {
         version: 1, route: "DIRECT_API", adapter: { id: "github-connector", version: "provider-v1" },
-        origin: { issuer: "GITHUB", accountId: input.snapshotLogin, recordId: input.snapshotCapturedAt },
+        origin: { issuer: "GITHUB", accountId: snapshot.login, recordId: snapshot.capturedAt },
         collector: { kind: "SYSTEM" }, activityActor: { kind: "UNKNOWN" },
       },
     });
@@ -349,4 +355,98 @@ test("a current connected GitHub account outranks a later historical snapshot", 
   const published = JSON.stringify(await t.run(ctx => ctx.db.query("publishedProfiles").collect()));
   expect(published).not.toContain("current-account");
   expect(published).not.toContain("late-account");
+});
+
+test("a later-attached older GitHub snapshot does not outrank a newer capture", async () => {
+  const { t, owner } = await fixture();
+  await t.run(async ctx => {
+    await seedPrivateGithubCard(ctx, {
+      fillerCount: 0,
+      snapshots: [
+        { login: "recent-account", capturedAt: "2026-03-01T00:00:00.000Z" },
+        { login: "historical-account", capturedAt: "2020-01-01T00:00:00.000Z" },
+      ],
+    });
+  });
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(card.links.find((link: { isPrimary: boolean }) => link.isPrimary)?.url).toBe("https://github.com");
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com/recent-account");
+  expect(card.associatedAccountEvidence.map((item: { accountId?: string }) => item.accountId)).toEqual([
+    "recent-account",
+    "historical-account",
+  ]);
+  const published = JSON.stringify(await t.run(ctx => ctx.db.query("publishedProfiles").collect()));
+  expect(published).not.toContain("recent-account");
+  expect(published).not.toContain("historical-account");
+});
+
+test.each([false, true])("equal GitHub capture times select the same destination with reversed attachments %s", async reversed => {
+  const { t, owner } = await fixture();
+  await t.run(async ctx => {
+    await seedPrivateGithubCard(ctx, {
+      fillerCount: 0,
+      snapshots: [
+        { login: "alpha-account", capturedAt: "2026-03-01T00:00:00.000Z" },
+        { login: "beta-account", capturedAt: "2026-03-01T00:00:00.000Z" },
+      ][reversed ? "reverse" : "slice"](),
+    });
+  });
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(new Set(card.associatedAccountEvidence.map((item: { accountId?: string }) => item.accountId))).toEqual(
+    new Set(["alpha-account", "beta-account"]),
+  );
+  expect(privateCardPrimaryLink({
+    product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence,
+  })?.url).toBe("https://github.com/alpha-account");
+});
+
+test.each(["2020-01-01", "2026-03-01", "2026-04-01"])("retained source date %s determines destination instead of preparation time", async sourceCapturedDate => {
+  const { t, owner, other } = await fixture();
+  await t.run(ctx => seedPrivateGithubCard(ctx, {
+    fillerCount: 0,
+    snapshotLogin: "current-account",
+    snapshotCapturedAt: "2026-03-01T12:00:00.000Z",
+  }));
+  const before = await t.run(ctx => ctx.db.query("publishedProfiles").collect());
+  const original = await packet(7, "retained-account");
+  const retained = prepareGitHubActivity({
+    payload: original.signal.payload,
+    artifact: { ...original.artifact, sourceCapturedDate, preparedAt: "2026-09-20T00:00:00.000Z" },
+  });
+  const imported = await owner.mutation(retain, { packet: retained });
+  const expectedUrl = sourceCapturedDate <= "2026-03-01"
+    ? "https://github.com/current-account" : "https://github.com/retained-account";
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(privateCardPrimaryLink({ product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence })?.url).toBe(expectedUrl);
+  const onboarding = await owner.query(api.onboarding.getState, {});
+  const onboardingCard = onboarding!.cards.find(item => item.prop._id === imported.propId)!;
+  expect(privateCardPrimaryLink({ product: onboardingCard.product!, links: onboardingCard.links, associatedEvidence: onboardingCard.associatedAccountEvidence })?.url).toBe(expectedUrl);
+  const raw = await t.run(ctx => ctx.db.get(imported.rawEvidenceId as Id<"rawEvidence">));
+  expect(raw?.capturedAt).toBe("2026-09-20T00:00:00.000Z");
+  expect(raw?.retainedArtifact?.sourceCapturedDate).toBe(sourceCapturedDate);
+  expect((await other.query(list, firstPage)).page).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual(before);
+});
+
+test.each([false, true])("native instants retain intraday chronology with a date-only export and reversed attachments %s", async reversed => {
+  const { t, owner } = await fixture();
+  await t.run(ctx => seedPrivateGithubCard(ctx, {
+    fillerCount: 0,
+    snapshots: [
+      { login: "alpha-earlier", capturedAt: "2026-03-01T10:00:00.000Z" },
+      { login: "zeta-later", capturedAt: "2026-03-01T08:00:00-05:00" },
+    ][reversed ? "reverse" : "slice"](),
+  }));
+  const original = await packet(7, "retained-account");
+  await owner.mutation(retain, { packet: prepareGitHubActivity({
+    payload: original.signal.payload,
+    artifact: { ...original.artifact, sourceCapturedDate: "2026-03-01", preparedAt: "2026-09-20T00:00:00.000Z" },
+  }) });
+  const card = (await owner.query(list, firstPage)).page[0];
+  expect(card.associatedAccountEvidence.map((item: { accountId?: string }) => item.accountId))
+    .toEqual(["zeta-later", "alpha-earlier", "retained-account"]);
+  expect(privateCardPrimaryLink({ product: card.product, links: card.links, associatedEvidence: card.associatedAccountEvidence })?.url)
+    .toBe("https://github.com/zeta-later");
 });

@@ -39,9 +39,18 @@ Production remains `32aa043` / `dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh` / Convex
 [Issue #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) first
 item: verified `retainUpload` replay now requires the current
 `tokenIdentifier` to match stored `uploadAttribution`. Legacy rows without
-attribution still replay for the same owner. This is source-only; it does not
-release the upload boundary. See
+attribution still replay for the same owner. Merged to `main` as
+`d27920adc5c0e6af3b7597a6e93126df0c5af490`. Source-only; it does not release
+the upload boundary. See
 [the replay receipt](verification/2026-09-20-upload-replay-issuer.md).
+
+## GitHub capture chronology — September 20, 2026
+
+Next #24 item that does not need a new evidence index: without a live
+connector, GitHub snapshots inside the existing 200-proof window rank by
+`capturedAt`, not proof attachment time. CONNECTED connector and owner-selected
+links still win. See
+[the chronology receipt](verification/2026-09-20-github-capture-chronology.md).
 
 # Cursor continuation — Proper Respect
 
@@ -158,12 +167,12 @@ or extract Screen Time automatically.
 
 Private GitHub account destinations, optional account-link sharing through
 explicit preview, selectable connector snapshots, first-upload owner binding,
-and CONNECTED-first / newest-200 GitHub lookup are on `main` via PRs #23 and
-#22 / recorded hosted lineage. They are not a production deploy of that tree.
-Verified upload replay now also requires the original issuer on that source
-lineage. Full personal-release acceptance remains unfinished. GitHub
-destinations still require GitHub source type and GitHub origin issuer.
-Do not publish private URLs or change owner choices during verification.
+CONNECTED-first / newest-200 GitHub lookup, and verified upload-replay issuer
+binding are on `main` via PRs #23, #22 and #26. They are not a production
+deploy of that tree. GitHub snapshots without a live connector now rank by
+`capturedAt` on this follow-up branch only. Full personal-release acceptance
+remains unfinished. Do not publish private URLs or change owner choices during
+verification.
 
 ## Branch disposition checked September 19
 
