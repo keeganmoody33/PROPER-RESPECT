@@ -3,6 +3,8 @@ import { publicSiteOrigin, publicPageMetadata } from "./public-site";
 import { generateMetadata as layoutMetadata } from "@/app/layout";
 import sitemap from "@/app/sitemap";
 
+vi.mock("next/font/local", () => ({ default: () => ({ variable: "test-font" }) }));
+
 afterEach(() => vi.unstubAllEnvs());
 
 it.each(["http://public.example", "https://user:password@example.com", "https://example.com/path", "https://example.com?token=secret", "https://example.com/#fragment", "not a URL"])("rejects invalid public origin %s without echoing it", (origin) => {

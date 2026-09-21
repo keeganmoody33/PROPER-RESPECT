@@ -3,6 +3,7 @@
   --paper: #f0eee7;
   --panel: #fbfaf6;
   --signal: #d8ff3e;
+  --respect-red: #c72c39;
   --muted: #706f68;
   --line: rgba(23, 23, 19, 0.2);
 }
@@ -19,6 +20,7 @@ html {
 
 body {
   margin: 0;
+  font-family: var(--homepage-sans, Arial), Helvetica, sans-serif;
 }
 
 a {
@@ -53,7 +55,7 @@ main {
 .activity-meta,
 .card-topline,
 .onboarding-kicker {
-  font-family: "Courier New", monospace;
+  font-family: var(--homepage-mono, "Courier New"), monospace;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -79,7 +81,8 @@ main {
 }
 
 .section-heading h1 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--homepage-sans), Arial, sans-serif;
+  text-transform: uppercase;
   font-size: clamp(2.75rem, 7vw, 6.5rem);
   font-weight: 400;
   letter-spacing: -0.06em;
@@ -724,7 +727,8 @@ main {
 
 .system-message h1,
 .onboarding-shell h1 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--homepage-sans), Arial, sans-serif;
+  text-transform: uppercase;
   font-size: clamp(3.5rem, 9vw, 8rem);
   font-weight: 400;
   letter-spacing: -0.07em;
@@ -766,7 +770,7 @@ main {
 
 .onboarding-intro > p {
   grid-column: 1 / -1;
-  font: 1.1rem/1.45 Georgia, "Times New Roman", serif;
+  font: 1.1rem/1.65 var(--homepage-sans), Arial, sans-serif;
   margin: 0;
   max-width: 55rem;
 }
@@ -778,8 +782,9 @@ main {
   padding: clamp(1.25rem, 3vw, 2.5rem);
 }
 
-.onboarding-panel h2 {
-  font-family: Georgia, "Times New Roman", serif;
+.onboarding-panel > h2 {
+  font-family: var(--homepage-sans), Arial, sans-serif;
+  text-transform: uppercase;
   font-size: clamp(2rem, 4vw, 3.5rem);
   font-weight: 400;
   letter-spacing: -0.04em;
@@ -796,7 +801,7 @@ main {
 
 .collection-navigation a { padding-block: .5rem; font-weight: 800; }
 .collection-add { padding-block: 1rem 2.5rem; scroll-margin-top: 1rem; }
-.collection-add h2 { font: 400 2rem Georgia, "Times New Roman", serif; margin-bottom: .5rem; }
+.collection-add h2 { font: 900 2rem var(--homepage-sans), Arial, sans-serif; margin-bottom: .5rem; }
 .collection-add > p { max-width: 48rem; line-height: 1.5; }
 .collection-identity { margin-block: 1.5rem; }
 .collection-identity > summary { font-weight: 800; cursor: pointer; padding-block: .5rem; }
@@ -855,10 +860,10 @@ main {
   padding: 1rem;
 }
 
-.connector-card strong,
-.review-card h3 {
+.connector-card > strong,
+.review-card > h3 {
   display: block;
-  font: 400 1.7rem Georgia, "Times New Roman", serif;
+  font: 800 1.7rem var(--homepage-sans), Arial, sans-serif;
   margin: 0 0 0.4rem;
 }
 
@@ -903,7 +908,7 @@ main {
 }
 
 .message {
-  border-left: 0.4rem solid var(--signal);
+  border-left: 0.4rem solid var(--respect-red);
   font-weight: 700;
   padding-left: 0.75rem;
 }
@@ -1004,3 +1009,42 @@ main {
   .official-source, .private-source { padding: .75rem; }
   .offering-table th, .offering-table td { padding: .5rem; }
 }
+
+/* Proper Respect frames the experience; product-card owns its brand tokens. */
+.site-header, .site-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1.1rem clamp(1.25rem, 4vw, 5rem); border-bottom: 1.5px solid var(--ink);
+}
+.site-wordmark { display: inline-flex; align-items: center; gap: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: -.03em; text-decoration: none; }
+.site-wordmark img { width: 32px; height: auto; }
+.site-navigation, .site-footer, .profile-context, .collection-navigation, .auth-intro figcaption { font-family: var(--homepage-mono), monospace; font-size: .7rem; line-height: 1.6; }
+.site-navigation { padding-block: .5rem; }
+.site-footer { border-top: 1.5px solid var(--ink); border-bottom: 0; flex-wrap: wrap; }
+.profile-context { padding: .6rem clamp(1.25rem, 4vw, 5rem); border-bottom: 1px solid var(--line); }
+.section-heading h1, .system-message h1, .onboarding-shell h1, .onboarding-panel > h2 { font-weight: 900; line-height: .98; letter-spacing: -.045em; }
+.onboarding-kicker, .onboarding-panel > .eyebrow { color: var(--respect-red); }
+.collection-navigation { border-color: var(--ink); margin-bottom: 2rem; }
+.primary-action:not(:disabled):hover { background: var(--respect-red); border-color: var(--respect-red); }
+.site-header a:focus-visible, .site-footer a:focus-visible, .collection-navigation a:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 4px; }
+.auth-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 6rem); align-items: center; padding: clamp(2rem, 5vw, 6rem); min-height: 80vh; max-width: 1600px; margin: auto; }
+.auth-intro h1 { font-size: clamp(2.8rem, 4.7vw, 5.5rem); font-weight: 900; line-height: .96; letter-spacing: -.05em; text-transform: uppercase; margin: 1.5rem 0; }
+.auth-intro h1 span { color: var(--respect-red); }
+.auth-intro > p { max-width: 45ch; line-height: 1.65; }
+.auth-intro figure { margin: 2rem 0 0; border: 1.5px solid var(--ink); }
+.auth-intro img { display: block; width: 100%; height: auto; }
+.auth-intro figcaption { border-top: 1px solid var(--ink); padding: .8rem; }
+.auth-form { min-width: 0; display: flex; justify-content: center; }
+@media (max-width: 900px) {
+  .auth-shell { grid-template-columns: minmax(0, 1fr); max-width: 680px; }
+  .auth-intro figure { display: none; }
+}
+@media (max-width: 600px) {
+  .site-header { padding-block: .8rem; }
+  .site-wordmark { font-size: .8rem; gap: .4rem; }
+  .site-wordmark img { width: 26px; }
+  .site-navigation { font-size: .65rem; }
+  .site-footer { align-items: flex-start; flex-direction: column; gap: .4rem; }
+}
+
+.site-skip { position: absolute; top: .5rem; left: 1rem; padding: .75rem; background: var(--panel); z-index: 100; transform: translateY(-200%); }
+.site-skip:focus { transform: translateY(0); outline: 3px solid var(--respect-red); }
