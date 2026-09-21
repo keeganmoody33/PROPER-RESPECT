@@ -303,7 +303,7 @@ export function canonicalCatalogSenderDomains(): string[] {
 export function normalizeVendorName(input: string): string {
   return input
     .toLowerCase()
-    .replace(/,?\s*(inc|llc|ltd|corp|co)\.?$/i, "")
+    .replace(/,?\s*\b(inc|llc|ltd|corp|co)\.?$/i, "")
     .replace(/[^a-z0-9 ]/g, "")
     .replace(/\s+/g, " ")
     .trim();
