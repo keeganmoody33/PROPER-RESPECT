@@ -126,7 +126,48 @@ function activityHighlight(activity: ActivityModule) {
   }
 }
 
-function ActivityPreview({ activity, unreviewed = false }: { activity: ActivityModule; unreviewed?: boolean }) {
+function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
+  if (activity.days.length === 0) return <p className="activity-empty">No daily contribution counts supplied</p>;
+  const days = [...activity.days].sort((a, b) => a.date.localeCompare(b.date));
+  const firstSupplied = new Date(`${days[0].date}T00:00:00Z`);
+  const lastSupplied = new Date(`${days.at(-1)!.date}T00:00:00Z`);
+  const periodStart = new Date(`${activity.period?.start}T00:00:00Z`);
+  const periodEnd = new Date(`${activity.period?.end}T00:00:00Z`);
+  const enclosingPeriod = Number.isFinite(periodStart.getTime()) && Number.isFinite(periodEnd.getTime())
+    && periodStart.toISOString().slice(0, 10) === activity.period?.start
+    && periodEnd.toISOString().slice(0, 10) === activity.period?.end
+    && periodStart <= firstSupplied && periodEnd >= lastSupplied;
+  const first = enclosingPeriod ? periodStart : firstSupplied;
+  const last = (enclosingPeriod ? periodEnd : lastSupplied).getTime();
+  const firstSunday = first.getTime() - first.getUTCDay() * 86_400_000;
+  const weeks = Math.floor((last - firstSunday) / (7 * 86_400_000)) + 1;
+  const gaps = weeks - 1;
+  const missingDays = Math.round((last - first.getTime()) / 86_400_000) + 1 - new Set(days.map(day => day.date)).size;
+  return (
+    <div className="contribution-calendar">
+      <div className="contribution-calendar-layout">
+        <div className="contribution-weekdays" aria-hidden="true">
+          {["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => <span key={index}>{label}</span>)}
+        </div>
+        <div className="activity-calendar contribution-grid" role="group" aria-label="Daily contributions, Sunday to Saturday in each column" style={{ gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`, maxWidth: `calc(${weeks * 0.7}rem + clamp(${gaps}px, ${gaps * 0.25}vw, ${gaps * 3}px))` }}>
+          {days.map(day => {
+            const date = new Date(`${day.date}T00:00:00Z`);
+            const label = `${day.date}: ${day.count} ${day.count === 1 ? "contribution" : "contributions"}`;
+            return <span key={day.date} role="img" aria-label={label} title={label} data-date={day.date} data-level={day.level}
+              style={{ gridColumn: Math.floor((date.getTime() - firstSunday) / (7 * 86_400_000)) + 1, gridRow: date.getUTCDay() + 1 }} />;
+          })}
+        </div>
+      </div>
+      <div className="contribution-legend" aria-hidden="true">Less {[0, 1, 2, 3, 4].map(level => <i key={level} data-level={level} />)} More</div>
+      {(!activity.period || activity.period.start !== days[0].date || activity.period.end !== days.at(-1)!.date) && (
+        <p className="contribution-range">Daily counts: {days[0].date} – {days.at(-1)!.date}</p>
+      )}
+      {missingDays > 0 && <p className="contribution-gap">{missingDays} {missingDays === 1 ? "day has" : "days have"} no supplied count; blank spaces are not zero activity.</p>}
+    </div>
+  );
+}
+
+function ActivityPreview({ activity, unreviewed = false, expanded = false }: { activity: ActivityModule; unreviewed?: boolean; expanded?: boolean }) {
   const metric = activityHighlight(activity);
   return (
     <div className="card-activity-preview">
@@ -138,6 +179,10 @@ function ActivityPreview({ activity, unreviewed = false }: { activity: ActivityM
           {activity.kind === "timeSeries" ? " · observation" : ""}
         </>}
       </p>
+      {activity.kind === "contributionCalendar" && <ContributionCalendar activity={activity} />}
+      {expanded && (activity.kind === "headlineMetrics" || activity.kind === "codingActivity") && <dl className="activity-preview-metrics">
+        {activity.supporting.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{compactNumber(metric.value)}{metric.unit ? ` ${metric.unit}` : ""}</dd></div>)}
+      </dl>}
       <p className="card-activity-coverage">
         {activity.attributionScope.toLowerCase()} activity ·{" "}
         {activity.period ? `${activity.period.start} to ${activity.period.end}` : "Measurement period not supplied"}
@@ -175,19 +220,7 @@ function ActivityView({ activity }: { activity: ActivityModule }) {
           <strong>{compactNumber(activity.total)}</strong>
           <span>contributions</span>
         </div>
-        {activity.days.length > 0 ? (
-          <div className="activity-calendar" aria-label="Contribution activity">
-            {activity.days.map((day) => (
-              <span
-                key={day.date}
-                data-level={day.level}
-                title={`${day.date}: ${day.count} contributions`}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="activity-empty">Calendar refresh pending</p>
-        )}
+        <ContributionCalendar activity={activity} />
         {activity.memberSince && (
           <p className="activity-caption">
             Member since {activity.memberSince.slice(0, 4)}
@@ -342,6 +375,7 @@ export function ProductCard({
   relationshipConfirmed = true,
   goTo = false,
   audience = "visitor",
+  expandedActivity = false,
 }: {
   card: Card;
   index: number;
@@ -349,6 +383,7 @@ export function ProductCard({
   relationshipConfirmed?: boolean;
   goTo?: boolean;
   audience?: "owner" | "visitor";
+  expandedActivity?: boolean;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const linkDisclosure = card.primaryLink?.type === "AFFILIATE" ? "Affiliate link"
@@ -435,7 +470,7 @@ export function ProductCard({
         </p>
 
         {!brandPreview && card.activity ? (
-          <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} />
+          <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />
         ) : (brandPreview || audience === "owner") ? (
           <p className="activity-placeholder">
             {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}

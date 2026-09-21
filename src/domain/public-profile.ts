@@ -1,3 +1,4 @@
+import { profileLinksSchema, profileLinkUrlSchema } from "./profile-links";
 import { z } from "zod";
 import { costSchema, type Cost, type CostVisibility } from "./cost";
 import { productBrandSnapshotSchema } from "./product-brand";
@@ -134,6 +135,8 @@ export const publicProfileSchema = z.object({
   displayName: z.string().min(1),
   bio: z.string(),
   avatarUrl: z.url().optional(),
+  profileLinks: profileLinksSchema.optional(),
+  preferredLinkUrl: profileLinkUrlSchema.optional(),
   cards: z.array(
     z.object({
       product: z.object({

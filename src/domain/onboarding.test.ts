@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { canRefreshMetric, claimableHandleSchema } from "./onboarding";
 
 describe("claimableHandleSchema", () => {
+  it.each(["collection", "app"])("preserves the previously claimable %s handle", handle => {
+    expect(claimableHandleSchema.parse(handle)).toBe(handle);
+  });
   it("normalizes a valid handle and rejects reserved public routes", () => {
     expect(claimableHandleSchema.parse("  Keegan-Moody  ")).toBe(
       "keegan-moody",

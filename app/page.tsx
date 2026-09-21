@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
 import styles from "./homepage.module.css";
 
@@ -13,21 +14,18 @@ export default function HomePage() {
       <main id="homepage-content" className={styles.main} tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="homepage-title">
           <div className={styles.intro}>
-            <p className={styles.label}>What you use. What stays with you.</p>
+            <p className={styles.label}>A personal record of the tools you use.</p>
             <h1 id="homepage-title">Your tools.<br /><span>Your track record.</span></h1>
-            <p className={styles.description}>What you use, what you are testing, and the tools you come back to. Keep the history and context privately, then choose what to share.</p>
+            <p className={styles.description}>Build a collection of the tools you use. Add your experience and usage evidence where available, then choose which cards to share on your profile.</p>
             <div className={styles.actions}>
-              <Link className={styles.primary} href="/onboarding">Open your collection</Link>
+              <Link className={styles.primary} href="/app/collection">Start your collection</Link>
               <Link className={styles.secondary} href="/keegan">View Keegan’s shared collection</Link>
             </div>
             <p className={styles.privacy}>Start with a private collection. Publishing is your choice.</p>
           </div>
-          <figure className={styles.figure}>
-            <Image src="/brand/homepage/fists-blueprint.png" alt="Blueprint illustration of two hands meeting in a fist bump" width={2048} height={1152} sizes="(max-width: 900px) 100vw, 55vw" preload />
-            <figcaption><span>The handoff</span><span>Give props. Get props.</span></figcaption>
-          </figure>
+          <div className={styles.example} id="example"><ProductExample /></div>
         </section>
-        <section className={styles.journey} aria-labelledby="journey-title">
+        <section id="how-it-works" className={styles.journey} aria-labelledby="journey-title">
           <div className={styles.sectionHeading}>
             <h2 id="journey-title">A collection that<br />tells your story.</h2>
             <p>From a tool you are trying to one you keep coming back to.</p>
@@ -55,7 +53,7 @@ export default function HomePage() {
         <section className={styles.close} aria-labelledby="start-title">
           <h2 id="start-title">Make it<br /><span>your collection.</span></h2>
           <div className={styles.actions}>
-            <Link className={styles.primary} href="/onboarding">Open your collection</Link>
+            <Link className={styles.primary} href="/app/collection">Start your collection</Link>
             <Link className={styles.secondary} href="/keegan">See the shared collection →</Link>
             <p className={styles.privacy}>Private by default. Shared by choice.</p>
           </div>

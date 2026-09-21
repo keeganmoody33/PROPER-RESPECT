@@ -122,3 +122,53 @@ test("exhausted pending-handle reservations fail without creating or changing an
   const availableId = await available.mutation(api.onboarding.ensureAccount, { displayName: "Available owner" });
   expect(await t.run(ctx => ctx.db.get(availableId))).toMatchObject({ handle: "pending-available", displayName: "Available owner" });
 });
+
+test("profile links are owner edits, preserve old callers, and require a new exact preview to publish", async () => {
+  const { t, owner, userId, otherId, approval } = await fixture();
+  await owner.mutation(api.onboarding.publishSelected, approval);
+  const oldPreview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  const profileLinks = [{ label: "My LinkedIn", url: "https://www.linkedin.com/in/example" }, { label: "Website", url: "https://example.com" }];
+  await owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "Owner", bio: "", profileLinks, preferredLinkUrl: profileLinks[0].url });
+  expect(await t.run(ctx => ctx.db.get(otherId))).not.toHaveProperty("profileLinks");
+  expect(await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" })).not.toHaveProperty("profileLinks");
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: oldPreview.revision, expectedPreviewHash: oldPreview.previewHash })).rejects.toThrow("preview changed");
+  await owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "New name", bio: "" });
+  expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ profileLinks, preferredLinkUrl: profileLinks[0].url });
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  expect(preview.profile).toMatchObject({ profileLinks, preferredLinkUrl: profileLinks[0].url });
+  await owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  expect(await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" })).toMatchObject({ profileLinks, preferredLinkUrl: profileLinks[0].url });
+  await owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "New name", bio: "", profileLinks: [], preferredLinkUrl: null });
+  expect(await t.run(ctx => ctx.db.get(userId))).not.toHaveProperty("preferredLinkUrl");
+  expect(await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" })).toMatchObject({ profileLinks });
+});
+
+test.each(["javascript:alert(1)", "data:text/html,hello", "https://user:secret@example.com", "ftp://example.com"])("rejects unsafe profile link %s without changing identity", async url => {
+  const { t, owner, userId } = await fixture();
+  const before = await t.run(ctx => ctx.db.get(userId));
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "Changed", bio: "", profileLinks: [{ label: "Test", url }] })).rejects.toThrow();
+  expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
+});
+
+test("name destination must be explicitly selected from bounded profile links", async () => {
+  const { t, owner, userId } = await fixture();
+  const values = { handle: "owner", displayName: "Owner", bio: "" };
+  await expect(owner.mutation(api.onboarding.claimHandle, { ...values, profileLinks: [], preferredLinkUrl: "https://example.com" })).rejects.toThrow("saved profile links");
+  await expect(owner.mutation(api.onboarding.claimHandle, { ...values, profileLinks: Array.from({ length: 9 }, () => ({ label: "Site", url: "https://example.com" })) })).rejects.toThrow();
+  await owner.mutation(api.onboarding.claimHandle, { ...values, profileLinks: [{ label: "Site", url: "https://example.com" }] });
+  expect(await t.run(ctx => ctx.db.get(userId))).not.toHaveProperty("preferredLinkUrl");
+  await expect(t.mutation(api.onboarding.claimHandle, { ...values, profileLinks: [] })).rejects.toThrow();
+  const other = t.withIdentity({ subject: "other" });
+  await expect(other.mutation(api.onboarding.claimHandle, { ...values, profileLinks: [] })).rejects.toThrow("already claimed");
+});
+
+test.each(["collection", "app"])("existing %s owners can edit their private identity while preserving their publication", async handle => {
+  const { t, owner, userId } = await fixture();
+  await t.run(ctx => ctx.db.patch(userId, { handle }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  await owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  const publishedBefore = await t.query(api.publicProfiles.getByHandleV2, { handle });
+  expect(await owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Private updated name", bio: "Private updated bio" })).toEqual({ handle });
+  expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Private updated name" });
+  expect(await t.query(api.publicProfiles.getByHandleV2, { handle })).toEqual(publishedBefore);
+});

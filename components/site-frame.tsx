@@ -7,7 +7,12 @@ export function SiteHeader() {
       <Image src="/brand/homepage/PR-mark-black.png" alt="" width={40} height={34} />
       <span>Proper Respect</span>
     </Link>
-    <Link className="site-navigation" href="/onboarding">Your collection</Link>
+    <nav className="site-navigation" aria-label="Main navigation">
+      <Link href="/#how-it-works">How it works</Link>
+      <Link href="/#example">Example</Link>
+      <Link href="/sign-in">Sign in</Link>
+      <Link className="site-start" href="/app/collection">Your collection</Link>
+    </nav>
   </header></>;
 }
 
@@ -24,10 +29,12 @@ export function AuthFrame({ children }: { children: React.ReactNode }) {
       <p className="eyebrow">Your collection / Your point of view</p>
       <h1 id="auth-intro-title">Your tools.<br /><span>Your track record.</span></h1>
       <p>Keep what you use, what you are testing, and the context behind your choices. Start in private. Share when you choose.</p>
-      <figure>
-        <Image src="/brand/homepage/fists-blueprint.png" alt="Blueprint illustration of two hands meeting in a fist bump" width={2048} height={1152} sizes="(max-width: 900px) 100vw, 50vw" />
-        <figcaption>The handoff / Give props. Get props.</figcaption>
-      </figure>
+      <ol className="auth-steps">
+        <li>Create your private collection.</li>
+        <li>Add a tool and record your experience.</li>
+        <li>Connect a source when you want supporting evidence.</li>
+        <li>Preview your profile before sharing.</li>
+      </ol>
     </section>
     <div className="auth-form">{children}</div>
   </main>;

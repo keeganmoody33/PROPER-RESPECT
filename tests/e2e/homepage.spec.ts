@@ -9,7 +9,7 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   page.on("request", request => { if (!new URL(request.url()).hostname.match(/^(127\.0\.0\.1|localhost)$/)) external.push(request.url()); });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
-  const fontFaces = await page.evaluate(() => ["h1", "header > a:last-child"].map(selector => {
+  const fontFaces = await page.evaluate(() => ["h1", ".site-navigation"].map(selector => {
     const element = document.querySelector(selector)!;
     const family = getComputedStyle(element).fontFamily.split(",")[0].trim().replace(/["']/g, "");
     const faces = [...document.fonts].filter(face => face.family.replace(/["']/g, "") === family);
@@ -20,9 +20,9 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   expect(fontFaces[1].family).toMatch(/mono/i);
   for (const face of fontFaces) expect(face.statuses).toEqual(["loaded"]);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your tools.Your track record.");
-  const art = page.getByRole("img", { name: "Blueprint illustration of two hands meeting in a fist bump" });
-  await expect(art).toBeVisible();
-  expect(await art.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  await expect(page.getByRole("img", { name: /Blueprint/ })).toHaveCount(0);
+  await expect(page.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await expect(page.getByText("Inside a card / Illustrative examples")).toBeVisible();
   const bump = page.getByRole("img", { name: "Two fists meeting at a bright red diamond" });
   await bump.scrollIntoViewIfNeeded();
   await expect(bump).toBeVisible();
@@ -34,8 +34,8 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await page.keyboard.press("Enter");
   await expect(page.locator("#page-content")).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Open your collection", exact: true }).first()).toBeFocused();
-  await expect(page.getByRole("link", { name: "Open your collection", exact: true }).first()).toHaveAttribute("href", "/onboarding");
+  await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toBeFocused();
+  await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toHaveAttribute("href", "/app/collection");
   await expect(page.getByRole("link", { name: "View Keegan’s shared collection" })).toHaveAttribute("href", "/keegan");
   expect(external).toEqual([]);
   expect(errors).toEqual([]);
@@ -45,6 +45,13 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await page.getByRole("link", { name: "View Keegan’s shared collection" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Keegan Moody");
   await page.goto("/");
-  await page.getByRole("link", { name: "Open your collection", exact: true }).first().click();
-  await expect(page).toHaveURL(/\/onboarding$/);
+  await page.getByRole("link", { name: "Start your collection", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/app\/collection$/);
+});
+
+
+test("existing collection links retain callback query values", async ({ page }) => {
+  await page.goto("/onboarding?gmail=connected");
+  await expect(page).toHaveURL(/\/app\/collection\?gmail=connected$/);
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });

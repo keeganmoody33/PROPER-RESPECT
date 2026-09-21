@@ -30,7 +30,7 @@ test("share image is a real PNG and sitemap has no private routes", async ({ req
   const sitemap = await request.get("/sitemap.xml");
   expect(sitemap.status()).toBe(200);
   expect(await sitemap.text()).toContain("<loc>https://public.example/</loc>");
-  expect(await sitemap.text()).not.toMatch(/onboarding|private-owner|sign-in/);
+  expect(await sitemap.text()).not.toMatch(/onboarding|collection|private-owner|sign-in/);
 });
 
 test("missing profiles and private onboarding are not indexed", async ({ page }) => {

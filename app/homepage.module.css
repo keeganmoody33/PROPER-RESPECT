@@ -57,3 +57,6 @@
   .steps li, .steps li + li { border-left: 0; padding: 1.5rem 0; }
   .steps h3 { margin-top: 1rem; }
 }
+
+.example { min-width: 0; padding: clamp(1rem, 3vw, 2rem); background: #e4e1d7; border: 1px solid #171713; }
+.example :global(.product-card) { width: 100%; }

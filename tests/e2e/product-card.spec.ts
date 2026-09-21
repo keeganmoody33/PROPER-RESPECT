@@ -79,8 +79,14 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   await first.getByRole("button", { name: "Close details", exact: true }).click();
   await expect(trigger).toBeFocused();
   const calendarCard = page.locator(".product-card").nth(2);
+  const frontCalendar = calendarCard.locator(".card-front .activity-calendar");
+  await expect(frontCalendar).toBeVisible();
+  await expect(frontCalendar.getByRole("img")).toHaveCount(371);
+  await expect(frontCalendar.locator('[data-date="2025-01-01"]')).toHaveCSS("grid-row-start", "4");
+  await expect(frontCalendar.locator('[data-date="2025-01-05"]')).toHaveCSS("grid-column-start", "2");
+  await expect(frontCalendar.getByRole("img", { name: "2025-01-01: 1 contribution", exact: true })).toBeVisible();
   await calendarCard.getByRole("button", { name: "Details", exact: true }).click();
-  const calendar = calendarCard.locator(".activity-calendar");
+  const calendar = calendarCard.locator(".card-back .activity-calendar");
   await expect(calendar.locator("span")).toHaveCount(371);
   expect(await calendar.evaluate(element => {
     const bounds = element.getBoundingClientRect();
@@ -193,4 +199,78 @@ for (const width of [390, 1280]) test(`upload attribution stays honest in suppor
   await expect(page.getByText(/authorship and product usage are not verified/)).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath(`2026-09-19-upload-attribution-${width}.png`), fullPage: true });
+});
+
+for (const width of [320, 1280]) test(`contribution calendar preserves supplied zeros and unsupplied gaps at ${width}px`, async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const sparse = { ...card, activity: {
+    kind: "contributionCalendar", total: 4, attributionScope: "PERSONAL", capturedAt: "2026-09-19T09:00:00.000Z", freshness: "STALE", provenanceLabel: "Synthetic partial snapshot",
+    period: { start: "2026-09-01", end: "2026-09-04" },
+    days: [{ date: "2026-09-04", count: 4, level: 3 }, { date: "2026-09-01", count: 0, level: 0 }],
+  } };
+  const bundle = buildSync({ stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement(ProductCard, { card: ${JSON.stringify(sparse)}, index: 0 }));`, resolveDir: process.cwd() },
+    bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' },
+  });
+  await page.setViewportSize({ width, height: 1000 });
+  await page.setContent('<main id="root"></main>');
+  await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
+  await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  const front = page.locator(".card-front");
+  await expect(front.getByRole("img")).toHaveCount(2);
+  await expect(front.getByRole("img", { name: "2026-09-01: 0 contributions" })).toHaveAttribute("data-level", "0");
+  await expect(front.getByRole("img", { name: "2026-09-04: 4 contributions" })).toHaveCSS("grid-row-start", "6");
+  const cell = await front.getByRole("img", { name: "2026-09-04: 4 contributions" }).boundingBox();
+  expect(cell).not.toBeNull();
+  expect(Math.abs(cell!.width - cell!.height)).toBeLessThanOrEqual(1);
+  expect(cell!.width).toBeLessThanOrEqual(12);
+  await expect(front).toContainText("2 days have no supplied count");
+  await expect(front).toContainText("stale");
+  await expect(front.locator('[data-date="2026-09-02"]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(page.locator(".card-back")).toContainText("Synthetic partial snapshot");
+});
+
+for (const width of [320, 1280]) test(`contribution calendar retains missing period boundaries at ${width}px`, async ({ page }, testInfo) => {
+  const sparse = { ...card, activity: {
+    kind: "contributionCalendar", total: 4, attributionScope: "PERSONAL", capturedAt: "2026-09-21T09:00:00.000Z", freshness: "FRESH", provenanceLabel: "Synthetic boundary-gap snapshot",
+    period: { start: "2026-09-01", end: "2026-09-30" },
+    days: [{ date: "2026-09-15", count: 0, level: 0 }, { date: "2026-09-25", count: 4, level: 3 }],
+  } };
+  const bundle = buildSync({ stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement(ProductCard, { card: ${JSON.stringify(sparse)}, index: 0 }));`, resolveDir: process.cwd() },
+    bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' },
+  });
+  await page.setViewportSize({ width, height: 1000 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setContent('<main id="root"></main>');
+  await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
+  await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  for (const side of [".card-front", ".card-back"]) {
+    if (side === ".card-back") await page.getByRole("button", { name: "Details", exact: true }).click();
+    const face = page.locator(side);
+    const grid = face.locator(".activity-calendar");
+    await expect(grid.getByRole("img")).toHaveCount(2);
+    await expect(grid.getByRole("img", { name: "2026-09-15: 0 contributions" })).toHaveCSS("grid-column-start", "3");
+    await expect(grid.getByRole("img", { name: "2026-09-25: 4 contributions" })).toHaveCSS("grid-column-start", "4");
+    await expect(face).toContainText("28 days have no supplied count; blank spaces are not zero activity.");
+    await expect(face).toContainText("Daily counts: 2026-09-15 – 2026-09-25");
+    await expect(grid.locator('[data-date="2026-09-01"], [data-date="2026-09-30"]')).toHaveCount(0);
+    const geometry = await grid.evaluate(element => {
+      const computed = getComputedStyle(element);
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+      return {
+        columns: computed.gridTemplateColumns.split(" ").length,
+        width: element.getBoundingClientRect().width,
+        expectedWidth: 5 * 0.7 * rem + 4 * Math.max(1, Math.min(innerWidth * 0.0025, 3)),
+        supportedWidth: CSS.supports("max-width", (element as HTMLElement).style.maxWidth),
+      };
+    });
+    expect(geometry.columns).toBe(5);
+    expect(geometry.supportedWidth).toBe(true);
+    expect(Math.abs(geometry.width - geometry.expectedWidth)).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`2026-09-21-calendar-boundaries-${side.slice(1)}-${width}.png`), fullPage: true, animations: "disabled" });
+  }
 });
