@@ -9,7 +9,7 @@
 .sample { margin: 0 0 .6rem; color: #45443e; }
 .slide { min-width: 0; }
 .slide :global(.product-card) { width: 100%; margin: 0; animation: none; border-radius: 10px; }
-.slide :global(.product-logo) { background: #fff; }
+.slide[data-example="github"] :global(.product-logo) { background: #fff; }
 .slide :global(.card-front) { min-height: 330px; }
 .slide :global(.card-activity-preview > p:first-child strong) { font-size: 2rem; line-height: 1.1; }
 .slide :global(.card-activity-preview > p:first-child) { display: flex; flex-direction: column; gap: .3rem; }

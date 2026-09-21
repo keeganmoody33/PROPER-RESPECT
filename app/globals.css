@@ -187,6 +187,17 @@ main {
   width: 80%;
 }
 
+.product-logo[data-logo-layout="app-icon"] {
+  background: transparent;
+  overflow: hidden;
+}
+
+.product-logo[data-logo-layout="app-icon"] img {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
 .product-logo[data-logo-mode="dark"] {
   background: #171713;
 }

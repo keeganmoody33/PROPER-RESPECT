@@ -1,0 +1,29 @@
+[
+  {
+    "productSlug": "clay",
+    "canonicalDomain": "clay.com",
+    "path": "/product-assets/clay/2026-09-21/app-icon.png",
+    "width": 512,
+    "height": 512,
+    "sha256": "9b58d69fd3686ab080b990fcf417caa579a7d5bca197976aa70c8b9c7c3426b6",
+    "sourcePage": "https://www.clay.com/press",
+    "sourceUrl": "https://cdn.prod.website-files.com/61477f2c24a826836f969afe/6a3a92ab2ebcb50096cbd51a_dot-com_favicon_2026_512.png",
+    "retrievedAt": "2026-09-21T12:32:25.515981+00:00",
+    "useBasis": "Original product-identification artwork; no endorsement or ownership claim."
+  },
+  {
+    "productSlug": "wisprflow",
+    "canonicalDomain": "wisprflow.ai",
+    "path": "/product-assets/wisprflow/2026-09-21/app-icon.jpg",
+    "width": 512,
+    "height": 512,
+    "sha256": "17bcda0d30457a7a0a2f818795cbb8d5dace51dde1197a86c0ad30930b256e3a",
+    "sourcePage": "https://wisprflow.ai/media-kit",
+    "sourceUrl": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/65/bb/8d/65bb8d1d-285e-a58b-e2a7-512e40918660/AppIcon-0-0-1x_U007ephone-0-1-0-85-220.png/512x512bb.jpg",
+    "retrievedAt": "2026-09-21T12:32:25.516632+00:00",
+    "useBasis": "Original product-identification artwork; no endorsement or ownership claim.",
+    "appStoreListing": "https://apps.apple.com/us/app/wispr-flow-ai-voice-keyboard/id6497229487",
+    "bundleId": "com.wispr.flowapp",
+    "sellerName": "Wispr AI INC"
+  }
+]
