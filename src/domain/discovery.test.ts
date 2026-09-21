@@ -179,7 +179,7 @@ describe("resolveProduct", () => {
       signal({ url: "https://example.com/workbook", sourceType: "GMAIL" }),
     );
     expect(product).toEqual({
-      slug: "example-com",
+      slug: "host-a379a6f6eeafb9a55e378c118034e275",
       name: "Example",
       domain: "example.com",
       description: "Discovered via gmail evidence.",
@@ -281,7 +281,7 @@ describe("proposeDrafts", () => {
     expect(proposals).toEqual([
       {
         product: {
-          slug: "app-linear-app",
+          slug: "host-62301f53620822a846f417d59e0a3e06",
           name: "App",
           domain: "app.linear.app",
           description: "Discovered via gmail evidence.",
@@ -291,7 +291,7 @@ describe("proposeDrafts", () => {
       },
       {
         product: {
-          slug: "app-clickup-com",
+          slug: "host-22da1e7696f4d2a0ebee166d25b23d8c",
           name: "App",
           domain: "app.clickup.com",
           description: "Discovered via gmail evidence.",
@@ -301,7 +301,7 @@ describe("proposeDrafts", () => {
       },
       {
         product: {
-          slug: "app-herokuapp-com",
+          slug: "host-31e138fc839d80f22cf10ccdc6a7d6f6",
           name: "App",
           domain: "app.herokuapp.com",
           description: "Discovered via browser history evidence.",
@@ -311,7 +311,7 @@ describe("proposeDrafts", () => {
       },
       {
         product: {
-          slug: "other-herokuapp-com",
+          slug: "host-681b6150264437483434959cfd5317fd",
           name: "Other",
           domain: "other.herokuapp.com",
           description: "Discovered via browser history evidence.",

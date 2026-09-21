@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import { evidenceObservationSchema } from "./evidence-claims.ts";
 import { captureProvenanceSchema } from "./capture-provenance.ts";
 
@@ -383,8 +385,8 @@ function deriveIdentity(signal: RawSignal): ProductIdentity | null {
     (signal.vendor ? extractDomain(signal.vendor) : null);
   if (!domain) return null;
 
-  const slug = domain.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  if (!slug) return null;
+  // Keep DNS label boundaries in the identity and fit the 39-character card key.
+  const slug = `host-${bytesToHex(sha256(new TextEncoder().encode(domain))).slice(0, 32)}`;
 
   const label = domain.split(".")[0] ?? domain;
   return {
