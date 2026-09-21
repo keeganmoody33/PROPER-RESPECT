@@ -59,8 +59,4 @@
 }
 
 .example { min-width: 0; padding: clamp(1rem, 3vw, 2rem); background: #e4e1d7; border: 1px solid #171713; }
-.example > div > p { font: .65rem/1.6 var(--homepage-mono), monospace; margin: 0 0 1rem; }
-.example > div > p:last-child { margin: 1rem 0 0; }
 .example :global(.product-card) { width: 100%; }
-
-.example :global(.product-logo) { background: #ffffff; }

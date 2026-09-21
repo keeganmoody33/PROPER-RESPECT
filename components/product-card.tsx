@@ -158,7 +158,7 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
   );
 }
 
-function ActivityPreview({ activity, unreviewed = false }: { activity: ActivityModule; unreviewed?: boolean }) {
+function ActivityPreview({ activity, unreviewed = false, expanded = false }: { activity: ActivityModule; unreviewed?: boolean; expanded?: boolean }) {
   const metric = activityHighlight(activity);
   return (
     <div className="card-activity-preview">
@@ -171,6 +171,9 @@ function ActivityPreview({ activity, unreviewed = false }: { activity: ActivityM
         </>}
       </p>
       {activity.kind === "contributionCalendar" && <ContributionCalendar activity={activity} />}
+      {expanded && (activity.kind === "headlineMetrics" || activity.kind === "codingActivity") && <dl className="activity-preview-metrics">
+        {activity.supporting.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{compactNumber(metric.value)}{metric.unit ? ` ${metric.unit}` : ""}</dd></div>)}
+      </dl>}
       <p className="card-activity-coverage">
         {activity.attributionScope.toLowerCase()} activity ·{" "}
         {activity.period ? `${activity.period.start} to ${activity.period.end}` : "Measurement period not supplied"}
@@ -363,6 +366,7 @@ export function ProductCard({
   relationshipConfirmed = true,
   goTo = false,
   audience = "visitor",
+  expandedActivity = false,
 }: {
   card: Card;
   index: number;
@@ -370,6 +374,7 @@ export function ProductCard({
   relationshipConfirmed?: boolean;
   goTo?: boolean;
   audience?: "owner" | "visitor";
+  expandedActivity?: boolean;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const linkDisclosure = card.primaryLink?.type === "AFFILIATE" ? "Affiliate link"
@@ -456,7 +461,7 @@ export function ProductCard({
         </p>
 
         {!brandPreview && card.activity ? (
-          <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} />
+          <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />
         ) : (brandPreview || audience === "owner") ? (
           <p className="activity-placeholder">
             {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}

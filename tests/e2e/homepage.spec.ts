@@ -22,7 +22,7 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your tools.Your track record.");
   await expect(page.getByRole("img", { name: /Blueprint/ })).toHaveCount(0);
   await expect(page.getByRole("article", { name: "GitHub card" })).toBeVisible();
-  await expect(page.getByText("Inside a card / Illustrative example")).toBeVisible();
+  await expect(page.getByText("Inside a card / Illustrative examples")).toBeVisible();
   const bump = page.getByRole("img", { name: "Two fists meeting at a bright red diamond" });
   await bump.scrollIntoViewIfNeeded();
   await expect(bump).toBeVisible();
