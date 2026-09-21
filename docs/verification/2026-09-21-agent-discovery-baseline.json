@@ -1,0 +1,63 @@
+{
+  "source": "https://ora.ai/api/score/proper-respect.com",
+  "scannedAt": "2026-09-21T19:10:42.081+00:00",
+  "score": 50,
+  "grade": "C",
+  "analysisStatus": "complete",
+  "http": [
+    {
+      "path": "/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "link": null
+    },
+    {
+      "path": "/index.md",
+      "status": 404,
+      "contentType": "text/html; charset=utf-8",
+      "link": "</_next/static/immutable/media/Archivo-s.p.1w1wfq3-t9aw4.ttf>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/ttf\", </_next/static/immutable/media/IBMPlexMono_Bold-s.p.1q7koouz79_g0.ttf>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/ttf\", </_next/static/immutable/chunks/3k-q-1to9fsxs.css>; rel=preload; as=\"style\""
+    },
+    {
+      "path": "/llms.txt",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "link": null
+    },
+    {
+      "path": "/robots.txt",
+      "status": 404,
+      "contentType": "text/html; charset=utf-8",
+      "link": "</_next/static/immutable/media/Archivo-s.p.1w1wfq3-t9aw4.ttf>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/ttf\", </_next/static/immutable/media/IBMPlexMono_Bold-s.p.1q7koouz79_g0.ttf>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/ttf\", </_next/static/immutable/chunks/3k-q-1to9fsxs.css>; rel=preload; as=\"style\""
+    },
+    {
+      "path": "/sitemap.xml",
+      "status": 200,
+      "contentType": "application/xml",
+      "link": null
+    },
+    {
+      "path": "/.well-known/ard.json",
+      "status": 404,
+      "contentType": "text/html; charset=utf-8",
+      "link": null
+    },
+    {
+      "path": "/auth.md",
+      "status": 404,
+      "contentType": "text/html; charset=utf-8",
+      "link": "</_next/static/immutable/media/Archivo-s.p.1w1wfq3-t9aw4.ttf>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/ttf\", </_next/static/immutable/media/IBMPlexMono_Bold-s.p.1q7koouz79_g0.ttf>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/ttf\", </_next/static/immutable/chunks/3k-q-1to9fsxs.css>; rel=preload; as=\"style\""
+    }
+  ],
+  "expectedBeforeFix": {
+    "expected": true,
+    "observed": {
+      "/index.md": false,
+      "/robots.txt": false,
+      "/.well-known/ard.json": false,
+      "/auth.md": false,
+      "homepage_link_header": false,
+      "homepage_jsonld": false
+    },
+    "verdict": "RED"
+  }
+}
