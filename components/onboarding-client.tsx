@@ -137,13 +137,28 @@ function Builder() {
   } | null>(null);
   const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, cards: state?.cards, user: state?.user }), [reviewEdits, state?.cards, state?.user]);
 
+  const [setupAttempt, setSetupAttempt] = useState(0);
+  const [setupFailed, setSetupFailed] = useState(false);
+  const [setupPending, setSetupPending] = useState(true);
+  const clerkId = clerkUser?.id;
+  const clerkName = clerkUser?.fullName;
+  const clerkAvatar = clerkUser?.imageUrl;
+
   useEffect(() => {
-    if (!clerkUser) return;
+    if (!clerkId) return;
+    let active = true;
     void ensureAccount({
-      displayName: clerkUser.fullName ?? undefined,
-      avatarUrl: clerkUser.imageUrl,
+      displayName: clerkName ?? undefined,
+      avatarUrl: clerkAvatar,
+    }).then(() => {
+      if (active) setSetupFailed(false);
+    }).catch(() => {
+      if (active) setSetupFailed(true);
+    }).finally(() => {
+      if (active) setSetupPending(false);
     });
-  }, [clerkUser, ensureAccount]);
+    return () => { active = false; };
+  }, [clerkId, clerkName, clerkAvatar, ensureAccount, setupAttempt]);
 
   async function run(label: string, operation: () => Promise<unknown>) {
     setBusy(true);
@@ -328,7 +343,16 @@ function Builder() {
     </div>);
   }
 
-  if (!state) return <main className="onboarding-shell"><p role="status">Loading your profile…</p></main>;
+  if (!state) return <main className="onboarding-shell">
+    {setupFailed ? <>
+      <p role="alert">We could not prepare your private collection. Retry account setup to continue. Nothing has been published.</p>
+      <button type="button" className="primary-action" disabled={setupPending} onClick={() => {
+        setSetupPending(true);
+        setSetupAttempt(attempt => attempt + 1);
+      }}>Retry account setup</button>
+      {setupPending && <p role="status">Preparing your private collection…</p>}
+    </> : <p role="status">Loading your profile…</p>}
+  </main>;
 
   return (
     <main className="onboarding-shell">
