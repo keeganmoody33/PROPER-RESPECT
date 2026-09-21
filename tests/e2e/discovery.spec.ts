@@ -11,7 +11,10 @@ test("llms.txt is a plain-text description of the available public surface", asy
   expect(body).toContain("# Proper Respect");
   expect(body).toContain("evidence-backed");
   expect(body).toContain("owner-approved");
-  expect(body).toContain("No documented public API, OpenAPI document, MCP endpoint, or WebMCP tools");
+  expect(body).toContain("get_current_public_profile accepts {}");
+  expect(body).toContain("No public HTTP API, OpenAPI document, or remote MCP endpoint");
+  expect(body).toContain("https://public.example/");
+  expect(body).not.toContain("props.lecturesfrom.com");
   expect(body).not.toMatch(/<!doctype html|<html[\s>]/i);
 });
 

@@ -9,6 +9,8 @@ import type {
   ActivityModule,
   PublicProfile,
 } from "@/src/domain/public-profile";
+import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
+import { compactNumber } from "@/src/domain/format-activity-number";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
@@ -115,12 +117,6 @@ function ProductLogo({
   );
 }
 
-const standardNumber = new Intl.NumberFormat("en", { notation: "standard", maximumFractionDigits: 1 });
-const abbreviatedNumber = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
-function compactNumber(value: number) {
-  return (value >= 10_000 ? abbreviatedNumber : standardNumber).format(value);
-}
-
 function activityHighlight(activity: ActivityModule) {
   switch (activity.kind) {
     case "contributionCalendar":
@@ -138,21 +134,11 @@ function activityHighlight(activity: ActivityModule) {
 }
 
 function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
-  if (activity.days.length === 0) return <p className="activity-empty">No daily contribution counts supplied</p>;
-  const days = [...activity.days].sort((a, b) => a.date.localeCompare(b.date));
-  const firstSupplied = new Date(`${days[0].date}T00:00:00Z`);
-  const lastSupplied = new Date(`${days.at(-1)!.date}T00:00:00Z`);
-  const periodStart = new Date(`${activity.period?.start}T00:00:00Z`);
-  const periodEnd = new Date(`${activity.period?.end}T00:00:00Z`);
-  const enclosingPeriod = Number.isFinite(periodStart.getTime()) && Number.isFinite(periodEnd.getTime())
-    && periodStart.toISOString().slice(0, 10) === activity.period?.start
-    && periodEnd.toISOString().slice(0, 10) === activity.period?.end
-    && periodStart <= firstSupplied && periodEnd >= lastSupplied;
-  const first = enclosingPeriod ? periodStart : firstSupplied;
-  const last = (enclosingPeriod ? periodEnd : lastSupplied).getTime();
+  const coverage = contributionCalendarCoverage(activity);
+  if (!coverage) return <p className="activity-empty">No daily contribution counts supplied</p>;
+  const { days, first, last, suppliedRange, gapNote } = coverage;
   const firstSunday = first.getTime() - first.getUTCDay() * 86_400_000;
   const weeks = Math.floor((last - firstSunday) / (7 * 86_400_000)) + 1;
-  const missingDays = Math.round((last - first.getTime()) / 86_400_000) + 1 - new Set(days.map(day => day.date)).size;
   const months = [...new Set(days.map(day => day.date.slice(0, 7)))].map(month => {
     const monthStart = new Date(`${month}-01T00:00:00Z`);
     const column = Math.max(1, Math.floor((monthStart.getTime() - firstSunday) / (7 * 86_400_000)) + 1);
@@ -180,10 +166,8 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
         </div>
       </div>
       <div className="contribution-legend" aria-hidden="true">Less {[0, 1, 2, 3, 4].map(level => <i key={level} data-level={level} />)} More</div>
-      {(!activity.period || activity.period.start !== days[0].date || activity.period.end !== days.at(-1)!.date) && (
-        <p className="contribution-range">Daily counts: {days[0].date} – {days.at(-1)!.date}</p>
-      )}
-      {missingDays > 0 && <p className="contribution-gap">{missingDays} {missingDays === 1 ? "day has" : "days have"} no supplied count; blank spaces are not zero activity.</p>}
+      {suppliedRange && <p className="contribution-range">{suppliedRange}</p>}
+      {gapNote && <p className="contribution-gap">{gapNote}</p>}
     </div>
   );
 }

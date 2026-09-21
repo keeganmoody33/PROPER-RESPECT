@@ -1,3 +1,5 @@
+import { PublicProfileWebMcp } from "@/components/public-profile-webmcp";
+import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
 import { ProfileName, ProfileLinks } from "@/components/profile-identity";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -40,6 +42,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   return (
     <main>
+      <PublicProfileWebMcp profile={projectVisiblePublicProfile(profile)} />
       <div className="profile-context"><p>@{profile.handle} / SHARED PRODUCT COLLECTION</p></div>
 
       <section className="stack" aria-labelledby="stack-heading">
