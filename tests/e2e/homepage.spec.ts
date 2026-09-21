@@ -9,6 +9,15 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   page.on("request", request => { if (!new URL(request.url()).hostname.match(/^(127\.0\.0\.1|localhost)$/)) external.push(request.url()); });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
+  const fontFaces = await page.evaluate(() => ["h1", "header > a:last-child"].map(selector => {
+    const element = document.querySelector(selector)!;
+    const family = getComputedStyle(element).fontFamily.split(",")[0].trim().replace(/["']/g, "");
+    const faces = [...document.fonts].filter(face => face.family.replace(/["']/g, "") === family);
+    return { family, statuses: faces.map(face => face.status) };
+  }));
+  expect(fontFaces[0].family).toMatch(/archivo/i);
+  expect(fontFaces[1].family).toMatch(/mono/i);
+  for (const face of fontFaces) expect(face.statuses).toEqual(["loaded"]);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your tools.Your track record.");
   const art = page.getByRole("img", { name: "Blueprint illustration of two hands meeting in a fist bump" });
   await expect(art).toBeVisible();
@@ -16,6 +25,10 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("main")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Open your collection", exact: true }).first()).toBeFocused();
   await expect(page.getByRole("link", { name: "Open your collection", exact: true }).first()).toHaveAttribute("href", "/onboarding");
   await expect(page.getByRole("link", { name: "View Keegan’s shared collection" })).toHaveAttribute("href", "/keegan");
   expect(external).toEqual([]);

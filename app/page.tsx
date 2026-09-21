@@ -22,7 +22,7 @@ export default function HomePage() {
         </Link>
         <Link className={styles.navLink} href="/onboarding">Your collection</Link>
       </header>
-      <main id="homepage-content" className={styles.main}>
+      <main id="homepage-content" className={styles.main} tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="homepage-title">
           <div className={styles.intro}>
             <p className={styles.label}>What you use. What stays with you.</p>
