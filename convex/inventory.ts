@@ -7,7 +7,9 @@ import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
 import { statusValidator } from "./validators";
 import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
-import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
+import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
+import { privateCardPrimaryLink } from "../src/domain/product-destination";
+import type { RankedAccountEvidence } from "../src/domain/account-evidence";
 
 async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   const user = await requireUser(ctx);
@@ -97,8 +99,8 @@ export const save = mutation({
 });
 
 export const list = query({
-  args: { paginationOpts: paginationOptsValidator },
-  handler: async (ctx, { paginationOpts }) => {
+  args: { paginationOpts: paginationOptsValidator, includeAccountEvidence: v.optional(v.boolean()) },
+  handler: async (ctx, { paginationOpts, includeAccountEvidence }) => {
     const user = await requireUser(ctx);
     const result = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).paginate(boundedPage(paginationOpts, 25));
     const page = await Promise.all(result.page.map(async prop => {
@@ -107,13 +109,48 @@ export const list = query({
       const brand = await retainedProductBrand(ctx, product);
       const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").take(25);
       const latestEvent = await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").first();
-      const associatedAccountEvidence = await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug);
+      const associatedAccountEvidence = includeAccountEvidence === false ? [] : await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug);
       return { prop, product: { ...product, brand }, links, associatedAccountEvidence,
         // Only the immediately preceding decision is needed by the History view.
         // Full append-only history is read separately when the card is opened.
         previousStatuses: latestEvent?.before.confirmed ? [latestEvent.before.status] : [],
       };
     }));
+    return { ...result, page };
+  },
+});
+
+export const accountEvidencePage = query({
+  args: { propId: v.id("props"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { propId, paginationOpts }) => {
+    const options = boundedPage(paginationOpts, 3);
+    const { user, prop } = await ownedProp(ctx, propId);
+    const product = await ctx.db.get(prop.productId);
+    type Row = { candidate: RankedAccountEvidence | null; connected: boolean };
+    if (!product || product.slug !== "github") return { page: [] as Row[], isDone: true, continueCursor: "" };
+    const connector = await ctx.db.query("connectorAccounts")
+      .withIndex("by_user_provider", q => q.eq("userId", user._id).eq("provider", "GITHUB")).unique();
+    const login = connector?.status === "CONNECTED"
+      ? connector.accountLabel.match(/^(?:https:\/\/)?github\.com\/([^/]+)$/i)?.[1] : undefined;
+    if (login) {
+      const evidence = { relationshipOwnerId: user._id, evidenceOwnerId: user._id, productSlug: product.slug, accountId: login, url: `https://github.com/${login}` };
+      const destination = privateCardPrimaryLink({ product, links: [], associatedEvidence: [evidence] });
+      if (destination && destination.url !== `https://${product.domain}`) {
+        return { page: [{ connected: true, candidate: { sourceDay: "", accountKey: "", evidence } }] as Row[], isDone: true, continueCursor: "" };
+      }
+    }
+    const result = await ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", propId))
+      .order("desc").paginate(options);
+    const page: Row[] = [];
+    for (const proof of result.page) {
+      let candidate: RankedAccountEvidence | null = null;
+      const raw = proof.rawEvidenceId ? await ctx.db.get(proof.rawEvidenceId) : null;
+      if (raw && raw.userId === user._id && !raw.deletedAt && raw.captureProvenance?.origin.issuer === "GITHUB") {
+        const source = await ctx.db.get(raw.evidenceSourceId);
+        if (source?.userId === user._id && source.type === "GITHUB") candidate = rankAccountEvidence(raw, user._id, product.slug);
+      }
+      page.push({ candidate, connected: false });
+    }
     return { ...result, page };
   },
 });

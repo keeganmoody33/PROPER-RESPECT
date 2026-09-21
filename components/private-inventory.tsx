@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
+import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { ProductBrandControls } from "./product-brand-controls";
@@ -157,7 +158,20 @@ function InventoryDetails({ item, onSave, brandEnrichmentAvailable }: { item: It
   </>;
 }
 
-export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, renderDetails, renderHistory }: {
+function InventoryCard({ item, index }: { item: Item; index: number }) {
+  return <ProductCard audience="owner" index={index} relationshipConfirmed={isRelationshipConfirmed(item.prop)} goTo={item.prop.goTo} card={{
+    product: item.product, status: item.prop.status, headline: item.prop.headline, note: item.prop.note,
+    startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
+    primaryLink: privateCardPrimaryLink({
+      product: item.product,
+      links: item.links,
+      associatedEvidence: item.associatedAccountEvidence ?? [],
+    }),
+  }} />;
+}
+
+export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, renderDetails, renderHistory, renderCard }: {
+  renderCard?: (item: Item, index: number) => ReactNode;
   data: InventoryData; onSave: (input: SaveInput) => Promise<SaveResult>;
   onImport: (packet: unknown) => Promise<unknown>;
   onLoadMore?: () => void; renderDetails?: (item: Item) => ReactNode; renderHistory?: (item: Item) => ReactNode;
@@ -207,15 +221,7 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
           </label>
           <p>{members.length} retained records for this product. Inspect each record’s decisions and evidence here. Selecting a record does not merge, confirm, or publish it.</p>
         </div>}
-        <ProductCard key={item.prop._id} audience="owner" index={index} relationshipConfirmed={confirmed} goTo={item.prop.goTo} card={{
-          product: item.product, status: item.prop.status, headline: item.prop.headline, note: item.prop.note,
-          startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
-          primaryLink: privateCardPrimaryLink({
-            product: item.product,
-            links: item.links,
-            associatedEvidence: item.associatedAccountEvidence ?? [],
-          }),
-        }} />
+        {renderCard?.(item, index) ?? <InventoryCard key={item.prop._id} item={item} index={index} />}
         <details key={`details:${item.prop._id}`} onToggle={event => { const open = event.currentTarget.open; setOpened(current => ({ ...current, [item.prop._id]: open })); }}>
           <summary>{confirmed ? "Manage relationship and context" : "Review this discovery"}</summary>
           {opened[item.prop._id] && (renderDetails?.(item) ?? <InventoryRelationshipDetails item={item} evidence={[]} onSave={onSave} renderHistory={renderHistory} />)}
@@ -235,11 +241,12 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
 }
 
 export function PrivateInventory({ brandEnrichmentAvailable = false }: { brandEnrichmentAvailable?: boolean }) {
-  const inventory = usePaginatedQuery(api.inventory.list, {}, { initialNumItems: 25 });
+  const inventory = usePaginatedQuery(api.inventory.list, { includeAccountEvidence: false }, { initialNumItems: 25 });
   const save = useMutation(api.inventory.save);
   const importPacket = useMutation(api.retainedEvidence.importPacket);
   if (inventory.status === "LoadingFirstPage") return <p role="status">Loading your private collection…</p>;
   return <><DiscoveryReview /><PrivateInventoryView data={{ cards: inventory.results, hasMore: inventory.status !== "Exhausted", loadingMore: inventory.status === "LoadingMore" }}
+    renderCard={(item, index) => <AccountEvidence key={item.prop._id} propId={item.prop._id} productSlug={item.product.slug}>{(evidence, progress) => <><InventoryCard item={{ ...item, associatedAccountEvidence: evidence }} index={index} />{progress}</>}</AccountEvidence>}
     onLoadMore={() => inventory.loadMore(25)} onSave={save} onImport={packet => importPacket({ packet })}
     renderDetails={item => <InventoryDetails item={item} onSave={save} brandEnrichmentAvailable={brandEnrichmentAvailable} />} /></>;
 }

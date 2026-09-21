@@ -21,6 +21,7 @@ import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/dom
 import { costSchema, type CostVisibility } from "@/src/domain/cost";
 import { ProductKnowledgePanel } from "./product-knowledge-panel";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
+import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
 import { ProductBrandControls } from "./product-brand-controls";
 import { PrivateInventory } from "./private-inventory";
@@ -125,7 +126,7 @@ function Builder() {
   const publishSelected = useMutation(api.onboarding.publishSelected);
   const revokeConnector = useMutation(api.connectors.revokeConnector);
   const connectDevin = useAction(api.connectors.connectDevin);
-  const state = useQuery(api.onboarding.getState, { includeClaims: false, includeLegacyCollections: false });
+  const state = useQuery(api.onboarding.getState, { includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -478,203 +479,206 @@ function Builder() {
             const priorEdit = reviewEdits[card.prop._id];
             const edit = priorEdit && isCurrentReview(savedCard, priorEdit) ? priorEdit : defaultReview(savedCard);
             const confirmed = isRelationshipConfirmed(card.prop);
-            const destinationInput = {
-              product: card.product,
-              links: card.links,
-              associatedEvidence: card.associatedAccountEvidence ?? [],
-            };
-            const privateDestination = privateCardPrimaryLink(destinationInput);
-            const publicationOffer = offeredPrivatePublicationLink(destinationInput);
-            return (
-              <fieldset className="review-card" key={card.prop._id} disabled={busy} aria-label={`${card.product.name} review`}>
-                <h3>{card.product.name}</h3>
-                <details>
-                  <summary>Preview private card</summary>
-                  <ProductCard audience="owner" index={index} relationshipConfirmed={confirmed} goTo={card.prop.goTo} card={{
-                    product: card.product,
-                    status: card.prop.status,
-                    headline: card.prop.headline,
-                    note: card.prop.note,
-                    startedAt: card.prop.startedAt,
-                    activity: card.prop.activity,
-                    cost: card.prop.cost,
-                    primaryLink: privateDestination,
-                  }} />
-                </details>
-                <details><summary>Product and evidence records</summary>
-                  {state.brandEnrichmentAvailable && <ProductBrandControls propId={card.prop._id} />}
-                  <ProductKnowledgePanel propId={card.prop._id} />
-                  <PrivateEvidencePanel propId={card.prop._id} productName={card.product.name} productSlug={card.product.slug} disabled={busy}
-                    onUseStartDate={state.privateInventoryAvailable ? undefined : date => updateReview(card.prop._id, edit, { startedAt: date })} />
-                </details>
-                {state.privateInventoryAvailable && <p>{confirmed
-                  ? "These are your saved relationship details. Change them in your private collection above before publishing a new version."
-                  : "Confirm and save this discovery in your private collection above before publishing it."}</p>}
-                <label className="review-toggle">
-                  <input
-                    type="checkbox"
-                    checked={edit.publish}
-                    disabled={state.privateInventoryAvailable && !confirmed}
-                    onChange={(event) =>
-                      updateReview(card.prop._id, edit, {
-                        publish: event.target.checked,
-                      })
-                    }
-                  />
-                    Share this saved card
-                </label>
-                {card.isPublishedAtCurrentHandle === true && <>
-                  <p>Already public at /{state.user.handle}. Its approved version stays unchanged until you include saved edits or change these publication choices.</p>
-                  <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, { publish: true })}>Include saved version</button>
-                </>}
-                <details><summary>Information to include</summary>
-                <label className="review-field">
-                  Relationship
-                  <select
-                    value={edit.status}
-                    disabled={state.privateInventoryAvailable}
-                    onChange={(event) =>
-                      updateReview(card.prop._id, edit, {
-                        status: event.target.value as ReviewEdit["status"],
-                      })
-                    }
-                  >
-                    <option value="ACTIVE">Active</option>
-                    <option value="TESTING">Testing</option>
-                    <option value="ARCHIVED">Archived</option>
-                  </select>
-                </label>
-                <label className="review-field">
-                  When you started using it (optional)
-                  <input
-                    type="date"
-                    value={edit.startedAt}
-                    readOnly={state.privateInventoryAvailable}
-                    onChange={(event) =>
-                      updateReview(card.prop._id, edit, {
-                        startedAt: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label className="review-field">
-                  Headline
-                  <input
-                    value={edit.headline}
-                    readOnly={state.privateInventoryAvailable}
-                    onChange={(event) =>
-                      updateReview(card.prop._id, edit, {
-                        headline: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label className="review-field">
-                  Public note
-                  <textarea
-                    value={edit.note}
-                    readOnly={state.privateInventoryAvailable}
-                    rows={3}
-                    onChange={(event) =>
-                      updateReview(card.prop._id, edit, {
-                        note: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label className="review-field">
-                  Primary link
-                  <input
-                    type="url"
-                    value={edit.linkUrl}
-                    onChange={(event) =>
-                      updateReview(card.prop._id, edit, {
-                        linkUrl: event.target.value,
-                      })
-                    }
-                  />
-                </label>
-                <label className="review-field">
-                  Link purpose
-                  <select value={edit.linkType} onChange={event => updateReview(card.prop._id, edit, { linkType: event.target.value as ReviewEdit["linkType"] })}>
-                    <option value="CANONICAL">Product or account page</option>
-                    <option value="AFFILIATE">My affiliate link</option>
-                    <option value="REFERRAL">My referral link</option>
-                    <option value="INVITE">My invite link</option>
-                  </select>
-                </label>
-                <p>Use your own affiliate or referral URL. It appears publicly only after you approve the sharing preview.</p>
-                {publicationOffer && publicationOffer.url !== edit.linkUrl && <>
-                  <p>Your private card opens {publicationOffer.url}. Visitors will use the primary link above until you choose otherwise and approve a preview.</p>
-                  <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, {
-                    linkUrl: publicationOffer.url,
-                    linkType: publicationOffer.type,
-                    linkLabel: publicationOffer.label,
-                  })}>Use the private account page in this preview</button>
-                </>}
-                <fieldset>
-                  <legend>Cost (optional)</legend>
-                  <label className="review-field">
-                    Amount
-                    <input type="number" min="0" step="0.01" value={edit.costAmount}
-                      onChange={event => updateReview(card.prop._id, edit, { costAmount: event.target.value })} />
-                  </label>
-                  <label className="review-field">
-                    Currency
-                    <input maxLength={3} value={edit.costCurrency}
-                      onChange={event => updateReview(card.prop._id, edit, { costCurrency: event.target.value.toUpperCase() })} />
-                  </label>
-                  <label className="review-field">
-                    Billing interval
-                    <select value={edit.costCadence} onChange={event => updateReview(card.prop._id, edit, { costCadence: event.target.value as ReviewEdit["costCadence"] })}>
-                      <option value="MONTHLY">Monthly</option><option value="ANNUAL">Annual</option><option value="ONE_TIME">One-time</option><option value="UNKNOWN">Unknown</option>
-                    </select>
-                  </label>
-                  <label className="review-field">
-                    Basis
-                    <select value={edit.costBasis} onChange={event => updateReview(card.prop._id, edit, { costBasis: event.target.value as ReviewEdit["costBasis"] })}>
-                      <option value="OWNER_REPORTED">Entered by me</option><option value="RECEIPT">From a receipt</option><option value="ESTIMATE">Estimate</option>
-                    </select>
-                  </label>
-                  <label className="review-field">
-                    Price as of
-                    <input type="date" value={edit.costAsOf}
-                      onChange={event => updateReview(card.prop._id, edit, { costAsOf: event.target.value })} />
-                  </label>
-                  <label className="review-field">
-                    Billing period start (optional)
-                    <input type="date" value={edit.costPeriodStart}
-                      onChange={event => updateReview(card.prop._id, edit, { costPeriodStart: event.target.value })} />
-                  </label>
-                  <label className="review-field">
-                    Billing period end (optional)
-                    <input type="date" value={edit.costPeriodEnd}
-                      onChange={event => updateReview(card.prop._id, edit, { costPeriodEnd: event.target.value })} />
-                  </label>
-                  <label className="review-toggle">
-                    <input type="checkbox" checked={edit.costVisibility === "PUBLIC"}
-                      onChange={event => updateReview(card.prop._id, edit, { costVisibility: event.target.checked ? "PUBLIC" : "PRIVATE" })} />
-                    Show this cost publicly
-                  </label>
-                </fieldset>
-                {card.prop.activity && (
+            return <AccountEvidence key={card.prop._id} propId={card.prop._id} productSlug={savedCard.product.slug}>{(evidence, progress) => {
+              const destinationInput = {
+                product: savedCard.product,
+                links: card.links,
+                associatedEvidence: evidence,
+              };
+              const privateDestination = privateCardPrimaryLink(destinationInput);
+              const publicationOffer = offeredPrivatePublicationLink(destinationInput);
+              return (
+                <fieldset className="review-card" key={card.prop._id} disabled={busy} aria-label={`${savedCard.product.name} review`}>
+                  <h3>{savedCard.product.name}</h3>
+                  {progress}
+                  <details>
+                    <summary>Preview private card</summary>
+                    <ProductCard audience="owner" index={index} relationshipConfirmed={confirmed} goTo={card.prop.goTo} card={{
+                      product: savedCard.product,
+                      status: card.prop.status,
+                      headline: card.prop.headline,
+                      note: card.prop.note,
+                      startedAt: card.prop.startedAt,
+                      activity: card.prop.activity,
+                      cost: card.prop.cost,
+                      primaryLink: privateDestination,
+                    }} />
+                  </details>
+                  <details><summary>Product and evidence records</summary>
+                    {state.brandEnrichmentAvailable && <ProductBrandControls propId={card.prop._id} />}
+                    <ProductKnowledgePanel propId={card.prop._id} />
+                    <PrivateEvidencePanel propId={card.prop._id} productName={savedCard.product.name} productSlug={savedCard.product.slug} disabled={busy}
+                      onUseStartDate={state.privateInventoryAvailable ? undefined : date => updateReview(card.prop._id, edit, { startedAt: date })} />
+                  </details>
+                  {state.privateInventoryAvailable && <p>{confirmed
+                    ? "These are your saved relationship details. Change them in your private collection above before publishing a new version."
+                    : "Confirm and save this discovery in your private collection above before publishing it."}</p>}
                   <label className="review-toggle">
                     <input
                       type="checkbox"
-                      checked={edit.approveActivity}
+                      checked={edit.publish}
+                      disabled={state.privateInventoryAvailable && !confirmed}
                       onChange={(event) =>
                         updateReview(card.prop._id, edit, {
-                          approveActivity: event.target.checked,
+                          publish: event.target.checked,
                         })
                       }
                     />
-                    Publish{" "}
-                    {card.prop.activity.attributionScope.toLowerCase()} activity
+                      Share this saved card
                   </label>
-                )}
-                </details>
-              </fieldset>
-            );
+                  {card.isPublishedAtCurrentHandle === true && <>
+                    <p>Already public at /{state.user.handle}. Its approved version stays unchanged until you include saved edits or change these publication choices.</p>
+                    <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, { publish: true })}>Include saved version</button>
+                  </>}
+                  <details><summary>Information to include</summary>
+                  <label className="review-field">
+                    Relationship
+                    <select
+                      value={edit.status}
+                      disabled={state.privateInventoryAvailable}
+                      onChange={(event) =>
+                        updateReview(card.prop._id, edit, {
+                          status: event.target.value as ReviewEdit["status"],
+                        })
+                      }
+                    >
+                      <option value="ACTIVE">Active</option>
+                      <option value="TESTING">Testing</option>
+                      <option value="ARCHIVED">Archived</option>
+                    </select>
+                  </label>
+                  <label className="review-field">
+                    When you started using it (optional)
+                    <input
+                      type="date"
+                      value={edit.startedAt}
+                      readOnly={state.privateInventoryAvailable}
+                      onChange={(event) =>
+                        updateReview(card.prop._id, edit, {
+                          startedAt: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="review-field">
+                    Headline
+                    <input
+                      value={edit.headline}
+                      readOnly={state.privateInventoryAvailable}
+                      onChange={(event) =>
+                        updateReview(card.prop._id, edit, {
+                          headline: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="review-field">
+                    Public note
+                    <textarea
+                      value={edit.note}
+                      readOnly={state.privateInventoryAvailable}
+                      rows={3}
+                      onChange={(event) =>
+                        updateReview(card.prop._id, edit, {
+                          note: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="review-field">
+                    Primary link
+                    <input
+                      type="url"
+                      value={edit.linkUrl}
+                      onChange={(event) =>
+                        updateReview(card.prop._id, edit, {
+                          linkUrl: event.target.value,
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="review-field">
+                    Link purpose
+                    <select value={edit.linkType} onChange={event => updateReview(card.prop._id, edit, { linkType: event.target.value as ReviewEdit["linkType"] })}>
+                      <option value="CANONICAL">Product or account page</option>
+                      <option value="AFFILIATE">My affiliate link</option>
+                      <option value="REFERRAL">My referral link</option>
+                      <option value="INVITE">My invite link</option>
+                    </select>
+                  </label>
+                  <p>Use your own affiliate or referral URL. It appears publicly only after you approve the sharing preview.</p>
+                  {publicationOffer && publicationOffer.url !== edit.linkUrl && <>
+                    <p>Your private card opens {publicationOffer.url}. Visitors will use the primary link above until you choose otherwise and approve a preview.</p>
+                    <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, {
+                      linkUrl: publicationOffer.url,
+                      linkType: publicationOffer.type,
+                      linkLabel: publicationOffer.label,
+                    })}>Use the private account page in this preview</button>
+                  </>}
+                  <fieldset>
+                    <legend>Cost (optional)</legend>
+                    <label className="review-field">
+                      Amount
+                      <input type="number" min="0" step="0.01" value={edit.costAmount}
+                        onChange={event => updateReview(card.prop._id, edit, { costAmount: event.target.value })} />
+                    </label>
+                    <label className="review-field">
+                      Currency
+                      <input maxLength={3} value={edit.costCurrency}
+                        onChange={event => updateReview(card.prop._id, edit, { costCurrency: event.target.value.toUpperCase() })} />
+                    </label>
+                    <label className="review-field">
+                      Billing interval
+                      <select value={edit.costCadence} onChange={event => updateReview(card.prop._id, edit, { costCadence: event.target.value as ReviewEdit["costCadence"] })}>
+                        <option value="MONTHLY">Monthly</option><option value="ANNUAL">Annual</option><option value="ONE_TIME">One-time</option><option value="UNKNOWN">Unknown</option>
+                      </select>
+                    </label>
+                    <label className="review-field">
+                      Basis
+                      <select value={edit.costBasis} onChange={event => updateReview(card.prop._id, edit, { costBasis: event.target.value as ReviewEdit["costBasis"] })}>
+                        <option value="OWNER_REPORTED">Entered by me</option><option value="RECEIPT">From a receipt</option><option value="ESTIMATE">Estimate</option>
+                      </select>
+                    </label>
+                    <label className="review-field">
+                      Price as of
+                      <input type="date" value={edit.costAsOf}
+                        onChange={event => updateReview(card.prop._id, edit, { costAsOf: event.target.value })} />
+                    </label>
+                    <label className="review-field">
+                      Billing period start (optional)
+                      <input type="date" value={edit.costPeriodStart}
+                        onChange={event => updateReview(card.prop._id, edit, { costPeriodStart: event.target.value })} />
+                    </label>
+                    <label className="review-field">
+                      Billing period end (optional)
+                      <input type="date" value={edit.costPeriodEnd}
+                        onChange={event => updateReview(card.prop._id, edit, { costPeriodEnd: event.target.value })} />
+                    </label>
+                    <label className="review-toggle">
+                      <input type="checkbox" checked={edit.costVisibility === "PUBLIC"}
+                        onChange={event => updateReview(card.prop._id, edit, { costVisibility: event.target.checked ? "PUBLIC" : "PRIVATE" })} />
+                      Show this cost publicly
+                    </label>
+                  </fieldset>
+                  {card.prop.activity && (
+                    <label className="review-toggle">
+                      <input
+                        type="checkbox"
+                        checked={edit.approveActivity}
+                        onChange={(event) =>
+                          updateReview(card.prop._id, edit, {
+                            approveActivity: event.target.checked,
+                          })
+                        }
+                      />
+                      Publish{" "}
+                      {card.prop.activity.attributionScope.toLowerCase()} activity
+                    </label>
+                  )}
+                  </details>
+                </fieldset>
+              );
+            }}</AccountEvidence>;
           })}
         </div>
         <div className="action-row">
