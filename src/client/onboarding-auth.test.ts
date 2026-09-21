@@ -12,6 +12,8 @@ const auth = vi.hoisted(() => ({
   protectedQuery: vi.fn(),
   ownerState: undefined as Record<string, unknown> | undefined,
   brandState: undefined as Record<string, unknown> | undefined,
+  accountRows: [] as Array<Record<string, unknown>>,
+  accountStatus: "Exhausted",
 }));
 
 vi.mock("@clerk/nextjs", () => ({
@@ -36,7 +38,9 @@ vi.mock("convex/react", async (importOriginal) => ({
   },
   useMutation: () => vi.fn(),
   useAction: () => vi.fn(),
-  usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: vi.fn() }),
+  usePaginatedQuery: (reference: FunctionReference<"query">) => getFunctionName(reference) === "inventory:accountEvidencePage"
+    ? { results: auth.accountRows, status: auth.accountStatus, loadMore: vi.fn() }
+    : { results: [], status: "Exhausted", loadMore: vi.fn() },
 }));
 
 const render = () => renderToString(createElement(OnboardingClient));
@@ -47,6 +51,8 @@ beforeEach(() => {
   auth.protectedQuery.mockClear();
   auth.ownerState = undefined;
   auth.brandState = undefined;
+  auth.accountRows = [];
+  auth.accountStatus = "Exhausted";
 });
 
 test("Clerk sign-in waits for Convex token acceptance before owner queries mount", () => {
@@ -122,7 +128,9 @@ test("private collection and simple owner-described product entry precede option
   expect(html).toContain('<option>Devin Desktop</option>');
 });
 
-test("sharing keeps the stored GitHub website until the owner opts into the private account page", () => {
+test.each(["Exhausted", "CanLoadMore"])("sharing requires complete account coverage and owner opt-in (%s)", (status) => {
+  auth.accountStatus = status;
+  auth.accountRows = [{ connected: false, candidate: { sourceDay: "2026-09-21", accountKey: "synthetic-account", evidence: { relationshipOwnerId: "owner-user", evidenceOwnerId: "owner-user", productSlug: "github", accountId: "synthetic-account", url: "https://github.com/synthetic-account" } } }];
   auth.convex = { isLoading: false, isAuthenticated: true };
   auth.ownerState = {
     user: { handle: "owner", displayName: "Owner", bio: "" },
@@ -131,18 +139,18 @@ test("sharing keeps the stored GitHub website until the owner opts into the priv
       product: { slug: "github", name: "GitHub", domain: "github.com", description: "Code" },
       links: [{ type: "CANONICAL", url: "https://github.com", label: "Check out GitHub", isPrimary: true }],
       claims: [],
-      associatedAccountEvidence: [{
-        relationshipOwnerId: "owner-user",
-        evidenceOwnerId: "owner-user",
-        productSlug: "github",
-        accountId: "synthetic-account",
-        url: "https://github.com/synthetic-account",
-      }],
+      associatedAccountEvidence: [],
     }],
     connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
   };
   const html = render();
   expect(html).toContain('value="https://github.com"');
+  if (status === "CanLoadMore") {
+    expect(html).toContain("Account lookup incomplete");
+    expect(html).not.toContain("Use the private account page in this preview");
+    expect(html).not.toContain("https://github.com/synthetic-account");
+    return;
+  }
   expect(html).toContain("https://github.com/synthetic-account");
   expect(html).toContain("Use the private account page in this preview");
   expect(html).toContain("Visitors will use the primary link above until you choose otherwise and approve a preview.");

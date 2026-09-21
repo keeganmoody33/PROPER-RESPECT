@@ -301,4 +301,8 @@ test("getState preserves legacy evidence metadata when claim details are disable
   expect(legacy?.evidence.map(item => item._id)).toEqual([evidenceId]);
   expect(legacy?.cards[0].claims).toHaveLength(1);
   expect(legacy?.cards[0].claims[0].observation.excerpt).toBe("Private retained words");
+  const collection = await owner.query(api.onboarding.getState, { includeClaims: false, includeLegacyCollections: false });
+  expect(collection?.cards[0].prop._id).toBe(a);
+  expect(collection?.evidence).toEqual([]);
+  expect(collection?.drafts).toEqual([]);
 });

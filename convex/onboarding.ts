@@ -127,7 +127,7 @@ export const claimHandle = mutation({
 });
 
 export const getState = query({
-  args: { includeClaims: v.optional(v.boolean()) },
+  args: { includeClaims: v.optional(v.boolean()), includeLegacyCollections: v.optional(v.boolean()), includeAccountEvidence: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx);
     const user = await ctx.db
@@ -142,7 +142,7 @@ export const getState = query({
         .query("props")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
         .collect(),
-      ctx.db
+      args.includeLegacyCollections === false ? [] : ctx.db
         .query("draftImports")
         .filter((q) => q.eq(q.field("userId"), user._id))
         .collect(),
@@ -150,7 +150,7 @@ export const getState = query({
         .query("connectorAccounts")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
         .collect(),
-      ctx.db
+      args.includeLegacyCollections === false ? [] : ctx.db
         .query("rawEvidence")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
         .collect(),
@@ -195,7 +195,7 @@ export const getState = query({
         const publishedActivity = approvedCards.length > 0 && approvedCards.every(card =>
           canonicalJson(card.activity) === canonicalJson(approvedCards[0].activity))
           ? approvedCards[0].activity : undefined;
-        const associatedAccountEvidence = product
+        const associatedAccountEvidence = product && args.includeAccountEvidence !== false
           ? await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug)
           : [];
         return { prop, product: product && brand ? { ...product, brand } : product, links, claims,

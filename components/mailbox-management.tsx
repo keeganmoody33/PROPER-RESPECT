@@ -53,7 +53,7 @@ function SourceProgress({ account }: { account: Account }) {
 
 function UnmatchedRecords() {
   const records = usePaginatedQuery(api.mailboxDiscovery.listUnknown, {}, { initialNumItems: 10 });
-  const choices = usePaginatedQuery(api.inventory.list, {}, { initialNumItems: 25 });
+  const choices = usePaginatedQuery(api.inventory.list, { includeAccountEvidence: false }, { initialNumItems: 25 });
   const review = useMutation(api.mailboxDiscovery.reviewUnknown);
   const recheckRetained = useMutation(api.mailboxDiscovery.recheckRetained);
   const [notice, setNotice] = useState("");
