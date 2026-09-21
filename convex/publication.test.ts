@@ -90,6 +90,71 @@ test("sharing preview is owner-only, read-only, and exactly matches the approved
   expect((await published()).profile).toEqual(preview.profile);
 });
 
+test.each(["publish", "remove"] as const)("another authenticated owner cannot %s a relationship through sharing preview or publication", async mode => {
+  const { t, owner, propIds: [publicProp, privateProp], otherPropId, selection } = await fixture();
+  const other = t.withIdentity({ subject: "other" });
+  for (const [account, propId, handle] of [[owner, publicProp, "owner"], [other, otherPropId, "other"]] as const) {
+    const selections = [await selection(propId)];
+    const preview = await account.query(api.onboarding.previewPublication, { selections });
+    await account.mutation(api.onboarding.publishSelected, {
+      selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+    });
+    expect(await t.query(api.publicProfiles.getByHandle, { handle })).toEqual(preview.profile);
+  }
+  const selections = [await selection(mode === "publish" ? privateProp : publicProp, { publish: mode === "publish" })];
+  const ownerPreview = await owner.query(api.onboarding.previewPublication, { selections });
+  const state = () => t.run(async ctx => ({
+    users: await ctx.db.query("users").collect(),
+    props: await ctx.db.query("props").collect(),
+    publications: await ctx.db.query("publishedProfiles").collect(),
+    sites: await ctx.db.query("sites").collect(),
+    links: await ctx.db.query("links").collect(),
+    drafts: await ctx.db.query("draftImports").collect(),
+    subscriptions: await ctx.db.query("metricSubscriptions").collect(),
+  }));
+  const before = await state();
+  expect(before.props.find(prop => prop._id === privateProp)?.visibility).toBe("PRIVATE");
+  expect(before.publications.map(profile => profile.handle).sort()).toEqual(["other", "owner"]);
+  await expect(other.query(api.onboarding.previewPublication, { selections })).rejects.toThrow("Cannot publish another user's product.");
+  expect(await state()).toEqual(before);
+  await expect(other.mutation(api.onboarding.publishSelected, {
+    selections, expectedPublicationRevision: ownerPreview.revision, expectedPreviewHash: ownerPreview.previewHash,
+  })).rejects.toThrow("Cannot publish another user's product.");
+  expect(await state()).toEqual(before);
+});
+
+test("another owner's preview hash cannot approve valid owned selections", async () => {
+  const { t, owner, propIds: [a], otherPropId, selection } = await fixture(1);
+  const other = t.withIdentity({ subject: "other" });
+  for (const [account, propId] of [[owner, a], [other, otherPropId]] as const) {
+    await account.mutation(api.onboarding.publishSelected, await reviewedPublication(account, { selections: [await selection(propId)] }));
+  }
+  const ownerPreview = await owner.query(api.onboarding.previewPublication, { selections: [await selection(a)] });
+  const selections = [await selection(otherPropId, { primaryLink: { type: "CANONICAL", url: "https://shared.example", label: "Other owner's approved link" } })];
+  const otherPreview = await other.query(api.onboarding.previewPublication, { selections });
+  expect(otherPreview.revision).toBe(ownerPreview.revision);
+  expect(otherPreview.previewHash).not.toBe(ownerPreview.previewHash);
+  const state = () => t.run(async ctx => ({
+    users: await ctx.db.query("users").collect(),
+    props: await ctx.db.query("props").collect(),
+    publications: await ctx.db.query("publishedProfiles").collect(),
+    sites: await ctx.db.query("sites").collect(),
+    links: await ctx.db.query("links").collect(),
+    drafts: await ctx.db.query("draftImports").collect(),
+    subscriptions: await ctx.db.query("metricSubscriptions").collect(),
+  }));
+  const before = await state();
+  await expect(other.mutation(api.onboarding.publishSelected, {
+    selections, expectedPublicationRevision: otherPreview.revision, expectedPreviewHash: ownerPreview.previewHash,
+  })).rejects.toThrow("The sharing preview changed.");
+  expect(await state()).toEqual(before);
+  await other.mutation(api.onboarding.publishSelected, {
+    selections, expectedPublicationRevision: otherPreview.revision, expectedPreviewHash: otherPreview.previewHash,
+  });
+  expect(await t.query(api.publicProfiles.getByHandle, { handle: "other" })).toEqual(otherPreview.profile);
+  expect(await t.query(api.publicProfiles.getByHandle, { handle: "owner" })).toEqual(ownerPreview.profile);
+});
+
 test("a sharing approval rejects publication or identity changes after preview without any writes", async () => {
   const { t, owner, userId, propIds: [a, b], selection, published } = await fixture();
   const selections = [await selection(a)];
