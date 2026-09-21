@@ -178,7 +178,7 @@ describe("resolveProduct", () => {
       signal({ url: "https://example.com/workbook", sourceType: "GMAIL" }),
     );
     expect(product).toEqual({
-      slug: "example",
+      slug: "example-com",
       name: "Example",
       domain: "example.com",
       description: "Discovered via gmail evidence.",

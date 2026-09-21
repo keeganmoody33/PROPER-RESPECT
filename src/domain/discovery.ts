@@ -383,10 +383,10 @@ function deriveIdentity(signal: RawSignal): ProductIdentity | null {
     (signal.vendor ? extractDomain(signal.vendor) : null);
   if (!domain) return null;
 
-  const label = domain.split(".")[0];
-  const slug = label.replace(/[^a-z0-9-]/g, "");
+  const slug = domain.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (!slug) return null;
 
+  const label = domain.split(".")[0] ?? domain;
   return {
     slug,
     name: label.charAt(0).toUpperCase() + label.slice(1),
