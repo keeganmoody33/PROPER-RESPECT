@@ -1,0 +1,31 @@
+import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+
+for (const width of [1440, 390, 320]) test(`homepage preserves collection and profile entry at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 1000 });
+  const errors: string[] = [];
+  const external: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => { if (!new URL(request.url()).hostname.match(/^(127\.0\.0\.1|localhost)$/)) external.push(request.url()); });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your tools.Your track record.");
+  const art = page.getByRole("img", { name: "Blueprint illustration of two hands meeting in a fist bump" });
+  await expect(art).toBeVisible();
+  expect(await art.evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await expect(page.getByRole("link", { name: "Open your collection", exact: true }).first()).toHaveAttribute("href", "/onboarding");
+  await expect(page.getByRole("link", { name: "View Keegan’s shared collection" })).toHaveAttribute("href", "/keegan");
+  expect(external).toEqual([]);
+  expect(errors).toEqual([]);
+  if (width === 1440) expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByRole("heading", { level: 1 }).click();
+  await page.screenshot({ path: testInfo.outputPath(`2026-09-21-homepage-${width}.png`), fullPage: true });
+  await page.getByRole("link", { name: "View Keegan’s shared collection" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Keegan Moody");
+  await page.goto("/");
+  await page.getByRole("link", { name: "Open your collection", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/onboarding$/);
+});
