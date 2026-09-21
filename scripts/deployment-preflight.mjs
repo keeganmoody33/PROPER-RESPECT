@@ -84,6 +84,19 @@ function validateHttpsUrl(name, value, hostSuffix) {
 const convexUrl = required("NEXT_PUBLIC_CONVEX_URL");
 validateHttpsUrl("NEXT_PUBLIC_CONVEX_URL", convexUrl, ".convex.cloud");
 
+const publicOrigin = required("PUBLIC_SITE_ORIGIN");
+validateHttpsUrl("PUBLIC_SITE_ORIGIN", publicOrigin);
+if (publicOrigin) {
+  try {
+    const url = new URL(publicOrigin);
+    if (url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
+      errors.push("PUBLIC_SITE_ORIGIN must be an origin without credentials, path, query or fragment.");
+    }
+  } catch {
+    // The URL validator above reports malformed values without exposing them.
+  }
+}
+
 const deployKey = environment.CONVEX_DEPLOY_KEY?.trim();
 const deployKeyTarget = deployKey?.match(/^(?:prod|dev):([^|]+)\|/)?.[1];
 if (convexUrl && deployKeyTarget) {

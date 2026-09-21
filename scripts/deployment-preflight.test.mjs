@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const validEnvironment = {
+  PUBLIC_SITE_ORIGIN: "https://public.example",
   NEXT_PUBLIC_CONVEX_URL: "https://proper-respect.convex.cloud",
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_live_public_example",
   CLERK_SECRET_KEY: "sk_live_secret_example",
@@ -14,6 +15,15 @@ const validEnvironment = {
   CLERK_FRONTEND_API_URL: "https://clerk.proper-respect.example",
   CONNECTOR_ENCRYPTION_KEY: "example-key-that-is-at-least-32-characters",
 };
+
+test("deployment preflight requires an explicit HTTPS public origin", () => {
+  for (const origin of ["", "http://public.example", "https://public.example/path", "https://secret@public.example", "https://public.example?secret=value"]) {
+    const result = runPreflight({ ...validEnvironment, PUBLIC_SITE_ORIGIN: origin });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /PUBLIC_SITE_ORIGIN/);
+    assert.doesNotMatch(result.stderr, /secret/);
+  }
+});
 
 test("GitHub consolidation cannot automatically deploy Vercel or Convex", () => {
   const configuration = JSON.parse(readFileSync("vercel.json", "utf8"));

@@ -1,4 +1,9 @@
 import Link from "next/link";
+import { publicPageMetadata } from "@/src/server/public-site";
+
+export function generateMetadata() {
+  return publicPageMetadata("Your tools. Your track record.", "What you use, test, and come back to, with the history and context behind your choices.");
+}
 
 export default function HomePage() {
   return (
