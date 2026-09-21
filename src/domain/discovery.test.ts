@@ -254,4 +254,65 @@ describe("proposeDrafts", () => {
   it("skips unresolvable signals", () => {
     expect(proposeDrafts([signal({ vendor: "???" })])).toEqual([]);
   });
+
+  it("keeps unknown products on distinct hosts reviewable instead of merging on the first hostname label", () => {
+    const proposals = proposeDrafts([
+      signal({ url: "https://app.linear.app/team", sourceType: "GMAIL" }),
+      signal({ url: "https://app.clickup.com/inbox", sourceType: "GMAIL" }),
+      signal({ url: "https://app.herokuapp.com/dashboard", sourceType: "BROWSER_HISTORY" }),
+      signal({ url: "https://other.herokuapp.com/dashboard", sourceType: "BROWSER_HISTORY" }),
+      signal({ url: "https://app.linear.app/settings", sourceType: "BROWSER_HISTORY" }),
+    ]);
+
+    expect(proposals).toEqual([
+      {
+        product: {
+          slug: "app-linear-app",
+          name: "App",
+          domain: "app.linear.app",
+          description: "Discovered via gmail evidence.",
+        },
+        canonicalUrl: "https://app.linear.app",
+        signalIndexes: [0, 4],
+      },
+      {
+        product: {
+          slug: "app-clickup-com",
+          name: "App",
+          domain: "app.clickup.com",
+          description: "Discovered via gmail evidence.",
+        },
+        canonicalUrl: "https://app.clickup.com",
+        signalIndexes: [1],
+      },
+      {
+        product: {
+          slug: "app-herokuapp-com",
+          name: "App",
+          domain: "app.herokuapp.com",
+          description: "Discovered via browser history evidence.",
+        },
+        canonicalUrl: "https://app.herokuapp.com",
+        signalIndexes: [2],
+      },
+      {
+        product: {
+          slug: "other-herokuapp-com",
+          name: "Other",
+          domain: "other.herokuapp.com",
+          description: "Discovered via browser history evidence.",
+        },
+        canonicalUrl: "https://other.herokuapp.com",
+        signalIndexes: [3],
+      },
+    ]);
+    expect(prepareImportedProp(proposals[0]!, "GMAIL")).toEqual({
+      visibility: "DRAFT",
+      status: "TESTING",
+      draftStatus: "PENDING",
+      headline: "App may be in your stack.",
+      note: "Proposed from gmail evidence. Review before publishing.",
+    });
+    expect(resolveProduct(signal({ url: "https://app.devin.ai" }))?.slug).toBe("devin");
+  });
 });
