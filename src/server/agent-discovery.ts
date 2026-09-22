@@ -67,6 +67,7 @@ See [agent instructions](${new URL("/agents.md", origin)}) for the supported rea
 export function agentCatalog() {
   const origin = publicSiteOrigin();
   return {
+    specVersion: "1.0",
     entries: [{
       "@context": "https://agenticresourcediscovery.org/context/v1",
       identifier: `urn:air:${origin.hostname}:docs:public-profile`,
