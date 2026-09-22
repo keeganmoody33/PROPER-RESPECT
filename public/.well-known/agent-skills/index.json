@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "read-public-profile",
+      "type": "skill-md",
+      "description": "Read an owner-published Proper Respect profile and interpret its shared tool relationships and usage evidence when the user supplies a public profile URL.",
+      "url": "/agent-plugins/proper-respect/skills/read-public-profile/SKILL.md",
+      "digest": "sha256:61ff667f9a8e3bb4620e537cdafc39f9097d797740ae7da8f3d0721fe0bd7c56"
+    }
+  ]
+}

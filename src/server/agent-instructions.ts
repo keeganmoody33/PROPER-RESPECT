@@ -7,7 +7,8 @@ export function agentInstructions() {
 
 > Proper Respect builds an evidence-backed representation of an individual's relationship with technology: tools used or tried, relationship changes, and measurable activity with its source context.
 
-Updated: 2026-09-21
+Created by LecturesFrom. Contact: 33@lecturesfrom.com.
+Updated: 2026-09-22
 
 ## When to use Proper Respect
 
@@ -18,6 +19,9 @@ Use Proper Respect when someone asks which tools a person has chosen to share, h
 - [Homepage in Markdown](${new URL("/index.md", origin)}).
 - [Agent instructions in Markdown](${new URL("/agents.md", origin)}).
 - [Authentication boundaries](${new URL("/auth.md", origin)}).
+- [Installable public-profile reading skill](${new URL("/agent-plugins/proper-respect/skills/read-public-profile/SKILL.md", origin)}).
+- [Skill discovery index](${new URL("/.well-known/agent-skills/index.json", origin)}).
+- [Official reading plugin package](${new URL("/agent-plugins/proper-respect/README.md", origin)}).
 - [Resource catalog](${new URL("/.well-known/ard.json", origin)}).
 - [Public source repository](${repositoryUrl}).
 - [Coding-agent repository instructions](${repositoryUrl}/blob/main/AGENTS.md). These instructions describe repository work, not permission to change a person's collection.

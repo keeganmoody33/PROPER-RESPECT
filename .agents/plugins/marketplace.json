@@ -1,0 +1,20 @@
+{
+  "name": "proper-respect-official",
+  "interface": {
+    "displayName": "Proper Respect Official"
+  },
+  "plugins": [
+    {
+      "name": "proper-respect",
+      "source": {
+        "source": "local",
+        "path": "./public/agent-plugins/proper-respect"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

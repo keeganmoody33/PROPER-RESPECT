@@ -1,0 +1,29 @@
+{
+  "name": "proper-respect",
+  "version": "0.1.0",
+  "description": "Read owner-published Proper Respect profiles with their evidence context.",
+  "author": {
+    "name": "LecturesFrom",
+    "email": "33@lecturesfrom.com"
+  },
+  "homepage": "https://proper-respect.com/agents.md",
+  "repository": "https://github.com/keeganmoody33/PROPER-RESPECT",
+  "keywords": [
+    "proper-respect",
+    "public-profile",
+    "read-only",
+    "evidence"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Proper Respect",
+    "shortDescription": "Read published profiles and their evidence.",
+    "longDescription": "Use the official LecturesFrom reading skill for owner-published Proper Respect profiles. Public reading requires no account.",
+    "developerName": "LecturesFrom",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": [
+      "Read this Proper Respect public profile and explain its published evidence."
+    ]
+  }
+}
