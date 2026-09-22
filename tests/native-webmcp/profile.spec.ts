@@ -164,7 +164,7 @@ test("Next Link navigation unregisters old native handles and remounts exactly o
 
   await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Origins", exact: true }).click();
   await expect(page).toHaveURL(/\/about\/origins$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Where it comes from." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Giving credit its context" })).toBeVisible();
   expect(await page.evaluate(() => (window as RetainedWindow).nativeWebMcpTest?.sentinel)).toBe("same-document");
   await expect.poll(() => tools(page)).toEqual([]);
   const stale = await invoke(page, {}, true);

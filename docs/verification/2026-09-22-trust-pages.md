@@ -40,3 +40,13 @@ All application runs used synthetic or explicitly fixture-only configuration. Th
 Confirm LecturesFrom's legal status and operator jurisdiction before promising a comprehensive legal policy. Review the proposed Origins wording. After an authorized merge/release, check the actual hosted routes and indexing headers, preserve root-profile behavior and request a complete Ora scan. Nested routes intentionally avoid root-handle collisions; scanner acceptance is not presumed.
 
 PStack applied **Model the Domain** to share HTML/Markdown facts without inventing organization data, **Prove It Works** through HTTP/browser evidence, and **Sequence Work into Verifiable Units** to keep this page slice separate from the local MCP prototype and production release.
+
+## PR 48 native navigation correction
+
+Reviewed PR head `38e929d523b2bf7132a2ffa01e551805eb23724f`. The application verification job passed, but [Native Chrome WebMCP run 35738390929](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/35738390929/job/106781428466) passed seven checks and failed the eighth. Chrome installed and executed successfully. The lifecycle test still waited for the removed placeholder heading, `Where it comes from.`, after navigating to Origins. This is a stale assertion from the trust-page change, not a browser download failure or evidence of a registration regression.
+
+Disposition: **fix now**. Update only that heading expectation to `Giving credit its context`. Keep the same-document sentinel, empty registration list, stale-handle rejection, return navigation and single-tool remount assertions intact.
+
+The matching test, `Next Link navigation unregisters old native handles and remounts exactly one tool`, passed against real Chrome with `WebMCPTesting,DevToolsWebMCPSupport` enabled. The temporary local configuration preserved the maintained native suite's behavior and used fixture-only development port 8838 to avoid other running checks. Command: `npx playwright test --config playwright.native-trust.local.ts --grep 'Next Link navigation'`. Result: one passed. The temporary configuration was removed afterward. No additional application changes or broad test rerun were needed.
+
+At inspection, the PR had no inline review threads, issue comments or Copilot review. Cursor's automated approval preceded the native failure and is not treated as evidence that all checks passed. The correction requires fresh CI at its new head; the earlier failure is retained here.
