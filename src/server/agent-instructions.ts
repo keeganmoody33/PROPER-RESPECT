@@ -34,7 +34,7 @@ Use Proper Respect when someone asks which tools a person has chosen to share, h
 ## Current public interface
 
 - [Proper Respect](${publicSiteOrigin().href}): the human web interface.
-- [Published example profile](${new URL("/keegan", origin)}): open this page to inspect the available browser tool.
+- [Published example profile](${new URL("/lecturesfrom", origin)}): open this page to inspect the available browser tool.
 - Public profiles use the path /{handle}. They present product relationships and activity selected for publication. A missing or unpublished profile returns HTTP 404.
 - Public profiles are a projection of owner-approved records. Private discoveries, raw account evidence, and credentials are not public resources.
 

@@ -19,7 +19,7 @@ codex plugin marketplace add keeganmoody33/PROPER-RESPECT --ref main
 codex plugin add proper-respect@proper-respect-official
 ```
 
-The repository's `.agents/plugins/marketplace.json` selects this package for the `proper-respect-official` marketplace. A fresh Codex session should expose `proper-respect:read-public-profile`. Ask it to read a specific published profile, for example: “Read https://proper-respect.com/keegan. Which tools are published, and what usage evidence is available?”
+The repository's `.agents/plugins/marketplace.json` selects this package for the `proper-respect-official` marketplace. A fresh Codex session should expose `proper-respect:read-public-profile`. Ask it to read a specific published profile, for example: “Read https://proper-respect.com/lecturesfrom. Which tools are published, and what usage evidence is available?”
 
 Remote GitHub installation and fresh-session skill discovery were verified with Codex 0.153.4 on September 22, 2026, against source `32a851f18632af984e56ab2d761ebc47be870340`. The website download and discovery index were verified on production. This does not establish a skills.sh listing or Ora's acceptance of the plugin manifest.
 

@@ -35,7 +35,7 @@ Private by default. Shared by choice. Activity does not rank importance. Homepag
 ## Links
 
 - [Start your collection](${new URL("/app/collection", origin)}).
-- [View Keegan's shared collection](${new URL("/keegan", origin)}).
+- [View Keegan's shared collection](${new URL("/lecturesfrom", origin)}).
 - [Agent instructions and WebMCP usage](${new URL("/agents.md", origin)}).
 - [Authentication boundaries](${new URL("/auth.md", origin)}).
 - [Origins](${new URL("/about/origins.md", origin)}).

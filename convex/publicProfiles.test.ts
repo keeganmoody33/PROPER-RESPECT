@@ -128,7 +128,7 @@ test("100 repeated cards share retained brand reads while mismatched domains rem
       expect(displayed?.cards).toHaveLength(100);
       expect(displayed?.cards[0].product.brand).toEqual(receipt.snapshot);
       expect(displayed?.cards[99]).toEqual(profile.cards[99]);
-      expect(query.mock.calls.map(([table]) => table)).toEqual(["publishedProfiles", "products", "productBrandJobs"]);
+      expect(query.mock.calls.map(([table]) => table)).toEqual(["publicProfileAliases", "publishedProfiles", "products", "productBrandJobs"]);
       expect(get).toHaveBeenCalledTimes(1);
     } finally { query.mockRestore(); get.mockRestore(); }
   });

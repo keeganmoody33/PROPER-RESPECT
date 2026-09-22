@@ -36,7 +36,7 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toBeFocused();
   await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toHaveAttribute("href", "/app/collection");
-  await expect(page.getByRole("link", { name: "View Keegan’s shared collection" })).toHaveAttribute("href", "/keegan");
+  await expect(page.getByRole("link", { name: "View Keegan’s shared collection" })).toHaveAttribute("href", "/lecturesfrom");
   expect(external).toEqual([]);
   expect(errors).toEqual([]);
   if (width === 1440) expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);

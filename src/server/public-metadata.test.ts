@@ -7,6 +7,13 @@ vi.mock("@/src/data/get-public-profile", () => ({ getPublicProfile: vi.fn() }));
 afterEach(() => { vi.unstubAllEnvs(); vi.resetAllMocks(); });
 
 describe("public profile metadata", () => {
+  it("uses the returned canonical handle for a legacy request", async () => {
+    vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://proper-respect.com");
+    vi.mocked(getPublicProfile).mockResolvedValue({ ...e2eReferenceProfile, handle: "lecturesfrom" });
+    const metadata = await generateMetadata({ params: Promise.resolve({ handle: "keegan" }) });
+    expect(metadata.alternates?.canonical).toBe("https://proper-respect.com/lecturesfrom");
+    expect(metadata.openGraph).toMatchObject({ url: "https://proper-respect.com/lecturesfrom" });
+  });
   it.each(["https://proper-respect.com", "https://props.lecturesfrom.com"])(
     "uses configured public origin %s, independently of mailbox callbacks", async (origin) => {
       vi.stubEnv("PUBLIC_SITE_ORIGIN", origin);
