@@ -9,7 +9,7 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 import { e2eReferenceProfile } from "@/src/data/e2e-reference-profile";
 import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
 import type { PublicProfile } from "@/src/domain/public-profile";
-import { createPublicReader, parseProfileReference, projectPresentation } from "../src/public-reader.js";
+import { createPublicReader, parseProfileReference, projectPresentation, readPublicGuide } from "../src/public-reader.js";
 import { assertLocalEnvironment, acceptedHeaders, startLoopbackServer } from "../src/transport.js";
 import { toToolResult } from "../src/server.js";
 import { publicToolResultSchema, PROFILE_RESOURCE_URI, HOST_ORIGIN, MAX_REQUEST_BYTES, MAX_RESULT_BYTES } from "../src/contracts.js";
@@ -23,6 +23,37 @@ test("one canonical reference, never an arbitrary URL", () => {
   assert.equal(parseProfileReference("keegan", origin), "keegan");
   assert.equal(parseProfileReference("https://proper-respect.com/keegan", origin), "keegan");
   for (const value of [" keegan", "keegan\n", "https://evil.example/keegan", "https://proper-respect.com:443/keegan", "https://proper-respect.com:444/keegan", "https://proper-respect.com@evil.example/keegan", "https://user@proper-respect.com/keegan", "https://proper-respect.com/keegan?x=1", "https://proper-respect.com/keegan#x", "https://proper-respect.com/%6beegan", "https://proper-respect.com/a/../keegan", "https://proper-respect.com/keegan/", "https://proper-respect.com/\\keegan", "//proper-respect.com/keegan", "http://127.0.0.1/keegan", "https://proper-respect.com/keegan%2fsecret", "x".repeat(257)]) assert.throws(() => parseProfileReference(value, origin), value);
+});
+
+test("configured HTTPS origin with a port supports guide, source and refresh", async () => {
+  const previous = process.env.PUBLIC_SITE_ORIGIN;
+  process.env.PUBLIC_SITE_ORIGIN = "https://public.example:8443";
+  try {
+    const read = createPublicReader({ dataMode: "synthetic", readPublished: async () => fixture() });
+    const first = await read("keegan");
+    assert.equal(first.kind, "profile");
+    if (first.kind !== "profile") assert.fail();
+    assert.equal(first.sourceUrl, "https://public.example:8443/keegan");
+    assert.equal((await read(first.sourceUrl)).kind, "profile");
+    const guide = readPublicGuide();
+    assert.equal(guide.sourceUrl, "https://public.example:8443/agents.md");
+    assert(guide.markdown.includes("https://public.example:8443/index.md"));
+    for (const reference of ["https://public.example/keegan", "https://public.example:9443/keegan", "https://public.example:8443/keegan?x=1", "https://public.example:8443/a/../keegan"]) {
+      assert.equal((await read(reference)).kind, "error", reference);
+    }
+  } finally { process.env.PUBLIC_SITE_ORIGIN = previous; }
+});
+
+test("missing or unsupported public origin fails before creating a reader or guide", () => {
+  const previous = process.env.PUBLIC_SITE_ORIGIN;
+  try {
+    for (const configured of [undefined, "", "http://localhost:3000", "http://127.0.0.1:3000", "https://user@public.example", "https://public.example/path", "not a URL"]) {
+      if (configured === undefined) delete process.env.PUBLIC_SITE_ORIGIN;
+      else process.env.PUBLIC_SITE_ORIGIN = configured;
+      assert.throws(() => createPublicReader(), /PUBLIC_SITE_ORIGIN/, String(configured));
+      assert.throws(() => readPublicGuide(), /PUBLIC_SITE_ORIGIN/, String(configured));
+    }
+  } finally { process.env.PUBLIC_SITE_ORIGIN = previous; }
 });
 
 test("exact visible projection and explicit brand overlay exclude raw/private fields", async () => {

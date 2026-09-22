@@ -29,7 +29,7 @@ test("real SDK bridge loads branded cards, preserves evidence, refreshes and med
   await expect(view.locator(".bio")).toContainText("Synthetic snapshot 2");
   await expect(page.locator("#status")).toHaveAttribute("data-completed-reads", "1");
   await view.getByRole("button", { name: "Open source" }).click();
-  await expect(page.locator("#links a")).toHaveAttribute("href", "https://proper-respect.com/changing");
+  await expect(page.locator("#links a")).toHaveAttribute("href", "https://public.example:8443/changing");
   expect(external).toEqual([]);
   expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
   await page.screenshot({ path: info.outputPath("panel-desktop.png"), fullPage: true });
@@ -73,7 +73,7 @@ test("empty, unavailable, refresh error and stale response do not fabricate a pr
   await expect(view.locator(".empty")).toBeVisible();
   await expect(page.locator("#status")).toHaveAttribute("data-completed-reads", "2");
   await expect(view.locator("article")).toHaveCount(0);
-  await expect(view.locator(".source-url")).toHaveText("https://proper-respect.com/empty");
+  await expect(view.locator(".source-url")).toHaveText("https://public.example:8443/empty");
 });
 test("320px keyboard and dark theme preserve the product identity", async ({ page }, info) => {
   await page.setViewportSize({ width: 320, height: 850 });

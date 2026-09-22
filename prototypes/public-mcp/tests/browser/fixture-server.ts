@@ -5,10 +5,11 @@ import { e2eReferenceProfile } from "@/src/data/e2e-reference-profile";
 import { parseProfileReference, projectPresentation } from "../../src/public-reader";
 import { visiblePublicProfileSchema, type PublicProfileResult, type PublicReadError } from "../../src/contracts";
 
+const origin = new URL(process.env.PUBLIC_SITE_ORIGIN!);
 const counts = new Map<string, number>();
 const readProfile = async (reference: string): Promise<PublicProfileResult | PublicReadError> => {
   let handle: string;
-  try { handle = parseProfileReference(reference, new URL("https://proper-respect.com")); }
+  try { handle = parseProfileReference(reference, origin); }
   catch { return { kind: "error", code: "INVALID_REFERENCE", message: "Invalid synthetic profile reference.", retryable: false }; }
   const count = (counts.get(handle) ?? 0) + 1;
   counts.set(handle, count);
@@ -33,7 +34,7 @@ const readProfile = async (reference: string): Promise<PublicProfileResult | Pub
       { ...base, product: { name: "Coding fixture", description: "Synthetic coding" }, activity: { ...meta, kind: "codingActivity", primary: { label: "tokens", displayValue: "4.2K", unit: "tokens" }, supporting: [{ label: "sessions", displayValue: "3" }], days: [{ date: "2026-09-21", count: 2 }] } },
     ];
   }
-  return { kind: "profile", dataMode: "synthetic", sourceUrl: "https://proper-respect.com/" + handle, retrievedAt: new Date().toISOString(), profile, presentation: projectPresentation(e2eReferenceProfile).filter(item => item.cardIndex < profile.cards.length) };
+  return { kind: "profile", dataMode: "synthetic", sourceUrl: new URL(`/${handle}`, origin).href, retrievedAt: new Date().toISOString(), profile, presentation: projectPresentation(e2eReferenceProfile).filter(item => item.cardIndex < profile.cards.length) };
 };
 const http = await startLoopbackServer({ readProfile, widgetPath: fileURLToPath(new URL("./widget.html", import.meta.url)) });
 await import("../../host/server");

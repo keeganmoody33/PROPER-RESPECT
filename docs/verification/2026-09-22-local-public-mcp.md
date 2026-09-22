@@ -56,3 +56,16 @@ PStack applied **Model the Domain** to preserve the public evidence projection, 
 ## Copilot live-read configuration correction
 
 September 22 review found that the live-read instructions omitted `PUBLIC_SITE_ORIGIN`. The README now requires `PUBLIC_SITE_ORIGIN=https://proper-respect.com` alongside the public Convex URL on the MCP process. This keeps source links and refresh profile validation on the canonical origin. Source inspection confirmed both uses; all 10 existing server tests passed after the documentation correction. No runtime code, credentials, host configuration or deployment changed.
+
+## Copilot origin review follow-up — September 22
+
+Inspected PR49 head `252ae8a875ac66f50713d076e04e4e9d8448d6d4`. Dispositions before implementation:
+
+- **Fix now:** review-body moderate finding that the shared development HTTP-localhost fallback breaks canonical source URLs and refresh. Require an explicit HTTPS public origin for this local MCP prototype; retain loopback HTTP for the transport.
+- **Fix now:** review-body moderate finding that a configured HTTPS non-default port is rejected. Accept that exact configured origin while retaining canonical spelling and hostile-reference rejection.
+- **Fix now:** README hard-coded profile-origin nit. Explain the configured-origin rule and use the production URL only as an example.
+- **Already fixed:** missing `PUBLIC_SITE_ORIGIN` live-read instructions, resolved in `252ae8a`; retain those instructions and enforce them at startup.
+
+The new regressions first failed on the inspected head: 10 passed, 2 failed (non-default-port reread and missing-origin rejection). After the fix, `npm --prefix prototypes/public-mcp test` passed all 12 tests. Configured `https://public.example:8443` is used consistently in guide links, profile source and reread; omitted/different ports, credentials, query/fragment/path tricks and explicit default-port spelling remain rejected. Missing, malformed and HTTP configuration fails with a `PUBLIC_SITE_ORIGIN` error before the reader is created. Two actual `node prototypes/public-mcp/dist/main.mjs` launches, one with the variable absent and one with HTTP localhost, exited nonzero before opening a listener.
+
+`npm --prefix prototypes/public-mcp run typecheck`, `run lint`, `run build` and `run test:e2e` all passed. The four real AppBridge browser tests now use a configured non-default HTTPS origin for synthetic sources, including Refresh and host-mediated Open source. Both desktop and narrow-dark axe checks passed. `git diff --check` passed. No provider reads, credentials, hosted changes or production Next.js behavior changes were involved.

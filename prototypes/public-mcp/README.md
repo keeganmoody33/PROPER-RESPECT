@@ -5,7 +5,7 @@ September 22, 2026. This package runs two read-only MCP tools and a branded MCP 
 ## What to try
 
 - `get_public_site_guide({})` explains the existing public site and its evidence boundaries.
-- `get_public_profile({"profileReference":"keegan"})` reads one deliberately published profile. A canonical `https://proper-respect.com/{handle}` URL also works. Arbitrary URLs are rejected.
+- `get_public_profile({"profileReference":"keegan"})` reads one deliberately published profile. A canonical `{PUBLIC_SITE_ORIGIN}/{handle}` URL also works (for example, `https://proper-respect.com/keegan` when that is the configured origin). Arbitrary URLs are rejected.
 - The panel shows the supplied cards, lets you choose a card and explicitly reread the public snapshot, and asks its host to open the source. Clients without MCP Apps rendering still receive the complete structured result and text fallback.
 
 The profile is the same visible projection used by the website. Measurement periods, capture dates, freshness, provenance, estimates and missing-coverage notes remain in the result. Retrieval time describes this read, not the age of the underlying evidence. Owner text is untrusted content, not instructions for the agent.
@@ -43,7 +43,7 @@ Open `http://127.0.0.1:8849/`. The `keegan` fixture has two synthetic cards. Its
 
 MCP clients can connect locally to `http://127.0.0.1:8848/mcp`. This is stateless Streamable HTTP, not legacy SSE. The UI resource is `ui://proper-respect/public-profile/v1.html` with `text/html;profile=mcp-app`. The harness uses port 8849 and a separate sandbox origin on 8850. All listeners bind literal `127.0.0.1`; do not expose these ports through a tunnel.
 
-For an anonymous live read, omit `PROPER_RESPECT_E2E_REFERENCE`. Set `PUBLIC_SITE_ORIGIN=https://proper-respect.com` and supply the site's current public `NEXT_PUBLIC_CONVEX_URL` to the MCP process. The canonical origin supplies source links and validates profile URLs used by refresh. Keep both variables on the MCP process, not just the panel host. Do not load an environment file or supply a Clerk secret, session, deploy key or provider credential. The startup path calls the existing anonymous public query; it does not enumerate private collections. Reconfirm the public deployment URL when testing another release.
+For an anonymous live read, omit `PROPER_RESPECT_E2E_REFERENCE`. Set `PUBLIC_SITE_ORIGIN=https://proper-respect.com` and supply the site's current public `NEXT_PUBLIC_CONVEX_URL` to the MCP process. The prototype requires an explicit HTTPS `PUBLIC_SITE_ORIGIN` in both synthetic and published modes; missing configuration and HTTP origins fail at startup instead of falling back to localhost. A configured non-default HTTPS port is supported. The exact canonical origin supplies guide and profile source links and validates profile URLs used by refresh; another host, port or noncanonical URL spelling is rejected. The MCP transport itself remains local HTTP. Keep both variables on the MCP process, not just the panel host. Do not load an environment file or supply a Clerk secret, session, deploy key or provider credential. The startup path calls the existing anonymous public query; it does not enumerate private collections. Reconfirm the public deployment URL when testing another release.
 
 ## Boundaries and limits
 
