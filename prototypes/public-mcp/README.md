@@ -43,7 +43,7 @@ Open `http://127.0.0.1:8849/`. The `keegan` fixture has two synthetic cards. Its
 
 MCP clients can connect locally to `http://127.0.0.1:8848/mcp`. This is stateless Streamable HTTP, not legacy SSE. The UI resource is `ui://proper-respect/public-profile/v1.html` with `text/html;profile=mcp-app`. The harness uses port 8849 and a separate sandbox origin on 8850. All listeners bind literal `127.0.0.1`; do not expose these ports through a tunnel.
 
-For an anonymous live read, omit `PROPER_RESPECT_E2E_REFERENCE` and explicitly supply the site's current public `NEXT_PUBLIC_CONVEX_URL` to the MCP process. Do not load an environment file or supply a Clerk secret, session, deploy key or provider credential. The startup path calls the existing anonymous public query; it does not enumerate private collections. Reconfirm the public deployment URL when testing another release.
+For an anonymous live read, omit `PROPER_RESPECT_E2E_REFERENCE`. Set `PUBLIC_SITE_ORIGIN=https://proper-respect.com` and supply the site's current public `NEXT_PUBLIC_CONVEX_URL` to the MCP process. The canonical origin supplies source links and validates profile URLs used by refresh. Keep both variables on the MCP process, not just the panel host. Do not load an environment file or supply a Clerk secret, session, deploy key or provider credential. The startup path calls the existing anonymous public query; it does not enumerate private collections. Reconfirm the public deployment URL when testing another release.
 
 ## Boundaries and limits
 

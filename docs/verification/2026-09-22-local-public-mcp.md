@@ -52,3 +52,7 @@ PStack applied **Model the Domain** to preserve the public evidence projection, 
 ![Local panel, desktop](screenshots/2026-09-22-public-mcp/panel-desktop.png)
 
 ![Local panel, narrow dark theme](screenshots/2026-09-22-public-mcp/panel-mobile-dark.png)
+
+## Copilot live-read configuration correction
+
+September 22 review found that the live-read instructions omitted `PUBLIC_SITE_ORIGIN`. The README now requires `PUBLIC_SITE_ORIGIN=https://proper-respect.com` alongside the public Convex URL on the MCP process. This keeps source links and refresh profile validation on the canonical origin. Source inspection confirmed both uses; all 10 existing server tests passed after the documentation correction. No runtime code, credentials, host configuration or deployment changed.
