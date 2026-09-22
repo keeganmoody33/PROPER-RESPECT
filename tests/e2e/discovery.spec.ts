@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 test("llms.txt is a plain-text description of the available public surface", async ({
@@ -108,6 +109,26 @@ test("robots, factual sitemap date and ARD link only to available public resourc
   expect(catalog.entries[0].representativeQueries).toHaveLength(2);
 });
 
+for (const path of ["/.well-known/agent-skills", "/.well-known/agent-skills/"]) {
+  test(`${path} serves the public agent instructions with GET and HEAD`, async ({ request }) => {
+    const response = await request.get(path);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toMatch(/^text\/markdown(?:;|$)/i);
+    expect(response.headers()["access-control-allow-origin"]).toBe("*");
+    expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+    const body = await response.text();
+    expect(body.startsWith("# Proper Respect")).toBe(true);
+    expect(body).toContain("## When to use Proper Respect");
+    expect(body).toBe(await (await request.get("/agents.md")).text());
+    const head = await request.head(path);
+    expect(head.status()).toBe(200);
+    expect(head.headers()["content-type"]).toBe(response.headers()["content-type"]);
+    expect(head.headers()["access-control-allow-origin"]).toBe("*");
+    expect(head.headers()["x-content-type-options"]).toBe("nosniff");
+    expect(await head.body()).toHaveLength(0);
+  });
+}
+
 test("public skill discovery downloads the exact indexed bytes with GET and HEAD", async ({ request }) => {
   const indexPath = "/.well-known/agent-skills/index.json";
   const response = await request.get(indexPath);
@@ -115,6 +136,7 @@ test("public skill discovery downloads the exact indexed bytes with GET and HEAD
   expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/i);
   expect(response.headers()["access-control-allow-origin"]).toBe("*");
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(await response.body()).toEqual(await readFile(`public${indexPath}`));
   const index = await response.json();
   expect(index.$schema).toBe("https://schemas.agentskills.io/discovery/0.2.0/schema.json");
   expect(index.skills).toHaveLength(1);
@@ -126,6 +148,7 @@ test("public skill discovery downloads the exact indexed bytes with GET and HEAD
   expect(download.headers()["content-type"]).toMatch(/^text\/(?:markdown|plain)(?:;|$)/i);
   expect(download.headers()["access-control-allow-origin"]).toBe("*");
   expect(download.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(await download.body()).toEqual(await readFile(`public${skill.url}`));
   expect(`sha256:${createHash("sha256").update(await download.body()).digest("hex")}`).toBe(skill.digest);
   for (const [url, expectedContentType] of [[indexPath, response.headers()["content-type"]], [skill.url, download.headers()["content-type"]]]) {
     const head = await request.head(url);

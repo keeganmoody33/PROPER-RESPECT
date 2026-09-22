@@ -25,6 +25,8 @@ Use Proper Respect when someone asks which tools a person has chosen to share, h
 - [Installable public-profile reading skill](${new URL("/agent-plugins/proper-respect/skills/read-public-profile/SKILL.md", origin)}).
 - [Skill discovery index](${new URL("/.well-known/agent-skills/index.json", origin)}).
 - [Official reading plugin package](${new URL("/agent-plugins/proper-respect/README.md", origin)}).
+- [Portable plugin manifest](${new URL("/agent-plugins/proper-respect/plugin.json", origin)}).
+- [Plugin source and package root](${repositoryUrl}/tree/main/public/agent-plugins/proper-respect).
 - [Resource catalog](${new URL("/.well-known/ard.json", origin)}).
 - [Public source repository](${repositoryUrl}).
 - [Coding-agent repository instructions](${repositoryUrl}/blob/main/AGENTS.md). These instructions describe repository work, not permission to change a person's collection.
