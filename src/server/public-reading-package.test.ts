@@ -27,7 +27,7 @@ describe("official public reading package", () => {
     const identity = {
       name: "proper-respect",
       version: "0.1.0",
-      author: { name: "LecturesFrom", email: "33@lecturesfrom.com" },
+      author: { name: "lecturesfrom", email: "33@lecturesfrom.com" },
     };
     expect(portable).toMatchObject(identity);
     expect(codex).toMatchObject(identity);

@@ -38,6 +38,9 @@ Private by default. Shared by choice. Activity does not rank importance. Homepag
 - [View Keegan's shared collection](${new URL("/keegan", origin)}).
 - [Agent instructions and WebMCP usage](${new URL("/agents.md", origin)}).
 - [Authentication boundaries](${new URL("/auth.md", origin)}).
+- [Origins](${new URL("/about/origins.md", origin)}).
+- [Contact](${new URL("/about/contact.md", origin)}).
+- [How your data is handled](${new URL("/about/privacy.md", origin)}).
 - [Public source repository](${repositoryUrl}).
 `;
 }

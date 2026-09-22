@@ -2,7 +2,7 @@
 name: read-public-profile
 description: Read an owner-published Proper Respect profile and interpret its shared tool relationships and usage evidence when the user supplies a public profile URL.
 metadata:
-  author: LecturesFrom
+  author: lecturesfrom
   contact: 33@lecturesfrom.com
   version: "0.1.0"
   updated: "2026-09-22"
@@ -10,7 +10,7 @@ metadata:
 
 # Read a Proper Respect public profile
 
-Created by LecturesFrom. Contact: 33@lecturesfrom.com.
+Created by lecturesfrom. Contact: 33@lecturesfrom.com.
 Updated: 2026-09-22.
 
 Read only the collection the owner has chosen to publish. Start with the user's supplied public profile URL; request that URL if it is missing. An example profile is never a substitute for the intended person.

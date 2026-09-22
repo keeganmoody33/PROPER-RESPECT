@@ -2,9 +2,9 @@ import { TrustArticle } from "@/components/trust-article";
 import { trustDocuments, trustMetadata } from "@/src/server/trust-pages";
 
 export function generateMetadata() {
-  return trustMetadata("origins");
+  return trustMetadata("privacy");
 }
 
-export default function OriginsPage() {
-  return <TrustArticle document={trustDocuments.origins} />;
+export default function PrivacyPage() {
+  return <TrustArticle document={trustDocuments.privacy} />;
 }

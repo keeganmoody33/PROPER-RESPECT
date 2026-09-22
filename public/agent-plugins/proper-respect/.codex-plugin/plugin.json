@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Read owner-published Proper Respect profiles with their evidence context.",
   "author": {
-    "name": "LecturesFrom",
+    "name": "lecturesfrom",
     "email": "33@lecturesfrom.com"
   },
   "homepage": "https://proper-respect.com/agents.md",
@@ -18,8 +18,8 @@
   "interface": {
     "displayName": "Proper Respect",
     "shortDescription": "Read published profiles and their evidence.",
-    "longDescription": "Use the official LecturesFrom reading skill for owner-published Proper Respect profiles. Public reading requires no account.",
-    "developerName": "LecturesFrom",
+    "longDescription": "Use the official lecturesfrom reading skill for owner-published Proper Respect profiles. Public reading requires no account.",
+    "developerName": "lecturesfrom",
     "category": "Productivity",
     "capabilities": [],
     "defaultPrompt": [
