@@ -1,0 +1,42 @@
+# Factual trust pages — September 22, 2026
+
+Implementation reviewed and tested: `504d5d8724acc05ac5ce6ee2e134d7190a49fb8b`.
+Base: `32a851f18632af984e56ab2d761ebc47be870340`.
+Ref: https://plan.ref.tools/d6fedvHQMy4bpEJW, Task 7.
+
+## Delivered behavior
+
+`/about/origins`, `/about/contact` and `/about/privacy` now have substantive HTML and matching Markdown twins. One small document model supplies both representations. The footer and agent entry documents link the pages; configured-origin canonicals, Markdown alternates, authored sitemap dates and preview noindex are covered. Root profile handles remain available, including `about`, `contact` and `privacy`.
+
+The contact page identifies Keegan Moody and `33@lecturesfrom.com` in visible copy and ContactPage/Person metadata. LecturesFrom receives creator credit. No legal entity type, address, country, price or rating is inferred.
+
+Origins uses attributed definitions from [American Heritage](https://ahdictionary.com/word/search.html?q=props) and [Collins](https://www.collinsdictionary.com/dictionary/english/props), and a short verified quotation from [Vogue's Aretha Franklin interview](https://www.vogue.com/article/aretha-franklin-interview-carole-king). The owner's original draft remains in the Ref; the proposed public narrative omits unsupported historical claims and song lyrics.
+
+The privacy page describes implemented behavior: Clerk sign-in, Convex storage, Gmail permission and requested metadata, private/public separation, local disconnect versus provider revocation, retained evidence/history, external presentation resources and browser storage. It explicitly states that full self-service account deletion and automatic evidence expiry are not implemented. This factual description does not establish legal-policy completeness.
+
+## Verification
+
+- Regression reproduced before implementation: the contact route returned 404.
+- `npm test`: 762 Vitest tests passed, two optional tests skipped; seven Node script tests passed.
+- `npm run lint`, `npm run typecheck`, and synthetic production build passed.
+- Focused development Playwright checks: 30 passed across trust pages, site frame and discovery.
+- Built production fixture: nine trust-page browser tests passed, including 12 axe checks across three pages, 320/1440 px and light/dark themes.
+- Separately built preview fixture: three GET/HEAD parity and noindex checks passed. The maintained preview configuration is included in CI.
+- Independent review of the full implementation found no blocking factual, routing, projection or metadata findings. Reviewer independently checked the final clean tree and diff; broad test counts above came from implementation logs.
+- Parent browser walkthrough followed Origins → footer Contact → Privacy in the actual in-app browser. Desktop Origins and 320 px dark Privacy were visually inspected. Text, heading wrapping, navigation and focus were readable; theme and viewport overrides were restored.
+
+All application runs used synthetic or explicitly fixture-only configuration. They did not establish new-user login, two-user isolation, connector lifecycle or legal compliance. No backend, Clerk/OAuth, DNS, merge or production deployment occurred in this slice. Current production remains the earlier 66/C release; these pages have not earned measured Ora credit.
+
+## Screenshots
+
+![Origins, desktop light](screenshots/2026-09-22-trust-pages/2026-09-22-origins-1440-light.png)
+
+![Contact, desktop light](screenshots/2026-09-22-trust-pages/2026-09-22-contact-1440-light.png)
+
+![Data handling, narrow dark](screenshots/2026-09-22-trust-pages/2026-09-22-privacy-320-dark.png)
+
+## Remaining release decisions
+
+Confirm LecturesFrom's legal status and operator jurisdiction before promising a comprehensive legal policy. Review the proposed Origins wording. After an authorized merge/release, check the actual hosted routes and indexing headers, preserve root-profile behavior and request a complete Ora scan. Nested routes intentionally avoid root-handle collisions; scanner acceptance is not presumed.
+
+PStack applied **Model the Domain** to share HTML/Markdown facts without inventing organization data, **Prove It Works** through HTTP/browser evidence, and **Sequence Work into Verifiable Units** to keep this page slice separate from the local MCP prototype and production release.
