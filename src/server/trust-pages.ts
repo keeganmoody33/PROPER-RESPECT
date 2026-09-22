@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { publicSiteOrigin } from "./public-site";
+import { markdownResponse } from "./agent-discovery";
 
 export type TrustSlug = "origins" | "contact" | "privacy";
 type TrustSection = Readonly<{
@@ -163,14 +164,9 @@ export function trustMarkdown(slug: TrustSlug): string {
 }
 
 export function trustMarkdownResponse(slug: TrustSlug) {
-  return new Response(trustMarkdown(slug), {
-    headers: {
-      "Content-Type": "text/markdown; charset=utf-8",
-      "X-Content-Type-Options": "nosniff",
-      "Access-Control-Allow-Origin": "*",
-      ...(process.env.VERCEL_ENV === "preview" ? { "X-Robots-Tag": "noindex, nofollow" } : {}),
-    },
-  });
+  const response = markdownResponse(trustMarkdown(slug));
+  if (process.env.VERCEL_ENV === "preview") response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
 }
 
 export function contactIdentity() {

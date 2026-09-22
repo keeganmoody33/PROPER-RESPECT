@@ -13,6 +13,8 @@ it.each(["origins", "contact", "privacy"] as const)("keeps %s previews out of in
   const response = trustMarkdownResponse(slug);
   expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
   expect(response.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
+  expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
   expect(await response.text()).not.toContain("preview.example");
   vi.stubEnv("VERCEL_ENV", "production");
   expect(trustMarkdownResponse(slug).headers.get("X-Robots-Tag")).toBeNull();
