@@ -8,7 +8,7 @@ Ref: https://plan.ref.tools/d6fedvHQMy4bpEJW, Task 7.
 
 `/about/origins`, `/about/contact` and `/about/privacy` now have substantive HTML and matching Markdown twins. One small document model supplies both representations. The footer and agent entry documents link the pages; configured-origin canonicals, Markdown alternates, authored sitemap dates and preview noindex are covered. Root profile handles remain available, including `about`, `contact` and `privacy`.
 
-The contact page identifies Keegan Moody and `33@lecturesfrom.com` in visible copy and ContactPage/Person metadata. LecturesFrom receives creator credit. No legal entity type, address, country, price or rating is inferred.
+The contact page identifies Keegan Moody as operator and `33@lecturesfrom.com` as the support contact. Following owner confirmation, ContactPage/Organization metadata identifies LecturesFrom as the business, with country `US`. No registered legal name, incorporation type, street address, price or rating is inferred.
 
 Origins uses attributed definitions from [American Heritage](https://ahdictionary.com/word/search.html?q=props) and [Collins](https://www.collinsdictionary.com/dictionary/english/props), and a short verified quotation from [Vogue's Aretha Franklin interview](https://www.vogue.com/article/aretha-franklin-interview-carole-king). The owner's original draft remains in the Ref; the proposed public narrative omits unsupported historical claims and song lyrics.
 
@@ -37,7 +37,7 @@ All application runs used synthetic or explicitly fixture-only configuration. Th
 
 ## Remaining release decisions
 
-Confirm LecturesFrom's legal status and operator jurisdiction before promising a comprehensive legal policy. Review the proposed Origins wording. After an authorized merge/release, check the actual hosted routes and indexing headers, preserve root-profile behavior and request a complete Ora scan. Nested routes intentionally avoid root-handle collisions; scanner acceptance is not presumed.
+The owner confirmed LecturesFrom is the business and the country is the United States. Formal legal-policy commitments remain separate from these identity facts. Review the proposed Origins wording. After an authorized merge/release, check the actual hosted routes and indexing headers, preserve root-profile behavior and request a complete Ora scan. Nested routes intentionally avoid root-handle collisions; scanner acceptance is not presumed.
 
 PStack applied **Model the Domain** to share HTML/Markdown facts without inventing organization data, **Prove It Works** through HTTP/browser evidence, and **Sequence Work into Verifiable Units** to keep this page slice separate from the local MCP prototype and production release.
 
@@ -54,3 +54,7 @@ At inspection, the PR had no inline review threads, issue comments or Copilot re
 ## Copilot follow-up
 
 The next inspection found two Copilot comments. The heading finding was already fixed by `e3e652fbdf597f8a5d113605a9f3ebee1cf18334`, whose five hosted checks passed. The second correctly identified duplicated Markdown response headers. Trust pages now call the existing `markdownResponse` helper and add only their preview indexing header to that response. No shared API or route behavior changed. Thirteen focused trust/public-site tests, ESLint and typecheck passed; existing browser/preview CI covers the same response contract. Both findings are addressed in code; final-head CI remains independently required.
+
+## Owner-confirmed business and country
+
+The owner's September 22 clarification was: “US is country. lecturesfrom is the business”. Origins, Contact and Privacy now state those facts in their shared HTML/Markdown source. ContactPage's main entity is Organization/LecturesFrom, with a customer-support ContactPoint and PostalAddress containing only addressCountry US. The fields follow [Organization](https://schema.org/Organization) and [PostalAddress](https://schema.org/PostalAddress); they do not assert an LLC, incorporation, state or street address. Four focused rendered browser checks passed for HTML/Markdown parity and contact metadata; ESLint and typecheck passed. Earlier screenshots precede this copy-only clarification. This update is prepared in the PR; it is not a deployment or measured score change.

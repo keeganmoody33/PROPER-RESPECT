@@ -53,10 +53,10 @@ test("nested trust pages preserve claimable root profiles", async ({ page, reque
 test("contact identity matches its visible operator and avoids invented business facts", async ({ page }) => {
   await page.goto("/about/contact");
   const identity = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() || "{}");
-  expect(identity).toMatchObject({ "@type": "ContactPage", url: "https://public.example/about/contact", mainEntity: { "@type": "Person", name: "Keegan Moody", email: "33@lecturesfrom.com" } });
-  await expect(page.locator("article")).toContainText("Created by LecturesFrom. Operated by Keegan Moody.");
+  expect(identity).toMatchObject({ "@type": "ContactPage", url: "https://public.example/about/contact", mainEntity: { "@type": "Organization", name: "LecturesFrom", address: { "@type": "PostalAddress", addressCountry: "US" }, contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "33@lecturesfrom.com" } } });
+  await expect(page.locator("article")).toContainText("Created by LecturesFrom, a business in the United States. Operated by Keegan Moody.");
   await expect(page.locator('article a[href="mailto:33@lecturesfrom.com"]')).toBeVisible();
-  expect(JSON.stringify(identity)).not.toMatch(/legalName|address|offers|aggregateRating|accountablePerson|creator/);
+  expect(JSON.stringify(identity)).not.toMatch(/legalName|streetAddress|postalCode|addressLocality|addressRegion|offers|aggregateRating|accountablePerson|creator/);
 });
 
 for (const width of [320, 1440]) for (const mode of ["light", "dark"]) test(`trust pages remain readable at ${width}px in ${mode}`, async ({ page }, testInfo) => {

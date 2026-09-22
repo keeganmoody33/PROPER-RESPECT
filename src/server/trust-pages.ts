@@ -51,7 +51,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
           "Our product brings its own question to that idea: how do you give a useful tool its due? A name in a list can tell someone what you use. Your experience explains why it matters, what changed when you tried it, and whether you still come back to it.",
           "Proper Respect is a place to keep that context. Build a collection of tools you use and test. Add notes and supporting evidence where it exists. Choose your go-to tools, keep the history, and decide which saved cards and details to share.",
           "For us, giving props means making recognition specific. Credit the tool and explain the experience. Keep the evidence close enough to inspect, and leave room for the story to change.",
-          "Created by LecturesFrom. Operated by Keegan Moody.",
+          "Created by LecturesFrom, a business in the United States. Operated by Keegan Moody.",
         ],
       },
     ],
@@ -62,7 +62,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     eyebrow: "Contact",
     updatedAt: "2026-09-22",
     introduction: [
-      "Created by LecturesFrom. Operated by Keegan Moody.",
+      "Created by LecturesFrom, a business in the United States. Operated by Keegan Moody.",
       "You can contact Keegan at 33@lecturesfrom.com about Proper Respect, your collection, a problem with the site, or a question about how your data is handled.",
     ],
     sections: [
@@ -91,7 +91,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     updatedAt: "2026-09-22",
     introduction: [
       "This page describes how Proper Respect handles accounts, evidence and publication as of September 22, 2026.",
-      "Proper Respect is created by LecturesFrom and operated by Keegan Moody. Contact 33@lecturesfrom.com with questions about your data.",
+      "Proper Respect is created by LecturesFrom, a business in the United States, and operated by Keegan Moody. Contact 33@lecturesfrom.com with questions about your data.",
     ],
     sections: [
       {
@@ -175,6 +175,11 @@ export function contactIdentity() {
     "@type": "ContactPage",
     name: trustDocuments.contact.title,
     url: new URL("/about/contact", publicSiteOrigin()).href,
-    mainEntity: { "@type": "Person", name: "Keegan Moody", email: "33@lecturesfrom.com" },
+    mainEntity: {
+      "@type": "Organization",
+      name: "LecturesFrom",
+      address: { "@type": "PostalAddress", addressCountry: "US" },
+      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "33@lecturesfrom.com" },
+    },
   };
 }
