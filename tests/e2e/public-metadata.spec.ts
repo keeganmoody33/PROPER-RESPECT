@@ -12,7 +12,7 @@ test("published fixture uses canonical metadata on desktop and mobile", async ({
     await page.goto("/keegan");
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/keegan");
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", "https://public.example/keegan");
-    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", "https://public.example/share-image.png");
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", "https://public.example/share-image.png?v=20260922");
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
     await expect(page.getByRole("heading", { level: 1, name: "Keegan Moody" })).toBeVisible();
     await expect(page.getByText("Private source record")).toHaveCount(0);
