@@ -92,7 +92,7 @@ test("robots, factual sitemap date and ARD link only to available public resourc
   expect(await robots.text()).toContain("Agentmap: https://public.example/.well-known/ard.json");
   const sitemap = await (await request.get("/sitemap.xml")).text();
   expect(sitemap).toContain("<lastmod>2026-09-21T00:00:00.000Z</lastmod>");
-  expect(sitemap).not.toMatch(/collection|origins|private-owner/);
+  expect(sitemap).not.toMatch(/collection|private-owner/);
   const response = await request.get("/.well-known/ard.json");
   expect(response.status()).toBe(200);
   expect(response.headers()["access-control-allow-origin"]).toBe("*");

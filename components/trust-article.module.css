@@ -1,0 +1,50 @@
+.shell {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 5vw, 5rem);
+  color: var(--ink);
+}
+
+.shell article {
+  max-width: 70ch;
+}
+
+.shell h1 {
+  font-size: clamp(2.4rem, 5vw, 4.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  margin: 1.5rem 0;
+  overflow-wrap: anywhere;
+}
+
+.shell h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.shell p,
+.shell li {
+  font-size: 1.125rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.shell section {
+  border-top: 1px solid var(--line);
+  padding-top: 1.5rem;
+  margin: 2.5rem 0;
+}
+
+.shell .date {
+  color: var(--secondary);
+  font-size: 0.875rem;
+}
+
+.shell ul {
+  padding-left: 1.25rem;
+}
+
+.shell a {
+  text-underline-offset: 0.2em;
+}

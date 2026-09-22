@@ -33,9 +33,12 @@ it("keeps request-host data out of canonical URLs and refuses unsafe handles", (
   expect(() => publicPageMetadata("Profile", "Bio", "//attacker.example")).toThrow();
 });
 
-it("marks preview pages noindex and limits the sitemap to the public root", () => {
+it("marks preview pages noindex and keeps the sitemap limited to completed public pages", () => {
   vi.stubEnv("VERCEL_ENV", "preview");
   vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://public.example");
   expect(layoutMetadata().robots).toEqual({ index: false, follow: false });
-  expect(sitemap()).toEqual([{ url: "https://public.example/", lastModified: "2026-09-21T00:00:00.000Z" }]);
+  expect(sitemap()).toEqual([
+    { url: "https://public.example/", lastModified: "2026-09-21T00:00:00.000Z" },
+    ...["origins", "contact", "privacy"].map(slug => ({ url: `https://public.example/about/${slug}`, lastModified: "2026-09-22" })),
+  ]);
 });

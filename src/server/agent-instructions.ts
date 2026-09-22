@@ -19,6 +19,9 @@ Use Proper Respect when someone asks which tools a person has chosen to share, h
 - [Homepage in Markdown](${new URL("/index.md", origin)}).
 - [Agent instructions in Markdown](${new URL("/agents.md", origin)}).
 - [Authentication boundaries](${new URL("/auth.md", origin)}).
+- [Origins](${new URL("/about/origins.md", origin)}).
+- [Contact](${new URL("/about/contact.md", origin)}).
+- [How your data is handled](${new URL("/about/privacy.md", origin)}).
 - [Installable public-profile reading skill](${new URL("/agent-plugins/proper-respect/skills/read-public-profile/SKILL.md", origin)}).
 - [Skill discovery index](${new URL("/.well-known/agent-skills/index.json", origin)}).
 - [Official reading plugin package](${new URL("/agent-plugins/proper-respect/README.md", origin)}).
