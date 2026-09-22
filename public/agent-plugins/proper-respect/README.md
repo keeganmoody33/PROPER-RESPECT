@@ -12,16 +12,18 @@ The package root is `public/agent-plugins/proper-respect` in the [official sourc
 
 ## Install in Codex
 
-From a local checkout containing this package, register the checkout's absolute path and install the plugin:
+Register the official GitHub marketplace and install the plugin:
 
 ```sh
-codex plugin marketplace add /absolute/path/to/PROPER-RESPECT
+codex plugin marketplace add keeganmoody33/PROPER-RESPECT --ref main
 codex plugin add proper-respect@proper-respect-official
 ```
 
 The repository's `.agents/plugins/marketplace.json` selects this package for the `proper-respect-official` marketplace. A fresh Codex session should expose `proper-respect:read-public-profile`. Ask it to read a specific published profile, for example: “Read https://proper-respect.com/keegan. Which tools are published, and what usage evidence is available?”
 
-Local installation and fresh-session discovery were verified with Codex 0.153.4. Remote marketplace installation and external directory listing require separate verification after this package is merged. Website download links require deployment.
+Remote GitHub installation and fresh-session skill discovery were verified with Codex 0.153.4 on September 22, 2026, against source `32a851f18632af984e56ab2d761ebc47be870340`. The website download and discovery index were verified on production. This does not establish a skills.sh listing or Ora's acceptance of the plugin manifest.
+
+For local development, substitute the checkout's absolute path for `keeganmoody33/PROPER-RESPECT` and omit `--ref main`.
 
 To remove the package:
 
@@ -31,5 +33,15 @@ codex plugin marketplace remove proper-respect-official
 ```
 
 The reading instructions are entirely in `skills/read-public-profile/SKILL.md`. Copying that file is sufficient for the skill; copying this directory preserves both plugin formats. Do not copy the repository's coding-agent `AGENTS.md` into the reading skill.
+
+## Install the skill with the skills CLI
+
+To install just the reading skill for Codex in the current project:
+
+```sh
+npx skills add https://github.com/keeganmoody33/PROPER-RESPECT/tree/main/public/agent-plugins/proper-respect --skill read-public-profile --agent codex
+```
+
+Discovery and installation from this package URL were verified with skills 1.7.0 on September 22, 2026. The installed Markdown matched the published index digest. This verifies a download and install path, not a skills.sh directory listing. The [skills CLI documentation](https://skills.sh/docs/cli) describes its installation telemetry and opt-out settings.
 
 After modifying the skill, recompute the index digest from its raw bytes and keep the index description equal to its frontmatter description. The package contract test verifies those relationships. Production availability and browser WebMCP support require separate runtime verification.
