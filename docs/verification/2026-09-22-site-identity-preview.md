@@ -35,3 +35,13 @@ Reproduction uses fontTools 4.60.1: load `Archivo.ttf` with `TTFont`; call `inst
 ## Boundaries
 
 This receipt covers local implementation and verification. No deployment, profile-handle change, data mutation, auth configuration change, private account read or publication happened in this slice. Owner profile identity is a separate diagnosis. No prior external-review comments apply to this newly created branch; independent review follows the implementation commit.
+
+## Legacy favicon follow-up
+
+The parent reproduced `/favicon.ico` returning 404 on production. Added a literal `public/favicon.ico` for clients that probe that conventional URL instead of following HTML icon metadata. This introduces no second metadata link or image-generation endpoint.
+
+The ICO is a 6-byte ICONDIR plus one 16-byte ICONDIRENTRY and the exact existing 32px `/icon` PNG. Header values are reserved=0, type=1, count=1; entry width=32, height=32, colors=0, reserved=0, planes=1, bit depth=32, payload length=409, payload offset=22. The PNG is copied byte-for-byte without editing pixels. SHA-256: `54e67f4e22b5b5836b1f7f9541f98fa7799d104dd77eca1809f2f75ebee694a0`. PNG-bearing ICO is documented by [Microsoft](https://devblogs.microsoft.com/oldnewthing/20101022-00/?p=12473).
+
+Verification: regression failed with the original 404; both site-identity browser tests now pass. The new test validates the ICO header/directory, embedded PNG dimensions and equality with the advertised `/icon`, then opens `/favicon.ico` in Chromium and confirms the decoded image width is 32. Production webpack rebuild passed. Local production GET returns 200 `image/x-icon`, length 431, exact source bytes; the `file` utility identifies a valid Windows icon resource with 32px RGBA PNG data. Evidence: `/tmp/site-identity-favicon-red.log`, `/tmp/site-identity-favicon-green.log`, `/tmp/site-identity-favicon-build.log`, `/tmp/site-identity-favicon-headers.txt`, `/tmp/site-identity-favicon-production.ico`.
+
+No extra Apple filename variant was added. The root layout already emits `rel="apple-touch-icon"` pointing to the verified 180px PNG. [Apple's documented link mechanism](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html) supports that explicit URL; root filename probing is a fallback when no link is supplied.

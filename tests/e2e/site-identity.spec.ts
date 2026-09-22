@@ -27,3 +27,25 @@ test("publishes working PR icons and the current share image on public pages", a
   expect(response.headers()["content-type"]).toContain("image/png");
   expect(pngSize(await response.body())).toEqual({ width: 1200, height: 630 });
 });
+
+test("serves the same PR icon at the conventional favicon URL", async ({ request, page }) => {
+  const response = await request.get("/favicon.ico");
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toMatch(/^image\/(?:x-icon|vnd\.microsoft\.icon)/);
+  const ico = await response.body();
+  expect(ico.readUInt16LE(0)).toBe(0);
+  expect(ico.readUInt16LE(2)).toBe(1);
+  expect(ico.readUInt16LE(4)).toBe(1);
+  expect(ico[6]).toBe(32);
+  expect(ico[7]).toBe(32);
+  expect(ico.readUInt16LE(10)).toBe(1);
+  expect(ico.readUInt16LE(12)).toBe(32);
+  const imageLength = ico.readUInt32LE(14);
+  const imageOffset = ico.readUInt32LE(18);
+  expect(imageOffset + imageLength).toBe(ico.length);
+  const png = ico.subarray(imageOffset);
+  expect(pngSize(png)).toEqual({ width: 32, height: 32 });
+  expect(png.equals(await (await request.get("/icon")).body())).toBe(true);
+  await page.goto("/favicon.ico");
+  await expect.poll(() => page.locator("img").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(32);
+});
