@@ -1,0 +1,37 @@
+# Site icons and share preview — 2026-09-22
+
+Base: `1055aa9dd575738fde4eb3547ae5f401c741b0ab`.
+Branch: `codex/site-identity-preview-20260922`.
+
+## Scope and evidence
+
+The owner reported that links lacked the PR monogram and previews did not reflect the current website. The base had no app icon metadata. Its share image used a generic font, omitted the PR mark, and lacked the homepage's red headline treatment.
+
+- Added Next.js root icon (32 × 32) and Apple touch icon (180 × 180), using the exact existing `public/brand/homepage/PR-mark-black.png` on a cream background. The mark is neither redrawn nor replaced.
+- Updated the 1200 × 630 share image to use the same PR mark, Archivo Black, cream/black/red palette, headline and privacy wording as the public homepage.
+- The domain remains configuration-derived. The image contains no user, collection or usage data.
+- Open Graph and Twitter image references now include `?v=20260922` so clients refetching page metadata receive a new asset URL. The unversioned image route remains valid.
+- Browser/chats decide whether to display hover previews or favicons and may retain cached page metadata. These changes supply the correct assets; they cannot force another application's UI or invalidate its cache.
+
+## Checks
+
+1. RED: new `tests/e2e/site-identity.spec.ts` failed against the base because `link[rel="icon"]` was absent.
+2. GREEN: the same browser test passed. It fetches advertised icon URLs from both the homepage and Origins, verifies successful PNG responses and their binary dimensions, and verifies the matching OG/Twitter preview URL and PNG dimensions.
+3. Focused ESLint passed for changed TypeScript files.
+4. Public-site/public-metadata Vitest: 14 tests passed, including configured origins, profile canonical URLs and no metadata advertisement for unpublished/unavailable profiles.
+5. Production webpack build passed without Clerk credentials or Convex access, using the reference fixture and `PUBLIC_SITE_ORIGIN=https://proper-respect.com`.
+6. Local production server: homepage advertises both icons plus the versioned image URL; `/icon`, `/apple-icon` and `/share-image.png?v=20260922` return valid PNGs at 32 × 32, 180 × 180 and 1200 × 630 respectively.
+7. Visually inspected the actual rendered share image, both icon sizes, and the existing homepage in a 390px browser viewport. The shared image matches the homepage visual identity. The icon has a cream background so the black mark remains visible in dark browser chrome.
+8. Production output tracing includes the share image's font and source logo assets.
+
+Local evidence: `/tmp/site-identity-red.log`, `/tmp/site-identity-green.log`, `/tmp/site-identity-unit.log`, `/tmp/site-identity-build.log`, `/tmp/site-identity-production-preview.png`, `/tmp/site-identity-production-icon.png`, `/tmp/site-identity-production-apple.png`, `/tmp/site-identity-home-mobile.png`.
+
+## Font derivation
+
+Next ImageResponse could not render the existing 643KB variable Archivo font (`Cannot read properties of undefined (reading '256')`). A static 900-weight, 100-width ASCII subset is derived from the existing font, keeping its name records and existing SIL OFL license. No runtime dependency was added. Provenance and SHA-256 are in `app/_homepage-fonts/sources.json`.
+
+Reproduction uses fontTools 4.60.1: load `Archivo.ttf` with `TTFont`; call `instantiateVariableFont(font, {"wght": 900, "wdth": 100}, inplace=True)`; subset Unicode `range(32,127)` with `Options.name_IDs=["*"]`, `name_legacy=True`, `name_languages=["*"]`; save `Archivo-Black-Latin.ttf`. The resulting asset is approximately 19KB and renders successfully in development and production.
+
+## Boundaries
+
+This receipt covers local implementation and verification. No deployment, profile-handle change, data mutation, auth configuration change, private account read or publication happened in this slice. Owner profile identity is a separate diagnosis. No prior external-review comments apply to this newly created branch; independent review follows the implementation commit.
