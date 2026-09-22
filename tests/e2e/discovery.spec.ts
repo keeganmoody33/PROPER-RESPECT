@@ -96,6 +96,7 @@ test("robots, factual sitemap date and ARD link only to available public resourc
   expect(response.status()).toBe(200);
   expect(response.headers()["access-control-allow-origin"]).toBe("*");
   const catalog = await response.json();
+  expect(catalog.specVersion).toBe("1.0");
   expect(catalog.entries).toHaveLength(1);
   expect(catalog.entries[0]).toMatchObject({
     identifier: "urn:air:public.example:docs:public-profile",
