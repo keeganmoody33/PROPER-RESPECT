@@ -1,0 +1,96 @@
+import { test, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+const panel = (page: Page) => page.frameLocator("#frame").frameLocator("iframe");
+async function load(page: Page, handle: string) {
+  await page.locator("#reference").fill(handle);
+  await page.getByRole("button", { name: "Read profile", exact: true }).click();
+}
+test("real SDK bridge loads branded cards, preserves evidence, refreshes and mediates links", async ({ page }, info) => {
+  const external: string[] = [];
+  page.on("request", request => { if (!request.url().startsWith("http://127.0.0.1:") && !request.url().startsWith("data:")) external.push(request.url()); });
+  await page.goto("/");
+  const view = panel(page);
+  await expect(view.getByRole("heading", { name: "Synthetic public profile" })).toBeVisible();
+  await expect(view.getByText("Synthetic test data", { exact: true })).toBeVisible();
+  await expect(view.locator("article")).toHaveAttribute("data-brand", "github");
+  await expect(view.locator("article img")).toHaveAttribute("src", /^data:image/);
+  await expect(view.locator("article")).toContainText("523");
+  await expect(view.locator("article")).toContainText("2026-07-20");
+  await expect(view.locator("article")).toContainText("GitHub account");
+  await expect(view.locator("article")).toContainText("ESTIMATE");
+  await view.getByRole("button", { name: "Wispr Flow", exact: true }).click();
+  await expect(view.locator("article")).toHaveAttribute("data-brand", "wispr-flow");
+  await expect(view.locator("article")).toContainText("373.7K");
+  await expect(view.locator("article")).toContainText("Measurement period not supplied");
+  await expect(view.locator("article")).toContainText("STALE");
+  await load(page, "changing");
+  await expect(view.locator(".bio")).toContainText("Synthetic snapshot 1");
+  await view.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(view.locator(".bio")).toContainText("Synthetic snapshot 2");
+  await expect(page.locator("#status")).toHaveAttribute("data-completed-reads", "1");
+  await view.getByRole("button", { name: "Open source" }).click();
+  await expect(page.locator("#links a")).toHaveAttribute("href", "https://proper-respect.com/changing");
+  expect(external).toEqual([]);
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: info.outputPath("panel-desktop.png"), fullPage: true });
+});
+test("all activity variants have accessible complete textual evidence", async ({ page }) => {
+  await page.goto("/");
+  await expect(panel(page).getByRole("heading", { name: "Synthetic public profile" })).toBeVisible();
+  await load(page, "variants");
+  const view = panel(page);
+  const cases = [["Series fixture", "17"], ["Artifact fixture", "<b>Literal artifact</b>"], ["Review fixture", "bugs caught"], ["Coding fixture", "4.2K"]];
+  for (const [name, evidence] of cases) {
+    await view.getByRole("button", { name, exact: true }).click();
+    await expect(view.locator("article")).toContainText(evidence);
+    await expect(view.locator("article")).toContainText("Synthetic source");
+    await expect(view.locator("article")).toContainText("Measurement period not supplied");
+    await expect(view.locator("article")).toHaveAttribute("data-brand", "neutral");
+  }
+  await load(page, "hostile");
+  await expect(view.getByRole("heading", { level: 1 })).toHaveText('<img src=x onerror="window.injected=true"> Literal owner text');
+  await expect(view.locator("h1 img")).toHaveCount(0);
+});
+test("empty, unavailable, refresh error and stale response do not fabricate a profile", async ({ page }) => {
+  await page.goto("/");
+  const view = panel(page);
+  await expect(view.getByRole("heading", { name: "Synthetic public profile" })).toBeVisible();
+  await load(page, "empty");
+  await expect(view.locator(".empty")).toContainText("No published products yet");
+  await expect(view.locator("article")).toHaveCount(0);
+  await load(page, "unavailable");
+  await expect(view.getByRole("alert")).toContainText("unavailable");
+  await expect(view.locator("article")).toHaveCount(0);
+  await load(page, "refresh-error");
+  await expect(view.locator("article")).toBeVisible();
+  await view.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(view.getByRole("alert")).toContainText("unavailable");
+  await expect(view.getByRole("status")).toContainText("Previous snapshot");
+  await load(page, "slow");
+  await expect(view.getByRole("alert")).toHaveCount(0);
+  await view.getByRole("button", { name: "Refresh", exact: true }).click();
+  await load(page, "empty");
+  await expect(view.locator(".empty")).toBeVisible();
+  await expect(page.locator("#status")).toHaveAttribute("data-completed-reads", "2");
+  await expect(view.locator("article")).toHaveCount(0);
+  await expect(view.locator(".source-url")).toHaveText("https://proper-respect.com/empty");
+});
+test("320px keyboard and dark theme preserve the product identity", async ({ page }, info) => {
+  await page.setViewportSize({ width: 320, height: 850 });
+  await page.goto("/");
+  const view = panel(page);
+  await expect(view.getByRole("heading", { name: "Synthetic public profile" })).toBeVisible();
+  await page.getByRole("button", { name: "Use dark theme" }).click();
+  await expect(view.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(view.getByText("Synthetic test data", { exact: true })).toBeVisible();
+  await expect(view.locator("article")).toHaveAttribute("data-brand", "github");
+  await view.getByRole("button", { name: "Wispr Flow", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(view.getByRole("button", { name: "Wispr Flow", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(view.getByRole("button", { name: "Wispr Flow", exact: true })).toBeFocused();
+  await expect(view.locator("article")).toHaveAttribute("data-brand", "wispr-flow");
+  const width = await view.locator("body").evaluate(element => ({ scroll: element.scrollWidth, viewport: element.clientWidth }));
+  expect(width.scroll).toBeLessThanOrEqual(width.viewport);
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: info.outputPath("panel-mobile-dark.png"), fullPage: true });
+});
