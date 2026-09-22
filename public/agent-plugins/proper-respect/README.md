@@ -1,6 +1,6 @@
 # Proper Respect public-profile reading plugin
 
-Created by LecturesFrom · Contact: 33@lecturesfrom.com · Updated: 2026-09-22.
+Created by lecturesfrom · Contact: 33@lecturesfrom.com · Updated: 2026-09-22.
 
 This package supplies one self-contained skill for reading an owner-published Proper Respect profile and preserving the meaning of its evidence. Supply the intended public profile URL. Public reading requires no account. The package contains no account connection, editing, publication, hooks or MCP server components.
 
