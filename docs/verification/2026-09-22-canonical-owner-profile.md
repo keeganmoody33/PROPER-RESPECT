@@ -21,6 +21,7 @@ The local MCP prototype still rejects a returned handle differing from the suppl
 - Full suite passed 778 unit tests with 2 optional skips and 7 script tests before that additional test; the final focused 16 tests pass.
 - Twenty-eight rendered Chromium checks passed: canonical legacy redirect, destination identity/OpenGraph URL, existing public routes, privacy-safe 404, private noindex, homepage links and agent discovery.
 - Full ESLint, TypeScript, diff whitespace check and configured production webpack build passed.
+- CI caught a stale native-navigation expectation after the homepage link changed. Updated that assertion and its returned tool identity to `lecturesfrom`; all eight real Chrome WebMCP checks passed locally with the webpack development server (the temporary server configuration accommodates external node_modules symlinks). No browser capability was mocked.
 
 ## Release gate and operator sequence
 

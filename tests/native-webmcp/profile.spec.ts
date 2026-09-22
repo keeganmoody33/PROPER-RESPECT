@@ -174,8 +174,8 @@ test("Next Link navigation unregisters old native handles and remounts exactly o
   await expect(page).toHaveURL("/");
   expect(await tools(page)).toEqual([]);
   await page.getByRole("link", { name: "View Keegan’s shared collection" }).click();
-  await expect(page).toHaveURL(/\/keegan$/);
+  await expect(page).toHaveURL(/\/lecturesfrom$/);
   expect(await page.evaluate(() => (window as RetainedWindow).nativeWebMcpTest?.sentinel)).toBe("same-document");
   await expectProfileTool(page);
-  expect(await invoke(page)).toMatchObject({ returned: true, value: { handle: "keegan" } });
+  expect(await invoke(page)).toMatchObject({ returned: true, value: { handle: "lecturesfrom" } });
 });
