@@ -3,7 +3,7 @@ import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile
 import { ProfileName, ProfileLinks } from "@/components/profile-identity";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { ZodError } from "zod";
 import { ProductCard } from "@/components/product-card";
 import { getPublicProfile } from "@/src/data/get-public-profile";
@@ -39,6 +39,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   }
 
   if (!profile) notFound();
+  if (profile.handle !== rawHandle) permanentRedirect(`/${profile.handle}`);
 
   return (
     <main>

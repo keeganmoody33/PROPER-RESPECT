@@ -22,7 +22,7 @@ export default function HomePage() {
             <p className={styles.description}>Build a collection of the tools you use. Add your experience and usage evidence where available, then choose which cards to share on your profile.</p>
             <div className={styles.actions}>
               <Link className={styles.primary} href="/app/collection">Start your collection</Link>
-              <Link className={styles.secondary} href="/keegan">View Keegan’s shared collection</Link>
+              <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
             </div>
             <p className={styles.privacy}>Start with a private collection. Publishing is your choice.</p>
           </div>
@@ -57,7 +57,7 @@ export default function HomePage() {
           <h2 id="start-title">Make it<br /><span>your collection.</span></h2>
           <div className={styles.actions}>
             <Link className={styles.primary} href="/app/collection">Start your collection</Link>
-            <Link className={styles.secondary} href="/keegan">See the shared collection →</Link>
+            <Link className={styles.secondary} href="/lecturesfrom">See the shared collection →</Link>
             <p className={styles.privacy}>Private by default. Shared by choice.</p>
           </div>
         </section>

@@ -13,6 +13,9 @@ export async function getPublicProfile(
 ): Promise<PublicProfile | null> {
   const handle = handleSchema.parse(rawHandle);
   if (process.env.PROPER_RESPECT_E2E_REFERENCE === "1") {
+    if (["lecturesfrom", "legacy-profile-url"].includes(handle)) {
+      return { ...e2eReferenceProfile, handle: "lecturesfrom" };
+    }
     if (["collection", "app", "about", "origins", "contact", "privacy"].includes(handle)) {
       return { handle, displayName: `Existing ${handle} owner`, bio: "Synthetic published profile for route compatibility checks.", cards: [] };
     }

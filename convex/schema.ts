@@ -358,6 +358,14 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_prop", ["propId"]),
 
+  publicProfileAliases: defineTable({
+    handle: v.string(),
+    targetHandle: v.string(),
+    ownerId: v.id("users"),
+    publicationId: v.id("publishedProfiles"),
+    createdAt: v.string(),
+  }).index("by_handle", ["handle"]),
+
   publishedProfiles: defineTable({
     handle: v.string(),
     revision: v.number(),

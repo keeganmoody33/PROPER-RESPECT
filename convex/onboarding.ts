@@ -40,6 +40,7 @@ async function availablePendingHandle(ctx: MutationCtx, subject: string) {
     const handle = attempt === 0 ? base : `${base}-${attempt}`;
     const owners = await ownersForHandle(ctx, handle);
     if (owners.length > 0) continue;
+    if (await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).first()) continue;
     const publication = await ctx.db.query("publishedProfiles")
       .withIndex("by_handle", q => q.eq("handle", handle)).first();
     if (!publication) return handle;
@@ -89,6 +90,9 @@ export const claimHandle = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const handle = claimableHandleSchema.parse(args.handle);
+    if (await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).first()) {
+      throw new Error("That handle is reserved by an existing public profile.");
+    }
     const linkFields = args.profileLinks !== undefined || args.preferredLinkUrl !== undefined
       ? validateProfileLinks(args.profileLinks ?? user.profileLinks ?? [], args.preferredLinkUrl === null ? undefined : args.preferredLinkUrl ?? user.preferredLinkUrl)
       : {};

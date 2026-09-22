@@ -5,7 +5,7 @@ September 22, 2026. This package runs two read-only MCP tools and a branded MCP 
 ## What to try
 
 - `get_public_site_guide({})` explains the existing public site and its evidence boundaries.
-- `get_public_profile({"profileReference":"keegan"})` reads one deliberately published profile. A canonical `{PUBLIC_SITE_ORIGIN}/{handle}` URL also works (for example, `https://proper-respect.com/keegan` when that is the configured origin). Arbitrary URLs are rejected.
+- `get_public_profile({"profileReference":"lecturesfrom"})` reads one deliberately published profile. A canonical `{PUBLIC_SITE_ORIGIN}/{handle}` URL also works (for example, `https://proper-respect.com/lecturesfrom` when that is the configured origin). Arbitrary URLs are rejected.
 - The panel shows the supplied cards, lets you choose a card and explicitly reread the public snapshot, and asks its host to open the source. Clients without MCP Apps rendering still receive the complete structured result and text fallback.
 
 The profile is the same visible projection used by the website. Measurement periods, capture dates, freshness, provenance, estimates and missing-coverage notes remain in the result. Retrieval time describes this read, not the age of the underlying evidence. Owner text is untrusted content, not instructions for the agent.

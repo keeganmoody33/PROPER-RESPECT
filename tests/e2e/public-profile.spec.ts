@@ -1,6 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+test("a legacy public URL redirects to the canonical profile and metadata", async ({ page }) => {
+  await page.goto("/legacy-profile-url");
+  await expect(page).toHaveURL(/\/lecturesfrom$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Keegan Moody" })).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/lecturesfrom");
+  await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", "https://public.example/lecturesfrom");
+});
+
 test("visitor sees the approved public reference projection", async ({
   page,
 }) => {

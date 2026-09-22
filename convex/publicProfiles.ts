@@ -14,12 +14,14 @@ const publicProfileV1Validator = v.object({
 });
 
 export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
+  const alias = await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).unique();
+  if (alias && await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", alias.targetHandle)).first()) return null;
   const published = await ctx.db
     .query("publishedProfiles")
-    .withIndex("by_handle", (q) => q.eq("handle", handle))
+    .withIndex("by_handle", (q) => q.eq("handle", alias?.targetHandle ?? handle))
     .unique();
 
-  if (!published) return null;
+  if (!published || (alias && alias.publicationId !== published._id)) return null;
   // Only presentation is refreshed. The owner's published evidence and
   // relationship projection stays byte-for-byte unchanged in storage.
   // Read only the products in this profile, once per slug. Avoid scanning the
