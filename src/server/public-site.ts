@@ -26,7 +26,7 @@ export function publicPageMetadata(title: string, description: string, handle?: 
   const origin = publicSiteOrigin();
   const path = handle === undefined ? "/" : `/${handleSchema.parse(handle)}`;
   const url = new URL(path, origin).href;
-  const image = new URL("/share-image.png", origin).href;
+  const image = new URL("/share-image.png?v=20260922", origin).href;
   return {
     title,
     description,

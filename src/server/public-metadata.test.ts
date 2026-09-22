@@ -22,7 +22,7 @@ describe("public profile metadata", () => {
       const metadata = await generateMetadata({ params: Promise.resolve({ handle: e2eReferenceProfile.handle }) });
       expect(metadata.alternates?.canonical).toBe(`${origin}/${e2eReferenceProfile.handle}`);
       expect(metadata.openGraph).toMatchObject({ url: `${origin}/${e2eReferenceProfile.handle}`, title: e2eReferenceProfile.displayName });
-      expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [`${origin}/share-image.png`] });
+      expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [`${origin}/share-image.png?v=20260922`] });
     },
   );
 
