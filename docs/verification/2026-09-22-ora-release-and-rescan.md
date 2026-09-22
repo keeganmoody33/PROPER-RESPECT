@@ -51,7 +51,7 @@ A fresh Codex app-server skill listing discovered the enabled `proper-respect:re
 
 This establishes remote Codex installation and fresh-process discovery. It does not establish external skills.sh directory presence, ranking, or Ora manifest acceptance.
 
-The skills CLI 1.7.0 separately discovered and installed `read-public-profile` from the remote package URL into an isolated temporary project. The installed Markdown SHA-256 was `61ff667f9a8e3bb4620e537cdafc39f9097d797740ae7da8f3d0721fe0bd7c56`, matching production. The initial skills.sh page showed unavailable-skill content despite HTTP 200; a successful HTTP status alone is not evidence of a listing. No artificial repeat installs or ranking claims were made.
+The skills CLI 1.7.0 separately discovered and installed `read-public-profile` from the remote package URL into an isolated temporary project. The installed Markdown SHA-256 was `61ff667f9a8e3bb4620e537cdafc39f9097d797740ae7da8f3d0721fe0bd7c56`, matching production. Cleanup removed that verified temporary copy, and the CLI subsequently reported no project skills. The initial skills.sh page showed unavailable-skill content despite HTTP 200; a successful HTTP status alone is not evidence of a listing. No artificial repeat installs or ranking claims were made.
 
 ## Remaining acceptance
 
