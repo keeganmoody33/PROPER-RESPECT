@@ -17,7 +17,8 @@ for (const width of [1440, 460, 390, 320]) test(`Origins and branded footer rema
   const heading = page.getByRole("heading", { level: 1 });
   await expect(heading).toHaveText("Giving credit its context");
   await expect(heading).toHaveAccessibleName("Giving credit its context");
-  await expect(page.getByRole("heading", { name: "The language we borrow" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What it means here" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The language we borrow" })).toHaveCount(0);
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/about/origins");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

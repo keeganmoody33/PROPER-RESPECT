@@ -20,24 +20,13 @@ export type TrustDocument = Readonly<{
 export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
   origins: {
     title: "Giving credit its context",
-    description: "The language behind Proper Respect and why we keep experience and evidence alongside the tools we use.",
+    description: "Why Proper Respect keeps experience and evidence alongside the tools we use.",
     eyebrow: "Origins / Lineage",
     updatedAt: "2026-09-22",
     introduction: [
       "Proper Respect takes its name from the idea behind giving someone their props: recognizing what they have contributed.",
     ],
     sections: [
-      {
-        heading: "The language we borrow",
-        paragraphs: [
-          "The word has a history in African American Vernacular English. American Heritage traces props to propers; Collins connects that older form to proper respect.",
-          "That history matters to us. We want to acknowledge the language we are borrowing and the people whose expression gave it meaning.",
-        ],
-        links: [
-          { label: "American Heritage: props", href: "https://ahdictionary.com/word/search.html?q=props" },
-          { label: "Collins: props", href: "https://www.collinsdictionary.com/dictionary/english/props" },
-        ],
-      },
       {
         heading: "Respect between people",
         paragraphs: [
