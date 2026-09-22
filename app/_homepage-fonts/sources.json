@@ -20,6 +20,15 @@
       "file": "IBMPlexMono-OFL.txt",
       "url": "https://raw.githubusercontent.com/google/fonts/e44c4b011a820c2cbe2fd2cfa8052037d7edb571/ofl/ibmplexmono/OFL.txt",
       "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+    },
+    {
+      "file": "Archivo-Black-Latin.ttf",
+      "derivedFrom": "Archivo.ttf",
+      "derivedAt": "2026-09-22",
+      "tool": "fontTools 4.60.1",
+      "transformation": "Static instance wght=900, wdth=100; Unicode U+0020 through U+007E retained for public share-image text; original name records retained.",
+      "sha256": "f2904ca64498d452612d22c0b54bedc85dc163b441d74a271fd803bc0a8b3c01",
+      "license": "Archivo-OFL.txt"
     }
   ]
 }
