@@ -153,7 +153,12 @@ export function trustMarkdown(slug: TrustSlug): string {
 }
 
 export function trustMarkdownResponse(slug: TrustSlug) {
-  const response = markdownResponse(trustMarkdown(slug));
+  const document = trustDocuments[slug];
+  const response = markdownResponse(trustMarkdown(slug), {
+    title: document.title,
+    description: document.description,
+    canonical: new URL(`/about/${slug}`, publicSiteOrigin()),
+  });
   if (process.env.VERCEL_ENV === "preview") response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
 }

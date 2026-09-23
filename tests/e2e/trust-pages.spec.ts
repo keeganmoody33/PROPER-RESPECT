@@ -1,3 +1,4 @@
+import { parseMarkdownDocument } from "../markdown-document";
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -17,7 +18,9 @@ for (const [slug, title] of pages) test(`${slug} has matching public HTML and Ma
   expect(markdown.status()).toBe(200);
   expect(markdown.headers()["content-type"]).toContain("text/markdown");
   const body = await markdown.text();
-  expect(body.startsWith(`# ${title}\n`)).toBe(true);
+  const document = parseMarkdownDocument(body);
+  expect(document.body.startsWith(`# ${title}\n`)).toBe(true);
+  expect(document.metadata).toMatchObject({ title, canonical: `https://public.example${path}` });
   for (const paragraph of await page.locator("article p[data-trust-copy]").allTextContents()) expect(body).toContain(paragraph);
   for (const link of await page.locator("article section a").evaluateAll(links => links.map(link => link.getAttribute("href")))) expect(body).toContain(link);
   const preview = testInfo.config.metadata.preview === true;

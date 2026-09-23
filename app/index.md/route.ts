@@ -1,9 +1,14 @@
-import { homepageMarkdown, markdownResponse } from "@/src/server/agent-discovery";
+import { homepageMarkdown, markdownResponse, productIdentity } from "@/src/server/agent-discovery";
 import { publicSiteOrigin } from "@/src/server/public-site";
 
 export function GET() {
-  const response = markdownResponse(homepageMarkdown());
   const origin = publicSiteOrigin();
+  const identity = productIdentity();
+  const response = markdownResponse(homepageMarkdown(), {
+    title: identity.name,
+    description: identity.description,
+    canonical: origin,
+  });
   response.headers.set("Vary", "Accept");
   response.headers.set("Cache-Control", "private, no-store");
   response.headers.set("Content-Location", new URL("/index.md", origin).href);

@@ -1,9 +1,12 @@
+import { parseMarkdownDocument } from "../markdown-document";
 import { expect, test } from "@playwright/test";
 
 test("root GET/HEAD negotiates the exact existing public Markdown representation", async ({ request }, info) => {
   const explicit = await request.get("/index.md");
   const expected = await explicit.text();
-  expect(expected).toMatch(/^# Proper Respect\n/);
+  const document = parseMarkdownDocument(expected);
+  expect(document.body).toMatch(/^# Proper Respect\n/);
+  expect(document.metadata).toMatchObject({ title: "Proper Respect", canonical: "https://public.example/" });
   for (const path of ["/", "/?campaign=public"]) {
     const response = await request.get(path, { headers: { Accept: "text/markdown" } });
     expect(response.status()).toBe(200);
