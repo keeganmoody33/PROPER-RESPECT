@@ -68,3 +68,13 @@ For preview verification, set `VERCEL_ENV=preview` on both commands. The new wor
 - Two early browser failures were test assumptions, not relaxed product requirements. Next normalizes the root canonical without its trailing slash, so the test accepts the equivalent exact origin URL. Flight metadata is not exposed to Proxy, so the final test uses an ordinary component Accept request, and the unsupported hidden-header guard was removed.
 - The final full and focused suites, lint, build/typecheck and production browser gate ran after removal of the ineffective internal-query guard. Preview checks exercised the same observable behavior before that removal; no hidden-query support is claimed.
 - Independent exact-head review, hosted CI, deployment and a subsequent Ora rescan remain parent-owned. This receipt does not claim an updated Ora score or deployed negotiation.
+
+## PR 55 review disposition — 2026-09-22
+
+Inspected integrated head: `9eeafdf8143425e2e03cb96eeadc94351a4051e3`.
+
+[Copilot thread PRRT_kwDOSyRAjs6k-dIf](https://github.com/keeganmoody33/PROPER-RESPECT/pull/55#discussion_r4078028540): **not a bug under the current HTTP standard**. The comment applies the former `accept-ext` distinction after `q`. [RFC 9110 §12.5.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-12.5.1) removed that grammar and says: “Recipients SHOULD process any parameter named "q" as weight, regardless of parameter ordering.” RFC 9110 obsoletes RFC 7231.
+
+The current parser treats `q` as the weight in either position, matches the offered UTF-8 charset, and refuses an unsupported `profile=agent` media parameter in either position. Ignoring all parameters after `q` would silently select a representation that does not satisfy the requested parameters. Keep the parser unchanged. Add explicit regressions for supported charset and unsupported profile before/after `q`, including lower Markdown preference, because these order combinations were not previously named tests. These are characterization regressions for correct existing behavior, so no product RED failure is claimed.
+
+Verification: `npx vitest run src/server/homepage-representation.test.ts` passed **42 tests**, including all six added ordering cases (`/tmp/pr55-parameter-ordering.log`). Focused ESLint and `git diff --check` passed. Only the test and this receipt changed; no production parser, proxy, caching, auth, route or configuration behavior changed. Existing production verification above was not rerun for this test-only addition.

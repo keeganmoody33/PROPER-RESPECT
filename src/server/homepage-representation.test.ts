@@ -26,6 +26,17 @@ it.each([
   expect(prefersHomepageMarkdown(accept)).toBe(markdown);
 });
 
+it.each([
+  ["text/markdown;charset=utf-8;q=0.9, text/html;q=0.5", true],
+  ["text/markdown;q=0.9;charset=utf-8, text/html;q=0.5", true],
+  ["text/markdown;charset=utf-8;q=0.2, text/html;q=0.5", false],
+  ["text/markdown;q=0.2;charset=utf-8, text/html;q=0.5", false],
+  ["text/markdown;profile=agent;q=0.9, text/html;q=0.5", false],
+  ["text/markdown;q=0.9;profile=agent, text/html;q=0.5", false],
+] as const)("applies weight and media parameters independently of ordering: %s", (accept, markdown) => {
+  expect(prefersHomepageMarkdown(accept)).toBe(markdown);
+});
+
 it.each(["GET", "HEAD"])("rewrites only root %s with explicit preference", method => {
   const response = homepageRepresentation(new NextRequest("https://request.example/?tracking=public", { method, headers: { accept: "text/markdown" } }));
   expect(response.headers.get("x-middleware-rewrite")).toBe("https://request.example/index.md");
