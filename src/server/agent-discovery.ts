@@ -1,4 +1,5 @@
 import { publicSiteOrigin } from "./public-site";
+import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
 export const repositoryUrl = "https://github.com/keeganmoody33/PROPER-RESPECT";
 export const homepageUpdatedAt = "2026-09-21T00:00:00.000Z";
@@ -86,8 +87,8 @@ export function agentCatalog() {
   };
 }
 
-export function markdownResponse(body: string) {
-  return new Response(body, {
+export function markdownResponse(body: string, metadata: MarkdownMetadata) {
+  return new Response(markdownWithMetadata(body, metadata), {
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
       "X-Content-Type-Options": "nosniff",

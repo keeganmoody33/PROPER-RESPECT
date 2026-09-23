@@ -1,3 +1,4 @@
+import { parseMarkdownDocument } from "../markdown-document";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
@@ -18,6 +19,7 @@ test("llms.txt is a plain-text description of the available public surface", asy
   expect(body).toContain("https://public.example/");
   expect(body).not.toContain("props.lecturesfrom.com");
   expect(body).not.toMatch(/<!doctype html|<html[\s>]/i);
+  expect(body).toBe(parseMarkdownDocument(await (await request.get("/agents.md")).text()).body);
 });
 
 test("an existing public profile still returns a successful HTML response", async ({
@@ -72,7 +74,10 @@ test("markdown documents describe public capabilities without private data or in
     expect(response.headers()["content-type"]).toContain("text/markdown");
     expect(response.headers()["x-content-type-options"]).toBe("nosniff");
     const body = await response.text();
-    expect(body.startsWith("# "), path).toBe(true);
+    const document = parseMarkdownDocument(body);
+    expect(document.body.startsWith("# "), path).toBe(true);
+    expect(document.metadata.title).toEqual(expect.any(String));
+    expect(document.metadata.canonical).toBe(`https://public.example${path === "/index.md" ? "/" : path}`);
     expect(body).toContain("https://public.example/");
     expect(body).not.toMatch(/<!doctype html|<html[\s>]|props\.lecturesfrom\.com|Private source record/i);
   }
@@ -117,7 +122,7 @@ for (const path of ["/.well-known/agent-skills", "/.well-known/agent-skills/"]) 
     expect(response.headers()["access-control-allow-origin"]).toBe("*");
     expect(response.headers()["x-content-type-options"]).toBe("nosniff");
     const body = await response.text();
-    expect(body.startsWith("# Proper Respect")).toBe(true);
+    expect(parseMarkdownDocument(body).body.startsWith("# Proper Respect")).toBe(true);
     expect(body).toContain("## When to use Proper Respect");
     expect(body).toBe(await (await request.get("/agents.md")).text());
     const head = await request.head(path);
