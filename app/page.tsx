@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
-import { productIdentity } from "@/src/server/agent-discovery";
+import { PublicSiteGuideWebMcp } from "@/components/public-site-guide-webmcp";
+import { productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
@@ -13,6 +14,7 @@ export function generateMetadata() {
 export default function HomePage() {
   return (
     <div className={styles.homepage}>
+      <PublicSiteGuideWebMcp guide={publicSiteGuide()} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productIdentity()).replace(/</g, "\\u003c") }} />
       <main id="homepage-content" className={styles.main} tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="homepage-title">

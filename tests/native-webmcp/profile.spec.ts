@@ -14,6 +14,7 @@ type NativeDocument = Document & { modelContext?: NativeModelContext };
 type RetainedWindow = Window & { nativeWebMcpTest?: { sentinel: string; tool: NativeTool } };
 type Execution = { returned: true; value: unknown } | { returned: false; error: string };
 const toolName = "get_current_public_profile";
+const guideName = "get_public_site_guide";
 
 async function tools(page: Page): Promise<NativeTool[]> {
   return page.evaluate(async () => {
@@ -29,7 +30,7 @@ async function tools(page: Page): Promise<NativeTool[]> {
   });
 }
 
-async function invoke(page: Page, input: unknown = {}, retained = false): Promise<Execution> {
+async function invoke(page: Page, input: unknown = {}, retained = false, selectedName = toolName): Promise<Execution> {
   return page.evaluate(async ({ input, retained, toolName }) => {
     const context = (document as NativeDocument).modelContext;
     if (!context) throw new Error("Native document.modelContext is unavailable.");
@@ -53,7 +54,7 @@ async function invoke(page: Page, input: unknown = {}, retained = false): Promis
     } catch {
       return { returned: true as const, value: raw };
     }
-  }, { input, retained, toolName });
+  }, { input, retained, toolName: selectedName });
 }
 
 async function expectProfileTool(page: Page) {
@@ -141,7 +142,7 @@ test("native invocation rejects arbitrary handle input instead of reading anothe
   expect(await invoke(page)).toMatchObject({ returned: true, value: { handle: "keegan" } });
 });
 
-for (const path of ["/", "/about/origins", "/app/collection", "/no-such-linker"]) {
+for (const path of ["/about/origins", "/about/contact", "/about/privacy", "/app/collection", "/no-such-linker"]) {
   test(`native Chrome has no profile tool at ${path}`, async ({ page }) => {
     const response = await page.goto(path);
     if (path === "/no-such-linker") expect(response?.status()).toBe(404);
@@ -172,10 +173,49 @@ test("Next Link navigation unregisters old native handles and remounts exactly o
 
   await page.locator(".site-header").getByRole("link", { name: "Proper Respect home" }).click();
   await expect(page).toHaveURL("/");
-  expect(await tools(page)).toEqual([]);
+  await expect.poll(async () => (await tools(page)).map(tool => tool.name)).toEqual([guideName]);
+  await page.evaluate(async () => {
+    const context = (document as NativeDocument).modelContext!;
+    const tool = (await context.getTools()).find(tool => tool.name === "get_public_site_guide")!;
+    (window as RetainedWindow).nativeWebMcpTest = { sentinel: "same-document", tool };
+  });
   await page.getByRole("link", { name: "View Keegan’s shared collection" }).click();
   await expect(page).toHaveURL(/\/keegan$/);
   expect(await page.evaluate(() => (window as RetainedWindow).nativeWebMcpTest?.sentinel)).toBe("same-document");
   await expectProfileTool(page);
   expect(await invoke(page)).toMatchObject({ returned: true, value: { handle: "keegan" } });
+  expect((await invoke(page, {}, true, guideName)).returned).toBe(false);
+  await page.locator(".site-header").getByRole("link", { name: "Proper Respect home" }).click();
+  await expect(page).toHaveURL("/");
+  await expect.poll(async () => (await tools(page)).map(tool => tool.name)).toEqual([guideName]);
+  expect(await invoke(page, {}, false, guideName)).toMatchObject({ returned: true, value: { name: "Proper Respect" } });
+});
+
+test("native homepage guide returns canonical public documentation without networking", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Your tools.");
+  await expect.poll(async () => (await tools(page)).map(tool => tool.name)).toEqual([guideName]);
+  const [guide] = await tools(page);
+  expect(guide.description).toBe("Explains Proper Respect, links to public documentation, and describes how to read a supplied published profile.");
+  expect(guide.inputSchema).toEqual({ type: "object", properties: {}, additionalProperties: false });
+  expect(guide.annotations).toMatchObject({ readOnlyHint: true, untrustedContentHint: false });
+  await page.waitForLoadState("networkidle", { timeout: 10_000 });
+  const requests: string[] = [];
+  await page.route("**/*", route => { requests.push(route.request().url()); return route.abort(); });
+  const execution = await invoke(page, {}, false, guideName);
+  expect(execution).toMatchObject({ returned: true, value: {
+    name: "Proper Respect", homepage: "https://public.example/",
+    documentation: {
+      agents: "https://public.example/agents.md", authentication: "https://public.example/auth.md",
+      homepageMarkdown: "https://public.example/index.md", origins: "https://public.example/about/origins.md",
+      contact: "https://public.example/about/contact.md", privacy: "https://public.example/about/privacy.md",
+    },
+    profileReading: { tool: toolName, input: {} },
+  } });
+  const invalid = await invoke(page, { url: "https://private.invalid", handle: "private" }, false, guideName);
+  if (invalid.returned) expect(invalid.value).toEqual({ error: "Use an empty object {}. This tool returns the public site guide and accepts no URL, handle, or other arguments." });
+  else expect(invalid.error).toMatch(/schema|input|argument|properties|parameter|invalid/i);
+  expect(requests).toEqual([]);
+  expect(await invoke(page, {}, false, guideName)).toEqual(execution);
+  await testInfo.attach("native-guide-result.json", { body: JSON.stringify({ guide, execution }, null, 2), contentType: "application/json" });
 });

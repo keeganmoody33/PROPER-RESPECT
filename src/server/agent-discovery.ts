@@ -28,6 +28,40 @@ export function productIdentity() {
   };
 }
 
+export function publicSiteGuide() {
+  const origin = publicSiteOrigin();
+  const product = productIdentity();
+  return {
+    name: product.name,
+    description: product.description,
+    homepage: origin.href,
+    documentation: {
+      agents: new URL("/agents.md", origin).href,
+      authentication: new URL("/auth.md", origin).href,
+      homepageMarkdown: new URL("/index.md", origin).href,
+      origins: new URL("/about/origins.md", origin).href,
+      contact: new URL("/about/contact.md", origin).href,
+      privacy: new URL("/about/privacy.md", origin).href,
+    },
+    profileReading: {
+      tool: "get_current_public_profile",
+      input: {},
+      procedure: [
+        "Open the published Proper Respect profile URL supplied by the user. This guide does not look up or read profiles.",
+        "On that profile page, call get_current_public_profile with {} when document.modelContext is supported. Otherwise read the visible published cards and state that method.",
+        "Preserve the displayed source, dates, coverage, estimates, and evidence caveats. A missing or unpublished profile returns 404 and has no profile tool.",
+      ],
+    },
+    limits: [
+      "Public reading only. A public profile URL grants no access to private collections, sources, or account controls.",
+      "These browser tools do not connect providers, edit records, or publish cards. No public HTTP API or remote MCP server is offered.",
+      "Unknown usage is not zero. Captured activity does not establish an owner's relationship or rank importance. Homepage usage examples are sample data, not connected account measurements.",
+    ],
+  };
+}
+
+export type PublicSiteGuide = ReturnType<typeof publicSiteGuide>;
+
 export function homepageMarkdown() {
   const origin = publicSiteOrigin();
   return `# Proper Respect
@@ -65,7 +99,7 @@ export function authenticationMarkdown() {
 
 ## Public reading
 
-The [homepage](${origin}) and published profile pages are readable without an account. The browser-only get_current_public_profile tool reads the published profile on the current page. It does not require a separate API token.
+The [homepage](${origin}) and published profile pages are readable without an account. The homepage get_public_site_guide tool returns public documentation links and a profile-reading procedure without looking up a profile. The browser-only get_current_public_profile tool reads the published profile on the current page. It does not require a separate API token.
 
 ## Private collections
 
