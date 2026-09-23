@@ -43,7 +43,6 @@ export function parseGithubActivity(text: string, window: Window): GithubActivit
   try {
     if (text.length > GITHUB_RESPONSE_BYTES || new TextEncoder().encode(text).byteLength > GITHUB_RESPONSE_BYTES) throw unavailable();
     const viewer = numericSchema.parse(JSON.parse(text)).data.viewer;
-    // Preserve complete string tokens; only numeric primitives become their source lexemes.
     const lexicalText = text.replace(/"(?:\\[\s\S]|[^"\\])*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/g,
       token => token.startsWith('"') ? token : JSON.stringify(token));
     const lexical = lexicalSchema.parse(JSON.parse(lexicalText)).data.viewer.contributionsCollection.contributionCalendar;
