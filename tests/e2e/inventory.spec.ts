@@ -118,3 +118,38 @@ test("sharing requires approval of the current exact preview and invalidates it 
   await expect(page.getByLabel("Synthetic publication status")).toHaveText("Nothing published");
   await expect(page.getByText("Your saved collection or sharing choices changed. Preview again before publishing.", { exact: true })).toBeVisible();
 });
+
+for (const width of [1280, 390]) test(`usage stays with its explicitly selected grouped record at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("button", { name: "Load grouped GitHub fixture" }).click();
+  const group = page.getByRole("region", { name: "GitHub in your collection", exact: true });
+  const selector = group.getByRole("combobox", { name: "Record to inspect for GitHub" });
+  await expect(selector).toHaveValue("synthetic-github-1");
+  await expect(group.getByText("No usage snapshot is selected for this record. Usage is unknown.", { exact: true })).toBeVisible();
+  await expect(group.getByText("1 other loaded record has a saved usage snapshot. Choose it above to inspect its own evidence.", { exact: true })).toBeVisible();
+  await expect(selector.getByRole("option", { name: /Record 2 · Usage snapshot/ })).toHaveCount(1);
+  await expect(group.locator(".activity-module")).toHaveCount(0);
+  await group.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(group.locator(".product-card")).toHaveAttribute("data-side", "back");
+  await expect(group.locator(".card-back")).not.toContainText("7 contributions");
+  await selector.selectOption("synthetic-github-2");
+  await expect(group.locator(".product-card")).toHaveAttribute("data-side", "front");
+  await expect(group.getByText("This record has a saved usage snapshot. Open Details to see its source and coverage.", { exact: true })).toBeVisible();
+  await group.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(group.locator(".activity-hero strong")).toHaveText("7");
+  await expect(group.locator(".activity-meta")).toContainText("Synthetic retained source");
+  await expect(group.locator(".activity-meta")).toContainText("Measurement period not supplied");
+  await expect(group.locator(".activity-meta")).toContainText("stale");
+  await page.keyboard.press("Escape");
+  await expect(group.getByRole("button", { name: "Details", exact: true })).toBeFocused();
+  await selector.selectOption("synthetic-github-3");
+  await expect(group.getByText("The selected usage snapshot is unavailable. Usage is unknown.", { exact: true })).toBeVisible();
+  await expect(group.locator(".activity-module")).toHaveCount(0);
+  await selector.selectOption("synthetic-github-1");
+  await expect(group.locator(".activity-module")).toHaveCount(0);
+  await expect(page.getByLabel("Synthetic save operations")).toHaveText("");
+  await page.getByRole("button", { name: "Open synthetic sharing preview", exact: true }).click();
+  await expect(page.getByLabel("Synthetic publication status")).toHaveText("Nothing published");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
