@@ -2,7 +2,7 @@
 // Explicit local files only. No directory discovery, account request or persistence.
 // Run: node --no-warnings --experimental-strip-types scripts/codex-usage-preview.mjs CAPTURE.json [CAPTURE.json ...]
 import { open, constants } from "node:fs/promises";
-import { CODEX_USAGE_LIMITS, parseCodexUsageCapture, reviewCodexUsageCaptures, formatCodexUsagePreview } from "../src/domain/codex-usage.ts";
+import { CODEX_USAGE_LIMITS, CODEX_USAGE_RUNTIME_ERROR, parseCodexUsageCapture, reviewCodexUsageCaptures, formatCodexUsagePreview } from "../src/domain/codex-usage.ts";
 
 const paths = process.argv.slice(2);
 try {
@@ -29,8 +29,10 @@ try {
   const review = reviewCodexUsageCaptures(captures);
   process.stdout.write(formatCodexUsagePreview(review));
   if (review.accounts.some(account => account.conflicts.length > 0)) process.exitCode = 2;
-} catch {
+} catch (error) {
   // Do not print exception text: it may contain raw JSON, source values or private paths.
-  console.error("Could not preview Codex metadata. Supply 1–32 bounded regular JSON captures matching the supported schema. No account read or write occurred.");
+  console.error(error instanceof Error && error.message === CODEX_USAGE_RUNTIME_ERROR
+    ? CODEX_USAGE_RUNTIME_ERROR
+    : "Could not preview Codex metadata. Supply 1–32 bounded regular JSON captures matching the supported schema. No account read or write occurred.");
   process.exitCode = 1;
 }

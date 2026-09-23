@@ -2,13 +2,30 @@ import { readFileSync, mkdtempSync, writeFileSync, rmSync, symlinkSync } from "n
 import { execFileSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { parseCodexUsageCapture, reviewCodexUsageCaptures, formatCodexUsagePreview, CODEX_USAGE_LIMITS } from "./codex-usage";
 
 const fixtureText = readFileSync("tests/fixtures/codex-usage/account-snapshot.json", "utf8");
 const fixture = () => JSON.parse(fixtureText);
+const withRawCount = (raw: string) => fixtureText.replace(/("lifetimeTokens"\s*:\s*)1200/, `$1${raw}`);
+const lossyCounts = ["1e-999", "9007199254740991.1", "1.0000000000000001", "-1e-999", "9.0071992547409911e15"];
 
 describe("bounded installed Codex metadata snapshots", () => {
+  test.each(lossyCounts)("rejects lossy raw numeric token %s", raw => {
+    expect(() => parseCodexUsageCapture(withRawCount(raw))).toThrow("Invalid Codex metadata capture.");
+  });
+
+  test.each(["0", "0e-999", "1.0", "1e3", "1000e-3", "9007199254740991", "9.007199254740991e15"])("retains exact safe integer token %s", raw => {
+    expect(parseCodexUsageCapture(withRawCount(raw)).response.summary.lifetimeTokens).toBe(Number(raw));
+  });
+
+  test("unsupported JSON source-context runtime fails explicitly", () => {
+    const parse = JSON.parse;
+    const mock = vi.spyOn(JSON, "parse").mockImplementation((text, reviver) => parse(text, reviver && function (key, value) { return reviver.call(this, key, value); }));
+    try {
+      expect(() => parseCodexUsageCapture(fixtureText)).toThrow("Codex metadata preview requires JSON.parse source context (Node.js 22+).");
+    } finally { mock.mockRestore(); }
+  });
   test("keeps source totals and subsets separate, without inventing billed cost", () => {
     const review = reviewCodexUsageCaptures([fixture()]);
     const snapshot = review.accounts[0].snapshots[0];
@@ -115,6 +132,26 @@ describe("bounded installed Codex metadata snapshots", () => {
 });
 
 describe("file-only preview command", () => {
+  test("reports an unsupported numeric-source runtime without a preview", () => {
+    const legacyParse = "const parse=JSON.parse;JSON.parse=(text,reviver)=>parse(text,reviver&&function(key,value){return reviver.call(this,key,value)});";
+    const result = spawnSync(process.execPath, ["--no-warnings", "--experimental-strip-types", "--import", `data:text/javascript,${encodeURIComponent(legacyParse)}`, "scripts/codex-usage-preview.mjs", "tests/fixtures/codex-usage/account-snapshot.json"], { encoding: "utf8" });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr.trim()).toBe("Codex metadata preview requires JSON.parse source context (Node.js 22+).");
+  });
+  test.each(lossyCounts)("lossy count %s emits no partial CLI preview", raw => {
+    const directory = mkdtempSync(join(tmpdir(), "codex-usage-preview-"));
+    const path = join(directory, "private-input.json");
+    try {
+      writeFileSync(path, withRawCount(raw));
+      const result = spawnSync(process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/codex-usage-preview.mjs", "tests/fixtures/codex-usage/account-snapshot.json", path], { encoding: "utf8" });
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("Could not preview Codex metadata");
+      expect(result.stderr).not.toContain(path);
+      expect(result.stderr).not.toContain(raw);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
   const run = (...paths: string[]) => execFileSync(process.execPath, ["--experimental-strip-types", "scripts/codex-usage-preview.mjs", ...paths], { encoding: "utf8", env: { ...process.env, NODE_NO_WARNINGS: "1" } });
   test("actually previews a synthetic file and reports an exact replay", () => {
     const path = "tests/fixtures/codex-usage/account-snapshot.json";

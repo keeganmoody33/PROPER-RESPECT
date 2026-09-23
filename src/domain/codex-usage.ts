@@ -3,6 +3,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./canonical-json.ts";
 
 export const CODEX_USAGE_LIMITS = { bytes: 256_000, captures: 32, days: 3660, groups: 128 } as const;
+export const CODEX_USAGE_RUNTIME_ERROR = "Codex metadata preview requires JSON.parse source context (Node.js 22+).";
 const invalid = () => new Error("Invalid Codex metadata capture.");
 const count = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const unknownCount = count.nullish().transform(value => value ?? null);
@@ -52,10 +53,37 @@ export type CodexUsageReview = {
   }[];
 };
 
+// Compare the original decimal token with its parsed integer; Number alone can
+// underflow or round fractional source counts before schema validation sees them.
+function exactCountToken(source: string, value: number): boolean {
+  if (!Number.isSafeInteger(value) || value < 0) return false;
+  const match = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(source);
+  if (!match) return false;
+  const fraction = match[3] ?? "";
+  const coefficient = `${match[2]}${fraction}`.replace(/^0+/, "");
+  if (!coefficient) return value === 0;
+  if (match[1]) return false;
+  const exponent = Number(match[4] ?? "0");
+  if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > CODEX_USAGE_LIMITS.bytes + 16) return false;
+  const significant = coefficient.replace(/0+$/, "");
+  const scale = exponent - fraction.length + coefficient.length - significant.length;
+  if (scale < 0 || significant.length + scale > 16) return false;
+  return BigInt(significant + "0".repeat(scale)) === BigInt(value);
+}
+
 export function parseCodexUsageCapture(text: string): CodexUsageCapture {
+  let sourceContextAvailable = false;
+  JSON.parse("0", (_key, value, context?: { source?: string }) => {
+    sourceContextAvailable = context?.source === "0";
+    return value;
+  });
+  if (!sourceContextAvailable) throw new Error(CODEX_USAGE_RUNTIME_ERROR);
   try {
     if (typeof text !== "string" || text.length > CODEX_USAGE_LIMITS.bytes || new TextEncoder().encode(text).byteLength > CODEX_USAGE_LIMITS.bytes) throw invalid();
-    return captureSchema.parse(JSON.parse(text));
+    return captureSchema.parse(JSON.parse(text, (_key, value, context?: { source?: string }) => {
+      if (typeof value === "number" && (!context?.source || !exactCountToken(context.source, value))) throw invalid();
+      return value;
+    }));
   } catch { throw invalid(); }
 }
 

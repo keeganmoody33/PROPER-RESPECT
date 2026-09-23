@@ -37,6 +37,8 @@ For an owner-supplied capture, follow the synthetic envelope exactly:
 
 The CLI accepts 1–32 explicitly named regular JSON files, each at most 256,000 bytes. It refuses directories, symlinks and invalid UTF-8, bounds the read even if a file grows, and performs no discovery or network operation. Up to 3,660 unique daily dates and 128 source thread groups per capture are allowed. Counts must be nonnegative safe integers. Labels/identifiers are bounded ASCII identifiers, not prose. Unsupported versions, mismatched thread scope, invalid dates, duplicate day buckets and impossible cached/net-new counts are rejected with one fixed error. No partial preview is printed when an input fails validation.
 
+The raw JSON boundary requires `JSON.parse` reviver source context, supported by the verified Node.js 22.17.0 runtime. It checks each original numeric token against its exact integer value before schema normalization. A runtime without that capability fails explicitly; it never falls back to rounded Number validation. Exact decimal/scientific integer forms remain valid. The in-memory review API cannot recover digits a caller already lost before constructing its numeric inputs; use the raw-file parser for source-fidelity validation.
+
 Exit codes: 0 for a valid preview, 1 for invalid/unreadable input, 2 when same-identity variants conflict. Conflicts quarantine all variants rather than exposing a selected figure. Different captures remain independent even when periods overlap. Different owner/account namespaces never collide. These caller-supplied namespaces are partitioning metadata, **not authorization**; any future authenticated import must bind ownership independently.
 
 ## Semantics and privacy boundaries
@@ -56,6 +58,14 @@ RED: focused tests initially failed because the new adapter did not exist. `/tmp
 GREEN: 27 focused tests cover source/subset preservation, null/zero, exact micro-unit formatting, inconsistent totals, replay/order determinism, overlapping snapshots, same-identity conflicts, account/owner partitioning, source dates, required scope, version/date/integer/bucket/group bounds, unexpected content, malformed JSON, actual CLI replay, safe CLI diagnostics, filesystem/encoding rejection and conflict exit status. `/tmp/codex-usage-u4-final-tests.log`.
 
 Focused ESLint, `npm run typecheck` and `git diff --check` pass. Actual file-to-readable-preview command was run and its output inspected. Tests use synthetic fixture files only. No service or account was started.
+
+### Independent review precision correction
+
+Review of `eea232f2c78c84cb030a2046a7c66ab1149d8334` found that ordinary JSON parsing rounded raw `1e-999`, `9007199254740991.1` and `1.0000000000000001` into otherwise valid integers. Reproduced those cases, negative underflow and scientific-notation rounding at the raw parser and actual CLI boundaries: **11 failed, 34 passed** (`/tmp/u4-exact-number-red.log`).
+
+The parser now compares decimal coefficient/exponent source text with the parsed safe integer using bounded string normalization and exact BigInt comparison. No rounded count is accepted, no missing count becomes zero, and no large exponent causes an unbounded allocation. Zero remains legitimate, including exact scientific zero. Runtime capability is checked before parsing a capture and produces a fixed unsupported-runtime diagnostic when unavailable. Input errors retain the fixed private-safe diagnostic.
+
+**46 focused tests pass** after the correction (`/tmp/u4-exact-number-green.log`), including all original 27 tests, raw precision-loss cases, exact integer forms through MAX_SAFE_INTEGER, simulated unsupported source-context runtime, and actual CLI subprocess checks. Each lossy CLI case supplies a valid first file followed by the malformed numeric file and verifies exit 1, empty stdout and no path/raw-number leakage. Focused ESLint, typecheck (`/tmp/u4-exact-number-typecheck.log`) and diff checks pass. The fixture is unchanged and no account data was acquired.
 
 ## Next private acceptance gate
 
