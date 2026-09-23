@@ -21,6 +21,24 @@ const syntheticEvidence: InventoryEvidence[number] = {
   suggestedActivity: { kind: "contributionCalendar", attributionScope: "PERSONAL", capturedAt: "2026-09-18T12:00:00.000Z", freshness: "STALE", provenanceLabel: "Synthetic retained source", total: 7, days: [{ date: "2026-09-17", count: 7, level: 1 }] },
 };
 
+const groupedGitHub: InventoryData = {
+  hasMore: false,
+  cards: ["Email discovery", "GitHub activity", "Earlier review", "Manual note"].map((headline, index) => ({
+    ...initial.cards[0],
+    product: { ...initial.cards[0].product, name: "GitHub", slug: "github", domain: "github.com" },
+    prop: {
+      ...initial.cards[0].prop,
+      _id: `synthetic-github-${index + 1}` as Id<"props">,
+      headline,
+      note: index === 1 ? "Synthetic source-associated activity record." : "Synthetic narrative without measured usage.",
+      ...(index === 1 ? {
+        activity: syntheticEvidence.suggestedActivity,
+        activityEvidenceId: syntheticEvidence.id,
+      } : index === 2 ? { activityEvidenceId: "synthetic-unavailable-snapshot" as Id<"rawEvidence"> } : {}),
+    },
+  })),
+};
+
 export function InventoryFixture() {
   const [data, setData] = useState(initial);
   const [evidence, setEvidence] = useState<InventoryEvidence>([]);
@@ -43,7 +61,7 @@ export function InventoryFixture() {
       return { ...previous.result, duplicate: true };
     }
     const version = args.expectedVersion + 1;
-    const next: InventoryData = { ...data, cards: data.cards.map(item => ({ ...item,
+    const next: InventoryData = { ...data, cards: data.cards.map(item => item.prop._id !== args.propId ? item : ({ ...item,
       previousStatuses: item.prop.confirmedAt ? [item.prop.status] : [],
       prop: { ...item.prop, status: args.status, goTo: args.goTo, headline: args.headline, note: args.note,
         startedAt: args.startedAt, supportingUrl: args.supportingUrl, relationshipVersion: version,
@@ -61,6 +79,7 @@ export function InventoryFixture() {
     return result;
   }
   return <>
+    <button type="button" onClick={() => setData(groupedGitHub)}>Load grouped GitHub fixture</button>
     <button type="button" onClick={() => { loseNextResponse.current = true; }}>Simulate one lost save response</button>
     <output aria-label="Synthetic save operations">{attempts.join("\n")}</output>
     <PrivateInventoryView data={data} onSave={onSave} onImport={async packet => {
