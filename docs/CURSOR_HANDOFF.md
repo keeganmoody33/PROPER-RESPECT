@@ -1,22 +1,79 @@
-<!-- Retained recheck release verified 2026-09-19 -->
+# Cursor continuation: Proper Respect
 
-> **Status correction — 2026-09-21:** Inspected remote main is `3a1413f3deb34c417cb9bdbdbfa4d34096e47e77` after owner merges through #31. This PR #28 branch retains its earlier e086131 base; it does not contain the later merged work. Production remains the last recorded 32aa043 release; no release follows from merge. Earlier branch/gate narratives below are dated history. Continue through #24 and the September 20 triage receipt. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
-## Latest hosted checkpoint
+Updated: 2026-09-23. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
 
-`32aa043c48ee32686b3c656127f2d58ed7d1388b` is deployed to Vercel
-`dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh` and production Convex `striped-chicken-693`.
-The single approved retained-only pass is complete. It checked 969 stored headers,
-matched 118 and retained 20 private candidates with brand snapshots. All original
-rows, saved decisions, source/cursor state and publication are unchanged.
-No new provider read or publication occurred. Development remains `a2539b9`.
-See [the live receipt](verification/2026-09-19-retained-recheck-production.md).
+## Current checkpoint
 
-The GitHub native-session correction `82faddf` remains local and unreleased.
-Do not treat branch HEAD as hosted. Fresh sign-in, remaining owner review and an
-exact approved public projection remain open. The retained-only authorization
-is exhausted; do not rerun it or start a new provider read automatically.
+Continue from the accepted work and [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24).
+Main includes PRs #25–64. Runtime changes from PRs #52, #58, #60, and #64
+remain excluded from production.
+The backend and frontend have distinct accepted commits. Read the
+[release reconciliation](verification/2026-09-23-release-documentation-reconciliation.md)
+for the exact SHAs, deployment, source comparison, and hosted evidence.
 
-## PR #22 GitHub lookup correction — September 20, 2026
+Production is native on `https://proper-respect.com`. The September 23 release
+adds the empty-collection first-tool flow, private-save confirmation, and optional
+public identity until sharing. Existing-owner collection access works. Fresh
+hosted signup, email-code delivery, second-user isolation, and provider
+reconnect/revocation remain unproven.
+
+The owner wants the `lecturesfrom` handle. Its canonical migration is merged in
+PR #52 but remains unreleased and unapplied. The four-card publication is still
+at `/keegan`; `/lecturesfrom` returns 404. Keep the live URL in runnable examples
+until the separately approved migration and public verification are complete.
+Do not silently migrate or publish a profile.
+
+## Continue in the accepted checkout
+
+Read `AGENTS.md`, [DEVELOPMENT.md](DEVELOPMENT.md), this file, and the
+[original Tasks 1–4 Ref](https://plan.ref.tools/oUl8LCIQb32SAicK). Track current
+work in the [delivery Ref](https://plan.ref.tools/rjPzMsTtYGRHP7TA) and
+[Ora Ref](https://plan.ref.tools/d6fedvHQMy4bpEJW). Inspect `git status` and
+`git log -5 --oneline` before editing. Preserve the current accepted checkout,
+Tasks 1–4, unrelated changes, dirty checkouts, and private operator history.
+Never push `codex/proper-respect-self-test-20260916`; it contains private history.
+Do not switch an
+existing checkout to a historical branch or restart completed discovery runs.
+Use pstack-codex as the primary workflow; Compound Engineering remains available
+for focused supporting work.
+
+For a fresh machine, clone the canonical repository's `main` branch, run
+`npm ci`, and configure approved development credentials privately using
+[DEPLOYMENT.md](DEPLOYMENT.md). A development checkout of main is not an approved
+production release candidate. Run `npm run dev -- --hostname localhost` and open
+`http://localhost:3000/onboarding`. Do not seed or reimport to populate an account.
+
+Generic uploads preserve originals but do not authenticate images or parse usage.
+Email discovers candidates and brand data supplies presentation; neither proves
+usage. Go-to and relationship changes remain owner decisions. See
+[source roles](003-evidence-surfaces.md).
+
+## Remaining work
+
+- Complete the fresh-user and two-user hosted acceptance checks recorded in #24.
+- Prepare each held runtime change against the current accepted sources before
+  requesting its release. A future GitHub backend candidate must retain the
+  September 23 onboarding query; the older standalone candidate would revert it.
+- Obtain exact source authorization before new provider reads. Retained GitHub
+  and Wispr captures remain historical; no personal Wispr usage API is established.
+- Keep additional Gmail reads and recurrence paused. The completed bounded runs
+  and retained-only recheck do not authorize another run.
+- Keep data transfer and owner choices separate from deployment. Never copy a
+  development Clerk subject into production or replace the production database.
+- Use exact owner selection and preview approval for publication, followed by
+  signed-out verification. Preserve the four curated public cards.
+
+Git-triggered deployments remain disabled. The repository's Vercel build invokes
+Convex deployment; use the selective procedure in the deployment runbook for
+future releases. The native-domain transition is complete and must not be
+restarted from a September 19 checklist.
+
+## Historical source corrections
+
+The following entries retain the September 20 implementation history. Their
+original verification receipts remain unchanged; current release status is above.
+
+### PR #22 GitHub lookup correction, September 20, 2026
 
 The owner authorized the Devin findings on
 [PR #22](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22) with review body
@@ -29,22 +86,21 @@ when no CONNECTED connector exists. No new evidence index or current-account
 table was added.
 
 This correction is merged to `main` as `4df11b5fd3ff4e4747f61fa2d72998842970fd7b`
-(head `a29ceab24db4a0bd3ac34e69e5140f6398937963`). It is **not deployed**.
-Production remains `32aa043` / `dpl_8zGq3Exu68QgVvCKmdy4Hm9SoRTh` / Convex
-`striped-chicken-693`. Do not deploy or sync Convex from this note. See
+(head `a29ceab24db4a0bd3ac34e69e5140f6398937963`). At that checkpoint it was not deployed. The accepted September 23 sources
+include the correction. This history does not authorize a new synchronization. See
 [the lookup receipt](verification/2026-09-20-github-connector-precedence.md).
 
-## Upload replay issuer binding — September 20, 2026
+### Upload replay issuer binding, September 20, 2026
 
 [Issue #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) first
 item: verified `retainUpload` replay now requires the current
 `tokenIdentifier` to match stored `uploadAttribution`. Legacy rows without
 attribution still replay for the same owner. Merged to `main` as
-`d27920adc5c0e6af3b7597a6e93126df0c5af490`. Source-only; it does not release
-the upload boundary. See
+`d27920adc5c0e6af3b7597a6e93126df0c5af490`. That merge was source-only; the accepted September 23 backend now contains
+the issuer-bound upload correction. See
 [the replay receipt](verification/2026-09-20-upload-replay-issuer.md).
 
-## GitHub capture chronology — September 20, 2026
+### GitHub capture chronology, September 20, 2026
 
 Without a live connector, GitHub snapshots inside the existing 200-proof
 window rank by capture time, not proof attachment time. CONNECTED connector
@@ -52,184 +108,25 @@ and owner-selected links still win. Merged to `main` as
 `e086131a03d7a68ea50b2feca298a11d152a40f5`. See
 [the chronology receipt](verification/2026-09-20-github-capture-chronology.md).
 
-## Unknown-product identity collisions — September 20, 2026
+### Unknown-product identity collisions, September 20, 2026
 
-Next #24 item that does not need a new evidence index: unknown `app.*` hosts
+The merged #24 correction means unknown `app.*` hosts
 no longer share the first hostname label as a slug. Derived identities use a
 37-character SHA-256-derived key of the normalized full hostname, preserving
 DNS label boundaries without exceeding the card key limit. Catalog matches are
 unchanged. See
 [the identity receipt](verification/2026-09-20-unknown-product-identity.md).
 
-# Cursor continuation — Proper Respect
-
-Updated: 2026-09-19. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
-Earlier released source: `d2266faff48bf764e56e93a8536d0fba9ab3783b`, available on
-`origin/codex/cursor-handoff-20260919` and PR #22. The upload and GitHub branches
-are reconciled. Verify current main/PR state before further Git operations.
-
-## Current release — hosted discovery
-
-Production application/backend now runs `5a0b77fe936c62df60b5a1924c2161b097288006`,
-Vercel `dpl_AJeXca75XZNAhM3NYuhRfYRDcdLX`, Convex `striped-chicken-693`.
-The owner approved hosted setup and this release. Origin, encryption and separate hosted Google OAuth client configuration are
-complete. The real OAuth start exposed an invalid server Clerk key, now repaired,
-then native Convex integration versus legacy-template incompatibility. Fix
-`5a0b77fe936c62df60b5a1924c2161b097288006` passes all final checks and was released
-with exact owner approval. Actual Add Gmail account reaches Google account selection.
-Both hosted Gmail accounts completed consent and separately approved bounded runs.
-Lectures From: 634 headers examined, 625 retained. Personal: 985 examined, 978
-retained. Five new private product cards await review. Both runs are terminal
-LIMIT_REACHED; historical coverage remains partial. No next run is authorized.
-See [the live proof](verification/2026-09-19-hosted-discovery-proof.md).
-Do not repeat setup approval or start a mailbox read without its bounded authorization.
-The live run changed only permitted discovery/presentation state; preexisting
-relationships and the published snapshot remain unchanged. No recurrence, private
-transfer or publication occurred. Do not restart either completed run.
-Read [the release receipt](verification/2026-09-19-hosted-gmail-release.md).
-Older release details below are historical; development remains at `a2539b9`.
-
-## Open the working product
-
-Current production source is `8b6aa9a2cd4fb452d7e5c54d54371f4a7580d594`, released
-with explicit owner approval to Vercel `dpl_4oRkjCrgWWbTJYkDJCYyxmXD4ZN2` and
-Convex `striped-chicken-693`. Hosted sharing membership checks passed; all 32
-application tables remained unchanged. Full mobile collection acceptance remains
-open because the existing GitHub record selector overflows a narrow viewport.
-See [the current release receipt](verification/2026-09-19-membership-production-release.md).
-The older hosted-release paragraphs below are historical.
-
-Local continuation now fixes that mobile selector overflow and removes brand
-retrieval diagnostics from normal cards. Durable catalog/history discovery with
-pause/resume/cancel is implemented and fixture-verified, but not deployed.
-Hosted Gmail has no connected accounts or required mailbox configuration; prior
-Gmail proofs were development-only. Continue from local HEAD, not the older remote
-release. Read [the discovery receipt](verification/2026-09-19-durable-discovery.md)
-for exact limits, checks and pending setup/release/consent gates.
-
-The owner approved keeping the existing `lecturesfrom` account/site handle.
-The `/keegan` restoration is cancelled and its undeployed helper is retired from
-active source. Preserve the legacy four-card `/keegan` publication. At present,
-`/lecturesfrom` has no published snapshot. Do not silently migrate or publish one.
-See [the local sharing correction](verification/2026-09-19-publication-membership.md).
-
-Production is synchronized at `8b6aa9a`; development remains at `a2539b9`.
-This release did not authorize or perform a development synchronization. Existing-session development loading and anonymous query
-rejection passed; all 32 application tables remained unchanged. No production
-release, transfer or publication accompanied that earlier development synchronization.
-The separately approved production release is recorded above. Read
-[the synchronization receipt](verification/2026-09-19-profile-development-sync.md) and
-[the dated readiness receipt](verification/2026-09-19-public-profile-readiness.md)
-before restarting the local authenticated application or changing environments.
-
-**September 19 hosted release:** https://proper-respect.com/onboarding forwards
-to `props.lecturesfrom.com`. Application/backend `d2266faff48bf764e56e93a8536d0fba9ab3783b`
-is deployed to Vercel `dpl_DD4jWfKFtrCKYAPxvK8ufntusCW6` and production Convex
-`striped-chicken-693`. All 32 existing tables are unchanged. Existing signed-in
-collection reload, export controls and sharing preview pass; private originals,
-newer owner choices and live maintenance remain separate acceptance work.
-See [the release receipt](verification/2026-09-19-hosted-release.md).
-
-On this Mac, the accepted checkout is
-`/Users/keeganmoody/Downloads/PROPER-RESPECT-self-test-20260916`.
-Its ignored `.env.local` already contains development configuration.
-Continue on `codex/personal-release-main`; do not switch to older local main. The original
-`codex/proper-respect-self-test-20260916` branch retains private operator history
-and must not be pushed to the public repository. Open this
-folder in Cursor. Do not substitute the older dirty `Downloads/PROPER-RESPECT`
-checkout or a frozen Codex worktree.
-
-Read `AGENTS.md`, `docs/DEVELOPMENT.md`, this file, and the
-[existing Ref](https://plan.ref.tools/oUl8LCIQb32SAicK). Inspect `git status` and
-`git log -5 --oneline` before editing. Use pstack-codex as the primary workflow, per the September 19 owner correction.
-Compound Engineering is available for focused supporting work.
-
-For a fresh machine, clone the canonical repository's `main` branch, run
-`npm ci`, and configure approved development credentials privately using
-`docs/DEPLOYMENT.md`. Credentials and original evidence are not in Git.
-
-Run `npm run dev -- --hostname localhost`, then open
-`http://localhost:3000/onboarding`. Use the real owner sign-in; a new browser
-session may need Google/Clerk consent. Do not seed or reimport to populate it.
-
-## Continue from proven work
-
-Application checkpoint `6bf69c2476c8f4eb0e94136b9c893c23ca3c878e` is synchronized
-to development `utmost-mongoose-374` under the completed exact-target approval.
-The upload fix retains JSON and other accepted exports as FILE_UPLOAD rather
-than screenshots, with private supporting context. It does not parse usage.
-See [the upload verification receipt](verification/2026-09-19-export-uploads.md).
-The owner's actual Devin JSON retention remains unverified. The private collection already contains owner-saved
-relationships. Real retained intake, owner review/save, reload, fresh sign-in,
-Context.dev card branding and bounded Gmail discovery were verified. Exact
-receipts are in `docs/verification/2026-09-18-personal-product-delivery.md` and
-its JSON companion (public placeholders; detailed receipts remain private). Subsequent security updates do not reauthorize any source.
-
-The product tells the owner's history with tools, including testing, go-to,
-stopping and returning. Go-to and relationship changes remain owner decisions.
-Email discovers possible relationships; product APIs/exports supply activity
-when available. Brand data supplies presentation only. See
-`docs/003-evidence-surfaces.md`; generic uploads do not yet authenticate images
-or extract Screen Time automatically.
-
-## Current integration
-
-Private GitHub account destinations, optional account-link sharing through
-explicit preview, selectable connector snapshots, first-upload owner binding,
-CONNECTED-first / newest-200 GitHub lookup, verified upload-replay issuer
-binding, and capture-time GitHub chronology are on `main` via PRs #23, #22,
-#26 and #27. They are not a production deploy of that tree. Unknown-product
-hostname identity is on this follow-up branch only. Full personal-release
-acceptance remains unfinished. Do not publish private URLs or change owner
-choices during verification.
-
-## Branch disposition checked September 19
-
-PR #22 carries the reconciled release; verify its current review/merge status. Keep one active delivery branch, `codex/personal-release-main`.
-Do not merge every branch to make the list shorter.
-
-- `codex/composio-integration-20260918` at `00a097f` preserves explicitly incomplete
-  integration work; consult `docs/COMPOSIO_CURSOR_HANDOFF.md` on that branch before
-  resuming it. It is not an accepted production replacement.
-- The Composio spike and onboarding prototype branches are retained references.
-- `codex/proper-respect-self-test-20260916` contains private operator history and
-  must never be pushed to the public remote.
-- The original `Downloads/PROPER-RESPECT` checkout is dirty with local agent setup
-  and generated files. Preserve it; do not sweep those files into this release.
-- Frozen worktrees have Finder metadata changes. Leave them alone.
-
-## Next unfinished work and exact gates
-
-- Finish hosted acceptance and the scoped transfer of newer development-only
-  private records and owner choices to the verified production owner. Never
-  copy a development Clerk subject or replace the production database.
-- Use the existing direct GitHub connector for the next supported activity
-  refresh proof under exact source authorization. The retained GitHub/Wispr
-  captures remain historical. No personal Wispr usage API is established.
-- Additional Gmail reads are paused: the approved four pages/twenty headers
-  were exhausted. Recurring collection remains off. Source reads, recurrence,
-  development sync, release and publication retain their existing gates.
-- Git-triggered Vercel deployment remains disabled in `vercel.json`. The
-  September 18 manual production release was authorized and completed;
-  subsequent releases retain their applicable approval boundary.
-- **proper-respect.com on Cloudflare** has verified DNS and HTTPS routing to
-  the existing host. Making it the primary host still needs matching Clerk,
-  callback and canonical/OpenGraph configuration; do not remove the working
-  redirect before authentication is ready there.
-- Production remains `props.lecturesfrom.com` / Convex `striped-chicken-693`.
-  Preserve its four curated public cards. Hosting does not approve publication;
-  sharing needs the owner's exact preview approval and signed-out verification.
-
 ## Preserved work and PR audit
 
 - Task 1, Gmail implementation and owner-auth fixes are complete; do not relaunch.
 - Composio evaluation `b562bf0a6d6f296a62f2d1a5ea827e985f1177b3` is complete,
-  separately preserved and unaccepted as a production replacement.
+  separately preserved, unaccepted as a production replacement, and nonblocking.
 - Prototype checkpoint `b19ab3ea7b2c69ab5bdf7bc1089241ed94118b6e` stays separate;
   A/B remains unselected and does not block the working collection.
 - PR #19's key fix is already included. PR #18's dependency proposal was stale;
   the current lockfile security repair replaces it. PR #17's old UI/seed must
-  not replace current code; its useful metadata remainder is recorded above.
+  not replace current code; its useful metadata work is now in the accepted source.
   PR #3's optional skill bundle is not adopted. Verify their current GitHub
   state before any further action.
 - The checked-in CE example contains comments only; it activates no settings.

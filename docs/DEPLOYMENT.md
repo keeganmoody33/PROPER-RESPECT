@@ -1,67 +1,41 @@
 # Deployment runbook
 
-> **Status correction — 2026-09-20:** Main is e086131 after owner merges #25/#26/#27; last recorded production is 32aa043. The issuer-replay correction is merged but not deployed. Older live-release/consent statements below are historical; additional reads and recurrence remain paused. Upload release still requires separate backend-first authorization. Phase 2 source preparation is recorded in [canonical-origin verification](verification/2026-09-20-canonical-public-origin.md); no hosting or authentication migration has occurred.
+Updated: 2026-09-23. Production uses separate accepted backend and frontend
+sources. Main contains changes still held from production. Use the
+[release reconciliation](verification/2026-09-23-release-documentation-reconciliation.md)
+for exact identities and the selective-release evidence before preparing a release.
 
-## Phase 2 canonical public origin — source preparation
+## Current public origin
+
+The native `https://proper-respect.com` cutover is complete. Production public
+pages and existing-owner access have been verified there. Fresh hosted signup,
+email-code delivery, and second-user isolation remain separate acceptance work.
+The September 21 Clerk Hobby primary-domain migration invalidated existing
+sessions. The old host redirects public links; retained callbacks and DNS support
+an explicit rollback plan, not simultaneous old-host authentication. Public
+redirect continuity does not prove authenticated rollback. The former
+apex-to-`props.lecturesfrom.com` sequence is historical, not a current setup task. Its source preparation remains in the
+[September 20 receipt](verification/2026-09-20-canonical-public-origin.md).
 
 `PUBLIC_SITE_ORIGIN` controls canonical URLs, OpenGraph/Twitter URLs, the generic
-share image and root sitemap. It is server-side, must be an HTTPS origin in
-production, and does not infer authority from Host or forwarded headers.
-Production rendering and deployment preflight reject missing/invalid values.
-Preview pages are noindex. The sitemap lists only the public landing page; it
-does not enumerate owners or privately saved profiles. Profile metadata uses
-the existing published-only read model. The share image contains no user data.
+share image, and sitemap. Production uses `https://proper-respect.com`. The value
+is server-side, must be an HTTPS origin in production, and does not infer authority
+from Host or forwarded headers. Production rendering and deployment preflight
+reject missing or invalid values. Preview pages are noindex.
 
-For a separately approved release before cutover, use
-`PUBLIC_SITE_ORIGIN=https://props.lecturesfrom.com`. Change it to
-`https://proper-respect.com` only as part of the approved native-host cutover.
-This variable does not change `MAILBOX_APPLICATION_ORIGIN`, Clerk domains,
-Google redirect URIs, Convex auth issuers or allowed origins.
+The sitemap includes the homepage and Origins, Contact, and Privacy pages with
+last-modified dates. It does not enumerate owners or private profiles. Profile
+metadata uses the published-only read model; the generic share image contains
+no owner data. This origin variable does not configure Clerk, Google redirect
+URIs, Convex auth issuers, or `MAILBOX_APPLICATION_ORIGIN`.
 
-Required cutover sequence (not authorization):
+## Deployment controls
 
-1. Verify existing Vercel project `groundskeep/proper-respect`, old-host TLS,
-   public profile and signed-in owner access. Record the working deployment and
-   current redirect/configuration for rollback.
-2. Obtain separate exact-target authorization for Clerk/OAuth/domain changes.
-   Preserve the old host as a working fallback while configuring and verifying
-   the new host. Do not replace an issuer in a way that creates new owner
-   identities or silently rebinds existing accounts.
-3. Configure and verify the new application's Clerk origin, callback allowlists
-   and Convex alignment. A callback URI registration is not permission for a
-   provider read. Old-host sign-in and callbacks must remain valid during this
-   stage; do not redirect callback traffic before verification.
-4. Release the approved source, respecting backend-first upload synchronization,
-   remove the apex's 307 in Vercel, and verify native apex TLS, owner sign-in,
-   published metadata/share image, and unchanged private/public state. Only then
-   demote the old host to the approved redirect policy. Verify fallback and avoid
-   opposing redirects that loop.
-5. On failure, remove any old-host redirect before restoring the apex-to-old-host
-   307, restore the previous approved origin/auth settings and compatible frontend
-   using the [rollback procedure](#rollback),
-   then reverify old-host public and authenticated behavior. No database restore,
-   seeding, owner transfer or publication belongs to this rollback.
-
-## Code synchronization and the owner's domain — September 18, 2026
-
-The owner reports owning **proper-respect.com**, registered through Cloudflare.
-DNS and HTTPS redirect to `props.lecturesfrom.com` are verified. The September 19
-release of `7fa18a7` is live; hosted Gmail client configuration is complete.
-Manual account consent remains pending. See
-[the current receipt](verification/2026-09-19-hosted-gmail-release.md).
-Clerk domain/OAuth callback migration remains separate from this working redirect.
-
-GitHub consolidation is separate from a hosted release. `vercel.json` sets
-`git.deploymentEnabled` to `false`, disabling automatic preview and production
-deployments from Git pushes. The existing build command is retained for a later
-explicitly approved release and still invokes **Convex deployment**. Manual
-Vercel deployments remain consequential and require exact-target approval.
-Do not remove the Git deployment guard merely to make a PR status appear.
-See [Vercel's Git configuration](https://vercel.com/docs/project-configuration/git-configuration#turning-off-all-automatic-deployments).
-
-During hosted release acceptance, finish canonical/OpenGraph origin metadata
-against the selected, verified public domain. That useful remainder from PR #17
-does not justify restoring its old seeded profile or superseded card layout.
+`vercel.json` sets `git.deploymentEnabled` to `false`. Git pushes do not create
+preview or production deployments. Its build command still runs
+`npm run deploy:check && npx convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL`.
+A manual Vercel deployment with that command also synchronizes Convex. Do not
+use it for a frontend-only release or remove the Git guard to obtain a PR check.
 
 PROPER-RESPECT has three configuration boundaries:
 
@@ -100,7 +74,10 @@ There is intentionally no shared `GITHUB_TOKEN` or `DEVIN_API_KEY`:
 - Devin uses a per-user organization token submitted during onboarding and
   encrypted before it is stored in Convex.
 
-### Context.dev local verification — September 17, 2026
+### Historical Context.dev verification, September 17–18, 2026
+
+The following records describe those dated development operations only. They
+do not inventory current production configuration or authorize another run.
 
 The brand adapter and queued Convex persistence are separate from mailbox and
 usage evidence. A canonical catalog slug and exact catalog domain are required.
@@ -138,7 +115,12 @@ configuration, not rotation; no GitHub/Devin connection or provider read followe
 The [current delivery receipt](verification/2026-09-18-personal-product-delivery.md)
 distinguishes these runtime changes from the earlier schema-only synchronization.
 
-## 1. Configure Clerk
+## Configuration reference for a separately authorized setup
+
+The existing production environment is configured. These setup instructions
+are not steps to repeat for an application release.
+
+### 1. Configure Clerk
 
 Use a production Clerk instance for the production domain.
 
@@ -150,15 +132,15 @@ Use a production Clerk instance for the production domain.
 3. With the native Convex integration, Clerk session claims contain
    `aud: "convex"`; use the session token directly. A legacy setup instead needs
    a JWT template named `convex`. Do not create a legacy template just to work
-   around a route that ignores native sessions. Hosted Gmail already handles
-   both modes. The GitHub route correction remains a separate local follow-up
-   until explicitly released and verified.
+   around a route that ignores native sessions. The accepted source handles
+   native sessions; a new sign-in and provider lifecycle proof remain separate
+   from that implementation.
 4. Enable GitHub under Clerk social connections and configure its production
    OAuth callback/domain settings.
 5. Copy the matching production publishable and secret keys. Both keys must be
    from the same Clerk environment (`pk_live_` with `sk_live_`).
 
-## 2. Configure Convex production
+### 2. Configure Convex production
 
 Generate the connector encryption key once:
 
@@ -183,7 +165,7 @@ Do not casually rotate `CONNECTOR_ENCRYPTION_KEY`. Existing connector
 credentials require the original key; rotation needs a deliberate
 decrypt-and-re-encrypt migration.
 
-## 3. Configure Vercel
+### 3. Configure Vercel
 
 Copy the Vercel variables from `.env.example`, replacing placeholders with the
 production Convex URL and matching Clerk live keys. Apply them to Production
@@ -212,31 +194,38 @@ npm run deploy:check:strict
 The check reports variable names and validation errors only; it never prints
 credential values.
 
-## 4. Deploy in order
+## Prepare a selective release
 
-Deploy the Convex schema and functions before the Next.js application:
+1. Record the accepted backend and frontend from the release reconciliation.
+   Compare the proposed source with each baseline. Exclude the held runtime
+   changes in PRs #52, #58, #60, and #64 unless their release is separately approved.
+2. Prepare an isolated candidate with only the approved changes. Keep the
+   accepted Convex source in a frontend-only candidate. Do not upload main or
+   assume that backend and frontend must share one Git commit.
+3. If the frontend needs a backend change, review and obtain approval for the
+   exact backend source and target first. Verify the complete deployed bundle
+   after synchronization before proceeding with the dependent frontend.
+4. For a frontend-only upload, follow the verified procedure in the
+   [September 22 release receipt](verification/2026-09-22-ora-release-and-rescan.md#source-and-release).
+   In an isolated deployment package, override `vercel.json` to use
+   `npm run deploy:check && npm run build`. Verify that both the uploaded project
+   settings and the actual remote build log use that command. Keep the shared
+   project settings unchanged.
+5. Verify the candidate before promotion. After the approved promotion, verify
+   the production alias, public behavior, existing-owner continuity, and unchanged
+   backend. Record the candidate, source SHAs, and deployment identity together.
 
-```bash
-npx convex deploy
-```
+The September 23 release used this separation and retained distinct backend and
+frontend commits. Its exact results and remaining acceptance work are in the
+release reconciliation. The prior operation's approval does not authorize a new
+release, configuration change, provider read, migration, or publication.
 
-Then deploy the same Git commit to Vercel. Confirm that
-`NEXT_PUBLIC_CONVEX_URL` points to the Convex deployment that received the
-backend deploy. A dev URL paired with a production deploy key is an invalid
-configuration even if both values work independently.
+The existing `/keegan` profile contains four curated public cards. Do not seed,
+replace production with development data, or migrate it as part of a release.
+`npm run convex:seed:prod` is an initial-setup operation requiring separate
+explicit authorization. It is not a smoke test.
 
-The existing `props.lecturesfrom.com/keegan` already has curated production data.
-Do not rerun the seed for this release or replace production with development
-data. The seed command below is only for a separately authorized initial setup:
-
-```bash
-npm run convex:seed:prod
-```
-
-`seedKeegan` is an internal Convex mutation: browser clients cannot invoke it,
-but an authenticated deployment operator can run it through the Convex CLI.
-
-## 5. Production smoke test
+## Production smoke test
 
 After an explicitly approved application/backend release:
 
@@ -283,7 +272,10 @@ Updated: 2026-09-21 UTC.
   or rotate `CONNECTOR_ENCRYPTION_KEY` as part of application rollback. Any data
   migration requires its own reversible plan and authorization.
 
-## Gmail configuration and operation — September 18, 2026
+## Historical Gmail configuration and operation, September 18, 2026
+
+These dated development results and original read limits are retained for
+reference. They are not current configuration instructions or fresh authorization.
 
 The authorized development verification passed for private intake, owner review and persistence. Detailed account results, personal relationship choices and mailbox classifications are retained in private operator receipts; public source verification is recorded in [the main-consolidation receipt](verification/2026-09-18-main-consolidation.md). No new source operation or publication follows from code integration.
 
@@ -384,12 +376,11 @@ re-extraction versions and complete historical coverage remain outside this
 slice. The real known-product capture/candidate gate is closed, without
 converting mailbox evidence into signup, payment or human-usage claims.
 
-## Authenticated file uploads — September 19 PR #23, not yet deployed
+## Authenticated file uploads
 
-The first-upload ownership fix replaces exposed storage upload URLs with an
-owner-bound ticket and authenticated Convex HTTP action. Deploy its additive
-schema/functions/HTTP action before the matching frontend, only with release
-authorization. Convex supplies `CONVEX_SITE_URL`; no additional secret is needed.
+The accepted backend includes first-upload ownership and issuer-bound replay.
+It replaces exposed storage upload URLs with an owner-bound ticket and an
+authenticated Convex HTTP action. Future changes must preserve that boundary. Convex supplies `CONVEX_SITE_URL`; no additional secret is needed.
 Old clients receive a reload instruction. New uploads accept the same formats
 up to **19 MiB**, below the HTTP action's 20 MB request limit. Existing retained
 files are unchanged. The private UI explicitly marks legacy uploader attribution
