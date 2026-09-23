@@ -35,3 +35,9 @@ During fixture development, an exact label query for a select and mock normaliza
 ## Remaining acceptance
 
 Real fresh login/signup, email-code delivery, hosted reload, second-user isolation, provider reconnect/revocation and publication are separate acceptance gates. This slice does not claim them complete. Existing owner data was neither inspected nor changed. No deployment, backend synchronization, auth/DNS change, recurrence, provider read or publication occurred.
+
+## Independent review follow-up
+
+Finding: the existing manual-entry inventory regression still expected the old success text after the guidance change. Disposition: fix now. Reproduced its failure at the removed text in `/tmp/fresh-user-u2-inventory-red.log`. Updated only that assertion to the new private-save wording and verified the review link targets the collection. Existing replay-identity and no-invented-decisions assertions remain unchanged; the other worker's grouped-usage additions are outside this branch and were not edited.
+
+Combined verification: all 10 current account-setup and inventory browser tests passed through `/tmp/u2-combined.config.cjs`, with webpack on isolated port 8882 and the same credential-free reference environment. `/tmp/fresh-user-u2-combined.log`. Next-generated type import paths were restored to the exact pre-test file after the server stopped. No permanent configuration change was made. The subsequent combined main branch additionally contains U1's two grouped-usage cases; root must verify that final merged integration separately.
