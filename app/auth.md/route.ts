@@ -1,9 +1,11 @@
-import { authenticationMarkdown, markdownResponse } from "@/src/server/agent-discovery";
-import { publicSiteOrigin } from "@/src/server/public-site";
+import { authenticationMarkdown } from "@/src/server/agent-discovery";
 
 export function GET() {
-  return markdownResponse(authenticationMarkdown(), {
-    title: "Proper Respect authentication",
-    canonical: new URL("/auth.md", publicSiteOrigin()),
+  return new Response(authenticationMarkdown(), {
+    headers: {
+      "Content-Type": "text/markdown; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "Access-Control-Allow-Origin": "*",
+    },
   });
 }
