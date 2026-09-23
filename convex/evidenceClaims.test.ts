@@ -72,8 +72,6 @@ test("GitHub proposes observed dates only from nonzero days; account date remain
 
 test("a connected GitHub snapshot produces private review claims without setting use-start", async () => {
   const { t, owner } = await fixture();
-  // A separately keyed source must not break the legacy GitHub connector's
-  // account-keyed source lookup or be reused as its provenance bucket.
   await t.mutation(ingest, {
     handle: "owner", sourceType: "GITHUB", sourceKey: "github:another-account", signals: [],
   });
