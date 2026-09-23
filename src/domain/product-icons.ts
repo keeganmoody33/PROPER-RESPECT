@@ -1,4 +1,7 @@
-import icons from "../../public/product-assets/2026-09-21-product-icons.json";
+import previousIcons from "../../public/product-assets/2026-09-21-product-icons.json";
+import exactIcons from "../../public/product-assets/2026-09-22-product-icons.json";
+
+const icons = [...previousIcons, ...exactIcons];
 
 export type ProductIcon = (typeof icons)[number];
 

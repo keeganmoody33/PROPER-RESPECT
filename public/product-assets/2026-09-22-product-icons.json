@@ -1,0 +1,40 @@
+[
+  {
+    "productSlug": "notebooklm",
+    "canonicalDomain": "notebooklm.google.com",
+    "path": "/product-assets/notebooklm/2026-09-22/app-icon.png",
+    "width": 180,
+    "height": 180,
+    "sha256": "104fc04acd259b3e55dcfadfae7ac0c64b4171410cfc510798a03d1223913437",
+    "sourcePage": "https://notebook.google/",
+    "sourceUrl": "https://notebook.google/_/static/branding/v6/light_mode/favicon/apple-touch-icon.png",
+    "retrievedAt": "2026-09-23T01:55:05.409965+00:00",
+    "useBasis": "Official exact-product touch icon, unchanged bytes. Google identifies Gemini Notebook as the same standalone product formerly named NotebookLM. Existing card identity is preserved; no parent Google or Gemini app logo is substituted. Presentation only, no ownership or endorsement claim.",
+    "identityContinuitySource": "https://blog.google/innovation-and-ai/products/gemini-notebook/notebooklm-gemini-notebook/"
+  },
+  {
+    "productSlug": "devin-desktop",
+    "canonicalDomain": "devin.ai",
+    "path": "/product-assets/devin-desktop/2026-09-22/app-icon.png",
+    "width": 1024,
+    "height": 1024,
+    "sha256": "22eb9e3bde6afbc07451d1048729293d0c60ead674295509c1f9a359608ebb9c",
+    "sourcePage": "https://devin.ai/download",
+    "sourceUrl": "https://windsurf-stable.codeiumdata.com/darwin-arm64/stable/b98cc43128712ba73c60cca73876f58a710aaa27/Devin-darwin-arm64-3.10.31.zip",
+    "retrievedAt": "2026-09-23T01:55:05.409965+00:00",
+    "useBasis": "Original 1024px PNG (ic10) embedded in the official desktop application icon selected by its Info.plist. Desktop download chain establishes exact product identity; not inferred from the Devin/Cognition website favicon. Presentation only, no ownership or endorsement claim.",
+    "downloadResolver": "https://windsurf.com/api/windsurf/download-redirect?build=darwin-arm64&isNext=false",
+    "archiveMember": "Devin.app/Contents/Resources/Devin.icns",
+    "sourceAssetPath": "/product-assets/devin-desktop/2026-09-22/source-icon.icns",
+    "sourceAssetSha256": "1bfe15f716de895b9cf3357e5202158e7cf527e97e2cf4850912d0e2295a1e55",
+    "bundleInfo": {
+      "member": "Devin.app/Contents/Info.plist",
+      "sha256": "0559e1dda4c7d0affc38bc1ded4bfcf16e809bc43651ecb0948fe1a7a8614374",
+      "identifier": "com.exafunction.windsurf",
+      "name": "Devin",
+      "version": "3.10.31",
+      "iconFile": "Devin.icns"
+    },
+    "extraction": "ICNS ic10 PNG payload, byte-for-byte extraction; no resizing, recoloring or re-encoding. HTTP ranges read the ZIP directory and two members; whole archive was not downloaded or hashed."
+  }
+]
