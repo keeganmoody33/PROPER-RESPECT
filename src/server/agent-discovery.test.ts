@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { agentCatalog, homepageMarkdown, productIdentity } from "./agent-discovery";
+import { agentCatalog, homepageMarkdown, productIdentity, publicSiteGuide } from "./agent-discovery";
 import { contactIdentity } from "./trust-pages";
 
 afterEach(() => vi.unstubAllEnvs());
@@ -61,4 +61,26 @@ it("advertises only the available public reading guide on the configured origin"
   expect(catalog.entries[0]).not.toHaveProperty("data");
   expect(catalog.entries[0].description).toContain("not a remote MCP endpoint");
   expect(catalog.entries[0].representativeQueries).toHaveLength(2);
+});
+
+it("builds a compact public guide from configured canonical URLs and existing facts", () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
+  vi.stubEnv("VERCEL_URL", "untrusted-preview.example");
+  const guide = publicSiteGuide();
+  expect(guide.name).toBe(productIdentity().name);
+  expect(guide.description).toBe(productIdentity().description);
+  expect(guide.homepage).toBe("https://canonical.example/");
+  expect(guide.documentation).toEqual({
+    agents: "https://canonical.example/agents.md",
+    authentication: "https://canonical.example/auth.md",
+    homepageMarkdown: "https://canonical.example/index.md",
+    origins: "https://canonical.example/about/origins.md",
+    contact: "https://canonical.example/about/contact.md",
+    privacy: "https://canonical.example/about/privacy.md",
+  });
+  expect(guide.profileReading).toMatchObject({ tool: "get_current_public_profile", input: {} });
+  expect(guide.profileReading.procedure.join(" ")).toContain("supplied by the user");
+  expect(guide.limits.join(" ")).toContain("Unknown usage is not zero");
+  expect(JSON.stringify(guide)).not.toMatch(/untrusted-preview|lecturesfrom|keegan|token|credential/);
+  expect(JSON.stringify(guide).length).toBeLessThan(2500);
 });
