@@ -6,13 +6,15 @@ import {
   internalMutation,
   internalQuery,
   mutation,
+  type MutationCtx,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { activityModuleValidator } from "./validators";
-import type { ActivityModule } from "../src/domain/public-profile";
+import { activityModuleSchema, type ActivityModule } from "../src/domain/public-profile";
+import { canonicalJson } from "../src/domain/canonical-json";
 import { canRefreshMetric } from "../src/domain/onboarding";
 import { requireUser } from "./authHelpers";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { githubDateObservations } from "../src/domain/evidence-claims";
 import { publishedCardIndicesForProp } from "./publication";
 
@@ -223,6 +225,122 @@ async function fetchDevinActivity(
 
 const providerValidator = v.union(v.literal("GITHUB"), v.literal("DEVIN"));
 
+type GithubSnapshotInput = {
+  accountLabel: string;
+  product: { name: string; slug: string; domain: string; description: string; logoUrl?: string };
+  activity: ActivityModule;
+  metricKey: string;
+  value: number;
+};
+
+function githubAccount(label: string) {
+  const login = /^(?:https:\/\/)?github\.com\/([a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?)$/i.exec(label)?.[1];
+  if (!login) throw new Error("GitHub account identity unavailable.");
+  return login.toLowerCase();
+}
+
+/** Private capture retention is independent of saved relationships and publication. */
+async function retainGithubSnapshot(ctx: MutationCtx, user: Doc<"users">, args: GithubSnapshotInput) {
+  const accountId = githubAccount(args.accountLabel);
+  const activity = activityModuleSchema.parse(args.activity);
+  if (args.product.slug !== "github" || args.product.domain !== "github.com" ||
+      activity.kind !== "contributionCalendar" || activity.attributionScope !== "PERSONAL" ||
+      args.metricKey !== "github.contributions" || args.value !== activity.total ||
+      !Number.isSafeInteger(activity.total) || activity.days.length > 400 ||
+      activity.days.some(day => !Number.isSafeInteger(day.count)) ||
+      new Set(activity.days.map(day => day.date)).size !== activity.days.length) {
+    throw new Error("Invalid GitHub snapshot metric or identity.");
+  }
+  const payload = JSON.stringify(activity);
+  const observations = githubDateObservations(activity);
+  if (observations.some(observation => !payload.includes(observation.excerpt))) throw new Error("Snapshot excerpt mismatch.");
+  const sourceKey = `github-connector:${accountId}`;
+  const dedupKey = JSON.stringify(["github-snapshot-v2", user._id, accountId, activity.capturedAt]);
+  const current = await ctx.db.query("rawEvidence").withIndex("by_dedup_key", q => q.eq("dedupKey", dedupKey)).take(2);
+  const legacy = await ctx.db.query("rawEvidence").withIndex("by_dedup_key", q => q.eq("dedupKey", `${user._id}:github-snapshot:${activity.capturedAt}`)).take(33);
+  if (current.length > 1 || legacy.length > 32) throw new Error("Ambiguous retained GitHub capture identity.");
+  const matching = [...current];
+  for (const raw of legacy) {
+    const originAccount = raw.captureProvenance?.origin.accountId;
+    if (!originAccount || raw.userId !== user._id) throw new Error("Legacy GitHub capture identity unavailable.");
+    if (githubAccount(`github.com/${originAccount}`) === accountId) matching.push(raw);
+  }
+  if (matching.length > 1) throw new Error("Ambiguous retained GitHub capture identity.");
+  const existing = matching[0];
+  if (existing) {
+    const source = await ctx.db.get(existing.evidenceSourceId);
+    const provenance = existing.captureProvenance;
+    if (existing.userId !== user._id || existing.deletedAt || !source || source.userId !== user._id || source.type !== "GITHUB" ||
+        (source.sourceKey !== undefined && source.sourceKey !== sourceKey) ||
+        (current.includes(existing) && source.sourceKey !== sourceKey) ||
+        provenance?.route !== "DIRECT_API" || provenance.adapter.id !== "github-connector" ||
+        !["provider-v1", "provider-v2"].includes(provenance.adapter.version) || provenance.origin.issuer !== "GITHUB" ||
+        provenance.origin.accountId?.toLowerCase() !== accountId || provenance.origin.recordId !== activity.capturedAt ||
+        provenance.origin.artifactRef !== undefined || provenance.collector.kind !== "SYSTEM" || provenance.collector.id !== undefined ||
+        !existing.detectedUrl || githubAccount(existing.detectedUrl) !== accountId ||
+        provenance.activityActor.kind !== "UNKNOWN" || provenance.activityActor.id !== undefined ||
+        existing.capturedAt !== activity.capturedAt || existing.detectedVendor !== "GitHub" ||
+        canonicalJson(existing.suggestedActivity) !== canonicalJson(activity)) {
+      throw new Error("GitHub capture identity conflict or unavailable original.");
+    }
+    let original: unknown;
+    try { original = JSON.parse(existing.payload ?? ""); } catch { throw new Error("GitHub capture original unavailable."); }
+    if (canonicalJson(original) !== canonicalJson(activity) || canonicalJson(existing.observations) !== canonicalJson(observations)) {
+      throw new Error("GitHub capture identity conflict.");
+    }
+    // A replay never resurrects a draft, reattaches a proof or reselects activity.
+    return { propId: null, rawEvidenceId: existing._id, duplicate: true, reviewRequired: false };
+  }
+  let product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", "github")).unique();
+  if (product && product.domain !== "github.com") throw new Error("GitHub product identity changed.");
+  if (!product) product = (await ctx.db.get(await ctx.db.insert("products", args.product)))!;
+  const candidates = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", user._id).eq("productId", product!._id)).take(2);
+  let prop = candidates.length === 1 ? candidates[0] : null;
+  const drafts = await ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", user._id).eq("suggestedProductSlug", "github")).take(101);
+  if (drafts.length > 100) throw new Error("Review GitHub discovery history before retaining another capture.");
+  for (const draft of drafts) {
+    if (draft.resultPropId) {
+      const target = await ctx.db.get(draft.resultPropId);
+      if (!target || target.userId !== user._id || target.productId !== product._id) throw new Error("GitHub discovery relationship identity changed.");
+    }
+  }
+  // Legacy resultPropId was automatic, so it cannot resolve multiple records.
+  // Frozen/rejected/approved discoveries are never reopened or appended to.
+  const eligible = drafts.filter(draft => draft.status === "PENDING" && !draft.evidenceResolution && !draft.resultPropId);
+  if (eligible.some(draft => draft.suggestedDomain !== "github.com")) throw new Error("GitHub discovery product identity changed.");
+  if (eligible.length > 1) throw new Error("Ambiguous pending GitHub discoveries.");
+  let source = await ctx.db.query("evidenceSources").withIndex("by_user_type_sourceKey", q => q.eq("userId", user._id).eq("type", "GITHUB").eq("sourceKey", sourceKey)).unique();
+  if (!source) source = (await ctx.db.get(await ctx.db.insert("evidenceSources", { userId: user._id, type: "GITHUB", sourceKey, label: `${args.accountLabel} · normalized API snapshot`, connectedAt: activity.capturedAt })))!;
+  const rawEvidenceId = await ctx.db.insert("rawEvidence", {
+    userId: user._id, evidenceSourceId: source._id, payload, observations, detectedVendor: "GitHub",
+    detectedUrl: `https://github.com/${accountId}`, suggestedActivity: activity, capturedAt: activity.capturedAt, dedupKey,
+    captureProvenance: { version: 1, route: "DIRECT_API", adapter: { id: "github-connector", version: "provider-v2" },
+      origin: { issuer: "GITHUB", accountId, recordId: activity.capturedAt }, collector: { kind: "SYSTEM" }, activityActor: { kind: "UNKNOWN" } },
+  });
+  if (candidates.length === 0) {
+    const propId = await ctx.db.insert("props", { userId: user._id, productId: product._id, status: "TESTING", visibility: "DRAFT",
+      headline: "GitHub is in my stack.", note: "Connected activity is private until I approve this card.", activity });
+    prop = (await ctx.db.get(propId))!;
+    await ctx.db.insert("links", { propId, type: "CANONICAL", url: "https://github.com", label: "Open GitHub", isPrimary: true });
+  }
+  if (prop) {
+    await ctx.db.insert("proofs", { propId: prop._id, type: "API_OAUTH", label: "Private GitHub snapshot", rawEvidenceId });
+    await ctx.db.insert("usageSignals", { userId: user._id, propId: prop._id, sourceId: source._id, metricKey: args.metricKey,
+      value: args.value, capturedAt: activity.capturedAt, attributionScope: "PERSONAL", evidenceRuleVersion: "provider-v2", visibility: "DRAFT" });
+  }
+  // Unassigned evidence must remain visible to the existing explicit review flow.
+  const draft = prop
+    ? drafts.find(item => item.status === "PENDING" && !item.evidenceResolution && item.resultPropId === prop._id)
+    : eligible[0];
+  if (draft) await ctx.db.patch(draft._id, { rawEvidenceIds: [...new Set([...draft.rawEvidenceIds, rawEvidenceId])] });
+  else await ctx.db.insert("draftImports", { userId: user._id, status: "PENDING", suggestedProductSlug: "github", suggestedProductName: product.name,
+    suggestedDomain: product.domain, suggestedDescription: product.description, suggestedUrl: "https://github.com", rawEvidenceIds: [rawEvidenceId],
+    ...(prop ? { resultPropId: prop._id } : {}) });
+  await ensureProductBrand(ctx, product);
+  await ctx.db.patch(user._id, { onboardingStatus: "REVIEW", updatedAt: new Date().toISOString() });
+  return { propId: prop?._id ?? null, rawEvidenceId, duplicate: false, reviewRequired: !prop };
+}
+
 export const saveConnectedSnapshot = internalMutation({
   args: {
     authSubject: v.string(),
@@ -249,6 +367,7 @@ export const saveConnectedSnapshot = internalMutation({
       )
       .unique();
     if (!user) throw new Error("Complete account setup before connecting.");
+    const githubCapture = args.provider === "GITHUB" ? await retainGithubSnapshot(ctx, user, args) : null;
     const now = new Date().toISOString();
 
     let secret = await ctx.db
@@ -299,6 +418,8 @@ export const saveConnectedSnapshot = internalMutation({
       });
       connector = (await ctx.db.get(connectorId))!;
     }
+
+    if (githubCapture) return { connectorId: connector._id, ...githubCapture };
 
     let product = await ctx.db
       .query("products")
@@ -351,39 +472,6 @@ export const saveConnectedSnapshot = internalMutation({
     });
 
     const snapshotEvidenceIds: Id<"rawEvidence">[] = [];
-    if (args.provider === "GITHUB" && args.activity.kind === "contributionCalendar") {
-      let source = await ctx.db.query("evidenceSources").withIndex("by_user_type_sourceKey", q => q.eq("userId", user._id).eq("type", "GITHUB").eq("sourceKey", undefined)).unique();
-      if (!source) {
-        const id = await ctx.db.insert("evidenceSources", { userId: user._id, type: "GITHUB", label: `${args.accountLabel} · normalized API snapshot`, connectedAt: now });
-        source = (await ctx.db.get(id))!;
-      }
-      const payload = JSON.stringify(args.activity);
-      const observations = githubDateObservations(args.activity);
-      if (observations.some(observation => !payload.includes(observation.excerpt))) throw new Error("Snapshot excerpt mismatch.");
-      const login = args.accountLabel.match(/^(?:https:\/\/)?github\.com\/([^/]+)$/i)?.[1];
-      const rawId = await ctx.db.insert("rawEvidence", {
-        userId: user._id, evidenceSourceId: source._id, payload, observations,
-        detectedVendor: "GitHub",
-        detectedUrl: login ? `https://github.com/${login}` : undefined,
-        suggestedActivity: args.activity,
-        captureProvenance: {
-          version: 1,
-          route: "DIRECT_API",
-          adapter: { id: "github-connector", version: "provider-v1" },
-          origin: {
-            issuer: "GITHUB",
-            ...(login ? { accountId: login } : {}),
-            recordId: args.activity.capturedAt,
-          },
-          collector: { kind: "SYSTEM" },
-          activityActor: { kind: "UNKNOWN" },
-        },
-        capturedAt: args.activity.capturedAt,
-        dedupKey: `${user._id}:github-snapshot:${args.activity.capturedAt}`,
-      });
-      snapshotEvidenceIds.push(rawId);
-      await ctx.db.insert("proofs", { propId: prop._id, type: "API_OAUTH", label: "Private GitHub snapshot", rawEvidenceId: rawId });
-    }
 
     const draft = await ctx.db
       .query("draftImports")
@@ -423,7 +511,7 @@ export const connectGithub = action({
     { token },
   ): Promise<{
     connectorId: Id<"connectorAccounts">;
-    propId: Id<"props">;
+    propId: Id<"props"> | null;
   }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication required.");
@@ -455,7 +543,7 @@ export const connectDevin = action({
     { token, organizationId },
   ): Promise<{
     connectorId: Id<"connectorAccounts">;
-    propId: Id<"props">;
+    propId: Id<"props"> | null;
   }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication required.");
