@@ -61,3 +61,5 @@ The browser uses real Chromium and ProductCard at the local synthetic origin `ht
 - `test-results/components/verified-product-assets-ex-af835-s-on-both-surfaces-at-390px/2026-09-22-exact-icons-390-3x.png`
 
 No full-suite repetition, live owner/provider reads, account mutation, backend synchronization, deployment, publication or auth changes occurred. Existing product names, canonical domains and profile content remain unchanged. Root owns PR creation, review and release.
+
+Root's final identity check: the checked-in seed and canonical catalog both use `notebooklm@notebooklm.google.com` and `devin-desktop@devin.ai`. Added a regression passing existing NotebookLM/Devin Desktop names and the explicit `/download` alias through `resolveCatalogProduct` before selecting an icon. The focused icon suite then passed **4 tests**; no identity aliases or resolution rules were changed.

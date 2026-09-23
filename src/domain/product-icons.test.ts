@@ -4,6 +4,7 @@ import { expect, test } from "vitest";
 import icons from "../../public/product-assets/2026-09-21-product-icons.json";
 import exactIcons from "../../public/product-assets/2026-09-22-product-icons.json";
 import { officialProductIcon } from "./product-icons";
+import { resolveCatalogProduct } from "./discovery";
 
 test("reviewed icons require exact product identity and preserve original bytes", () => {
   for (const icon of [...icons, ...exactIcons]) {
@@ -42,4 +43,16 @@ test("Devin Desktop PNG is the unchanged embedded payload of the retained offici
     offset += length;
   }
   expect(embedded).toEqual(readFileSync(new URL(`../../public${entry.path}`, import.meta.url)));
+});
+
+test("existing catalog names and desktop download alias select the retained exact icons", () => {
+  for (const [input, slug, domain] of [
+    [{ vendor: "NotebookLM", url: "https://notebooklm.google" }, "notebooklm", "notebooklm.google.com"],
+    [{ vendor: "Devin Desktop", url: "https://devin.ai/download" }, "devin-desktop", "devin.ai"],
+    [{ url: "https://devin.ai/download" }, "devin-desktop", "devin.ai"],
+  ] as const) {
+    const product = resolveCatalogProduct(input)?.product;
+    expect(product).toMatchObject({ slug, domain });
+    expect(officialProductIcon(product!)?.productSlug).toBe(slug);
+  }
 });
