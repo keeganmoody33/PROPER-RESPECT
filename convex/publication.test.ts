@@ -233,10 +233,10 @@ test("removing a selected relationship preserves the other same-product card and
 test.each(["withheld", "fixed", "removed"] as const)("a %s public snapshot revokes earlier refresh consent only for the selected relationship", async mode => {
   const { t, owner, userId, propIds: [a, b], selection, published } = await fixture();
   const connectorId = await t.run(ctx => ctx.db.insert("connectorAccounts", {
-    userId, provider: "GITHUB", status: "CONNECTED", accountLabel: "Synthetic account",
+    userId, provider: "DEVIN", status: "CONNECTED", accountLabel: "Synthetic account",
     attributionScope: "PERSONAL", connectedAt: capturedAt,
   }));
-  const refresh = { autoRefresh: true, connectorId, metricKey: "github.contributions" };
+  const refresh = { autoRefresh: true, connectorId, metricKey: "devin.sessions" };
   await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [
     await selection(a, { ...refresh, activity: activity(1) }),
     await selection(b, { ...refresh, activity: activity(2) }),
