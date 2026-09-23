@@ -93,3 +93,16 @@ live provider compatibility has been established. No real Codex app server,
 account request, private configuration, authentication, session, or transcript
 read occurred. No frontend, API, Convex, deployment, or publication change is
 included. Independent exact-commit review and hosted CI follow this receipt.
+
+## PR 66 review remediation
+
+Reviewed head `fad5e857dded275bcafcb7673abff8cbfa49fc07`.
+
+- Ordinary `HEAD` or `head` directory rejected as Git: fixed. Any `.git` marker still rejects the destination. Bare-layout rejection now requires a regular `HEAD` file and `objects` and `refs` directories together. Both ordinary-directory regressions failed before the fix on this case-insensitive macOS filesystem. The bare-layout regression rejects before child creation.
+- No-comments review's deadline catch comment: removed. Exception handling and the deadline behavior are unchanged.
+
+Node 22.20.0 remediation checks passed: 59 focused tests in 3.46 seconds,
+`npm run lint`, `npm run typecheck`, and `git diff --check`.
+The full suite was not repeated for this bounded destination-check correction;
+the prior full-suite result above remains tied to its source commit. Hosted CI
+and independent review must check the replacement head before merge.

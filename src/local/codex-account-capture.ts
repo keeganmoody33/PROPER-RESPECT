@@ -111,7 +111,7 @@ function acquire(input: Input, startFixture: () => ChildProcessWithoutNullStream
       child.stdin.destroy();
       if (!closed) {
         try { child.kill("SIGTERM"); } catch { /* Closure still must be observed. */ }
-        killTimer = setTimeout(() => { try { child.kill("SIGKILL"); } catch { /* The absolute deadline reports missing closure. */ } }, LIMITS.killMs);
+        killTimer = setTimeout(() => { try { child.kill("SIGKILL"); } catch {} }, LIMITS.killMs);
       }
       settle();
     }
@@ -187,10 +187,16 @@ async function validateBase(base: string) {
   const info = await lstat(base);
   if (!info.isDirectory() || !owned(info, 0o700)) throw invalid();
   for (let p = base;; p = dirname(p)) {
-    for (const marker of [".git", "HEAD"]) {
-      try { await lstat(join(p, marker)); throw invalid(); }
-      catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw invalid(); }
-    }
+    const inspect = async (name: string) => {
+      try { return await lstat(join(p, name)); }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw invalid();
+        return undefined;
+      }
+    };
+    if (await inspect(".git")) throw invalid();
+    const [head, objects, refs] = await Promise.all(["HEAD", "objects", "refs"].map(inspect));
+    if (head?.isFile() && objects?.isDirectory() && refs?.isDirectory()) throw invalid();
     if (dirname(p) === p) break;
   }
   return info;

@@ -206,3 +206,19 @@ test.each(["process", "stdin", "stdout", "stderr"])("rejects %s error and observ
   })).toEqual({ status: "transport-rejected" });
   expect(await readdir(privateBase)).toEqual([]);
 });
+
+test.each(["HEAD", "head"])("accepts an ordinary %s directory outside Git", async name => {
+  const privateBase = await base();
+  await mkdir(join(privateBase, name));
+  expect(await captureCodexAccount({ ...metadata, privateBase, directoryName: "attempt" }, () => child())).toEqual({ status: "saved" });
+});
+
+test("rejects a bare Git layout before starting the child", async () => {
+  const privateBase = await base();
+  await writeFile(join(privateBase, "HEAD"), "ref: refs/heads/main\n");
+  await mkdir(join(privateBase, "objects"));
+  await mkdir(join(privateBase, "refs"));
+  const start = vi.fn(() => child());
+  expect(await captureCodexAccount({ ...metadata, privateBase, directoryName: "attempt" }, start)).toEqual({ status: "invalid-input" });
+  expect(start).not.toHaveBeenCalled();
+});
