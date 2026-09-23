@@ -239,7 +239,6 @@ function githubAccount(label: string) {
   return login.toLowerCase();
 }
 
-/** Private capture retention is independent of saved relationships and publication. */
 async function retainGithubSnapshot(ctx: MutationCtx, user: Doc<"users">, args: GithubSnapshotInput) {
   const accountId = githubAccount(args.accountLabel);
   const activity = activityModuleSchema.parse(args.activity);
@@ -288,7 +287,6 @@ async function retainGithubSnapshot(ctx: MutationCtx, user: Doc<"users">, args: 
     if (canonicalJson(original) !== canonicalJson(activity) || canonicalJson(existing.observations) !== canonicalJson(observations)) {
       throw new Error("GitHub capture identity conflict.");
     }
-    // A replay never resurrects a draft, reattaches a proof or reselects activity.
     return { propId: null, rawEvidenceId: existing._id, duplicate: true, reviewRequired: false };
   }
   let product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", "github")).unique();
@@ -304,8 +302,6 @@ async function retainGithubSnapshot(ctx: MutationCtx, user: Doc<"users">, args: 
       if (!target || target.userId !== user._id || target.productId !== product._id) throw new Error("GitHub discovery relationship identity changed.");
     }
   }
-  // Legacy resultPropId was automatic, so it cannot resolve multiple records.
-  // Frozen/rejected/approved discoveries are never reopened or appended to.
   const eligible = drafts.filter(draft => draft.status === "PENDING" && !draft.evidenceResolution && !draft.resultPropId);
   if (eligible.some(draft => draft.suggestedDomain !== "github.com")) throw new Error("GitHub discovery product identity changed.");
   if (eligible.length > 1) throw new Error("Ambiguous pending GitHub discoveries.");
@@ -328,7 +324,6 @@ async function retainGithubSnapshot(ctx: MutationCtx, user: Doc<"users">, args: 
     await ctx.db.insert("usageSignals", { userId: user._id, propId: prop._id, sourceId: source._id, metricKey: args.metricKey,
       value: args.value, capturedAt: activity.capturedAt, attributionScope: "PERSONAL", evidenceRuleVersion: "provider-v2", visibility: "DRAFT" });
   }
-  // Unassigned evidence must remain visible to the existing explicit review flow.
   const draft = prop
     ? drafts.find(item => item.status === "PENDING" && !item.evidenceResolution && item.resultPropId === prop._id)
     : eligible[0];
