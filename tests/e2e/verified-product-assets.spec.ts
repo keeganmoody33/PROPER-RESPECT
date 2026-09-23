@@ -122,3 +122,67 @@ test("missing fonts preserve readable fallback text and intact official logos", 
   await page.screenshot({ path: testInfo.outputPath("2026-09-19-copilot-font-fallback-mobile.png"), fullPage: true, animations: "disabled" });
   expect(externalRequests).toEqual([]);
 });
+
+const exactProducts = [
+  { slug: "notebooklm", domain: "notebooklm.google.com", name: "NotebookLM", initials: "N" },
+  { slug: "devin-desktop", domain: "devin.ai", name: "Devin Desktop", initials: "DD" },
+];
+const exactCards = exactProducts.flatMap(product => (["light", "dark"] as const).map(mode => ({
+  ...baseCard, activity: undefined,
+  product: { ...product, description: "Synthetic exact-product icon fixture.", brand: {
+    ...lightCard.product.brand!, productSlug: product.slug, canonicalDomain: product.domain,
+    styleguide: { mode, colors: { background: mode === "light" ? "#ffffff" : "#171713", text: mode === "light" ? "#111111" : "#ffffff" } },
+  } },
+})));
+const iconFixture = buildSync({
+  stdin: { contents: `import {createElement} from "react"; import {createRoot} from "react-dom/client"; import {ProductCard} from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement("div", {className:"card-grid"},
+      ...${JSON.stringify(exactCards)}.map((card,index)=>createElement(ProductCard,{card,index,key:index}))));`, resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '\"production\"' },
+}).outputFiles[0].text;
+async function mountExactIcons(page: Page, fail = false) {
+  const externalRequests: string[] = [];
+  await page.route("**/*", route => {
+    const url = new URL(route.request().url());
+    if (url.origin !== "http://127.0.0.1:8852") { externalRequests.push(url.href); return route.abort(); }
+    if (url.pathname === "/") return route.fulfill({ contentType: "text/html", body: '<meta charset="utf-8"><main id="root"></main>' });
+    const allowed = exactProducts.some(product => url.pathname === `/product-assets/${product.slug}/2026-09-22/app-icon.png`);
+    if (!allowed || fail) return route.abort();
+    return route.fulfill({ contentType: "image/png", body: readFileSync(`public${url.pathname}`) });
+  });
+  await page.goto("http://127.0.0.1:8852/");
+  await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
+  await page.addScriptTag({ content: iconFixture });
+  return externalRequests;
+}
+for (const width of [1280, 390]) test(`exact NotebookLM and Devin Desktop icons on both surfaces at ${width}px`, async ({ browser }, testInfo) => {
+  const context = await browser.newContext({ viewport: { width, height: 1000 }, deviceScaleFactor: 3 });
+  const page = await context.newPage();
+  try {
+    const requests = await mountExactIcons(page);
+    const cards = page.locator(".product-card");
+    await expect(cards).toHaveCount(4);
+    for (let index = 0; index < exactCards.length; index++) {
+      const card = cards.nth(index);
+      const image = card.locator(".product-logo img");
+      await expect(image).toBeVisible();
+      await expect(image).toHaveAttribute("src", `/product-assets/${exactCards[index].product.slug}/2026-09-22/app-icon.png`);
+      await image.evaluate((element: HTMLImageElement) => element.decode());
+      const size = await image.evaluate((element: HTMLImageElement) => ({ width: element.width, height: element.height, naturalWidth: element.naturalWidth, naturalHeight: element.naturalHeight }));
+      expect(size.naturalWidth).toBeGreaterThanOrEqual(size.width * 3);
+      expect(size.naturalHeight).toBeGreaterThanOrEqual(size.height * 3);
+      await expect(card.locator(".product-logo")).toHaveAttribute("data-logo-provider", "official-vendor");
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(requests).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath(`2026-09-22-exact-icons-${width}-3x.png`), fullPage: true, animations: "disabled" });
+  } finally { await context.close(); }
+});
+test("failed exact icons retain safe initials on both surfaces", async ({ page }) => {
+  const requests = await mountExactIcons(page, true);
+  const logos = page.locator(".product-logo");
+  await expect(logos).toHaveCount(4);
+  await expect(logos.locator("img")).toHaveCount(0);
+  for (let index = 0; index < 4; index++) await expect(logos.nth(index)).toHaveText(exactProducts[Math.floor(index / 2)].initials);
+  expect(requests).toEqual([]);
+});
