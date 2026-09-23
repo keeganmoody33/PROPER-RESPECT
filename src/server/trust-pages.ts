@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { publicSiteOrigin } from "./public-site";
-import { markdownResponse } from "./agent-discovery";
+import { creatorBusinessIdentity, markdownResponse } from "./agent-discovery";
 
 export type TrustSlug = "origins" | "contact" | "privacy";
 type TrustSection = Readonly<{
@@ -169,11 +169,6 @@ export function contactIdentity() {
     "@type": "ContactPage",
     name: trustDocuments.contact.title,
     url: new URL("/about/contact", publicSiteOrigin()).href,
-    mainEntity: {
-      "@type": "Organization",
-      name: "lecturesfrom",
-      address: { "@type": "PostalAddress", addressCountry: "US" },
-      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "33@lecturesfrom.com" },
-    },
+    mainEntity: creatorBusinessIdentity(),
   };
 }
