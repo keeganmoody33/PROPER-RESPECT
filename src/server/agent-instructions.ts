@@ -1,5 +1,14 @@
 import { publicSiteOrigin } from "./public-site";
-import { repositoryUrl } from "./agent-discovery";
+import { agentCatalog, markdownResponse, repositoryUrl } from "./agent-discovery";
+
+export function agentInstructionsResponse() {
+  const guide = agentCatalog().entries[0];
+  return markdownResponse(agentInstructions(), {
+    title: guide.displayName,
+    description: guide.description,
+    canonical: new URL(guide.url),
+  });
+}
 
 export function agentInstructions() {
   const origin = publicSiteOrigin();

@@ -1,6 +1,5 @@
-import { agentInstructions } from "@/src/server/agent-instructions";
-import { markdownResponse } from "@/src/server/agent-discovery";
+import { agentInstructionsResponse } from "@/src/server/agent-instructions";
 
 export function GET() {
-  return markdownResponse(agentInstructions());
+  return agentInstructionsResponse();
 }
