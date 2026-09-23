@@ -11,14 +11,13 @@ import { parseMarkdownDocument } from "@/tests/markdown-document";
 
 afterEach(() => vi.unstubAllEnvs());
 
-it("adds factual metadata while preserving every existing public document body", async () => {
+it("preserves metadata and bodies on homepage, guide and trust documents", async () => {
   vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
   vi.stubEnv("VERCEL_URL", "untrusted-preview.example");
   const documents = [
     [homepage(), homepageMarkdown(), "Proper Respect", "/"],
     [agents(), agentInstructions(), "Proper Respect public-profile reading guide", "/agents.md"],
     [skills(), agentInstructions(), "Proper Respect public-profile reading guide", "/agents.md"],
-    [authentication(), authenticationMarkdown(), "Proper Respect authentication", "/auth.md"],
     ...(["origins", "contact", "privacy"] as const).map(slug => [trustMarkdownResponse(slug), trustMarkdown(slug), trustDocuments[slug].title, `/about/${slug}`] as const),
   ] as const;
   for (const [response, expectedBody, title, path] of documents) {
@@ -52,4 +51,19 @@ it("round-trips YAML-sensitive scalars without introducing metadata fields or ch
   expect(text).toContain(String.raw`\u0085\u2028\u2029`);
   expect(text).not.toMatch(/[\u0085\u2028\u2029]/);
   expect(text.split("\n").filter(line => line === "---")).toHaveLength(2);
+});
+
+
+it("keeps auth.md heading-first for authentication-document discovery", async () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
+  const response = authentication();
+  const body = await response.text();
+  expect(response.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
+  expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+  expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+  expect(body).toBe(authenticationMarkdown());
+  expect(body).toMatch(/^# Proper Respect authentication\n/);
+  expect(body.length).toBeGreaterThan(200);
+  expect(body).toContain("No agent API keys or OAuth token exchange");
+  expect(body).toContain("Do not extract session cookies");
 });

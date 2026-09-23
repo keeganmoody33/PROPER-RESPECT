@@ -74,10 +74,15 @@ test("markdown documents describe public capabilities without private data or in
     expect(response.headers()["content-type"]).toContain("text/markdown");
     expect(response.headers()["x-content-type-options"]).toBe("nosniff");
     const body = await response.text();
-    const document = parseMarkdownDocument(body);
-    expect(document.body.startsWith("# "), path).toBe(true);
-    expect(document.metadata.title).toEqual(expect.any(String));
-    expect(document.metadata.canonical).toBe(`https://public.example${path === "/index.md" ? "/" : path}`);
+    if (path === "/auth.md") {
+      expect(body).toMatch(/^# Proper Respect authentication\n/);
+      expect(body.length).toBeGreaterThan(200);
+    } else {
+      const document = parseMarkdownDocument(body);
+      expect(document.body.startsWith("# "), path).toBe(true);
+      expect(document.metadata.title).toEqual(expect.any(String));
+      expect(document.metadata.canonical).toBe(`https://public.example${path === "/index.md" ? "/" : path}`);
+    }
     expect(body).toContain("https://public.example/");
     expect(body).not.toMatch(/<!doctype html|<html[\s>]|props\.lecturesfrom\.com|Private source record/i);
   }
