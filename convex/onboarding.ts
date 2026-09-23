@@ -145,7 +145,7 @@ export const getState = query({
       )
       .unique();
     if (!user) return null;
-    const [props, drafts, connectors, evidence, published] = await Promise.all([
+    const [props, drafts, connectors, evidence, published, site] = await Promise.all([
       ctx.db
         .query("props")
         .withIndex("by_user", (q) => q.eq("userId", user._id))
@@ -165,6 +165,10 @@ export const getState = query({
       ctx.db
         .query("publishedProfiles")
         .withIndex("by_handle", (q) => q.eq("handle", user.handle))
+        .unique(),
+      ctx.db
+        .query("sites")
+        .withIndex("by_owner", q => q.eq("ownerId", user._id))
         .unique(),
     ]);
     const publishedPropIds = published
@@ -215,6 +219,7 @@ export const getState = query({
       user,
       cards,
       hasPublicationAtCurrentHandle: published !== null,
+      hasClaimedPublicIdentity: site?.handle === user.handle,
       brandEnrichmentAvailable: true,
       privateInventoryAvailable: true,
       drafts,
