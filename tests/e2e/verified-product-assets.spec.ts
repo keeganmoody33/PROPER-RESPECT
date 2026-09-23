@@ -123,7 +123,6 @@ test("missing fonts preserve readable fallback text and intact official logos", 
   expect(externalRequests).toEqual([]);
 });
 
-// 2026-09-22: reuse the real ProductCard fixture for exact app icons, with no owner data.
 const exactProducts = [
   { slug: "notebooklm", domain: "notebooklm.google.com", name: "NotebookLM", initials: "N" },
   { slug: "devin-desktop", domain: "devin.ai", name: "Devin Desktop", initials: "DD" },
