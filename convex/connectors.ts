@@ -8,11 +8,13 @@ import {
   internalQuery,
   mutation,
   type MutationCtx,
+  type QueryCtx,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { activityModuleValidator } from "./validators";
 import { activityModuleSchema, type ActivityModule } from "../src/domain/public-profile";
 import { canonicalJson } from "../src/domain/canonical-json";
+import { sha256 } from "../src/domain/product-knowledge";
 import { canRefreshMetric } from "../src/domain/onboarding";
 import { requireUser } from "./authHelpers";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -488,6 +490,112 @@ export const revokeConnector = mutation({
   },
 });
 
+function canonicalTimestamp(value: string | undefined) {
+  if (value === undefined || !Number.isFinite(Date.parse(value))) return null;
+  return new Date(value).toISOString() === value ? Date.parse(value) : null;
+}
+
+async function githubRefreshAuthority(ctx: QueryCtx | MutationCtx, subscriptionId: Id<"metricSubscriptions">) {
+  const subscription = await ctx.db.get(subscriptionId);
+  if (!subscription || subscription.revokedAt !== undefined || subscription.refreshCadence !== "DAILY" ||
+      subscription.metricKey !== "github.contributions" || subscription.attributionScope !== "PERSONAL" ||
+      canonicalTimestamp(subscription.approvedAt) === null) return null;
+  for (const value of [subscription.lastAttemptedAt, subscription.lastSuccessfulAt]) {
+    if (value !== undefined && canonicalTimestamp(value) === null) return null;
+  }
+  const siblings = await ctx.db.query("metricSubscriptions")
+    .withIndex("by_prop_metric", q => q.eq("propId", subscription.propId).eq("metricKey", subscription.metricKey))
+    .filter(q => q.eq(q.field("revokedAt"), undefined)).take(2);
+  if (siblings.length !== 1 || siblings[0]._id !== subscriptionId) return null;
+  const connector = await ctx.db.get(subscription.connectorId);
+  if (!connector || connector.userId !== subscription.userId || connector.provider !== "GITHUB" ||
+      !["CONNECTED", "ERROR"].includes(connector.status) || connector.attributionScope !== "PERSONAL" || !connector.secretRef) return null;
+  let account: string;
+  try { account = githubAccount(connector.accountLabel); } catch { return null; }
+  const secret = await ctx.db.get(connector.secretRef);
+  if (!secret || secret.userId !== subscription.userId || secret.provider !== "GITHUB" || !secret.ciphertext || !secret.iv) return null;
+  const prop = await ctx.db.get(subscription.propId);
+  if (!prop || prop.userId !== subscription.userId || prop.visibility !== "PUBLIC") return null;
+  const product = await ctx.db.get(prop.productId);
+  if (!product || product.slug !== "github" || product.domain !== "github.com") return null;
+  const user = await ctx.db.get(subscription.userId);
+  if (!user) return null;
+  const owners = await ctx.db.query("users").withIndex("by_handle", q => q.eq("handle", user.handle)).take(2);
+  if (owners.length !== 1 || owners[0]._id !== user._id) return null;
+  const publications = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).take(2);
+  if (publications.length !== 1) return null;
+  const published = publications[0];
+  if (published.profile.handle !== user.handle) return null;
+  const indices = await publishedCardIndicesForProp(ctx, published, prop);
+  if (indices.length !== 1) return null;
+  const card = published.profile.cards[indices[0]];
+  if (card.product.slug !== "github" || card.product.domain !== "github.com" ||
+      card.activity?.kind !== "contributionCalendar" || card.activity.attributionScope !== "PERSONAL" ||
+      canonicalTimestamp(card.activity.capturedAt) === null) return null;
+  const fingerprint = await sha256(canonicalJson({ subscription, connector, secret, prop, product,
+    owner: { id: user._id, handle: user.handle }, published, indices }));
+  return { subscription, connector, secret, prop, published, index: indices[0], account, fingerprint };
+}
+
+export const prepareGithubRefresh = internalQuery({
+  args: { subscriptionId: v.id("metricSubscriptions") },
+  handler: async (ctx, args) => {
+    const authority = await githubRefreshAuthority(ctx, args.subscriptionId);
+    if (!authority) return null;
+    return { grant: { subscriptionId: args.subscriptionId, fingerprint: authority.fingerprint },
+      credential: { ciphertext: authority.secret.ciphertext, iv: authority.secret.iv } };
+  },
+});
+
+export const completeGithubRefresh = internalMutation({
+  args: {
+    grant: v.object({ subscriptionId: v.id("metricSubscriptions"), fingerprint: v.string() }),
+    outcome: v.union(v.object({ kind: v.literal("failure") }), v.object({ kind: v.literal("success"),
+      accountLabel: v.string(), activity: activityModuleValidator, value: v.number() })),
+  },
+  handler: async (ctx, { grant, outcome }) => {
+    const authority = await githubRefreshAuthority(ctx, grant.subscriptionId);
+    if (!authority || authority.fingerprint !== grant.fingerprint) return false;
+    const { subscription, connector, prop, published, index } = authority;
+    const previousAttempt = canonicalTimestamp(subscription.lastAttemptedAt) ?? -1;
+    const attemptedAtMs = Math.max(Date.now(), previousAttempt + 1);
+    if (!Number.isSafeInteger(attemptedAtMs) || attemptedAtMs > 8.64e15) return false;
+    const attemptedAt = new Date(attemptedAtMs).toISOString();
+    if (outcome.kind === "success") {
+      const parsed = activityModuleSchema.safeParse(outcome.activity);
+      if (!parsed.success || parsed.data.kind !== "contributionCalendar" || parsed.data.attributionScope !== "PERSONAL") return false;
+      const activity = parsed.data;
+      let account: string;
+      try { account = githubAccount(outcome.accountLabel); } catch { return false; }
+      const captured = canonicalTimestamp(activity.capturedAt);
+      const priorSuccess = canonicalTimestamp(subscription.lastSuccessfulAt) ?? -1;
+      const priorPublic = canonicalTimestamp(published.profile.cards[index].activity?.capturedAt);
+      if (account !== authority.account || captured === null || priorPublic === null || captured <= Math.max(priorSuccess, priorPublic) ||
+          captured > Date.now() + 60_000 || outcome.value !== activity.total || !Number.isSafeInteger(activity.total) ||
+          activity.days.length > 400 || activity.days.some(day => !Number.isSafeInteger(day.count)) ||
+          new Set(activity.days.map(day => day.date)).size !== activity.days.length) return false;
+      if (!prop.activityEvidenceId && !prop.relationshipVersion) await ctx.db.patch(prop._id, { activity });
+      await ctx.db.patch(published._id, { revision: published.revision + 1, publishedAt: activity.capturedAt,
+        profile: { ...published.profile, cards: published.profile.cards.map((card, i) => i === index ? { ...card, activity } : card) } });
+      await ctx.db.insert("usageSignals", { userId: subscription.userId, propId: prop._id, metricKey: "github.contributions",
+        value: outcome.value, capturedAt: activity.capturedAt, attributionScope: "PERSONAL", evidenceRuleVersion: "provider-v1", visibility: "PUBLIC" });
+      await ctx.db.patch(subscription._id, { lastAttemptedAt: attemptedAt, lastSuccessfulAt: activity.capturedAt, lastError: undefined });
+      await ctx.db.patch(connector._id, { status: "CONNECTED", lastSyncedAt: activity.capturedAt, lastError: undefined });
+    } else {
+      if (prop.activity && !prop.activityEvidenceId && !prop.relationshipVersion) {
+        await ctx.db.patch(prop._id, { activity: { ...prop.activity, freshness: "STALE" } });
+      }
+      await ctx.db.patch(published._id, { profile: { ...published.profile,
+        cards: published.profile.cards.map((card, i) => i === index && card.activity
+          ? { ...card, activity: { ...card.activity, freshness: "STALE" as const } } : card) } });
+      const message = "GitHub activity response unavailable.";
+      await ctx.db.patch(subscription._id, { lastAttemptedAt: attemptedAt, lastError: message });
+      await ctx.db.patch(connector._id, { status: "ERROR", lastError: message });
+    }
+    return true;
+  },
+});
+
 export const listRefreshWork = internalQuery({
   args: {},
   handler: async (ctx) => {
@@ -499,7 +607,7 @@ export const listRefreshWork = internalQuery({
         .filter((subscription) => !subscription.revokedAt)
         .map(async (subscription) => {
           const connector = await ctx.db.get(subscription.connectorId);
-          const secret = connector?.secretRef
+          const secret = connector?.provider === "DEVIN" && connector.secretRef
             ? await ctx.db.get(connector.secretRef)
             : null;
           return { subscription, connector, secret };
@@ -526,7 +634,7 @@ export const applyRefresh = internalMutation({
       throw new Error("Refresh exceeds the approved metric or scope.");
     }
     const connector = await ctx.db.get(subscription.connectorId);
-    if (!connector || connector.status === "REVOKED") return;
+    if (!connector || connector.provider !== "DEVIN" || connector.status === "REVOKED") return;
     const prop = await ctx.db.get(subscription.propId);
     if (!prop || prop.visibility !== "PUBLIC" || prop.userId !== subscription.userId || connector.userId !== subscription.userId) return;
 
@@ -590,7 +698,7 @@ export const markRefreshFailed = internalMutation({
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription || subscription.revokedAt) return;
     const connector = await ctx.db.get(subscription.connectorId);
-    if (!connector || connector.status === "REVOKED" || connector.userId !== subscription.userId) return;
+    if (!connector || connector.provider !== "DEVIN" || connector.status === "REVOKED" || connector.userId !== subscription.userId) return;
     const prop = await ctx.db.get(subscription.propId);
     if (!prop || prop.userId !== subscription.userId) return;
     if (prop.activity && !prop.activityEvidenceId && !prop.relationshipVersion) {
@@ -635,16 +743,26 @@ export const refreshApproved = internalAction({
   handler: async (ctx) => {
     const work = await ctx.runQuery(internal.connectors.listRefreshWork, {});
     for (const item of work) {
+      if (item.connector?.provider === "GITHUB") {
+        const prepared = await ctx.runQuery(internal.connectors.prepareGithubRefresh, { subscriptionId: item.subscription._id });
+        if (!prepared) continue;
+        let outcome: { kind: "failure" } | ({ kind: "success" } & Awaited<ReturnType<typeof fetchGithubActivity>>);
+        try {
+          const token = await decryptSecret(prepared.credential.ciphertext, prepared.credential.iv);
+          outcome = { kind: "success", ...await fetchGithubActivity(token) };
+        } catch {
+          outcome = { kind: "failure" };
+        }
+        await ctx.runMutation(internal.connectors.completeGithubRefresh, { grant: prepared.grant, outcome });
+        continue;
+      }
       if (!item.connector || !item.secret) continue;
       try {
         const cleartext = await decryptSecret(
           item.secret.ciphertext,
           item.secret.iv,
         );
-        const snapshot =
-          item.connector.provider === "GITHUB"
-            ? await fetchGithubActivity(cleartext)
-            : await (async () => {
+        const snapshot = await (async () => {
                 const parsed = JSON.parse(cleartext) as {
                   token: string;
                   organizationId: string;
