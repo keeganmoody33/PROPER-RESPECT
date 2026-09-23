@@ -9,6 +9,7 @@ const LIMITS = { stdout: 512_000, stderr: 64_000, frame: 260_000, messages: 128,
 type Input = { privateBase: string; directoryName: string; ownerAlias: string; accountAlias: string; captureId: string; capturedAt: string };
 type Status = "saved" | "invalid-input" | "transport-rejected" | "termination-unconfirmed" | "storage-rejected" | "cleanup-unconfirmed";
 type Outcome = { status: Status };
+type CompletionBarrier = () => Promise<"complete" | "termination-unconfirmed" | "cleanup-unconfirmed">;
 type State = "initializing" | "requesting" | "draining" | "rejected" | "closed";
 const invalid = () => new Error("Rejected capture.");
 const object = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -264,8 +265,21 @@ async function retain(input: Input, baseInfo: Stats, capture: CodexUsageCapture)
   return outcome;
 }
 
+async function completeAttempt(finishAttempt?: CompletionBarrier): Promise<Outcome | undefined> {
+  if (!finishAttempt) return;
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    const completion = await Promise.race([
+      Promise.resolve().then(finishAttempt),
+      new Promise<"termination-unconfirmed">(resolveCompletion => { timer = setTimeout(() => resolveCompletion("termination-unconfirmed"), 2_000); }),
+    ]);
+    if (completion !== "complete") return { status: completion === "cleanup-unconfirmed" ? completion : "termination-unconfirmed" };
+  } catch { return { status: "termination-unconfirmed" }; }
+  finally { clearTimeout(timer); }
+}
+
 /** Offline boundary only. No Codex executable, launcher, or account selection is provided. */
-export async function captureCodexAccount(providedInput: Input, startFixture: () => ChildProcessWithoutNullStreams): Promise<Outcome> {
+export async function captureCodexAccount(providedInput: Input, startFixture: () => ChildProcessWithoutNullStreams, finishAttempt?: CompletionBarrier): Promise<Outcome> {
   let baseInfo: Stats;
   let input: Input;
   try {
@@ -275,8 +289,10 @@ export async function captureCodexAccount(providedInput: Input, startFixture: ()
     baseInfo = await validateBase(input.privateBase);
     try { await lstat(join(input.privateBase, input.directoryName)); throw invalid(); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw invalid(); }
-  } catch { return { status: "invalid-input" }; }
+  } catch { return await completeAttempt(finishAttempt) ?? { status: "invalid-input" }; }
   const result = await acquire(input, startFixture);
+  const completion = await completeAttempt(finishAttempt);
+  if (completion) return completion;
   if ("status" in result) return result;
   return retain(input, baseInfo, result.capture);
 }
