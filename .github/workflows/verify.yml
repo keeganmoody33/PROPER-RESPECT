@@ -58,6 +58,16 @@ jobs:
       - run: npx playwright test --config tests/e2e/components.config.ts
       - run: npx playwright test tests/e2e/public-metadata.spec.ts tests/e2e/homepage.spec.ts tests/e2e/public-profile.spec.ts tests/e2e/product-icons.spec.ts tests/e2e/discovery.spec.ts tests/e2e/webmcp-contract.spec.ts tests/e2e/trust-pages.spec.ts tests/e2e/site-frame.spec.ts tests/e2e/site-identity.spec.ts tests/e2e/inventory.spec.ts
       - run: npx playwright test --config tests/e2e/trust-preview.config.ts
+      - name: Verify production homepage representation negotiation
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ""
+          CLERK_SECRET_KEY: ""
+          NEXT_PUBLIC_CONVEX_URL: ""
+          PROPER_RESPECT_E2E_REFERENCE: "1"
+          NEGOTIATION_PRODUCTION: "1"
+        run: |
+          npm run build -- --webpack
+          npx playwright test --config tests/e2e/markdown-negotiation.config.ts
   native-webmcp:
     name: Native Chrome WebMCP
     runs-on: ubuntu-latest
