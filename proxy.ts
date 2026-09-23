@@ -1,9 +1,9 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { homepageRepresentation } from "@/src/server/homepage-representation";
 
 const proxy = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-  ? clerkMiddleware()
-  : () => NextResponse.next();
+  ? clerkMiddleware((_auth, request) => homepageRepresentation(request))
+  : homepageRepresentation;
 
 export default proxy;
 
