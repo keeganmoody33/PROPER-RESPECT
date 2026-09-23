@@ -1,0 +1,16 @@
+{
+  "formatVersion": 1,
+  "source": { "method": "account/usage/read", "version": "0.153.4" },
+  "scope": { "ownerAlias": "synthetic-owner", "accountAlias": "synthetic-account", "requestedThreadId": "synthetic-thread" },
+  "capture": { "id": "synthetic-capture-1", "capturedAt": "2026-09-22T12:00:00.000Z" },
+  "response": {
+    "summary": { "lifetimeTokens": 1200, "currentStreakDays": 0, "longestStreakDays": 2, "peakDailyTokens": 1200, "longestRunningTurnSec": null },
+    "dailyUsageBuckets": [{ "startDate": "2026-09-21", "tokens": 1200 }, { "startDate": "2026-09-22", "tokens": 0 }],
+    "threadUsage": {
+      "threadId": "synthetic-thread",
+      "estimatedUsageCreditsMicros": 1500000,
+      "estimatedUsageUsdMicros": null,
+      "groups": [{ "model": "synthetic-model", "reasoningEffort": null, "speed": "standard", "inputTokens": 1000, "cachedInputTokens": 800, "netNewInputTokens": 200, "outputTokens": 200, "totalTokens": 1200, "estimatedUsageCreditsMicros": 1500000 }]
+    }
+  }
+}
