@@ -2,7 +2,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { mkdtemp, realpath, rm, readdir, stat, readFile, mkdir, chmod, symlink, writeFile, open, unlink } from "node:fs/promises";
+import { mkdtemp, realpath, rm, readdir, stat, readFile, mkdir, chmod, symlink, writeFile, open, unlink, lstat, link, readlink, type FileHandle } from "node:fs/promises";
 import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -10,7 +10,7 @@ import { captureCodexAccount } from "./codex-account-capture";
 
 vi.mock("node:fs/promises", async importOriginal => {
   const actual = await importOriginal<typeof import("node:fs/promises")>();
-  return { ...actual, open: vi.fn(actual.open) };
+  return { ...actual, open: vi.fn(actual.open), lstat: vi.fn(actual.lstat) };
 });
 
 const bases: string[] = [];
@@ -221,4 +221,84 @@ test("rejects a bare Git layout before starting the child", async () => {
   const start = vi.fn(() => child());
   expect(await captureCodexAccount({ ...metadata, privateBase, directoryName: "attempt" }, start)).toEqual({ status: "invalid-input" });
   expect(start).not.toHaveBeenCalled();
+});
+
+
+test.each(["symlink", "uid", "mode", "links"])("preserves a cleanup entry with matching device/inode but changed %s", async change => {
+  const privateBase = await base();
+  const file = join(privateBase, "attempt", "capture.json");
+  const target = join(privateBase, "untouched-target");
+  const actual = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+  await writeFile(target, "PRIVATE_SENTINEL", { mode: 0o600 });
+  let injected = false;
+  vi.mocked(open).mockImplementation(async (path, flags, options) => {
+    if (flags === (constants.O_RDONLY | constants.O_NOFOLLOW) && !injected) {
+      injected = true;
+      const original = await actual.lstat(file);
+      if (change === "symlink") { await unlink(file); await symlink(target, file); }
+      if (change === "mode") await chmod(file, 0o644);
+      if (change === "links") await link(file, join(privateBase, "second-link"));
+      vi.mocked(lstat).mockImplementation((async (entry: Parameters<typeof lstat>[0]) => {
+        const info = await actual.lstat(entry);
+        if (entry === file) {
+          info.dev = original.dev;
+          info.ino = original.ino;
+          if (change === "uid") info.uid = original.uid + 1;
+        }
+        return info;
+      }) as typeof lstat);
+      throw new Error("PRIVATE_SENTINEL");
+    }
+    return actual.open(path, flags, options);
+  });
+  try {
+    expect(await captureCodexAccount({ ...metadata, privateBase, directoryName: "attempt" }, () => child())).toEqual({ status: "cleanup-unconfirmed" });
+    expect(injected).toBe(true);
+    expect(await actual.lstat(file)).toBeDefined();
+    if (change === "symlink") expect(await readlink(file)).toBe(target);
+    expect(await readFile(target, "utf8")).toBe("PRIVATE_SENTINEL");
+  } finally {
+    vi.mocked(open).mockImplementation(actual.open);
+    vi.mocked(lstat).mockImplementation(actual.lstat);
+  }
+});
+
+
+test.each([false, true])("holds the created inode through readback and closes all handles, rejection=%s", async rejectRead => {
+  const privateBase = await base();
+  const actual = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+  const handles: FileHandle[] = [];
+  let retainedOpenAtRead = false;
+  vi.mocked(open).mockImplementation(async (path, flags, options) => {
+    if (flags === (constants.O_RDONLY | constants.O_NOFOLLOW)) {
+      retainedOpenAtRead = handles[0].fd >= 0;
+      if (rejectRead) throw new Error("PRIVATE_SENTINEL");
+    }
+    const handle = await actual.open(path, flags, options);
+    handles.push(handle);
+    return handle;
+  });
+  try {
+    expect(await captureCodexAccount({ ...metadata, privateBase, directoryName: "attempt" }, () => child())).toEqual({ status: rejectRead ? "storage-rejected" : "saved" });
+    expect(retainedOpenAtRead).toBe(true);
+    expect(handles.length).toBeGreaterThan(0);
+    expect(handles.every(handle => handle.fd === -1)).toBe(true);
+    if (rejectRead) expect(await readdir(privateBase)).toEqual([]);
+  } finally { vi.mocked(open).mockImplementation(actual.open); }
+});
+
+test("reports a fixed outcome if the retained handle close reports an error", async () => {
+  const privateBase = await base();
+  const actual = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
+  vi.mocked(open).mockImplementation(async (path, flags, options) => {
+    const handle = await actual.open(path, flags, options);
+    if (typeof flags === "number" && (flags & constants.O_CREAT)) {
+      const close = handle.close.bind(handle);
+      handle.close = async () => { await close(); throw new Error("PRIVATE_SENTINEL"); };
+    }
+    return handle;
+  });
+  try {
+    expect(await captureCodexAccount({ ...metadata, privateBase, directoryName: "attempt" }, () => child())).toEqual({ status: "cleanup-unconfirmed" });
+  } finally { vi.mocked(open).mockImplementation(actual.open); }
 });

@@ -106,3 +106,35 @@ Node 22.20.0 remediation checks passed: 59 focused tests in 3.46 seconds,
 The full suite was not repeated for this bounded destination-check correction;
 the prior full-suite result above remains tied to its source commit. Hosted CI
 and independent review must check the replacement head before merge.
+
+## PR 66 cleanup identity correction
+
+CI head `39e23bb646e867db300c1572a597ec6257a3fb78` failed the replaced-symlink
+readback case. It returned `storage-rejected` instead of `cleanup-unconfirmed`.
+The other 1,094 executed Vitest tests passed. CI did not record inode values,
+so the log alone does not prove the allocator behavior.
+
+The cleanup check compared only device and inode after the original file
+handle had closed. A replacement could reuse those values and be unlinked as
+though it were the owned file. Four deterministic regressions reproduced that
+failure with matching device/inode and changed type, owner, mode, or link count.
+They use real files and symlinks with controlled stat metadata. They are not
+claims of native Linux allocator reproduction.
+
+The fix holds the original write handle open through readback and cleanup,
+which prevents that inode from being recycled during those checks. Cleanup
+also requires a regular file, the current owner, mode 0600, and one link. The
+directory checks require directory type, current ownership, and mode 0700.
+A mismatched entry remains untouched and reports `cleanup-unconfirmed`.
+The retained handle closes after either outcome. A close error returns a fixed
+uncertainty status without exposing the error text. The documented same-UID
+ancestor-mutation limitation still applies.
+
+New tests verify preservation of the replacement path, descriptor lifetime
+through readback, closure on success and rejection, and fixed close-error
+handling. The original symlink assertion remains unchanged.
+
+Node 22.20.0 checks passed: 66 focused tests, 1,102 full-suite Vitest tests with
+two skipped, seven Node script tests, lint, typecheck, and `git diff --check`.
+The full suite was repeated because cleanup ownership changed. Replacement-head
+Linux CI and independent review remain required before merge.

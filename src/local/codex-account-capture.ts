@@ -1,6 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { constants, type Stats } from "node:fs";
-import { lstat, realpath, mkdir, open, unlink, rmdir } from "node:fs/promises";
+import { lstat, realpath, mkdir, open, unlink, rmdir, type FileHandle } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { parseCodexUsageCapture, reviewCodexUsageCaptures, type CodexUsageCapture, CODEX_USAGE_LIMITS } from "../domain/codex-usage";
 import { CODEX_NOTIFICATION_METHODS } from "./codex-account-capture-notifications";
@@ -206,6 +206,8 @@ async function retain(input: Input, baseInfo: Stats, capture: CodexUsageCapture)
   const directory = join(input.privateBase, input.directoryName), file = join(directory, "capture.json");
   let dirInfo: Stats | undefined, fileInfo: Stats | undefined;
   let createdDirectory = false;
+  let retainedHandle: FileHandle | undefined;
+  let outcome: Outcome;
   try {
     if (!same(baseInfo, await validateBase(input.privateBase))) throw invalid();
     if (Buffer.byteLength(JSON.stringify(capture)) > CODEX_USAGE_LIMITS.bytes) throw invalid();
@@ -213,15 +215,14 @@ async function retain(input: Input, baseInfo: Stats, capture: CodexUsageCapture)
     createdDirectory = true;
     dirInfo = await lstat(directory);
     if (!dirInfo.isDirectory() || !owned(dirInfo, 0o700)) throw invalid();
-    const handle = await open(file, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
-    try {
-      fileInfo = await handle.stat();
-      if (!fileInfo.isFile() || !owned(fileInfo, 0o600) || fileInfo.nlink !== 1) throw invalid();
-      await handle.writeFile(JSON.stringify(capture));
-      await handle.sync();
-    } finally { await handle.close(); }
+    retainedHandle = await open(file, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
+    fileInfo = await retainedHandle.stat();
+    if (!fileInfo.isFile() || !owned(fileInfo, 0o600) || fileInfo.nlink !== 1) throw invalid();
+    await retainedHandle.writeFile(JSON.stringify(capture));
+    await retainedHandle.sync();
     const read = async () => {
-      if (!same(baseInfo, await validateBase(input.privateBase)) || !same(dirInfo!, await lstat(directory))) throw invalid();
+      const directoryInfo = await lstat(directory);
+      if (!same(baseInfo, await validateBase(input.privateBase)) || !same(dirInfo!, directoryInfo) || !directoryInfo.isDirectory() || !owned(directoryInfo, 0o700)) throw invalid();
       const handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
       try {
         const info = await handle.stat();
@@ -241,21 +242,26 @@ async function retain(input: Input, baseInfo: Stats, capture: CodexUsageCapture)
     };
     const review = reviewCodexUsageCaptures([await read(), await read()]);
     if (review.accounts.length !== 1 || review.replays !== 1 || review.accounts[0].snapshots.length !== 1 || review.accounts[0].conflicts.length !== 0) throw invalid();
-    return { status: "saved" };
+    outcome = { status: "saved" };
   } catch {
+    outcome = { status: "storage-rejected" };
     try {
       if (createdDirectory && !dirInfo) throw invalid();
       if (dirInfo) {
-        if (!same(baseInfo, await validateBase(input.privateBase)) || !same(dirInfo, await lstat(directory))) throw invalid();
+        const directoryInfo = await lstat(directory);
+        if (!same(baseInfo, await validateBase(input.privateBase)) || !same(dirInfo, directoryInfo) || !directoryInfo.isDirectory() || !owned(directoryInfo, 0o700)) throw invalid();
         if (fileInfo) {
-          if (!same(fileInfo, await lstat(file))) throw invalid();
+          const current = await lstat(file);
+          if (!same(fileInfo, current) || !current.isFile() || !owned(current, 0o600) || current.nlink !== 1) throw invalid();
           await unlink(file);
         }
         await rmdir(directory);
       }
-    } catch { return { status: "cleanup-unconfirmed" }; }
-    return { status: "storage-rejected" };
+    } catch { outcome = { status: "cleanup-unconfirmed" }; }
   }
+  try { await retainedHandle?.close(); }
+  catch { outcome = { status: "cleanup-unconfirmed" }; }
+  return outcome;
 }
 
 /** Offline boundary only. No Codex executable, launcher, or account selection is provided. */
