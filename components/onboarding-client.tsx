@@ -64,7 +64,7 @@ function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
 
 export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) => Promise<unknown> }) {
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
   const retry = useRef<{ body: string; id: string } | null>(null);
   async function submit(form: HTMLFormElement) {
     const data = new FormData(form);
@@ -76,14 +76,14 @@ export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) =
     const body = JSON.stringify(values);
     if (retry.current?.body !== body) retry.current = { body, id: crypto.randomUUID() };
     setBusy(true);
-    setNotice("");
+    setNotice(null);
     try {
       await onAdd({ ...values, operationId: retry.current.id });
-      setNotice("The product is in your private collection. New products appear in Discoveries; an existing product keeps its saved choices and notes.");
+      setNotice({ kind: "saved", text: "Saved privately. Review the card to choose how you use this tool and add your explanation. Existing products keep their saved choices and notes." });
       retry.current = null;
       form.reset();
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "The product was not added. Your collection is unchanged; you can retry.");
+      setNotice({ kind: "error", text: error instanceof Error ? error.message : "The product was not added. Your collection is unchanged; you can retry." });
     } finally { setBusy(false); }
   }
   return <div id="add-product" className="collection-add">
@@ -95,7 +95,8 @@ export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) =
       <label className="full">What you want to remember (optional)<textarea name="description" rows={2} maxLength={4000} disabled={busy} /></label>
       <div className="action-row full"><button className="secondary-action" disabled={busy}>{busy ? "Adding…" : "Add for private review"}</button></div>
     </form>
-    <p role="status">{notice}</p>
+    <p role="status">{notice?.text}</p>
+    {notice?.kind === "saved" && <a href="#private-collection-title">Review your card</a>}
   </div>;
 }
 
@@ -385,6 +386,12 @@ function Builder() {
         <a href="#collection-sharing">Sharing</a>
       </nav>
       {message && <p className="message" role="status">{message}</p>}
+      {state.cards.length === 0 && state.privateInventoryAvailable && <section className="onboarding-panel" aria-labelledby="first-tool-title">
+        <p className="onboarding-kicker">YOUR FIRST CARD</p>
+        <h2 id="first-tool-title">Start with one tool</h2>
+        <p>Add a tool you use or are trying. Then choose your relationship and write what it helps you do. Your card stays private; you can connect a source or share it later.</p>
+        <a className="primary-action" href="#add-product">Add your first tool</a>
+      </section>}
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <PrivateInventory brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} />
@@ -461,7 +468,7 @@ function Builder() {
         <p className="onboarding-kicker">SHARING / YOUR CHOICE</p>
         <h2 id="collection-sharing-title">Choose what to share</h2>
         <p>Private saving never publishes. Select saved cards, preview the information a visitor will see, and approve that version. Existing public cards stay unchanged unless you include or remove them here.</p>
-        <details id="collection-profile" className="collection-identity" open={state.user.handle.startsWith("pending-")}>
+        <details id="collection-profile" className="collection-identity">
           <summary>Public identity</summary>
           <p>A handle is needed only when you choose to share. It is not required to build your private collection.</p>
           <form onSubmit={event => { event.preventDefault(); void submitProfile(new FormData(event.currentTarget)); }} className="form-grid">
@@ -701,7 +708,8 @@ function Builder() {
           <span className="sharing-selection-count">{Object.keys(reviewEdits).length} card choice{Object.keys(reviewEdits).length === 1 ? "" : "s"} to review</span>
           {state.hasPublicationAtCurrentHandle === true && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
         </div>
-        {state.hasPublicationAtCurrentHandle === false && <p>Nothing is published at /{state.user.handle} yet.</p>}
+        {state.user.handle.startsWith("pending-") && <p>Ready to preview a public page? <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Set up your public identity</a> with a handle and display name. Social links are optional.</p>}
+        {state.hasPublicationAtCurrentHandle === false && <p>{state.user.handle.startsWith("pending-") ? "Nothing is published yet." : `Nothing is published at /${state.user.handle} yet.`}</p>}
         {preview && <SharingPreview key={preview.basis} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
       </section>
     </main>
