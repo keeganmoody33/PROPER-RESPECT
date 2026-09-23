@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { fetchGithubActivity } from "../src/server/github-activity";
 import { ensureProductBrand } from "./productBrands";
 import {
   action,
@@ -64,113 +65,6 @@ async function decryptSecret(ciphertext: string, iv: string) {
     base64ToBytes(ciphertext),
   );
   return new TextDecoder().decode(cleartext);
-}
-
-function contributionLevel(level: string) {
-  return (
-    {
-      NONE: 0,
-      FIRST_QUARTILE: 1,
-      SECOND_QUARTILE: 2,
-      THIRD_QUARTILE: 3,
-      FOURTH_QUARTILE: 4,
-    }[level] ?? 0
-  );
-}
-
-type GithubResponse = {
-  data?: {
-    viewer?: {
-      login: string;
-      createdAt: string;
-      contributionsCollection: {
-        contributionCalendar: {
-          totalContributions: number;
-          weeks: Array<{
-            contributionDays: Array<{
-              date: string;
-              contributionCount: number;
-              contributionLevel: string;
-            }>;
-          }>;
-        };
-      };
-    };
-  };
-  errors?: Array<{ message: string }>;
-};
-
-async function fetchGithubActivity(token: string): Promise<{
-  accountLabel: string;
-  activity: ActivityModule;
-  value: number;
-}> {
-  const to = new Date();
-  const from = new Date(to);
-  from.setUTCFullYear(to.getUTCFullYear() - 1);
-  const response = await fetch("https://api.github.com/graphql", {
-    method: "POST",
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "proper-respect",
-    },
-    body: JSON.stringify({
-      query: `query ViewerActivity($from: DateTime!, $to: DateTime!) {
-        viewer {
-          login
-          createdAt
-          contributionsCollection(from: $from, to: $to) {
-            contributionCalendar {
-              totalContributions
-              weeks {
-                contributionDays {
-                  date
-                  contributionCount
-                  contributionLevel
-                }
-              }
-            }
-          }
-        }
-      }`,
-      variables: { from: from.toISOString(), to: to.toISOString() },
-    }),
-  });
-  const body = (await response.json()) as GithubResponse;
-  const viewer = body.data?.viewer;
-  if (!response.ok || !viewer) {
-    throw new Error(
-      body.errors?.[0]?.message ?? `GitHub API error: ${response.status}`,
-    );
-  }
-  const calendar = viewer.contributionsCollection.contributionCalendar;
-  return {
-    accountLabel: `github.com/${viewer.login}`,
-    value: calendar.totalContributions,
-    activity: {
-      kind: "contributionCalendar",
-      attributionScope: "PERSONAL",
-      capturedAt: to.toISOString(),
-      freshness: "FRESH",
-      provenanceLabel: "GitHub account",
-      period: {
-        start: from.toISOString().slice(0, 10),
-        end: to.toISOString().slice(0, 10),
-        label: "Last 12 months",
-      },
-      total: calendar.totalContributions,
-      memberSince: viewer.createdAt.slice(0, 10),
-      days: calendar.weeks.flatMap((week) =>
-        week.contributionDays.map((day) => ({
-          date: day.date,
-          count: day.contributionCount,
-          level: contributionLevel(day.contributionLevel),
-        })),
-      ),
-    },
-  };
 }
 
 type DevinUsage = {
