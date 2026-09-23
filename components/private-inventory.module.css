@@ -12,7 +12,10 @@
 .editor input:not([type="checkbox"]), .editor select, .editor textarea, .intake input { width: 100%; min-width: 0; box-sizing: border-box; padding: .6rem; border: 1px solid #8888; border-radius: .35rem; font: inherit; color: inherit; background: transparent; }
 .editor .toggle { display: flex; align-items: center; gap: .5rem; }
 .source { padding-block: .8rem; border-block-start: 1px solid #8884; overflow-wrap: anywhere; }
-.source select { max-width: 100%; }
+.source label { display: grid; gap: .4rem; font-size: .9rem; }
+.source select { width: 100%; max-width: 100%; min-width: 0; padding: .6rem; border: 1px solid #8888; border-radius: .35rem; font: inherit; color: inherit; background: var(--paper, #fff); }
+.usageSummary { margin-block: .5rem .8rem; padding-inline-start: .75rem; border-inline-start: 2px solid var(--control-line, #b7b3a6); overflow-wrap: anywhere; }
+.usageSummary p { margin-block: .35rem; font-size: .85rem; line-height: 1.5; }
 .source p, .source li { font-size: .85rem; line-height: 1.5; }
 .source ul { padding-inline-start: 1.2rem; }
 .source blockquote { margin-inline: 0; padding-inline-start: .8rem; border-inline-start: 2px solid currentColor; }

@@ -210,17 +210,26 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
       const matching = members.filter(item => inInventoryView(view, item));
       const item = members.find(member => member.prop._id === inspectedRecords[groupId]) ?? matching[0];
       const confirmed = isRelationshipConfirmed(item.prop);
+      const otherUsageRecords = members.filter(member => member.prop._id !== item.prop._id && member.prop.activity).length;
       return <section className={styles.item} key={groupId} aria-label={`${item.product.name} in your collection`}>
         {members.length > 1 && <div className={styles.source}>
           <label>Record to inspect for {item.product.name}
             <select value={item.prop._id} onChange={event => setInspectedRecords(current => ({ ...current, [groupId]: event.target.value }))}>
               {members.map((member, recordIndex) => <option key={member.prop._id} value={member.prop._id}>
-                {`Record ${recordIndex + 1} · ${isRelationshipConfirmed(member.prop) ? member.prop.status.toLowerCase() : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
+                {`Record ${recordIndex + 1} · ${member.prop.activity ? "Usage snapshot" : member.prop.activityEvidenceId ? "Snapshot unavailable" : "No usage snapshot"} · ${isRelationshipConfirmed(member.prop) ? member.prop.status.toLowerCase() : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
               </option>)}
             </select>
           </label>
           <p>{members.length} retained records for this product. Inspect each record’s decisions and evidence here. Selecting a record does not merge, confirm, or publish it.</p>
         </div>}
+        <div className={styles.usageSummary} aria-live="polite">
+          <p>{item.prop.activity
+            ? "This record has a saved usage snapshot. Open Details to see its source and coverage."
+            : item.prop.activityEvidenceId
+              ? "The selected usage snapshot is unavailable. Usage is unknown."
+              : "No usage snapshot is selected for this record. Usage is unknown."}</p>
+          {otherUsageRecords > 0 && <p>{otherUsageRecords} other loaded {otherUsageRecords === 1 ? "record has" : "records have"} a saved usage snapshot. Choose {otherUsageRecords === 1 ? "it" : "one"} above to inspect its own evidence.</p>}
+        </div>
         {renderCard?.(item, index) ?? <InventoryCard key={item.prop._id} item={item} index={index} />}
         <details key={`details:${item.prop._id}`} onToggle={event => { const open = event.currentTarget.open; setOpened(current => ({ ...current, [item.prop._id]: open })); }}>
           <summary>{confirmed ? "Manage relationship and context" : "Review this discovery"}</summary>
