@@ -65,7 +65,40 @@ test("homepage advertises truthful identity and a working markdown alternate", a
   expect(identity).not.toHaveProperty("aggregateRating");
   expect(identity).not.toHaveProperty("offers");
   expect(identity).not.toHaveProperty("address");
+  const creator = {
+    "@id": "https://public.example/about/contact#organization",
+    "@type": "Organization",
+    name: "lecturesfrom",
+    address: { "@type": "PostalAddress", addressCountry: "US" },
+    contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "33@lecturesfrom.com" },
+  };
+  expect(identity.creator).toEqual(creator);
+  const contact = await request.get("/about/contact");
+  expect(contact.status()).toBe(200);
+  const contactScript = (await contact.text()).match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  expect(contactScript).not.toBeNull();
+  const contactIdentity = JSON.parse(contactScript![1]);
+  expect(contactIdentity["@type"]).toBe("ContactPage");
+  expect(contactIdentity.mainEntity).toEqual(creator);
 });
+
+for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+  test(`creator attribution is readable and linked at ${viewport.width}px`, async ({ page, request }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const attribution = page.locator("main p").filter({ hasText: "Created by lecturesfrom, a business in the United States." });
+    await attribution.scrollIntoViewIfNeeded();
+    await expect(attribution).toBeVisible();
+    await expect(attribution).toHaveText("Created by lecturesfrom, a business in the United States. Contact: 33@lecturesfrom.com.");
+    await expect(attribution.getByRole("link", { name: "Contact: 33@lecturesfrom.com" })).toHaveAttribute("href", "/about/contact");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    const markdown = parseMarkdownDocument(await (await request.get("/index.md")).text());
+    expect(markdown.body).toContain("Created by lecturesfrom, a business in the United States. [Contact: 33@lecturesfrom.com](https://public.example/about/contact).");
+    await attribution.getByRole("link").click();
+    await expect(page).toHaveURL(/\/about\/contact$/);
+    await expect(page.getByRole("heading", { name: "Contact Proper Respect", exact: true })).toBeVisible();
+  });
+}
 
 test("markdown documents describe public capabilities without private data or invented credentials", async ({ request }) => {
   for (const path of ["/index.md", "/agents.md", "/auth.md"]) {
@@ -102,7 +135,7 @@ test("robots, factual sitemap date and ARD link only to available public resourc
   expect(await robots.text()).toContain("Sitemap: https://public.example/sitemap.xml");
   expect(await robots.text()).toContain("Agentmap: https://public.example/.well-known/ard.json");
   const sitemap = await (await request.get("/sitemap.xml")).text();
-  expect(sitemap).toContain("<lastmod>2026-09-21T00:00:00.000Z</lastmod>");
+  expect(sitemap).toContain("<lastmod>2026-09-23T00:00:00.000Z</lastmod>");
   expect(sitemap).not.toMatch(/collection|private-owner/);
   const response = await request.get("/.well-known/ard.json");
   expect(response.status()).toBe(200);

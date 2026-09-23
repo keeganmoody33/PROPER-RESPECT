@@ -2,7 +2,17 @@ import { publicSiteOrigin } from "./public-site";
 import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
 export const repositoryUrl = "https://github.com/keeganmoody33/PROPER-RESPECT";
-export const homepageUpdatedAt = "2026-09-21T00:00:00.000Z";
+export const homepageUpdatedAt = "2026-09-23T00:00:00.000Z";
+
+export function creatorBusinessIdentity() {
+  return {
+    "@id": new URL("/about/contact#organization", publicSiteOrigin()).href,
+    "@type": "Organization",
+    name: "lecturesfrom",
+    address: { "@type": "PostalAddress", addressCountry: "US" },
+    contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "33@lecturesfrom.com" },
+  };
+}
 
 export function productIdentity() {
   return {
@@ -14,6 +24,7 @@ export function productIdentity() {
     applicationCategory: "LifestyleApplication",
     operatingSystem: "Web",
     sameAs: [repositoryUrl],
+    creator: creatorBusinessIdentity(),
   };
 }
 
@@ -32,6 +43,8 @@ ${productIdentity().description}
 3. Preview every choice. Select the saved cards and details you want to share. Review the exact preview before you approve publication.
 
 Private by default. Shared by choice. Activity does not rank importance. Homepage usage examples contain sample data, not connected account measurements.
+
+Created by lecturesfrom, a business in the United States. [Contact: 33@lecturesfrom.com](${new URL("/about/contact", origin)}).
 
 ## Links
 

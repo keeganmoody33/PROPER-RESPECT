@@ -60,6 +60,7 @@ export default function HomePage() {
             <Link className={styles.secondary} href="/keegan">See the shared collection →</Link>
             <p className={styles.privacy}>Private by default. Shared by choice.</p>
           </div>
+          <p className={styles.privacy}>Created by lecturesfrom, a business in the United States. <Link href="/about/contact">Contact: 33@lecturesfrom.com</Link>.</p>
         </section>
       </main>
     </div>
