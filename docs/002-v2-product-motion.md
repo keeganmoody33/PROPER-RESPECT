@@ -1,6 +1,6 @@
 # 002 — V2 product motion: multi-user on proper-respect.com
 
-Updated: 2026-09-20. Supersedes [V1 motion](002-v1-product-motion.md) as the active
+Updated: 2026-09-23. Supersedes [V1 motion](002-v1-product-motion.md) as the active
 scope. Reuses the existing evidence and publication decisions; this is not a
 new architecture program.
 
@@ -14,21 +14,24 @@ statements remain distinct; no universal score or cross-product ranking.
 
 ## Existing implementation and source
 
-Main `4df11b5fd3ff4e4747f61fa2d72998842970fd7b` includes merged #23/#22.
-[Shipped V1 #14](https://github.com/keeganmoody33/PROPER-RESPECT/issues/14) records
-only hosted-proven outcomes. Latest recorded production is `32aa043`, not main.
-[Release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) is
-the single current acceptance and bug queue. Completed Tasks 1–4, private evidence
-and source checkpoints remain intact; no seed reruns or automatic owner transfer.
+Main includes PRs #25–64. Accepted production has separate backend and frontend
+sources, with #52, #58, #60, and #64 still held. The native `proper-respect.com`
+cutover and September 23 onboarding release are complete. See the
+[release reconciliation](verification/2026-09-23-release-documentation-reconciliation.md)
+for exact identities and the evidence limits.
+
+[Release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24)
+remains the acceptance and bug queue. Completed Tasks 1–4, private evidence, and
+source checkpoints remain intact; no seed reruns or automatic owner transfer.
 
 ## Launch sequence and acceptance
 
-1. Close the explicitly triaged release gaps, including issuer-bound upload
-   replay and bounded account lookup. Keep user decisions, source ownership,
-   replay safety and existing public projections intact.
-2. Launch native path-based profiles at `proper-respect.com/handle` after the
-   separately authorized hosting/auth configuration and release checks. Existing
-   `props.lecturesfrom.com` keeps working until the approved transition.
+1. Preserve the accepted ownership, replay-safety, and public-projection fixes.
+   Release held changes only after their separate review and authorization.
+2. Native path-based profiles run on `proper-respect.com`. The published owner
+   example remains `/keegan`; the desired `/lecturesfrom` canonical migration
+   is pending. The empty-collection first-tool flow is released, while a fresh
+   hosted account's complete journey remains to be verified.
 3. A second test user signs in to an isolated private owner record, independently
    authorizes each source, sees source-specific progress/coverage/errors and
    reviews deduplicated candidates. Google sign-in is not Gmail consent.
@@ -48,7 +51,7 @@ keep work context private by default, and preserve historical claims when source
 access stops. New source reads, recurrence, transfer, deployment and publication
 retain separate authorization gates.
 
-Verified Domain routing is net-new [custom-domain milestone #13](https://github.com/keeganmoody33/PROPER-RESPECT/issues/13),
+Owner-specific custom-domain routing remains the separate [custom-domain milestone #13](https://github.com/keeganmoody33/PROPER-RESPECT/issues/13),
 not a prerequisite for path-based profiles. All historical products, every
 connector, production Composio replacement, prototype A/B selection and perfect
 styling are not launch prerequisites. No new ADRs or parallel planning program;

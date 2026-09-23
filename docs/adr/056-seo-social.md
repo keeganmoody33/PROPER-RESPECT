@@ -1,31 +1,37 @@
 # ADR-056: SEO and Social Sharing
 
-> **Status correction — 2026-09-20:** OG/share generation and host-derived sitemap remain unimplemented intent. Custom-domain canonical routing belongs to #13; the path-based launch does not assume that subsystem exists. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+> Status checked 2026-09-23: canonical OpenGraph/Twitter metadata and the generic
+> branded `/share-image.png` are implemented and present in the accepted frontend.
+> The sitemap includes the homepage and three trust pages with last-modified dates.
+> Per-profile share-image customization below remains unimplemented intent.
+> Owner-specific custom-domain routing remains #13. See the
+> [release reconciliation](../verification/2026-09-23-release-documentation-reconciliation.md).
 
 ## Status
 Accepted - revised 2026-06-06
 
 ## Context
 
-Public profiles and product cards need to look good when shared. The final domain/name is not fixed, so examples should use placeholders rather than a specific brand domain.
+Public profiles and product cards need to look good when shared. The production origin is `https://proper-respect.com`. The example below uses the implemented image and current public URL. Its title and description are illustrative; actual values come from the published display name and bio.
 
 ## Decision
 
-Each public profile should generate strong metadata and share images.
+Published profiles have canonical metadata and use the generic branded share image. A future profile-specific image would require a separate implementation.
 
-## Profile Metadata
+## Profile metadata
 
 ```html
 <meta property="og:title" content="Keegan's Product Stack" />
 <meta property="og:description" content="Products Keegan uses, tests, and has archived - with links, proof, and lineage." />
-<meta property="og:image" content="https://proper-respect.example/api/og/keegan.png" />
-<meta property="og:url" content="https://proper-respect.example/keegan" />
-<meta property="og:type" content="profile" />
+<meta property="og:image" content="https://proper-respect.com/share-image.png?v=20260922" />
+<meta property="og:url" content="https://proper-respect.com/keegan" />
+<meta property="og:type" content="website" />
 ```
 
-## Dynamic OG Image
+## Deferred profile-specific image
 
-The share image should include:
+The current generated image contains the brand mark and tagline, without owner
+data. This proposed customization remains unimplemented:
 
 - Linker's name/avatar
 - Top active products
@@ -35,7 +41,7 @@ The share image should include:
 
 Avoid credibility scores in MVP. Show visible proof categories instead.
 
-## SEO Targets
+## SEO targets
 
 - product stack
 - tools I use
@@ -53,7 +59,7 @@ Avoid credibility scores in MVP. Show visible proof categories instead.
 
 ### Negative
 
-- Dynamic image generation adds implementation work.
+- Profile-specific image content adds implementation and publication review work.
 - SEO should not distract from the profile builder.
 
 ## Related

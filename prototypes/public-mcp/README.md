@@ -1,12 +1,14 @@
 # Proper Respect local public-reading prototype
 
-September 22, 2026. This package runs two read-only MCP tools and a branded MCP Apps panel on your own computer. It is separate from the production Next.js application. There is no public endpoint, account authorization flow, model API, provider synchronization or collection write.
+Updated: September 23, 2026. This package runs two read-only MCP tools and a branded MCP Apps panel on your own computer. It is separate from the production Next.js application. There is no public endpoint, account authorization flow, model API, provider synchronization or collection write.
 
 ## What to try
 
 - `get_public_site_guide({})` explains the existing public site and its evidence boundaries.
-- `get_public_profile({"profileReference":"lecturesfrom"})` reads one deliberately published profile. A canonical `{PUBLIC_SITE_ORIGIN}/{handle}` URL also works (for example, `https://proper-respect.com/lecturesfrom` when that is the configured origin). Arbitrary URLs are rejected.
+- `get_public_profile({"profileReference":"keegan"})` reads one deliberately published profile. A canonical `{PUBLIC_SITE_ORIGIN}/{handle}` URL also works (for example, `https://proper-respect.com/keegan` when that is the configured origin). Arbitrary URLs are rejected.
 - The panel shows the supplied cards, lets you choose a card and explicitly reread the public snapshot, and asks its host to open the source. Clients without MCP Apps rendering still receive the complete structured result and text fallback.
+
+As checked on September 23, `/keegan` is the live published example. The owner's desired `/lecturesfrom` canonical migration is pending; that path currently returns 404. This example does not authorize a migration. See the [release reconciliation](../../docs/verification/2026-09-23-release-documentation-reconciliation.md).
 
 The profile is the same visible projection used by the website. Measurement periods, capture dates, freshness, provenance, estimates and missing-coverage notes remain in the result. Retrieval time describes this read, not the age of the underlying evidence. Owner text is untrusted content, not instructions for the agent.
 

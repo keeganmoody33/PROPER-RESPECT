@@ -1,6 +1,6 @@
 # Proper Respect public-profile reading plugin
 
-Created by lecturesfrom · Contact: 33@lecturesfrom.com · Updated: 2026-09-22.
+Created by lecturesfrom · Contact: 33@lecturesfrom.com · Updated: 2026-09-23.
 
 This package supplies one self-contained skill for reading an owner-published Proper Respect profile and preserving the meaning of its evidence. Supply the intended public profile URL. Public reading requires no account. The package contains no account connection, editing, publication, hooks or MCP server components.
 
@@ -19,7 +19,9 @@ codex plugin marketplace add keeganmoody33/PROPER-RESPECT --ref main
 codex plugin add proper-respect@proper-respect-official
 ```
 
-The repository's `.agents/plugins/marketplace.json` selects this package for the `proper-respect-official` marketplace. A fresh Codex session should expose `proper-respect:read-public-profile`. Ask it to read a specific published profile, for example: “Read https://proper-respect.com/lecturesfrom. Which tools are published, and what usage evidence is available?”
+The repository's `.agents/plugins/marketplace.json` selects this package for the `proper-respect-official` marketplace. A fresh Codex session should expose `proper-respect:read-public-profile`. Ask it to read a specific published profile, for example: "Read https://proper-respect.com/keegan. Which tools are published, and what usage evidence is available?"
+
+As checked on September 23, `/keegan` is the live published example. The owner's desired `/lecturesfrom` canonical migration is pending; that path currently returns 404. The skill still requires the user's intended public profile URL and does not guess or substitute a handle. See the [release reconciliation](https://github.com/keeganmoody33/PROPER-RESPECT/blob/main/docs/verification/2026-09-23-release-documentation-reconciliation.md).
 
 Remote GitHub installation and fresh-session skill discovery were verified with Codex 0.153.4 on September 22, 2026, against source `32a851f18632af984e56ab2d761ebc47be870340`. The website download and discovery index were verified on production. This does not establish a skills.sh listing or Ora's acceptance of the plugin manifest.
 
