@@ -96,7 +96,7 @@ export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) =
       <div className="action-row full"><button className="secondary-action" disabled={busy}>{busy ? "Adding…" : "Add for private review"}</button></div>
     </form>
     <p role="status">{notice?.text}</p>
-    {notice?.kind === "saved" && <a href="#private-collection-title">Review your card</a>}
+    {notice?.kind === "saved" && <a href="#private-collection-title">Review your collection</a>}
   </div>;
 }
 
@@ -362,6 +362,9 @@ function Builder() {
     </> : <p role="status">Loading your profile…</p>}
   </main>;
 
+  const publicIdentityClaimed = typeof state.hasClaimedPublicIdentity === "boolean"
+    ? state.hasClaimedPublicIdentity : null;
+
   return (
     <main className="onboarding-shell">
       <div className="onboarding-intro">
@@ -472,7 +475,7 @@ function Builder() {
           <summary>Public identity</summary>
           <p>A handle is needed only when you choose to share. It is not required to build your private collection.</p>
           <form onSubmit={event => { event.preventDefault(); void submitProfile(new FormData(event.currentTarget)); }} className="form-grid">
-            <label>Handle<input name="handle" defaultValue={state.user.handle.startsWith("pending-") ? "" : state.user.handle} placeholder="your-handle" required /></label>
+            <label>Handle<input name="handle" defaultValue={publicIdentityClaimed === false ? "" : state.user.handle} placeholder="your-handle" required /></label>
             <label>Display name<input name="displayName" defaultValue={state.user.displayName ?? clerkUser?.fullName ?? ""} required /></label>
             <label className="full">Short footer bio (optional)<textarea name="bio" defaultValue={state.user.bio} rows={2} /></label>
             <ProfileLinksFields links={state.user.profileLinks} preferredLinkUrl={state.user.preferredLinkUrl} />
@@ -701,15 +704,16 @@ function Builder() {
             className="primary-action"
             type="button"
             onClick={previewSharing}
-            disabled={busy || state.user.handle.startsWith("pending-")}
+            disabled={busy || publicIdentityClaimed !== true}
           >
             Preview sharing
           </button>
           <span className="sharing-selection-count">{Object.keys(reviewEdits).length} card choice{Object.keys(reviewEdits).length === 1 ? "" : "s"} to review</span>
           {state.hasPublicationAtCurrentHandle === true && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
         </div>
-        {state.user.handle.startsWith("pending-") && <p>Ready to preview a public page? <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Set up your public identity</a> with a handle and display name. Social links are optional.</p>}
-        {state.hasPublicationAtCurrentHandle === false && <p>{state.user.handle.startsWith("pending-") ? "Nothing is published yet." : `Nothing is published at /${state.user.handle} yet.`}</p>}
+        {publicIdentityClaimed === false && <p>Ready to preview a public page? <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Set up your public identity</a> with a handle and display name. Social links are optional.</p>}
+        {publicIdentityClaimed === null && <p>Public identity status is unavailable. Reload before previewing sharing.</p>}
+        {state.hasPublicationAtCurrentHandle === false && <p>{publicIdentityClaimed === true ? `Nothing is published at /${state.user.handle} yet.` : "Nothing is published yet."}</p>}
         {preview && <SharingPreview key={preview.basis} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
       </section>
     </main>

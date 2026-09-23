@@ -25,7 +25,7 @@ const mutations = {
     if (!state) retain({
       user: { _id: "synthetic-owner", handle: "pending-owner", displayName: "Synthetic owner", bio: "" },
       cards: [], connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
-      brandEnrichmentAvailable: false, hasPublicationAtCurrentHandle: false,
+      brandEnrichmentAvailable: false, hasPublicationAtCurrentHandle: false, hasClaimedPublicIdentity: false,
     });
     return "synthetic-owner";
   },
@@ -48,7 +48,7 @@ const mutations = {
   },
   "onboarding:claimHandle": async args => {
     record("claimHandle", args);
-    retain({ ...state, user: { ...state.user, ...args, preferredLinkUrl: args.preferredLinkUrl ?? undefined } });
+    retain({ ...state, hasClaimedPublicIdentity: true, user: { ...state.user, ...args, preferredLinkUrl: args.preferredLinkUrl ?? undefined } });
     return args.handle;
   },
   "onboarding:publishSelected": async args => {

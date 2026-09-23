@@ -93,7 +93,7 @@ test("owner-described product entry needs no website or telemetry and retries wi
   await expect(page.getByLabel("Product name", { exact: true })).toHaveValue("An occasional tool");
   await page.getByRole("button", { name: "Add for private review", exact: true }).click();
   await expect(page.getByText("Saved privately. Review the card", { exact: false })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Review your card", exact: true })).toHaveAttribute("href", "#private-collection-title");
+  await expect(page.getByRole("link", { name: "Review your collection", exact: true })).toHaveAttribute("href", "#private-collection-title");
   const operations = (await page.getByLabel("Synthetic add operations").textContent())!.trim().split(/\s+/);
   expect(operations).toHaveLength(2);
   expect(operations[0]).toBe(operations[1]);
