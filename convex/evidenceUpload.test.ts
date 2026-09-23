@@ -10,11 +10,12 @@ const modules = import.meta.glob("./**/*.ts");
 
 afterEach(() => vi.unstubAllEnvs());
 
-async function fixture(bound = true) {
+async function fixture(bound = true, freshAccount = false) {
   vi.stubEnv("CONVEX_SITE_URL", "https://test.convex.site");
   const t = convexTest(schema, modules);
-  await t.run(ctx => ctx.db.insert("users", { handle: "owner", authSubject: "owner", displayName: "Owner", bio: "" }));
   const owner = t.withIdentity({ subject: "owner" });
+  if (freshAccount) await owner.mutation(api.onboarding.ensureAccount, { displayName: "Owner" });
+  else await t.run(ctx => ctx.db.insert("users", { handle: "owner", authSubject: "owner", displayName: "Owner", bio: "" }));
   const content = '{"sessions":[]}';
   const storageId = await t.run(ctx => ctx.storage.store(new Blob([content], { type: "application/json" })));
   // convex-test store() omits contentType; seed the metadata a real upload records.
@@ -124,4 +125,22 @@ test("knowing another uploader's unretained storage ID cannot establish first ow
   await expect(t.withIdentity({ subject: "intruder" }).mutation(api.onboarding.retainUpload, upload)).rejects.toThrow();
   expect(await t.run(ctx => ctx.db.query("rawEvidence").collect())).toEqual([]);
   expect(await t.run(ctx => ctx.db.query("props").collect())).toEqual([]);
+});
+
+test("retained upload does not claim public identity, while an owned pending-prefixed site does", async () => {
+  const { t, owner, upload } = await fixture(true, true);
+  const user = (await owner.query(api.onboarding.getState, {}))!.user;
+  expect(user).toMatchObject({ handle: "pending-owner", onboardingStatus: "PROFILE" });
+  expect(await owner.query(api.onboarding.getState, {})).toMatchObject({ hasClaimedPublicIdentity: false });
+  await owner.mutation(api.onboarding.retainUpload, upload);
+  expect(await owner.query(api.onboarding.getState, {})).toMatchObject({ user: { onboardingStatus: "REVIEW" }, hasClaimedPublicIdentity: false });
+  await t.run(async ctx => {
+    const otherId = await ctx.db.insert("users", { authSubject: "other-site-owner", handle: "other-site-owner", displayName: "Other", bio: "" });
+    await ctx.db.insert("sites", { ownerId: otherId, handle: "pending-owner", status: "DRAFT" });
+  });
+  expect(await owner.query(api.onboarding.getState, {})).toMatchObject({ hasClaimedPublicIdentity: false });
+  await owner.mutation(api.onboarding.claimHandle, { handle: "pending-victim123", displayName: "Owner", bio: "" });
+  expect(await owner.query(api.onboarding.getState, {})).toMatchObject({ user: { handle: "pending-victim123" }, hasClaimedPublicIdentity: true, hasPublicationAtCurrentHandle: false });
+  await t.run(ctx => ctx.db.patch(user._id, { handle: "mismatched-site" }));
+  expect(await owner.query(api.onboarding.getState, {})).toMatchObject({ hasClaimedPublicIdentity: false });
 });

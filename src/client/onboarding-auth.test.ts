@@ -182,6 +182,7 @@ test.each([
   auth.convex = { isLoading: false, isAuthenticated: true };
   auth.ownerState = {
     user: { handle: "current", displayName: "Owner", bio: "" },
+    hasClaimedPublicIdentity: true,
     hasPublicationAtCurrentHandle: publication,
     cards: [{
       prop: { _id: "saved-prop", visibility: "PUBLIC", status: "ACTIVE", headline: "Saved relationship", note: "Saved note", relationshipVersion: 1, confirmedAt: "2026-09-19T23:00:00.000Z" },
@@ -210,4 +211,20 @@ test.each([
   }
   if (publication === false) expect(html).toContain("Nothing is published at /current yet.");
   else expect(html).not.toContain("Nothing is published at /current yet.");
+});
+
+test("absent identity capability keeps sharing disabled without claiming a public handle", () => {
+  auth.convex = { isLoading: false, isAuthenticated: true };
+  auth.ownerState = {
+    user: { handle: "current", displayName: "Owner", bio: "" },
+    hasPublicationAtCurrentHandle: false,
+    cards: [], connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
+  };
+  const html = render();
+  expect(html).toContain("Public identity status is unavailable. Reload before previewing sharing.");
+  expect(html).toMatch(/<button[^>]*disabled[^>]*>Preview sharing<\/button>/);
+  expect(html).toContain("Nothing is published yet.");
+  expect(html).not.toContain("Nothing is published at /current yet.");
+  expect(html).not.toContain("Set up your public identity");
+  expect(html).not.toContain("Open current public page");
 });
