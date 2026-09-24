@@ -1,0 +1,41 @@
+{
+  "format": "claude-code-sanitized-metrics-v1",
+  "captureId": "synthetic-priced-synthetic",
+  "capturedAt": "2026-09-24T00:20:00.000Z",
+  "sample": "synthetic",
+  "sourceVersion": "2.1.274",
+  "ownerAlias": "synthetic-owner",
+  "accountAlias": "synthetic-account",
+  "deviceAlias": "synthetic-device",
+  "timezone": "UTC",
+  "namespace": "synthetic-namespace",
+  "identity": "caller-declared-full-stream",
+  "alignment": "same-interval-disjoint-categories",
+  "counterSemantics": "monotonic",
+  "bundles": [
+    {
+      "id": "delta-1",
+      "streamDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sessionAlias": "synthetic-session",
+      "processAlias": "synthetic-process",
+      "model": "claude-haiku-4-5-20251001",
+      "temporality": "delta",
+      "start": "2026-09-24T00:00:00.000Z",
+      "end": "2026-09-24T00:01:00.000Z",
+      "counts": {
+        "input": "1000",
+        "output": "200",
+        "cacheRead": "100",
+        "cacheCreation": "0"
+      },
+      "sourceCostUsd": "0.009123456789",
+      "metricStreams": {
+        "input": "8d95637c998e509f033b5edee399b4b650c6029c0fcedc0f0d59772ffeb65641",
+        "output": "aa1abc4020e8a4475e84500d74e59e765ef954f54cf647384dc5dc1375a8bcd3",
+        "cacheRead": "44c80f0f73f0fe30ac8d10dd8a5870d839e60d626536021f93a80c9313a1274f",
+        "cacheCreation": "28165eedf1ff20a6204682ac0921da7038b2823c7417cf53bc101fdbb2f0992f",
+        "cost": "6194a995454789e85e94491ecd0a582146c7090722fa9ebf13d181c067e7c8c9"
+      }
+    }
+  ]
+}

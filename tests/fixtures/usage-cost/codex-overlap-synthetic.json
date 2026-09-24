@@ -1,0 +1,36 @@
+{
+  "formatVersion": 1,
+  "source": {
+    "method": "account/usage/read",
+    "version": "0.153.4"
+  },
+  "scope": {
+    "ownerAlias": "synthetic-owner",
+    "accountAlias": "synthetic-account",
+    "requestedThreadId": null
+  },
+  "capture": {
+    "id": "synthetic-capture-overlap",
+    "capturedAt": "2026-09-24T00:20:00.000Z"
+  },
+  "response": {
+    "summary": {
+      "lifetimeTokens": 1200,
+      "currentStreakDays": 0,
+      "longestStreakDays": 2,
+      "peakDailyTokens": 1200,
+      "longestRunningTurnSec": null
+    },
+    "dailyUsageBuckets": [
+      {
+        "startDate": "2026-09-21",
+        "tokens": 1200
+      },
+      {
+        "startDate": "2026-09-22",
+        "tokens": 0
+      }
+    ],
+    "threadUsage": null
+  }
+}

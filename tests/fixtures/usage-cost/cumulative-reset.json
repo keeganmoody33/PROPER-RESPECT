@@ -1,0 +1,137 @@
+{
+  "format": "claude-code-sanitized-metrics-v1",
+  "captureId": "synthetic-cumulative-reset",
+  "capturedAt": "2026-09-24T00:20:00.000Z",
+  "sample": "synthetic",
+  "sourceVersion": "2.1.274",
+  "ownerAlias": "synthetic-owner",
+  "accountAlias": "synthetic-account",
+  "deviceAlias": "synthetic-device",
+  "timezone": "UTC",
+  "namespace": "synthetic-namespace",
+  "identity": "caller-declared-full-stream",
+  "alignment": "same-interval-disjoint-categories",
+  "counterSemantics": "monotonic",
+  "bundles": [
+    {
+      "id": "baseline",
+      "streamDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "sessionAlias": "synthetic-session",
+      "processAlias": "synthetic-process",
+      "model": "claude-haiku-4-5-20251001",
+      "temporality": "cumulative",
+      "start": "2026-09-24T00:00:00.000Z",
+      "end": "2026-09-24T00:01:00.000Z",
+      "counts": {
+        "input": "100",
+        "output": "0",
+        "cacheRead": "0",
+        "cacheCreation": "0"
+      },
+      "sourceCostUsd": null,
+      "metricStreams": {
+        "input": "afc025a16bf6a3b7132e454f2c5a525e090fc4c59f3cff97d2cdd2a55c0dd2ae",
+        "output": "21ca0fe9f9f5c042775a3eaab598461f47599e6290d3f5d19652ad5015b14413",
+        "cacheRead": "fe4789dcc8cd7ae3c297770a1880a1b02c95f33a3a00175ca5cc5bfcdc30db53",
+        "cacheCreation": "2a37516be9eab11dd05a203e4a9bd28f6606953e7266db574d0ed1eb36750be7",
+        "cost": "4f31ebd8807d312205e5fafc2f01c6ff1a2639584b9a2ca5ebfeb7749504017a"
+      }
+    },
+    {
+      "id": "repeat-counter",
+      "streamDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "sessionAlias": "synthetic-session",
+      "processAlias": "synthetic-process",
+      "model": "claude-haiku-4-5-20251001",
+      "temporality": "cumulative",
+      "start": "2026-09-24T00:00:00.000Z",
+      "end": "2026-09-24T00:02:00.000Z",
+      "counts": {
+        "input": "100",
+        "output": "0",
+        "cacheRead": "0",
+        "cacheCreation": "0"
+      },
+      "sourceCostUsd": null,
+      "metricStreams": {
+        "input": "afc025a16bf6a3b7132e454f2c5a525e090fc4c59f3cff97d2cdd2a55c0dd2ae",
+        "output": "21ca0fe9f9f5c042775a3eaab598461f47599e6290d3f5d19652ad5015b14413",
+        "cacheRead": "fe4789dcc8cd7ae3c297770a1880a1b02c95f33a3a00175ca5cc5bfcdc30db53",
+        "cacheCreation": "2a37516be9eab11dd05a203e4a9bd28f6606953e7266db574d0ed1eb36750be7",
+        "cost": "4f31ebd8807d312205e5fafc2f01c6ff1a2639584b9a2ca5ebfeb7749504017a"
+      }
+    },
+    {
+      "id": "increment",
+      "streamDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "sessionAlias": "synthetic-session",
+      "processAlias": "synthetic-process",
+      "model": "claude-haiku-4-5-20251001",
+      "temporality": "cumulative",
+      "start": "2026-09-24T00:00:00.000Z",
+      "end": "2026-09-24T00:03:00.000Z",
+      "counts": {
+        "input": "160",
+        "output": "0",
+        "cacheRead": "0",
+        "cacheCreation": "0"
+      },
+      "sourceCostUsd": null,
+      "metricStreams": {
+        "input": "afc025a16bf6a3b7132e454f2c5a525e090fc4c59f3cff97d2cdd2a55c0dd2ae",
+        "output": "21ca0fe9f9f5c042775a3eaab598461f47599e6290d3f5d19652ad5015b14413",
+        "cacheRead": "fe4789dcc8cd7ae3c297770a1880a1b02c95f33a3a00175ca5cc5bfcdc30db53",
+        "cacheCreation": "2a37516be9eab11dd05a203e4a9bd28f6606953e7266db574d0ed1eb36750be7",
+        "cost": "4f31ebd8807d312205e5fafc2f01c6ff1a2639584b9a2ca5ebfeb7749504017a"
+      }
+    },
+    {
+      "id": "reset-baseline",
+      "streamDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "sessionAlias": "synthetic-session",
+      "processAlias": "synthetic-process",
+      "model": "claude-haiku-4-5-20251001",
+      "temporality": "cumulative",
+      "start": "2026-09-24T00:04:00.000Z",
+      "end": "2026-09-24T00:05:00.000Z",
+      "counts": {
+        "input": "20",
+        "output": "0",
+        "cacheRead": "0",
+        "cacheCreation": "0"
+      },
+      "sourceCostUsd": null,
+      "metricStreams": {
+        "input": "afc025a16bf6a3b7132e454f2c5a525e090fc4c59f3cff97d2cdd2a55c0dd2ae",
+        "output": "21ca0fe9f9f5c042775a3eaab598461f47599e6290d3f5d19652ad5015b14413",
+        "cacheRead": "fe4789dcc8cd7ae3c297770a1880a1b02c95f33a3a00175ca5cc5bfcdc30db53",
+        "cacheCreation": "2a37516be9eab11dd05a203e4a9bd28f6606953e7266db574d0ed1eb36750be7",
+        "cost": "4f31ebd8807d312205e5fafc2f01c6ff1a2639584b9a2ca5ebfeb7749504017a"
+      }
+    },
+    {
+      "id": "after-reset",
+      "streamDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "sessionAlias": "synthetic-session",
+      "processAlias": "synthetic-process",
+      "model": "claude-haiku-4-5-20251001",
+      "temporality": "cumulative",
+      "start": "2026-09-24T00:04:00.000Z",
+      "end": "2026-09-24T00:06:00.000Z",
+      "counts": {
+        "input": "30",
+        "output": "0",
+        "cacheRead": "0",
+        "cacheCreation": "0"
+      },
+      "sourceCostUsd": null,
+      "metricStreams": {
+        "input": "afc025a16bf6a3b7132e454f2c5a525e090fc4c59f3cff97d2cdd2a55c0dd2ae",
+        "output": "21ca0fe9f9f5c042775a3eaab598461f47599e6290d3f5d19652ad5015b14413",
+        "cacheRead": "fe4789dcc8cd7ae3c297770a1880a1b02c95f33a3a00175ca5cc5bfcdc30db53",
+        "cacheCreation": "2a37516be9eab11dd05a203e4a9bd28f6606953e7266db574d0ed1eb36750be7",
+        "cost": "4f31ebd8807d312205e5fafc2f01c6ff1a2639584b9a2ca5ebfeb7749504017a"
+      }
+    }
+  ]
+}
