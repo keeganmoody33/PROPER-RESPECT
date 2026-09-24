@@ -11,6 +11,8 @@ import type {
 } from "@/src/domain/public-profile";
 import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
 import { compactNumber } from "@/src/domain/format-activity-number";
+import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
+import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
@@ -381,6 +383,7 @@ export function ProductCard({
   goTo = false,
   audience = "visitor",
   expandedActivity = false,
+  privateUsage,
 }: {
   card: Card;
   index: number;
@@ -389,8 +392,16 @@ export function ProductCard({
   goTo?: boolean;
   audience?: "owner" | "visitor";
   expandedActivity?: boolean;
+  privateUsage?: PrivateUsageCard;
 }) {
   const brandPreview = displayMode === "brand-preview";
+  const parsedUsage = audience === "owner" && !brandPreview && privateUsage
+    ? privateUsageCardSchema.safeParse(privateUsage)
+    : undefined;
+  const ownerUsage = parsedUsage?.success
+    && parsedUsage.data.productSlug === card.product.slug
+    && card.product.domain === (parsedUsage.data.productSlug === "claude-code" ? "claude.com" : "openai.com")
+    ? parsedUsage.data : undefined;
   const linkDisclosure = card.primaryLink?.type === "AFFILIATE" ? "Affiliate link"
     : card.primaryLink?.type === "REFERRAL" ? "Referral link" : undefined;
   const linkRel = linkDisclosure ? "noopener noreferrer sponsored" : "noopener noreferrer";
@@ -476,11 +487,12 @@ export function ProductCard({
 
         {!brandPreview && card.activity ? (
           <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />
-        ) : (brandPreview || audience === "owner") ? (
+        ) : (brandPreview || (audience === "owner" && !ownerUsage)) ? (
           <p className="activity-placeholder">
             {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}
           </p>
         ) : null}
+        {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
 
         <div className="card-footer">
           <span className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
@@ -536,6 +548,7 @@ export function ProductCard({
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
             <ActivityView activity={card.activity} />
           </>}
+          {ownerUsage && <PrivateUsageCardDetails usage={ownerUsage} />}
           {brandPreview && brand && <details className="card-brand-provenance" open>
             <summary>Brand provenance</summary>
             <ProductBrandDetails snapshot={brand} />

@@ -37,6 +37,33 @@
   color-scheme: dark;
 }
 
+.private-usage-preview-shell { max-width: 1320px; margin: 0 auto; padding: 40px 24px; }
+.private-usage-preview-shell > header { max-width: 800px; margin-bottom: 32px; }
+.private-usage-preview-shell > header h1 { font: 500 clamp(2rem, 5vw, 3.5rem)/1.05 Georgia, serif; margin: 16px 0; }
+.private-usage-preview-shell > header p, .private-usage-preview-note { font-size: .9rem; line-height: 1.65; }
+.private-usage-preview-shell select { padding: 8px 12px; min-height: 44px; color: var(--ink); background: var(--panel); border: 1px solid var(--control-line); }
+.private-usage-preview-shell [data-preview-product="claude-code"] { --brand-card-background: #292724; --brand-card-text: #f5f0e8; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: ui-monospace, monospace; }
+.private-usage-preview-shell [data-preview-product="claude-code"] .product-logo { color: #292724; background: #d9a38d; font-family: ui-monospace, monospace; }
+.private-usage-preview, .private-usage-details { min-width: 0; font-size: .8rem; line-height: 1.6; }
+.private-usage-preview { border-top: 1px solid var(--card-line, #77776d); padding-top: 12px; }
+.private-usage-preview > :is(span, strong) { display: block; margin: 5px 0; }
+.private-usage-preview p { margin: 5px 0; }
+.private-usage-row { border-top: 1px solid var(--card-line, #77776d); padding: 16px 0; min-width: 0; }
+.private-usage-row h3 { font: inherit; font-weight: 700; }
+.private-usage-meta, .private-usage-counts, .private-usage-costs { display: grid; gap: 10px; margin: 12px 0; }
+.private-usage-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.private-usage-details :is(p, dd, dt, li, a, time), .private-usage-preview :is(p, strong) { overflow-wrap: anywhere; min-width: 0; }
+.private-usage-details dd { margin: 2px 0 0; font-variant-numeric: tabular-nums; }
+.private-usage-counts dd { font-size: 1rem; font-weight: 600; }
+.private-usage-details dt { opacity: .8; }
+.private-usage-reasons { padding-left: 18px; }
+.private-usage-observations { border-top: 1px solid var(--card-line, #77776d); padding-top: 14px; }
+.private-usage-observations summary { cursor: pointer; min-height: 44px; }
+@media (max-width: 420px) {
+  .private-usage-preview-shell { padding: 24px 12px; }
+  .private-usage-counts { grid-template-columns: minmax(0, 1fr); }
+}
+
 * {
   box-sizing: border-box;
 }
