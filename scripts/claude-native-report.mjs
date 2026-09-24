@@ -23,7 +23,9 @@ async function readFile(path, cap, key = false) {
 let key;
 try {
   const args = process.argv.slice(2), values = new Map();
-  if (args.shift() !== "--synthetic") throw new Error();
+  const mode = args.shift();
+  if (!["--synthetic", "--owner-supplied"].includes(mode) || args.some(arg => arg === "--synthetic" || arg === "--owner-supplied")) throw new Error();
+  const sample = mode === "--synthetic" ? "synthetic" : "owner-supplied";
   while (args[0]?.startsWith("--")) {
     const name = args.shift(), value = args.shift();
     if (!["--key-file", "--source-scope", "--captured-at", "--content-type", "--format"].includes(name) || values.has(name) || !value || value.startsWith("--")) throw new Error();
@@ -38,7 +40,7 @@ try {
   for (const path of args) {
     const capture = sanitizeClaudeNativeMetrics(await readFile(path, NATIVE_LIMITS.bytes), {
       identityKey: key, sourceScope: values.get("--source-scope"), capturedAt: values.get("--captured-at"),
-      sample: "synthetic", contentType: values.get("--content-type"),
+      sample, contentType: values.get("--content-type"),
     });
     points += capture.points.length;
     if (points > NATIVE_LIMITS.aggregatePoints) throw new Error();
@@ -48,6 +50,6 @@ try {
   process.stdout.write(format === "sanitized" ? `${JSON.stringify(captures[0])}\n` : formatUsageCostReport(report));
   if (report.hasConflicts) process.exitCode = 2;
 } catch {
-  console.error("Native metrics rejected. Supply bounded synthetic OTLP JSON files and an explicit private 32-byte key. No partial report emitted.");
+  console.error("Native metrics rejected. Start with exactly one of --synthetic or --owner-supplied; supply bounded OTLP JSON files and an explicit private 32-byte key. No partial report emitted.");
   process.exitCode = 1;
 } finally { key?.fill(0); }
