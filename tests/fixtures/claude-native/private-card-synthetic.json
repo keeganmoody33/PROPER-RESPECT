@@ -1,0 +1,30 @@
+{
+  "format": "claude-code-native-metrics-v1",
+  "sample": "synthetic",
+  "capturedAt": "2026-09-24T12:00:00.000Z",
+  "keyScopeDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "points": [
+    {
+      "streamDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "familyDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "metric": "input",
+      "model": "claude-haiku-4-5-20251001",
+      "sourceVersion": "2.1.274",
+      "temporality": "delta",
+      "startUnixNano": "1790244000000000001",
+      "endUnixNano": "1790244000000000100",
+      "quantity": "900719925474099312345678901234"
+    },
+    {
+      "streamDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "familyDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "metric": "sourceCostUsd",
+      "model": null,
+      "sourceVersion": null,
+      "temporality": "delta",
+      "startUnixNano": "1790244000000000004",
+      "endUnixNano": "1790244000000000108",
+      "quantity": "0.00000000000000000001234567890123456789"
+    }
+  ]
+}

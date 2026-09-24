@@ -7,13 +7,16 @@ const fixture = () => JSON.parse(text("priced-synthetic"));
 const scenario = { syntheticScenario: SYNTHETIC_SCENARIO } as const;
 
 describe("private usage card projection", () => {
-  it("rejects native-only and mixed reports rather than silently dropping unsupported evidence", () => {
+  it("includes native-only and mixed reports without silently dropping evidence", () => {
     const native = JSON.stringify({ format: "claude-code-native-metrics-v1", sample: "synthetic", capturedAt: "2026-09-24T00:00:00.000Z", keyScopeDigest: "c".repeat(64),
       points: [{ streamDigest: "a".repeat(64), familyDigest: "b".repeat(64), metric: "input", model: null, sourceVersion: "2.1.274", temporality: "delta", startUnixNano: "1000000000000000001", endUnixNano: "1000000000000000002", quantity: "5" }] });
     for (const inputs of [[native], [native, text("priced-synthetic")]]) {
       const report = buildUsageCostReport(inputs);
       expect(report.nativeClaude?.rows).toHaveLength(1);
-      expect(() => projectPrivateUsage(report)).toThrow("Native single-metric evidence is not supported by this private card preview. Use the native metrics report.");
+      const preview = projectPrivateUsage(report);
+      expect(preview.tools).toHaveLength(1);
+      expect(preview.tools[0].nativeClaude?.rows[0].quantity).toBe("5");
+      expect(preview.tools[0].rows).toHaveLength(inputs.length - 1);
     }
   });
   it("retains exact huge counts, tiny costs, zero and unknown separately", () => {

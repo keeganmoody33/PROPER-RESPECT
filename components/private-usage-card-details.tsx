@@ -1,4 +1,5 @@
 import type { PrivateUsageCard } from "@/src/domain/private-usage-card";
+import { PrivateNativeUsageDetails } from "./private-native-usage-details";
 
 type UsageRow = PrivateUsageCard["rows"][number];
 type Observation = PrivateUsageCard["observations"][number];
@@ -20,12 +21,13 @@ function coverageLabel(status: UsageRow["status"] | Observation["status"]) {
 }
 
 export function PrivateUsageCardPreview({ usage }: { usage: PrivateUsageCard }) {
-  const samples = [...new Set([...usage.rows, ...usage.observations].map((row) => sampleLabel(row.sample)))];
+  const samples = [...new Set([...usage.rows, ...usage.observations, ...usage.nativeClaude?.rows ?? [], ...usage.nativeClaude?.observations ?? []].map((row) => sampleLabel(row.sample)))];
+  const rowCount = usage.rows.length + (usage.nativeClaude?.rows.length ?? 0);
   return (
     <div className="private-usage-preview">
       <span className="private-usage-label">Private local snapshot</span>
       <strong>{samples.join(" · ") || "No observations supplied"}</strong>
-      <span>{usage.rows.length} independent coverage {usage.rows.length === 1 ? "row" : "rows"} · not additive</span>
+      <span>{rowCount} independent coverage {rowCount === 1 ? "row" : "rows"} · not additive</span>
       <span>Not connected · automatic updates unavailable</span>
       {usage.hasConflicts && <span>Conflicts present · review Details</span>}
     </div>
@@ -63,11 +65,13 @@ export function PrivateUsageCardDetails({ usage }: { usage: PrivateUsageCard }) 
       <p>Local snapshot · not saved · not publishable. Genuine owner usage is not validated.</p>
       <p>Not connected · automatic updates unavailable.</p>
       <p>Coverage rows and source observations are independent and not additive. No total across tools or overlapping snapshots.</p>
+      {usage.nativeClaude && usage.rows.length > 0 && <p>Aligned and native Claude evidence are separate lanes and may overlap. Neither lane is additive to the other.</p>}
       <p>{usage.replays} duplicate {usage.replays === 1 ? "replay" : "replays"} ignored. Conflicts: {usage.hasConflicts ? "present" : "none in supplied batch"}.</p>
       <p>{usage.productSlug === "codex"
         ? "Codex cached input is included in input; reasoning is included in output. Account totals remain unpriced."
         : "Claude input, cache read and cache creation are separate source categories."}</p>
-      <div className="private-usage-rows">
+      {(!usage.nativeClaude || usage.rows.length > 0) && <div className="private-usage-rows">
+        {usage.nativeClaude && <h3>Aligned Claude metrics</h3>}
         {usage.rows.length === 0 && <p>No reconciled coverage rows supplied.</p>}
         {usage.rows.map((row, index) => <section className="private-usage-row" key={index} aria-label={`Coverage row ${index + 1}`}>
           <h4>Coverage row {index + 1}</h4>
@@ -83,8 +87,8 @@ export function PrivateUsageCardDetails({ usage }: { usage: PrivateUsageCard }) 
             : <p className="private-usage-valuation">Synthetic counterfactual list-price estimate · not a bill, savings or compute cost.
                 {" Rate: "}{row.apiEquivalent.rateVersion}. Source: {row.apiEquivalent.rateSource}</p>}
         </section>)}
-      </div>
-      <details className="private-usage-observations">
+      </div>}
+      {(!usage.nativeClaude || usage.observations.length > 0) && <details className="private-usage-observations">
         <summary>Source observations ({usage.observations.length}) · not additive</summary>
         {usage.observations.length === 0 && <p>No separate source observations supplied.</p>}
         {usage.observations.map((row, index) => <section className="private-usage-row" key={index} aria-label={`Source observation ${index + 1}`}>
@@ -92,7 +96,8 @@ export function PrivateUsageCardDetails({ usage }: { usage: PrivateUsageCard }) 
           <ObservationFacts row={row} />
           <dl className="private-usage-costs"><div><dt>Source estimate (USD)</dt><dd>{row.sourceEstimateUsd ?? "Unknown"}</dd></div></dl>
         </section>)}
-      </details>
+      </details>}
+      {usage.nativeClaude && <PrivateNativeUsageDetails usage={usage.nativeClaude} />}
     </section>
   );
 }

@@ -10,6 +10,7 @@ import { projectVisiblePublicProfile } from "../src/domain/visible-public-profil
 import { privateUsageCardSchema, projectPrivateUsage } from "../src/domain/private-usage-card";
 import { buildUsageCostReport } from "../src/domain/usage-cost-report";
 import usageFixture from "../tests/fixtures/usage-cost/priced-synthetic.json";
+import nativeFixture from "../tests/fixtures/claude-native/private-card-synthetic.json";
 
 const modules = import.meta.glob("./**/*.ts");
 const capturedAt = "2026-09-24T00:00:00.000Z";
@@ -20,6 +21,7 @@ syntheticCapture.bundles[0].sourceCostUsd = "0.000000000001";
 const privateUsage = privateUsageCardSchema.parse(
   projectPrivateUsage(buildUsageCostReport([JSON.stringify(syntheticCapture)])).tools[0],
 );
+const nativeUsage = projectPrivateUsage(buildUsageCostReport([JSON.stringify(nativeFixture)])).tools[0];
 const activity = {
   kind: "headlineMetrics" as const, attributionScope: "PERSONAL" as const,
   capturedAt, freshness: "FRESH" as const, provenanceLabel: "Synthetic supporting snapshot",
@@ -51,17 +53,17 @@ async function fixture() {
   return { t, owner, other, selection, publishArgs, saveArgs, state };
 }
 
-test("private usage cannot enter save or publication arguments and failed attempts preserve approved activity", async () => {
+test.each([privateUsage, nativeUsage])("private usage cannot enter save or publication arguments and failed attempts preserve approved activity: %#", async (attachment) => {
   const { t, owner, selection, publishArgs, saveArgs, state } = await fixture();
   const before = await state();
   expect(privateUsage.rows[0].counts[0].value).toBe(exactCount);
   expect(privateUsage.rows[0].sourceEstimateUsd).toBe("0.000000000001");
   expect(before.publications[0].profile.cards[0].activity).toEqual(activity);
   for (const field of ["activity", "privateUsage"] as const) {
-    const saveAttempt = { ...saveArgs, [field]: privateUsage } as unknown as FunctionArgs<typeof api.inventory.save>;
+    const saveAttempt = { ...saveArgs, [field]: attachment } as unknown as FunctionArgs<typeof api.inventory.save>;
     await expect(owner.mutation(api.inventory.save, saveAttempt)).rejects.toThrow();
     expect(await state()).toEqual(before);
-    const invalidSelection = { ...selection, [field]: privateUsage } as unknown as typeof selection;
+    const invalidSelection = { ...selection, [field]: attachment } as unknown as typeof selection;
     await expect(owner.query(api.onboarding.previewPublication, { selections: [invalidSelection] })).rejects.toThrow();
     await expect(owner.mutation(api.onboarding.publishSelected, { ...publishArgs, selections: [invalidSelection] })).rejects.toThrow();
     expect(await state()).toEqual(before);
