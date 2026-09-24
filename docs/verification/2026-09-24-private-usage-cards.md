@@ -2,6 +2,7 @@
 
 Branch: `codex/exact-private-usage-cards-20260924`.
 Base: `bf1c2db019c7ca2a46495f256d3937331ca1e42b` (PR #68).
+Updated base: `df59f5d33fd2016e3179d0285025984ea9616395` (PR #69). Native-only or mixed reports fail closed with an explicit unsupported-preview message; independently timed native metrics are not silently discarded or forced into aligned categories.
 Feature Ref: https://plan.ref.tools/YWNjvdWM6alR07GP
 Integration Ref: https://plan.ref.tools/T5OY9rT2rmtqxuxw
 External receipt: `/tmp/proper-respect-private-usage-cards-20260924/receipt.md` records final reviewed/merged SHAs and hosted checks after this source receipt.
@@ -52,5 +53,6 @@ Committed browser evidence: [desktop light](assets/2026-09-24-private-usage-card
 - D3 — fixed: test schema-valid projected data against actual save/publication APIs, not a malformed stand-in.
 - V1 — test correction: duplicate fixture produces one replay; browser assertion corrected from plural to exact single replay.
 - V2 — fixed: replace internal pricing reason codes with readable, fixed explanations.
+- N1 — fixed after base update: reject native-only/mixed reports before creating output; native nanosecond/single-metric projection remains a separate feature. RED regression observed omission before the guard. Prior exact-head review is superseded until the combined source is re-reviewed and CI passes.
 
 No application route, production record, backend synchronization, device collector, telemetry hook, provider invocation, personal config/auth/session read, scheduled work or deployment occurred. The next dependency is separately validated real source evidence and a reviewed collector/transfer contract; future native single-metric rows and owner-selected public fields need their own projection review. Whole-product and live-metering acceptance remain open.

@@ -33,3 +33,15 @@ test("rejects invalid input without partial preview or sensitive diagnostics", (
   expect(existsSync(out)).toBe(false);
   expect(result.stderr).not.toContain("PRIVATE_");
 });
+
+test("reports unsupported native evidence without writing a partial aligned preview", () => {
+  const parent = mkdtempSync(join(tmpdir(), "private-card-native-"));
+  const native = join(parent, "native.json");
+  writeFileSync(native, JSON.stringify({ format: "claude-code-native-metrics-v1", sample: "synthetic", capturedAt: "2026-09-24T00:00:00.000Z", keyScopeDigest: "c".repeat(64),
+    points: [{ streamDigest: "a".repeat(64), familyDigest: "b".repeat(64), metric: "input", model: null, sourceVersion: "2.1.274", temporality: "delta", startUnixNano: "1000000000000000001", endUnixNano: "1000000000000000002", quantity: "5" }] }));
+  const out = join(parent, "preview");
+  const result = spawnSync(process.execPath, [...args, "--out", out, priced, native], { encoding: "utf8" });
+  expect(result.status).toBe(1);
+  expect(existsSync(out)).toBe(false);
+  expect(result.stderr.trim()).toBe("Native single-metric evidence is not supported by this private card preview. Use the native metrics report.");
+});

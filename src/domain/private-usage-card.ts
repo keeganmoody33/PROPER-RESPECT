@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { UsageCostReport } from "./usage-cost-report.ts";
 import type { ClaudeMetricObservation, ClaudeMetricRow } from "./claude-metric-evidence.ts";
 
+export const PRIVATE_USAGE_UNSUPPORTED_NATIVE = "Native single-metric evidence is not supported by this private card preview. Use the native metrics report.";
+
 const integer = z.string().regex(/^(0|[1-9][0-9]*)$/);
 const decimal = z.string().regex(/^(0|[1-9][0-9]*)(\.[0-9]{1,12})?$/);
 const fields = {
@@ -83,6 +85,7 @@ function claudeFacts(value: ClaudeMetricObservation | ClaudeMetricRow) {
 
 /** Local presentation only: never attach this projection to a saved/public card. */
 export function projectPrivateUsage(report: UsageCostReport): PrivateUsagePreview {
+  if (report.nativeClaude) throw new Error(PRIVATE_USAGE_UNSUPPORTED_NATIVE);
   if (report.valuations.length !== (report.claude?.rows.length ?? 0)) throw new Error("Usage valuation count does not match reconciled rows.");
   const tools: PrivateUsageCard[] = [];
   if (report.claude) {

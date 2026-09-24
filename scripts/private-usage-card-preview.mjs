@@ -4,7 +4,7 @@ import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { buildUsageCostReport, USAGE_REPORT_LIMITS, SYNTHETIC_SCENARIO } from "../src/domain/usage-cost-report.ts";
-import { projectPrivateUsage } from "../src/domain/private-usage-card.ts";
+import { projectPrivateUsage, PRIVATE_USAGE_UNSUPPORTED_NATIVE } from "../src/domain/private-usage-card.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -77,7 +77,7 @@ try {
   await writeFile(join(output, "styles.css"), css, { flag: "wx", mode: 0o600 });
   await writeFile(join(output, "index.html"), `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"><title>Private usage card preview</title><link rel="stylesheet" href="./styles.css"></head><body><div id="root"></div><script src="./preview.js"></script></body></html>`, { flag: "wx", mode: 0o600 });
   console.log(`Private preview generated at ${generatedAt}. Serve the output directory on loopback only; open index.html through that local server. No source identities were included.`);
-} catch {
-  console.error("Could not create preview. Use Node.js 22+ with --experimental-strip-types, optional --synthetic-haiku-20260924, --out NEW_DIRECTORY, and 1–32 explicit sanitized capture files. Existing outputs are never overwritten.");
+} catch (error) {
+  console.error(error instanceof Error && error.message === PRIVATE_USAGE_UNSUPPORTED_NATIVE ? PRIVATE_USAGE_UNSUPPORTED_NATIVE : "Could not create preview. Use Node.js 22+ with --experimental-strip-types, optional --synthetic-haiku-20260924, --out NEW_DIRECTORY, and 1–32 explicit sanitized capture files. Existing outputs are never overwritten.");
   process.exitCode = 1;
 }
