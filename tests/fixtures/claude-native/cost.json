@@ -1,0 +1,67 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "claude-code"
+            }
+          },
+          {
+            "key": "service.version",
+            "value": {
+              "stringValue": "2.1.274"
+            }
+          },
+          {
+            "key": "user.email",
+            "value": {
+              "stringValue": "SYNTHETIC-PRIVATE@example.test"
+            }
+          }
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": {
+            "name": "synthetic-meter",
+            "version": "1.0"
+          },
+          "metrics": [
+            {
+              "name": "claude_code.cost.usage",
+              "unit": "USD",
+              "sum": {
+                "aggregationTemporality": 1,
+                "isMonotonic": true,
+                "dataPoints": [
+                  {
+                    "attributes": [
+                      {
+                        "key": "model",
+                        "value": {
+                          "stringValue": "claude-haiku-4-5-20251001"
+                        }
+                      },
+                      {
+                        "key": "session.id",
+                        "value": {
+                          "stringValue": "SYNTHETIC-PRIVATE-SESSION"
+                        }
+                      }
+                    ],
+                    "startTimeUnixNano": "1790244000000000004",
+                    "timeUnixNano": "1790244000000000108",
+                    "asDouble": 1.234567890123456789e-20
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
