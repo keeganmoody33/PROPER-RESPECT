@@ -56,7 +56,7 @@ try {
             ...preview.tools.map((usage, index) => h("div", { key: usage.productSlug, "data-preview-product": usage.productSlug },
               h(ProductCard, { card: { product: product(usage.productSlug), status: "TESTING", headline: "A local snapshot for private review.", note: "Demonstration relationship only. Not saved in a collection or published profile." }, index, audience: "owner", privateUsage: usage }))),
             h(ProductCard, { card: { product: { slug: "github-copilot", name: "GitHub Copilot", domain: "github.com", description: "An unchanged, non-metered card using retained official branding." }, status: "TESTING", headline: "A tool does not need a usage meter.", note: "Synthetic relationship for compatibility verification." }, index: 2, audience: "owner" })),
-          h("p", { className: "private-usage-preview-note" }, "Claude Code retains the existing example identity and initials; Codex uses initials because no exact retained product logo is configured. GitHub Copilot retains its existing official assets. Branding does not establish usage."));
+          h("p", { className: "private-usage-preview-note" }, "Product artwork is retained locally from publisher sources. Branding does not establish usage."));
       }
       createRoot(document.getElementById("root")).render(h(App));`, resolveDir: root },
     bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
@@ -65,6 +65,15 @@ try {
   const css = await readFile(join(root, "app/globals.css"), "utf8");
   const manifest = JSON.parse(await readFile(join(root, "public/product-assets/github-copilot/2026-09-19/source-manifest.json"), "utf8"));
   const assets = [...manifest.logos, ...manifest.typography.files, manifest.typography.license, { path: manifest.manifestPath }];
+  const usageIcons = JSON.parse(await readFile(join(root, "public/product-assets/2026-09-24-product-icons.json"), "utf8"));
+  for (const tool of preview.tools) {
+    const domain = tool.productSlug === "claude-code" ? "claude.com" : "openai.com";
+    const icon = usageIcons.find(candidate => candidate.productSlug === tool.productSlug && candidate.canonicalDomain === domain);
+    if (icon) assets.push(icon);
+  }
+  for (const asset of assets) {
+    if (!asset.path.startsWith("/product-assets/") || asset.path.split("/").some(segment => segment === ".." || segment === ".") || asset.path.includes("\\")) throw new Error();
+  }
   // A new private directory is required: never overwrite an earlier preview.
   const output = resolve(destination);
   await mkdir(output, { mode: 0o700 });

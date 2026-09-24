@@ -589,3 +589,18 @@ test("a canonical destination receives no invented affiliate disclosure", () => 
   expect($(".card-link-disclosure")).toHaveLength(0);
   expect($(".card-visit").attr("rel")).toBe("noopener noreferrer");
 });
+
+test.each([
+  ["claude-code", "claude.com", "Claude Code"],
+  ["codex", "openai.com", "Codex"],
+])("known %s card renders retained image instead of initials", (slug, domain, name) => {
+  const $ = renderCard({ product: { ...baseCard.product, slug, domain, name } });
+  expect($(".product-logo img").attr("src")).toBe(`/product-assets/${slug}/2026-09-24/app-icon.png`);
+  expect($(".product-logo").text()).toBe("");
+});
+
+test("unknown product retains its initials fallback", () => {
+  const $ = renderCard();
+  expect($(".product-logo img")).toHaveLength(0);
+  expect($(".product-logo").text()).toBe("EP");
+});

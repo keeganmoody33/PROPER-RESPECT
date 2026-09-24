@@ -1,0 +1,27 @@
+[
+  {
+    "productSlug": "claude-code",
+    "canonicalDomain": "claude.com",
+    "path": "/product-assets/claude-code/2026-09-24/app-icon.png",
+    "width": 266,
+    "height": 266,
+    "sha256": "7241633e5a39b44a947c7b9a821637f30d6e86716e7a8c847136d91f9c3f6ba1",
+    "sourcePage": "https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code",
+    "sourceUrl": "https://anthropic.gallerycdn.vsassets.io/extensions/anthropic/claude-code/2.1.281/1790191864096/Microsoft.VisualStudio.Services.Icons.Default",
+    "retrievedAt": "2026-09-24T19:23:30.260383+00:00",
+    "useBasis": "Unchanged original artwork from the exact product listing published by Anthropic. Claude Code editor listing artwork. Presentation only; no usage, ownership or endorsement claim."
+  },
+  {
+    "productSlug": "codex",
+    "canonicalDomain": "openai.com",
+    "path": "/product-assets/codex/2026-09-24/app-icon.png",
+    "width": 385,
+    "height": 385,
+    "sha256": "2ce1c57dd3b312417106a487815ab1235bddce17e1fa9b32a2f048bd71ee25d3",
+    "sourcePage": "https://marketplace.visualstudio.com/items?itemName=openai.chatgpt",
+    "sourceUrl": "https://openai.gallerycdn.vsassets.io/extensions/openai/chatgpt/26.5917.62051/1790149959307/Microsoft.VisualStudio.Services.Icons.Default",
+    "retrievedAt": "2026-09-24T19:23:30.287363+00:00",
+    "useBasis": "Unchanged original artwork from the exact product listing published by OpenAI. White Blossom supplied by the Codex editor listing; not a distinct terminal glyph. Presentation only; no usage, ownership or endorsement claim.",
+    "surface": "dark"
+  }
+]

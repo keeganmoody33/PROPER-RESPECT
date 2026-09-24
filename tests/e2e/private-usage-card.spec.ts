@@ -3,9 +3,12 @@ import { tmpdir } from "node:os";
 import { resolve, join, extname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 let server: Server;
+let nativeServer: Server;
+let nativeOrigin: string;
+test.use({ deviceScaleFactor: 3 });
 let origin: string;
 let output: string;
 let nativeOutput: string;
@@ -47,22 +50,42 @@ test.beforeAll(async () => {
   const nativeResult = spawnSync(process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/private-usage-card-preview.mjs",
     "--out", nativeOutput, nativeFixture, laterNative], { encoding: "utf8" });
   expect(nativeResult.status, nativeResult.stderr).toBe(0);
-  const types: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
-  server = createServer((request, response) => {
-    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
-    const base = pathname.startsWith("/native-only/") ? nativeOutput : output;
-    const relative = base === nativeOutput ? pathname.slice("/native-only".length) : pathname;
-    const path = resolve(base, `.${relative === "/" ? "/index.html" : relative}`);
-    if (!path.startsWith(`${base}/`)) { response.writeHead(404).end(); return; }
-    try { response.writeHead(200, { "Content-Type": types[extname(path)] ?? "application/octet-stream" }).end(readFileSync(path)); }
-    catch { response.writeHead(404).end(); }
-  });
-  await new Promise<void>(done => server.listen(0, "127.0.0.1", done));
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("Missing local fixture address");
-  origin = `http://127.0.0.1:${address.port}`;
+  const types: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".woff2": "font/woff2" };
+  async function serve(base: string) {
+    const instance = createServer((request, response) => {
+      const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+      const path = resolve(base, `.${pathname === "/" ? "/index.html" : pathname}`);
+      if (!path.startsWith(`${base}/`)) { response.writeHead(404).end(); return; }
+      try { response.writeHead(200, { "Content-Type": types[extname(path)] ?? "application/octet-stream" }).end(readFileSync(path)); }
+      catch { response.writeHead(404).end(); }
+    });
+    await new Promise<void>(done => instance.listen(0, "127.0.0.1", done));
+    const address = instance.address();
+    if (!address || typeof address === "string") throw new Error("Missing local fixture address");
+    return { server: instance, origin: `http://127.0.0.1:${address.port}` };
+  }
+  ({ server, origin } = await serve(output));
+  ({ server: nativeServer, origin: nativeOrigin } = await serve(nativeOutput));
 });
-test.afterAll(async () => { if (server) await new Promise<void>((done, reject) => server.close(error => error ? reject(error) : done())); });
+test.afterAll(async () => {
+  for (const instance of [server, nativeServer]) if (instance) await new Promise<void>((done, reject) => instance.close(error => error ? reject(error) : done()));
+});
+
+async function expectKnownLogo(card: Locator, slug: string, pixels: number) {
+  const logo = card.locator(".product-logo img");
+  await expect(logo).toBeVisible();
+  await expect(logo).toHaveAttribute("src", `/product-assets/${slug}/2026-09-24/app-icon.png`);
+  await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  const dimensions = await logo.evaluate((image: HTMLImageElement) => ({
+    width: image.naturalWidth, height: image.naturalHeight,
+    rendered: Math.max(image.getBoundingClientRect().width, image.getBoundingClientRect().height),
+    density: devicePixelRatio,
+  }));
+  expect(dimensions.width).toBe(pixels);
+  expect(dimensions.height).toBe(pixels);
+  expect(dimensions.density).toBe(3);
+  expect(dimensions.width).toBeGreaterThanOrEqual(dimensions.rendered * dimensions.density);
+}
 
 for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
   test(`generated exact private cards ${width}px ${theme}`, async ({ page }, testInfo) => {
@@ -77,7 +100,11 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     const claude = page.getByRole("article", { name: "Claude Code card", exact: true });
     const codex = page.getByRole("article", { name: "Codex card", exact: true });
     const copilot = page.getByRole("article", { name: "GitHub Copilot card", exact: true });
+    await expectKnownLogo(claude, "claude-code", 266);
     await expect(claude).toContainText("Synthetic");
+    await expectKnownLogo(codex, "codex", 385);
+    await expect(codex.locator(".product-logo")).toHaveAttribute("data-logo-mode", "dark");
+    await expect(codex.locator(".product-logo")).toHaveCSS("background-color", "rgb(23, 23, 19)");
     await expect(codex).toContainText("Origin unverified");
     await expect(copilot.locator(".private-usage-preview")).toHaveCount(0);
     await expect(copilot).toHaveAttribute("data-verified-brand", "github-copilot");
@@ -131,17 +158,22 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
   test(`generated native-only exact private cards ${width}px ${theme}`, async ({ page }, testInfo) => {
     const external: string[] = [];
     const errors: string[] = [];
-    page.on("request", request => { if (!request.url().startsWith(origin)) external.push(request.url()); });
+    page.on("request", request => { if (!request.url().startsWith(nativeOrigin)) external.push(request.url()); });
     page.on("pageerror", error => errors.push(error.message));
     await page.setViewportSize({ width, height: 1000 });
-    await page.goto(`${origin}/native-only/`);
+    await page.goto(nativeOrigin);
     await page.getByRole("combobox", { name: "Appearance" }).selectOption(theme);
     const claude = page.getByRole("article", { name: "Claude Code card", exact: true });
     await expect(claude).toHaveCount(1);
     await expect(page.getByRole("article", { name: "Codex card", exact: true })).toHaveCount(0);
+    await expectKnownLogo(claude, "claude-code", 266);
     await expect(claude).toContainText("Synthetic");
     await expect(claude).toContainText("2 independent coverage rows");
-    await claude.getByRole("button", { name: "Details", exact: true }).click();
+    await page.screenshot({ path: testInfo.outputPath(`2026-09-24-native-only-front-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+    const details = claude.getByRole("button", { name: "Details", exact: true });
+    await details.focus();
+    await page.keyboard.press("Enter");
+    await expect(claude.locator(".card-back h2")).toBeFocused();
     const native = claude.locator(".private-native-usage");
     await expect(native).toContainText("Native Claude metrics");
     const rows = native.locator(".private-native-rows");
@@ -164,5 +196,22 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     expect(await page.locator("body").textContent()).not.toMatch(/[a-f0-9]{64}|SYNTHETIC-PRIVATE/);
     expect(external).toEqual([]);
     expect(errors).toEqual([]);
+  });
+}
+
+for (const product of [{ name: "Claude Code", slug: "claude-code", mark: "CC" }, { name: "Codex", slug: "codex", mark: "C" }]) {
+  test(`failed ${product.name} image retains fallback`, async ({ page }) => {
+    let attempted = false;
+    await page.route(`**/product-assets/${product.slug}/2026-09-24/app-icon.png`, route => {
+      attempted = true;
+      return route.abort();
+    });
+    await page.goto(origin);
+    const card = page.getByRole("article", { name: `${product.name} card`, exact: true });
+    await expect.poll(() => attempted).toBe(true);
+    await expect(card.locator(".product-logo img")).toHaveCount(0);
+    await expect(card.locator(".product-logo")).toHaveText(product.mark);
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(card.locator(".card-back h2")).toBeFocused();
   });
 }
