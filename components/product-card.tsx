@@ -95,7 +95,7 @@ function ProductLogo({
     <span
       className="product-logo"
       data-logo-layout={verifiedAssets ? "wordmark" : appIcon ? "app-icon" : undefined}
-      data-logo-mode={verifiedLogo?.mode ?? (logo ? logo.mode : undefined)}
+      data-logo-mode={verifiedLogo?.mode ?? (appIcon && "surface" in appIcon ? appIcon.surface : logo?.mode)}
       data-logo-provider={appIcon ? "official-vendor" : verifiedLogo ? verifiedAssets?.provider : logo ? brand?.provider : undefined}
       aria-hidden="true"
     >

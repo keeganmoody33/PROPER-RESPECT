@@ -11,6 +11,11 @@ test("generates the actual private card application with default-off pricing and
   const out = join(parent, "preview");
   const result = spawnSync(process.execPath, [...args, "--out", out, priced, "tests/fixtures/usage-cost/codex-account-synthetic.json"], { encoding: "utf8" });
   expect(result.status, result.stderr).toBe(0);
+  for (const slug of ["claude-code", "codex"]) {
+    const asset = `product-assets/${slug}/2026-09-24/app-icon.png`;
+    expect(existsSync(join(out, asset))).toBe(true);
+    expect(readFileSync(join(out, asset))).toEqual(readFileSync(join("public", asset)));
+  }
   const js = readFileSync(join(out, "preview.js"), "utf8");
   expect(js).toContain("0.009123456789");
   expect(js).not.toContain("0.002010000000");
@@ -60,6 +65,10 @@ test.each([false, true])("synthetic native files through sanitizer produce an ex
   const result = spawnSync(process.execPath, [...args, "--out", out, ...inputs], { encoding: "utf8" });
   expect(result.status, result.stderr).toBe(0);
   const js = readFileSync(join(out, "preview.js"), "utf8");
+  const claudeAsset = "product-assets/claude-code/2026-09-24/app-icon.png";
+  expect(existsSync(join(out, claudeAsset))).toBe(true);
+  expect(readFileSync(join(out, claudeAsset))).toEqual(readFileSync(join("public", claudeAsset)));
+  expect(existsSync(join(out, "product-assets/codex/2026-09-24/app-icon.png"))).toBe(mixed);
   for (const exact of ["900719925474099312345678901234", "0.00000000000000000001234567890123456789", "1790244000000000001", "1790244000000000100", "1790244000000000004", "1790244000000000108"]) expect(js).toContain(exact);
   for (const privateText of [...digests, "SYNTHETIC-PRIVATE", "PRIVATE_SYNTHETIC_SCOPE"]) expect(js).not.toContain(privateText);
   expect(js).toContain("Native Claude metrics");

@@ -43,7 +43,6 @@
 .private-usage-preview-shell > header p, .private-usage-preview-note { font-size: .9rem; line-height: 1.65; }
 .private-usage-preview-shell select { padding: 8px 12px; min-height: 44px; color: var(--ink); background: var(--panel); border: 1px solid var(--control-line); }
 .private-usage-preview-shell [data-preview-product="claude-code"] { --brand-card-background: #292724; --brand-card-text: #f5f0e8; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: ui-monospace, monospace; }
-.private-usage-preview-shell [data-preview-product="claude-code"] .product-logo { color: #292724; background: #d9a38d; font-family: ui-monospace, monospace; }
 .private-usage-preview, .private-usage-details { min-width: 0; font-size: .8rem; line-height: 1.6; }
 .private-usage-preview { border-top: 1px solid var(--card-line, #77776d); padding-top: 12px; }
 .private-usage-preview > :is(span, strong) { display: block; margin: 5px 0; }

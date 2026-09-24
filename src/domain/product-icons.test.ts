@@ -3,11 +3,12 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
 import icons from "../../public/product-assets/2026-09-21-product-icons.json";
 import exactIcons from "../../public/product-assets/2026-09-22-product-icons.json";
+import usageIcons from "../../public/product-assets/2026-09-24-product-icons.json";
 import { officialProductIcon } from "./product-icons";
 import { resolveCatalogProduct } from "./discovery";
 
 test("reviewed icons require exact product identity and preserve original bytes", () => {
-  for (const icon of [...icons, ...exactIcons]) {
+  for (const icon of [...icons, ...exactIcons, ...usageIcons]) {
     const product = { slug: icon.productSlug, domain: icon.canonicalDomain };
     expect(officialProductIcon(product)).toEqual(icon);
     expect(officialProductIcon({ ...product, slug: `manual-${product.slug}` })).toBeUndefined();
@@ -55,4 +56,24 @@ test("existing catalog names and desktop download alias select the retained exac
     expect(product).toMatchObject({ slug, domain });
     expect(officialProductIcon(product!)?.productSlug).toBe(slug);
   }
+});
+
+test.each([
+  ["claude-code", "claude.com"],
+  ["codex", "openai.com"],
+])("supported usage product %s requires a retained exact-product image", (slug, domain) => {
+  const icon = officialProductIcon({ slug, domain });
+  expect(icon?.path).toBe(`/product-assets/${slug}/2026-09-24/app-icon.png`);
+  expect(officialProductIcon({ slug, domain: `other.${domain}` })).toBeUndefined();
+  expect(officialProductIcon({ slug: `other-${slug}`, domain })).toBeUndefined();
+});
+
+test("usage artwork retains PNG dimensions and a contrasting white-mark surface", () => {
+  for (const icon of usageIcons) {
+    const bytes = readFileSync(new URL(`../../public${icon.path}`, import.meta.url));
+    expect(bytes.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+    expect(bytes.readUInt32BE(16)).toBe(icon.width);
+    expect(bytes.readUInt32BE(20)).toBe(icon.height);
+  }
+  expect(officialProductIcon({ slug: "codex", domain: "openai.com" })).toMatchObject({ surface: "dark" });
 });
