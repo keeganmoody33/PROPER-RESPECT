@@ -1,3 +1,4 @@
+import { parseClaudeNativeCapture, reviewClaudeNativeCaptures } from "./claude-native-evidence.ts";
 import { CODEX_USAGE_LIMITS, parseCodexUsageCapture, reviewCodexUsageCaptures, formatCodexUsagePreview } from "./codex-usage.ts";
 import { parseClaudeMetricsCapture, reviewClaudeMetricsCaptures } from "./claude-metric-evidence.ts";
 import type { ClaudeMetricRow } from "./claude-metric-evidence.ts";
@@ -57,12 +58,14 @@ export function buildUsageCostReport(texts: readonly string[], options: Options 
     if (!Array.isArray(texts) || !texts.length || texts.length > USAGE_REPORT_LIMITS.files ||
         !options || Object.keys(options).some(key => key !== "syntheticScenario") ||
         (options.syntheticScenario !== undefined && options.syntheticScenario !== SYNTHETIC_SCENARIO)) throw invalid();
-    const codexInputs = [], claudeInputs = [];
+    const codexInputs = [], claudeInputs = [], nativeInputs = [];
     for (const text of texts) {
       if (typeof text !== "string" || text.length > USAGE_REPORT_LIMITS.bytes || new TextEncoder().encode(text).length > USAGE_REPORT_LIMITS.bytes) throw invalid();
       const route: unknown = JSON.parse(text);
       if (route && typeof route === "object" && "format" in route && route.format === "claude-code-sanitized-metrics-v1") {
         claudeInputs.push(parseClaudeMetricsCapture(text));
+      } else if (route && typeof route === "object" && "format" in route && route.format === "claude-code-native-metrics-v1") {
+        nativeInputs.push(parseClaudeNativeCapture(text));
       } else {
         codexInputs.push(parseCodexUsageCapture(text));
       }
@@ -70,12 +73,13 @@ export function buildUsageCostReport(texts: readonly string[], options: Options 
     if (codexInputs.length > CODEX_USAGE_LIMITS.captures) throw invalid();
     const codex = codexInputs.length ? reviewCodexUsageCaptures(codexInputs) : null;
     const claude = claudeInputs.length ? reviewClaudeMetricsCaptures(claudeInputs) : null;
+    const nativeClaude = nativeInputs.length ? reviewClaudeNativeCaptures(nativeInputs) : null;
     const valuations = (claude?.rows ?? []).map(row => valueRow(row, options));
     return {
       ruleVersion: "usage-cost-report-v1", scenario: options.syntheticScenario ?? null,
-      codex, claude, valuations,
-      replays: (codex?.replays ?? 0) + (claude?.replays ?? 0),
-      hasConflicts: Boolean(codex?.accounts.some(account => account.conflicts.length) || claude?.hasConflicts),
+      codex, claude, valuations, nativeClaude,
+      replays: (codex?.replays ?? 0) + (claude?.replays ?? 0) + (nativeClaude?.replays ?? 0),
+      hasConflicts: Boolean(codex?.accounts.some(account => account.conflicts.length) || claude?.hasConflicts || nativeClaude?.hasConflicts),
     };
   } catch { throw invalid(); }
 }
@@ -125,6 +129,19 @@ export function formatUsageCostReport(report: UsageCostReport): string {
   if (report.claude) lines.push("", "## Claude source observations (not additive)",
     "Strict sanitized contract, not native OTLP. Original category facts and capture provenance remain separate from calculations.",
     "```json", JSON.stringify(report.claude.observations, null, 2), "```", ...report.claude.diagnostics);
+  if (report.nativeClaude) {
+    lines.push("", "## Native Claude metrics (independent streams)",
+      "Exact exported decimal representation and Unix nanoseconds; no category alignment or global totals.",
+      "Identity is locally keyed, not authenticated account coverage. Native source estimates are approximate; API equivalent unpriced; actual billed unknown.",
+      "Each category arrives independently. Missing categories remain unknown; cache creation TTL is unavailable.",
+      "Old clients before 2.1.214 may inflate streaming counters; unknown client versions remain unvalidated.",
+      "| Metric | Model | Start Unix ns | End Unix ns | Status | Exact quantity | Coverage |",
+      "| --- | --- | --- | --- | --- | --- | --- |");
+    for (const row of report.nativeClaude.rows) lines.push(
+      `| ${row.metric === "sourceCostUsd" ? "Source estimate USD" : row.metric} | ${row.model ?? "unknown"} | ${row.startUnixNano} | ${row.endUnixNano} | ${row.status} | ${row.quantity} | ${row.reasons.join("; ")} |`);
+    lines.push("", "### Native sanitized source observations (not additive)",
+      "```json", JSON.stringify(report.nativeClaude.observations, null, 2), "```", ...report.nativeClaude.diagnostics);
+  }
   if (report.codex) lines.push("", "## Codex source views (not additive)", formatCodexUsagePreview(report.codex));
   return `${lines.join("\n")}\n`;
 }
