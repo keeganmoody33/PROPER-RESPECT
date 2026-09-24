@@ -39,9 +39,10 @@ No missing category becomes zero. No native API-equivalent or billed amount is
 computed. The exact decimal is the exported JSON representation, not a claim
 of precision or correctness beyond the source's floating-point calculation.
 
-The CLI requires `--synthetic`; it is developer machinery, not an authorized
-personal-data acquisition command. The pure sanitizer can mark later explicitly
-authorized input `owner-supplied`, without authenticating it.
+The CLI now requires exactly one leading `--synthetic` or `--owner-supplied`
+selector. The selected designation enters the sanitizer directly, without
+authenticating the producer. See the [selected-file CLI contract](2026-09-24-claude-selected-file-cli.md)
+for operator preflights and the separate genuine-file authorization boundary.
 
 ## Supported native subset
 
@@ -122,7 +123,8 @@ this sanitizer processed genuine telemetry.
 The `claude-code-native-metrics-v1` format is a separate scalar lane. Existing
 `claude-code-sanitized-metrics-v1`, Codex parsing, `claude` rows and positional
 `valuations` retain their contracts. `nativeClaude` is an additive report section;
-existing private card projection does not yet consume this lane.
+the current local private card projection consumes this lane, preserving exact
+strings and marking owner-supplied origin unverified.
 
 Semantic replay excludes capture time, normalizes decimal encodings and retains
 safe capture digests/times. Same-position disagreements and changed metadata
@@ -150,8 +152,8 @@ UTC window of at most ten minutes. No sample is presumed to exist. The local
 invocation would call the pure sanitizer with content type `application/json`,
 sample `owner-supplied`, the attested capture time, a new private random key and
 a local source scope, then pass only the sanitized capture to the report. A
-future separately reviewed operator command is required because this CLI is
-synthetic-only. No network transport or configuration change occurs for an
+selected-file CLI now exposes that designation explicitly; its synthetic tests
+do not authorize a genuine invocation. No network transport or configuration change occurs for an
 existing-file pilot. The owner must name exact input, key and 0700 output
 directory paths before authorizing a read/write; do not request credentials.
 
