@@ -1,0 +1,65 @@
+{
+  "format": "claude-code-sanitized-metrics-v1",
+  "captureId": "synthetic-unknown-and-missing",
+  "capturedAt": "2026-09-24T00:20:00.000Z",
+  "sample": "synthetic",
+  "sourceVersion": "2.1.274",
+  "ownerAlias": "synthetic-owner",
+  "accountAlias": "synthetic-account",
+  "deviceAlias": "synthetic-device",
+  "timezone": "UTC",
+  "namespace": "synthetic-namespace",
+  "identity": "caller-declared-full-stream",
+  "alignment": "same-interval-disjoint-categories",
+  "counterSemantics": "monotonic",
+  "bundles": [
+    {
+      "id": "mixed",
+      "streamDigest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "sessionAlias": "synthetic-session",
+      "processAlias": "synthetic-process",
+      "model": "mixed",
+      "temporality": "delta",
+      "start": "2026-09-24T00:01:00.000Z",
+      "end": "2026-09-24T00:02:00.000Z",
+      "counts": {
+        "input": "1000",
+        "output": "200",
+        "cacheRead": "100",
+        "cacheCreation": "0"
+      },
+      "sourceCostUsd": "0.009123456789",
+      "metricStreams": {
+        "input": "b708c20a285d9a816f9ca8dc811ef8265b07c6af379c5bcce6b3951d2c16f44a",
+        "output": "2e000acd12e9cfaa7ba4d540b92ac63802da9235c94f6b39e4d822173426729e",
+        "cacheRead": "7fbaf3a69bf362c29a7550a7282fc601ff2675a4705a6976a9b47c3b66a10359",
+        "cacheCreation": "8c3eb5a9fe368d81f992f447aa853f6f85975acdb4a4603df652e7e45c174559",
+        "cost": "b4c574af02068fa79125ab222565ada4bcb83481ff68e797729155d6f9acebe7"
+      }
+    },
+    {
+      "id": "missing",
+      "streamDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "sessionAlias": "synthetic-session",
+      "processAlias": "synthetic-process",
+      "model": "claude-haiku-4-5-20251001",
+      "temporality": "delta",
+      "start": "2026-09-24T00:02:00.000Z",
+      "end": "2026-09-24T00:03:00.000Z",
+      "counts": {
+        "input": "1000",
+        "output": null,
+        "cacheRead": "100",
+        "cacheCreation": "0"
+      },
+      "sourceCostUsd": "0.009123456789",
+      "metricStreams": {
+        "input": "e21cb68078159df66502cb80184152e1b4a7e7e55467606810be5053a018d473",
+        "output": "88bb6cc36a66fd4ffea3bed8cd844b9c05b66132986f8f6e93c50ba4c61e69cb",
+        "cacheRead": "619e83cdc2ff72bd87891508c44295189f384dcd8663712824b98f78b67855b4",
+        "cacheCreation": "551c2ff9c8c272dcb8e45291acc855c950bc61e095642b3163902bb7c446e1b2",
+        "cost": "9a4c4f354c545817dc47d060b8dee3e95515b79f1d2d8e1834baa14adcb174b9"
+      }
+    }
+  ]
+}
