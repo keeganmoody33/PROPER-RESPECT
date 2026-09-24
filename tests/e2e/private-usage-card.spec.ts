@@ -8,11 +8,19 @@ import { expect, test } from "@playwright/test";
 let server: Server;
 let origin: string;
 let output: string;
+let nativeOutput: string;
 const huge = "900719925474099312345678901234";
+const tiny = "0.00000000000000000001234567890123456789";
 
 test.beforeAll(async () => {
   const scratch = mkdtempSync(join(tmpdir(), "usage-card-browser-"));
   output = join(scratch, "preview");
+  nativeOutput = join(scratch, "native-preview");
+  const nativeFixture = "tests/fixtures/claude-native/private-card-synthetic.json";
+  const laterNative = join(scratch, "native-later.json");
+  const later = JSON.parse(readFileSync(nativeFixture, "utf8"));
+  later.capturedAt = "2026-09-24T13:00:00.000Z";
+  writeFileSync(laterNative, JSON.stringify(later));
   const fixture = JSON.parse(readFileSync("tests/fixtures/usage-cost/priced-synthetic.json", "utf8"));
   fixture.namespace = "PRIVATE_NAMESPACE_HUGE";
   fixture.ownerAlias = "PRIVATE_OWNER_SENTINEL";
@@ -31,14 +39,21 @@ test.beforeAll(async () => {
   });
   const result = spawnSync(process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/private-usage-card-preview.mjs",
     "--synthetic-haiku-20260924", "--out", output, large, large, ...additional,
-    "tests/fixtures/usage-cost/priced-synthetic.json", "tests/fixtures/usage-cost/codex-account-synthetic.json"], { encoding: "utf8" });
+    "tests/fixtures/usage-cost/priced-synthetic.json", "tests/fixtures/usage-cost/codex-account-synthetic.json", nativeFixture, laterNative], { encoding: "utf8" });
   expect(result.status, result.stderr).toBe(0);
   const js = readFileSync(join(output, "preview.js"), "utf8");
   expect(js).not.toMatch(/PRIVATE_(OWNER|ACCOUNT|DEVICE|NAMESPACE)/);
+  for (const digest of ["a", "b", "c", "d", "e"]) expect(js).not.toContain(digest.repeat(64));
+  const nativeResult = spawnSync(process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/private-usage-card-preview.mjs",
+    "--out", nativeOutput, nativeFixture, laterNative], { encoding: "utf8" });
+  expect(nativeResult.status, nativeResult.stderr).toBe(0);
   const types: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
   server = createServer((request, response) => {
-    const path = resolve(output, `.${new URL(request.url ?? "/", "http://localhost").pathname === "/" ? "/index.html" : new URL(request.url ?? "/", "http://localhost").pathname}`);
-    if (!path.startsWith(`${output}/`)) { response.writeHead(404).end(); return; }
+    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+    const base = pathname.startsWith("/native-only/") ? nativeOutput : output;
+    const relative = base === nativeOutput ? pathname.slice("/native-only".length) : pathname;
+    const path = resolve(base, `.${relative === "/" ? "/index.html" : relative}`);
+    if (!path.startsWith(`${base}/`)) { response.writeHead(404).end(); return; }
     try { response.writeHead(200, { "Content-Type": types[extname(path)] ?? "application/octet-stream" }).end(readFileSync(path)); }
     catch { response.writeHead(404).end(); }
   });
@@ -84,11 +99,23 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     await expect(back).toContainText("Cumulative baseline");
     await expect(back).toContainText("Conflicting observations");
     await expect(back).toContainText("New cumulative epoch/reset");
-    await expect(back).toContainText("1 duplicate replay ignored");
+    await expect(back).toContainText("3 duplicate replays ignored");
+    const native = back.locator(".private-native-usage");
+    await expect(native).toContainText("Native Claude metrics");
+    await expect(native).toContainText("Unix nanoseconds");
+    await expect(native.locator(".private-native-rows")).toContainText(huge);
+    await expect(native.locator(".private-native-rows")).toContainText(tiny);
+    for (const exact of ["1790244000000000001", "1790244000000000100", "1790244000000000004", "1790244000000000108"]) await expect(native).toContainText(exact);
+    await expect(native).toContainText("Unpriced");
+    await expect(native).toContainText("Unknown");
+    await native.locator("details.private-native-observations > summary").click();
+    await expect(native).toContainText("2026-09-24T12:00:00.000Z");
+    await expect(native).toContainText("2026-09-24T13:00:00.000Z");
+    await native.screenshot({ path: testInfo.outputPath(`2026-09-24-native-mixed-${width}-${theme}.png`), animations: "disabled" });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`2026-09-24-private-usage-details-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
     await back.getByRole("region", { name: "Coverage row 1", exact: true }).screenshot({ path: testInfo.outputPath(`2026-09-24-private-usage-exact-row-${width}-${theme}.png`), animations: "disabled" });
-    await back.getByText(/Source observations \(/).click();
+    await back.locator("details.private-usage-observations > summary").filter({ hasText: /^Source observations \(/ }).click();
     await expect(back.getByText("Source observation 1", { exact: true })).toBeVisible();
     await expect(back).toContainText("not additive");
     await page.keyboard.press("Escape");
@@ -97,6 +124,44 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     await expect(codex.locator(".card-back")).toContainText("Lifetime tokens (account snapshot)");
     await expect(codex.locator(".card-back")).toContainText("Unpriced");
     expect(await page.locator("body").textContent()).not.toMatch(/PRIVATE_(OWNER|ACCOUNT|DEVICE|NAMESPACE)/);
+    expect(external).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test(`generated native-only exact private cards ${width}px ${theme}`, async ({ page }, testInfo) => {
+    const external: string[] = [];
+    const errors: string[] = [];
+    page.on("request", request => { if (!request.url().startsWith(origin)) external.push(request.url()); });
+    page.on("pageerror", error => errors.push(error.message));
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(`${origin}/native-only/`);
+    await page.getByRole("combobox", { name: "Appearance" }).selectOption(theme);
+    const claude = page.getByRole("article", { name: "Claude Code card", exact: true });
+    await expect(claude).toHaveCount(1);
+    await expect(page.getByRole("article", { name: "Codex card", exact: true })).toHaveCount(0);
+    await expect(claude).toContainText("Synthetic");
+    await expect(claude).toContainText("2 independent coverage rows");
+    await claude.getByRole("button", { name: "Details", exact: true }).click();
+    const native = claude.locator(".private-native-usage");
+    await expect(native).toContainText("Native Claude metrics");
+    const rows = native.locator(".private-native-rows");
+    await expect(rows.getByRole("heading", { name: /^Native coverage row / })).toHaveCount(2);
+    await expect(rows).toContainText(huge);
+    await expect(rows).toContainText(tiny);
+    await expect(rows).toContainText("Source estimate (USD)");
+    await expect(rows).toContainText("Unpriced");
+    await expect(rows).toContainText("Unknown");
+    await expect(native).toContainText("Unix nanoseconds");
+    await expect(native).toContainText(/independent/i);
+    await native.locator("details.private-native-observations > summary").click();
+    const observations = native.locator("details.private-native-observations");
+    await expect(observations.getByRole("heading", { name: /^Native observation / })).toHaveCount(2);
+    await expect(observations).toContainText("2026-09-24T12:00:00.000Z");
+    await expect(observations).toContainText("2026-09-24T13:00:00.000Z");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await native.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await native.screenshot({ path: testInfo.outputPath(`2026-09-24-native-only-${width}-${theme}.png`), animations: "disabled" });
+    expect(await page.locator("body").textContent()).not.toMatch(/[a-f0-9]{64}|SYNTHETIC-PRIVATE/);
     expect(external).toEqual([]);
     expect(errors).toEqual([]);
   });

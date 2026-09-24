@@ -1,8 +1,7 @@
 import { z } from "zod";
 import type { UsageCostReport } from "./usage-cost-report.ts";
 import type { ClaudeMetricObservation, ClaudeMetricRow } from "./claude-metric-evidence.ts";
-
-export const PRIVATE_USAGE_UNSUPPORTED_NATIVE = "Native single-metric evidence is not supported by this private card preview. Use the native metrics report.";
+import { privateNativeUsageSchema, projectPrivateNativeUsage } from "./private-native-usage-card.ts";
 
 const integer = z.string().regex(/^(0|[1-9][0-9]*)$/);
 const decimal = z.string().regex(/^(0|[1-9][0-9]*)(\.[0-9]{1,12})?$/);
@@ -23,7 +22,8 @@ export const privateUsageCardSchema = z.strictObject({
   version: z.literal("private-usage-card-v1"), productSlug: z.enum(["claude-code", "codex"]),
   rows: z.array(rowSchema), observations: z.array(observationSchema),
   replays: z.number().int().nonnegative(), hasConflicts: z.boolean(), connection: z.literal("unavailable"),
-});
+  nativeClaude: privateNativeUsageSchema.optional(),
+}).refine(value => value.nativeClaude === undefined || value.productSlug === "claude-code");
 export type PrivateUsageRow = z.infer<typeof rowSchema>;
 export type PrivateUsageObservation = z.infer<typeof observationSchema>;
 export type PrivateUsageCard = z.infer<typeof privateUsageCardSchema>;
@@ -85,7 +85,6 @@ function claudeFacts(value: ClaudeMetricObservation | ClaudeMetricRow) {
 
 /** Local presentation only: never attach this projection to a saved/public card. */
 export function projectPrivateUsage(report: UsageCostReport): PrivateUsagePreview {
-  if (report.nativeClaude) throw new Error(PRIVATE_USAGE_UNSUPPORTED_NATIVE);
   if (report.valuations.length !== (report.claude?.rows.length ?? 0)) throw new Error("Usage valuation count does not match reconciled rows.");
   const tools: PrivateUsageCard[] = [];
   if (report.claude) {
@@ -121,6 +120,18 @@ export function projectPrivateUsage(report: UsageCostReport): PrivateUsagePrevie
       }
     }
     tools.push(privateUsageCardSchema.parse({ version: "private-usage-card-v1", productSlug: "codex", rows, observations: [], replays: report.codex.replays, hasConflicts: report.codex.accounts.some(account => account.conflicts.length > 0), connection: "unavailable" }));
+  }
+  if (report.nativeClaude) {
+    const nativeClaude = projectPrivateNativeUsage(report.nativeClaude);
+    const claude = tools.find(value => value.productSlug === "claude-code");
+    if (claude) {
+      claude.nativeClaude = nativeClaude;
+      claude.replays += nativeClaude.replays;
+      claude.hasConflicts ||= nativeClaude.hasConflicts;
+    } else tools.unshift(privateUsageCardSchema.parse({
+      version: "private-usage-card-v1", productSlug: "claude-code", rows: [], observations: [], nativeClaude,
+      replays: nativeClaude.replays, hasConflicts: nativeClaude.hasConflicts, connection: "unavailable",
+    }));
   }
   return { version: "private-usage-preview-v1", replays: report.replays, hasConflicts: report.hasConflicts, tools };
 }
