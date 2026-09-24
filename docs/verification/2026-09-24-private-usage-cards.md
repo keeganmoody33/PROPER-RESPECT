@@ -43,6 +43,8 @@ Codex account lifetime snapshots remain origin-unverified and unpriced with peri
 
 Screenshots and detailed logs live under `/tmp/proper-respect-private-usage-cards-20260924/browser/`. The final receipt lists actual screenshot paths and final reviewer/CI results. Chromium evidence is local synthetic proof; Safari and actual owner evidence are untested.
 
+Committed browser evidence: [desktop light](assets/2026-09-24-private-usage-cards/desktop-light.png), [mobile dark](assets/2026-09-24-private-usage-cards/mobile-dark.png), [exact row mobile](assets/2026-09-24-private-usage-cards/exact-row-mobile.png), [exact row desktop](assets/2026-09-24-private-usage-cards/exact-row-desktop.png). These are actual generated-artifact screenshots with synthetic inputs.
+
 ## Review dispositions
 
 - D1 — fixed before implementation: keep private usage outside ActivityModule/public schema; reject forced visitor and wrong-product rendering.
