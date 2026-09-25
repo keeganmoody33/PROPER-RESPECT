@@ -210,15 +210,16 @@ line, or in a `remediate/<ID>-` branch name.
   A branch behind main gets its own update request, outside those rounds.
   Only these findings count: top-level review comments and "changes
   requested" reviews from Codex, Copilot, Vercel, Cursor or Devin review, or
-  from the owner and collaborators, and a Copilot review of the commit that
-  still lists open findings.
+  from the owner and collaborators, and a Copilot review of the commit whose
+  overview lists findings, including ones it found in unchanged code.
 - **Review.** Once the checks pass and 30 minutes have passed since the push,
   it asks `@codex review` and, unless Copilot already reviewed that commit,
   requests a Copilot review with the owner's token. A review is clean when
   Codex's review summary shows a completed review of that commit and Codex
   left no comments on it, or when Copilot's latest review of the commit is
-  finished, has no comments, and shows no sign of findings. It waits up to an
-  hour for a review in progress.
+  finished, in a format the autopilot knows, has no comments, and shows no
+  sign of findings. An unfamiliar Copilot format never clears a PR. It waits
+  up to an hour for a review in progress.
 - **Codex outages.** When Codex answers "Something went wrong", or a review
   never comes, it asks again: at once the first time, then an hour after each
   failure, up to 6 times per commit. So a few hours of Codex downtime delay a

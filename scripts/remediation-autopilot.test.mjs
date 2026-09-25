@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CODEX_BOT, cleanReviewer, codexAsk, codexReviewStatus, createGitHub, decide, findingsOnHead, latestChecks, mergeMessage,
-  mergeTitle, parseMarkers, protectedChanges, shouldStartRun, startPrompt, taskIdOf,
+  mergeTitle, parseMarkers, protectedChanges, recentClosedPulls, shouldStartRun, startPrompt, taskIdOf,
 } from "./remediation-autopilot.mjs";
 
 const HEAD = "a".repeat(40);
@@ -93,10 +93,10 @@ test("review findings count only top-level comments on the head from trusted rev
     copilotReview(OPEN_FINDINGS),
   ];
   const result = findingsOnHead(comments, reviews, HEAD);
-  // Four comments and two reviews count; Codex's and the owner's block. The
-  // Copilot overview adds nothing, since Copilot commented on the commit.
-  assert.deepEqual([result.total, result.blocking], [6, 3]);
-  assert.ok(result.urls.includes("https://example/r2") && result.urls.includes("https://example/r3"));
+  // Four comments, two "changes requested" reviews and the Copilot overview
+  // count; Codex's and the owner's block.
+  assert.deepEqual([result.total, result.blocking], [7, 3]);
+  for (const url of ["https://example/r2", "https://example/r3", "https://example/copilot-review"]) assert.ok(result.urls.includes(url), url);
 });
 
 test("a Copilot review that lists open findings without commenting on the commit is a finding", () => {
@@ -233,6 +233,14 @@ test("a clean review comes only from Codex's summary for the commit or a finishe
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("**Review effort:** Lite\n**Findings:** 2 high")] }), null);
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("", { state: "CHANGES_REQUESTED" })] }), null);
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("", { state: "PENDING" })] }), null);
+  // Unknown formats fail closed; resolved findings don't block.
+  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("Looks fine to me.")] }), null);
+  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("")] }), null);
+  const overview = section => copilotReview(`<!-- ccr-overview-v2 -->\n<details>\n<summary><strong>${section}</strong></summary>\n</details>`);
+  assert.equal(cleanReviewer({ ...base, reviews: [overview("Previously missed (1)")] }), null);
+  assert.equal(cleanReviewer({ ...base, reviews: [overview("Resolved since last review (3)")] }), "Copilot");
+  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("Copilot reviewed 2 of 2 files. Adds quota handling; generated no comments.")] }), "Copilot");
+  assert.deepEqual(findingsOnHead([comment("Copilot")], [overview("Previously missed (1)")], HEAD).urls, ["https://example/Copilot", "https://example/copilot-review"]);
   // The latest Copilot review of the commit decides.
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview(OPEN_FINDINGS), copilot] }), "Copilot");
   assert.equal(cleanReviewer({ ...base, codexComments: [summary("Completed")], reviewComments: [comment(CODEX_BOT)] }), null);
@@ -326,6 +334,18 @@ test("a run pull request is renamed after its task, retried, closed, or paused",
   assert.deepEqual([failedStart.type, failedStart.retry], ["request-start", true]);
   const restarted = [...start, { ...start[0], key: "retry", createdAt: minutesAgo(15) }];
   assert.equal(decide(facts({ pr: run, markers: restarted, commitSubjects: only, codexComments: [somethingWrong(10)] })).type, "wait");
+});
+
+test("run limits read every PR closed or changed in the last day", async () => {
+  const page = updatedMinutesAgo => Array.from({ length: 100 }, () => ({ updated_at: minutesAgo(updatedMinutesAgo) }));
+  const pages = [page(60), page(600), [...page(1200).slice(0, 99), { updated_at: minutesAgo(25 * 60) }], page(30 * 60)];
+  const asked = [];
+  const github = { request: async path => { asked.push(path); return pages[Number(path.match(/&page=(\d+)/)[1]) - 1]; } };
+  assert.equal((await recentClosedPulls(github, NOW)).length, 300);
+  assert.equal(asked.length, 3);
+  assert.match(asked[0], /sort=updated&direction=desc/);
+  const endless = { request: async () => page(10) };
+  await assert.rejects(recentClosedPulls(endless, NOW, 3), error => error.code === "TRUNCATED");
 });
 
 test("a new run starts only when nothing is in flight", () => {

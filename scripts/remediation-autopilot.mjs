@@ -62,11 +62,19 @@ const FAILED = new Set(["failure", "timed_out", "cancelled", "action_required", 
 const TITLE_TASK = /\((R\d{2})\)\s*$/;
 const REVIEW_SUMMARY = "<!-- codex-pull-request-review-summary -->";
 const CODEX_FAILURE = /something went wrong/i;
-const COPILOT_UNAVAILABLE = /unable to review|quota/i;
-// Signs of findings in a Copilot review body: its overview's "Open (n)" list,
-// its "Changes recommended" verdict, or a nonzero "Findings:" count.
-const COPILOT_FINDINGS = [/<strong>Open \([1-9]\d*\)<\/strong>/, /^###\s+\S+\s+Changes recommended/m, /\*\*Findings:\*\*\s*[1-9]/];
+const COPILOT_UNAVAILABLE = /Copilot was unable to review/i;
+// Signs of findings in a Copilot review body: a counted overview section
+// other than "Resolved since last review" (such as "Open (2)" or "Previously
+// missed (1)"), a "Changes recommended" verdict, or a nonzero "Findings:".
+const COPILOT_FINDINGS = [
+  /<strong>(?!Resolved)[^<]*\([1-9]\d*\)<\/strong>/,
+  /^###\s+\S+\s+Changes recommended/m,
+  /\*\*Findings:\*\*\s*[1-9]/,
+];
 const copilotFindings = review => COPILOT_FINDINGS.some(pattern => pattern.test(review.body ?? ""));
+// The review shapes whose clean form is known: the overview, and the older
+// summary that says Copilot generated no comments. Anything else can't clear a PR.
+const copilotKnownShape = review => (review.body ?? "").includes("<!-- ccr-overview-v2 -->") || /generated (?:no|0) (?:new )?comments/i.test(review.body ?? "");
 const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|note) sha=([0-9a-f]{7,40})(?: key=([\w-]+))? -->/;
 
 const minutesSince = (now, iso) => (now - Date.parse(iso)) / 60_000;
@@ -99,17 +107,17 @@ const latestCopilotReview = (reviews, headSha) =>
 
 // Review findings on the head commit that ask for work: top-level review
 // comments and "changes requested" reviews from a review bot or a trusted
-// person, and a Copilot review of the commit that lists open findings without
-// commenting on the commit. Replies and outsiders don't count. Findings from
-// Codex or from people block a merge; other bots' are advisory once the fix
-// rounds run out.
+// person, and the latest Copilot review of the commit when its body lists
+// findings (some, like "Previously missed", never become comments). Replies
+// and outsiders don't count. Findings from Codex or from people block a
+// merge; other bots' are advisory once the fix rounds run out.
 export function findingsOnHead(comments, reviews, headSha) {
   const trusted = entry => REVIEW_BOTS.includes(entry.login) || (entry.type !== "Bot" && TRUSTED_ASSOCIATIONS.includes(entry.association));
   const inline = comments.filter(comment => comment.inReplyTo === null && comment.originalCommitId === headSha && trusted(comment));
   const requested = reviews.filter(review => review.commitId === headSha && review.state === "CHANGES_REQUESTED" && trusted(review));
   const copilot = latestCopilotReview(reviews, headSha);
-  const copilotOpen = copilot && copilotFindings(copilot) && !inline.some(comment => COPILOT_REVIEWERS.includes(comment.login));
-  const found = [...inline, ...requested, ...(copilotOpen ? [copilot] : [])];
+  const copilotBody = copilot && copilotFindings(copilot) && !requested.includes(copilot) ? [copilot] : [];
+  const found = [...inline, ...requested, ...copilotBody];
   return {
     total: found.length,
     blocking: found.filter(entry => entry.login === CODEX_BOT || entry.type !== "Bot").length,
@@ -139,15 +147,16 @@ export function codexReviewStatus(codexComments, headSha) {
 
 // Who reviewed the head commit cleanly: Codex, when its review summary shows
 // a completed review of that commit and it left no comments on it; or Copilot,
-// when its latest review of the commit is a finished review with no comments
-// and no sign of findings. Nothing else, such as a reaction, counts.
+// when its latest review of the commit is a finished review in a known shape
+// with no comments and no sign of findings. Nothing else, such as a
+// reaction or an unfamiliar review format, counts.
 export function cleanReviewer(facts) {
   const head = facts.pr.headSha;
   const commented = logins => facts.reviewComments.some(comment => logins.includes(comment.login) && comment.originalCommitId === head);
   if (!commented([CODEX_BOT]) && codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
   const copilot = latestCopilotReview(facts.reviews, head);
-  const clean = copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && !COPILOT_UNAVAILABLE.test(copilot.body ?? "") &&
-    !copilotFindings(copilot) && !commented(COPILOT_REVIEWERS);
+  const clean = copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && copilotKnownShape(copilot) &&
+    !COPILOT_UNAVAILABLE.test(copilot.body ?? "") && !copilotFindings(copilot) && !commented(COPILOT_REVIEWERS);
   return clean ? "Copilot" : null;
 }
 
@@ -420,6 +429,19 @@ function truncated(message) {
   return error;
 }
 
+// Every PR closed or changed in the last day: that covers each run started in
+// the last 24 hours and each run closed within the cooldown.
+export async function recentClosedPulls(github, now, maxPages = 20) {
+  const dayAgo = now - 24 * 60 * 60_000;
+  const closed = [];
+  for (let page = 1; page <= maxPages; page += 1) {
+    const batch = await github.request(`/repos/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=${page}`);
+    closed.push(...batch);
+    if (batch.length < 100 || Date.parse(batch.at(-1).updated_at) < dayAgo) return closed;
+  }
+  throw truncated(`more than ${maxPages * 100} pull requests were closed or changed in the last day`);
+}
+
 // The newest run of each check. Reruns leave older attempts on the commit.
 export function latestChecks(checkRuns) {
   const newest = new Map();
@@ -615,7 +637,7 @@ export async function main(env = process.env, log = console.log) {
   }
 
   if (startTasks && merged === 0 && failures === 0) {
-    const closed = await github.request("/repos/{repo}/pulls?state=closed&sort=created&direction=desc&per_page=50");
+    const closed = await recentClosedPulls(github, now);
     const recentRuns = [
       ...open.map(pr => ({ number: pr.number, labels: pr.labels, headRef: pr.headRef, createdAt: pr.createdAt, closedAt: null, merged: false })),
       ...closed.map(pr => ({ number: pr.number, labels: pr.labels.map(label => label.name), headRef: pr.head.ref, createdAt: pr.created_at, closedAt: pr.closed_at, merged: Boolean(pr.merged_at) })),
