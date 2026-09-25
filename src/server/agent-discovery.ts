@@ -117,6 +117,7 @@ See [agent instructions](${new URL("/agents.md", origin)}) for the supported rea
 
 export function agentCatalog() {
   const origin = publicSiteOrigin();
+  const guideUrl = new URL("/agents.md", origin).href;
   return {
     specVersion: "1.0",
     entries: [{
@@ -124,12 +125,19 @@ export function agentCatalog() {
       identifier: `urn:air:${origin.hostname}:docs:public-profile`,
       displayName: "Proper Respect public-profile reading guide",
       type: "text/markdown",
-      url: new URL("/agents.md", origin).href,
+      url: guideUrl,
       description: "Instructions for reading an owner-published tool collection and using its read-only browser WebMCP tool. This is documentation, not a remote MCP endpoint.",
       representativeQueries: [
         "How do I read a person's published tool collection on Proper Respect?",
         "How should I interpret the usage evidence on a Proper Respect profile?",
       ],
+      ...(origin.protocol === "https:" ? {
+        trustManifest: {
+          identity: guideUrl,
+          identityType: "https",
+          provenance: [{ relation: "publishedFrom", sourceId: repositoryUrl }],
+        },
+      } : {}),
     }],
   };
 }
