@@ -63,6 +63,33 @@ it("advertises only the available public reading guide on the configured origin"
   expect(catalog.entries[0].representativeQueries).toHaveLength(2);
 });
 
+it.each(["https://proper-respect.com", "https://canonical.example:8443"])("binds unsigned catalog provenance to the configured HTTPS publisher %s", origin => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", origin);
+  vi.stubEnv("VERCEL_URL", "untrusted-preview.example");
+  vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "untrusted-production.example");
+
+  const entry = agentCatalog().entries[0];
+  expect(entry.identifier.split(":")[2]).toBe(new URL(origin).hostname);
+  expect(entry).toHaveProperty("trustManifest", {
+    identity: `${origin}/agents.md`,
+    identityType: "https",
+    provenance: [{
+      relation: "publishedFrom",
+      sourceId: "https://github.com/keeganmoody33/PROPER-RESPECT",
+    }],
+  });
+  expect(JSON.stringify(entry)).not.toContain("untrusted-");
+});
+
+it("does not advertise an HTTPS trust identity for local HTTP development", () => {
+  vi.stubEnv("NODE_ENV", "development");
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "http://localhost:3000");
+
+  const entry = agentCatalog().entries[0];
+  expect(entry.url).toBe("http://localhost:3000/agents.md");
+  expect(entry).not.toHaveProperty("trustManifest");
+});
+
 it("builds a compact public guide from configured canonical URLs and existing facts", () => {
   vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
   vi.stubEnv("VERCEL_URL", "untrusted-preview.example");
