@@ -68,7 +68,8 @@ const COPILOT_UNAVAILABLE = /Copilot was unable to review/i;
 // missed (1)"), a "Changes recommended" verdict, or a nonzero "Findings:".
 const COPILOT_FINDINGS = [
   /<strong>(?!Resolved)[^<]*\([1-9]\d*\)<\/strong>/,
-  /^###\s+\S+\s+Changes recommended/m,
+  // Any heading with "changes recommended", with or without an emoji, unless it says "no changes".
+  /^#{1,6}(?![^\n]*\bno changes\b)[^\n]*\bchanges recommended\b/im,
   /\*\*Findings:\*\*\s*[1-9]/,
 ];
 const copilotFindings = review => COPILOT_FINDINGS.some(pattern => pattern.test(review.body ?? ""));
@@ -80,13 +81,22 @@ const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|note
 const minutesSince = (now, iso) => (now - Date.parse(iso)) / 60_000;
 const queued = id => (id && TASK_IDS.includes(id) ? id : null);
 
-// The task ID from the title's suffix, else the template's task line, else a
-// remediate/<ID>- branch. IDs outside the queue don't count.
+// The task IDs a PR names: in its title's suffix, the template's task line,
+// and a remediate/<ID>- branch name.
+export function taskIdsOf(pr) {
+  const ids = [
+    pr.title.match(TITLE_TASK)?.[1],
+    (pr.body ?? "").match(/^\s*-\s*Remediation task, if any:\s*(R\d{2})\b/m)?.[1],
+    pr.headRef.match(/^remediate\/(R\d{2})-/)?.[1],
+  ];
+  return [...new Set(ids.filter(Boolean))];
+}
+
+// The PR's task: the one queued ID it names. None when it names none, an ID
+// outside the queue, or two different IDs (decide() holds those for the owner).
 export function taskIdOf(pr) {
-  const id = pr.title.match(TITLE_TASK)?.[1] ??
-    (pr.body ?? "").match(/^\s*-\s*Remediation task, if any:\s*(R\d{2})\b/m)?.[1] ??
-    pr.headRef.match(/^remediate\/(R\d{2})-/)?.[1];
-  return queued(id);
+  const ids = taskIdsOf(pr);
+  return ids.length === 1 ? queued(ids[0]) : null;
 }
 
 export const isRun = pr => pr.labels.includes(RUN_LABEL) || pr.headRef.startsWith(RUN_BRANCH_PREFIX);
@@ -326,6 +336,10 @@ export function decide(facts, limits = LIMITS) {
   if (pr.draft) return { type: "skip", reason: "draft" };
   const ownerLabel = pr.labels.find(label => OWNER_LABELS.includes(label));
   if (ownerLabel) return { type: "skip", reason: `labeled ${ownerLabel}` };
+  const named = taskIdsOf(pr);
+  if (named.length > 1) {
+    return { type: "label-owner", label: "needs-owner", reason: `its title, template line and branch name different tasks (${named.join(", ")})` };
+  }
   const taskId = taskIdOf(pr);
   const decision = isRun(pr) && !taskId ? decideRun(facts, limits) : taskId ? decideTask(facts, taskId, limits) : { type: "skip", reason: "not a remediation task" };
   if (decision.type === "wait" && decision.since && minutesSince(now, decision.since) >= limits.stuckHours * 60) {
@@ -566,7 +580,7 @@ export async function main(env = process.env, log = console.log) {
   let failures = 0;
   let merged = 0;
   for (const pull of open) {
-    if (!taskIdOf(pull) && !isRun(pull)) continue;
+    if (!taskIdOf(pull) && !isRun(pull) && taskIdsOf(pull).length < 2) continue;
     const ownerLabel = pull.labels.find(label => OWNER_LABELS.includes(label));
     if (ownerLabel) {
       log(`#${pull.number}: skip (labeled ${ownerLabel})`);
@@ -609,11 +623,18 @@ export async function main(env = process.env, log = console.log) {
           log("  skipping: one merge per run, because main has just moved");
           continue;
         }
+        // Look again right before merging: a review can land after the first look.
+        const again = await gatherFacts(github, pull, { ...context, now: Date.now() });
+        const second = decide(again);
+        if (second.type !== "merge" || again.pr.headSha !== sha) {
+          log(`  not merging: a second look says ${second.type} (${second.reason})`);
+          continue;
+        }
         await write(`squash-merge #${pull.number} at ${sha.slice(0, 7)}`, async () => {
           try {
             const result = await github.request(`/repos/{repo}/pulls/${pull.number}/merge`, { method: "PUT", body: {
-              merge_method: "squash", sha, commit_title: mergeTitle(facts.pr, decision.taskId),
-              commit_message: mergeMessage(facts.commitMessages, decision.reviewer),
+              merge_method: "squash", sha, commit_title: mergeTitle(again.pr, second.taskId),
+              commit_message: mergeMessage(again.commitMessages, second.reviewer),
             } });
             if (result?.merged !== true) throw new Error(`GitHub answered without merging: ${result?.message ?? "no reason given"}`);
           } catch (error) {

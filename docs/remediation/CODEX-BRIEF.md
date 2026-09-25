@@ -233,6 +233,8 @@ line, or in a `remediate/<ID>-` branch name.
   - Codex or Copilot reviewed that commit cleanly;
   - GitHub reports the PR as clean.
 
+  Right before merging it reads the PR again and merges only if that second
+  look still says merge, so a review that lands in between stops it.
   Merges by the workflow token don't start other workflows, so `verify.yml`
   doesn't rerun on main afterwards. Main requires branches to be up to date,
   so the tested tree is the merged one.
@@ -246,8 +248,9 @@ line, or in a `remediate/<ID>-` branch name.
   - Codex keeps failing after the 6 retries, and Copilot gave no clean
     review;
   - a check or commit status from an app other than GitHub Actions fails;
-  - its commits name another task, so it mixes tasks (commit subjects
-    without an ID are fine, since the squash subject carries it);
+  - it names two different tasks, in its title, template line, branch name
+    or commit subjects (commit subjects without an ID are fine, since the
+    squash subject carries it);
   - a list it reads (files, commits, comments or reviews) is too long to
     read in full;
   - anything waits more than 6 hours.

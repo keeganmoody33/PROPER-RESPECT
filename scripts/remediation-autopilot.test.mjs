@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  CODEX_BOT, cleanReviewer, codexAsk, codexReviewStatus, createGitHub, decide, findingsOnHead, latestChecks, mergeMessage,
-  mergeTitle, parseMarkers, protectedChanges, recentClosedPulls, shouldStartRun, startPrompt, taskIdOf,
+  CODEX_BOT, cleanReviewer, codexAsk, codexReviewStatus, createGitHub, decide, findingsOnHead, latestChecks, main, mergeMessage,
+  mergeTitle, parseMarkers, protectedChanges, recentClosedPulls, shouldStartRun, startPrompt, taskIdOf, taskIdsOf,
 } from "./remediation-autopilot.mjs";
 
 const HEAD = "a".repeat(40);
@@ -376,4 +376,112 @@ test("Codex prompts name what to do", () => {
   assert.equal(codexAsk({ type: "request-review" }, HEAD), "@codex review");
   assert.match(codexAsk({ type: "request-update" }, HEAD), /behind main/);
   assert.match(codexAsk({ type: "request-fix", kind: "ci", reason: "failing: verify" }, HEAD), /\(verify\)/);
+});
+
+test("PRs naming two different tasks go to the owner", () => {
+  assert.deepEqual(taskIdsOf({ title: "fix: caps (R01)", body: "", headRef: "remediate/R02-caps" }), ["R01", "R02"]);
+  assert.equal(taskIdOf({ title: "fix: caps (R01)", body: "", headRef: "remediate/R02-caps" }), null);
+  assert.equal(taskIdOf({ title: "fix: caps (R02)", body: "- Remediation task, if any: R02", headRef: "remediate/R02-caps" }), "R02");
+  const mixed = decide(facts({ pr: { title: "fix: caps (R01)", headRef: "remediate/R02-caps" } }));
+  assert.deepEqual([mixed.type, mixed.label], ["label-owner", "needs-owner"]);
+  assert.match(mixed.reason, /R01, R02/);
+});
+
+test("Copilot's changes-recommended verdict counts with or without an emoji", () => {
+  const base = facts({ codexComments: [] });
+  for (const verdict of ["### Changes recommended", "## 🔴 Changes recommended", "### ⚠️ Some changes recommended"]) {
+    const review = copilotReview(`<!-- ccr-overview-v2 -->\n${verdict}\n`);
+    assert.equal(cleanReviewer({ ...base, reviews: [review] }), null, verdict);
+    assert.equal(findingsOnHead([], [review], HEAD).total, 1, verdict);
+  }
+  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("<!-- ccr-overview-v2 -->\n### No changes recommended\n")] }), "Copilot");
+});
+
+// A fake GitHub API for main(): one clean task PR, with review comments that
+// can change between the autopilot's two looks.
+function fakeGitHub({ laterComments = [], issueComments = null } = {}) {
+  const sha = "c".repeat(40);
+  const ago = minutes => new Date(Date.now() - minutes * 60_000).toISOString();
+  const pull = {
+    number: 81, title: "fix: reserve route-shadowed handles (R01)", body: "", draft: false, created_at: ago(120),
+    head: { ref: "remediate/R01-handles", sha, repo: { full_name: "o/r" } }, base: { ref: "main", repo: { full_name: "o/r" } },
+    user: { login: "owner" }, labels: [], changed_files: 1, commits: 1, mergeable_state: "clean", requested_reviewers: [],
+  };
+  const calls = [];
+  let reviewCommentReads = 0;
+  const routes = {
+    "GET /user": () => ({ login: "owner" }),
+    "GET /repos/o/r/pulls": () => [pull],
+    "GET /repos/o/r/pulls/81": () => pull,
+    "GET /repos/o/r/pulls/81/files": () => [{ filename: "src/domain/onboarding.ts" }],
+    [`GET /repos/o/r/commits/${sha}/check-runs`]: () => ({ check_runs: ["verify", "Native Chrome WebMCP"].map((name, id) => ({
+      id, name, app: { slug: "github-actions" }, status: "completed", conclusion: "success", started_at: ago(45) })) }),
+    [`GET /repos/o/r/commits/${sha}/status`]: () => ({ state: "success", total_count: 0, statuses: [] }),
+    "GET /repos/o/r/pulls/81/reviews": () => [],
+    "GET /repos/o/r/pulls/81/comments": () => (reviewCommentReads++ === 0 ? [] : laterComments),
+    "GET /repos/o/r/issues/81/comments": () => issueComments ?? [
+      { id: 1, user: { login: "owner" }, body: `@codex review\n\n<!-- remediation-autopilot:review sha=${sha} -->`, created_at: ago(20), updated_at: ago(20) },
+      { id: 2, user: { login: CODEX_BOT }, created_at: ago(18), updated_at: ago(10),
+        body: `<!-- codex-pull-request-review-summary -->\n| 📝 **Code Review** | ✅ **Completed** | \`${sha.slice(0, 7)}\` | Manual request |` },
+    ],
+    "GET /repos/o/r/pulls/81/commits": () => [{ commit: { message: "fix: reserve route-shadowed handles (R01)" }, author: { login: "owner" }, committer: { login: "owner" } }],
+    [`GET /repos/o/r/commits/${sha}`]: () => ({ commit: { committer: { date: ago(50) } } }),
+    "PUT /repos/o/r/pulls/81/merge": () => ({ merged: true, sha: "d".repeat(40) }),
+    "POST /repos/o/r/issues/81/comments": () => ({ id: 9 }),
+    "POST /repos/o/r/pulls/81/requested_reviewers": () => pull,
+    "DELETE /repos/o/r/git/refs/heads/remediate/R01-handles": () => null,
+  };
+  const fetch = async (url, { method = "GET", body, headers = {} } = {}) => {
+    const { pathname } = new URL(url);
+    const key = `${method} ${pathname}`;
+    calls.push({ key, body: body ? JSON.parse(body) : null, token: headers.authorization });
+    if (!routes[key]) return { ok: false, status: 404, text: async () => JSON.stringify({ message: `no fake for ${key}` }) };
+    const data = routes[key]();
+    return { ok: true, status: data === null ? 204 : 200, text: async () => (data === null ? "" : JSON.stringify(data)) };
+  };
+  return { fetch, calls, sha };
+}
+
+async function runMain(fake) {
+  const original = globalThis.fetch;
+  const lines = [];
+  globalThis.fetch = fake.fetch;
+  try {
+    await main({ GITHUB_REPOSITORY: "o/r", GITHUB_REPOSITORY_OWNER: "owner", GH_TOKEN: "t", CODEX_TRIGGER_TOKEN: "t2", AUTOPILOT_ENABLED: "true" }, line => lines.push(line));
+  } finally {
+    globalThis.fetch = original;
+  }
+  return lines;
+}
+
+test("main merges a clean task PR once, pinned to its commit, and deletes the branch", async () => {
+  const fake = fakeGitHub();
+  await runMain(fake);
+  const merges = fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge");
+  assert.equal(merges.length, 1);
+  assert.equal(merges[0].body.sha, fake.sha);
+  assert.equal(merges[0].body.commit_title, "fix: reserve route-shadowed handles (R01) (#81)");
+  assert.match(merges[0].body.commit_message, /reviewed cleanly by Codex/);
+  assert.ok(fake.calls.some(call => call.key === "DELETE /repos/o/r/git/refs/heads/remediate/R01-handles"));
+});
+
+test("main doesn't merge when a finding lands between its two looks", async () => {
+  const late = [{ user: { login: "Copilot", type: "Bot" }, author_association: "NONE", in_reply_to_id: null,
+    original_commit_id: "c".repeat(40), html_url: "https://example/late" }];
+  const fake = fakeGitHub({ laterComments: late });
+  const lines = await runMain(fake);
+  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
+  assert.ok(lines.some(line => /not merging: a second look says request-fix/.test(line)), lines.join("\n"));
+});
+
+test("main asks Codex and Copilot for a review with the owner's token", async () => {
+  const fake = fakeGitHub({ issueComments: [] });
+  await runMain(fake);
+  const asks = fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments");
+  assert.equal(asks.length, 1);
+  assert.match(asks[0].body.body, new RegExp(`^@codex review\\n\\n<!-- remediation-autopilot:review sha=${fake.sha} -->$`));
+  assert.equal(asks[0].token, "Bearer t2");
+  const copilot = fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers");
+  assert.deepEqual([copilot.length, copilot[0]?.body, copilot[0]?.token], [1, { reviewers: ["copilot-pull-request-reviewer[bot]"] }, "Bearer t2"]);
+  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
 });
