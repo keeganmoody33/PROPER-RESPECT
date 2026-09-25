@@ -1,6 +1,28 @@
 # Repository Guidelines
 
-Updated: 2026-09-19.
+Updated: 2026-09-25.
+
+## Active remediation program
+
+Owner-approved 2026-09-25. When the owner asks you to continue remediation, or
+names a task from it (for example R05 or K03), first read
+[`docs/remediation/CODEX-BRIEF.md`](docs/remediation/CODEX-BRIEF.md) and
+follow it: one task, one branch, one PR. For that work only, the brief
+replaces four rules in this file:
+
+- "Do not reset to main": each remediation task starts a new branch from
+  `origin/main`. Existing checkouts and branches stay as they are.
+- Commit and PR titles: keep the `fix:`, `docs:` and `feat:` prefixes, and end
+  the PR title and every commit subject with the task ID, for example
+  `fix: reserve route-shadowed handles (R01)`.
+- Concurrent Review Protocol: the PR description is the task's receipt, and
+  review dispositions go in the PR thread. New bugs are listed in the PR and,
+  where Codex can create issues, filed as their own `bug` issues linked from
+  #24.
+- "Start fixes with a RED regression": the brief exempts tasks that change
+  only docs, configuration or workflow files.
+
+Every other rule here still applies to remediation work.
 
 ## Project Structure & Module Organization
 
