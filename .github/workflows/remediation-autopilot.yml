@@ -21,6 +21,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # The trigger token lives in this environment, limited to main, so
+    # workflows on pull request branches can't read it.
+    environment: autopilot
     steps:
       - uses: actions/checkout@v4
         with:
