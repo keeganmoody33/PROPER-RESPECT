@@ -343,10 +343,11 @@ The table order is the priority order.
   - Also reserve `agents`, `auth` and `index`. R24 will serve
     `/{handle}.md`, and `app/agents.md`, `app/auth.md` and `app/index.md`
     already own those paths.
-  - Reject handles that start with `pending-` (the automatic placeholder from
-    `convex/onboarding.ts:28-31`), unless the handle equals the caller's own
-    current handle. Check how `claimHandle` is called before choosing the
-    exact rule.
+  - Leave handles that start with `pending-` claimable. New accounts already
+    step around a taken placeholder (`convex/onboarding.ts:37-48` tries
+    `pending-<id>`, then `-1`, `-2` and so on), and tests claim
+    `pending-victim123` on purpose (`convex/publicationHandles.test.ts:70-88`,
+    `convex/evidenceUpload.test.ts:130-143`).
   - Do **not** reserve `about`, `app`, `collection`, `contact`, `origins` or
     `privacy`. Tests keep those claimable on purpose
     (`tests/e2e/trust-pages.spec.ts:44`, `tests/e2e/public-profile.spec.ts:53`).
@@ -354,7 +355,7 @@ The table order is the priority order.
   - Unit cases go in `src/domain/onboarding.test.ts`.
   - A `convex-test` case shows `claimHandle` rejects each reserved name with
     "This handle is reserved."
-  - Existing route tests stay green.
+  - Existing route tests and the `pending-` handle tests stay green.
 
 #### R02. Cap published text on the write path (G11)
 
