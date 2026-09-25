@@ -68,14 +68,22 @@ const COPILOT_UNAVAILABLE = /Copilot was unable to review/i;
 // missed (1)"), a "Changes recommended" verdict, or a nonzero "Findings:".
 const COPILOT_FINDINGS = [
   /<strong>(?!Resolved)[^<]*\([1-9]\d*\)<\/strong>/,
-  // Any heading with "changes recommended", with or without an emoji, unless it says "no changes".
-  /^#{1,6}(?![^\n]*\bno changes\b)[^\n]*\bchanges recommended\b/im,
+  // A heading that recommends changes or asks for a closer look, with or
+  // without an emoji, unless it says "no changes".
+  /^#{1,6}(?![^\n]*\bno changes\b)[^\n]*\b(?:changes recommended|needs a closer look)\b/im,
   /\*\*Findings:\*\*\s*[1-9]/,
 ];
 const copilotFindings = review => COPILOT_FINDINGS.some(pattern => pattern.test(review.body ?? ""));
-// The review shapes whose clean form is known: the overview, and the older
-// summary that says Copilot generated no comments. Anything else can't clear a PR.
-const copilotKnownShape = review => (review.body ?? "").includes("<!-- ccr-overview-v2 -->") || /generated (?:no|0) (?:new )?comments/i.test(review.body ?? "");
+// Only a review that plainly says it found nothing can clear a PR: an
+// overview whose verdict (its first "###" heading) says so, or the older
+// summary that says Copilot generated no comments. Any other shape or
+// verdict, such as "Needs a closer look", fails closed.
+const COPILOT_CLEAN_VERDICT = /\b(?:looks good|lgtm|all clear|ready to merge|no (?:changes|issues|concerns|findings|problems|action)\b)/i;
+const copilotSaysClean = review => {
+  const body = review.body ?? "";
+  if (body.includes("<!-- ccr-overview-v2 -->")) return COPILOT_CLEAN_VERDICT.test(body.match(/^###\s+(.+)$/m)?.[1] ?? "");
+  return /generated (?:no|0) (?:new )?comments/i.test(body);
+};
 const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|note) sha=([0-9a-f]{7,40})(?: key=([\w-]+))? -->/;
 
 const minutesSince = (now, iso) => (now - Date.parse(iso)) / 60_000;
@@ -157,15 +165,15 @@ export function codexReviewStatus(codexComments, headSha) {
 
 // Who reviewed the head commit cleanly: Codex, when its review summary shows
 // a completed review of that commit and it left no comments on it; or Copilot,
-// when its latest review of the commit is a finished review in a known shape
-// with no comments and no sign of findings. Nothing else, such as a
-// reaction or an unfamiliar review format, counts.
+// when its latest review of the commit is finished, says plainly that it
+// found nothing, and has no comments or other sign of findings. Nothing else,
+// such as a reaction or an unfamiliar review format, counts.
 export function cleanReviewer(facts) {
   const head = facts.pr.headSha;
   const commented = logins => facts.reviewComments.some(comment => logins.includes(comment.login) && comment.originalCommitId === head);
   if (!commented([CODEX_BOT]) && codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
   const copilot = latestCopilotReview(facts.reviews, head);
-  const clean = copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && copilotKnownShape(copilot) &&
+  const clean = copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && copilotSaysClean(copilot) &&
     !COPILOT_UNAVAILABLE.test(copilot.body ?? "") && !copilotFindings(copilot) && !commented(COPILOT_REVIEWERS);
   return clean ? "Copilot" : null;
 }

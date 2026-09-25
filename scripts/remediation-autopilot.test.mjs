@@ -236,9 +236,15 @@ test("a clean review comes only from Codex's summary for the commit or a finishe
   // Unknown formats fail closed; resolved findings don't block.
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("Looks fine to me.")] }), null);
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("")] }), null);
-  const overview = section => copilotReview(`<!-- ccr-overview-v2 -->\n<details>\n<summary><strong>${section}</strong></summary>\n</details>`);
+  const overview = (section, verdict = "### 🟢 Looks good") => copilotReview(`<!-- ccr-overview-v2 -->\n## Copilot review overview\n\n${verdict}\n\n<details>\n<summary><strong>${section}</strong></summary>\n</details>`);
   assert.equal(cleanReviewer({ ...base, reviews: [overview("Previously missed (1)")] }), null);
   assert.equal(cleanReviewer({ ...base, reviews: [overview("Resolved since last review (3)")] }), "Copilot");
+  // The overview's verdict has to say it found nothing; "Needs a closer look" is a finding.
+  assert.equal(cleanReviewer({ ...base, reviews: [overview("Resolved since last review (3)", "### 🔵 Needs a closer look")] }), null);
+  assert.equal(findingsOnHead([], [overview("Resolved since last review (3)", "### 🔵 Needs a closer look")], HEAD).total, 1);
+  assert.equal(cleanReviewer({ ...base, reviews: [overview("Resolved since last review (3)", "### 🟣 Something new")] }), null);
+  assert.equal(findingsOnHead([], [overview("Resolved since last review (3)", "### 🟣 Something new")], HEAD).total, 0);
+  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("<!-- ccr-overview-v2 -->\n**Findings:** None\n")] }), null);
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("Copilot reviewed 2 of 2 files. Adds quota handling; generated no comments.")] }), "Copilot");
   assert.deepEqual(findingsOnHead([comment("Copilot")], [overview("Previously missed (1)")], HEAD).urls, ["https://example/Copilot", "https://example/copilot-review"]);
   // The latest Copilot review of the commit decides.

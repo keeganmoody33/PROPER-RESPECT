@@ -217,9 +217,10 @@ line, or in a `remediate/<ID>-` branch name.
   requests a Copilot review with the owner's token. A review is clean when
   Codex's review summary shows a completed review of that commit and Codex
   left no comments on it, or when Copilot's latest review of the commit is
-  finished, in a format the autopilot knows, has no comments, and shows no
-  sign of findings. An unfamiliar Copilot format never clears a PR. It waits
-  up to an hour for a review in progress.
+  finished, says plainly that it found nothing (its overview's verdict, or
+  the older "generated no comments" line), and has no comments or other sign
+  of findings. Any other Copilot verdict or format, such as "Needs a closer
+  look", never clears a PR. It waits up to an hour for a review in progress.
 - **Codex outages.** When Codex answers "Something went wrong", or a review
   never comes, it asks again: at once the first time, then an hour after each
   failure, up to 6 times per commit. So a few hours of Codex downtime delay a
