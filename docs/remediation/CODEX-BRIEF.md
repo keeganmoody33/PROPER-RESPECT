@@ -14,13 +14,18 @@ what order, and what proves each fix.
 - **Told an owner task is done (for example "K03 is done"):** count it as done.
   Record it in Section 9's "Done owner tasks" line through a separate one-line
   `docs:` PR with no task ID, never inside a task PR.
+- **Started by an `@codex` comment on a pull request** (usually the autopilot's,
+  Section 4): do what the comment asks, on that pull request's branch. It asks
+  you to fix failing checks, fix review comments, merge main in, or, on a
+  remediation run pull request, do the next eligible task. Push to that
+  branch; never open a new pull request.
 
 This brief must be on main before the loop runs, because every task branch
 starts from `origin/main`.
 
 Read these before changing code:
 
-1. `AGENTS.md`. Its "Active remediation program" section lists the four rules
+1. `AGENTS.md`. Its "Active remediation program" section lists the five rules
    this brief replaces. Everything else in it still applies.
 2. Section 4 of this file (guardrails and process).
 3. Every file your task names.
@@ -70,6 +75,9 @@ when a test, a check or a live observation proves it, not when code exists.
   - Backend deploys first, and each step waits for an owner approval.
   - Pull requests get preview deployments once a synthetic backend exists
     (K10, then R30). Until then, no Git push deploys anything.
+  - Task pull requests merge without a human review when the autopilot's
+    conditions hold (Section 4, "Autopilot"). Owner decision, 2026-09-25
+    evening. Merging to main ships nothing: releases stay with the owner.
 
 **Later, only after real users exist.** Do not build these, and do not shape
 the schema for them now:
@@ -111,8 +119,8 @@ the schema for them now:
    - No Clerk, Vercel, Google Cloud, Cloudflare or Convex dashboard changes.
    - No environment variable changes.
 3. **Read real provider accounts or mailboxes, or publish owner content.** This
-   includes running the receipt or uptime scripts against production
-   yourself; their tests use fixtures. Anonymous GET requests to public pages
+   includes running the receipt, uptime or autopilot scripts against
+   production or this repository yourself; their tests use fixtures. Anonymous GET requests to public pages
    (for example `curl -I https://proper-respect.com/lecturesfrom`) are fine.
 4. **Commit or print secrets.** Build with the synthetic CI values in Section 6.
 5. **Hand-edit `convex/_generated/`.**
@@ -132,20 +140,25 @@ the schema for them now:
    - Activity never implies human use without a documented metric.
 7. **Build on a Devin-pushed branch, or stack a task on another unmerged task
    branch.**
-8. **Merge a PR.** The owner reviews and merges.
+8. **Merge a PR yourself, or turn on auto-merge.** The autopilot merges
+   eligible task PRs; the owner merges the rest.
 9. **Weaken a gate.**
    - Change `release.yml`, `receipt.yml`, `uptime.yml`, the `git` settings in
      `vercel.json` or the preflight script only in the task that owns them.
      One named exception: R13 changes the Node version line in every
      workflow.
+   - Never change the autopilot (`.github/workflows/remediation-autopilot.yml`,
+     `scripts/remediation-autopilot.mjs` and its test). The owner does. A PR
+     that touches them, R13's included, waits for the owner.
    - Never remove a step from `verify.yml` or lower what it checks. Adding a
      spec, a step or a job, or raising a timeout, isn't weakening.
    - New workflows use the same `setup-node` setting as `verify.yml`.
 
 **Always:**
 
-1. Start from the latest `origin/main`, with one task per branch named
-   `remediate/<ID>-<slug>`.
+1. Start from the latest `origin/main`, with one task per branch. Name it
+   `remediate/<ID>-<slug>` when you choose the name. On a remediation run
+   pull request, use its branch.
 2. RED first. Add a regression test that fails because of the stated gap, run
    it, and keep the failing output for the PR.
    - **Exempt:** tasks that change only docs or configuration (R13, R14, R19,
@@ -183,6 +196,42 @@ the schema for them now:
 - `pstack-codex` stays the preferred workflow when it's available. This brief
   says what to do and what proves it.
 
+**Autopilot.** `.github/workflows/remediation-autopilot.yml` runs
+`scripts/remediation-autopilot.mjs` from main every 30 minutes. It acts only
+on open task PRs: a title ending with the task ID, the template's
+"Remediation task" line, or a `remediate/<ID>-` branch.
+
+- **Fixes.** It posts `@codex` comments with the owner's trigger token, since
+  Codex answers people, not bots. It asks for a fix of failing checks, review
+  comments on the latest commit, a conflict with main, or a branch behind
+  main. It asks once per commit, for at most 3 rounds per PR.
+- **Review.** Before merging, it wants a clean Codex review of the latest
+  commit. When none exists 30 minutes after the push, it comments
+  `@codex review` and waits up to 60 minutes.
+- **Merge.** It squash-merges, pinned to the reviewed commit, when all of
+  these hold:
+  - the required checks passed and no check failed;
+  - no review comments remain on the latest commit, or only other review
+    bots' after the 3 rounds;
+  - 30 minutes have passed since the last push;
+  - GitHub reports the PR as clean.
+- **Owner holds.** It never merges a PR that changes the autopilot,
+  `release.yml`, `vercel.json`, `convex.json`, `AGENTS.md` or this brief, or
+  that removes lines from `verify.yml`. It also holds R07, whose wording the
+  owner approves. It labels those `needs-owner-approval`. Review comments
+  from Codex or from people that outlast 3 rounds get `needs-owner`.
+- **Next task.** With the `AUTOPILOT_START_TASKS` variable set to `true`, it
+  starts a task whenever none is in flight. It opens a run PR on a fresh
+  branch and asks Codex, in a comment, for the next eligible task. It runs one
+  at a time, at most 6 a day, and pauses 12 hours after a run gets no task.
+- **Switches.** Unless `AUTOPILOT_ENABLED` is `true`, it only logs what it
+  would do. Add `needs-owner` to a PR to pause the autopilot on it; remove it
+  to hand the PR back.
+
+For you, that means: when an `@codex` comment asks for a fix, change only
+what it asks, stay in the task's scope, and push to the same branch. Leave
+anything you decide not to change, with the reason, under "Found, not fixed".
+
 ## 5. The loop
 
 ```sh
@@ -193,11 +242,16 @@ git log origin/main --format=%s | grep -oE '\(R[0-9]{2}\)' | tr -d '()' | sort -
 git ls-remote --heads origin 'remediate/*'
 ```
 
+If your environment can't reach GitHub, skip the in-progress check. The
+autopilot names the tasks to skip in its prompt, and it runs one task at a
+time.
+
 1. **Pick** the first task in Section 7 order that meets all of these:
    - Owner is Codex (C);
    - not merged;
    - no `remediate/<ID>-*` branch exists (a leftover branch means in
-     progress; the owner deletes abandoned ones);
+     progress; the owner deletes abandoned ones), and the prompt doesn't
+     list it as open;
    - every task under its `Needs` is done. An R task is done when merged. A K
      task is done when Section 9's "Done owner tasks" line lists it, or when
      the owner says so in your prompt.
@@ -209,8 +263,8 @@ git ls-remote --heads origin 'remediate/*'
 5. **Stop.** Start the next task only when told to continue, and start it
    from `origin/main`, not from your previous branch.
 
-Stop and ask, by opening a draft PR with your questions, when any of these is
-true:
+Stop and ask when any of these is true. Open a draft PR with your questions,
+or, when an `@codex` comment started you, reply to that comment instead:
 
 - the task needs an owner decision;
 - a guardrail would be crossed;
@@ -1159,7 +1213,32 @@ the results are recorded in `docs/acceptance/second-user.md`:
 **Done owner tasks:** none yet. Edit this line yourself, or tell Codex in the
 prompt and it opens a one-line `docs:` PR for it.
 
-- **K01. Close public sign-up. Do this today.**
+**Autopilot setup, once:**
+
+1. Merge the PR that adds the autopilot.
+2. In Codex settings (chatgpt.com/codex/settings):
+   - under Code review, turn on Code review and Automatic reviews for this
+     repository;
+   - check that this repository's environment holds no production secret: no
+     Convex deploy key, no `sk_live` Clerk key, no Vercel token.
+3. Create a fine-grained GitHub token for this repository only, with just
+   Issues: Read and write, expiring after your trip. Save it as the
+   repository secret `CODEX_TRIGGER_TOKEN`. With it, the autopilot's
+   `@codex` comments post as you.
+4. In repository settings, turn on "Automatically delete head branches".
+5. Add the repository variable `AUTOPILOT_ENABLED` = `true`. Add
+   `AUTOPILOT_START_TASKS` = `true` to have it start tasks on its own.
+6. Test it: Actions, then "Remediation autopilot", then "Run workflow". With
+   `AUTOPILOT_START_TASKS` on, it opens a "Remediation run" PR. Codex should
+   react to its comment within a few minutes. If Codex never reacts, turn
+   `AUTOPILOT_START_TASKS` off and start each task yourself (Section 11).
+   The autopilot still reviews, fixes and merges.
+7. Optional: raise your Copilot budget so Copilot reviews too. Its review of
+   #76 failed on quota.
+
+- **K01. Close public sign-up. Do this today.** Codex can't do this for you.
+  Clerk's Backend API has no setting for sign-up mode or legal consent; its
+  instance update takes nine fields, and neither is one of them.
   1. In the Clerk dashboard, go to Configure, then Restrictions.
   2. Set the sign-up mode to Restricted. Invitations still work, and so does
      your own sign-in.
@@ -1193,8 +1272,8 @@ prompt and it opens a one-line `docs:` PR for it.
 - **K04. Publish the GitHub card, after K03 and R11.** Publish it with its
   contribution calendar and "Refresh daily from GitHub" checked. That starts
   the 30-day clock. Check the next morning's receipt line.
-- **K05. Turn on Clerk legal consent, after K03.** You approve the Terms
-  wording in R07's PR before merging it. Once `/about/terms` is live, turn on
+- **K05. Turn on Clerk legal consent, after K03.** This is dashboard-only too.
+  You approve the Terms wording in R07's PR before merging it. Once `/about/terms` is live, turn on
   Clerk's legal consent and link it to `/about/terms` and `/about/privacy`.
 - **K06. Release v0.3.0, after R12 to R21 merge.**
   1. Set `MAILBOX_GOOGLE_TEST_EMAILS` on production Convex to your address and
@@ -1290,7 +1369,10 @@ prompt and it opens a one-line `docs:` PR for it.
 
 ## 11. Kickoff prompts
 
-Merge the PR that adds this brief before the first run.
+Merge the PR that adds this brief before the first run. With
+`AUTOPILOT_START_TASKS` on, the autopilot sends the next-task prompt itself.
+Otherwise, send it from Codex on the web or in the ChatGPT app, then open the
+PR when Codex finishes. The autopilot takes it from there.
 
 - **Next task:** "Read `docs/remediation/CODEX-BRIEF.md` and run the next
   eligible task."

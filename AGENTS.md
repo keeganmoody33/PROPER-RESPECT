@@ -8,7 +8,7 @@ Owner-approved 2026-09-25. When the owner asks you to continue remediation, or
 names a task from it (for example R05 or K03), first read
 [`docs/remediation/CODEX-BRIEF.md`](docs/remediation/CODEX-BRIEF.md) and
 follow it: one task, one branch, one PR. For that work only, the brief
-replaces four rules in this file:
+replaces five rules in this file:
 
 - "Do not reset to main": each remediation task starts a new branch from
   `origin/main`. Existing checkouts and branches stay as they are.
@@ -21,6 +21,9 @@ replaces four rules in this file:
   #24.
 - "Start fixes with a RED regression": the brief exempts tasks that change
   only docs, configuration or workflow files.
+- Merge authorization: the remediation autopilot merges eligible task PRs
+  without a human review, pinned to the reviewed commit (owner decision,
+  2026-09-25). Codex never merges its own PRs.
 
 Every other rule here still applies to remediation work.
 
