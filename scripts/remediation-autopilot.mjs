@@ -50,6 +50,8 @@ export const LIMITS = {
   quietMinutes: 30,
   reviewWaitMinutes: 60,
   replyWaitMinutes: 90,
+  codexRetries: 6,
+  retryAfterMinutes: 60,
   stuckHours: 6,
   runnerWaitHours: 6,
   runnerCooldownHours: 12,
@@ -61,8 +63,10 @@ const TITLE_TASK = /\((R\d{2})\)\s*$/;
 const REVIEW_SUMMARY = "<!-- codex-pull-request-review-summary -->";
 const CODEX_FAILURE = /something went wrong/i;
 const COPILOT_UNAVAILABLE = /unable to review|quota/i;
-// Copilot's review overview lists its unresolved findings under "Open (n)".
-const COPILOT_OPEN = /<strong>Open \([1-9]\d*\)<\/strong>/;
+// Signs of findings in a Copilot review body: its overview's "Open (n)" list,
+// its "Changes recommended" verdict, or a nonzero "Findings:" count.
+const COPILOT_FINDINGS = [/<strong>Open \([1-9]\d*\)<\/strong>/, /^###\s+\S+\s+Changes recommended/m, /\*\*Findings:\*\*\s*[1-9]/];
+const copilotFindings = review => COPILOT_FINDINGS.some(pattern => pattern.test(review.body ?? ""));
 const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|note) sha=([0-9a-f]{7,40})(?: key=([\w-]+))? -->/;
 
 const minutesSince = (now, iso) => (now - Date.parse(iso)) / 60_000;
@@ -104,7 +108,7 @@ export function findingsOnHead(comments, reviews, headSha) {
   const inline = comments.filter(comment => comment.inReplyTo === null && comment.originalCommitId === headSha && trusted(comment));
   const requested = reviews.filter(review => review.commitId === headSha && review.state === "CHANGES_REQUESTED" && trusted(review));
   const copilot = latestCopilotReview(reviews, headSha);
-  const copilotOpen = copilot && COPILOT_OPEN.test(copilot.body ?? "") && !inline.some(comment => COPILOT_REVIEWERS.includes(comment.login));
+  const copilotOpen = copilot && copilotFindings(copilot) && !inline.some(comment => COPILOT_REVIEWERS.includes(comment.login));
   const found = [...inline, ...requested, ...(copilotOpen ? [copilot] : [])];
   return {
     total: found.length,
@@ -133,26 +137,46 @@ export function codexReviewStatus(codexComments, headSha) {
   return status && commit && headSha.startsWith(commit) ? { status, updatedAt: summary.updatedAt } : null;
 }
 
-// Who reviewed the head commit cleanly: Codex, when its review of the commit
-// completed without comments or it reacted 👍 after being asked; or Copilot,
-// when its latest review of the commit has no comments and no open findings.
-export function cleanReviewer(facts, askedAt) {
+// Who reviewed the head commit cleanly: Codex, when its review summary shows
+// a completed review of that commit and it left no comments on it; or Copilot,
+// when its latest review of the commit is a finished review with no comments
+// and no sign of findings. Nothing else, such as a reaction, counts.
+export function cleanReviewer(facts) {
   const head = facts.pr.headSha;
   const commented = logins => facts.reviewComments.some(comment => logins.includes(comment.login) && comment.originalCommitId === head);
-  if (!commented([CODEX_BOT])) {
-    if (codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
-    if (askedAt && facts.codexThumbsUp.some(at => Date.parse(at) > Date.parse(askedAt))) return "Codex";
-  }
+  if (!commented([CODEX_BOT]) && codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
   const copilot = latestCopilotReview(facts.reviews, head);
-  const clean = copilot && !COPILOT_UNAVAILABLE.test(copilot.body ?? "") && !COPILOT_OPEN.test(copilot.body ?? "") && !commented(COPILOT_REVIEWERS);
+  const clean = copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && !COPILOT_UNAVAILABLE.test(copilot.body ?? "") &&
+    !copilotFindings(copilot) && !commented(COPILOT_REVIEWERS);
   return clean ? "Copilot" : null;
+}
+
+// When Codex last failed after an ask: a "Something went wrong" reply, or a
+// Failed review summary updated after it. Null when it hasn't failed.
+function codexFailureAfter(codexComments, iso, summary = null) {
+  const times = codexComments
+    .filter(comment => !comment.body.includes(REVIEW_SUMMARY) && CODEX_FAILURE.test(comment.body) && Date.parse(comment.createdAt) > Date.parse(iso))
+    .map(comment => comment.createdAt);
+  if (summary?.status === "Failed" && Date.parse(summary.updatedAt) > Date.parse(iso)) times.push(summary.updatedAt);
+  return times.sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1) ?? null;
+}
+
+// After Codex fails, ask again at once the first time and then an hour after
+// each failure, so a Codex outage doesn't park the PR. Give up at the limit.
+function retryAfterFailure({ retries, failedAt, now, limits, what, retry }) {
+  if (retries >= limits.codexRetries) return { type: "label-owner", label: "needs-owner", reason: `Codex failed ${retries + 1} times ${what}` };
+  if (retries > 0 && minutesSince(now, failedAt) < limits.retryAfterMinutes) {
+    return { type: "wait", reason: `Codex failed ${what}; asking again ${limits.retryAfterMinutes} minutes after the last failure`, since: failedAt };
+  }
+  return retry;
 }
 
 function decideRun(facts, limits) {
   const { pr, now } = facts;
   const subject = facts.commitSubjects.find(line => queued(line.match(TITLE_TASK)?.[1]));
   if (subject) return { type: "retitle", title: subject, reason: "Codex pushed a task" };
-  const start = facts.markers.find(marker => marker.kind === "start");
+  const starts = facts.markers.filter(marker => marker.kind === "start");
+  const start = starts[0];
   const waitedHours = minutesSince(now, start?.createdAt ?? pr.createdAt) / 60;
   if (waitedHours >= limits.runnerWaitHours) {
     if (facts.commitSubjects.length > 1) {
@@ -161,6 +185,13 @@ function decideRun(facts, limits) {
     return { type: "close-runner", reason: `no task commit after ${limits.runnerWaitHours} hours` };
   }
   if (!start) return { type: "request-start", reason: "the start comment is missing" };
+  const failedAt = codexFailureAfter(facts.codexComments, starts.at(-1).createdAt);
+  const retries = starts.filter(marker => marker.key === "retry").length;
+  // Out of retries, the run waits to be closed, and the cooldown follows.
+  if (failedAt && retries < limits.codexRetries) {
+    return retryAfterFailure({ retries, failedAt, now, limits, what: "to start the task",
+      retry: { type: "request-start", retry: true, reason: "Codex failed to start the task, so asking again" } });
+  }
   return { type: "wait", reason: "waiting for Codex to push the next task", since: start.createdAt };
 }
 
@@ -175,19 +206,28 @@ function decideTask(facts, taskId, limits) {
   const guarded = protectedChanges(facts.files);
   if (guarded.length) return { type: "label-owner", label: "needs-owner-approval", reason: `it changes ${guarded.join(", ")}` };
   if (OWNER_TASKS.includes(taskId)) return { type: "label-owner", label: "needs-owner-approval", reason: `the brief has the owner approve ${taskId}` };
+  // Commit subjects without an ID are fine, since the squash subject carries
+  // it. Subjects naming another task mean the PR mixes tasks.
+  const others = [...new Set(facts.commitSubjects.map(subject => subject.match(TITLE_TASK)?.[1]).filter(id => id && id !== taskId))];
+  if (others.length) {
+    return { type: "label-owner", label: "needs-owner", reason: `its commits also name ${others.join(", ")}, so merging it as ${taskId} would hide them` };
+  }
 
   const asksFor = kind => facts.markers.filter(entry => entry.kind === kind && entry.sha === pr.headSha);
   const marker = kind => asksFor(kind).at(-1);
   // Codex's replies after a time, leaving out its review summary comment.
   const repliesAfter = iso => facts.codexComments.filter(comment => !comment.body.includes(REVIEW_SUMMARY) && Date.parse(comment.createdAt) > Date.parse(iso));
   const rounds = facts.markers.filter(entry => entry.kind === "fix" && entry.key !== "retry").length;
+  const retriesOf = kind => asksFor(kind).filter(entry => entry.key === "retry").length;
   const askForFix = (kind, reason, extra = {}) => {
     const asked = marker("fix");
     if (asked) {
-      const reply = repliesAfter(asked.createdAt).at(-1);
-      if (reply && CODEX_FAILURE.test(reply.body) && !asksFor("fix").some(entry => entry.key === "retry")) {
-        return { type: "request-fix", kind, retry: true, reason: `${reason}; Codex failed, so asking once more`, ...extra };
+      const failedAt = codexFailureAfter(facts.codexComments, asked.createdAt);
+      if (failedAt) {
+        return retryAfterFailure({ retries: retriesOf("fix"), failedAt, now, limits, what: "on a fix request",
+          retry: { type: "request-fix", kind, retry: true, reason: `${reason}; Codex failed, so asking again`, ...extra } });
       }
+      const reply = repliesAfter(asked.createdAt).at(-1);
       if (reply && minutesSince(now, reply.createdAt) >= limits.replyWaitMinutes) {
         return { type: "label-owner", label: "needs-owner", reason: `Codex answered the fix request without pushing: "${reply.body.slice(0, 120)}"` };
       }
@@ -245,20 +285,20 @@ function decideTask(facts, taskId, limits) {
   if (reviewing.length && minutesSince(now, reviewSince) < limits.reviewWaitMinutes) {
     return { type: "wait", reason: `${reviewing.join(" and ")} reviewing`, since: reviewSince };
   }
-  const reviewer = cleanReviewer(facts, asked?.createdAt);
+  const reviewer = cleanReviewer(facts);
   if (!reviewer) {
     const copilot = !copilotReview && !facts.copilotPending;
     if (!asked) return { type: "request-review", copilot, reason: "no clean review of this commit yet" };
-    const failed = (codex?.status === "Failed" && Date.parse(codex.updatedAt) > Date.parse(asked.createdAt)) ||
-      repliesAfter(asked.createdAt).some(comment => CODEX_FAILURE.test(comment.body));
-    if (failed) {
-      if (!asksFor("review").some(entry => entry.key === "retry")) {
-        return { type: "request-review", retry: true, copilot, reason: "the Codex review failed, so asking once more" };
-      }
-      return { type: "label-owner", label: "needs-owner", reason: "the Codex review failed twice and Copilot gave no clean review" };
+    const what = "to review this commit, and Copilot gave no clean review";
+    const failedAt = codexFailureAfter(facts.codexComments, asked.createdAt, codex);
+    if (failedAt) {
+      return retryAfterFailure({ retries: retriesOf("review"), failedAt, now, limits, what,
+        retry: { type: "request-review", retry: true, copilot, reason: "the Codex review failed, so asking again" } });
     }
+    // No answer within the review wait counts as a failure at the ask.
     if (minutesSince(now, asked.createdAt) >= limits.reviewWaitMinutes) {
-      return { type: "label-owner", label: "needs-owner", reason: `no clean review ${limits.reviewWaitMinutes} minutes after asking Codex and Copilot` };
+      return retryAfterFailure({ retries: retriesOf("review"), failedAt: asked.createdAt, now, limits, what,
+        retry: { type: "request-review", retry: true, copilot, reason: `no clean review ${limits.reviewWaitMinutes} minutes after asking, so asking again` } });
     }
     return { type: "wait", reason: "waiting for a review", since: asked.createdAt };
   }
@@ -396,7 +436,7 @@ export function latestChecks(checkRuns) {
 export async function gatherFacts(github, pull, context) {
   const pr = await github.request(`/repos/{repo}/pulls/${pull.number}`);
   const headSha = pr.head.sha;
-  const [files, checkRuns, status, reviews, reviewComments, comments, reactions, commits, headCommit] = await Promise.all([
+  const [files, checkRuns, status, reviews, reviewComments, comments, commits, headCommit] = await Promise.all([
     // GitHub lists at most 3,000 files; decide() holds bigger PRs for the owner.
     github.all(`/repos/{repo}/pulls/${pr.number}/files`, data => data, 30),
     github.all(`/repos/{repo}/commits/${headSha}/check-runs?filter=latest`, data => data.check_runs),
@@ -404,7 +444,6 @@ export async function gatherFacts(github, pull, context) {
     github.all(`/repos/{repo}/pulls/${pr.number}/reviews`),
     github.all(`/repos/{repo}/pulls/${pr.number}/comments`),
     github.all(`/repos/{repo}/issues/${pr.number}/comments`),
-    github.all(`/repos/{repo}/issues/${pr.number}/reactions`),
     // GitHub lists at most 250 commits.
     github.all(`/repos/{repo}/pulls/${pr.number}/commits`, data => data, 3),
     github.request(`/repos/{repo}/commits/${headSha}`),
@@ -429,7 +468,9 @@ export async function gatherFacts(github, pull, context) {
       login: review.user?.login ?? "", type: review.user?.type ?? "User", association: review.author_association,
       state: review.state, commitId: review.commit_id, body: review.body ?? "", url: review.html_url,
     })),
-    copilotPending: (pr.requested_reviewers ?? []).some(user => COPILOT_REVIEWERS.includes(user.login)),
+    // GitHub leaves Copilot out of requested_reviewers, so its running check counts too.
+    copilotPending: (pr.requested_reviewers ?? []).some(user => COPILOT_REVIEWERS.includes(user.login)) ||
+      checks.some(check => check.name === "copilot-pull-request-reviewer" && check.status !== "completed"),
     reviewComments: reviewComments.map(comment => ({
       login: comment.user?.login ?? "", type: comment.user?.type ?? "User", association: comment.author_association,
       inReplyTo: comment.in_reply_to_id ?? null, originalCommitId: comment.original_commit_id, url: comment.html_url,
@@ -439,8 +480,6 @@ export async function gatherFacts(github, pull, context) {
     })), context.trustedMarkers),
     codexComments: comments.filter(comment => comment.user?.login === CODEX_BOT)
       .map(comment => ({ body: comment.body ?? "", createdAt: comment.created_at, updatedAt: comment.updated_at })),
-    codexThumbsUp: reactions.filter(reaction => reaction.user?.login === CODEX_BOT && reaction.content === "+1")
-      .map(reaction => reaction.created_at),
     pushedAt: starts.length ? new Date(Math.min(...starts)).toISOString() : headCommit.commit.committer.date,
     commitAuthors: commits.flatMap(commit => [commit.author?.login, commit.committer?.login]).filter(Boolean),
     commitMessages: commits.map(commit => commit.commit.message),

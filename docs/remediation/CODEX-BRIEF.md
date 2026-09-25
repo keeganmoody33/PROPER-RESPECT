@@ -215,10 +215,14 @@ line, or in a `remediate/<ID>-` branch name.
 - **Review.** Once the checks pass and 30 minutes have passed since the push,
   it asks `@codex review` and, unless Copilot already reviewed that commit,
   requests a Copilot review with the owner's token. A review is clean when
-  Codex's review of the commit completes with no comments (or Codex reacts
-  👍), or when Copilot's latest review of the commit has no comments and no
-  open findings. It waits up to an hour for a review in progress, and asks
-  Codex once more if its review fails.
+  Codex's review summary shows a completed review of that commit and Codex
+  left no comments on it, or when Copilot's latest review of the commit is
+  finished, has no comments, and shows no sign of findings. It waits up to an
+  hour for a review in progress.
+- **Codex outages.** When Codex answers "Something went wrong", or a review
+  never comes, it asks again: at once the first time, then an hour after each
+  failure, up to 6 times per commit. So a few hours of Codex downtime delay a
+  PR without parking it.
 - **Merge.** It squash-merges, pinned to the reviewed commit, one PR per run,
   when all of these hold:
   - the required checks passed and no check or commit status failed
@@ -238,9 +242,11 @@ line, or in a `remediate/<ID>-` branch name.
   It labels those `needs-owner-approval` or `needs-owner`, and so any PR
   where:
   - Codex answers a fix request without pushing;
+  - Codex keeps failing after the 6 retries, and Copilot gave no clean
+    review;
   - a check or commit status from an app other than GitHub Actions fails;
-  - no clean review arrives within an hour of asking, or Codex's review
-    fails twice and Copilot gave no clean review;
+  - its commits name another task, so it mixes tasks (commit subjects
+    without an ID are fine, since the squash subject carries it);
   - a list it reads (files, commits, comments or reviews) is too long to
     read in full;
   - anything waits more than 6 hours.
