@@ -199,26 +199,33 @@ the schema for them now:
 **Autopilot.** `.github/workflows/remediation-autopilot.yml` runs
 `scripts/remediation-autopilot.mjs` from main every 30 minutes. It acts only
 on open task PRs into main, from a branch of this repository, opened by the
-owner, Codex or the autopilot itself. A task PR has a title ending with the
-task ID, the template's "Remediation task" line, or a `remediate/<ID>-`
-branch.
+owner, Codex or the autopilot itself. A task PR carries a queued task ID
+(R01 to R30) at the end of its title, in the template's "Remediation task"
+line, or in a `remediate/<ID>-` branch name.
 
 - **Fixes.** It posts `@codex` comments with the owner's trigger token, since
-  Codex answers people, not bots. It asks Codex to fix failing checks, a
-  conflict with main, or review comments on the latest commit, listing the
-  comments to address. It asks once per commit, for at most 3 rounds per PR.
+  Codex answers people, not bots. It asks Codex to fix failing GitHub Actions
+  checks, a conflict with main, or review findings on the latest commit,
+  listing them by link. It asks once per commit, for at most 3 rounds per PR.
   A branch behind main gets its own update request, outside those rounds.
-  Only these review comments count: top-level ones, from Codex, Copilot,
-  Vercel, Cursor or Devin review, or from the owner and collaborators.
-- **Review.** Before merging, it asks `@codex review` for the latest commit,
-  30 minutes after the push. It needs Codex to answer that it found no major
-  issues.
+  Only these findings count: top-level review comments and "changes
+  requested" reviews from Codex, Copilot, Vercel, Cursor or Devin review, or
+  from the owner and collaborators, and a Copilot review of the commit that
+  still lists open findings.
+- **Review.** Once the checks pass and 30 minutes have passed since the push,
+  it asks `@codex review` and, unless Copilot already reviewed that commit,
+  requests a Copilot review with the owner's token. A review is clean when
+  Codex's review of the commit completes with no comments (or Codex reacts
+  👍), or when Copilot's latest review of the commit has no comments and no
+  open findings. It waits up to an hour for a review in progress, and asks
+  Codex once more if its review fails.
 - **Merge.** It squash-merges, pinned to the reviewed commit, one PR per run,
   when all of these hold:
-  - the required checks passed and no check failed;
-  - no counted review comments remain on the latest commit, or only other
-    review bots' after the 3 rounds;
-  - Codex's review of that commit came back clean;
+  - the required checks passed and no check or commit status failed
+    (reviewer checks and Devin's status don't count as CI);
+  - no counted findings remain on the latest commit, or only review bots'
+    other than Codex after the 3 rounds;
+  - Codex or Copilot reviewed that commit cleanly;
   - GitHub reports the PR as clean.
 
   Merges by the workflow token don't start other workflows, so `verify.yml`
@@ -229,8 +236,14 @@ branch.
   GitHub refuses workflow changes from the workflow token anyway. It also
   holds R07, whose wording the owner approves, and PRs with Devin commits.
   It labels those `needs-owner-approval` or `needs-owner`, and so any PR
-  where Codex answers without pushing, the review isn't clean, a check other
-  than GitHub Actions fails, or anything waits more than 6 hours.
+  where:
+  - Codex answers a fix request without pushing;
+  - a check or commit status from an app other than GitHub Actions fails;
+  - no clean review arrives within an hour of asking, or Codex's review
+    fails twice and Copilot gave no clean review;
+  - a list it reads (files, commits, comments or reviews) is too long to
+    read in full;
+  - anything waits more than 6 hours.
 - **Next task.** With the `AUTOPILOT_START_TASKS` variable set to `true`, it
   starts a task whenever none is in flight. It opens a run PR on a fresh
   branch and asks Codex, in a comment, for the next eligible task. It runs one
@@ -1235,8 +1248,10 @@ prompt and it opens a one-line `docs:` PR for it.
    - check that this repository's environment holds no production secret: no
      Convex deploy key, no `sk_live` Clerk key, no Vercel token.
 3. Create a fine-grained GitHub token for this repository only, with just
-   Issues: Read and write, expiring after your trip. With it, the
-   autopilot's `@codex` comments post as you.
+   Pull requests: Read and write and Issues: Read and write, expiring after
+   your trip. With it, the autopilot's `@codex` comments and Copilot review
+   requests post as you. It must be your token: the autopilot ignores one
+   that belongs to anyone else.
 4. In repository settings:
    - Environments: create `autopilot`, limit its deployment branches to
      `main`, and add the token there as the secret `CODEX_TRIGGER_TOKEN`. A
@@ -1254,8 +1269,10 @@ prompt and it opens a one-line `docs:` PR for it.
    react to its comment within a few minutes. If Codex never reacts, turn
    `AUTOPILOT_START_TASKS` off and start each task yourself (Section 11).
    The autopilot still reviews, fixes and merges.
-7. Optional: raise your Copilot budget so Copilot reviews too. Its review of
-   #76 failed on quota.
+7. Keep Copilot code review within budget for the trip. The autopilot asks
+   Copilot to review each task commit, billed to you, and a clean Copilot
+   review can merge a PR when Codex's review fails. Copilot's reviews of #60
+   to #76 failed on quota; its review of #77 worked.
 
 Expect some PRs to wait for you: every one that touches a workflow or
 `vercel.json` (R04, R10, R11, R13, R20, R23, R28, R29, R30), and R07. The

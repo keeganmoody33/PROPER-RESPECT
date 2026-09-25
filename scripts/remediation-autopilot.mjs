@@ -16,9 +16,19 @@ export const OWNER_LABELS = ["needs-owner", "needs-owner-approval"];
 export const CODEX_BOT = "chatgpt-codex-connector[bot]";
 export const ACTIONS_BOT = "github-actions[bot]";
 export const REQUIRED_CHECKS = ["verify", "Native Chrome WebMCP"];
+// Copilot reviews as the first login and comments as the second. Requesting
+// the first as a reviewer, with the owner's token, asks for a fresh review.
+export const COPILOT_REVIEWERS = ["copilot-pull-request-reviewer[bot]", "Copilot"];
 // Review comments count only from these bots, or from the owner and collaborators.
-export const REVIEW_BOTS = [CODEX_BOT, "copilot-pull-request-reviewer[bot]", "Copilot", "vercel[bot]", "cursor[bot]", "devin-ai-integration[bot]"];
+export const REVIEW_BOTS = [CODEX_BOT, ...COPILOT_REVIEWERS, "vercel[bot]", "cursor[bot]", "devin-ai-integration[bot]"];
 export const TRUSTED_ASSOCIATIONS = ["OWNER", "MEMBER", "COLLABORATOR"];
+// Checks and commit statuses that are reviewers, not CI. The autopilot waits
+// for them to finish but never treats their outcome as a CI result.
+// Copilot's check runs under GitHub Actions.
+export const REVIEW_CHECKS = ["copilot-pull-request-reviewer", "Vercel Agent Review", "Cursor Approval Agent: Pull Request Router and Approver"];
+export const REVIEW_STATUSES = ["Devin Review"];
+// The queued Codex tasks (Section 7). Any other ID is not the autopilot's to merge.
+export const TASK_IDS = Array.from({ length: 30 }, (_, index) => `R${String(index + 1).padStart(2, "0")}`);
 
 // Changes to these paths always wait for the owner. GitHub also refuses to let
 // the workflow token merge changes under .github/workflows/.
@@ -39,7 +49,7 @@ export const LIMITS = {
   updates: 5,
   quietMinutes: 30,
   reviewWaitMinutes: 60,
-  replyWaitMinutes: 60,
+  replyWaitMinutes: 90,
   stuckHours: 6,
   runnerWaitHours: 6,
   runnerCooldownHours: 12,
@@ -48,18 +58,23 @@ export const LIMITS = {
 
 const FAILED = new Set(["failure", "timed_out", "cancelled", "action_required", "startup_failure", "stale"]);
 const TITLE_TASK = /\((R\d{2})\)\s*$/;
-const CLEAN_REVIEW = /did(?:n'?t| not) find any major issues/i;
+const REVIEW_SUMMARY = "<!-- codex-pull-request-review-summary -->";
+const CODEX_FAILURE = /something went wrong/i;
+const COPILOT_UNAVAILABLE = /unable to review|quota/i;
+// Copilot's review overview lists its unresolved findings under "Open (n)".
+const COPILOT_OPEN = /<strong>Open \([1-9]\d*\)<\/strong>/;
 const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|note) sha=([0-9a-f]{7,40})(?: key=([\w-]+))? -->/;
 
 const minutesSince = (now, iso) => (now - Date.parse(iso)) / 60_000;
+const queued = id => (id && TASK_IDS.includes(id) ? id : null);
 
+// The task ID from the title's suffix, else the template's task line, else a
+// remediate/<ID>- branch. IDs outside the queue don't count.
 export function taskIdOf(pr) {
-  const fromTitle = pr.title.match(TITLE_TASK);
-  if (fromTitle) return fromTitle[1];
-  const fromBody = (pr.body ?? "").match(/^\s*-\s*Remediation task, if any:\s*(R\d{2})\b/m);
-  if (fromBody) return fromBody[1];
-  const fromBranch = pr.headRef.match(/^remediate\/(R\d{2})-/);
-  return fromBranch ? fromBranch[1] : null;
+  const id = pr.title.match(TITLE_TASK)?.[1] ??
+    (pr.body ?? "").match(/^\s*-\s*Remediation task, if any:\s*(R\d{2})\b/m)?.[1] ??
+    pr.headRef.match(/^remediate\/(R\d{2})-/)?.[1];
+  return queued(id);
 }
 
 export const isRun = pr => pr.labels.includes(RUN_LABEL) || pr.headRef.startsWith(RUN_BRANCH_PREFIX);
@@ -75,20 +90,26 @@ export function protectedChanges(files) {
   return touched;
 }
 
-// Review comments that ask for work: top-level comments on the head commit
-// from a review bot or a trusted person. Replies and outsiders don't count.
-// Comments from Codex or from people block a merge; other bots' are advisory
-// once the fix rounds run out.
+const latestCopilotReview = (reviews, headSha) =>
+  reviews.filter(review => COPILOT_REVIEWERS.includes(review.login) && review.commitId === headSha).at(-1) ?? null;
+
+// Review findings on the head commit that ask for work: top-level review
+// comments and "changes requested" reviews from a review bot or a trusted
+// person, and a Copilot review of the commit that lists open findings without
+// commenting on the commit. Replies and outsiders don't count. Findings from
+// Codex or from people block a merge; other bots' are advisory once the fix
+// rounds run out.
 export function findingsOnHead(comments, reviews, headSha) {
-  const counted = comments.filter(comment => comment.inReplyTo === null && comment.originalCommitId === headSha &&
-    (REVIEW_BOTS.includes(comment.login) || (comment.type !== "Bot" && TRUSTED_ASSOCIATIONS.includes(comment.association))));
-  const blockingComments = counted.filter(comment => comment.login === CODEX_BOT || comment.type !== "Bot");
-  const changesRequested = reviews.filter(review => review.commitId === headSha && review.state === "CHANGES_REQUESTED" &&
-    (REVIEW_BOTS.includes(review.login) || TRUSTED_ASSOCIATIONS.includes(review.association)));
+  const trusted = entry => REVIEW_BOTS.includes(entry.login) || (entry.type !== "Bot" && TRUSTED_ASSOCIATIONS.includes(entry.association));
+  const inline = comments.filter(comment => comment.inReplyTo === null && comment.originalCommitId === headSha && trusted(comment));
+  const requested = reviews.filter(review => review.commitId === headSha && review.state === "CHANGES_REQUESTED" && trusted(review));
+  const copilot = latestCopilotReview(reviews, headSha);
+  const copilotOpen = copilot && COPILOT_OPEN.test(copilot.body ?? "") && !inline.some(comment => COPILOT_REVIEWERS.includes(comment.login));
+  const found = [...inline, ...requested, ...(copilotOpen ? [copilot] : [])];
   return {
-    total: counted.length + changesRequested.length,
-    blocking: blockingComments.length + changesRequested.length,
-    urls: counted.map(comment => comment.url),
+    total: found.length,
+    blocking: found.filter(entry => entry.login === CODEX_BOT || entry.type !== "Bot").length,
+    urls: found.map(entry => entry.url).filter(Boolean),
   };
 }
 
@@ -102,9 +123,34 @@ export function parseMarkers(comments, trustedLogins) {
   return markers;
 }
 
+// Codex keeps one review summary comment per PR, edited in place. Its Code
+// Review row shows Running, Completed or Failed, and the commit reviewed.
+export function codexReviewStatus(codexComments, headSha) {
+  const summary = [...codexComments].reverse().find(comment => comment.body.includes(REVIEW_SUMMARY));
+  const row = summary?.body.split("\n").find(line => line.trim().startsWith("|") && line.includes("Code Review"));
+  const status = row?.match(/\*\*(Running|Completed|Failed)\*\*/)?.[1];
+  const commit = row?.match(/`([0-9a-f]{7,40})`/)?.[1];
+  return status && commit && headSha.startsWith(commit) ? { status, updatedAt: summary.updatedAt } : null;
+}
+
+// Who reviewed the head commit cleanly: Codex, when its review of the commit
+// completed without comments or it reacted 👍 after being asked; or Copilot,
+// when its latest review of the commit has no comments and no open findings.
+export function cleanReviewer(facts, askedAt) {
+  const head = facts.pr.headSha;
+  const commented = logins => facts.reviewComments.some(comment => logins.includes(comment.login) && comment.originalCommitId === head);
+  if (!commented([CODEX_BOT])) {
+    if (codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
+    if (askedAt && facts.codexThumbsUp.some(at => Date.parse(at) > Date.parse(askedAt))) return "Codex";
+  }
+  const copilot = latestCopilotReview(facts.reviews, head);
+  const clean = copilot && !COPILOT_UNAVAILABLE.test(copilot.body ?? "") && !COPILOT_OPEN.test(copilot.body ?? "") && !commented(COPILOT_REVIEWERS);
+  return clean ? "Copilot" : null;
+}
+
 function decideRun(facts, limits) {
   const { pr, now } = facts;
-  const subject = facts.commitSubjects.find(line => TITLE_TASK.test(line));
+  const subject = facts.commitSubjects.find(line => queued(line.match(TITLE_TASK)?.[1]));
   if (subject) return { type: "retitle", title: subject, reason: "Codex pushed a task" };
   const start = facts.markers.find(marker => marker.kind === "start");
   const waitedHours = minutesSince(now, start?.createdAt ?? pr.createdAt) / 60;
@@ -130,13 +176,18 @@ function decideTask(facts, taskId, limits) {
   if (guarded.length) return { type: "label-owner", label: "needs-owner-approval", reason: `it changes ${guarded.join(", ")}` };
   if (OWNER_TASKS.includes(taskId)) return { type: "label-owner", label: "needs-owner-approval", reason: `the brief has the owner approve ${taskId}` };
 
-  const marker = kind => facts.markers.find(entry => entry.kind === kind && entry.sha === pr.headSha);
-  const codexAfter = iso => facts.codexComments.filter(comment => Date.parse(comment.createdAt) > Date.parse(iso));
-  const rounds = facts.markers.filter(entry => entry.kind === "fix").length;
+  const asksFor = kind => facts.markers.filter(entry => entry.kind === kind && entry.sha === pr.headSha);
+  const marker = kind => asksFor(kind).at(-1);
+  // Codex's replies after a time, leaving out its review summary comment.
+  const repliesAfter = iso => facts.codexComments.filter(comment => !comment.body.includes(REVIEW_SUMMARY) && Date.parse(comment.createdAt) > Date.parse(iso));
+  const rounds = facts.markers.filter(entry => entry.kind === "fix" && entry.key !== "retry").length;
   const askForFix = (kind, reason, extra = {}) => {
     const asked = marker("fix");
     if (asked) {
-      const reply = codexAfter(asked.createdAt)[0];
+      const reply = repliesAfter(asked.createdAt).at(-1);
+      if (reply && CODEX_FAILURE.test(reply.body) && !asksFor("fix").some(entry => entry.key === "retry")) {
+        return { type: "request-fix", kind, retry: true, reason: `${reason}; Codex failed, so asking once more`, ...extra };
+      }
       if (reply && minutesSince(now, reply.createdAt) >= limits.replyWaitMinutes) {
         return { type: "label-owner", label: "needs-owner", reason: `Codex answered the fix request without pushing: "${reply.body.slice(0, 120)}"` };
       }
@@ -146,14 +197,17 @@ function decideTask(facts, taskId, limits) {
     return { type: "request-fix", kind, reason, ...extra };
   };
 
-  const actionsFailed = facts.checks.filter(check => check.app === "github-actions" && check.status === "completed" && FAILED.has(check.conclusion));
-  if (actionsFailed.length || facts.statusState === "failure" || facts.statusState === "error") {
-    const names = [...actionsFailed.map(check => check.name), ...(actionsFailed.length ? [] : ["commit status"])];
-    return askForFix("ci", `failing: ${names.join(", ")}`);
-  }
-  const otherFailed = facts.checks.filter(check => check.app !== "github-actions" && check.status === "completed" && FAILED.has(check.conclusion));
+  // GitHub Actions reports check runs, never commit statuses, so only failed
+  // Actions checks go to Codex. Other apps' failures go to the owner.
+  const ci = facts.checks.filter(check => !REVIEW_CHECKS.includes(check.name));
+  const actionsFailed = ci.filter(check => check.app === "github-actions" && check.status === "completed" && FAILED.has(check.conclusion));
+  if (actionsFailed.length) return askForFix("ci", `failing: ${actionsFailed.map(check => check.name).join(", ")}`);
+  const otherFailed = [
+    ...ci.filter(check => check.app !== "github-actions" && check.status === "completed" && FAILED.has(check.conclusion)).map(check => check.name),
+    ...facts.statuses.filter(status => !REVIEW_STATUSES.includes(status.context) && ["failure", "error"].includes(status.state)).map(status => status.context),
+  ];
   if (otherFailed.length) {
-    return { type: "label-owner", label: "needs-owner", reason: `${otherFailed.map(check => check.name).join(", ")} failed, which Codex can't fix from here` };
+    return { type: "label-owner", label: "needs-owner", reason: `${otherFailed.join(", ")} failed, which Codex can't fix from here` };
   }
   if (pr.mergeableState === "dirty") return askForFix("conflict", "conflicts with main");
   if (pr.mergeableState === "behind") {
@@ -165,7 +219,7 @@ function decideTask(facts, taskId, limits) {
   }
   const findings = findingsOnHead(facts.reviewComments, facts.reviews, pr.headSha);
   if (findings.total > 0 && (rounds < limits.fixRounds || findings.blocking > 0)) {
-    return askForFix("review", `${findings.total} review comments on this commit`, { urls: findings.urls });
+    return askForFix("review", `${findings.total} review findings on this commit`, { urls: findings.urls });
   }
 
   const required = REQUIRED_CHECKS.map(name => ({ name, check: facts.checks.find(check => check.app === "github-actions" && check.name === name) }));
@@ -175,27 +229,43 @@ function decideTask(facts, taskId, limits) {
   if (running.length) return { type: "wait", reason: `checks running: ${running.join(", ")}`, since: facts.pushedAt };
   const missing = required.filter(({ check }) => !check).map(({ name }) => name);
   if (missing.length) return { type: "wait", reason: `required checks not reported: ${missing.join(", ")}`, since: facts.pushedAt };
-  if (facts.statusState === "pending") return { type: "wait", reason: "commit statuses pending", since: facts.pushedAt };
+  if (facts.statuses.some(status => status.state === "pending")) return { type: "wait", reason: "commit statuses pending", since: facts.pushedAt };
   const quiet = minutesSince(now, facts.pushedAt);
   if (quiet < limits.quietMinutes) {
     return { type: "wait", reason: `letting reviewers finish, ${Math.ceil(limits.quietMinutes - quiet)} minutes left`, since: facts.pushedAt };
   }
 
+  // Reviews: ask Codex, and Copilot when it hasn't reviewed this commit. Wait
+  // for a review in progress, then merge on the first clean one.
   const asked = marker("review");
-  if (!asked) return { type: "request-review", reason: "no Codex review of this commit yet" };
-  const replies = codexAfter(asked.createdAt);
-  const clean = replies.some(comment => CLEAN_REVIEW.test(comment.body));
-  if (!clean) {
-    if (replies.length) return { type: "label-owner", label: "needs-owner", reason: `Codex replied without a clean review: "${replies[0].body.slice(0, 120)}"` };
-    if (minutesSince(now, asked.createdAt) >= limits.reviewWaitMinutes) {
-      return { type: "label-owner", label: "needs-owner", reason: `no Codex review ${limits.reviewWaitMinutes} minutes after asking` };
+  const reviewSince = asked?.createdAt ?? facts.pushedAt;
+  const codex = codexReviewStatus(facts.codexComments, pr.headSha);
+  const copilotReview = latestCopilotReview(facts.reviews, pr.headSha);
+  const reviewing = [codex?.status === "Running" ? "Codex" : null, facts.copilotPending ? "Copilot" : null].filter(Boolean);
+  if (reviewing.length && minutesSince(now, reviewSince) < limits.reviewWaitMinutes) {
+    return { type: "wait", reason: `${reviewing.join(" and ")} reviewing`, since: reviewSince };
+  }
+  const reviewer = cleanReviewer(facts, asked?.createdAt);
+  if (!reviewer) {
+    const copilot = !copilotReview && !facts.copilotPending;
+    if (!asked) return { type: "request-review", copilot, reason: "no clean review of this commit yet" };
+    const failed = (codex?.status === "Failed" && Date.parse(codex.updatedAt) > Date.parse(asked.createdAt)) ||
+      repliesAfter(asked.createdAt).some(comment => CODEX_FAILURE.test(comment.body));
+    if (failed) {
+      if (!asksFor("review").some(entry => entry.key === "retry")) {
+        return { type: "request-review", retry: true, copilot, reason: "the Codex review failed, so asking once more" };
+      }
+      return { type: "label-owner", label: "needs-owner", reason: "the Codex review failed twice and Copilot gave no clean review" };
     }
-    return { type: "wait", reason: "waiting for the Codex review", since: asked.createdAt };
+    if (minutesSince(now, asked.createdAt) >= limits.reviewWaitMinutes) {
+      return { type: "label-owner", label: "needs-owner", reason: `no clean review ${limits.reviewWaitMinutes} minutes after asking Codex and Copilot` };
+    }
+    return { type: "wait", reason: "waiting for a review", since: asked.createdAt };
   }
   if (pr.mergeableState !== "clean" && pr.mergeableState !== "has_hooks") {
-    return { type: "wait", reason: `GitHub merge state is ${pr.mergeableState}`, since: asked.createdAt };
+    return { type: "wait", reason: `GitHub merge state is ${pr.mergeableState}`, since: reviewSince };
   }
-  return { type: "merge", taskId, reason: "green and reviewed" };
+  return { type: "merge", taskId, reviewer, reason: `green and reviewed cleanly by ${reviewer}` };
 }
 
 // Decides the next step for one open pull request. Pure, so it can be tested.
@@ -229,15 +299,15 @@ export function shouldStartRun({ open, recentRuns, now }, limits = LIMITS) {
 }
 
 export function mergeTitle(pr, taskId) {
-  const title = TITLE_TASK.test(pr.title) ? pr.title : `${pr.title} (${taskId})`;
+  const title = pr.title.match(TITLE_TASK)?.[1] === taskId ? pr.title : `${pr.title} (${taskId})`;
   return `${title} (#${pr.number})`;
 }
 
 // Keeps each commit's message, so questions Codex leaves in a commit body reach main.
-export function mergeMessage(commitMessages) {
+export function mergeMessage(commitMessages, reviewer = "Codex") {
   const kept = commitMessages.filter(message => !message.startsWith("chore: start a remediation run"));
   return [
-    "Merged by the remediation autopilot: checks green, Codex review clean, no owner-only files.",
+    `Merged by the remediation autopilot: checks green, reviewed cleanly by ${reviewer}, no owner-only files.`,
     ...kept.map(message => `* ${message.trim()}`),
   ].join("\n\n");
 }
@@ -262,7 +332,7 @@ export function codexAsk(decision, sha) {
   if (decision.kind === "ci") return `@codex Checks are failing on commit ${short} (${decision.reason.replace(/^failing: /, "")}). Fix them. ${tail}`;
   if (decision.kind === "conflict") return `@codex This pull request conflicts with main. Merge main into this branch and resolve the conflicts so both sides keep working. ${tail}`;
   return [
-    `@codex Address these review comments on commit ${short}, and ignore any other comment on this pull request:`,
+    `@codex Address these review findings on commit ${short}, and ignore any other comment on this pull request:`,
     ...decision.urls.map(url => `- ${url}`),
     "",
     `Fix what's valid. List anything you leave unchanged, with the reason, under "Found, not fixed" in your commit message body. ${tail}`,
@@ -290,33 +360,58 @@ export function createGitHub(token, repo) {
     }
     return data;
   }
-  async function all(path, pick = data => data, pages = 10) {
+  // Every page, or an error: decisions never rest on a partial list.
+  async function all(path, pick = data => data, pages = 50) {
     const items = [];
     for (let page = 1; page <= pages; page += 1) {
       const separator = path.includes("?") ? "&" : "?";
       const batch = pick(await request(`${path}${separator}per_page=100&page=${page}`));
       items.push(...batch);
-      if (batch.length < 100) break;
+      if (batch.length < 100) return items;
     }
-    return items;
+    throw truncated(`${path.replace("{repo}", repo).split("?")[0]} lists more than ${pages * 100} entries`);
   }
   return { request, all };
+}
+
+function truncated(message) {
+  const error = new Error(message);
+  error.code = "TRUNCATED";
+  return error;
+}
+
+// The newest run of each check. Reruns leave older attempts on the commit.
+export function latestChecks(checkRuns) {
+  const newest = new Map();
+  const order = run => [Date.parse(run.started_at ?? "") || 0, run.id ?? 0];
+  for (const run of checkRuns) {
+    const key = `${run.app?.slug ?? ""}/${run.name}`;
+    const seen = newest.get(key);
+    const [at, id] = order(run);
+    if (!seen || at > order(seen)[0] || (at === order(seen)[0] && id > order(seen)[1])) newest.set(key, run);
+  }
+  return [...newest.values()];
 }
 
 export async function gatherFacts(github, pull, context) {
   const pr = await github.request(`/repos/{repo}/pulls/${pull.number}`);
   const headSha = pr.head.sha;
-  const [files, checkRuns, status, reviews, reviewComments, comments, commits, headCommit] = await Promise.all([
+  const [files, checkRuns, status, reviews, reviewComments, comments, reactions, commits, headCommit] = await Promise.all([
+    // GitHub lists at most 3,000 files; decide() holds bigger PRs for the owner.
     github.all(`/repos/{repo}/pulls/${pr.number}/files`, data => data, 30),
-    github.all(`/repos/{repo}/commits/${headSha}/check-runs`, data => data.check_runs),
-    github.request(`/repos/{repo}/commits/${headSha}/status`),
+    github.all(`/repos/{repo}/commits/${headSha}/check-runs?filter=latest`, data => data.check_runs),
+    github.request(`/repos/{repo}/commits/${headSha}/status?per_page=100`),
     github.all(`/repos/{repo}/pulls/${pr.number}/reviews`),
     github.all(`/repos/{repo}/pulls/${pr.number}/comments`),
     github.all(`/repos/{repo}/issues/${pr.number}/comments`),
-    github.all(`/repos/{repo}/pulls/${pr.number}/commits`),
+    github.all(`/repos/{repo}/issues/${pr.number}/reactions`),
+    // GitHub lists at most 250 commits.
+    github.all(`/repos/{repo}/pulls/${pr.number}/commits`, data => data, 3),
     github.request(`/repos/{repo}/commits/${headSha}`),
   ]);
-  const checks = checkRuns.map(run => ({ name: run.name, app: run.app?.slug ?? "", status: run.status, conclusion: run.conclusion, startedAt: run.started_at }));
+  if (status.total_count > status.statuses.length) throw truncated(`commit ${headSha.slice(0, 7)} has more than ${status.statuses.length} statuses`);
+  if (pr.commits > commits.length) throw truncated(`the pull request has ${pr.commits} commits and GitHub lists ${commits.length}`);
+  const checks = latestChecks(checkRuns).map(run => ({ name: run.name, app: run.app?.slug ?? "", status: run.status, conclusion: run.conclusion, startedAt: run.started_at }));
   const starts = checks.filter(check => check.app === "github-actions").map(check => Date.parse(check.startedAt)).filter(Number.isFinite);
   return {
     now: context.now,
@@ -329,8 +424,12 @@ export async function gatherFacts(github, pull, context) {
     },
     files,
     checks,
-    statusState: status.total_count > 0 ? status.state : null,
-    reviews: reviews.map(review => ({ login: review.user?.login ?? "", association: review.author_association, state: review.state, commitId: review.commit_id })),
+    statuses: status.statuses.map(entry => ({ context: entry.context, state: entry.state })),
+    reviews: reviews.map(review => ({
+      login: review.user?.login ?? "", type: review.user?.type ?? "User", association: review.author_association,
+      state: review.state, commitId: review.commit_id, body: review.body ?? "", url: review.html_url,
+    })),
+    copilotPending: (pr.requested_reviewers ?? []).some(user => COPILOT_REVIEWERS.includes(user.login)),
     reviewComments: reviewComments.map(comment => ({
       login: comment.user?.login ?? "", type: comment.user?.type ?? "User", association: comment.author_association,
       inReplyTo: comment.in_reply_to_id ?? null, originalCommitId: comment.original_commit_id, url: comment.html_url,
@@ -339,7 +438,9 @@ export async function gatherFacts(github, pull, context) {
       id: comment.id, login: comment.user?.login ?? "", body: comment.body ?? "", createdAt: comment.created_at,
     })), context.trustedMarkers),
     codexComments: comments.filter(comment => comment.user?.login === CODEX_BOT)
-      .map(comment => ({ body: comment.body ?? "", createdAt: comment.created_at })),
+      .map(comment => ({ body: comment.body ?? "", createdAt: comment.created_at, updatedAt: comment.updated_at })),
+    codexThumbsUp: reactions.filter(reaction => reaction.user?.login === CODEX_BOT && reaction.content === "+1")
+      .map(reaction => reaction.created_at),
     pushedAt: starts.length ? new Date(Math.min(...starts)).toISOString() : headCommit.commit.committer.date,
     commitAuthors: commits.flatMap(commit => [commit.author?.login, commit.committer?.login]).filter(Boolean),
     commitMessages: commits.map(commit => commit.commit.message),
@@ -354,11 +455,16 @@ export async function main(env = process.env, log = console.log) {
   const live = env.AUTOPILOT_ENABLED === "true";
   const startTasks = env.AUTOPILOT_START_TASKS === "true";
   const github = createGitHub(env.GH_TOKEN, repo);
+  // The trigger token must be the owner's: Codex answers the people it's
+  // linked to, and only the owner's markers count.
   let trigger = env.CODEX_TRIGGER_TOKEN ? createGitHub(env.CODEX_TRIGGER_TOKEN, repo) : null;
   if (trigger) {
     try {
       const login = (await trigger.request("/user")).login;
-      if (login !== owner) log(`Warning: the trigger token belongs to ${login}, not ${owner}.`);
+      if (login !== owner) {
+        log(`The trigger token belongs to ${login}, not ${owner}; continuing without it.`);
+        trigger = null;
+      }
     } catch (error) {
       log(`The trigger token was rejected (${error.message}); continuing without it.`);
       trigger = null;
@@ -382,20 +488,29 @@ export async function main(env = process.env, log = console.log) {
   };
   const note = (number, sha, key, text) => write(`note on #${number}: ${text}`, () =>
     github.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body: `Remediation autopilot: ${text}\n\n<!-- ${MARKER}:note sha=${sha} key=${key} -->` } }));
-  const askCodex = (number, kind, sha, text) => write(`ask Codex (${kind}) on #${number}`, () =>
-    trigger.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body: `${text}\n\n<!-- ${MARKER}:${kind} sha=${sha} -->` } }));
+  const askCodex = (number, kind, sha, text, retry = false) => write(`ask Codex (${kind}${retry ? ", retry" : ""}) on #${number}`, () =>
+    trigger.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body: `${text}\n\n<!-- ${MARKER}:${kind} sha=${sha}${retry ? " key=retry" : ""} -->` } }));
+  // Copilot bills the person who asks, so this uses the owner's token too.
+  const askCopilot = number => write(`ask Copilot to review #${number}`, () =>
+    trigger.request(`/repos/{repo}/pulls/${number}/requested_reviewers`, { method: "POST", body: { reviewers: [COPILOT_REVIEWERS[0]] } })
+      .catch(error => log(`  Copilot review request failed (${error.message}); Codex's review still counts.`)));
   const deleteBranch = ref => github.request(`/repos/{repo}/git/refs/heads/${ref}`, { method: "DELETE" }).catch(() => {});
 
   const open = (await github.all("/repos/{repo}/pulls?state=open"))
     .filter(pr => pr.base.ref === "main" && pr.head.repo?.full_name === repo && context.trustedAuthors.includes(pr.user?.login))
     .map(pr => ({
-      number: pr.number, title: pr.title, body: pr.body ?? "", draft: pr.draft, headRef: pr.head.ref,
+      number: pr.number, title: pr.title, body: pr.body ?? "", draft: pr.draft, headRef: pr.head.ref, headSha: pr.head.sha,
       labels: pr.labels.map(label => label.name), createdAt: pr.created_at,
     }));
   let failures = 0;
   let merged = 0;
   for (const pull of open) {
     if (!taskIdOf(pull) && !isRun(pull)) continue;
+    const ownerLabel = pull.labels.find(label => OWNER_LABELS.includes(label));
+    if (ownerLabel) {
+      log(`#${pull.number}: skip (labeled ${ownerLabel})`);
+      continue;
+    }
     try {
       const facts = await gatherFacts(github, pull, context);
       const decision = decide(facts);
@@ -425,7 +540,8 @@ export async function main(env = process.env, log = console.log) {
           if (!hasNote("no-trigger")) await note(pull.number, sha, "no-trigger", `this needs Codex (${decision.reason}), but the Codex trigger token isn't available. Comment \`@codex\` here yourself, or fix the \`CODEX_TRIGGER_TOKEN\` secret.`);
         } else {
           const text = kind === "start" ? startPrompt([...new Set(open.map(taskIdOf).filter(Boolean))].sort()) : codexAsk(decision, sha);
-          await askCodex(pull.number, kind, sha, text);
+          await askCodex(pull.number, kind, sha, text, Boolean(decision.retry));
+          if (decision.copilot) await askCopilot(pull.number);
         }
       } else if (decision.type === "merge") {
         if (merged > 0) {
@@ -434,10 +550,11 @@ export async function main(env = process.env, log = console.log) {
         }
         await write(`squash-merge #${pull.number} at ${sha.slice(0, 7)}`, async () => {
           try {
-            await github.request(`/repos/{repo}/pulls/${pull.number}/merge`, { method: "PUT", body: {
+            const result = await github.request(`/repos/{repo}/pulls/${pull.number}/merge`, { method: "PUT", body: {
               merge_method: "squash", sha, commit_title: mergeTitle(facts.pr, decision.taskId),
-              commit_message: mergeMessage(facts.commitMessages),
+              commit_message: mergeMessage(facts.commitMessages, decision.reviewer),
             } });
+            if (result?.merged !== true) throw new Error(`GitHub answered without merging: ${result?.message ?? "no reason given"}`);
           } catch (error) {
             if (!hasNote("merge-failed")) await note(pull.number, sha, "merge-failed", `the merge failed: ${error.message}`);
             throw error;
@@ -449,6 +566,12 @@ export async function main(env = process.env, log = console.log) {
     } catch (error) {
       failures += 1;
       log(`#${pull.number}: error: ${error.message}`);
+      // A list too long to read in full means the PR can't be judged: hold it.
+      if (error.code === "TRUNCATED") {
+        await addLabel(pull.number, "needs-owner").catch(labelError => log(`  labeling failed: ${labelError.message}`));
+        await note(pull.number, pull.headSha, "truncated", `waiting for the owner, because ${error.message}, too many to check. Remove the \`needs-owner\` label to hand it back to the autopilot.`)
+          .catch(noteError => log(`  note failed: ${noteError.message}`));
+      }
     }
   }
 
