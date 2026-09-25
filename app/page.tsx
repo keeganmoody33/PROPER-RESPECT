@@ -7,7 +7,7 @@ import { productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
-  const metadata = publicPageMetadata("Your tools. Your track record.", "What you use, test, and come back to, with the history and context behind your choices.");
+  const metadata = publicPageMetadata("Proper Respect: Your tools. Your track record.", "What you use, test, and come back to, with the history and context behind your choices.");
   return { ...metadata, alternates: { ...metadata.alternates, types: { "text/markdown": "/index.md" } } };
 }
 
