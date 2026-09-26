@@ -220,7 +220,9 @@ line, or in a `remediate/<ID>-` branch name.
   finished, says plainly that it found nothing (its overview's verdict, or
   the older "generated no comments" line), and has no comments or other sign
   of findings. Any other Copilot verdict or format, such as "Needs a closer
-  look", never clears a PR. It waits up to an hour for a review in progress.
+  look", never clears a PR; without listed findings it isn't a finding
+  either, and the PR waits for Codex's review. It waits up to an hour for a
+  review in progress.
 - **Codex outages.** When Codex answers "Something went wrong", or a review
   never comes, it asks again: at once the first time, then an hour after each
   failure, up to 6 times per commit. So a few hours of Codex downtime delay a
@@ -235,7 +237,9 @@ line, or in a `remediate/<ID>-` branch name.
   - GitHub reports the PR as clean.
 
   Right before merging it reads the PR again and merges only if that second
-  look still says merge, so a review that lands in between stops it.
+  look still says merge, so a review that lands in between stops it. The
+  squash subject ends with the task ID, after the PR number:
+  `fix: reserve route-shadowed handles (#81) (R01)`.
   Merges by the workflow token don't start other workflows, so `verify.yml`
   doesn't rerun on main afterwards. Main requires branches to be up to date,
   so the tested tree is the merged one.
@@ -254,6 +258,7 @@ line, or in a `remediate/<ID>-` branch name.
     squash subject carries it);
   - a list it reads (files, commits, comments or reviews) is too long to
     read in full;
+  - GitHub refuses the merge twice at the same commit;
   - anything waits more than 6 hours.
 - **Next task.** With the `AUTOPILOT_START_TASKS` variable set to `true`, it
   starts a task whenever none is in flight. It opens a run PR on a fresh

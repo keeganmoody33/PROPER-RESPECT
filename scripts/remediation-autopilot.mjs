@@ -68,9 +68,10 @@ const COPILOT_UNAVAILABLE = /Copilot was unable to review/i;
 // missed (1)"), a "Changes recommended" verdict, or a nonzero "Findings:".
 const COPILOT_FINDINGS = [
   /<strong>(?!Resolved)[^<]*\([1-9]\d*\)<\/strong>/,
-  // A heading that recommends changes or asks for a closer look, with or
-  // without an emoji, unless it says "no changes".
-  /^#{1,6}(?![^\n]*\bno changes\b)[^\n]*\b(?:changes recommended|needs a closer look)\b/im,
+  // A heading that recommends changes, with or without an emoji, unless it
+  // says "no changes". "Needs a closer look" without listed findings names
+  // nothing to fix: it isn't a finding, and it isn't a clean review either.
+  /^#{1,6}(?![^\n]*\bno changes\b)[^\n]*\bchanges recommended\b/im,
   /\*\*Findings:\*\*\s*[1-9]/,
 ];
 const copilotFindings = review => COPILOT_FINDINGS.some(pattern => pattern.test(review.body ?? ""));
@@ -286,7 +287,7 @@ function decideTask(facts, taskId, limits) {
   }
   const findings = findingsOnHead(facts.reviewComments, facts.reviews, pr.headSha);
   if (findings.total > 0 && (rounds < limits.fixRounds || findings.blocking > 0)) {
-    return askForFix("review", `${findings.total} review findings on this commit`, { urls: findings.urls });
+    return askForFix("review", `${findings.total} review finding${findings.total === 1 ? "" : "s"} on this commit`, { urls: findings.urls });
   }
 
   const required = REQUIRED_CHECKS.map(name => ({ name, check: facts.checks.find(check => check.app === "github-actions" && check.name === name) }));
@@ -369,9 +370,11 @@ export function shouldStartRun({ open, recentRuns, now }, limits = LIMITS) {
   return { start: true, reason: "no task in flight" };
 }
 
+// The squash subject ends with the task ID, like every task commit, with the
+// PR number before it: "fix: reserve route-shadowed handles (#81) (R01)".
 export function mergeTitle(pr, taskId) {
-  const title = pr.title.match(TITLE_TASK)?.[1] === taskId ? pr.title : `${pr.title} (${taskId})`;
-  return `${title} (#${pr.number})`;
+  const title = pr.title.match(TITLE_TASK)?.[1] === taskId ? pr.title.replace(TITLE_TASK, "").trimEnd() : pr.title;
+  return `${title} (#${pr.number}) (${taskId})`;
 }
 
 // Keeps each commit's message, so questions Codex leaves in a commit body reach main.
@@ -646,7 +649,15 @@ export async function main(env = process.env, log = console.log) {
             } });
             if (result?.merged !== true) throw new Error(`GitHub answered without merging: ${result?.message ?? "no reason given"}`);
           } catch (error) {
-            if (!hasNote("merge-failed")) await note(pull.number, sha, "merge-failed", `the merge failed: ${error.message}`);
+            // One retry on the next run; a second failure at the same commit
+            // is likely to last (branch protection, token rights), so hold it
+            // and let the queue move on.
+            if (hasNote("merge-failed")) {
+              await addLabel(pull.number, "needs-owner");
+              await note(pull.number, sha, "merge-failed-again", `waiting for the owner, because the merge failed twice at this commit: ${error.message}. Remove the \`needs-owner\` label to hand it back to the autopilot.`);
+            } else {
+              await note(pull.number, sha, "merge-failed", `the merge failed: ${error.message}. The autopilot tries once more on its next run.`);
+            }
             throw error;
           }
           merged += 1;
@@ -702,7 +713,7 @@ export async function main(env = process.env, log = console.log) {
       });
     }
   }
-  if (failures) throw new Error(`${failures} pull requests hit errors; see the log above.`);
+  if (failures) throw new Error(`${failures} pull request${failures === 1 ? "" : "s"} hit errors; see the log above.`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

@@ -66,7 +66,7 @@ test("only queued task IDs count", () => {
   for (const id of ["R00", "R31", "R99"]) assert.equal(taskIdOf({ title: `fix: unrelated (${id})`, body: "", headRef: "x" }), null);
   assert.equal(taskIdOf({ title: "fix: caps", body: "- Remediation task, if any: R45", headRef: "remediate/R99-x" }), null);
   assert.equal(decide(facts({ pr: { title: "fix: unrelated change (R99)", headRef: "fix/x" } })).type, "skip");
-  assert.equal(mergeTitle({ title: "fix: caps (R99)", number: 81 }, "R02"), "fix: caps (R99) (R02) (#81)");
+  assert.equal(mergeTitle({ title: "fix: caps (R99)", number: 81 }, "R02"), "fix: caps (R99) (#81) (R02)");
 });
 
 test("owner-only paths include every workflow file", () => {
@@ -239,9 +239,14 @@ test("a clean review comes only from Codex's summary for the commit or a finishe
   const overview = (section, verdict = "### 🟢 Looks good") => copilotReview(`<!-- ccr-overview-v2 -->\n## Copilot review overview\n\n${verdict}\n\n<details>\n<summary><strong>${section}</strong></summary>\n</details>`);
   assert.equal(cleanReviewer({ ...base, reviews: [overview("Previously missed (1)")] }), null);
   assert.equal(cleanReviewer({ ...base, reviews: [overview("Resolved since last review (3)")] }), "Copilot");
-  // The overview's verdict has to say it found nothing; "Needs a closer look" is a finding.
-  assert.equal(cleanReviewer({ ...base, reviews: [overview("Resolved since last review (3)", "### 🔵 Needs a closer look")] }), null);
-  assert.equal(findingsOnHead([], [overview("Resolved since last review (3)", "### 🔵 Needs a closer look")], HEAD).total, 1);
+  // The overview's verdict has to say it found nothing. "Needs a closer look"
+  // with no listed findings is neither clean nor a finding: Codex decides.
+  const closerLook = overview("Resolved since last review (3)", "### 🔵 Needs a closer look");
+  assert.equal(cleanReviewer({ ...base, reviews: [closerLook] }), null);
+  assert.equal(findingsOnHead([], [closerLook], HEAD).total, 0);
+  assert.equal(decide(facts({ reviews: [closerLook] })).reviewer, "Codex");
+  assert.equal(decide(facts({ reviews: [closerLook], codexComments: [], markers: [] })).type, "request-review");
+  assert.equal(findingsOnHead([], [overview("Previously missed (1)", "### 🔵 Needs a closer look")], HEAD).total, 1);
   assert.equal(cleanReviewer({ ...base, reviews: [overview("Resolved since last review (3)", "### 🟣 Something new")] }), null);
   assert.equal(findingsOnHead([], [overview("Resolved since last review (3)", "### 🟣 Something new")], HEAD).total, 0);
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("<!-- ccr-overview-v2 -->\n**Findings:** None\n")] }), null);
@@ -368,8 +373,8 @@ test("a new run starts only when nothing is in flight", () => {
 });
 
 test("merge commits carry the task ID and Codex's commit messages", () => {
-  assert.equal(mergeTitle({ title: "fix: caps", number: 81 }, "R02"), "fix: caps (R02) (#81)");
-  assert.equal(mergeTitle({ title: "fix: caps (R02)", number: 81 }, "R02"), "fix: caps (R02) (#81)");
+  assert.equal(mergeTitle({ title: "fix: caps", number: 81 }, "R02"), "fix: caps (#81) (R02)");
+  assert.equal(mergeTitle({ title: "fix: caps (R02)", number: 81 }, "R02"), "fix: caps (#81) (R02)");
   const message = mergeMessage(["chore: start a remediation run", "fix: caps (R02)\n\nQuestion: which limit?"], "Copilot");
   assert.match(message, /Question: which limit\?/);
   assert.match(message, /reviewed cleanly by Copilot/);
@@ -405,7 +410,7 @@ test("Copilot's changes-recommended verdict counts with or without an emoji", ()
 
 // A fake GitHub API for main(): one clean task PR, with review comments that
 // can change between the autopilot's two looks.
-function fakeGitHub({ laterComments = [], issueComments = null } = {}) {
+function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = false } = {}) {
   const sha = "c".repeat(40);
   const ago = minutes => new Date(Date.now() - minutes * 60_000).toISOString();
   const pull = {
@@ -432,7 +437,9 @@ function fakeGitHub({ laterComments = [], issueComments = null } = {}) {
     ],
     "GET /repos/o/r/pulls/81/commits": () => [{ commit: { message: "fix: reserve route-shadowed handles (R01)" }, author: { login: "owner" }, committer: { login: "owner" } }],
     [`GET /repos/o/r/commits/${sha}`]: () => ({ commit: { committer: { date: ago(50) } } }),
-    "PUT /repos/o/r/pulls/81/merge": () => ({ merged: true, sha: "d".repeat(40) }),
+    "PUT /repos/o/r/pulls/81/merge": () => (mergeFails ? { merged: false, message: "Base branch policy prohibits the merge" } : { merged: true, sha: "d".repeat(40) }),
+    "POST /repos/o/r/labels": () => ({ name: "needs-owner" }),
+    "POST /repos/o/r/issues/81/labels": () => [{ name: "needs-owner" }],
     "POST /repos/o/r/issues/81/comments": () => ({ id: 9 }),
     "POST /repos/o/r/pulls/81/requested_reviewers": () => pull,
     "DELETE /repos/o/r/git/refs/heads/remediate/R01-handles": () => null,
@@ -466,7 +473,7 @@ test("main merges a clean task PR once, pinned to its commit, and deletes the br
   const merges = fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge");
   assert.equal(merges.length, 1);
   assert.equal(merges[0].body.sha, fake.sha);
-  assert.equal(merges[0].body.commit_title, "fix: reserve route-shadowed handles (R01) (#81)");
+  assert.equal(merges[0].body.commit_title, "fix: reserve route-shadowed handles (#81) (R01)");
   assert.match(merges[0].body.commit_message, /reviewed cleanly by Codex/);
   assert.ok(fake.calls.some(call => call.key === "DELETE /repos/o/r/git/refs/heads/remediate/R01-handles"));
 });
@@ -490,4 +497,25 @@ test("main asks Codex and Copilot for a review with the owner's token", async ()
   const copilot = fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers");
   assert.deepEqual([copilot.length, copilot[0]?.body, copilot[0]?.token], [1, { reviewers: ["copilot-pull-request-reviewer[bot]"] }, "Bearer t2"]);
   assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
+});
+
+test("a merge that fails twice at the same commit is held for the owner", async () => {
+  const sha = "c".repeat(40);
+  const ago = minutes => new Date(Date.now() - minutes * 60_000).toISOString();
+  const clean = [
+    { id: 1, user: { login: "owner" }, body: `@codex review\n\n<!-- remediation-autopilot:review sha=${sha} -->`, created_at: ago(20), updated_at: ago(20) },
+    { id: 2, user: { login: CODEX_BOT }, created_at: ago(18), updated_at: ago(10),
+      body: `<!-- codex-pull-request-review-summary -->\n| 📝 **Code Review** | ✅ **Completed** | \`${sha.slice(0, 7)}\` | Manual request |` },
+  ];
+  const first = fakeGitHub({ mergeFails: true, issueComments: clean });
+  await assert.rejects(runMain(first), /hit errors/);
+  const firstNotes = first.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").map(call => call.body.body);
+  assert.equal(firstNotes.length, 1);
+  assert.match(firstNotes[0], /tries once more/);
+  assert.equal(first.calls.filter(call => call.key === "POST /repos/o/r/issues/81/labels").length, 0);
+  const noted = [...clean, { id: 3, user: { login: "github-actions[bot]" }, body: `x\n\n<!-- remediation-autopilot:note sha=${sha} key=merge-failed -->`, created_at: ago(5), updated_at: ago(5) }];
+  const second = fakeGitHub({ mergeFails: true, issueComments: noted });
+  await assert.rejects(runMain(second), /hit errors/);
+  assert.deepEqual(second.calls.find(call => call.key === "POST /repos/o/r/issues/81/labels")?.body, { labels: ["needs-owner"] });
+  assert.match(second.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").at(-1).body.body, /failed twice/);
 });
