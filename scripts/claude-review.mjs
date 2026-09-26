@@ -188,12 +188,16 @@ export async function prepare({ github, repo, number, dir, hasToken }) {
 const text = value => (typeof value === "string" ? value.trim() : "");
 const clip = (value, limit) => (value.length > limit ? `${value.slice(0, limit - 1)}…` : value);
 
-// Claude reads the PR's files under .../claude-review/pr-head/, so it may name
-// them that way. Findings name paths from the repository root, so only that
-// checkout prefix goes: a folder of the repository named pr-head stays.
-function repoPath(value) {
+// Claude reads the PR's files under .../claude-review/pr-head/ and main's in
+// the workspace, by absolute path, so it may name a file either way. Findings
+// name paths from the repository root, so only those checkout prefixes go: a
+// folder of the repository named pr-head stays.
+function repoPath(value, workspace = "") {
   const file = text(value).replace(/^\.\//, "");
-  return file.match(/^(?:\/.*?\/claude-review\/)?pr-head\/(.+)$/)?.[1] ?? file;
+  const underHead = file.match(/^(?:\/.*?\/claude-review\/)?pr-head\/(.+)$/)?.[1];
+  if (underHead) return underHead;
+  const root = `${workspace.replace(/\/+$/, "")}/`;
+  return root !== "/" && file.startsWith(root) ? file.slice(root.length) : file;
 }
 
 // The fields of the workflow's --json-schema, and no others.
@@ -201,18 +205,18 @@ const REVIEW_KEYS = ["verdict", "summary", "findings", "notes"];
 const FINDING_KEYS = ["severity", "file", "line", "problem", "why", "fix"];
 const onlyKeys = (value, keys) => Object.keys(value).every(key => keys.includes(key));
 
-function validFinding(finding) {
+function validFinding(finding, workspace) {
   if (!finding || typeof finding !== "object" || Array.isArray(finding) || !onlyKeys(finding, FINDING_KEYS)) return false;
   if (![finding.file, finding.problem, finding.why, finding.fix].every(value => typeof value === "string")) return false;
-  const file = repoPath(finding.file);
+  const file = repoPath(finding.file, workspace);
   const lineOk = finding.line === undefined || (Number.isInteger(finding.line) && finding.line > 0);
   return SEVERITIES.includes(finding.severity) && Boolean(file) && file.length <= LIMITS.file &&
     !file.startsWith("/") && !file.split("/").includes("..") && Boolean(text(finding.problem)) && lineOk;
 }
 
-const cleanFinding = finding => ({
+const cleanFinding = (finding, workspace) => ({
   severity: finding.severity,
-  file: repoPath(finding.file),
+  file: repoPath(finding.file, workspace),
   line: Number.isInteger(finding.line) ? finding.line : null,
   problem: clip(text(finding.problem), LIMITS.field),
   why: clip(text(finding.why), LIMITS.field),
@@ -224,8 +228,8 @@ const none = reason => ({ verdict: "none", reason, summary: "", findings: [], no
 // Claude's structured output, read strictly. Clean needs Claude to say
 // "clean" and list no findings. Any listed finding wins over the word.
 // Anything missing, malformed or unfinished is no verdict, which clears
-// nothing.
-export function readVerdict(raw, conclusion = "success") {
+// nothing. The workspace is main's checkout, where Claude runs.
+export function readVerdict(raw, conclusion = "success", workspace = "") {
   if (conclusion !== "success") return none(`Claude didn't finish (${conclusion || "no result"})`);
   if (!raw) return none("Claude finished without a verdict");
   let output;
@@ -241,10 +245,10 @@ export function readVerdict(raw, conclusion = "success") {
     typeof output.summary === "string" && Array.isArray(output.findings) &&
     Array.isArray(output.notes) && output.notes.every(note => typeof note === "string");
   if (!shaped) return none("Claude's answer didn't match the review format");
-  if (!output.findings.every(validFinding)) return none("Claude's findings were malformed");
+  if (!output.findings.every(finding => validFinding(finding, workspace))) return none("Claude's findings were malformed");
   // The review lists at most LIMITS.findings, but counts every one.
   const total = output.findings.length;
-  const findings = output.findings.slice(0, LIMITS.findings).map(cleanFinding);
+  const findings = output.findings.slice(0, LIMITS.findings).map(finding => cleanFinding(finding, workspace));
   const summary = clip(text(output.summary), LIMITS.summary);
   const notes = output.notes.map(text).filter(Boolean).slice(0, LIMITS.notes).map(note => clip(note, LIMITS.note));
   if (findings.length) return { verdict: "findings", summary, findings, notes, total };
@@ -282,8 +286,11 @@ function safe(value, { oneLine = false } = {}) {
     .join("\n\n");
 }
 
+// encodeURIComponent leaves parentheses alone, and an unbalanced one would end
+// the Markdown link early.
+const pathPart = part => encodeURIComponent(part).replace(/[()]/g, char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 const blobLink = (repo, sha, file, line) =>
-  `https://github.com/${repo}/blob/${sha}/${file.split("/").map(encodeURIComponent).join("/")}${line ? `#L${line}` : ""}`;
+  `https://github.com/${repo}/blob/${sha}/${file.split("/").map(pathPart).join("/")}${line ? `#L${line}` : ""}`;
 
 export function reviewBody({ result, sha, runId, repo }) {
   const count = result.total ?? result.findings.length;
@@ -354,11 +361,11 @@ export function quotesCredential(raw, secrets = []) {
     secrets.some(secret => typeof secret === "string" && secret.length >= 8 && value.includes(secret)));
 }
 
-export async function post({ github, repo, number, sha, runId, raw, conclusion, secrets = [] }) {
+export async function post({ github, repo, number, sha, runId, raw, conclusion, secrets = [], workspace = "" }) {
   // Nothing Claude wrote is posted when it quotes a credential.
   const result = quotesCredential(raw, secrets)
     ? none("Claude's answer quoted what looks like a credential, so none of it was posted")
-    : readVerdict(raw, conclusion);
+    : readVerdict(raw, conclusion, workspace);
   const body = reviewBody({ result, sha, runId, repo });
   try {
     await github.request(`/repos/{repo}/pulls/${number}/reviews`, { method: "POST", body: { commit_id: sha, event: "COMMENT", body } });
@@ -415,7 +422,7 @@ export async function main(argv = process.argv.slice(2), env = process.env, log 
     const result = await post({
       github: api, repo, number, sha: env.HEAD_SHA, runId: env.GITHUB_RUN_ID,
       raw: env.EXECUTION_FILE ? answerFrom(env.EXECUTION_FILE) : "", conclusion: env.CLAUDE_CONCLUSION,
-      secrets: [env.GITHUB_TOKEN, env.CLAUDE_CODE_OAUTH_TOKEN],
+      secrets: [env.GITHUB_TOKEN, env.CLAUDE_CODE_OAUTH_TOKEN], workspace: env.GITHUB_WORKSPACE ?? "",
     });
     log(`Claude's verdict on ${env.HEAD_SHA.slice(0, 7)}: ${result.verdict}, posted as a ${result.where}.`);
     return result;

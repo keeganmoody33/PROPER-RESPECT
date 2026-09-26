@@ -500,6 +500,29 @@ test("main tells the owner why it skipped, and hands the commit to the next step
   }
 });
 
+test("a finding named from main's checkout comes back relative, and a parenthesis can't cut its link", async () => {
+  const workspace = "/home/runner/work/PROPER-RESPECT/PROPER-RESPECT";
+  const answer = file => JSON.stringify({ verdict: "findings", summary: "", findings: [{ ...finding, file }], notes: [] });
+  // Claude Code's Read takes absolute paths, so Claude may name main's copy of
+  // a file that way, as it may a file under pr-head/.
+  assert.equal(readVerdict(answer(`${workspace}/scripts/claude-review.mjs`), "success", workspace).findings[0].file, "scripts/claude-review.mjs");
+  assert.equal(readVerdict(answer(`${workspace}/pr-head/x.ts`), "success", workspace).findings[0].file, "pr-head/x.ts");
+  // Any other absolute path is still no verdict.
+  assert.equal(readVerdict(answer("/home/runner/work/_temp/claude-review/context/pr.json"), "success", workspace).verdict, "none");
+  assert.equal(readVerdict(answer(`${workspace}-old/x.ts`), "success", workspace).verdict, "none");
+  assert.equal(readVerdict(answer(`${workspace}/scripts/x.ts`)).verdict, "none");
+  // main() hands post the runner's workspace. encodeURIComponent leaves
+  // parentheses alone, and an unbalanced one would end the link early.
+  const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
+  const fake = fakeGitHub();
+  const output = { verdict: "findings", summary: "", findings: [{ ...finding, file: `${workspace}/app/(group)/pa)ge.tsx` }], notes: [] };
+  await main(["post"], { GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, CLAUDE_CONCLUSION: "success",
+    GITHUB_WORKSPACE: workspace, EXECUTION_FILE: executionLog(dir, output) }, () => {}, fake);
+  const body = fake.calls.at(-1).body.body;
+  assert.equal(verdictMarker(body).verdict, "findings");
+  assert.ok(body.includes(`[\`app/(group)/pa)ge.tsx:9\`](https://github.com/o/r/blob/${HEAD}/app/%28group%29/pa%29ge.tsx#L9): `), body);
+});
+
 test("post reads Claude's answer from the action's log file, however long it is", async () => {
   const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
   const env = { GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, CLAUDE_CONCLUSION: "success" };
