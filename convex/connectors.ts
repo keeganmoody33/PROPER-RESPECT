@@ -70,11 +70,29 @@ async function decryptSecret(ciphertext: string, iv: string) {
 }
 
 type DevinUsage = {
-  prs_created_count?: number;
-  prs_merged_count?: number;
-  searches_count?: number;
-  sessions_count?: number;
+  prs_created_count?: unknown;
+  prs_merged_count?: unknown;
+  searches_count?: unknown;
+  sessions_count?: unknown;
 };
+
+// A count Devin leaves out, or sends as null, is unknown. It never becomes 0
+// and never appears on the card (docs/003-evidence-surfaces.md, "Lifecycle").
+function reportedDevinCounts(usage: DevinUsage) {
+  const counts = [
+    ["Sessions", usage.sessions_count],
+    ["Searches", usage.searches_count],
+    ["PRs created", usage.prs_created_count],
+    ["PRs merged", usage.prs_merged_count],
+  ] as const;
+  return counts.flatMap(([label, value]) => {
+    if (value === undefined || value === null) return [];
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+      throw new Error("Devin usage response included an invalid count.");
+    }
+    return [{ label, value }];
+  });
+}
 
 async function fetchDevinActivity(
   token: string,
@@ -82,7 +100,8 @@ async function fetchDevinActivity(
 ): Promise<{
   accountLabel: string;
   activity: ActivityModule;
-  value: number;
+  // The devin.sessions value. Undefined when Devin did not report sessions.
+  value?: number;
 }> {
   const response = await fetch(
     `https://api.devin.ai/v3/organizations/${encodeURIComponent(organizationId)}/metrics/usage`,
@@ -98,23 +117,23 @@ async function fetchDevinActivity(
   }
   const raw = (await response.json()) as DevinUsage & { data?: DevinUsage };
   const usage = raw.data ?? raw;
-  const sessions = usage.sessions_count ?? 0;
+  // Sessions leads when reported; otherwise the first count Devin did report.
+  const [primary, ...supporting] = reportedDevinCounts(usage);
+  if (!primary) {
+    throw new Error("Devin usage response did not include any usage counts.");
+  }
   const capturedAt = new Date().toISOString();
   return {
     accountLabel: `Devin organization ${organizationId}`,
-    value: sessions,
+    value: primary.label === "Sessions" ? primary.value : undefined,
     activity: {
       kind: "headlineMetrics",
       attributionScope: "ORGANIZATION",
       capturedAt,
       freshness: "FRESH",
       provenanceLabel: "Devin organization metrics",
-      primary: { label: "Sessions", value: sessions },
-      supporting: [
-        { label: "Searches", value: usage.searches_count ?? 0 },
-        { label: "PRs created", value: usage.prs_created_count ?? 0 },
-        { label: "PRs merged", value: usage.prs_merged_count ?? 0 },
-      ],
+      primary,
+      supporting,
     },
   };
 }
@@ -126,7 +145,9 @@ type GithubSnapshotInput = {
   product: { name: string; slug: string; domain: string; description: string; logoUrl?: string };
   activity: ActivityModule;
   metricKey: string;
-  value: number;
+  // Optional in the shared mutation for Devin; a GitHub capture without it
+  // fails the value check below before any write.
+  value?: number;
 };
 
 function githubAccount(label: string) {
@@ -248,7 +269,8 @@ export const saveConnectedSnapshot = internalMutation({
     }),
     activity: activityModuleValidator,
     metricKey: v.string(),
-    value: v.number(),
+    // Absent when the provider did not report the metric. Never read as 0.
+    value: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -351,16 +373,18 @@ export const saveConnectedSnapshot = internalMutation({
     }
 
     await ensureProductBrand(ctx, product);
-    await ctx.db.insert("usageSignals", {
-      userId: user._id,
-      propId: prop._id,
-      metricKey: args.metricKey,
-      value: args.value,
-      capturedAt: args.activity.capturedAt,
-      attributionScope: args.activity.attributionScope,
-      evidenceRuleVersion: "provider-v1",
-      visibility: "DRAFT",
-    });
+    if (args.value !== undefined) {
+      await ctx.db.insert("usageSignals", {
+        userId: user._id,
+        propId: prop._id,
+        metricKey: args.metricKey,
+        value: args.value,
+        capturedAt: args.activity.capturedAt,
+        attributionScope: args.activity.attributionScope,
+        evidenceRuleVersion: "provider-v1",
+        visibility: "DRAFT",
+      });
+    }
 
     const snapshotEvidenceIds: Id<"rawEvidence">[] = [];
 
@@ -627,7 +651,7 @@ export const applyRefresh = internalMutation({
     if (!subscription) return;
     if (
       !canRefreshMetric(subscription, {
-        metricKey: subscription.metricKey,
+        metricKey: "devin.sessions",
         attributionScope: args.activity.attributionScope,
       })
     ) {
@@ -757,6 +781,10 @@ export const refreshApproved = internalAction({
         continue;
       }
       if (!item.connector || !item.secret) continue;
+      if (!canRefreshMetric(item.subscription, {
+        metricKey: "devin.sessions",
+        attributionScope: "ORGANIZATION",
+      })) continue;
       try {
         const cleartext = await decryptSecret(
           item.secret.ciphertext,
@@ -772,6 +800,11 @@ export const refreshApproved = internalAction({
                   parsed.organizationId,
                 );
               })();
+        // The subscription approves devin.sessions. Without a reported
+        // sessions count, the card keeps its last capture, marked stale.
+        if (snapshot.value === undefined) {
+          throw new Error("Devin usage response did not include a sessions count.");
+        }
         await ctx.runMutation(internal.connectors.applyRefresh, {
           subscriptionId: item.subscription._id,
           activity: snapshot.activity,
