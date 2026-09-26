@@ -52,6 +52,24 @@ function renderCard(overrides: Partial<Card> = {}) {
   })));
 }
 
+test("a card's work-sample link sits on the back under the owner's label, and not on the front", () => {
+  const url = "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002";
+  const $ = renderCard({ usageLink: { url, label: "TUTORIAL" } });
+  const link = $(".card-back a.usage-link");
+  expect(link.attr("href")).toBe(url);
+  expect(link.attr("target")).toBe("_blank");
+  expect(link.attr("rel")).toBe("noopener noreferrer");
+  expect(link.text()).toBe("Tutorial ↗loom.com");
+  expect(link.attr("aria-label")).toBe("Tutorial, on loom.com (opens in a new tab)");
+  expect($(".card-front .usage-link")).toHaveLength(0);
+  expect($("iframe")).toHaveLength(0);
+});
+
+test("a stored work-sample link that isn't https never renders", () => {
+  const $ = renderCard({ usageLink: { url: "javascript:alert(1)", label: "DEMO" } });
+  expect($(".usage-link")).toHaveLength(0);
+});
+
 test.each([
   { name: "Wispr Flow", slug: "wisprflow", domain: "wisprflow.ai", path: "/product-assets/wisprflow/2026-09-21/app-icon.jpg" },
   { name: "Clay", slug: "clay", domain: "clay.com", path: "/product-assets/clay/2026-09-21/app-icon.png" },

@@ -1,18 +1,30 @@
 import type { ActivityModule, CuratedProp } from "./public-profile";
 import type { Cost, CostVisibility } from "./cost";
 import { canonicalJson } from "./canonical-json";
+import { DEFAULT_USAGE_LINK_LABEL, usageLinkUrlSchema, type UsageLink, type UsageLinkLabel } from "./usage-links";
 
 export type ReviewCard = {
-  prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & { relationshipVersion?: number };
+  prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & {
+    relationshipVersion?: number;
+    supportingUrl?: string;
+  };
   product: { domain: string };
   links: CuratedProp["links"];
   isPublishedAtCurrentHandle?: boolean;
   publishedActivity?: ActivityModule;
+  publishedUsageLink?: UsageLink;
 };
 
 function reviewBasis(card: ReviewCard) {
   return canonicalJson({ version: card.prop.relationshipVersion ?? 0, activity: card.prop.activity,
-    isPublishedAtCurrentHandle: card.isPublishedAtCurrentHandle === true, publishedActivity: card.publishedActivity });
+    isPublishedAtCurrentHandle: card.isPublishedAtCurrentHandle === true, publishedActivity: card.publishedActivity,
+    publishedUsageLink: card.publishedUsageLink });
+}
+
+/** The saved work-sample link when it can go on the card. */
+export function reviewUsageLink(card: ReviewCard) {
+  const url = card.prop.supportingUrl;
+  return url && usageLinkUrlSchema.safeParse(url).success ? url : null;
 }
 
 export function isCurrentReview(card: ReviewCard, edit: ReviewEdit) {
@@ -53,6 +65,10 @@ export function setReviewCostVisibility<T extends ReviewCard & { prop: { _id: st
 // Opening review must not promote a proposed relationship or change the owner's link.
 export function defaultReview(card: ReviewCard) {
   const primary = card.links.find(link => link.isPrimary);
+  // The link goes public only by choice: kept when this card already shows
+  // this same link, off otherwise.
+  const keepsUsageLink = card.isPublishedAtCurrentHandle === true && card.publishedUsageLink !== undefined &&
+    card.publishedUsageLink.url === card.prop.supportingUrl;
   return {
     basis: reviewBasis(card),
     publish: card.isPublishedAtCurrentHandle === true,
@@ -65,6 +81,8 @@ export function defaultReview(card: ReviewCard) {
     linkLabel: primary?.label ?? "Open product",
     approveActivity: card.isPublishedAtCurrentHandle === true && Boolean(card.publishedActivity) &&
       canonicalJson(card.prop.activity) === canonicalJson(card.publishedActivity),
+    includeUsageLink: keepsUsageLink,
+    usageLinkLabel: (keepsUsageLink ? card.publishedUsageLink!.label : DEFAULT_USAGE_LINK_LABEL) as UsageLinkLabel,
     autoRefresh: false,
     costAmount: card.prop.cost?.amount.toString() ?? "",
     costCurrency: card.prop.cost?.currency ?? "USD",

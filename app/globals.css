@@ -753,6 +753,32 @@ main {
   margin: 3rem 0 1rem;
 }
 
+.usage-link {
+  border: 1px solid var(--card-line);
+  border-radius: 0.45rem;
+  color: inherit;
+  display: grid;
+  gap: 0.2rem;
+  margin: 1.5rem 0 0;
+  padding: 0.7rem 0.8rem;
+  text-decoration: none;
+}
+
+.usage-link > span:first-child {
+  font-weight: 800;
+}
+
+.usage-link-host {
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.usage-link:hover,
+.usage-link:focus-visible {
+  background: var(--brand-card-text, var(--paper));
+  color: var(--brand-card-background, var(--ink));
+}
+
 .close-button {
   background: var(--ink);
   border: 0;

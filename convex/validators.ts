@@ -156,6 +156,11 @@ export const activityModuleValidator = v.union(
 );
 
 export const profileLinkValidator = v.object({ label: v.string(), url: v.string() });
+// The label an owner picks for a card's work-sample link (src/domain/usage-links.ts).
+export const usageLinkLabelValidator = v.union(
+  v.literal("SEE_HOW_I_USE_IT"), v.literal("WATCH_IT_IN_ACTION"), v.literal("PROOF_OF_USE"), v.literal("DEMO"), v.literal("TUTORIAL"),
+);
+export const usageLinkValidator = v.object({ url: v.string(), label: usageLinkLabelValidator });
 
 export const publicProfileValidator = v.object({
   handle: v.string(),
@@ -186,6 +191,7 @@ export const publicProfileValidator = v.object({
         url: v.string(),
         label: v.string(),
       })),
+      usageLink: v.optional(usageLinkValidator),
     }),
   ),
 });

@@ -11,6 +11,7 @@ import type {
 } from "@/src/domain/public-profile";
 import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
 import { compactNumber } from "@/src/domain/format-activity-number";
+import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
@@ -405,6 +406,9 @@ export function ProductCard({
   const linkDisclosure = card.primaryLink?.type === "AFFILIATE" ? "Affiliate link"
     : card.primaryLink?.type === "REFERRAL" ? "Referral link" : undefined;
   const linkRel = linkDisclosure ? "noopener noreferrer sponsored" : "noopener noreferrer";
+  // The owner's work-sample link, checked again here so a stored non-https
+  // value never becomes a link.
+  const usageLink = !brandPreview && card.usageLink && usageLinkSchema.safeParse(card.usageLink).success ? card.usageLink : undefined;
   const cardStatus = brandPreview ? "BRAND PREVIEW" : relationshipConfirmed ? card.status : "PRIVATE DISCOVERY";
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
   const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : "Relationship & evidence";
@@ -549,6 +553,16 @@ export function ProductCard({
             <ActivityView activity={card.activity} />
           </>}
           {ownerUsage && <PrivateUsageCardDetails usage={ownerUsage} />}
+          {usageLink && <a
+            className="usage-link"
+            href={usageLink.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${usageLinkLabelText(usageLink.label)}, on ${usageLinkHost(usageLink.url)} (opens in a new tab)`}
+          >
+            <span>{usageLinkLabelText(usageLink.label)} ↗</span>
+            <span className="usage-link-host">{usageLinkHost(usageLink.url)}</span>
+          </a>}
           {brandPreview && brand && <details className="card-brand-provenance" open>
             <summary>Brand provenance</summary>
             <ProductBrandDetails snapshot={brand} />
