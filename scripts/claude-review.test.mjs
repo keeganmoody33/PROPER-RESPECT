@@ -232,6 +232,7 @@ test("model text posts as plain text: no HTML, links, images or code spans, and 
     "Ship it `@keeganmoody33 now, cc /@codex and &#64;devin.",
     '<img src="https://evil.example/p.png"> ![x](https://evil.example/x.png) [docs](https://evil.example)',
     "Closes #12 and other/repo#34.",
+    "See https://evil.example/a#12, www.evil.example, HTTPS://EVIL.EXAMPLE, mailto:x@evil.example and someone@evil.example.",
   ].join("\n\n");
   const result = readVerdict(JSON.stringify({
     verdict: "findings",
@@ -246,8 +247,10 @@ test("model text posts as plain text: no HTML, links, images or code spans, and 
   // An open backtick, a slash or an entity no longer smuggles a mention out.
   assert.ok(body.includes("Ship it \\``@keeganmoody33` now, cc /`@codex` and &amp;`#64`;devin."), body);
   // No HTML, no image fetched, no link.
-  assert.ok(body.includes('&lt;img src="https://evil.example/p.png"&gt; !\\[x\\](https://evil.example/x.png) \\[docs\\](https://evil.example)'), body);
+  assert.ok(body.includes('&lt;img src="`https://evil.example/p.png`"&gt; !\\[x\\](`https://evil.example/x.png`) \\[docs\\](`https://evil.example`)'), body);
   assert.ok(body.includes("Closes `#12` and `other/repo#34`."), body);
+  // GitHub turns bare web addresses and emails into links, so they go in code.
+  assert.ok(body.includes("See `https://evil.example/a#12`, `www.evil.example`, `HTTPS://EVIL.EXAMPLE`, `mailto:x@evil.example` and `someone@evil.example`."), body);
   // The file keeps its own code span and links to the right blob.
   assert.ok(body.includes(`1. **P1** [\`app/@modal/xy.ts:9\`](https://github.com/o/r/blob/${HEAD}/app/%40modal/x%60y.ts#L9): 1\\. \\\`index\\\` stays claimable`), body);
   // Outside code spans, nothing pings anyone or links an issue.
@@ -255,6 +258,8 @@ test("model text posts as plain text: no HTML, links, images or code spans, and 
   assert.doesNotMatch(outsideCode, /(?<!\w)@[A-Za-z0-9]/);
   assert.doesNotMatch(outsideCode, /(?<!\w)#\d/);
   assert.doesNotMatch(outsideCode, /<(?!details>|\/details>|summary>|\/summary>|sub>|\/sub>|!-- claude-review verdict=findings )/);
+  // The only links left are the review's own, to this repository.
+  assert.doesNotMatch(outsideCode.replace(/\]\(https:\/\/github\.com\/o\/r\/[^)\s]+\)/g, "]"), /https?:\/\/|www\.|mailto:|\w@\w/i);
   assert.equal(verdictMarker(body).verdict, "findings");
 });
 
@@ -317,6 +322,10 @@ test("the workflow gives Claude reading tools only, and the job can comment", ()
   assert.match(workflow, /"Read\(\.\/\.git\/\*\*\)"/);
   assert.match(workflow, /"Read\(\/\$\{\{ github\.workspace \}\}\/\.git\/\*\*\)"/);
   for (const root of ["proc", "sys", "etc"]) assert.match(workflow, new RegExp(`"Read\\(//${root}/\\*\\*\\)"`), root);
+  // Only post() publishes Claude's words: the action writes no report of its
+  // own and doesn't print the run's messages to the public log.
+  assert.match(workflow, /^\s+display_report: 'false'$/m);
+  assert.match(workflow, /^\s+show_full_output: 'false'$/m);
   assert.match(workflow, /^\s+pull-requests: write$/m);
   assert.match(workflow, /^\s+issues: write$/m);
   // Both ways in are the owner's: a comment by the owner, or the owner's

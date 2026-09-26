@@ -108,6 +108,11 @@ jobs:
           path_to_claude_code_executable: ${{ runner.temp }}/claude-cli/node_modules/@anthropic-ai/claude-code-linux-x64/claude
           path_to_bun_executable: ${{ runner.temp }}/claude-cli/node_modules/@oven/bun-linux-x64/bin/bun
           classify_inline_comments: 'false'
+          # Only scripts/claude-review.mjs publishes Claude's words, escaped.
+          # The action's own report and full log stay off, as at this pin's
+          # defaults, whatever a later version defaults to.
+          display_report: 'false'
+          show_full_output: 'false'
           # Claude reads only the working directory (main) and the review
           # folder. Claude Code's docs say only this setting makes its file
           # tools refuse reads outside those in every permission mode, and

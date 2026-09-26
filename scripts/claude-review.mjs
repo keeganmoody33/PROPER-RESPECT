@@ -237,9 +237,15 @@ export function readVerdict(raw, conclusion = "success") {
 // Model text goes into the review as plain text. Its HTML, entities, links,
 // images and code spans are escaped, so nothing can pass for the verdict line
 // or load from elsewhere. Each paragraph is one line that can't open a
-// heading, list or quote. An @mention or #reference goes in a code span of
-// our own, where GitHub neither pings nor links.
-const PLAIN = /(?<!\w)@[A-Za-z0-9][A-Za-z0-9-]*(?:\/[A-Za-z0-9._-]+)?|(?<!\w)(?:[A-Za-z0-9][\w.-]*\/[\w.-]+)?#\d+\b|[\\`[\]&<>]/g;
+// heading, list or quote. A web address, email, @mention or #reference goes
+// in a code span of our own, where GitHub neither links nor pings.
+const PLAIN = new RegExp([
+  /(?:https?:\/\/|www\.|mailto:|xmpp:)[^\s`<>"]*[^\s`<>".,;:!?)\]']/.source,
+  /(?<![\w.+-])[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/.source,
+  /(?<!\w)@[A-Za-z0-9][A-Za-z0-9-]*(?:\/[A-Za-z0-9._-]+)?/.source,
+  /(?<!\w)(?:[A-Za-z0-9][\w.-]*\/[\w.-]+)?#\d+\b/.source,
+  /[\\`[\]&<>]/.source,
+].join("|"), "gi");
 const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
 
 function safe(value, { oneLine = false } = {}) {
