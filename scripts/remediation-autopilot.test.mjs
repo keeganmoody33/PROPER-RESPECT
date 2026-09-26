@@ -76,7 +76,7 @@ test("owner-only paths include every workflow file", () => {
   assert.deepEqual(protectedChanges([{ filename: "src/app.ts" }]), []);
 });
 
-test("review findings count only top-level comments on the head from trusted reviewers", () => {
+test("trusted top-level review findings survive new heads until disposition", () => {
   const comments = [
     comment("copilot-pull-request-reviewer[bot]"),
     comment("Copilot"),
@@ -95,9 +95,9 @@ test("review findings count only top-level comments on the head from trusted rev
     copilotReview(OPEN_FINDINGS),
   ];
   const result = findingsOnHead(comments, reviews, HEAD);
-  // Four comments, two "changes requested" reviews and the Copilot overview
-  // count; Codex's and the owner's block.
-  assert.deepEqual([result.total, result.blocking], [7, 3]);
+  // Six comments, two requested-changes reviews and the overview count;
+  // prior-head Codex comments still block.
+  assert.deepEqual([result.total, result.blocking], [9, 5]);
   for (const url of ["https://example/r2", "https://example/r3", "https://example/copilot-review"]) assert.ok(result.urls.includes(url), url);
 });
 
@@ -106,7 +106,7 @@ test("a Copilot review that lists open findings without commenting on the commit
   assert.deepEqual([found.total, found.blocking, found.urls], [1, 0, ["https://example/copilot-review"]]);
   const decision = decide(facts({ reviews: [copilotReview(OPEN_FINDINGS)] }));
   assert.deepEqual([decision.type, decision.kind, decision.urls], ["request-fix", "review", ["https://example/copilot-review"]]);
-  assert.equal(findingsOnHead([], [copilotReview(OPEN_FINDINGS, { commitId: "b".repeat(40) })], HEAD).total, 0);
+  assert.equal(findingsOnHead([], [copilotReview(OPEN_FINDINGS, { commitId: "b".repeat(40) })], HEAD).total, 1);
 });
 
 test("markers count only from the owner and the workflow bot", () => {
@@ -265,10 +265,10 @@ test("a clean review comes only from a finished, finding-free Copilot review, or
   assert.equal(cleanReviewer({ ...base, reviews: [overview("Resolved since last review (3)", "### 🟣 Something new")] }), null);
   assert.equal(findingsOnHead([], [overview("Resolved since last review (3)", "### 🟣 Something new")], HEAD).total, 0);
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("<!-- ccr-overview-v2 -->\n**Findings:** None\n")] }), null);
-  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("Copilot reviewed 2 of 2 files. Adds quota handling; generated no comments.")] }), "Copilot");
+  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("Copilot reviewed 2 of 2 files. Adds quota handling; generated no comments.")] }), null);
   assert.deepEqual(findingsOnHead([comment("Copilot")], [overview("Previously missed (1)")], HEAD).urls, ["https://example/Copilot", "https://example/copilot-review"]);
-  // The latest Copilot review of the commit decides.
-  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview(OPEN_FINDINGS), copilot] }), "Copilot");
+  // A later clean review is not an explicit dismissal of earlier findings.
+  assert.equal(cleanReviewer({ ...base, reviews: [copilotReview(OPEN_FINDINGS), copilot] }), null);
   assert.equal(cleanReviewer({ ...base, codexComments: [summary("Completed")], reviewComments: [comment(CODEX_BOT)] }), null);
 });
 
@@ -474,6 +474,7 @@ function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = fal
     "POST /repos/o/r/labels": () => ({ name: "needs-owner" }),
     "POST /repos/o/r/issues/81/labels": () => [{ name: "needs-owner" }],
     "POST /repos/o/r/issues/81/comments": () => ({ id: 9 }),
+    "PATCH /repos/o/r/issues/comments/9": () => ({ id: 9 }),
     "POST /repos/o/r/pulls/81/requested_reviewers": () => pull,
     "DELETE /repos/o/r/git/refs/heads/remediate/R01-handles": () => null,
   };
@@ -532,8 +533,11 @@ test("main asks Copilot, never Codex, to review a Codex task, and marks the ask"
   const posts = fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments");
   assert.equal(posts.length, 1);
   assert.doesNotMatch(posts[0].body.body, /@codex/);
-  assert.match(posts[0].body.body, new RegExp(`<!-- remediation-autopilot:review sha=${fake.sha} -->$`));
+  assert.match(posts[0].body.body, new RegExp(`<!-- remediation-autopilot:review sha=${fake.sha} key=dispatch-pending -->$`));
   assert.equal(posts[0].token, "Bearer t");
+  const finalized = fake.calls.find(call => call.key === "PATCH /repos/o/r/issues/comments/9");
+  assert.match(finalized.body.body, new RegExp(`<!-- remediation-autopilot:review sha=${fake.sha} -->$`));
+  assert.ok(fake.calls.indexOf(posts[0]) < fake.calls.findIndex(call => call.key.endsWith("requested_reviewers")));
   const copilot = fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers");
   assert.deepEqual([copilot.length, copilot[0]?.body, copilot[0]?.token], [1, { reviewers: ["copilot-pull-request-reviewer[bot]"] }, "Bearer t2"]);
   assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
@@ -569,4 +573,107 @@ test("a merge that fails twice at the same commit is held for the owner", async 
   await assert.rejects(runMain(second), /hit errors/);
   assert.deepEqual(second.calls.find(call => call.key === "POST /repos/o/r/issues/81/labels")?.body, { labels: ["needs-owner"] });
   assert.match(second.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").at(-1).body.body, /failed twice/);
+});
+
+test("quota retry handles the actual unfinished Copilot check but never bypasses running CI", () => {
+  const quota = copilotReview("Copilot was unable to review", { submittedAt: minutesAgo(5) });
+  const checks = [...green, check("copilot-pull-request-reviewer", "in_progress", null)];
+  const f = facts({ reviews: [quota], copilotPending: true, checks });
+  assert.equal(decide(f).type, "request-review");
+  assert.equal(decide({ ...f, checks: [...checks, check("build", "in_progress", null)] }).type, "wait");
+});
+
+test("only complete supported affirmative review bodies clear", () => {
+  const bodies = [
+    "<!-- ccr-overview-v2 -->\n### Not ready to merge",
+    "<!-- ccr-overview-v2 -->\n### Looks good except for a critical bug",
+    "<!-- ccr-overview-v2 -->\n### No action taken",
+    "<!-- ccr-overview-v2 -->\n### Looks good\nBut a blocker remains.",
+    "The old report generated no comments; current review found a blocker.",
+    "Copilot reviewed 3 files and generated no comments. But a blocker remains.",
+  ];
+  for (const body of bodies) assert.notEqual(decide(facts({ reviews: [copilotReview(body)] })).type, "merge", body);
+  assert.equal(decide(facts({ reviews: [copilotReview()] })).type, "merge");
+  assert.equal(cleanReviewer(facts({ reviews: [copilotReview("<!-- ccr-overview-v2 -->\n### ✅ No changes recommended\n")] })), "Copilot");
+});
+
+test("prior-head trusted findings survive pushes and later approvals until native dismissal", () => {
+  const old = "b".repeat(40);
+  const owner = { id: 100, login: "keeganmoody33", type: "User", association: "OWNER", state: "CHANGES_REQUESTED", commitId: old };
+  const writer = comment(CODEX_BOT, { originalCommitId: old, reviewId: 101 });
+  assert.notEqual(decide(facts({ reviews: [owner, copilotReview()] })).type, "merge");
+  assert.notEqual(decide(facts({ reviews: [copilotReview()], reviewComments: [writer] })).type, "merge");
+  assert.notEqual(decide(facts({ reviews: [owner, { ...owner, id: 102, state: "APPROVED", commitId: HEAD }, copilotReview()] })).type, "merge");
+  const dismissed = [{ ...owner, state: "DISMISSED" }, { id: 101, login: CODEX_BOT, type: "Bot", state: "DISMISSED", commitId: old }, copilotReview()];
+  assert.equal(decide(facts({ reviews: dismissed, reviewComments: [writer] })).type, "merge");
+  assert.notEqual(decide(facts({ reviews: dismissed, reviewComments: [{ ...writer, reviewId: undefined }] })).type, "merge");
+});
+
+test("earlier Copilot finding bodies are not disposed by a fresh clean review", () => {
+  const old = copilotReview(OPEN_FINDINGS, { id: 5, commitId: "b".repeat(40) });
+  assert.notEqual(decide(facts({ reviews: [old, copilotReview()], markers: fixMarkers(3) })).type, "merge");
+  assert.equal(decide(facts({ reviews: [{ ...old, state: "DISMISSED" }, copilotReview()] })).type, "merge");
+});
+
+// Simulate the two independent HTTP boundaries with durable server-side comments.
+function attemptFake({ reserveFails = false, reserveResponseLost = false, dispatchResponseLost = false, finalizeFails = false } = {}) {
+  const comments = [];
+  const fake = fakeGitHub({ issueComments: comments });
+  const original = fake.fetch;
+  let accepted = 0;
+  fake.fetch = async (url, options = {}) => {
+    const path = new URL(url).pathname;
+    const payload = options.body ? JSON.parse(options.body) : null;
+    if (options.method === "POST" && path.endsWith("/issues/81/comments")) {
+      if (reserveFails) throw new Error("reservation rejected");
+      const result = await original(url, options);
+      comments.push({ id: 9, user: { login: "github-actions[bot]" }, body: payload.body, created_at: new Date().toISOString() });
+      if (reserveResponseLost) throw new Error("reservation response lost");
+      return result;
+    }
+    if (options.method === "POST" && path.endsWith("/requested_reviewers")) {
+      accepted++;
+      const result = await original(url, options);
+      if (dispatchResponseLost) throw new Error("accepted request response lost");
+      return result;
+    }
+    if (options.method === "PATCH" && path.endsWith("/issues/comments/9")) {
+      if (finalizeFails) throw new Error("finalize failed");
+      comments[0].body = payload.body;
+      return { ok: true, status: 200, text: async () => JSON.stringify(comments[0]) };
+    }
+    return original(url, options);
+  };
+  return { fake, comments, accepted: () => accepted };
+}
+
+test("reservation failure never dispatches, including a lost successful response", async () => {
+  for (const mode of [{ reserveFails: true }, { reserveResponseLost: true }]) {
+    const state = attemptFake(mode);
+    for (let i = 0; i < 8; i++) await runMain(state.fake).catch(() => {});
+    assert.equal(state.accepted(), 0);
+  }
+});
+
+test("accepted dispatch with lost response or failed finalization is never blindly replayed", async () => {
+  for (const mode of [{ dispatchResponseLost: true }, { finalizeFails: true }]) {
+    const state = attemptFake(mode);
+    await runMain(state.fake).catch(() => {});
+    assert.equal(state.accepted(), 1);
+    for (let i = 0; i < 8; i++) {
+      // Expire the wait: ambiguity must hold, not become a retry.
+      for (const entry of state.comments) entry.created_at = new Date(Date.now() - 90 * 60_000).toISOString();
+      await runMain(state.fake).catch(() => {});
+    }
+    assert.equal(state.accepted(), 1);
+  }
+});
+
+test("pending attempts reconcile only with a subsequent review and consume retry budget", () => {
+  const pending = { ...reviewAsk(90), key: "dispatch-pending" };
+  assert.equal(decide(facts({ markers: [pending], reviews: [] })).type, "label-owner");
+  assert.equal(decide(facts({ markers: [pending], reviews: [copilotReview(undefined, { submittedAt: minutesAgo(100) })] })).type, "label-owner");
+  assert.equal(decide(facts({ markers: [pending], reviews: [copilotReview(undefined, { submittedAt: minutesAgo(5) })] })).type, "merge");
+  const retries = Array.from({ length: 6 }, (_, i) => ({ ...reviewAsk(100 - i), key: "retry-dispatch-pending" }));
+  assert.equal(decide(facts({ markers: [pending, ...retries], reviews: [copilotReview("Copilot was unable to review", { submittedAt: minutesAgo(5) })] })).type, "label-owner");
 });
