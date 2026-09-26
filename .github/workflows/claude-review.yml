@@ -157,6 +157,9 @@ jobs:
           # Only to withhold an answer that quotes it; never posted.
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           HEAD_SHA: ${{ steps.prepare.outputs.sha }}
-          STRUCTURED_OUTPUT: ${{ steps.claude.outputs.structured_output }}
+          # The path to the action's log of the run. Claude's answer is read
+          # from it: Linux won't start a step with an environment string of
+          # 128 KiB or more, so the answer itself can't travel here.
+          EXECUTION_FILE: ${{ steps.claude.outputs.execution_file }}
           CLAUDE_CONCLUSION: ${{ steps.claude.outputs.conclusion }}
         run: node scripts/claude-review.mjs post

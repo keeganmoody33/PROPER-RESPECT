@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -56,6 +56,20 @@ function fakeGitHub({ pull = pullOf(), pullLater = null, commits = [commitOf("fi
 }
 
 const clean = JSON.stringify({ verdict: "clean", summary: "Does what R01 asks.", findings: [], notes: [] });
+
+// The action's log of one run, as it writes it: every message, ending with the
+// result that carries Claude's structured answer.
+let logs = 0;
+function executionLog(dir, output, result = {}) {
+  const file = join(dir, `execution-${logs++}.json`);
+  const messages = [
+    { type: "system", subtype: "init", session_id: "s" },
+    { type: "assistant", message: { content: [{ type: "text", text: "Reading the diff." }] } },
+    { type: "result", subtype: "success", is_error: false, num_turns: 3, ...(output === null ? {} : { structured_output: output }), ...result },
+  ];
+  writeFileSync(file, JSON.stringify(messages, null, 2));
+  return file;
+}
 const finding = { severity: "P1", file: "src/domain/onboarding.ts", line: 9, problem: "`index` stays claimable.", why: "R01 reserves it.", fix: "Add it to RESERVED_HANDLES." };
 
 test("Claude's own work is refused, by branch, app, commit or co-author trailer", () => {
@@ -370,15 +384,43 @@ test("main tells the owner why it skipped, and hands the commit to the next step
   await assert.rejects(main(["prepare"], { ...env, PR_NUMBER: "x" }, quiet, fakeGitHub()), /PR_NUMBER/);
   await assert.rejects(main(["merge"], env, quiet, fakeGitHub()), /Unknown command "merge"/);
   const posted = fakeGitHub();
-  await main(["post"], { ...env, HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, STRUCTURED_OUTPUT: clean, CLAUDE_CONCLUSION: "success" }, quiet, posted);
+  await main(["post"], { ...env, HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, EXECUTION_FILE: executionLog(dir, JSON.parse(clean)), CLAUDE_CONCLUSION: "success" }, quiet, posted);
   assert.equal(verdictMarker(posted.calls.at(-1).body.body).verdict, "clean");
   // The job's own tokens are withheld by value.
   for (const key of ["GITHUB_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN"]) {
     const leaked = fakeGitHub();
-    const output = JSON.stringify({ verdict: "clean", summary: "token plain-token-value-42", findings: [], notes: [] });
-    await main(["post"], { ...env, HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, STRUCTURED_OUTPUT: output, CLAUDE_CONCLUSION: "success", [key]: "plain-token-value-42" }, quiet, leaked);
+    const output = { verdict: "clean", summary: "token plain-token-value-42", findings: [], notes: [] };
+    await main(["post"], { ...env, HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, EXECUTION_FILE: executionLog(dir, output), CLAUDE_CONCLUSION: "success", [key]: "plain-token-value-42" }, quiet, leaked);
     const body = leaked.calls.at(-1).body.body;
     assert.equal(verdictMarker(body).verdict, "none", key);
     assert.doesNotMatch(body, /plain-token-value-42/);
   }
+});
+
+test("post reads Claude's answer from the action's log file, however long it is", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
+  const env = { GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, CLAUDE_CONCLUSION: "success" };
+  const verdictOf = async extra => {
+    const fake = fakeGitHub();
+    await main(["post"], { ...env, ...extra }, () => {}, fake);
+    return verdictMarker(fake.calls.at(-1).body.body).verdict;
+  };
+  // Linux won't start a step whose environment holds a 128 KiB string, which
+  // would lose even the no-verdict review. So the answer travels in the log
+  // file, whatever its size, and reaches the review clipped.
+  const long = { verdict: "clean", summary: "x".repeat(200_000), findings: [], notes: [] };
+  assert.equal(await verdictOf({ EXECUTION_FILE: executionLog(dir, long) }), "clean");
+  // Only a successful final result counts.
+  assert.equal(await verdictOf({ EXECUTION_FILE: executionLog(dir, long, { subtype: "error_max_turns" }) }), "none");
+  assert.equal(await verdictOf({ EXECUTION_FILE: executionLog(dir, long, { is_error: true }) }), "none");
+  assert.equal(await verdictOf({ EXECUTION_FILE: executionLog(dir, null) }), "none");
+  assert.equal(await verdictOf({ EXECUTION_FILE: join(dir, "missing.json") }), "none");
+  assert.equal(await verdictOf({}), "none");
+  const garbled = join(dir, "garbled.json");
+  writeFileSync(garbled, "{not json");
+  assert.equal(await verdictOf({ EXECUTION_FILE: garbled }), "none");
+  // The workflow hands over the file's path, never the answer itself.
+  const workflow = readFileSync(new URL("../.github/workflows/claude-review.yml", import.meta.url), "utf8");
+  assert.match(workflow, /^\s+EXECUTION_FILE: \$\{\{ steps\.claude\.outputs\.execution_file \}\}$/m);
+  assert.doesNotMatch(workflow, /outputs\.structured_output/);
 });

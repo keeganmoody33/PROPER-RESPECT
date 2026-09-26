@@ -9,7 +9,7 @@
 // Claude itself only reads. The rules are in docs/remediation/CODEX-BRIEF.md,
 // Section 4, "Review policy".
 
-import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -343,6 +343,23 @@ export async function post({ github, repo, number, sha, runId, raw, conclusion, 
   }
 }
 
+// Claude's answer, read from the action's log of the run. An environment
+// variable can't carry it: Linux won't start a step whose environment holds a
+// string of 128 KiB or more, and that would lose even the no-verdict review.
+// Only a successful final result counts; anything else is no answer.
+export function answerFrom(executionFile) {
+  let messages;
+  try {
+    messages = JSON.parse(readFileSync(executionFile, "utf8"));
+  } catch {
+    return "";
+  }
+  const result = Array.isArray(messages) ? messages.findLast(message => message?.type === "result") : null;
+  const output = result?.structured_output;
+  if (result?.subtype !== "success" || result.is_error !== false || !output || typeof output !== "object") return "";
+  return JSON.stringify(output);
+}
+
 export async function main(argv = process.argv.slice(2), env = process.env, log = console.log, github = null) {
   const [command] = argv;
   const repo = env.GITHUB_REPOSITORY;
@@ -368,7 +385,7 @@ export async function main(argv = process.argv.slice(2), env = process.env, log 
     if (!/^\d+$/.test(env.GITHUB_RUN_ID ?? "")) throw new Error("GITHUB_RUN_ID is required");
     const result = await post({
       github: api, repo, number, sha: env.HEAD_SHA, runId: env.GITHUB_RUN_ID,
-      raw: env.STRUCTURED_OUTPUT, conclusion: env.CLAUDE_CONCLUSION,
+      raw: env.EXECUTION_FILE ? answerFrom(env.EXECUTION_FILE) : "", conclusion: env.CLAUDE_CONCLUSION,
       secrets: [env.GITHUB_TOKEN, env.CLAUDE_CODE_OAUTH_TOKEN],
     });
     log(`Claude's verdict on ${env.HEAD_SHA.slice(0, 7)}: ${result.verdict}, posted as a ${result.where}.`);
