@@ -81,6 +81,23 @@ jobs:
               mkdir -p "$set_aside/$(dirname "$path")"
               mv "$path" "$set_aside/$path"
             done
+      # Left alone, the action pipes https://claude.ai/install.sh into bash and
+      # setup-bun downloads Bun, with no digest check, in the job that holds
+      # the owner's tokens. npm ci checks each build against the sha512 in
+      # .github/claude-review/package-lock.json and stops on a mismatch.
+      # claude-code-action v1.0.235 runs Claude Code 2.1.283 on Bun 1.3.14.
+      # Change .github/claude-review/package.json when the action changes.
+      - name: Install the pinned Claude Code and Bun
+        if: steps.prepare.outputs.skip == ''
+        run: |
+          set -euo pipefail
+          cli="$RUNNER_TEMP/claude-cli"
+          mkdir -p "$cli"
+          cp .github/claude-review/package.json .github/claude-review/package-lock.json "$cli/"
+          cd "$cli"
+          npm ci --ignore-scripts --no-audit --no-fund
+          node_modules/@anthropic-ai/claude-code-linux-x64/claude --version
+          node_modules/@oven/bun-linux-x64/bin/bun --version
       - name: Claude reviews
         id: claude
         if: steps.prepare.outputs.skip == ''
@@ -88,6 +105,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
+          path_to_claude_code_executable: ${{ runner.temp }}/claude-cli/node_modules/@anthropic-ai/claude-code-linux-x64/claude
+          path_to_bun_executable: ${{ runner.temp }}/claude-cli/node_modules/@oven/bun-linux-x64/bin/bun
           classify_inline_comments: 'false'
           # Claude reads only the working directory (main) and the review
           # folder. Claude Code's docs say only this setting makes its file

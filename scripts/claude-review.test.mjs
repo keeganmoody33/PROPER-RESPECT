@@ -286,6 +286,36 @@ test("the workflow gives Claude reading tools only, and the job can comment", ()
   assert.match(workflow, /github\.event\.comment\.user\.login == github\.repository_owner/);
 });
 
+test("the job runs Claude Code and Bun from a lockfile, never from a live download", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/claude-review.yml", import.meta.url), "utf8");
+  const folder = new URL("../.github/claude-review/", import.meta.url);
+  const manifest = JSON.parse(readFileSync(new URL("package.json", folder), "utf8"));
+  const lock = JSON.parse(readFileSync(new URL("package-lock.json", folder), "utf8"));
+  // Left alone, the action pipes https://claude.ai/install.sh into bash and
+  // setup-bun downloads Bun, with no digest check, in the job that holds the
+  // owner's tokens. npm ci checks each package against the lockfile's sha512
+  // and stops on a mismatch; --ignore-scripts runs none of their scripts.
+  const [, action, claudeCode, bun] = workflow.match(/^\s+# claude-code-action (v[\d.]+) runs Claude Code ([\d.]+) on Bun ([\d.]+)\.$/m) ?? [];
+  assert.ok(action, "the workflow names the versions the action runs");
+  assert.match(workflow, new RegExp(`uses: anthropics/claude-code-action@[0-9a-f]{40} # ${action.replaceAll(".", "\\.")}$`, "m"));
+  const builds = [
+    ["@anthropic-ai/claude-code-linux-x64", claudeCode, "claude", "path_to_claude_code_executable"],
+    ["@oven/bun-linux-x64", bun, "bin/bun", "path_to_bun_executable"],
+  ];
+  assert.deepEqual(Object.keys(manifest.dependencies).sort(), builds.map(([name]) => name).sort());
+  assert.deepEqual(Object.keys(lock.packages).filter(Boolean).sort(), builds.map(([name]) => `node_modules/${name}`).sort());
+  for (const [name, version, binary, input] of builds) {
+    assert.equal(manifest.dependencies[name], version, name);
+    const locked = lock.packages[`node_modules/${name}`];
+    assert.equal(locked.version, version, name);
+    assert.equal(locked.resolved, `https://registry.npmjs.org/${name}/-/${name.split("/")[1]}-${version}.tgz`, name);
+    assert.match(locked.integrity, /^sha512-[A-Za-z0-9+/]{86}==$/, name);
+    assert.ok(workflow.includes(`\n          ${input}: \${{ runner.temp }}/claude-cli/node_modules/${name}/${binary}\n`), input);
+  }
+  const install = workflow.indexOf("npm ci --ignore-scripts --no-audit --no-fund\n");
+  assert.ok(install > 0 && install < workflow.indexOf("uses: anthropics/claude-code-action@"), "installed before the action runs");
+});
+
 test("main tells the owner why it skipped, and hands the commit to the next steps", async () => {
   const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
   const outputFile = join(dir, "output.txt");
