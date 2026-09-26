@@ -70,10 +70,10 @@ async function decryptSecret(ciphertext: string, iv: string) {
 }
 
 type DevinUsage = {
-  prs_created_count?: number | null;
-  prs_merged_count?: number | null;
-  searches_count?: number | null;
-  sessions_count?: number | null;
+  prs_created_count?: unknown;
+  prs_merged_count?: unknown;
+  searches_count?: unknown;
+  sessions_count?: unknown;
 };
 
 // A count Devin leaves out, or sends as null, is unknown. It never becomes 0
@@ -85,9 +85,13 @@ function reportedDevinCounts(usage: DevinUsage) {
     ["PRs created", usage.prs_created_count],
     ["PRs merged", usage.prs_merged_count],
   ] as const;
-  return counts.flatMap(([label, value]) =>
-    value === undefined || value === null ? [] : [{ label, value }],
-  );
+  return counts.flatMap(([label, value]) => {
+    if (value === undefined || value === null) return [];
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+      throw new Error("Devin usage response included an invalid count.");
+    }
+    return [{ label, value }];
+  });
 }
 
 async function fetchDevinActivity(
@@ -121,7 +125,7 @@ async function fetchDevinActivity(
   const capturedAt = new Date().toISOString();
   return {
     accountLabel: `Devin organization ${organizationId}`,
-    value: usage.sessions_count ?? undefined,
+    value: primary.label === "Sessions" ? primary.value : undefined,
     activity: {
       kind: "headlineMetrics",
       attributionScope: "ORGANIZATION",
@@ -647,7 +651,7 @@ export const applyRefresh = internalMutation({
     if (!subscription) return;
     if (
       !canRefreshMetric(subscription, {
-        metricKey: subscription.metricKey,
+        metricKey: "devin.sessions",
         attributionScope: args.activity.attributionScope,
       })
     ) {
@@ -777,6 +781,10 @@ export const refreshApproved = internalAction({
         continue;
       }
       if (!item.connector || !item.secret) continue;
+      if (!canRefreshMetric(item.subscription, {
+        metricKey: "devin.sessions",
+        attributionScope: "ORGANIZATION",
+      })) continue;
       try {
         const cleartext = await decryptSecret(
           item.secret.ciphertext,
