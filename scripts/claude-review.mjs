@@ -129,15 +129,14 @@ export async function prepare({ github, repo, number, dir, hasToken }) {
   if (commits.length >= MAX_COMMITS) {
     return { skip: "too-long", sha, note: `Claude won't review #${number}: it has ${commits.length} or more commits, too many to check who wrote them. Review it by hand.` };
   }
+  const writer = evidence => ({
+    skip: "writer",
+    sha,
+    note: `Claude won't review #${number}: Claude wrote or helped write it (${evidence.join("; ")}). ` +
+      "The model that wrote a PR never clears it. Ask Codex instead: `@codex review`.",
+  });
   const evidence = claudeEvidence(pull, commits);
-  if (evidence.length) {
-    return {
-      skip: "writer",
-      sha,
-      note: `Claude won't review #${number}: Claude wrote or helped write it (${evidence.join("; ")}). ` +
-        "The model that wrote a PR never clears it. Ask Codex instead: `@codex review`.",
-    };
-  }
+  if (evidence.length) return writer(evidence);
   if (!hasToken) {
     return {
       skip: "no-token",
@@ -166,6 +165,10 @@ export async function prepare({ github, repo, number, dir, hasToken }) {
       note: `Claude didn't review #${number}: it changed while Claude was reading it (${changed.join("; ")}). Ask again.`,
     };
   }
+  // The description and branch can change without a push, so the writer
+  // check runs again on the second look.
+  const later = claudeEvidence(again, commits);
+  if (later.length) return writer(later);
   mkdirSync(dir, { recursive: true });
   const summary = {
     number,
