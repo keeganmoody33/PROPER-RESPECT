@@ -259,15 +259,18 @@ test("post leaves one review of the commit, or a comment when GitHub refuses the
 
 test("the workflow gives Claude reading tools only, and the job can comment", () => {
   const workflow = readFileSync(new URL("../.github/workflows/claude-review.yml", import.meta.url), "utf8");
-  // --allowedTools only skips prompts; --tools is what removes every other tool.
-  assert.match(workflow, /^\s+--tools "Read,Grep,Glob"$/m);
+  // --allowedTools only skips prompts; --tools is what removes every other
+  // tool. Grep stays out: path rules guard only the folder it searches.
+  assert.match(workflow, /^\s+--tools "Read,Glob"$/m);
   const denied = workflow.match(/^\s+--disallowedTools "([^"]+)"$/m)?.[1].split(",") ?? [];
-  for (const tool of ["Bash", "Edit", "Write", "WebFetch", "WebSearch", "Agent", "Task", "mcp__*"]) assert.ok(denied.includes(tool), tool);
+  for (const tool of ["Bash", "Edit", "Write", "WebFetch", "WebSearch", "Grep", "Agent", "Task", "mcp__*"]) assert.ok(denied.includes(tool), tool);
   assert.match(workflow, /"blockReadsOutsideWorkingDirectories":true/);
   // The action writes its GitHub token into the checkout's .git/config, so
-  // .git is denied by relative and by absolute path.
+  // .git is denied by relative and by absolute path. In Read rules, // is
+  // the filesystem root; a single / would mean ~/.claude for user settings.
   assert.match(workflow, /"Read\(\.\/\.git\/\*\*\)"/);
   assert.match(workflow, /"Read\(\/\$\{\{ github\.workspace \}\}\/\.git\/\*\*\)"/);
+  for (const root of ["proc", "sys", "etc"]) assert.match(workflow, new RegExp(`"Read\\(//${root}/\\*\\*\\)"`), root);
   assert.match(workflow, /^\s+pull-requests: write$/m);
   assert.match(workflow, /^\s+issues: write$/m);
   // Both ways in are the owner's: a comment by the owner, or the owner's

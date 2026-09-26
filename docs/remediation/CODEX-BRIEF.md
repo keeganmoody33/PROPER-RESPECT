@@ -303,8 +303,8 @@ line, or in a `remediate/<ID>-` branch name.
   branch; a PR or commit by the `claude` or `claude[bot]` account or from
   Claude Code's address; a `Co-Authored-By: Claude` trailer; or Claude
   Code's footer or session link in a commit or the description. Its settings
-  fence Claude's reads to main and the PR's files, and it can't edit, run
-  commands or fetch pages. It posts one review of the commit, and the
+  fence Claude's reads to main and the PR's files, and it can't edit,
+  search file contents, run commands or fetch pages. It posts one review of the commit, and the
   review's last line is its verdict: clean only when Claude lists no P0 or
   P1 finding, and no verdict when the run fails, its answer is malformed, or
   it quotes what looks like a credential (then none of it is posted).

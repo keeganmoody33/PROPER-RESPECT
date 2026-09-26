@@ -93,6 +93,8 @@ jobs:
           # folder. Claude Code's docs say only this setting makes its file
           # tools refuse reads outside those in every permission mode, and
           # the action writes its GitHub token into .git/config.
+          # In Read rules, // is the filesystem root. A single / would anchor
+          # at ~/.claude, where these user settings live.
           settings: >-
             {"permissions":{"blockReadsOutsideWorkingDirectories":true,
             "deny":["Read(./.git/**)","Read(/${{ github.workspace }}/.git/**)","Read(//proc/**)","Read(//sys/**)","Read(//etc/**)",
@@ -119,12 +121,14 @@ jobs:
             Answer "clean" only when you have no findings. An empty findings list is a good result when it's true, so don't invent problems.
           # --tools is the only exclusive list: --allowedTools just skips the
           # prompt for the tools it names. With --tools, Claude Code 2.1.283
-          # offers Read, Grep and Glob and nothing else.
+          # offers Read and Glob and nothing else. Grep is left out: path
+          # rules guard it only for the folder it searches, so a search from
+          # the repository root could reach .git/config.
           claude_args: >-
             --max-turns 40
-            --tools "Read,Grep,Glob"
-            --allowedTools "Read,Grep,Glob"
-            --disallowedTools "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Agent,Task,TaskOutput,KillShell,Skill,SlashCommand,mcp__*"
+            --tools "Read,Glob"
+            --allowedTools "Read,Glob"
+            --disallowedTools "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Grep,Agent,Task,TaskOutput,KillShell,Skill,SlashCommand,mcp__*"
             --add-dir ${{ runner.temp }}/claude-review
             --json-schema '{"type":"object","additionalProperties":false,"required":["verdict","summary","findings","notes"],"properties":{"verdict":{"type":"string","enum":["clean","findings"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["severity","file","problem","why","fix"],"properties":{"severity":{"type":"string","enum":["P0","P1"]},"file":{"type":"string"},"line":{"type":"integer","minimum":1},"problem":{"type":"string"},"why":{"type":"string"},"fix":{"type":"string"}}}},"notes":{"type":"array","items":{"type":"string"}}}}'
       - name: Post the review
