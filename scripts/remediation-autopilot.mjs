@@ -155,6 +155,15 @@ const claudeVerdictIn = review => (review.login === ACTIONS_BOT && review.state 
 // Claude's latest verdict on the head commit, reviewed at that commit.
 const latestClaudeVerdict = (verdicts, headSha) =>
   (verdicts ?? []).filter(verdict => verdict.sha === headSha && verdict.commitId === headSha).at(-1) ?? null;
+// Claude's findings, on any commit: its reviews that list findings, and the
+// verdicts it posted as comments because GitHub refused a review of a commit
+// the PR no longer had (scripts/claude-review.mjs, post). A comment can't be
+// dismissed, so its findings hold until the owner deletes it.
+const claudeFindings = (reviews, verdicts = []) => [
+  ...reviews.filter(review => claudeVerdictIn(review)?.verdict === "findings"),
+  ...(verdicts ?? []).filter(verdict => verdict.source === "comment" && verdict.verdict === "findings")
+    .map(verdict => ({ login: ACTIONS_BOT, type: "Bot", commitId: verdict.sha, url: verdict.url })),
+];
 
 // A push or a later approval is not a disposition of an earlier finding.
 // Native review dismissal is the explicit disposition available from these
@@ -165,17 +174,17 @@ const activeComments = (comments, reviews) => {
   const dismissed = new Set(reviews.filter(review => review.state === "DISMISSED" && trustedReviewer(review)).map(review => review.id).filter(Number.isSafeInteger));
   return comments.filter(comment => !dismissed.has(comment.reviewId));
 };
-export function findingsOnHead(comments, reviews, headSha) {
+export function findingsOnHead(comments, reviews, headSha, claudeVerdicts = []) {
   const inline = activeComments(comments, reviews).filter(comment => comment.inReplyTo === null && trustedReviewer(comment));
   const requested = reviews.filter(review => review.state === "CHANGES_REQUESTED" && trustedReviewer(review));
   const copilotBody = reviews.filter(review => COPILOT_REVIEWERS.includes(review.login) && review.state !== "DISMISSED" && copilotFindings(review) && !requested.includes(review));
   // Claude's findings count on any commit, as Copilot's do, whether or not its
   // clean verdict can clear the PR.
-  const claudeBody = reviews.filter(review => claudeVerdictIn(review)?.verdict === "findings");
+  const claudeBody = claudeFindings(reviews, claudeVerdicts);
   const found = [...inline, ...requested, ...copilotBody, ...claudeBody];
   // Findings from Codex, people, Claude or an earlier commit always block.
   // Other review bots' findings on the latest commit turn advisory after the
-  // fix rounds; Claude reports only what should stop a merge, so its don't.
+  // fix rounds. Claude's never do: it reports only what should stop a merge.
   return {
     total: found.length,
     blocking: found.filter(entry => entry.login === CODEX_BOT || entry.type !== "Bot" || claudeBody.includes(entry) ||
@@ -218,7 +227,7 @@ export function cleanReviewer(facts, writer = TASK_WRITER) {
   if (writer !== "Codex" && !commented([CODEX_BOT]) && codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
   if (facts.claudeReview && writer !== "Claude") {
     const claude = latestClaudeVerdict(facts.claudeReviews, head);
-    const claudeFound = facts.reviews.some(review => claudeVerdictIn(review)?.verdict === "findings");
+    const claudeFound = claudeFindings(facts.reviews, facts.claudeReviews).length > 0;
     if (claude?.verdict === "clean" && claude.trusted === true && !claudeFound) return "Claude";
   }
   const copilot = latestCopilotReview(facts.reviews, head);
@@ -341,7 +350,7 @@ function decideTask(facts, taskId, limits) {
     if (updates >= limits.updates) return { type: "label-owner", label: "needs-owner", reason: `still behind main after ${updates} updates` };
     return { type: "request-update", reason: "behind main" };
   }
-  const findings = findingsOnHead(facts.reviewComments, facts.reviews, pr.headSha);
+  const findings = findingsOnHead(facts.reviewComments, facts.reviews, pr.headSha, facts.claudeReviews);
   if (findings.total > 0 && (rounds < limits.fixRounds || findings.blocking > 0)) {
     return askForFix("review", `${findings.total} outstanding review finding${findings.total === 1 ? "" : "s"}`, { urls: findings.urls });
   }
@@ -615,15 +624,23 @@ export function latestChecks(checkRuns) {
   return [...newest.values()];
 }
 
-// Claude's verdicts, read from the reviews the Actions bot posted. With Claude
-// reviews switched on, a clean verdict on the head commit is traced to its
-// run: it counts only when that run is the Claude review workflow, started on
-// main by a comment or by hand, in this repository.
-async function claudeVerdicts(github, reviews, headSha, context) {
-  const verdicts = reviews.flatMap(review => {
+// Claude's verdicts, from the reviews the Actions bot posted and from the
+// comments it posts instead when GitHub refuses a review of a commit the PR no
+// longer has. A comment names no commit GitHub checked, so its verdict never
+// clears; its findings still hold. With Claude reviews switched on, a clean
+// verdict on the head commit is traced to its run: it counts only when that
+// run is the Claude review workflow, started on main by a comment or by hand,
+// in this repository.
+async function claudeVerdicts(github, reviews, comments, headSha, context) {
+  const fromReviews = reviews.flatMap(review => {
     const marker = review.user?.login === ACTIONS_BOT && review.state !== "DISMISSED" ? verdictMarker(review.body ?? "") : null;
-    return marker ? [{ ...marker, commitId: review.commit_id, url: review.html_url, submittedAt: review.submitted_at ?? null, trusted: false }] : [];
+    return marker ? [{ ...marker, source: "review", commitId: review.commit_id, url: review.html_url, submittedAt: review.submitted_at ?? null, trusted: false }] : [];
   });
+  const fromComments = comments.flatMap(comment => {
+    const marker = comment.user?.login === ACTIONS_BOT ? verdictMarker(comment.body ?? "") : null;
+    return marker ? [{ ...marker, source: "comment", commitId: null, url: comment.html_url, submittedAt: comment.created_at ?? null, trusted: false }] : [];
+  });
+  const verdicts = [...fromReviews, ...fromComments];
   if (!context.claudeReview) return verdicts;
   for (const verdict of verdicts) {
     if (verdict.verdict !== "clean" || verdict.sha !== headSha || verdict.commitId !== headSha) continue;
@@ -652,7 +669,7 @@ export async function gatherFacts(github, pull, context) {
   if (status.total_count > status.statuses.length) throw truncated(`commit ${headSha.slice(0, 7)} has more than ${status.statuses.length} statuses`);
   if (pr.commits > commits.length) throw truncated(`the pull request has ${pr.commits} commits and GitHub lists ${commits.length}`);
   const checks = latestChecks(checkRuns).map(run => ({ name: run.name, app: run.app?.slug ?? "", status: run.status, conclusion: run.conclusion, startedAt: run.started_at }));
-  const claudeReviews = await claudeVerdicts(github, reviews, headSha, context);
+  const claudeReviews = await claudeVerdicts(github, reviews, comments, headSha, context);
   const starts = checks.filter(check => check.app === "github-actions").map(check => Date.parse(check.startedAt)).filter(Number.isFinite);
   return {
     now: context.now,
@@ -672,6 +689,7 @@ export async function gatherFacts(github, pull, context) {
       submittedAt: review.submitted_at ?? null,
     })),
     claudeReview: Boolean(context.claudeReview),
+    // Claude's verdicts, from its reviews and from the comments it falls back to.
     claudeReviews,
     // GitHub leaves Copilot out of requested_reviewers, so its running check counts too.
     copilotPending: (pr.requested_reviewers ?? []).some(user => COPILOT_REVIEWERS.includes(user.login)) ||

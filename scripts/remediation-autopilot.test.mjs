@@ -876,6 +876,33 @@ test("Claude's findings go to Codex, and an earlier finding outlives a later cle
   assert.equal(findingsOnHead([], [claudeReviewOf("findings", { login: "someone-else[bot]" })], HEAD).total, 0);
 });
 
+test("a Claude verdict posted as a comment still holds its findings, and never clears", async () => {
+  // When GitHub refuses a review of a commit the PR no longer has, as after a
+  // force-push, scripts/claude-review.mjs posts the review as a comment.
+  const old = "b".repeat(40);
+  const fallback = claudeVerdictOf("findings", { sha: old, commitId: null, source: "comment", url: "https://example/claude-comment", trusted: false });
+  const held = withClaude({ claudeReviews: [fallback, claudeVerdictOf("clean")], reviews: [claudeReviewOf("clean")] });
+  assert.equal(cleanReviewer(held), null);
+  assert.deepEqual(findingsOnHead([], held.reviews, HEAD, held.claudeReviews), { total: 1, blocking: 1, urls: ["https://example/claude-comment"] });
+  const fix = decide(held);
+  assert.deepEqual([fix.type, fix.urls], ["request-fix", ["https://example/claude-comment"]]);
+  // A clean verdict in a comment names no commit GitHub checked, so it clears nothing.
+  const cleanComment = withClaude({ markers: [claudeAsk(10)], claudeReviews: [claudeVerdictOf("clean", { commitId: null, source: "comment" })] });
+  assert.equal(cleanReviewer(cleanComment), null);
+  // End to end: main reads the Actions bot's comments as well as its reviews.
+  const at = new Date(Date.now() - 30 * 60_000).toISOString();
+  const comment = { id: 3, user: { login: "github-actions[bot]", type: "Bot" }, created_at: at, updated_at: at, html_url: "https://example/claude-comment",
+    body: `### Claude review of \`${old.slice(0, 7)}\`: 1 finding\n\n<!-- claude-review verdict=findings sha=${old} run=76 -->` };
+  const fake = fakeGitHub({ claudeClean: true, issueComments: [comment] });
+  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
+  assert.match(fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").at(-1).body.body, /^- https:\/\/example\/claude-comment$/m);
+  // Another account's look-alike comment isn't Claude's.
+  const lookalike = fakeGitHub({ claudeClean: true, issueComments: [{ ...comment, user: { login: "someone-else[bot]", type: "Bot" } }] });
+  await runMain(lookalike, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+  assert.equal(lookalike.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 1);
+});
+
 test("main asks Claude with the owner's token, in a comment the review workflow accepts", async () => {
   const fake = fakeGitHub({ issueComments: [] });
   await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });

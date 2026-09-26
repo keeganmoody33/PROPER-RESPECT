@@ -215,7 +215,8 @@ line, or in a `remediate/<ID>-` branch name.
   requested" reviews from Codex, Copilot, Vercel, Cursor or Devin review, or
   from the owner and collaborators, a Copilot review of the commit whose
   overview lists findings, including ones it found in unchanged code, and a
-  Claude review whose verdict line says findings.
+  Claude review whose verdict line says findings, or the comment Claude posts
+  instead when GitHub refuses that review.
 - **Review.** Once the checks pass and 30 minutes have passed since the push,
   it asks an outside model to review that commit. With the repository
   variable `AUTOPILOT_CLAUDE_REVIEW` set to `true`, it asks Claude first: it
@@ -322,7 +323,10 @@ line, or in a `remediate/<ID>-` branch name.
   P1 finding, and no verdict when the run fails, its answer is malformed, or
   it quotes what looks like a credential (then none of it is posted).
 - **Claude's verdict clears a task PR only when the owner switches it on.**
-  Claude's findings go to Codex like any reviewer's. A clean verdict clears
+  Claude's findings go to Codex like any reviewer's. When the PR's head moves
+  during a review, GitHub refuses it and Claude posts its verdict as a
+  comment: that comment's findings hold until the owner deletes it, and its
+  verdict never clears. A clean verdict clears
   a Codex task only with the repository variable `AUTOPILOT_CLAUDE_REVIEW`
   set to `true`, and only when its run is the Claude review workflow on
   main. A PR's own text can steer any model that reads it, Copilot included,
