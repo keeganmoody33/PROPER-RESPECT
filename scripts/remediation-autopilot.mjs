@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Remediation autopilot. Runs from main on a schedule
 // (.github/workflows/remediation-autopilot.yml). For each open remediation task
-// pull request it asks Codex to fix failing checks or review findings, asks
-// Codex and Copilot to review the latest commit, and merges the pull request
-// once it is green and reviewed. It can also start the next task. It never
-// deploys.
-// The rules are in docs/remediation/CODEX-BRIEF.md, Section 4, "Autopilot".
+// pull request it asks Codex to fix failing checks or review findings, asks an
+// outside reviewer (Copilot) to review the latest commit, and merges the pull
+// request once it is green and cleanly reviewed by a model that didn't write
+// it. It can also start the next task. It never deploys.
+// The rules are in docs/remediation/CODEX-BRIEF.md, Section 4, "Autopilot"
+// and "Review policy".
 
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -16,6 +17,9 @@ export const RUN_BRANCH_PREFIX = "remediate/run-";
 export const OWNER_LABELS = ["needs-owner", "needs-owner-approval"];
 export const CODEX_BOT = "chatgpt-codex-connector[bot]";
 export const ACTIONS_BOT = "github-actions[bot]";
+// Who writes remediation tasks (AGENTS.md: "Codex writes"). The writer's own
+// review never clears its pull request, so the autopilot doesn't ask for it.
+export const TASK_WRITER = "Codex";
 export const REQUIRED_CHECKS = ["verify", "Native Chrome WebMCP"];
 // Copilot reviews as the first login and comments as the second. Requesting
 // the first as a reviewer, with the owner's token, asks for a fresh review.
@@ -165,19 +169,27 @@ export function codexReviewStatus(codexComments, headSha) {
   return status && commit && headSha.startsWith(commit) ? { status, updatedAt: summary.updatedAt } : null;
 }
 
-// Who reviewed the head commit cleanly: Codex, when its review summary shows
-// a completed review of that commit and it left no comments on it; or Copilot,
-// when its latest review of the commit is finished, says plainly that it
-// found nothing, and has no comments or other sign of findings. Nothing else,
-// such as a reaction or an unfamiliar review format, counts.
-export function cleanReviewer(facts) {
+// Who reviewed the head commit cleanly, never counting the writer: Codex,
+// when its review summary shows a completed review of that commit and it left
+// no comments on it; or Copilot, when its latest review of the commit is
+// finished, says plainly that it found nothing, and has no comments or other
+// sign of findings. Nothing else, such as a reaction, a commit status or an
+// unfamiliar review format, counts.
+export function cleanReviewer(facts, writer = TASK_WRITER) {
   const head = facts.pr.headSha;
   const commented = logins => facts.reviewComments.some(comment => logins.includes(comment.login) && comment.originalCommitId === head);
-  if (!commented([CODEX_BOT]) && codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
+  if (writer !== "Codex" && !commented([CODEX_BOT]) && codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
   const copilot = latestCopilotReview(facts.reviews, head);
-  const clean = copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && copilotSaysClean(copilot) &&
+  const clean = writer !== "Copilot" && copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && copilotSaysClean(copilot) &&
     !COPILOT_UNAVAILABLE.test(copilot.body ?? "") && !copilotFindings(copilot) && !commented(COPILOT_REVIEWERS);
   return clean ? "Copilot" : null;
+}
+
+// When Copilot last answered an ask without reviewing, such as out of quota.
+// Null when it hasn't, or when that answer came before the ask.
+function copilotFailureAfter(review, iso) {
+  if (!review || !COPILOT_UNAVAILABLE.test(review.body ?? "")) return null;
+  return Date.parse(review.submittedAt ?? "") > Date.parse(iso) ? review.submittedAt : null;
 }
 
 // When Codex last failed after an ask: a "Something went wrong" reply, or a
@@ -190,12 +202,13 @@ function codexFailureAfter(codexComments, iso, summary = null) {
   return times.sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1) ?? null;
 }
 
-// After Codex fails, ask again at once the first time and then an hour after
-// each failure, so a Codex outage doesn't park the PR. Give up at the limit.
-function retryAfterFailure({ retries, failedAt, now, limits, what, retry }) {
-  if (retries >= limits.codexRetries) return { type: "label-owner", label: "needs-owner", reason: `Codex failed ${retries + 1} times ${what}` };
+// After Codex or a reviewer fails, ask again at once the first time and then
+// an hour after each failure, so an outage or a spent quota doesn't park the
+// PR. Give up at the limit.
+function retryAfterFailure({ who = "Codex", retries, failedAt, now, limits, what, retry }) {
+  if (retries >= limits.codexRetries) return { type: "label-owner", label: "needs-owner", reason: `${who} failed ${retries + 1} times ${what}` };
   if (retries > 0 && minutesSince(now, failedAt) < limits.retryAfterMinutes) {
-    return { type: "wait", reason: `Codex failed ${what}; asking again ${limits.retryAfterMinutes} minutes after the last failure`, since: failedAt };
+    return { type: "wait", reason: `${who} failed ${what}; asking again ${limits.retryAfterMinutes} minutes after the last failure`, since: failedAt };
   }
   return retry;
 }
@@ -304,30 +317,45 @@ function decideTask(facts, taskId, limits) {
     return { type: "wait", reason: `letting reviewers finish, ${Math.ceil(limits.quietMinutes - quiet)} minutes left`, since: facts.pushedAt };
   }
 
-  // Reviews: ask Codex, and Copilot when it hasn't reviewed this commit. Wait
-  // for a review in progress, then merge on the first clean one.
+  // Reviews. The model that wrote a PR never clears it (brief, Section 4,
+  // "Review policy"). Codex writes every task, so the outside reviewer is
+  // Copilot: ask it, wait for any review in progress (Codex's own included,
+  // since its findings still block), and merge on Copilot's clean review.
+  const writer = TASK_WRITER;
+  const outsideOnly = writer === "Codex";
   const asked = marker("review");
   const reviewSince = asked?.createdAt ?? facts.pushedAt;
   const codex = codexReviewStatus(facts.codexComments, pr.headSha);
   const copilotReview = latestCopilotReview(facts.reviews, pr.headSha);
-  const reviewing = [codex?.status === "Running" ? "Codex" : null, facts.copilotPending ? "Copilot" : null].filter(Boolean);
+  // Copilot answering the latest ask without reviewing ends its review, even
+  // while GitHub still shows it pending, so the retry isn't held back.
+  const copilotGaveUp = asked ? copilotFailureAfter(copilotReview, asked.createdAt) : null;
+  const reviewing = [codex?.status === "Running" ? "Codex" : null, facts.copilotPending && !copilotGaveUp ? "Copilot" : null].filter(Boolean);
   if (reviewing.length && minutesSince(now, reviewSince) < limits.reviewWaitMinutes) {
     return { type: "wait", reason: `${reviewing.join(" and ")} reviewing`, since: reviewSince };
   }
-  const reviewer = cleanReviewer(facts);
+  const reviewer = cleanReviewer(facts, writer);
   if (!reviewer) {
-    const copilot = !copilotReview && !facts.copilotPending;
-    if (!asked) return { type: "request-review", copilot, reason: "no clean review of this commit yet" };
-    const what = "to review this commit, and Copilot gave no clean review";
-    const failedAt = codexFailureAfter(facts.codexComments, asked.createdAt, codex);
+    const copilotOut = Boolean(copilotReview) && COPILOT_UNAVAILABLE.test(copilotReview.body ?? "");
+    if (outsideOnly && copilotReview && !copilotOut) {
+      return { type: "label-owner", label: "needs-owner",
+        reason: `Copilot reviewed ${pr.headSha.slice(0, 7)} without a clean verdict, and it's the only outside reviewer wired so far` };
+    }
+    const ask = { type: "request-review", codex: !outsideOnly, copilot: outsideOnly || (!copilotReview && !facts.copilotPending) };
+    if (!asked) return { ...ask, reason: "no clean review of this commit yet" };
+    const who = outsideOnly ? "Copilot" : "Codex";
+    const what = outsideOnly ? "to review this commit" : "to review this commit, and Copilot gave no clean review";
+    const failedAt = outsideOnly
+      ? copilotFailureAfter(copilotReview, asked.createdAt)
+      : codexFailureAfter(facts.codexComments, asked.createdAt, codex);
     if (failedAt) {
-      return retryAfterFailure({ retries: retriesOf("review"), failedAt, now, limits, what,
-        retry: { type: "request-review", retry: true, copilot, reason: "the Codex review failed, so asking again" } });
+      return retryAfterFailure({ who, retries: retriesOf("review"), failedAt, now, limits, what,
+        retry: { ...ask, retry: true, reason: `the ${who} review failed, so asking again` } });
     }
     // No answer within the review wait counts as a failure at the ask.
     if (minutesSince(now, asked.createdAt) >= limits.reviewWaitMinutes) {
-      return retryAfterFailure({ retries: retriesOf("review"), failedAt: asked.createdAt, now, limits, what,
-        retry: { type: "request-review", retry: true, copilot, reason: `no clean review ${limits.reviewWaitMinutes} minutes after asking, so asking again` } });
+      return retryAfterFailure({ who, retries: retriesOf("review"), failedAt: asked.createdAt, now, limits, what,
+        retry: { ...ask, retry: true, reason: `no clean review ${limits.reviewWaitMinutes} minutes after asking, so asking again` } });
     }
     return { type: "wait", reason: "waiting for a review", since: asked.createdAt };
   }
@@ -515,6 +543,7 @@ export async function gatherFacts(github, pull, context) {
     reviews: reviews.map(review => ({
       login: review.user?.login ?? "", type: review.user?.type ?? "User", association: review.author_association,
       state: review.state, commitId: review.commit_id, body: review.body ?? "", url: review.html_url,
+      submittedAt: review.submitted_at ?? null,
     })),
     // GitHub leaves Copilot out of requested_reviewers, so its running check counts too.
     copilotPending: (pr.requested_reviewers ?? []).some(user => COPILOT_REVIEWERS.includes(user.login)) ||
@@ -585,7 +614,12 @@ export async function main(env = process.env, log = console.log) {
   // Copilot bills the person who asks, so this uses the owner's token too.
   const askCopilot = number => write(`ask Copilot to review #${number}`, () =>
     trigger.request(`/repos/{repo}/pulls/${number}/requested_reviewers`, { method: "POST", body: { reviewers: [COPILOT_REVIEWERS[0]] } })
-      .catch(error => log(`  Copilot review request failed (${error.message}); Codex's review still counts.`)));
+      .catch(error => log(`  Copilot review request failed (${error.message}); the autopilot asks again after the review wait.`)));
+  // The record of an outside review ask. It posts with the workflow token and
+  // mentions no one, so it never reaches Codex.
+  const markReviewAsk = (number, sha, retry) => write(`mark the review ask on #${number}`, () =>
+    github.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body:
+      `Remediation autopilot: asked Copilot to review commit ${sha.slice(0, 7)}. Codex wrote this pull request, so only an outside reviewer can clear it.\n\n<!-- ${MARKER}:review sha=${sha}${retry ? " key=retry" : ""} -->` } }));
   const deleteBranch = ref => github.request(`/repos/{repo}/git/refs/heads/${ref}`, { method: "DELETE" }).catch(() => {});
 
   const open = (await github.all("/repos/{repo}/pulls?state=open"))
@@ -627,9 +661,17 @@ export async function main(env = process.env, log = console.log) {
         }
       } else if (["request-fix", "request-update", "request-review", "request-start"].includes(decision.type)) {
         const kind = { "request-fix": "fix", "request-update": "update", "request-review": "review", "request-start": "start" }[decision.type];
+        const outsideReview = kind === "review" && !decision.codex;
         if (!trigger) {
           await addLabel(pull.number, "needs-owner");
-          if (!hasNote("no-trigger")) await note(pull.number, sha, "no-trigger", `this needs Codex (${decision.reason}), but the Codex trigger token isn't available. Comment \`@codex\` here yourself, or fix the \`CODEX_TRIGGER_TOKEN\` secret.`);
+          if (!hasNote("no-trigger")) {
+            await note(pull.number, sha, "no-trigger", outsideReview
+              ? `this needs a Copilot review (${decision.reason}), but the trigger token isn't available, and Copilot reviews are requested with your token. Request a review from Copilot here yourself, or fix the \`CODEX_TRIGGER_TOKEN\` secret.`
+              : `this needs Codex (${decision.reason}), but the Codex trigger token isn't available. Comment \`@codex\` here yourself, or fix the \`CODEX_TRIGGER_TOKEN\` secret.`);
+          }
+        } else if (outsideReview) {
+          await askCopilot(pull.number);
+          await markReviewAsk(pull.number, sha, Boolean(decision.retry));
         } else {
           const text = kind === "start" ? startPrompt([...new Set(open.map(taskIdOf).filter(Boolean))].sort()) : codexAsk(decision, sha);
           await askCodex(pull.number, kind, sha, text, Boolean(decision.retry));

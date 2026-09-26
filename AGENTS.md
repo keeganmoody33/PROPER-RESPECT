@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Updated: 2026-09-25.
+Updated: 2026-09-26.
 
 ## Active remediation program
 
@@ -23,7 +23,9 @@ replaces five rules in this file:
   only docs, configuration or workflow files.
 - Merge authorization: the remediation autopilot merges eligible task PRs
   without a human review, pinned to the reviewed commit (owner decision,
-  2026-09-25). Codex never merges its own PRs.
+  2026-09-25). Codex never merges its own PRs, and its review never clears
+  them: only an outside reviewer can (the brief's Section 4, "Review
+  policy").
 
 Every other rule here still applies to remediation work.
 
