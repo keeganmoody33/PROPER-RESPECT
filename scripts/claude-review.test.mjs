@@ -132,6 +132,10 @@ test("prepare refuses closed, fork, Claude-written and overlong PRs, and one wit
   assert.equal((await run({ pull: pullOf({ state: "closed" }) })).skip, "closed");
   assert.equal((await run({ pull: pullOf({ head: { ref: "x", sha: HEAD, repo: { full_name: "someone/fork" } } }) })).skip, "fork");
   assert.equal((await run({ pull: pullOf({ head: { ref: "x", sha: HEAD, repo: null } }) })).skip, "fork");
+  // Claude reads main as the base, so a PR into another branch isn't one it can judge.
+  const based = await run({ pull: pullOf({ base: { ref: "release/v0.2" } }) });
+  assert.deepEqual([based.skip, based.sha], ["base", HEAD]);
+  assert.match(based.note, /targets `release\/v0\.2`, not main/);
   const writer = await run({ commits: [commitOf("fix: x\n\nCo-Authored-By: Claude <noreply@anthropic.com>")] });
   assert.deepEqual([writer.skip, writer.sha], ["writer", HEAD]);
   assert.match(writer.note, /never clears it\. Ask Codex instead: `@codex review`/);
