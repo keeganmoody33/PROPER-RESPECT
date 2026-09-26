@@ -277,6 +277,11 @@ test("the workflow gives Claude reading tools only, and the job can comment", ()
   // manual run. Each review spends the owner's Claude plan. A re-run keeps
   // github.actor, so the one who starts this run must be the owner too.
   assert.match(workflow, /github\.triggering_actor == github\.repository_owner &&/);
+  // This job holds the owner's Claude token, so every action it runs is
+  // pinned to a commit: a moved tag can't swap in other code.
+  const uses = [...workflow.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)];
+  assert.ok(uses.length >= 4, String(uses.length));
+  for (const [, ref, comment] of uses) assert.match(`${ref}${comment}`, /@[0-9a-f]{40} # v\d+(\.\d+)*$/, ref);
   assert.match(workflow, /github\.event_name == 'workflow_dispatch' && github\.actor == github\.repository_owner/);
   assert.match(workflow, /github\.event\.comment\.user\.login == github\.repository_owner/);
 });
