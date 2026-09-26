@@ -98,7 +98,7 @@ const copilotSaysClean = review => {
   }
   return /^Copilot reviewed \d+(?: of \d+)? (?:changed )?files? and generated (?:no|0) (?:new )?comments\.$/.test(body);
 };
-const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|note) sha=([0-9a-f]{7,40})(?: key=([\w-]+))? -->/;
+const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|note) sha=([0-9a-f]{7,40})(?: key=([\w-]+))?(?: until=(\d+))? -->/;
 
 const minutesSince = (now, iso) => (now - Date.parse(iso)) / 60_000;
 const queued = id => (id && TASK_IDS.includes(id) ? id : null);
@@ -163,7 +163,7 @@ export function parseMarkers(comments, trustedLogins) {
   for (const comment of comments) {
     if (!trustedLogins.includes(comment.login)) continue;
     const match = comment.body.match(MARKER_PATTERN);
-    if (match) markers.push({ kind: match[1], sha: match[2], key: match[3] ?? null, createdAt: comment.createdAt, id: comment.id });
+    if (match) markers.push({ kind: match[1], sha: match[2], key: match[3] ?? null, createdAt: comment.createdAt, id: comment.id, ...(match[4] ? { notBefore: Number(match[4]) } : {}) });
   }
   return markers;
 }
@@ -269,7 +269,7 @@ function decideTask(facts, taskId, limits) {
   // Codex's replies after a time, leaving out its review summary comment.
   const repliesAfter = iso => facts.codexComments.filter(comment => !comment.body.includes(REVIEW_SUMMARY) && Date.parse(comment.createdAt) > Date.parse(iso));
   const rounds = facts.markers.filter(entry => entry.kind === "fix" && entry.key !== "retry").length;
-  const retriesOf = kind => asksFor(kind).filter(entry => (entry.key === "retry" || entry.key === "retry-dispatch-pending")).length;
+  const retriesOf = kind => asksFor(kind).filter(entry => ["retry", "retry-dispatch-pending", "retry-rate-rejected"].includes(entry.key)).length;
   const askForFix = (kind, reason, extra = {}) => {
     const asked = marker("fix");
     if (asked) {
@@ -319,7 +319,12 @@ function decideTask(facts, taskId, limits) {
   const asked = marker("review");
   const copilotReview = latestCopilotReview(facts.reviews, pr.headSha);
   const copilotGaveUp = asked ? copilotFailureAfter(copilotReview, asked.createdAt) : null;
-  const running = facts.checks.filter(check => check.status !== "completed" && !(check.name === "copilot-pull-request-reviewer" && copilotGaveUp)).map(check => check.name);
+  const rateRejected = ["rate-rejected", "retry-rate-rejected"].includes(asked?.key);
+  const staleReviewerCheck = check => rateRejected && COPILOT_UNAVAILABLE.test(copilotReview?.body ?? "") &&
+    Date.parse(check.startedAt ?? "") <= Date.parse(copilotReview?.submittedAt ?? "") &&
+    Date.parse(copilotReview?.submittedAt ?? "") <= Date.parse(asked.createdAt);
+  const running = facts.checks.filter(check => check.status !== "completed" &&
+    !(check.name === "copilot-pull-request-reviewer" && (copilotGaveUp || staleReviewerCheck(check)))).map(check => check.name);
   if (running.length) return { type: "wait", reason: `checks running: ${running.join(", ")}`, since: facts.pushedAt };
   const missing = required.filter(({ check }) => !check).map(({ name }) => name);
   if (missing.length) return { type: "wait", reason: `required checks not reported: ${missing.join(", ")}`, since: facts.pushedAt };
@@ -339,9 +344,21 @@ function decideTask(facts, taskId, limits) {
   const codex = codexReviewStatus(facts.codexComments, pr.headSha);
   // Copilot answering the latest ask without reviewing ends its review, even
   // while GitHub still shows it pending, so the retry isn't held back.
-  const dispatchPending = ["dispatch-pending", "retry-dispatch-pending"].includes(asked?.key);
   const answered = copilotReview && ["COMMENTED", "APPROVED", "CHANGES_REQUESTED"].includes(copilotReview.state) &&
     Date.parse(copilotReview.submittedAt ?? "") > Date.parse(asked?.createdAt ?? "");
+  const reviewer = cleanReviewer(facts, writer);
+  if (rateRejected && !(answered && reviewer)) {
+    const retries = retriesOf("review");
+    if (!Number.isSafeInteger(asked.notBefore) || asked.notBefore <= 0) {
+      return { type: "label-owner", label: "needs-owner", reason: "rate rejection has no valid retry deadline" };
+    }
+    if (retries >= limits.codexRetries) return { type: "label-owner", label: "needs-owner", reason: "review dispatch exhausted its retry budget" };
+    const nextAttempt = Math.max(asked.notBefore, Date.parse(asked.createdAt) + 60_000 * 2 ** retries);
+    if (!Number.isFinite(nextAttempt)) return { type: "label-owner", label: "needs-owner", reason: "rate rejection has no valid attempt timestamp" };
+    if (now < nextAttempt) return { type: "wait", reason: "waiting for the rejected review attempt's cooldown", since: asked.createdAt };
+    return { type: "request-review", codex: false, copilot: true, retry: true, reason: "retrying a durably recorded rate-limit rejection" };
+  }
+  const dispatchPending = ["dispatch-pending", "retry-dispatch-pending"].includes(asked?.key);
   if (dispatchPending && !answered) {
     return minutesSince(now, reviewSince) < limits.reviewWaitMinutes
       ? { type: "wait", reason: "review dispatch outcome is unconfirmed", since: reviewSince }
@@ -351,7 +368,6 @@ function decideTask(facts, taskId, limits) {
   if (reviewing.length && minutesSince(now, reviewSince) < limits.reviewWaitMinutes) {
     return { type: "wait", reason: `${reviewing.join(" and ")} reviewing`, since: reviewSince };
   }
-  const reviewer = cleanReviewer(facts, writer);
   if (!reviewer) {
     const copilotOut = Boolean(copilotReview) && COPILOT_UNAVAILABLE.test(copilotReview.body ?? "");
     if (outsideOnly && copilotReview && !copilotOut) {
@@ -459,6 +475,31 @@ export function codexAsk(decision, sha) {
   ].join("\n");
 }
 
+// GitHub documents retryable rate-limit failures as403/429 with exhausted
+// primary quota or an explicit secondary-limit error. Unknown errors remain
+// ambiguous. Respect every supplied timing constraint; malformed ones hold.
+// https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api#exceeding-the-rate-limit
+function rateLimitRetryAt(response, data) {
+  if (![403, 429].includes(response.status)) return null;
+  const header = name => response.headers?.get(name) ?? null;
+  const primary = header("x-ratelimit-remaining") === "0";
+  if (!primary && !/^You have exceeded a secondary rate limit(?:[.!]|$)/i.test(data?.message ?? "")) return null;
+  const seconds = value => /^\d+$/.test(value ?? "") && Number.isSafeInteger(Number(value)) ? Number(value) : null;
+  const now = Date.now();
+  let until = now + 60_000;
+  const after = header("retry-after");
+  if (after !== null) {
+    if (seconds(after) === null) return null;
+    until = Math.max(until, now + seconds(after) * 1000);
+  }
+  if (primary) {
+    const reset = seconds(header("x-ratelimit-reset"));
+    if (reset === null) return null;
+    until = Math.max(until, reset * 1000 + 1000);
+  }
+  return Number.isSafeInteger(until) && until <= 8.64e15 ? until : null;
+}
+
 export function createGitHub(token, repo) {
   async function request(path, { method = "GET", body } = {}) {
     const response = await fetch(`https://api.github.com${path.replace("{repo}", repo)}`, {
@@ -476,6 +517,7 @@ export function createGitHub(token, repo) {
     if (!response.ok) {
       const error = new Error(`${method} ${path} returned ${response.status}: ${data?.message ?? text.slice(0, 200)}`);
       error.status = response.status;
+      error.rateLimitRetryAt = rateLimitRetryAt(response, data);
       throw error;
     }
     return data;
@@ -639,7 +681,16 @@ export async function main(env = process.env, log = console.log) {
     const record = await github.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body:
       `Remediation autopilot: reserved a Copilot review attempt; dispatch outcome is unconfirmed.\n\n<!-- ${MARKER}:review sha=${sha} key=${pendingKey} -->` } });
     if (!Number.isSafeInteger(record?.id)) throw new Error("Review reservation returned no comment ID; not dispatching.");
-    await trigger.request(`/repos/{repo}/pulls/${number}/requested_reviewers`, { method: "POST", body: { reviewers: [COPILOT_REVIEWERS[0]] } });
+    try {
+      await trigger.request(`/repos/{repo}/pulls/${number}/requested_reviewers`, { method: "POST", body: { reviewers: [COPILOT_REVIEWERS[0]] } });
+    } catch (error) {
+      if (error.rateLimitRetryAt) {
+        const key = retry ? "retry-rate-rejected" : "rate-rejected";
+        await github.request(`/repos/{repo}/issues/comments/${record.id}`, { method: "PATCH", body: { body:
+          `Remediation autopilot: GitHub rejected this review attempt due to a rate limit. Retry only after the recorded cooldown.\n\n<!-- ${MARKER}:review sha=${sha} key=${key} until=${error.rateLimitRetryAt} -->` } });
+      }
+      throw error;
+    }
     await github.request(`/repos/{repo}/issues/comments/${record.id}`, { method: "PATCH", body: { body:
       `Remediation autopilot: Copilot review request accepted for commit ${sha.slice(0, 7)}.\n\n<!-- ${MARKER}:review sha=${sha}${retry ? " key=retry" : ""} -->` } });
   });

@@ -677,3 +677,122 @@ test("pending attempts reconcile only with a subsequent review and consume retry
   const retries = Array.from({ length: 6 }, (_, i) => ({ ...reviewAsk(100 - i), key: "retry-dispatch-pending" }));
   assert.equal(decide(facts({ markers: [pending, ...retries], reviews: [copilotReview("Copilot was unable to review", { submittedAt: minutesAgo(5) })] })).type, "label-owner");
 });
+
+// HTTP responses here model GitHub's documented rate-limit error contract.
+function rejectedAttemptFake({ status = 429, headers = {}, message = "You have exceeded a secondary rate limit.", persistFailure = null, acceptAfter = Infinity } = {}) {
+  const comments = [];
+  const fake = fakeGitHub({ issueComments: comments });
+  const original = fake.fetch;
+  let attempts = 0, accepted = 0;
+  const json = data => ({ ok: true, status: 200, text: async () => JSON.stringify(data) });
+  fake.fetch = async (url, options = {}) => {
+    const path = new URL(url).pathname;
+    const payload = options.body ? JSON.parse(options.body) : null;
+    if (options.method === "POST" && path.endsWith("/issues/81/comments")) {
+      const entry = { id: 100 + comments.length, user: { login: "github-actions[bot]" }, body: payload.body, created_at: new Date(Date.now()).toISOString() };
+      comments.push(entry);
+      return json(entry);
+    }
+    if (options.method === "PATCH" && path.includes("/issues/comments/")) {
+      if (persistFailure === "before") throw new Error("outcome write rejected");
+      const entry = comments.find(comment => comment.id === Number(path.split("/").at(-1)));
+      entry.body = payload.body;
+      if (persistFailure === "after") throw new Error("outcome write response lost");
+      return json(entry);
+    }
+    if (options.method === "POST" && path.endsWith("/requested_reviewers")) {
+      attempts++;
+      if (attempts > acceptAfter) { accepted++; throw new Error("accepted dispatch response lost"); }
+      return { ok: false, status, headers: new Headers(headers), text: async () => JSON.stringify({ message }) };
+    }
+    return original(url, options);
+  };
+  return { fake, comments, counts: () => ({ attempts, accepted }) };
+}
+
+async function withClock(action) {
+  const real = Date.now;
+  let now = NOW;
+  Date.now = () => now;
+  try { await action(minutes => { now += minutes * 60_000; }); }
+  finally { Date.now = real; }
+}
+
+test("documented rate rejection is durable, observes cooldown, and can retry without replaying later ambiguity", async () => {
+  await withClock(async advance => {
+    const state = rejectedAttemptFake({ headers: { "retry-after": "120" }, acceptAfter: 1 });
+    await assert.rejects(() => runMain(state.fake));
+    assert.match(state.comments[0].body, /key=rate-rejected until=/);
+    await runMain(state.fake);
+    assert.equal(state.counts().attempts, 1);
+    advance(3);
+    await assert.rejects(() => runMain(state.fake));
+    assert.deepEqual(state.counts(), { attempts: 2, accepted: 1 });
+    for (let i = 0; i < 8; i++) { advance(90); await runMain(state.fake); }
+    assert.deepEqual(state.counts(), { attempts: 2, accepted: 1 });
+  });
+});
+
+test("primary rate-limit403 respects reset and repeated rejections consume the shared retry cap", async () => {
+  await withClock(async advance => {
+    const state = rejectedAttemptFake({ status: 403, headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(NOW / 1000 + 7200) }, message: "API rate limit exceeded" });
+    await assert.rejects(() => runMain(state.fake));
+    advance(90); await runMain(state.fake); assert.equal(state.counts().attempts, 1);
+    for (let i = 0; i < 9; i++) { advance(130); await runMain(state.fake).catch(() => {}); }
+    assert.deepEqual(state.counts(), { attempts: 7, accepted: 0 });
+    const markers = parseMarkers(state.comments.map(c => ({ login: c.user.login, body: c.body, createdAt: c.created_at, id: c.id })), ["github-actions[bot]"]);
+    assert.equal(markers.filter(m => m.kind === "review").length, 7);
+    assert.equal(markers.filter(m => m.key === "retry-rate-rejected").length, 6);
+  });
+});
+
+test("failed rejection persistence holds; persisted rejection with lost acknowledgement remains bounded", async () => {
+  for (const persistFailure of ["before", "after"]) await withClock(async advance => {
+    const state = rejectedAttemptFake({ persistFailure });
+    for (let i = 0; i < 9; i++) { await runMain(state.fake).catch(() => {}); advance(130); }
+    assert.deepEqual(state.counts(), { attempts: persistFailure === "before" ? 1 : 7, accepted: 0 });
+  });
+});
+
+test("unknown statuses, malformed rate evidence and timing never authorize dispatch replay", async () => {
+  const modes = [
+    { status: 503, headers: { "retry-after": "60" } },
+    { status: 429, message: "unclassified response" },
+    { status: 429, message: "Not a secondary rate limit" },
+    { status: 403, message: "Resource not accessible" },
+    { status: 422, message: "Validation Failed" },
+    { headers: { "retry-after": "later" } },
+    { headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "invalid" } },
+  ];
+  for (const mode of modes) await withClock(async advance => {
+    const state = rejectedAttemptFake(mode);
+    await assert.rejects(() => runMain(state.fake));
+    assert.match(state.comments[0].body, /key=dispatch-pending/);
+    advance(130); await runMain(state.fake);
+    assert.deepEqual(state.counts(), { attempts: 1, accepted: 0 });
+  });
+});
+
+test("rate rejection markers fail closed without a valid deadline and back off exponentially", () => {
+  const rejected = { ...reviewAsk(20), key: "rate-rejected", notBefore: NOW + 60_000 };
+  assert.equal(decide(facts({ markers: [rejected] })).type, "wait");
+  assert.equal(decide(facts({ markers: [rejected], reviews: [copilotReview("Copilot was unable to review", { submittedAt: minutesAgo(5) })] })).type, "wait");
+  assert.equal(decide(facts({ markers: [rejected], reviews: [copilotReview(undefined, { submittedAt: minutesAgo(5) })] })).type, "merge");
+  assert.equal(decide(facts({ markers: [{ ...rejected, notBefore: undefined }] })).type, "label-owner");
+  assert.equal(decide(facts({ markers: [{ ...rejected, notBefore: NOW - 1 }] })).type, "request-review");
+  const retry = { ...rejected, key: "retry-rate-rejected", createdAt: minutesAgo(1), notBefore: NOW - 1 };
+  assert.equal(decide(facts({ markers: [rejected, retry] })).type, "wait");
+  assert.equal(decide(facts({ markers: [rejected, { ...retry, createdAt: minutesAgo(3) }] })).type, "request-review");
+});
+
+test("a rejected retry ignores only reviewer checks known stale before a terminal quota response", () => {
+  const rejected = { ...reviewAsk(20), key: "rate-rejected", notBefore: NOW - 1 };
+  const quota = copilotReview("Copilot was unable to review", { submittedAt: minutesAgo(25) });
+  const stale = check("copilot-pull-request-reviewer", "in_progress", null);
+  const f = facts({ markers: [rejected], reviews: [quota], copilotPending: true, checks: [...green, stale] });
+  assert.equal(decide(f).type, "request-review");
+  for (const startedAt of [minutesAgo(10), undefined, "invalid"]) {
+    assert.equal(decide({ ...f, checks: [...green, { ...stale, startedAt }] }).type, "wait");
+  }
+  assert.equal(decide({ ...f, checks: [...f.checks, check("build", "in_progress", null)] }).type, "wait");
+});
