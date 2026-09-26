@@ -218,7 +218,7 @@ test("the review names its commit and run, and its last line is the verdict", ()
   assert.match(body, /^### Claude review of `aaaaaaa`: 1 finding\n/);
   assert.match(body, /1\. \*\*P1\*\* \[`src\/domain\/onboarding\.ts:9`\]\(https:\/\/github\.com\/o\/r\/blob\/a{40}\/src\/domain\/onboarding\.ts#L9\): \\`index\\` stays claimable\. R01 reserves it\. Fix: Add it to RESERVED_HANDLES\./);
   assert.match(body, /<details><summary>Notes that don't block<\/summary>\n\n- Tests read well\./);
-  assert.match(body, /\[run 123\]\(https:\/\/github\.com\/o\/r\/actions\/runs\/123\)\. A clean verdict clears a Codex task only when the owner has turned on Claude reviews for the remediation autopilot\./);
+  assert.match(body, /\[run 123\]\(https:\/\/github\.com\/o\/r\/actions\/runs\/123\)\. Advisory: a clean Claude verdict does not authorize an autopilot merge\./);
   assert.deepEqual(verdictMarker(body), { verdict: "findings", sha: HEAD, run: 123 });
   const none = reviewBody({ result: readVerdict("", "failure"), sha: HEAD, runId: RUN, repo: REPO });
   assert.match(none, /^### Claude review of `aaaaaaa`: no verdict\n\nClaude didn't finish \(failure\)\. This review clears nothing\./);

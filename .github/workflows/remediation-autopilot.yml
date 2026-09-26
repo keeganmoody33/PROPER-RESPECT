@@ -2,33 +2,24 @@ name: Remediation autopilot
 # Steers remediation task pull requests to merge and, when switched on, starts
 # the next task. Rules: docs/remediation/CODEX-BRIEF.md, Section 4, "Autopilot".
 # Kill switch: set the repository variable AUTOPILOT_ENABLED to anything but
-# "true"; the script then only logs what it would do. AUTOPILOT_CLAUDE_REVIEW
-# set to "true" makes Claude the first outside reviewer of Codex's tasks.
+# "true"; the job skips and the script performs no I/O. AUTOPILOT_CLAUDE_REVIEW
+# set to "true" requests an advisory Claude review before Copilot.
 on:
   schedule:
     - cron: "11,41 * * * *"
   workflow_dispatch:
-  # GitHub may delay or drop scheduled runs under load, and only two of
-  # about 22 ran on Sep 26 before 9 AM, so it also runs whenever CI
-  # finishes. That run starts from main and checks out main, never the
-  # PR's code.
-  workflow_run:
-    workflows: ["Verify application"]
-    types: [completed]
 permissions:
   contents: write
   pull-requests: write
   issues: write
   checks: read
   statuses: read
-  # To trace a Claude verdict to the run that posted it.
-  actions: read
 concurrency:
   group: remediation-autopilot
   cancel-in-progress: false
 jobs:
   steer:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.AUTOPILOT_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # The trigger token lives in this environment, limited to main, so

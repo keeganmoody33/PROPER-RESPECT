@@ -310,12 +310,11 @@ export function reviewBody({ result, sha, runId, repo }) {
   const notes = result.notes.length
     ? ["<details><summary>Notes that don't block</summary>", "", ...result.notes.map(note => `- ${safe(note, { oneLine: true })}`), "", "</details>", ""]
     : [];
-  // A PR's own text can steer any model that reads it, so the owner decides
-  // whether this verdict counts: it clears a Codex task only with the
-  // autopilot's AUTOPILOT_CLAUDE_REVIEW switch on.
+  // Model output is advisory: marker text does not establish exact review
+  // provenance or protect the model from instructions in the PR's own text.
   const tail = [
     `<sub>Outside review by Claude in [run ${runId}](https://github.com/${repo}/actions/runs/${runId}). ` +
-      "A clean verdict clears a Codex task only when the owner has turned on Claude reviews for the remediation autopilot. Claude only reads, and the model that wrote a PR never clears it.</sub>",
+      "Advisory: a clean Claude verdict does not authorize an autopilot merge. Claude only reads, and the model that wrote a PR never clears it.</sub>",
     `<!-- claude-review verdict=${result.verdict} sha=${sha} run=${runId} -->`,
   ];
   const assemble = (shown, withNotes) => {

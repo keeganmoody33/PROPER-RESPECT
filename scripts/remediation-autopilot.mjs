@@ -2,8 +2,8 @@
 // Remediation autopilot. Runs from main on a schedule
 // (.github/workflows/remediation-autopilot.yml). For each open remediation task
 // pull request it asks Codex to fix failing checks or review findings, asks an
-// outside reviewer (Claude when the owner switches it on, else Copilot) to
-// review the latest commit, and merges the pull request once it is green and
+// advisory Claude reviewer first when enabled, then asks Copilot to review
+// the latest commit, and merges the pull request once it is green and
 // cleanly reviewed by a model that didn't write it. It can also start the next
 // task. It never deploys.
 // The rules are in docs/remediation/CODEX-BRIEF.md, Section 4, "Autopilot"
@@ -12,7 +12,7 @@
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
-import { verdictMarker } from "./claude-review.mjs";
+import { claudeEvidence, verdictMarker } from "./claude-review.mjs";
 
 export const MARKER = "remediation-autopilot";
 export const RUN_LABEL = "remediation-run";
@@ -35,11 +35,8 @@ export const TRUSTED_ASSOCIATIONS = ["OWNER", "MEMBER", "COLLABORATOR"];
 // Copilot's check runs under GitHub Actions.
 export const REVIEW_CHECKS = ["copilot-pull-request-reviewer", "Vercel Agent Review", "Cursor Approval Agent: Pull Request Router and Approver"];
 export const REVIEW_STATUSES = ["Devin Review"];
-// Claude reviews through this workflow, which posts as the Actions bot and
-// starts on an owner's comment that begins with CLAUDE_ASK. Any workflow on
-// main posts as the same bot, so a clean verdict counts only when its run is
-// this workflow on main.
-export const CLAUDE_WORKFLOW = ".github/workflows/claude-review.yml";
+// The advisory Claude workflow starts on an owner comment beginning with
+// CLAUDE_ASK. Actions-bot identity alone never proves review provenance.
 export const CLAUDE_ASK = "@claude review";
 // The queued Codex tasks (Section 7). Any other ID is not the autopilot's to merge.
 export const TASK_IDS = Array.from({ length: 30 }, (_, index) => `R${String(index + 1).padStart(2, "0")}`);
@@ -215,9 +212,7 @@ export function codexReviewStatus(codexComments, headSha) {
 
 // Who reviewed the head commit cleanly, never counting the writer: Codex,
 // when its review summary shows a completed review of that commit and it left
-// no comments on it; Claude, when the owner has switched Claude reviews on,
-// its latest verdict on the commit is clean, that verdict's run is the Claude
-// review workflow on main, and none of its reviews lists findings; or Copilot,
+// no comments on it; or Copilot,
 // when its latest review of the commit is finished, says plainly that it
 // found nothing, and has no comments or other sign of findings. Nothing else,
 // such as a reaction, a commit status or an unfamiliar review format, counts.
@@ -225,11 +220,8 @@ export function cleanReviewer(facts, writer = TASK_WRITER) {
   const head = facts.pr.headSha;
   const commented = logins => activeComments(facts.reviewComments, facts.reviews).some(comment => logins.includes(comment.login));
   if (writer !== "Codex" && !commented([CODEX_BOT]) && codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
-  if (facts.claudeReview && writer !== "Claude") {
-    const claude = latestClaudeVerdict(facts.claudeReviews, head);
-    const claudeFound = claudeFindings(facts.reviews, facts.claudeReviews).length > 0;
-    if (claude?.verdict === "clean" && claude.trusted === true && !claudeFound) return "Claude";
-  }
+  // Actions-bot text and a referenced run do not bind the emitted review to
+  // this PR, head and base. Claude remains advisory for clearance.
   const copilot = latestCopilotReview(facts.reviews, head);
   const clean = writer !== "Copilot" && copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && copilotSaysClean(copilot) &&
     !COPILOT_UNAVAILABLE.test(copilot.body ?? "") && !facts.reviews.some(review => COPILOT_REVIEWERS.includes(review.login) && review.state !== "DISMISSED" && copilotFindings(review)) && !commented(COPILOT_REVIEWERS);
@@ -391,10 +383,9 @@ function decideTask(facts, taskId, limits) {
   const reviewer = cleanReviewer(facts, writer);
   // Claude first, when the owner has switched it on (brief, Section 4,
   // "Review policy"): ask it once per commit and wait for its verdict. With
-  // no verdict in time, a verdict of none, or one that can't be traced to the
-  // Claude review workflow, Copilot reviews as before. Once Copilot is asked
-  // about this commit, Claude isn't asked again.
-  if (facts.claudeReview && !reviewer && !asked) {
+  // no verdict in time, or any non-blocking verdict, Copilot reviews as before.
+  // Once Copilot is asked about this commit, Claude is not asked again.
+  if (facts.claudeReview && !facts.claudeWritten && !reviewer && !asked) {
     const claudeAsked = marker("claude");
     if (!latestClaudeVerdict(facts.claudeReviews, pr.headSha)) {
       if (!claudeAsked) return { type: "request-claude", reason: "asking Claude, the first outside reviewer" };
@@ -624,31 +615,18 @@ export function latestChecks(checkRuns) {
   return [...newest.values()];
 }
 
-// Claude's verdicts, from the reviews the Actions bot posted and from the
-// comments it posts instead when GitHub refuses a review of a commit the PR no
-// longer has. A comment names no commit GitHub checked, so its verdict never
-// clears; its findings still hold. With Claude reviews switched on, a clean
-// verdict on the head commit is traced to its run: it counts only when that
-// run is the Claude review workflow, started on main by a comment or by hand,
-// in this repository.
-async function claudeVerdicts(github, reviews, comments, headSha, context) {
+// Normalize both publication paths. Findings can hold a merge; a marker,
+// even one naming a real Claude run, is never clearance evidence.
+function claudeVerdicts(reviews, comments) {
   const fromReviews = reviews.flatMap(review => {
     const marker = review.user?.login === ACTIONS_BOT && review.state !== "DISMISSED" ? verdictMarker(review.body ?? "") : null;
-    return marker ? [{ ...marker, source: "review", commitId: review.commit_id, url: review.html_url, submittedAt: review.submitted_at ?? null, trusted: false }] : [];
+    return marker ? [{ ...marker, source: "review", commitId: review.commit_id, url: review.html_url }] : [];
   });
   const fromComments = comments.flatMap(comment => {
     const marker = comment.user?.login === ACTIONS_BOT ? verdictMarker(comment.body ?? "") : null;
-    return marker ? [{ ...marker, source: "comment", commitId: null, url: comment.html_url, submittedAt: comment.created_at ?? null, trusted: false }] : [];
+    return marker ? [{ ...marker, source: "comment", commitId: null, url: comment.html_url }] : [];
   });
-  const verdicts = [...fromReviews, ...fromComments];
-  if (!context.claudeReview) return verdicts;
-  for (const verdict of verdicts) {
-    if (verdict.verdict !== "clean" || verdict.sha !== headSha || verdict.commitId !== headSha) continue;
-    const run = await github.request(`/repos/{repo}/actions/runs/${verdict.run}`).catch(() => null);
-    verdict.trusted = run?.path === CLAUDE_WORKFLOW && run.head_branch === "main" &&
-      ["issue_comment", "workflow_dispatch"].includes(run.event) && run.repository?.full_name === context.repo;
-  }
-  return verdicts;
+  return [...fromReviews, ...fromComments];
 }
 
 export async function gatherFacts(github, pull, context) {
@@ -669,7 +647,7 @@ export async function gatherFacts(github, pull, context) {
   if (status.total_count > status.statuses.length) throw truncated(`commit ${headSha.slice(0, 7)} has more than ${status.statuses.length} statuses`);
   if (pr.commits > commits.length) throw truncated(`the pull request has ${pr.commits} commits and GitHub lists ${commits.length}`);
   const checks = latestChecks(checkRuns).map(run => ({ name: run.name, app: run.app?.slug ?? "", status: run.status, conclusion: run.conclusion, startedAt: run.started_at }));
-  const claudeReviews = await claudeVerdicts(github, reviews, comments, headSha, context);
+  const claudeReviews = claudeVerdicts(reviews, comments);
   const starts = checks.filter(check => check.app === "github-actions").map(check => Date.parse(check.startedAt)).filter(Number.isFinite);
   return {
     now: context.now,
@@ -689,6 +667,7 @@ export async function gatherFacts(github, pull, context) {
       submittedAt: review.submitted_at ?? null,
     })),
     claudeReview: Boolean(context.claudeReview),
+    claudeWritten: claudeEvidence(pr, commits).length > 0,
     // Claude's verdicts, from its reviews and from the comments it falls back to.
     claudeReviews,
     // GitHub leaves Copilot out of requested_reviewers, so its running check counts too.
@@ -715,12 +694,15 @@ export async function gatherFacts(github, pull, context) {
 }
 
 export async function main(env = process.env, log = console.log) {
+  if (env.AUTOPILOT_ENABLED !== "true") {
+    log("Remediation autopilot disabled; no credentials read and no requests made.");
+    return;
+  }
   const repo = env.GITHUB_REPOSITORY;
   if (!repo || !env.GH_TOKEN) throw new Error("GITHUB_REPOSITORY and GH_TOKEN are required.");
   const owner = env.GITHUB_REPOSITORY_OWNER || repo.split("/")[0];
-  const live = env.AUTOPILOT_ENABLED === "true";
   const startTasks = env.AUTOPILOT_START_TASKS === "true";
-  // Whether Claude's clean verdict can clear a task PR (brief, Section 4, "Review policy").
+  // Opt-in advisory first review; Claude never supplies merge clearance.
   const claudeReview = env.AUTOPILOT_CLAUDE_REVIEW === "true";
   const github = createGitHub(env.GH_TOKEN, repo);
   // The trigger token must be the owner's: Codex answers the people it's
@@ -740,11 +722,11 @@ export async function main(env = process.env, log = console.log) {
   }
   const context = { now: Date.now(), repo, claudeReview, trustedMarkers: [ACTIONS_BOT, owner], trustedAuthors: [owner, ACTIONS_BOT, CODEX_BOT] };
   const { now } = context;
-  log(`${live ? "Live" : "Dry run (set AUTOPILOT_ENABLED to true to act)"}; Codex trigger token ${trigger ? "ready" : "not available"}; Claude reviews ${claudeReview ? "on" : "off"}.`);
+  log(`Live; Codex trigger token ${trigger ? "ready" : "not available"}; Claude reviews ${claudeReview ? "on" : "off"}.`);
 
   const write = async (description, action) => {
-    log(`  ${live ? "doing" : "would do"}: ${description}`);
-    if (live) await action();
+    log(`  doing: ${description}`);
+    await action();
   };
   const ensureLabel = name => write(`create label ${name} if missing`, () =>
     github.request("/repos/{repo}/labels", { method: "POST", body: { name, color: name === RUN_LABEL ? "0e8a16" : "d93f0b" } })
