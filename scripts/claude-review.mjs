@@ -148,14 +148,22 @@ export async function prepare({ github, repo, number, dir, hasToken }) {
   }
   const files = await github.all(`/repos/{repo}/pulls/${number}/files`, 30);
   // A push while the lists were read would mix two commits: the writer check,
-  // the diff and the checked-out tree must all describe the same one.
+  // the diff and the checked-out tree must all describe the same one. The PR
+  // must also still be open, from this repository, and into the same main.
   const again = await github.request(`/repos/{repo}/pulls/${number}`);
-  if (again.head?.sha !== sha) {
+  const changed = [
+    again.head?.sha !== sha && `${sha.slice(0, 7)} to ${String(again.head?.sha ?? "unknown").slice(0, 7)}`,
+    again.state !== "open" && `now ${String(again.state ?? "unknown").replace(/[^a-z]/gi, "")}`,
+    again.head?.repo?.full_name !== repo && "now from another repository",
+    again.base?.ref !== "main" && `now into \`${String(again.base?.ref ?? "unknown").replace(/`/g, "")}\``,
+    again.base?.ref === "main" && again.base?.sha !== pull.base?.sha &&
+      `base ${String(pull.base?.sha ?? "unknown").slice(0, 7)} to ${String(again.base?.sha ?? "unknown").slice(0, 7)}`,
+  ].filter(Boolean);
+  if (changed.length) {
     return {
       skip: "moved",
       sha,
-      note: `Claude didn't review #${number}: it changed while Claude was reading it ` +
-        `(${sha.slice(0, 7)} to ${String(again.head?.sha ?? "unknown").slice(0, 7)}). Ask again.`,
+      note: `Claude didn't review #${number}: it changed while Claude was reading it (${changed.join("; ")}). Ask again.`,
     };
   }
   mkdirSync(dir, { recursive: true });

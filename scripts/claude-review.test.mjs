@@ -145,6 +145,16 @@ test("prepare refuses closed, fork, Claude-written and overlong PRs, and one wit
   // check and the checked-out tree would describe different commits.
   const moved = await run({ pullLater: pullOf({ head: { ref: "remediate/R01-handles", sha: "c".repeat(40), repo: { full_name: REPO } } }) });
   assert.deepEqual([moved.skip, moved.sha], ["moved", HEAD]);
+  // So does closing it, or pointing it at another branch, while it's read.
+  const closedMeanwhile = await run({ pullLater: pullOf({ state: "closed" }) });
+  assert.deepEqual([closedMeanwhile.skip, closedMeanwhile.sha], ["moved", HEAD]);
+  assert.match(closedMeanwhile.note, /now closed/);
+  const retargeted = await run({ pullLater: pullOf({ base: { ref: "@keeganmoody33`x" } }) });
+  assert.deepEqual([retargeted.skip, retargeted.sha], ["moved", HEAD]);
+  assert.match(retargeted.note, /now into `@keeganmoody33x`/);
+  const rebased = await run({ pull: pullOf({ base: { ref: "main", sha: "1".repeat(40) } }), pullLater: pullOf({ base: { ref: "main", sha: "2".repeat(40) } }) });
+  assert.deepEqual([rebased.skip, rebased.sha], ["moved", HEAD]);
+  assert.match(rebased.note, /base 1111111 to 2222222/);
   assert.match(moved.note, /changed while Claude was reading it \(aaaaaaa to ccccccc\)\. Ask again\./);
   // The writer check runs before the token check, so the rule shows even
   // before setup.
