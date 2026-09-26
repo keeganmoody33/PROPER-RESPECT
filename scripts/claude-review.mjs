@@ -244,24 +244,28 @@ export function readVerdict(raw, conclusion = "success") {
 // Model text goes into the review as plain text. Its HTML, entities, links,
 // images and code spans are escaped, so nothing can pass for the verdict line
 // or load from elsewhere. Each paragraph is one line that can't open a
-// heading, list or quote. A web address, and any word holding an @ or a #
-// (a mention, email or reference, or several run together), goes whole in a
-// code span of our own, where GitHub neither links nor pings.
-const WORD = String.raw`[^\s\`<>"&\\[\]]`;
-const WORD_END = String.raw`[^\s\`<>"&\\[\].,;:!?)']`;
-const PLAIN = new RegExp([
-  /(?:https?:\/\/|www\.|mailto:|xmpp:)[^\s`<>"]*[^\s`<>".,;:!?)\]']/.source,
-  `(?<!${WORD})${WORD}*[@#]${WORD}*${WORD_END}`,
-  /[\\`[\]&<>]/.source,
-].join("|"), "gi");
+// heading, list or quote. Any whitespace-free chunk GitHub could turn into a
+// link or a ping (a web address, an @ or # before a letter or digit, or what
+// it reads as a commit SHA or a GH- reference) goes whole in a code span of
+// our own, so nothing next to it gains an edge to link on.
+const LINKABLE = /@[0-9a-z]|#[0-9a-z]|:\/\/|www\.|mailto:|xmpp:|(?<![0-9a-z])(?:gh-\d|[0-9a-f]{7,40}(?![0-9a-z]))/i;
 const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
+
+// Fenced with more backticks than the chunk holds, padded when it starts or
+// ends with one, as CommonMark reads code spans.
+function codeSpan(chunk) {
+  const fence = "`".repeat(Math.max(0, ...(chunk.match(/`+/g) ?? []).map(run => run.length)) + 1);
+  const pad = chunk.startsWith("`") || chunk.endsWith("`") ? " " : "";
+  return `${fence}${pad}${chunk}${pad}${fence}`;
+}
 
 function safe(value, { oneLine = false } = {}) {
   return (oneLine ? [value] : value.split(/\n\s*\n/))
     .map(paragraph => paragraph.replace(/\s+/g, " ").trim())
     .filter(Boolean)
-    .map(paragraph => paragraph
-      .replace(PLAIN, token => (token.length > 1 ? `\`${token}\`` : ENTITIES[token] ?? `\\${token}`))
+    .map(paragraph => paragraph.split(" ")
+      .map(chunk => (LINKABLE.test(chunk) ? codeSpan(chunk) : chunk.replace(/[\\`[\]&<>]/g, char => ENTITIES[char] ?? `\\${char}`)))
+      .join(" ")
       .replace(/^[#+*=_~|-]/, "\\$&")
       .replace(/^(\d+)([.)])/, "$1\\$2"))
     .join("\n\n");
