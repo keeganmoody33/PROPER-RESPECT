@@ -56,6 +56,19 @@ test("an unpublished owner can change to an available handle", async () => {
   expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle: "available" });
 });
 
+test.each(["icon", "apple-icon", "evidence-fixture", "agents", "auth", "index"].flatMap(handle => [handle, `  ${handle.toUpperCase()}  `]))("claimHandle rejects reserved handle %s without changing the stored user", async handle => {
+  const { t, owner, userId } = await fixture();
+  const before = await t.run(ctx => ctx.db.get(userId));
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Changed name", bio: "Changed bio" })).rejects.toThrow("This handle is reserved.");
+  expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
+});
+
+test.each(["about", "app", "collection", "contact", "origins", "privacy", "pending-victim123"])("an unpublished owner can still claim %s", async handle => {
+  const { t, owner, userId } = await fixture();
+  expect(await owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Owner", bio: "Approved bio" })).toEqual({ handle });
+  expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Owner", bio: "Approved bio" });
+});
+
 test.each(["both", "revision", "hash"])("publication rejects missing %s preview proof before writing", async missing => {
   const { t, owner, approval } = await fixture();
   const args = { ...approval } as Record<string, unknown>;
