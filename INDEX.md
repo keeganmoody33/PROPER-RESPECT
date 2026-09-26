@@ -1,6 +1,6 @@
 # PROPER-RESPECT - Documentation Index
 
-> Updated: 2026-09-20
+> Updated: 2026-09-25
 >
 > Current scope: [V2 product motion](docs/002-v2-product-motion.md) — multi-user on proper-respect.com, preserving private evidence, owner-selected relationships and explicit publication.
 
@@ -8,6 +8,7 @@
 
 | File | Purpose |
 | --- | --- |
+| [docs/remediation/CODEX-BRIEF.md](docs/remediation/CODEX-BRIEF.md) | Active remediation program: owner decisions, guardrails and the Codex work queue |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Current continuation guide and execution boundaries |
 | [docs/002-v2-product-motion.md](docs/002-v2-product-motion.md) | Active scope and acceptance; remaining release gaps are tracked in issue #24 |
 | `README.md` | Product overview and current build target |
