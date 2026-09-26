@@ -234,14 +234,23 @@ export function readVerdict(raw, conclusion = "success") {
   return none("Claude answered \"findings\" without listing any");
 }
 
-// Model text goes into the review as plain text: no hidden comments that could
-// pass for the verdict line, and no live @mentions.
+// Model text goes into the review as plain text. Its HTML, entities, links,
+// images and code spans are escaped, so nothing can pass for the verdict line
+// or load from elsewhere. Each paragraph is one line that can't open a
+// heading, list or quote. An @mention or #reference goes in a code span of
+// our own, where GitHub neither pings nor links.
+const PLAIN = /(?<!\w)@[A-Za-z0-9][A-Za-z0-9-]*(?:\/[A-Za-z0-9._-]+)?|(?<!\w)(?:[A-Za-z0-9][\w.-]*\/[\w.-]+)?#\d+\b|[\\`[\]&<>]/g;
+const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
+
 function safe(value, { oneLine = false } = {}) {
-  const escaped = value
-    .replace(/<!--/g, "&lt;!--")
-    .replace(/-->/g, "--&gt;")
-    .replace(/(^|[^\w`/])@([A-Za-z0-9][A-Za-z0-9-]*(?:\/[A-Za-z0-9._-]+)?)/g, "$1`@$2`");
-  return oneLine ? escaped.replace(/\s*\n\s*/g, " ") : escaped;
+  return (oneLine ? [value] : value.split(/\n\s*\n/))
+    .map(paragraph => paragraph.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .map(paragraph => paragraph
+      .replace(PLAIN, token => (token.length > 1 ? `\`${token}\`` : ENTITIES[token] ?? `\\${token}`))
+      .replace(/^[#+*=_~|-]/, "\\$&")
+      .replace(/^(\d+)([.)])/, "$1\\$2"))
+    .join("\n\n");
 }
 
 const blobLink = (repo, sha, file, line) =>
@@ -254,11 +263,13 @@ export function reviewBody({ result, sha, runId, repo }) {
   if (result.verdict === "none") head.push(`${safe(result.reason, { oneLine: true })}. This review clears nothing.`, "");
   if (result.summary) head.push(safe(result.summary), "");
   const findings = result.findings.map((finding, index) => {
-    const where = finding.line ? `${finding.file}:${finding.line}` : finding.file;
+    // The path sits in a code span, so only a backtick or a line break could
+    // end it early.
+    const where = (finding.line ? `${finding.file}:${finding.line}` : finding.file).replace(/[`\r\n]/g, "");
     const parts = [safe(finding.problem, { oneLine: true })];
     if (finding.why) parts.push(safe(finding.why, { oneLine: true }));
     if (finding.fix) parts.push(`Fix: ${safe(finding.fix, { oneLine: true })}`);
-    return `${index + 1}. **${finding.severity}** [\`${safe(where, { oneLine: true })}\`](${blobLink(repo, sha, finding.file, finding.line)}): ${parts.join(" ")}`;
+    return `${index + 1}. **${finding.severity}** [\`${where}\`](${blobLink(repo, sha, finding.file, finding.line)}): ${parts.join(" ")}`;
   });
   const notes = result.notes.length
     ? ["<details><summary>Notes that don't block</summary>", "", ...result.notes.map(note => `- ${safe(note, { oneLine: true })}`), "", "</details>", ""]
