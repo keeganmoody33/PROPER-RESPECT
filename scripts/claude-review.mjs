@@ -224,11 +224,13 @@ export function readVerdict(raw, conclusion = "success") {
     Array.isArray(output.notes) && output.notes.every(note => typeof note === "string");
   if (!shaped) return none("Claude's answer didn't match the review format");
   if (!output.findings.every(validFinding)) return none("Claude's findings were malformed");
+  // The review lists at most LIMITS.findings, but counts every one.
+  const total = output.findings.length;
   const findings = output.findings.slice(0, LIMITS.findings).map(cleanFinding);
   const summary = clip(text(output.summary), LIMITS.summary);
   const notes = output.notes.map(text).filter(Boolean).slice(0, LIMITS.notes).map(note => clip(note, LIMITS.note));
-  if (findings.length) return { verdict: "findings", summary, findings, notes };
-  if (output.verdict === "clean") return { verdict: "clean", summary, findings, notes };
+  if (findings.length) return { verdict: "findings", summary, findings, notes, total };
+  if (output.verdict === "clean") return { verdict: "clean", summary, findings, notes, total };
   return none("Claude answered \"findings\" without listing any");
 }
 
@@ -246,7 +248,7 @@ const blobLink = (repo, sha, file, line) =>
   `https://github.com/${repo}/blob/${sha}/${file.split("/").map(encodeURIComponent).join("/")}${line ? `#L${line}` : ""}`;
 
 export function reviewBody({ result, sha, runId, repo }) {
-  const count = result.findings.length;
+  const count = result.total ?? result.findings.length;
   const title = { clean: "clean", findings: `${count} finding${count === 1 ? "" : "s"}`, none: "no verdict" }[result.verdict];
   const head = [`### Claude review of \`${sha.slice(0, 7)}\`: ${title}`, ""];
   if (result.verdict === "none") head.push(`${safe(result.reason, { oneLine: true })}. This review clears nothing.`, "");
@@ -270,9 +272,10 @@ export function reviewBody({ result, sha, runId, repo }) {
   ];
   const assemble = (shown, withNotes) => {
     const lines = [...head, ...findings.slice(0, shown)];
-    const hidden = findings.length - shown;
+    // Findings past the listing cap or the body limit are counted, never lost.
+    const hidden = count - shown;
     if (hidden) lines.push(`${hidden} more finding${hidden === 1 ? "" : "s"} didn't fit in one review.`);
-    if (findings.length) lines.push("");
+    if (count) lines.push("");
     return [...lines, ...(withNotes ? notes : []), ...tail].join("\n");
   };
   // Keep under GitHub's body limit: notes go first, then the last findings.

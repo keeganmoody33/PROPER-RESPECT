@@ -180,10 +180,17 @@ test("the longest review Claude can give still fits in one GitHub review", () =>
   const result = readVerdict(JSON.stringify({ verdict: "findings", summary: long(9000), findings, notes: Array.from({ length: 30 }, () => long(900)) }));
   const body = reviewBody({ result, sha: HEAD, runId: RUN, repo: REPO });
   assert.ok(body.length <= 60_000, String(body.length));
-  assert.match(body, /^### Claude review of `aaaaaaa`: 30 findings\n/);
+  assert.match(body, /^### Claude review of `aaaaaaa`: 40 findings\n/);
   assert.match(body, /\d+ more findings didn't fit in one review\./);
   assert.doesNotMatch(body, /Notes that don't block/);
   assert.deepEqual(verdictMarker(body), { verdict: "findings", sha: HEAD, run: 123 });
+  // Past the 30 the review lists, findings are still counted, not dropped.
+  const many = readVerdict(JSON.stringify({ verdict: "findings", summary: "", findings: Array.from({ length: 35 }, () => finding), notes: [] }));
+  assert.deepEqual([many.total, many.findings.length], [35, 30]);
+  const listed = reviewBody({ result: many, sha: HEAD, runId: RUN, repo: REPO });
+  assert.match(listed, /^### Claude review of `aaaaaaa`: 35 findings\n/);
+  assert.match(listed, /\n30\. \*\*P1\*\*/);
+  assert.match(listed, /\n5 more findings didn't fit in one review\./);
   // A review that fits loses nothing.
   const short = reviewBody({ result: readVerdict(JSON.stringify({ verdict: "findings", summary: "", findings: [finding], notes: ["n"] })), sha: HEAD, runId: RUN, repo: REPO });
   assert.doesNotMatch(short, /didn't fit/);
@@ -264,7 +271,9 @@ test("the workflow gives Claude reading tools only, and the job can comment", ()
   assert.match(workflow, /^\s+pull-requests: write$/m);
   assert.match(workflow, /^\s+issues: write$/m);
   // Both ways in are the owner's: a comment by the owner, or the owner's
-  // manual run. Each review spends the owner's Claude plan.
+  // manual run. Each review spends the owner's Claude plan. A re-run keeps
+  // github.actor, so the one who starts this run must be the owner too.
+  assert.match(workflow, /github\.triggering_actor == github\.repository_owner &&/);
   assert.match(workflow, /github\.event_name == 'workflow_dispatch' && github\.actor == github\.repository_owner/);
   assert.match(workflow, /github\.event\.comment\.user\.login == github\.repository_owner/);
 });
