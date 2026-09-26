@@ -4,6 +4,12 @@ import { attributionScopeSchema, handleSchema } from "./public-profile";
 const RESERVED_HANDLES = new Set([
   "api",
   "admin",
+  "icon",
+  "apple-icon",
+  "evidence-fixture",
+  "agents",
+  "auth",
+  "index",
   "onboarding",
   "sign-in",
   "sign-up",
