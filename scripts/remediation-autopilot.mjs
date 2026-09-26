@@ -2,14 +2,17 @@
 // Remediation autopilot. Runs from main on a schedule
 // (.github/workflows/remediation-autopilot.yml). For each open remediation task
 // pull request it asks Codex to fix failing checks or review findings, asks an
-// outside reviewer (Copilot) to review the latest commit, and merges the pull
-// request once it is green and cleanly reviewed by a model that didn't write
-// it. It can also start the next task. It never deploys.
+// outside reviewer (Claude when the owner switches it on, else Copilot) to
+// review the latest commit, and merges the pull request once it is green and
+// cleanly reviewed by a model that didn't write it. It can also start the next
+// task. It never deploys.
 // The rules are in docs/remediation/CODEX-BRIEF.md, Section 4, "Autopilot"
 // and "Review policy".
 
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+
+import { verdictMarker } from "./claude-review.mjs";
 
 export const MARKER = "remediation-autopilot";
 export const RUN_LABEL = "remediation-run";
@@ -32,15 +35,24 @@ export const TRUSTED_ASSOCIATIONS = ["OWNER", "MEMBER", "COLLABORATOR"];
 // Copilot's check runs under GitHub Actions.
 export const REVIEW_CHECKS = ["copilot-pull-request-reviewer", "Vercel Agent Review", "Cursor Approval Agent: Pull Request Router and Approver"];
 export const REVIEW_STATUSES = ["Devin Review"];
+// Claude reviews through this workflow, which posts as the Actions bot and
+// starts on an owner's comment that begins with CLAUDE_ASK. Any workflow on
+// main posts as the same bot, so a clean verdict counts only when its run is
+// this workflow on main.
+export const CLAUDE_WORKFLOW = ".github/workflows/claude-review.yml";
+export const CLAUDE_ASK = "@claude review";
 // The queued Codex tasks (Section 7). Any other ID is not the autopilot's to merge.
 export const TASK_IDS = Array.from({ length: 30 }, (_, index) => `R${String(index + 1).padStart(2, "0")}`);
 
 // Changes to these paths always wait for the owner. GitHub also refuses to let
 // the workflow token merge changes under .github/workflows/.
-export const PROTECTED_PREFIXES = [".github/workflows/"];
+// Claude reviews Codex's tasks, so its script and pinned CLI are the owner's too.
+export const PROTECTED_PREFIXES = [".github/workflows/", ".github/claude-review/"];
 export const PROTECTED_PATHS = [
   "scripts/remediation-autopilot.mjs",
   "scripts/remediation-autopilot.test.mjs",
+  "scripts/claude-review.mjs",
+  "scripts/claude-review.test.mjs",
   "vercel.json",
   "convex.json",
   "AGENTS.md",
@@ -54,6 +66,8 @@ export const LIMITS = {
   updates: 5,
   quietMinutes: 30,
   reviewWaitMinutes: 60,
+  // The Claude review job times out after 30 minutes.
+  claudeWaitMinutes: 40,
   replyWaitMinutes: 90,
   codexRetries: 6,
   retryAfterMinutes: 60,
@@ -98,7 +112,7 @@ const copilotSaysClean = review => {
   }
   return /^Copilot reviewed \d+(?: of \d+)? (?:changed )?files? and generated (?:no|0) (?:new )?comments\.$/.test(body);
 };
-const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|note) sha=([0-9a-f]{7,40})(?: key=([\w-]+))?(?: until=(\d+))? -->/;
+const MARKER_PATTERN = /<!-- remediation-autopilot:(start|fix|update|review|claude|note) sha=([0-9a-f]{7,40})(?: key=([\w-]+))?(?: until=(\d+))? -->/;
 
 const minutesSince = (now, iso) => (now - Date.parse(iso)) / 60_000;
 const queued = id => (id && TASK_IDS.includes(id) ? id : null);
@@ -136,6 +150,11 @@ export function protectedChanges(files) {
 
 const latestCopilotReview = (reviews, headSha) =>
   reviews.filter(review => COPILOT_REVIEWERS.includes(review.login) && review.commitId === headSha).at(-1) ?? null;
+// A review by the Actions bot whose last line is Claude's verdict.
+const claudeVerdictIn = review => (review.login === ACTIONS_BOT && review.state !== "DISMISSED" ? verdictMarker(review.body ?? "") : null);
+// Claude's latest verdict on the head commit, reviewed at that commit.
+const latestClaudeVerdict = (verdicts, headSha) =>
+  (verdicts ?? []).filter(verdict => verdict.sha === headSha && verdict.commitId === headSha).at(-1) ?? null;
 
 // A push or a later approval is not a disposition of an earlier finding.
 // Native review dismissal is the explicit disposition available from these
@@ -150,10 +169,17 @@ export function findingsOnHead(comments, reviews, headSha) {
   const inline = activeComments(comments, reviews).filter(comment => comment.inReplyTo === null && trustedReviewer(comment));
   const requested = reviews.filter(review => review.state === "CHANGES_REQUESTED" && trustedReviewer(review));
   const copilotBody = reviews.filter(review => COPILOT_REVIEWERS.includes(review.login) && review.state !== "DISMISSED" && copilotFindings(review) && !requested.includes(review));
-  const found = [...inline, ...requested, ...copilotBody];
+  // Claude's findings count on any commit, as Copilot's do, whether or not its
+  // clean verdict can clear the PR.
+  const claudeBody = reviews.filter(review => claudeVerdictIn(review)?.verdict === "findings");
+  const found = [...inline, ...requested, ...copilotBody, ...claudeBody];
+  // Findings from Codex, people, Claude or an earlier commit always block.
+  // Other review bots' findings on the latest commit turn advisory after the
+  // fix rounds; Claude reports only what should stop a merge, so its don't.
   return {
     total: found.length,
-    blocking: found.filter(entry => entry.login === CODEX_BOT || entry.type !== "Bot" || (entry.originalCommitId ?? entry.commitId) !== headSha).length,
+    blocking: found.filter(entry => entry.login === CODEX_BOT || entry.type !== "Bot" || claudeBody.includes(entry) ||
+      (entry.originalCommitId ?? entry.commitId) !== headSha).length,
     urls: found.map(entry => entry.url).filter(Boolean),
   };
 }
@@ -180,14 +206,21 @@ export function codexReviewStatus(codexComments, headSha) {
 
 // Who reviewed the head commit cleanly, never counting the writer: Codex,
 // when its review summary shows a completed review of that commit and it left
-// no comments on it; or Copilot, when its latest review of the commit is
-// finished, says plainly that it found nothing, and has no comments or other
-// sign of findings. Nothing else, such as a reaction, a commit status or an
-// unfamiliar review format, counts.
+// no comments on it; Claude, when the owner has switched Claude reviews on,
+// its latest verdict on the commit is clean, that verdict's run is the Claude
+// review workflow on main, and none of its reviews lists findings; or Copilot,
+// when its latest review of the commit is finished, says plainly that it
+// found nothing, and has no comments or other sign of findings. Nothing else,
+// such as a reaction, a commit status or an unfamiliar review format, counts.
 export function cleanReviewer(facts, writer = TASK_WRITER) {
   const head = facts.pr.headSha;
   const commented = logins => activeComments(facts.reviewComments, facts.reviews).some(comment => logins.includes(comment.login));
   if (writer !== "Codex" && !commented([CODEX_BOT]) && codexReviewStatus(facts.codexComments, head)?.status === "Completed") return "Codex";
+  if (facts.claudeReview && writer !== "Claude") {
+    const claude = latestClaudeVerdict(facts.claudeReviews, head);
+    const claudeFound = facts.reviews.some(review => claudeVerdictIn(review)?.verdict === "findings");
+    if (claude?.verdict === "clean" && claude.trusted === true && !claudeFound) return "Claude";
+  }
   const copilot = latestCopilotReview(facts.reviews, head);
   const clean = writer !== "Copilot" && copilot && ["COMMENTED", "APPROVED"].includes(copilot.state) && copilotSaysClean(copilot) &&
     !COPILOT_UNAVAILABLE.test(copilot.body ?? "") && !facts.reviews.some(review => COPILOT_REVIEWERS.includes(review.login) && review.state !== "DISMISSED" && copilotFindings(review)) && !commented(COPILOT_REVIEWERS);
@@ -347,6 +380,20 @@ function decideTask(facts, taskId, limits) {
   const answered = copilotReview && ["COMMENTED", "APPROVED", "CHANGES_REQUESTED"].includes(copilotReview.state) &&
     Date.parse(copilotReview.submittedAt ?? "") > Date.parse(asked?.createdAt ?? "");
   const reviewer = cleanReviewer(facts, writer);
+  // Claude first, when the owner has switched it on (brief, Section 4,
+  // "Review policy"): ask it once per commit and wait for its verdict. With
+  // no verdict in time, a verdict of none, or one that can't be traced to the
+  // Claude review workflow, Copilot reviews as before. Once Copilot is asked
+  // about this commit, Claude isn't asked again.
+  if (facts.claudeReview && !reviewer && !asked) {
+    const claudeAsked = marker("claude");
+    if (!latestClaudeVerdict(facts.claudeReviews, pr.headSha)) {
+      if (!claudeAsked) return { type: "request-claude", reason: "asking Claude, the first outside reviewer" };
+      if (minutesSince(now, claudeAsked.createdAt) < limits.claudeWaitMinutes) {
+        return { type: "wait", reason: "waiting for Claude's review", since: claudeAsked.createdAt };
+      }
+    }
+  }
   if (rateRejected && !(answered && reviewer)) {
     const retries = retriesOf("review");
     if (!Number.isSafeInteger(asked.notBefore) || asked.notBefore <= 0) {
@@ -568,6 +615,25 @@ export function latestChecks(checkRuns) {
   return [...newest.values()];
 }
 
+// Claude's verdicts, read from the reviews the Actions bot posted. With Claude
+// reviews switched on, a clean verdict on the head commit is traced to its
+// run: it counts only when that run is the Claude review workflow, started on
+// main by a comment or by hand, in this repository.
+async function claudeVerdicts(github, reviews, headSha, context) {
+  const verdicts = reviews.flatMap(review => {
+    const marker = review.user?.login === ACTIONS_BOT && review.state !== "DISMISSED" ? verdictMarker(review.body ?? "") : null;
+    return marker ? [{ ...marker, commitId: review.commit_id, url: review.html_url, submittedAt: review.submitted_at ?? null, trusted: false }] : [];
+  });
+  if (!context.claudeReview) return verdicts;
+  for (const verdict of verdicts) {
+    if (verdict.verdict !== "clean" || verdict.sha !== headSha || verdict.commitId !== headSha) continue;
+    const run = await github.request(`/repos/{repo}/actions/runs/${verdict.run}`).catch(() => null);
+    verdict.trusted = run?.path === CLAUDE_WORKFLOW && run.head_branch === "main" &&
+      ["issue_comment", "workflow_dispatch"].includes(run.event) && run.repository?.full_name === context.repo;
+  }
+  return verdicts;
+}
+
 export async function gatherFacts(github, pull, context) {
   const pr = await github.request(`/repos/{repo}/pulls/${pull.number}`);
   const headSha = pr.head.sha;
@@ -586,6 +652,7 @@ export async function gatherFacts(github, pull, context) {
   if (status.total_count > status.statuses.length) throw truncated(`commit ${headSha.slice(0, 7)} has more than ${status.statuses.length} statuses`);
   if (pr.commits > commits.length) throw truncated(`the pull request has ${pr.commits} commits and GitHub lists ${commits.length}`);
   const checks = latestChecks(checkRuns).map(run => ({ name: run.name, app: run.app?.slug ?? "", status: run.status, conclusion: run.conclusion, startedAt: run.started_at }));
+  const claudeReviews = await claudeVerdicts(github, reviews, headSha, context);
   const starts = checks.filter(check => check.app === "github-actions").map(check => Date.parse(check.startedAt)).filter(Number.isFinite);
   return {
     now: context.now,
@@ -604,6 +671,8 @@ export async function gatherFacts(github, pull, context) {
       state: review.state, commitId: review.commit_id, body: review.body ?? "", url: review.html_url,
       submittedAt: review.submitted_at ?? null,
     })),
+    claudeReview: Boolean(context.claudeReview),
+    claudeReviews,
     // GitHub leaves Copilot out of requested_reviewers, so its running check counts too.
     copilotPending: (pr.requested_reviewers ?? []).some(user => COPILOT_REVIEWERS.includes(user.login)) ||
       checks.some(check => check.name === "copilot-pull-request-reviewer" && check.status !== "completed"),
@@ -633,6 +702,8 @@ export async function main(env = process.env, log = console.log) {
   const owner = env.GITHUB_REPOSITORY_OWNER || repo.split("/")[0];
   const live = env.AUTOPILOT_ENABLED === "true";
   const startTasks = env.AUTOPILOT_START_TASKS === "true";
+  // Whether Claude's clean verdict can clear a task PR (brief, Section 4, "Review policy").
+  const claudeReview = env.AUTOPILOT_CLAUDE_REVIEW === "true";
   const github = createGitHub(env.GH_TOKEN, repo);
   // The trigger token must be the owner's: Codex answers the people it's
   // linked to, and only the owner's markers count.
@@ -649,9 +720,9 @@ export async function main(env = process.env, log = console.log) {
       trigger = null;
     }
   }
-  const context = { now: Date.now(), trustedMarkers: [ACTIONS_BOT, owner], trustedAuthors: [owner, ACTIONS_BOT, CODEX_BOT] };
+  const context = { now: Date.now(), repo, claudeReview, trustedMarkers: [ACTIONS_BOT, owner], trustedAuthors: [owner, ACTIONS_BOT, CODEX_BOT] };
   const { now } = context;
-  log(`${live ? "Live" : "Dry run (set AUTOPILOT_ENABLED to true to act)"}; Codex trigger token ${trigger ? "ready" : "not available"}.`);
+  log(`${live ? "Live" : "Dry run (set AUTOPILOT_ENABLED to true to act)"}; Codex trigger token ${trigger ? "ready" : "not available"}; Claude reviews ${claudeReview ? "on" : "off"}.`);
 
   const write = async (description, action) => {
     log(`  ${live ? "doing" : "would do"}: ${description}`);
@@ -669,6 +740,10 @@ export async function main(env = process.env, log = console.log) {
     github.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body: `Remediation autopilot: ${text}\n\n<!-- ${MARKER}:note sha=${sha} key=${key} -->` } }));
   const askCodex = (number, kind, sha, text, retry = false) => write(`ask Codex (${kind}${retry ? ", retry" : ""}) on #${number}`, () =>
     trigger.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body: `${text}\n\n<!-- ${MARKER}:${kind} sha=${sha}${retry ? " key=retry" : ""} -->` } }));
+  // The Claude review workflow starts only on the owner's comment, and each
+  // review draws on the owner's Claude plan.
+  const askClaude = (number, sha) => write(`ask Claude to review #${number}`, () =>
+    trigger.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body: `${CLAUDE_ASK}\n\n<!-- ${MARKER}:claude sha=${sha} -->` } }));
   // Copilot bills the person who asks, so this uses the owner's token too.
   const askCopilot = number => write(`ask Copilot to review #${number}`, () =>
     trigger.request(`/repos/{repo}/pulls/${number}/requested_reviewers`, { method: "POST", body: { reviewers: [COPILOT_REVIEWERS[0]] } })
@@ -732,6 +807,15 @@ export async function main(env = process.env, log = console.log) {
             ? "Review it and merge it yourself when it's right."
             : `Remove the \`${decision.label}\` label to hand it back to the autopilot.`;
           await note(pull.number, sha, decision.label, `waiting for the owner, because ${decision.reason}. ${handBack}`);
+        }
+      } else if (decision.type === "request-claude") {
+        if (trigger) {
+          await askClaude(pull.number, sha);
+        } else {
+          await addLabel(pull.number, "needs-owner");
+          if (!hasNote("no-trigger")) {
+            await note(pull.number, sha, "no-trigger", `this needs Claude's review (${decision.reason}), but the trigger token isn't available, and the Claude review workflow starts only on your comment. Comment \`${CLAUDE_ASK}\` here yourself, or fix the \`CODEX_TRIGGER_TOKEN\` secret.`);
+          }
         }
       } else if (["request-fix", "request-update", "request-review", "request-start"].includes(decision.type)) {
         const kind = { "request-fix": "fix", "request-update": "update", "request-review": "review", "request-start": "start" }[decision.type];
