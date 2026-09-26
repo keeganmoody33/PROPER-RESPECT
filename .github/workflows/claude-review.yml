@@ -33,6 +33,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      # Skip notes and the fallback comment go through the issues API.
+      issues: write
     concurrency:
       group: claude-review-${{ github.event.issue.number || inputs.pr }}
       cancel-in-progress: false
@@ -111,10 +113,14 @@ jobs:
             For each finding, give the file path from the repository root, the line at the PR's commit, what's wrong, why it matters and what would fix it. Describe the fix; don't write the patch. Style, naming and nice-to-haves aren't findings. Put anything else worth saying in notes, briefly.
 
             Answer "clean" only when you have no findings. An empty findings list is a good result when it's true, so don't invent problems.
+          # --tools is the only exclusive list: --allowedTools just skips the
+          # prompt for the tools it names. With --tools, Claude Code 2.1.283
+          # offers Read, Grep and Glob and nothing else.
           claude_args: >-
             --max-turns 40
+            --tools "Read,Grep,Glob"
             --allowedTools "Read,Grep,Glob"
-            --disallowedTools "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch"
+            --disallowedTools "Bash,Edit,Write,NotebookEdit,WebFetch,WebSearch,Agent,Task,TaskOutput,KillShell,Skill,SlashCommand,mcp__*"
             --add-dir ${{ runner.temp }}/claude-review
             --json-schema '{"type":"object","additionalProperties":false,"required":["verdict","summary","findings","notes"],"properties":{"verdict":{"type":"string","enum":["clean","findings"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["severity","file","problem","why","fix"],"properties":{"severity":{"type":"string","enum":["P0","P1"]},"file":{"type":"string"},"line":{"type":"integer","minimum":1},"problem":{"type":"string"},"why":{"type":"string"},"fix":{"type":"string"}}}},"notes":{"type":"array","items":{"type":"string"}}}}'
       - name: Post the review

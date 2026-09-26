@@ -206,6 +206,17 @@ test("post leaves one review of the commit, or a comment when GitHub refuses the
   await assert.rejects(post({ github: fakeGitHub({ reviewStatus: 500 }), repo: REPO, number: 88, sha: HEAD, runId: RUN, raw: clean }), /500/);
 });
 
+test("the workflow gives Claude reading tools only, and the job can comment", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/claude-review.yml", import.meta.url), "utf8");
+  // --allowedTools only skips prompts; --tools is what removes every other tool.
+  assert.match(workflow, /^\s+--tools "Read,Grep,Glob"$/m);
+  const denied = workflow.match(/^\s+--disallowedTools "([^"]+)"$/m)?.[1].split(",") ?? [];
+  for (const tool of ["Bash", "Edit", "Write", "WebFetch", "WebSearch", "Agent", "Task", "mcp__*"]) assert.ok(denied.includes(tool), tool);
+  assert.match(workflow, /"blockReadsOutsideWorkingDirectories":true/);
+  assert.match(workflow, /^\s+pull-requests: write$/m);
+  assert.match(workflow, /^\s+issues: write$/m);
+});
+
 test("main tells the owner why it skipped, and hands the commit to the next steps", async () => {
   const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
   const outputFile = join(dir, "output.txt");
