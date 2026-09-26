@@ -158,6 +158,11 @@ test("prepare refuses closed, fork, Claude-written and overlong PRs, and one wit
   // A Claude footer added to the description between the two looks counts too.
   const claimed = await run({ pullLater: pullOf({ body: "Generated with [Claude Code](https://claude.com/claude-code)" }) });
   assert.deepEqual([claimed.skip, claimed.sha], ["writer", HEAD]);
+  // A title or description edited between the looks reaches Claude as edited.
+  const edited = await run({ pullLater: pullOf({ title: "fix: reserve every route (R01)", body: "Edited." }) });
+  assert.equal(edited.skip, undefined);
+  const summary = JSON.parse(readFileSync(join(dir, "pr.json"), "utf8"));
+  assert.deepEqual([summary.title, summary.body], ["fix: reserve every route (R01)", "Edited."]);
   assert.match(moved.note, /changed while Claude was reading it \(aaaaaaa to ccccccc\)\. Ask again\./);
   // The writer check runs before the token check, so the rule shows even
   // before setup.

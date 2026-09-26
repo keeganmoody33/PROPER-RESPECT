@@ -165,19 +165,19 @@ export async function prepare({ github, repo, number, dir, hasToken }) {
       note: `Claude didn't review #${number}: it changed while Claude was reading it (${changed.join("; ")}). Ask again.`,
     };
   }
-  // The description and branch can change without a push, so the writer
-  // check runs again on the second look.
+  // The title, description and branch can change without a push, so the
+  // writer check runs again on the second look, and Claude reads them as of it.
   const later = claudeEvidence(again, commits);
   if (later.length) return writer(later);
   mkdirSync(dir, { recursive: true });
   const summary = {
     number,
-    title: pull.title,
-    body: pull.body ?? "",
-    author: pull.user?.login ?? null,
-    headRef: pull.head.ref,
+    title: again.title,
+    body: again.body ?? "",
+    author: again.user?.login ?? null,
+    headRef: again.head.ref,
     headSha: sha,
-    baseRef: pull.base.ref,
+    baseRef: again.base.ref,
   };
   writeFileSync(join(dir, "pr.json"), `${JSON.stringify(summary, null, 2)}\n`);
   writeFileSync(join(dir, "commits.txt"), commits.map(commit => `commit ${commit.sha}\n\n${commit.commit?.message ?? ""}\n`).join("\n"));
