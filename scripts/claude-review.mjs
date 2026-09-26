@@ -1,0 +1,307 @@
+#!/usr/bin/env node
+// Outside review by Claude: the parts of .github/workflows/claude-review.yml
+// that don't need a model.
+// - prepare: reads the pull request, refuses one that Claude wrote or helped
+//   write (the model that wrote a PR never clears it), and writes the files
+//   Claude reads.
+// - post: turns Claude's structured output into one review of the commit. The
+//   review's last line is a verdict the autopilot can check.
+// Claude itself only reads. The rules are in docs/remediation/CODEX-BRIEF.md,
+// Section 4, "Review policy".
+
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import process from "node:process";
+import { pathToFileURL } from "node:url";
+
+export const CLAUDE_BOT = "claude[bot]";
+export const CLAUDE_BRANCH_PREFIX = "claude/";
+// GitHub lists at most 250 commits for a pull request. A list that long may be
+// cut short, so it can't show who wrote the rest.
+export const MAX_COMMITS = 250;
+export const SEVERITIES = ["P0", "P1"];
+// Skips the owner hears about in the pull request. Closed and fork PRs are
+// only logged.
+export const NOTIFY_SKIPS = ["writer", "too-long", "no-token"];
+const CO_AUTHOR = /^co-authored-by:\s*claude\b/im;
+const MARKER = /^<!-- claude-review verdict=(clean|findings|none) sha=([0-9a-f]{40}) run=(\d+) -->$/;
+// Credential shapes a review must never carry: GitHub tokens, Anthropic keys
+// and OAuth tokens, and JSON Web Tokens such as the runner's.
+const CREDENTIAL_PATTERNS = [
+  /\bgh[pousr]_[A-Za-z0-9]{30,}/,
+  /\bgithub_pat_[A-Za-z0-9_]{30,}/,
+  /\bsk-ant-[A-Za-z0-9_-]{20,}/,
+  /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\./,
+];
+const LIMITS = { summary: 4000, field: 1500, file: 300, findings: 30, notes: 20, note: 500 };
+
+export function createGitHub(token, repo) {
+  async function request(path, { method = "GET", body } = {}) {
+    const response = await fetch(`https://api.github.com${path.replace("{repo}", repo)}`, {
+      method,
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "x-github-api-version": "2022-11-28",
+        ...(body ? { "content-type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+      const error = new Error(`${method} ${path} returned ${response.status}: ${data?.message ?? text.slice(0, 200)}`);
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  }
+  // Every page, or an error: a partial list never passes for the whole.
+  async function all(path, pages = 50) {
+    const items = [];
+    for (let page = 1; page <= pages; page += 1) {
+      const separator = path.includes("?") ? "&" : "?";
+      const batch = await request(`${path}${separator}per_page=100&page=${page}`);
+      items.push(...batch);
+      if (batch.length < 100) return items;
+    }
+    throw new Error(`${path.replace("{repo}", repo)} lists more than ${pages * 100} entries`);
+  }
+  return { request, all };
+}
+
+// Evidence that Claude wrote or helped write the pull request. Any one is
+// enough to refuse: a Claude branch, a PR or commit by the Claude app, or a
+// commit that credits Claude as a co-author.
+export function claudeEvidence(pull, commits) {
+  const evidence = [];
+  if (pull.head.ref.startsWith(CLAUDE_BRANCH_PREFIX)) evidence.push(`branch \`${pull.head.ref}\``);
+  if (pull.user?.login === CLAUDE_BOT) evidence.push(`opened by ${CLAUDE_BOT}`);
+  for (const commit of commits) {
+    const sha = commit.sha.slice(0, 7);
+    if ([commit.author?.login, commit.committer?.login].includes(CLAUDE_BOT)) {
+      evidence.push(`commit ${sha} by ${CLAUDE_BOT}`);
+    } else if (CO_AUTHOR.test(commit.commit?.message ?? "")) {
+      evidence.push(`commit ${sha} co-authored by Claude`);
+    }
+  }
+  return evidence;
+}
+
+const fileSection = file => [
+  `=== ${file.filename} (${file.status}, +${file.additions} -${file.deletions})` +
+    (file.previous_filename ? `, renamed from ${file.previous_filename}` : ""),
+  file.patch ?? "(GitHub sent no patch: the file is binary or its diff is too large. Read it under pr-head/.)",
+  "",
+].join("\n");
+
+export async function prepare({ github, repo, number, dir, hasToken }) {
+  const pull = await github.request(`/repos/{repo}/pulls/${number}`);
+  if (pull.state !== "open") return { skip: "closed", note: `#${number} is ${pull.state}, so Claude won't review it.` };
+  if (pull.head?.repo?.full_name !== repo) {
+    return { skip: "fork", note: `#${number} comes from another repository, so Claude won't review it here.` };
+  }
+  const sha = pull.head.sha;
+  const commits = await github.all(`/repos/{repo}/pulls/${number}/commits`, 3);
+  if (commits.length >= MAX_COMMITS) {
+    return { skip: "too-long", sha, note: `Claude won't review #${number}: it has ${commits.length} or more commits, too many to check who wrote them. Review it by hand.` };
+  }
+  const evidence = claudeEvidence(pull, commits);
+  if (evidence.length) {
+    return {
+      skip: "writer",
+      sha,
+      note: `Claude won't review #${number}: Claude wrote or helped write it (${evidence.join("; ")}). ` +
+        "The model that wrote a PR never clears it. Ask Codex instead: `@codex review`.",
+    };
+  }
+  if (!hasToken) {
+    return {
+      skip: "no-token",
+      sha,
+      note: "Claude can't review yet: the `CLAUDE_CODE_OAUTH_TOKEN` secret is missing. Run `claude setup-token`, " +
+        "then add the token to the `reviewers` environment (docs/remediation/CODEX-BRIEF.md, Section 9).",
+    };
+  }
+  const files = await github.all(`/repos/{repo}/pulls/${number}/files`, 30);
+  mkdirSync(dir, { recursive: true });
+  const summary = {
+    number,
+    title: pull.title,
+    body: pull.body ?? "",
+    author: pull.user?.login ?? null,
+    headRef: pull.head.ref,
+    headSha: sha,
+    baseRef: pull.base.ref,
+  };
+  writeFileSync(join(dir, "pr.json"), `${JSON.stringify(summary, null, 2)}\n`);
+  writeFileSync(join(dir, "commits.txt"), commits.map(commit => `commit ${commit.sha}\n\n${commit.commit?.message ?? ""}\n`).join("\n"));
+  writeFileSync(join(dir, "diff.patch"), files.map(fileSection).join("\n"));
+  return { sha, note: `Reviewing ${sha.slice(0, 7)} of #${number}: ${files.length} files, ${commits.length} commits.` };
+}
+
+const text = value => (typeof value === "string" ? value.trim() : "");
+const clip = (value, limit) => (value.length > limit ? `${value.slice(0, limit - 1)}…` : value);
+
+// Claude reads the PR's files under .../pr-head/, so it may name them that way.
+// Findings name paths from the repository root.
+function repoPath(value) {
+  const file = text(value);
+  const cut = file.lastIndexOf("pr-head/");
+  return (cut >= 0 ? file.slice(cut + "pr-head/".length) : file).replace(/^\.\//, "");
+}
+
+function validFinding(finding) {
+  if (!finding || typeof finding !== "object" || Array.isArray(finding)) return false;
+  const file = repoPath(finding.file);
+  const lineOk = finding.line === undefined || finding.line === null || (Number.isInteger(finding.line) && finding.line > 0);
+  return SEVERITIES.includes(finding.severity) && Boolean(file) && file.length <= LIMITS.file &&
+    !file.startsWith("/") && !file.split("/").includes("..") && Boolean(text(finding.problem)) && lineOk;
+}
+
+const cleanFinding = finding => ({
+  severity: finding.severity,
+  file: repoPath(finding.file),
+  line: Number.isInteger(finding.line) ? finding.line : null,
+  problem: clip(text(finding.problem), LIMITS.field),
+  why: clip(text(finding.why), LIMITS.field),
+  fix: clip(text(finding.fix), LIMITS.field),
+});
+
+const none = reason => ({ verdict: "none", reason, summary: "", findings: [], notes: [] });
+
+// Claude's structured output, read strictly. Clean needs Claude to say
+// "clean" and list no findings. Any listed finding wins over the word.
+// Anything missing, malformed or unfinished is no verdict, which clears
+// nothing.
+export function readVerdict(raw, conclusion = "success") {
+  if (conclusion !== "success") return none(`Claude didn't finish (${conclusion || "no result"})`);
+  if (!raw) return none("Claude finished without a verdict");
+  let output;
+  try {
+    output = JSON.parse(raw);
+  } catch {
+    return none("Claude's verdict wasn't valid JSON");
+  }
+  if (!output || typeof output !== "object" || Array.isArray(output)) return none("Claude's verdict wasn't an object");
+  if (!Array.isArray(output.findings) || !output.findings.every(validFinding)) return none("Claude's findings were malformed");
+  const findings = output.findings.slice(0, LIMITS.findings).map(cleanFinding);
+  const summary = clip(text(output.summary), LIMITS.summary);
+  const notes = (Array.isArray(output.notes) ? output.notes : [])
+    .map(text).filter(Boolean).slice(0, LIMITS.notes).map(note => clip(note, LIMITS.note));
+  if (findings.length) return { verdict: "findings", summary, findings, notes };
+  if (output.verdict === "clean") return { verdict: "clean", summary, findings, notes };
+  return none("Claude's verdict was neither \"clean\" nor a list of findings");
+}
+
+// Model text goes into the review as plain text: no hidden comments that could
+// pass for the verdict line, and no live @mentions.
+function safe(value, { oneLine = false } = {}) {
+  const escaped = value
+    .replace(/<!--/g, "&lt;!--")
+    .replace(/-->/g, "--&gt;")
+    .replace(/(^|[^\w`/])@([A-Za-z0-9][A-Za-z0-9-]*(?:\/[A-Za-z0-9._-]+)?)/g, "$1`@$2`");
+  return oneLine ? escaped.replace(/\s*\n\s*/g, " ") : escaped;
+}
+
+const blobLink = (repo, sha, file, line) =>
+  `https://github.com/${repo}/blob/${sha}/${file.split("/").map(encodeURIComponent).join("/")}${line ? `#L${line}` : ""}`;
+
+export function reviewBody({ result, sha, runId, repo }) {
+  const count = result.findings.length;
+  const title = { clean: "clean", findings: `${count} finding${count === 1 ? "" : "s"}`, none: "no verdict" }[result.verdict];
+  const lines = [`### Claude review of \`${sha.slice(0, 7)}\`: ${title}`, ""];
+  if (result.verdict === "none") lines.push(`${safe(result.reason, { oneLine: true })}. This review clears nothing.`, "");
+  if (result.summary) lines.push(safe(result.summary), "");
+  result.findings.forEach((finding, index) => {
+    const where = finding.line ? `${finding.file}:${finding.line}` : finding.file;
+    const parts = [safe(finding.problem, { oneLine: true })];
+    if (finding.why) parts.push(safe(finding.why, { oneLine: true }));
+    if (finding.fix) parts.push(`Fix: ${safe(finding.fix, { oneLine: true })}`);
+    lines.push(`${index + 1}. **${finding.severity}** [\`${safe(where, { oneLine: true })}\`](${blobLink(repo, sha, finding.file, finding.line)}): ${parts.join(" ")}`);
+  });
+  if (count) lines.push("");
+  if (result.notes.length) {
+    lines.push("<details><summary>Notes that don't block</summary>", "", ...result.notes.map(note => `- ${safe(note, { oneLine: true })}`), "", "</details>", "");
+  }
+  lines.push(`<sub>Outside review by Claude in [run ${runId}](https://github.com/${repo}/actions/runs/${runId}). ` +
+    "Claude only reads. The model that wrote a PR never clears it.</sub>");
+  lines.push(`<!-- claude-review verdict=${result.verdict} sha=${sha} run=${runId} -->`);
+  return lines.join("\n");
+}
+
+// The verdict a review body carries, read from its last line only, so text
+// quoted above it can't pass for one.
+export function verdictMarker(body) {
+  const last = String(body ?? "").trimEnd().split("\n").at(-1) ?? "";
+  const match = last.match(MARKER);
+  return match ? { verdict: match[1], sha: match[2], run: Number(match[3]) } : null;
+}
+
+// Whether Claude's answer quotes a credential, by its shape or by the exact
+// value of a secret this job holds. Claude reads files a PR's author chose, so
+// a planted instruction could steer it toward one.
+export function quotesCredential(raw, secrets = []) {
+  const value = String(raw ?? "");
+  return CREDENTIAL_PATTERNS.some(pattern => pattern.test(value)) ||
+    secrets.some(secret => typeof secret === "string" && secret.length >= 8 && value.includes(secret));
+}
+
+export async function post({ github, repo, number, sha, runId, raw, conclusion, secrets = [] }) {
+  // Nothing Claude wrote is posted when it quotes a credential.
+  const result = quotesCredential(raw, secrets)
+    ? none("Claude's answer quoted what looks like a credential, so none of it was posted")
+    : readVerdict(raw, conclusion);
+  const body = reviewBody({ result, sha, runId, repo });
+  try {
+    await github.request(`/repos/{repo}/pulls/${number}/reviews`, { method: "POST", body: { commit_id: sha, event: "COMMENT", body } });
+    return { verdict: result.verdict, where: "review" };
+  } catch (error) {
+    if (error.status !== 422) throw error;
+    // GitHub refuses a review of a commit the PR no longer contains, as after
+    // a force-push. The verdict still names its commit, so post it as a comment.
+    await github.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body } });
+    return { verdict: result.verdict, where: "comment" };
+  }
+}
+
+export async function main(argv = process.argv.slice(2), env = process.env, log = console.log, github = null) {
+  const [command] = argv;
+  const repo = env.GITHUB_REPOSITORY;
+  const number = Number(env.PR_NUMBER);
+  if (!repo || !Number.isInteger(number) || number < 1) throw new Error("GITHUB_REPOSITORY and a positive PR_NUMBER are required");
+  const api = github ?? createGitHub(env.GITHUB_TOKEN, repo);
+  const output = (key, value) => {
+    if (env.GITHUB_OUTPUT) appendFileSync(env.GITHUB_OUTPUT, `${key}=${value}\n`);
+  };
+  if (command === "prepare") {
+    if (!env.REVIEW_CONTEXT_DIR) throw new Error("REVIEW_CONTEXT_DIR is required");
+    const result = await prepare({ github: api, repo, number, dir: env.REVIEW_CONTEXT_DIR, hasToken: env.HAS_CLAUDE_TOKEN === "true" });
+    log(result.note);
+    output("sha", result.sha ?? "");
+    output("skip", result.skip ?? "");
+    if (NOTIFY_SKIPS.includes(result.skip)) {
+      await api.request(`/repos/{repo}/issues/${number}/comments`, { method: "POST", body: { body: result.note } });
+    }
+    return result;
+  }
+  if (command === "post") {
+    if (!/^[0-9a-f]{40}$/.test(env.HEAD_SHA ?? "")) throw new Error("HEAD_SHA must be a full commit SHA");
+    if (!/^\d+$/.test(env.GITHUB_RUN_ID ?? "")) throw new Error("GITHUB_RUN_ID is required");
+    const result = await post({
+      github: api, repo, number, sha: env.HEAD_SHA, runId: env.GITHUB_RUN_ID,
+      raw: env.STRUCTURED_OUTPUT, conclusion: env.CLAUDE_CONCLUSION,
+      secrets: [env.GITHUB_TOKEN, env.CLAUDE_CODE_OAUTH_TOKEN],
+    });
+    log(`Claude's verdict on ${env.HEAD_SHA.slice(0, 7)}: ${result.verdict}, posted as a ${result.where}.`);
+    return result;
+  }
+  throw new Error(`Unknown command "${command ?? ""}". Use prepare or post.`);
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  main().catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}
