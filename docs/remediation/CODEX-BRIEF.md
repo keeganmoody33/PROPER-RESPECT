@@ -1300,8 +1300,9 @@ the results are recorded in `docs/acceptance/second-user.md`:
 
 ## 9. Owner actions
 
-**Done owner tasks:** none yet. Edit this line yourself, or tell Codex in the
-prompt and it opens a one-line `docs:` PR for it.
+**Done owner tasks:** K01 (production Clerk reports sign-up mode `restricted`,
+verified 2026-09-26). Edit this line yourself, or tell Codex in the prompt and
+it opens a one-line `docs:` PR for it.
 
 **Autopilot setup, once:**
 
