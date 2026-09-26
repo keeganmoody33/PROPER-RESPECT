@@ -292,6 +292,10 @@ test("merging needs an outside review of the head commit, asked for and retried 
   const quota = minutes => copilotReview("Copilot was unable to review this pull request because the user who requested the review has reached their quota limit.", { submittedAt: minutesAgo(minutes) });
   const outOfQuota = decide(facts({ reviews: [quota(5)] }));
   assert.deepEqual([outOfQuota.type, outOfQuota.retry], ["request-review", true]);
+  // That answer ends Copilot's review even while GitHub still shows it
+  // pending, so the first retry isn't held for the review wait.
+  const stillPending = decide(facts({ copilotPending: true, reviews: [quota(5)] }));
+  assert.deepEqual([stillPending.type, stillPending.retry], ["request-review", true]);
   assert.equal(decide(facts({ markers: [reviewAsk(30), reviewAsk(15, "retry")], reviews: [quota(5)] })).type, "wait");
   assert.equal(decide(facts({ markers: [reviewAsk(130), reviewAsk(70, "retry")], reviews: [quota(65)] })).retry, true);
   const retries = Array.from({ length: 6 }, (_, index) => reviewAsk(400 - index * 60, "retry"));

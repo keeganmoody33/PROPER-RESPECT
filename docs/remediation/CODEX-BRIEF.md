@@ -287,9 +287,12 @@ line, or in a `remediate/<ID>-` branch name.
 - **No clean outside review, no merge.** When Copilot's verdict isn't clean,
   or Copilot keeps failing, the PR waits for the owner instead of merging on
   its writer's word.
-- **A status isn't a review.** On PR #74, Devin Review reports `success` with
-  the description "Full review skipped: trial expired and no credits
-  remaining". Reviewer checks and statuses never count as CI or as approval.
+- **A status or an automatic approval isn't a review.** On PR #74, Devin
+  Review reports `success` with the description "Full review skipped: trial
+  expired and no credits remaining". On PR #80, Cursor's Approval Agent
+  approved because "no approval policy required human review". Reviewer
+  checks, statuses and routing bots' approvals never count as CI or as a
+  clean review.
 - **A new reviewer earns its place.** Devin with credits, or Claude through
   the Claude Code GitHub Action, can become an outside reviewer for Codex's
   PRs once the autopilot reads its clean verdict as strictly as Copilot's,

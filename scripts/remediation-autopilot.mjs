@@ -327,7 +327,10 @@ function decideTask(facts, taskId, limits) {
   const reviewSince = asked?.createdAt ?? facts.pushedAt;
   const codex = codexReviewStatus(facts.codexComments, pr.headSha);
   const copilotReview = latestCopilotReview(facts.reviews, pr.headSha);
-  const reviewing = [codex?.status === "Running" ? "Codex" : null, facts.copilotPending ? "Copilot" : null].filter(Boolean);
+  // Copilot answering the latest ask without reviewing ends its review, even
+  // while GitHub still shows it pending, so the retry isn't held back.
+  const copilotGaveUp = asked ? copilotFailureAfter(copilotReview, asked.createdAt) : null;
+  const reviewing = [codex?.status === "Running" ? "Codex" : null, facts.copilotPending && !copilotGaveUp ? "Copilot" : null].filter(Boolean);
   if (reviewing.length && minutesSince(now, reviewSince) < limits.reviewWaitMinutes) {
     return { type: "wait", reason: `${reviewing.join(" and ")} reviewing`, since: reviewSince };
   }
