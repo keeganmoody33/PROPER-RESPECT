@@ -213,27 +213,29 @@ line, or in a `remediate/<ID>-` branch name.
   from the owner and collaborators, and a Copilot review of the commit whose
   overview lists findings, including ones it found in unchanged code.
 - **Review.** Once the checks pass and 30 minutes have passed since the push,
-  it asks `@codex review` and, unless Copilot already reviewed that commit,
-  requests a Copilot review with the owner's token. A review is clean when
-  Codex's review summary shows a completed review of that commit and Codex
-  left no comments on it, or when Copilot's latest review of the commit is
-  finished, says plainly that it found nothing (its overview's verdict, or
-  the older "generated no comments" line), and has no comments or other sign
-  of findings. Any other Copilot verdict or format, such as "Needs a closer
-  look", never clears a PR; without listed findings it isn't a finding
-  either, and the PR waits for Codex's review. It waits up to an hour for a
-  review in progress.
-- **Codex outages.** When Codex answers "Something went wrong", or a review
-  never comes, it asks again: at once the first time, then an hour after each
-  failure, up to 6 times per commit. So a few hours of Codex downtime delay a
-  PR without parking it.
+  it requests a Copilot review of that commit with the owner's token, and
+  leaves a comment that marks the ask. It never asks Codex to review a task,
+  because Codex wrote it (see "Review policy" below). A review is clean when
+  Copilot's latest review of the commit is finished, says plainly that it
+  found nothing (its overview's verdict, or the older "generated no comments"
+  line), and has no comments or other sign of findings. Any other Copilot
+  verdict or format, such as "Needs a closer look", never clears a PR:
+  findings it lists go to Codex as a fix request, and otherwise the PR goes
+  to the owner. Codex's automatic review, when Codex runs one, still counts
+  for its findings. It waits up to an hour for any review in progress.
+- **Outages.** When Codex answers "Something went wrong", when Copilot
+  answers a review request without reviewing (on a spent quota it says
+  "Copilot was unable to review this pull request"), or when a review never
+  comes, it asks again: at once the first time, then an hour after each
+  failure, up to 6 times per commit. So a few hours of downtime or an empty
+  quota delay a PR without parking it.
 - **Merge.** It squash-merges, pinned to the reviewed commit, one PR per run,
   when all of these hold:
   - the required checks passed and no check or commit status failed
     (reviewer checks and Devin's status don't count as CI);
   - no counted findings remain on the latest commit, or only review bots'
     other than Codex after the 3 rounds;
-  - Codex or Copilot reviewed that commit cleanly;
+  - Copilot, the outside reviewer, reviewed that commit cleanly;
   - GitHub reports the PR as clean.
 
   Right before merging it reads the PR again and merges only if that second
@@ -250,8 +252,9 @@ line, or in a `remediate/<ID>-` branch name.
   It labels those `needs-owner-approval` or `needs-owner`, and so any PR
   where:
   - Codex answers a fix request without pushing;
-  - Codex keeps failing after the 6 retries, and Copilot gave no clean
-    review;
+  - Codex keeps failing a fix request after the 6 retries;
+  - Copilot reviews the latest commit without a clean verdict or findings to
+    fix, or keeps failing after the 6 retries;
   - a check or commit status from an app other than GitHub Actions fails;
   - it names two different tasks, in its title, template line, branch name
     or commit subjects (commit subjects without an ID are fine, since the
@@ -267,6 +270,50 @@ line, or in a `remediate/<ID>-` branch name.
 - **Switches.** Unless `AUTOPILOT_ENABLED` is `true`, it only logs what it
   would do. Add `needs-owner` to a PR to pause the autopilot on it; remove it
   to hand the PR back.
+
+**Review policy.** The model that wrote a PR never clears it. Owner decision,
+2026-09-25.
+
+- **The writer can block, never approve.** Codex writes every task, so its
+  review findings block a task PR like anyone's, but a clean Codex review
+  doesn't clear it. The rule follows the writer: a PR that Claude writes
+  needs a reviewer other than Claude.
+- **An outside model clears it.** Today that's Copilot, the only outside
+  reviewer the autopilot can ask. GitHub doesn't name the models behind
+  Copilot's reviews, only "a carefully tuned mix of models"
+  ([GitHub](https://docs.github.com/en/copilot/responsible-use/code-review)),
+  so Copilot may share a model family with Codex. It's the outside reviewer
+  that's wired, not a perfect one.
+- **No clean outside review, no merge.** When Copilot's verdict isn't clean,
+  or Copilot keeps failing, the PR waits for the owner instead of merging on
+  its writer's word.
+- **A status or an automatic approval isn't a review.** On PR #74, Devin
+  Review reports `success` with the description "Full review skipped: trial
+  expired and no credits remaining". On PR #80, Cursor's Approval Agent
+  approved because "no approval policy required human review". Reviewer
+  checks, statuses and routing bots' approvals never count as CI or as a
+  clean review.
+- **A new reviewer earns its place.** Devin with credits, or Claude through
+  the Claude Code GitHub Action, can become an outside reviewer for Codex's
+  PRs once the autopilot reads its clean verdict as strictly as Copilot's,
+  with tests. One clearing reviewer is the goal, not a panel.
+
+Why:
+
+- Models favor their own work. An LLM evaluator "scores its own outputs
+  higher than others' while human annotators consider them of equal quality"
+  ([Panickssery, Bowman and Feng, 2024](https://arxiv.org/abs/2404.13076)).
+- Outside review catches more, and direction matters. On 116 coding tasks,
+  Claude's review raised Codex's pass rate from 71.6% to 89.7%, against 84.5%
+  when Codex reviewed itself. Codex reviewing Claude's drafts lowered theirs
+  from 91.4% to 82.8% ([Xiang et al., 2026](https://arxiv.org/abs/2607.21656)).
+  A different model isn't automatically a better reviewer.
+- PostHog goes further: an agent-authored PR always needs a human's
+  approval, and no AI review counts for it. Its handbook also warns that
+  "Three agents arguing with each other is noisy"
+  ([How we review PRs](https://posthog.com/handbook/engineering/how-we-review)).
+  This repository takes an outside model instead of a human, so the queue can
+  run while the owner is away, and keeps one clearing reviewer.
 
 For you, that means: when an `@codex` comment asks for a fix, change only
 what it asks, stay in the task's scope, and push to the same branch. Treat
@@ -1261,7 +1308,8 @@ prompt and it opens a one-line `docs:` PR for it.
 1. Merge the PR that adds the autopilot.
 2. In Codex settings (chatgpt.com/codex/settings):
    - under Code review, turn on Code review and Automatic reviews for this
-     repository;
+     repository. Codex's own reviews still count for their findings, but
+     never clear a task PR (Section 4, "Review policy");
    - check that this repository's environment holds no production secret: no
      Convex deploy key, no `sk_live` Clerk key, no Vercel token.
 3. Create a fine-grained GitHub token for this repository only, with just
@@ -1286,10 +1334,11 @@ prompt and it opens a one-line `docs:` PR for it.
    react to its comment within a few minutes. If Codex never reacts, turn
    `AUTOPILOT_START_TASKS` off and start each task yourself (Section 11).
    The autopilot still reviews, fixes and merges.
-7. Keep Copilot code review within budget for the trip. The autopilot asks
-   Copilot to review each task commit, billed to you, and a clean Copilot
-   review can merge a PR when Codex's review fails. Copilot's reviews of #60
-   to #76 failed on quota; its review of #77 worked.
+7. Keep Copilot code review within budget for the trip. Copilot is the only
+   reviewer that can clear a task PR: the autopilot asks it to review each
+   task commit, billed to you. With the quota spent, each PR goes to you
+   after 6 retries, about 6 hours. Copilot's reviews of #60 to #76 failed on
+   quota; its review of #77 worked.
 
 Expect some PRs to wait for you: every one that touches a workflow or
 `vercel.json` (R04, R10, R11, R13, R20, R23, R28, R29, R30), and R07. The
