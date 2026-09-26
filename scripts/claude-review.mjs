@@ -177,12 +177,12 @@ export async function prepare({ github, repo, number, dir, hasToken }) {
 const text = value => (typeof value === "string" ? value.trim() : "");
 const clip = (value, limit) => (value.length > limit ? `${value.slice(0, limit - 1)}…` : value);
 
-// Claude reads the PR's files under .../pr-head/, so it may name them that way.
-// Findings name paths from the repository root.
+// Claude reads the PR's files under .../claude-review/pr-head/, so it may name
+// them that way. Findings name paths from the repository root, so only that
+// checkout prefix goes: a folder of the repository named pr-head stays.
 function repoPath(value) {
-  const file = text(value);
-  const cut = file.lastIndexOf("pr-head/");
-  return (cut >= 0 ? file.slice(cut + "pr-head/".length) : file).replace(/^\.\//, "");
+  const file = text(value).replace(/^\.\//, "");
+  return file.match(/^(?:\/.*?\/claude-review\/)?pr-head\/(.+)$/)?.[1] ?? file;
 }
 
 // The fields of the workflow's --json-schema, and no others.

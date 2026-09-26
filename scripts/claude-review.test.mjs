@@ -174,6 +174,12 @@ test("a clean verdict needs the word clean and no findings; anything else clears
   const underHead = readVerdict(JSON.stringify({ verdict: "findings", summary: "", findings: [{ ...finding, file: "/home/runner/work/_temp/claude-review/pr-head/src/domain/onboarding.ts" }], notes: [] }));
   assert.deepEqual([underHead.verdict, underHead.findings[0].file], ["findings", "src/domain/onboarding.ts"]);
   assert.equal(readVerdict(JSON.stringify({ verdict: "findings", summary: "", findings: [{ ...finding, file: "./src/a.ts" }], notes: [] })).findings[0].file, "src/a.ts");
+  // Only the checkout's own prefix goes; a folder that happens to be named pr-head stays.
+  const fileOfAnswer = file => readVerdict(JSON.stringify({ verdict: "findings", summary: "", findings: [{ ...finding, file }], notes: [] })).findings[0].file;
+  assert.equal(fileOfAnswer("pr-head/src/a.ts"), "src/a.ts");
+  assert.equal(fileOfAnswer("./pr-head/src/a.ts"), "src/a.ts");
+  assert.equal(fileOfAnswer("src/pr-head/check.ts"), "src/pr-head/check.ts");
+  assert.equal(fileOfAnswer("/home/runner/work/_temp/claude-review/pr-head/tools/pr-head/x.ts"), "tools/pr-head/x.ts");
   // Every field must have the schema's type; nothing is filled in or dropped.
   const base = { verdict: "clean", summary: "", findings: [], notes: [] };
   for (const bad of [{ ...base, notes: "invalid" }, { ...base, notes: [1] }, { ...base, summary: 5 }, { ...base, extra: true },
