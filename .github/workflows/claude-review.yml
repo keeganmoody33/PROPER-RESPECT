@@ -92,7 +92,7 @@ jobs:
           # the action writes its GitHub token into .git/config.
           settings: >-
             {"permissions":{"blockReadsOutsideWorkingDirectories":true,
-            "deny":["Read(./.git/**)","Read(//proc/**)","Read(//sys/**)","Read(//etc/**)",
+            "deny":["Read(./.git/**)","Read(/${{ github.workspace }}/.git/**)","Read(//proc/**)","Read(//sys/**)","Read(//etc/**)",
             "Read(//home/runner/runners/**)","Read(~/.claude/**)","Read(~/.config/**)","Read(~/.gitconfig)"]}}
           prompt: |
             You're the outside reviewer for pull request #${{ env.PR_NUMBER }} in ${{ github.repository }}. Another model wrote it, and the rule here is that the model that wrote a PR never clears it. Your job is to find what should stop it from merging. You can read files but not change anything. This job posts your verdict for you.

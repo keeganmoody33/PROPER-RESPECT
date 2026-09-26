@@ -257,6 +257,10 @@ test("the workflow gives Claude reading tools only, and the job can comment", ()
   const denied = workflow.match(/^\s+--disallowedTools "([^"]+)"$/m)?.[1].split(",") ?? [];
   for (const tool of ["Bash", "Edit", "Write", "WebFetch", "WebSearch", "Agent", "Task", "mcp__*"]) assert.ok(denied.includes(tool), tool);
   assert.match(workflow, /"blockReadsOutsideWorkingDirectories":true/);
+  // The action writes its GitHub token into the checkout's .git/config, so
+  // .git is denied by relative and by absolute path.
+  assert.match(workflow, /"Read\(\.\/\.git\/\*\*\)"/);
+  assert.match(workflow, /"Read\(\/\$\{\{ github\.workspace \}\}\/\.git\/\*\*\)"/);
   assert.match(workflow, /^\s+pull-requests: write$/m);
   assert.match(workflow, /^\s+issues: write$/m);
   // Both ways in are the owner's: a comment by the owner, or the owner's
