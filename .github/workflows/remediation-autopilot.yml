@@ -1,0 +1,40 @@
+name: Remediation autopilot
+# Steers remediation task pull requests to merge and, when switched on, starts
+# the next task. Rules: docs/remediation/CODEX-BRIEF.md, Section 4, "Autopilot".
+# Kill switch: set the repository variable AUTOPILOT_ENABLED to anything but
+# "true"; the script then only logs what it would do.
+on:
+  schedule:
+    - cron: "11,41 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  checks: read
+  statuses: read
+concurrency:
+  group: remediation-autopilot
+  cancel-in-progress: false
+jobs:
+  steer:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The trigger token lives in this environment, limited to main, so
+    # workflows on pull request branches can't read it.
+    environment: autopilot
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Steer remediation pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CODEX_TRIGGER_TOKEN: ${{ secrets.CODEX_TRIGGER_TOKEN }}
+          AUTOPILOT_ENABLED: ${{ vars.AUTOPILOT_ENABLED }}
+          AUTOPILOT_START_TASKS: ${{ vars.AUTOPILOT_START_TASKS }}
+        run: node scripts/remediation-autopilot.mjs

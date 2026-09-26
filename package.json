@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run && node --test scripts/deployment-preflight.test.mjs scripts/replay-evidence.test.mjs",
+    "test": "vitest run && node --test scripts/deployment-preflight.test.mjs scripts/replay-evidence.test.mjs scripts/remediation-autopilot.test.mjs",
     "test:watch": "vitest",
     "evidence:replay": "node --experimental-strip-types scripts/replay-evidence.mjs",
     "test:e2e": "playwright test",
