@@ -109,7 +109,7 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
     <h3 id="sharing-preview-title">Your visitor’s view</h3>
     <p>This is the public information after your selected changes, including previously approved cards that you kept. Private originals and unselected details are excluded.</p>
     {!current && <p role="status">Your saved collection or sharing choices changed. Preview again before publishing.</p>}
-    {profile.cards.some(card => card.demo) && <p>Anyone with the link can play the videos on these cards. Check that each one shows nothing private, like other people’s contact details.</p>}
+    {profile.cards.some(card => card.demo) && <p>Visitors can open the videos on these cards, and each plays only if its own sharing settings let anyone watch. Check that each shows nothing private, like other people’s contact details.</p>}
     <div className="card-grid">{profile.cards.map((card, index) => <ProductCard key={`${card.product.slug}-${index}`} card={card} index={index} goTo={card.goTo} />)}</div>
     {!profile.cards.length && <p>No products will be public.</p>}
     <footer className="profile-footer"><div><strong><ProfileName profile={profile} /></strong><span>@{profile.handle}</span></div><p>{profile.bio}</p><ProfileLinks profile={profile} /></footer>
@@ -708,7 +708,7 @@ function Builder() {
                         />
                         Show my {presentation.providerLabel} video on this card
                       </label>
-                      <p>Visitors can play it from the card. A screen recording can show other people’s data, like enriched contact rows in Clay, so watch it through first.</p>
+                      <p>Visitors can open it from the card. It plays for them only if its sharing settings let anyone with the link watch. A screen recording can show other people’s data, like enriched contact rows in Clay, so watch it through first.</p>
                     </>;
                   })()}
                   </details>

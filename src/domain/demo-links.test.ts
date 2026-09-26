@@ -27,6 +27,9 @@ describe("demo link parsing", () => {
     [`https://app.arcade.software/share/${ARCADE}`, { provider: "ARCADE", id: ARCADE }],
     [`https://demo.arcade.software/${ARCADE}`, { provider: "ARCADE", id: ARCADE }],
     [`  https://www.loom.com/share/${LOOM}  `, { provider: "LOOM", id: LOOM }],
+    // A scheme's default port is the same origin: the URL parser drops it, and
+    // the stored demo holds no URL. Any other port is refused below.
+    [`https://www.loom.com:443/share/${LOOM}`, { provider: "LOOM", id: LOOM }],
   ])("reads %s", (input, expected) => {
     expect(parseDemoLink(input)).toEqual(expected);
   });
