@@ -76,6 +76,8 @@ test("Claude's own work is refused, by branch, app, commit or co-author trailer"
   assert.deepEqual(claudeEvidence(pullOf(), [commitOf("fix: reserve handles (R01)")]), []);
   assert.deepEqual(claudeEvidence(pullOf({ head: { ref: "claude/outside-review", sha: HEAD, repo: { full_name: REPO } } }), []), ["branch `claude/outside-review`"]);
   assert.deepEqual(claudeEvidence(pullOf({ user: { login: "claude[bot]" } }), []), ["opened by claude[bot]"]);
+  // Git allows a backtick in a branch name; it mustn't end the code span and ping someone.
+  assert.deepEqual(claudeEvidence(pullOf({ head: { ref: "claude/x`@keeganmoody33", sha: HEAD, repo: { full_name: REPO } } }), []), ["branch `claude/x@keeganmoody33`"]);
   assert.deepEqual(claudeEvidence(pullOf(), [commitOf("fix: x", { author: { login: "claude[bot]" } })]), ["commit bbbbbbb by claude[bot]"]);
   const trailer = "fix: x\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>";
   assert.deepEqual(claudeEvidence(pullOf(), [commitOf(trailer)]), ["commit bbbbbbb co-authored by Claude"]);
@@ -106,7 +108,11 @@ test("Claude's account, address, footer and session link count too, even on anot
 
 test("prepare writes what Claude reads, and returns the reviewed commit", async () => {
   const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
-  const fake = fakeGitHub({ files: [fileOf("src/domain/onboarding.ts"), { ...fileOf("public/logo.png"), patch: undefined }] });
+  const fake = fakeGitHub({ files: [
+    fileOf("src/domain/onboarding.ts"),
+    { ...fileOf("public/logo.png"), patch: undefined },
+    { ...fileOf("public/old-logo.png"), status: "removed", patch: undefined },
+  ] });
   const result = await prepare({ github: fake, repo: REPO, number: 88, dir, hasToken: true });
   assert.deepEqual([result.sha, result.skip], [HEAD, undefined]);
   const pr = JSON.parse(readFileSync(join(dir, "pr.json"), "utf8"));
@@ -114,6 +120,9 @@ test("prepare writes what Claude reads, and returns the reviewed commit", async 
   const diff = readFileSync(join(dir, "diff.patch"), "utf8");
   assert.match(diff, /=== src\/domain\/onboarding\.ts \(modified, \+1 -1\)\n@@ -1 \+1 @@/);
   assert.match(diff, /=== public\/logo\.png .*\n\(GitHub sent no patch/);
+  // A removed file isn't under pr-head/, so Claude reads what it was in main's
+  // checkout, the working directory: the copy a merge would delete.
+  assert.match(diff, /=== public\/old-logo\.png \(removed, .*\n\(GitHub sent no patch[^\n]*working directory/);
   assert.match(readFileSync(join(dir, "commits.txt"), "utf8"), /^commit b{40}\n\nfix: reserve handles \(R01\)/);
 });
 
@@ -233,6 +242,7 @@ test("model text posts as plain text: no HTML, links, images or code spans, and 
     '<img src="https://evil.example/p.png"> ![x](https://evil.example/x.png) [docs](https://evil.example)',
     "Closes #12 and other/repo#34.",
     "See https://evil.example/a#12, www.evil.example, HTTPS://EVIL.EXAMPLE, mailto:x@evil.example and someone@evil.example.",
+    "Chained @a@keeganmoody33, a@evil.example@keeganmoody33 and #1#2.",
   ].join("\n\n");
   const result = readVerdict(JSON.stringify({
     verdict: "findings",
@@ -245,12 +255,15 @@ test("model text posts as plain text: no HTML, links, images or code spans, and 
   assert.match(body, /\n\\# Looks fine\n/);
   assert.match(body, /\n- \\- nested\n- &gt; quoted\n/);
   // An open backtick, a slash or an entity no longer smuggles a mention out.
-  assert.ok(body.includes("Ship it \\``@keeganmoody33` now, cc /`@codex` and &amp;`#64`;devin."), body);
+  assert.ok(body.includes("Ship it \\``@keeganmoody33` now, cc `/@codex` and &amp;`#64;devin`."), body);
   // No HTML, no image fetched, no link.
   assert.ok(body.includes('&lt;img src="`https://evil.example/p.png`"&gt; !\\[x\\](`https://evil.example/x.png`) \\[docs\\](`https://evil.example`)'), body);
   assert.ok(body.includes("Closes `#12` and `other/repo#34`."), body);
   // GitHub turns bare web addresses and emails into links, so they go in code.
   assert.ok(body.includes("See `https://evil.example/a#12`, `www.evil.example`, `HTTPS://EVIL.EXAMPLE`, `mailto:x@evil.example` and `someone@evil.example`."), body);
+  // A word holding an @ or # goes in one code span, so a second mention or
+  // reference right after the first can't escape it.
+  assert.ok(body.includes("Chained `@a@keeganmoody33`, `a@evil.example@keeganmoody33` and `#1#2`."), body);
   // The file keeps its own code span and links to the right blob.
   assert.ok(body.includes(`1. **P1** [\`app/@modal/xy.ts:9\`](https://github.com/o/r/blob/${HEAD}/app/%40modal/x%60y.ts#L9): 1\\. \\\`index\\\` stays claimable`), body);
   // Outside code spans, nothing pings anyone or links an issue.

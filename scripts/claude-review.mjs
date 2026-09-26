@@ -87,7 +87,8 @@ export function createGitHub(token, repo) {
 // commit message with a Claude co-author trailer, footer or session link.
 export function claudeEvidence(pull, commits) {
   const evidence = [];
-  if (pull.head.ref.startsWith(CLAUDE_BRANCH_PREFIX)) evidence.push(`branch \`${pull.head.ref}\``);
+  // Git allows a backtick in a branch name, and one would end the code span.
+  if (pull.head.ref.startsWith(CLAUDE_BRANCH_PREFIX)) evidence.push(`branch \`${pull.head.ref.replace(/`/g, "")}\``);
   if (CLAUDE_LOGINS.includes(pull.user?.login)) evidence.push(`opened by ${pull.user.login}`);
   if (CLAUDE_MARKS.test(pull.body ?? "")) evidence.push("a Claude Code footer or session link in the description");
   for (const commit of commits) {
@@ -107,7 +108,7 @@ export function claudeEvidence(pull, commits) {
 const fileSection = file => [
   `=== ${file.filename} (${file.status}, +${file.additions} -${file.deletions})` +
     (file.previous_filename ? `, renamed from ${file.previous_filename}` : ""),
-  file.patch ?? "(GitHub sent no patch: the file is binary or its diff is too large. Read it under pr-head/.)",
+  file.patch ?? "(GitHub sent no patch: the file is binary or its diff is too large. The PR's version is under pr-head/, unless the PR removes the file; main's version, if it has one, is in the working directory.)",
   "",
 ].join("\n");
 
@@ -237,13 +238,14 @@ export function readVerdict(raw, conclusion = "success") {
 // Model text goes into the review as plain text. Its HTML, entities, links,
 // images and code spans are escaped, so nothing can pass for the verdict line
 // or load from elsewhere. Each paragraph is one line that can't open a
-// heading, list or quote. A web address, email, @mention or #reference goes
-// in a code span of our own, where GitHub neither links nor pings.
+// heading, list or quote. A web address, and any word holding an @ or a #
+// (a mention, email or reference, or several run together), goes whole in a
+// code span of our own, where GitHub neither links nor pings.
+const WORD = String.raw`[^\s\`<>"&\\[\]]`;
+const WORD_END = String.raw`[^\s\`<>"&\\[\].,;:!?)']`;
 const PLAIN = new RegExp([
   /(?:https?:\/\/|www\.|mailto:|xmpp:)[^\s`<>"]*[^\s`<>".,;:!?)\]']/.source,
-  /(?<![\w.+-])[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/.source,
-  /(?<!\w)@[A-Za-z0-9][A-Za-z0-9-]*(?:\/[A-Za-z0-9._-]+)?/.source,
-  /(?<!\w)(?:[A-Za-z0-9][\w.-]*\/[\w.-]+)?#\d+\b/.source,
+  `(?<!${WORD})${WORD}*[@#]${WORD}*${WORD_END}`,
   /[\\`[\]&<>]/.source,
 ].join("|"), "gi");
 const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
