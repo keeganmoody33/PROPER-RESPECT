@@ -199,7 +199,8 @@ the schema for them now:
   says what to do and what proves it.
 
 **Autopilot.** `.github/workflows/remediation-autopilot.yml` runs
-`scripts/remediation-autopilot.mjs` from main every 30 minutes. It acts only
+`scripts/remediation-autopilot.mjs` from main every 30 minutes and whenever
+CI finishes, since GitHub may drop scheduled runs. It acts only
 on open task PRs into main, from a branch of this repository, opened by the
 owner, Codex or the autopilot itself. A task PR carries a queued task ID
 (R01 to R30) at the end of its title, in the template's "Remediation task"

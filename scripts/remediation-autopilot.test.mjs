@@ -936,3 +936,11 @@ test("the autopilot workflow can read the run behind a Claude verdict", () => {
   const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
   assert.match(workflow, /^\s+actions: read$/m);
 });
+
+test("the autopilot also runs when CI finishes, since GitHub drops scheduled runs", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
+  const verify = readFileSync(new URL("../.github/workflows/verify.yml", import.meta.url), "utf8").match(/^name: (.+)$/m)[1];
+  assert.match(workflow, new RegExp(`^  workflow_run:\\n    workflows: \\["${verify}"\\]\\n    types: \\[completed\\]$`, "m"));
+  // A workflow_run run starts from main, so the job's main-only guard still holds.
+  assert.match(workflow, /^\s+if: github\.ref == 'refs\/heads\/main'$/m);
+});
