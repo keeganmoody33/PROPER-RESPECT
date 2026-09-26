@@ -2,7 +2,8 @@ name: Remediation autopilot
 # Steers remediation task pull requests to merge and, when switched on, starts
 # the next task. Rules: docs/remediation/CODEX-BRIEF.md, Section 4, "Autopilot".
 # Kill switch: set the repository variable AUTOPILOT_ENABLED to anything but
-# "true"; the script then only logs what it would do.
+# "true"; the job skips and the script performs no I/O. AUTOPILOT_CLAUDE_REVIEW
+# set to "true" requests an advisory Claude review before Copilot.
 on:
   schedule:
     - cron: "11,41 * * * *"
@@ -18,17 +19,19 @@ concurrency:
   cancel-in-progress: false
 jobs:
   steer:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && vars.AUTOPILOT_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # The trigger token lives in this environment, limited to main, so
     # workflows on pull request branches can't read it.
     environment: autopilot
     steps:
-      - uses: actions/checkout@v4
+      # This job holds the owner's trigger token, so its actions are pinned
+      # to commits: a moved tag can't swap in other code.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
       - name: Steer remediation pull requests
@@ -37,4 +40,5 @@ jobs:
           CODEX_TRIGGER_TOKEN: ${{ secrets.CODEX_TRIGGER_TOKEN }}
           AUTOPILOT_ENABLED: ${{ vars.AUTOPILOT_ENABLED }}
           AUTOPILOT_START_TASKS: ${{ vars.AUTOPILOT_START_TASKS }}
+          AUTOPILOT_CLAUDE_REVIEW: ${{ vars.AUTOPILOT_CLAUDE_REVIEW }}
         run: node scripts/remediation-autopilot.mjs

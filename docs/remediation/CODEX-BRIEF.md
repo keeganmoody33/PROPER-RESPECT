@@ -148,8 +148,10 @@ the schema for them now:
      One named exception: R13 changes the Node version line in every
      workflow.
    - Never change the autopilot (`.github/workflows/remediation-autopilot.yml`,
-     `scripts/remediation-autopilot.mjs` and its test). The owner does. A PR
-     that touches them, R13's included, waits for the owner.
+     `scripts/remediation-autopilot.mjs` and its test) or the Claude review
+     that checks your work (`.github/workflows/claude-review.yml`,
+     `scripts/claude-review.mjs`, its test and `.github/claude-review/`). The
+     owner does. A PR that touches them, R13's included, waits for the owner.
    - Never remove a step from `verify.yml` or lower what it checks. Adding a
      spec, a step or a job, or raising a timeout, isn't weakening.
    - New workflows use the same `setup-node` setting as `verify.yml`.
@@ -197,7 +199,8 @@ the schema for them now:
   says what to do and what proves it.
 
 **Autopilot.** `.github/workflows/remediation-autopilot.yml` runs
-`scripts/remediation-autopilot.mjs` from main every 30 minutes. It acts only
+`scripts/remediation-autopilot.mjs` from main on the existing 30-minute
+schedule, only when `AUTOPILOT_ENABLED` is `true`. It acts only
 on open task PRs into main, from a branch of this repository, opened by the
 owner, Codex or the autopilot itself. A task PR carries a queued task ID
 (R01 to R30) at the end of its title, in the template's "Remediation task"
@@ -210,11 +213,21 @@ line, or in a `remediate/<ID>-` branch name.
   A branch behind main gets its own update request, outside those rounds.
   Only these findings count: top-level review comments and "changes
   requested" reviews from Codex, Copilot, Vercel, Cursor or Devin review, or
-  from the owner and collaborators, and a Copilot review of the commit whose
-  overview lists findings, including ones it found in unchanged code.
+  from the owner and collaborators, a Copilot review of the commit whose
+  overview lists findings, including ones it found in unchanged code, and a
+  Claude review whose verdict line says findings, or the comment Claude posts
+  instead when GitHub refuses that review.
 - **Review.** Once the checks pass and 30 minutes have passed since the push,
-  it requests a Copilot review of that commit with the owner's token, and
-  leaves a comment that marks the ask. It never asks Codex to review a task,
+  it asks an outside model to review that commit. With the repository
+  variable `AUTOPILOT_CLAUDE_REVIEW` set to `true`, it asks Claude first: it
+  comments `@claude review` with the owner's token, which starts
+  `.github/workflows/claude-review.yml`, and waits up to 40 minutes for
+  Claude's verdict on that commit. Explicit Claude writer evidence skips
+  that request. Claude's findings block; a clean or missing verdict proceeds
+  to Copilot. Claude's clean verdict is advisory because its marker and run
+  reference do not prove which PR, head, base and emitted review belong
+  together. With the switch off it requests Copilot directly
+  with the owner's token, and leaves a comment that marks the ask. It never asks Codex to review a task,
   because Codex wrote it (see "Review policy" below). A review is clean when
   Copilot's latest review of the commit is finished, says plainly that it
   found nothing (its overview's verdict, or the older "generated no comments"
@@ -234,8 +247,8 @@ line, or in a `remediate/<ID>-` branch name.
   - the required checks passed and no check or commit status failed
     (reviewer checks and Devin's status don't count as CI);
   - no counted findings remain on the latest commit, or only review bots'
-    other than Codex after the 3 rounds;
-  - Copilot, the outside reviewer, reviewed that commit cleanly;
+    other than Codex and Claude after the 3 rounds;
+  - Copilot reviewed that commit cleanly;
   - GitHub reports the PR as clean.
 
   Right before merging it reads the PR again and merges only if that second
@@ -246,8 +259,9 @@ line, or in a `remediate/<ID>-` branch name.
   doesn't rerun on main afterwards. Main requires branches to be up to date,
   so the tested tree is the merged one.
 - **Owner holds.** It never merges a PR that changes a workflow file, the
-  autopilot, `vercel.json`, `convex.json`, `AGENTS.md` or this brief, since
-  GitHub refuses workflow changes from the workflow token anyway. It also
+  autopilot, the Claude review script or its pinned CLI, `vercel.json`,
+  `convex.json`, `AGENTS.md` or this brief, since GitHub refuses workflow
+  changes from the workflow token anyway. It also
   holds R07, whose wording the owner approves, and PRs with Devin commits.
   It labels those `needs-owner-approval` or `needs-owner`, and so any PR
   where:
@@ -267,8 +281,8 @@ line, or in a `remediate/<ID>-` branch name.
   starts a task whenever none is in flight. It opens a run PR on a fresh
   branch and asks Codex, in a comment, for the next eligible task. It runs one
   at a time, at most 6 a day, and pauses 12 hours after a run gets no task.
-- **Switches.** Unless `AUTOPILOT_ENABLED` is `true`, it only logs what it
-  would do. Add `needs-owner` to a PR to pause the autopilot on it; remove it
+- **Switches.** Unless `AUTOPILOT_ENABLED` is `true`, the job skips and
+  the script exits before reading credentials or making requests. Add `needs-owner` to a PR to pause the autopilot on it; remove it
   to hand the PR back.
 
 **Review policy.** The model that wrote a PR never clears it. Owner decision,
@@ -278,15 +292,14 @@ line, or in a `remediate/<ID>-` branch name.
   review findings block a task PR like anyone's, but a clean Codex review
   doesn't clear it. The rule follows the writer: a PR that Claude writes
   needs a reviewer other than Claude.
-- **An outside model clears it.** Today that's Copilot, the only outside
-  reviewer the autopilot can ask. GitHub doesn't name the models behind
+- **An outside model clears it.** The current clearing reviewer is Copilot. GitHub doesn't name the models behind
   Copilot's reviews, only "a carefully tuned mix of models"
   ([GitHub](https://docs.github.com/en/copilot/responsible-use/code-review)),
   so Copilot may share a model family with Codex. It's the outside reviewer
   that's wired, not a perfect one.
-- **No clean outside review, no merge.** When Copilot's verdict isn't clean,
-  or Copilot keeps failing, the PR waits for the owner instead of merging on
-  its writer's word.
+- **No clean outside review, no merge.** When the outside reviewer's verdict
+  isn't clean, or Copilot keeps failing, the PR waits for the owner instead
+  of merging on its writer's word.
 - **A status or an automatic approval isn't a review.** On PR #74, Devin
   Review reports `success` with the description "Full review skipped: trial
   expired and no credits remaining". On PR #80, Cursor's Approval Agent
@@ -296,8 +309,8 @@ line, or in a `remediate/<ID>-` branch name.
 - **A new reviewer earns its place.** A reviewer clears task PRs only once
   the autopilot reads its clean verdict as strictly as Copilot's, with tests.
   One clearing reviewer is the goal, not a panel.
-- **Claude is the first outside reviewer for Codex's PRs.** Owner decision,
-  2026-09-26. `.github/workflows/claude-review.yml` runs Claude, read-only,
+- **Claude can supply an optional advisory first review.** Source safety
+  correction, 2026-09-26. Activation requires separate owner authority. `.github/workflows/claude-review.yml` runs Claude, read-only,
   when the owner comments `@claude review` on a PR, or from Actions with the
   PR number. It refuses a PR that Claude wrote or helped write: a `claude/`
   branch; a PR or commit by the `claude` or `claude[bot]` account or from
@@ -308,10 +321,17 @@ line, or in a `remediate/<ID>-` branch name.
   review's last line is its verdict: clean only when Claude lists no P0 or
   P1 finding, and no verdict when the run fails, its answer is malformed, or
   it quotes what looks like a credential (then none of it is posted).
-- **Claude's verdict is advisory for now.** The autopilot doesn't read it,
-  so it clears no task PR. A PR's own text can steer any model that reads
-  it, Copilot included. Before the autopilot counts Claude's verdict, the
-  owner decides whether one AI reviewer's clean verdict is enough to merge.
+- **Claude's clean verdict never authorizes an autopilot merge.**
+  Claude's findings go to Codex like any reviewer's. If GitHub refuses the
+  review and Claude posts an issue comment, that comment's findings also
+  block. A later clean verdict never disposes an earlier finding. Native
+  review dismissal or removal of the fallback comment removes that record
+  from the current API view; this is not a durable disposition ledger.
+  The optional `AUTOPILOT_CLAUDE_REVIEW` switch controls advisory requests
+  only. Automatic Claude clearance remains unavailable until trusted
+  PR/head/base/review provenance and independent validation are established.
+  Model instructions in PR-controlled text are not a security boundary.
+  Copilot's existing clearance behavior is unchanged.
 
 Why:
 
@@ -1376,9 +1396,9 @@ it opens a one-line `docs:` PR for it.
    react to its comment within a few minutes. If Codex never reacts, turn
    `AUTOPILOT_START_TASKS` off and start each task yourself (Section 11).
    The autopilot still reviews, fixes and merges.
-7. Keep Copilot code review within budget for the trip. Copilot is the only
-   reviewer that can clear a task PR: the autopilot asks it to review each
-   task commit, billed to you. With the quota spent, each PR goes to you
+7. Keep Copilot code review within budget for the trip. Unless Claude
+   reviews are on, Copilot is the only reviewer that can clear a task PR:
+   the autopilot asks it to review each task commit, billed to you. With the quota spent, each PR goes to you
    after 6 retries, about 6 hours. Copilot's reviews of #60 to #76 failed on
    quota; its review of #77 worked.
 
@@ -1393,6 +1413,11 @@ it opens a one-line `docs:` PR for it.
 3. Test it: comment `@claude review` on an open Codex PR. A review titled
    "Claude review of" its commit should appear within a few minutes. If the
    secret is missing, the workflow says so on the PR instead.
+4. To make Claude the first outside reviewer of Codex's tasks, add the
+   repository variable `AUTOPILOT_CLAUDE_REVIEW` = `true` (Section 4,
+   "Review policy"). This requires separate activation approval. It requests
+   an advisory Claude review before Copilot; only Copilot can clear a task.
+   Claude's findings count with the switch on or off.
 
 Expect some PRs to wait for you: every one that touches a workflow or
 `vercel.json` (R04, R10, R11, R13, R20, R23, R28, R29, R30), and R07. The

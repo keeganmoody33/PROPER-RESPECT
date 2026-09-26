@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
+import { post as postClaudeReview } from "./claude-review.mjs";
 import {
   CODEX_BOT, cleanReviewer, codexAsk, codexReviewStatus, createGitHub, decide, findingsOnHead, latestChecks, main, mergeMessage,
   mergeTitle, parseMarkers, protectedChanges, recentClosedPulls, shouldStartRun, startPrompt, taskIdOf, taskIdsOf,
@@ -74,6 +76,10 @@ test("owner-only paths include every workflow file", () => {
   assert.deepEqual(protectedChanges([{ filename: "x.md", previous_filename: "AGENTS.md" }]), ["x.md"]);
   assert.deepEqual(protectedChanges([{ filename: ".github/workflows/verify.yml", deletions: 0 }]), [".github/workflows/verify.yml"]);
   assert.deepEqual(protectedChanges([{ filename: "src/app.ts" }]), []);
+  // Claude reviews Codex's tasks, so its script and pinned CLI are the owner's too.
+  for (const filename of ["scripts/claude-review.mjs", "scripts/claude-review.test.mjs", ".github/claude-review/package-lock.json"]) {
+    assert.deepEqual(protectedChanges([{ filename }]), [filename]);
+  }
 });
 
 test("trusted top-level review findings survive new heads until disposition", () => {
@@ -439,13 +445,20 @@ test("Copilot's changes-recommended verdict counts with or without an emoji", ()
 // A fake GitHub API for main(): one clean task PR, with review comments that
 // can change between the autopilot's two looks. With copilotClean, Copilot has
 // reviewed the head commit and found nothing.
-function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = false, copilotClean = false } = {}) {
+const CLAUDE_RUN = { path: ".github/workflows/claude-review.yml", head_branch: "main", event: "issue_comment", repository: { full_name: "o/r" } };
+
+function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = false, copilotClean = false, claudeClean = false, claudeRun = CLAUDE_RUN } = {}) {
   const sha = "c".repeat(40);
   const ago = minutes => new Date(Date.now() - minutes * 60_000).toISOString();
   const reviews = copilotClean ? [{
     user: { login: "copilot-pull-request-reviewer[bot]", type: "Bot" }, author_association: "NONE", state: "COMMENTED",
     commit_id: sha, body: "Copilot reviewed 1 of 1 changed files and generated no comments.", html_url: "https://example/copilot", submitted_at: ago(15),
   }] : [];
+  if (claudeClean) reviews.push({
+    user: { login: "github-actions[bot]", type: "Bot" }, author_association: "NONE", state: "COMMENTED", commit_id: sha,
+    body: `### Claude review of \`${sha.slice(0, 7)}\`: clean\n\n<!-- claude-review verdict=clean sha=${sha} run=77 -->`,
+    html_url: "https://example/claude", submitted_at: ago(12),
+  });
   const pull = {
     number: 81, title: "fix: reserve route-shadowed handles (R01)", body: "", draft: false, created_at: ago(120),
     head: { ref: "remediate/R01-handles", sha, repo: { full_name: "o/r" } }, base: { ref: "main", repo: { full_name: "o/r" } },
@@ -468,7 +481,7 @@ function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = fal
       { id: 2, user: { login: CODEX_BOT }, created_at: ago(18), updated_at: ago(10),
         body: `<!-- codex-pull-request-review-summary -->\n| 📝 **Code Review** | ✅ **Completed** | \`${sha.slice(0, 7)}\` | Manual request |` },
     ],
-    "GET /repos/o/r/pulls/81/commits": () => [{ commit: { message: "fix: reserve route-shadowed handles (R01)" }, author: { login: "owner" }, committer: { login: "owner" } }],
+    "GET /repos/o/r/pulls/81/commits": () => [{ sha, commit: { message: "fix: reserve route-shadowed handles (R01)" }, author: { login: "owner" }, committer: { login: "owner" } }],
     [`GET /repos/o/r/commits/${sha}`]: () => ({ commit: { committer: { date: ago(50) } } }),
     "PUT /repos/o/r/pulls/81/merge": () => (mergeFails ? { merged: false, message: "Base branch policy prohibits the merge" } : { merged: true, sha: "d".repeat(40) }),
     "POST /repos/o/r/labels": () => ({ name: "needs-owner" }),
@@ -477,6 +490,7 @@ function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = fal
     "PATCH /repos/o/r/issues/comments/9": () => ({ id: 9 }),
     "POST /repos/o/r/pulls/81/requested_reviewers": () => pull,
     "DELETE /repos/o/r/git/refs/heads/remediate/R01-handles": () => null,
+    "GET /repos/o/r/actions/runs/77": () => claudeRun,
   };
   const fetch = async (url, { method = "GET", body, headers = {} } = {}) => {
     const { pathname } = new URL(url);
@@ -795,4 +809,241 @@ test("a rejected retry ignores only reviewer checks known stale before a termina
     assert.equal(decide({ ...f, checks: [...green, { ...stale, startedAt }] }).type, "wait");
   }
   assert.equal(decide({ ...f, checks: [...f.checks, check("build", "in_progress", null)] }).type, "wait");
+});
+
+
+// Claude, the first outside reviewer once the owner switches it on with
+// AUTOPILOT_CLAUDE_REVIEW. Its reviews come from the Actions bot and end in a
+// verdict line (scripts/claude-review.mjs).
+const claudeBody = (verdict, sha = HEAD) => `### Claude review of \`${sha.slice(0, 7)}\`: ${verdict}\n\n<!-- claude-review verdict=${verdict} sha=${sha} run=55 -->`;
+const claudeReviewOf = (verdict, extra = {}) => ({
+  login: "github-actions[bot]", type: "Bot", association: "NONE", state: "COMMENTED", commitId: HEAD,
+  body: claudeBody(verdict, extra.commitId ?? HEAD), url: `https://example/claude-${verdict}`, submittedAt: minutesAgo(5), ...extra,
+});
+const claudeVerdictOf = (verdict, extra = {}) => ({
+  verdict, sha: HEAD, run: 55, commitId: HEAD, url: `https://example/claude-${verdict}`, submittedAt: minutesAgo(5), trusted: true, ...extra,
+});
+const claudeAsk = minutes => ({ kind: "claude", sha: HEAD, key: null, createdAt: minutesAgo(minutes), id: 8 });
+const withClaude = (overrides = {}) => facts({ claudeReview: true, markers: [], ...overrides });
+
+test("with Claude reviews on, the autopilot asks Claude first and asks Copilot after a clean verdict", () => {
+  const ask = decide(withClaude());
+  assert.deepEqual([ask.type, ask.reason], ["request-claude", "asking Claude, the first outside reviewer"]);
+  assert.deepEqual([decide(withClaude({ markers: [claudeAsk(10)] })).type, decide(withClaude({ markers: [claudeAsk(10)] })).reason], ["wait", "waiting for Claude's review"]);
+  const clean = withClaude({ markers: [claudeAsk(10)], claudeReviews: [claudeVerdictOf("clean")], reviews: [claudeReviewOf("clean")] });
+  assert.equal(cleanReviewer(clean), null);
+  assert.equal(decide(clean).type, "request-review");
+  // Switched off, the same verdict clears nothing, and Copilot is asked as before.
+  assert.equal(cleanReviewer({ ...clean, claudeReview: false }), null);
+  assert.equal(decide({ ...clean, claudeReview: false }).type, "request-review");
+  // The writer never clears its own PR: on one Claude wrote, only another model's review can.
+  assert.equal(cleanReviewer({ ...clean, codexComments: [] }, "Claude"), null);
+});
+
+test("Copilot reviews when Claude has no verdict in time, answers none, or can't be traced to its workflow", () => {
+  const late = decide(withClaude({ markers: [claudeAsk(41)] }));
+  assert.deepEqual([late.type, late.copilot], ["request-review", true]);
+  const none = withClaude({ markers: [claudeAsk(10)], claudeReviews: [claudeVerdictOf("none")], reviews: [claudeReviewOf("none")] });
+  assert.equal(decide(none).type, "request-review");
+  const untraced = withClaude({ markers: [claudeAsk(10)], claudeReviews: [claudeVerdictOf("clean", { trusted: false })], reviews: [claudeReviewOf("clean")] });
+  assert.equal(cleanReviewer(untraced), null);
+  assert.equal(decide(untraced).type, "request-review");
+  // Once Copilot is asked about a commit, the autopilot doesn't go back to Claude.
+  assert.equal(decide(withClaude({ markers: [claudeAsk(41), reviewAsk(5)] })).type, "wait");
+  // A verdict on an older commit doesn't count for the head.
+  const old = "b".repeat(40);
+  const stale = withClaude({ claudeReviews: [claudeVerdictOf("clean", { sha: old, commitId: old })], reviews: [claudeReviewOf("clean", { commitId: old })] });
+  assert.equal(cleanReviewer(stale), null);
+  assert.equal(decide(stale).type, "request-claude");
+});
+
+test("Claude's findings go to Codex, and an earlier finding outlives a later clean verdict", () => {
+  const findings = withClaude({ markers: [claudeAsk(10)], claudeReviews: [claudeVerdictOf("findings")], reviews: [claudeReviewOf("findings")] });
+  const fix = decide(findings);
+  assert.deepEqual([fix.type, fix.urls], ["request-fix", ["https://example/claude-findings"]]);
+  // Findings count with Claude reviews off too: they never wait on a switch.
+  assert.equal(findingsOnHead([], [claudeReviewOf("findings")], HEAD).total, 1);
+  // A fresh clean verdict isn't a disposition of an earlier finding.
+  const old = "b".repeat(40);
+  const later = withClaude({
+    claudeReviews: [claudeVerdictOf("findings", { sha: old, commitId: old }), claudeVerdictOf("clean")],
+    reviews: [claudeReviewOf("findings", { commitId: old }), claudeReviewOf("clean")],
+  });
+  assert.equal(cleanReviewer(later), null);
+  assert.equal(findingsOnHead([], later.reviews, HEAD).blocking, 1);
+  assert.notEqual(decide(later).type, "merge");
+  // A dismissed review counts for nothing, and another bot's look-alike line isn't Claude's.
+  assert.equal(findingsOnHead([], [claudeReviewOf("findings", { state: "DISMISSED" })], HEAD).total, 0);
+  assert.equal(findingsOnHead([], [claudeReviewOf("findings", { login: "someone-else[bot]" })], HEAD).total, 0);
+});
+
+test("a Claude verdict posted as a comment still holds its findings, and never clears", async () => {
+  // When GitHub refuses a review of a commit the PR no longer has, as after a
+  // force-push, scripts/claude-review.mjs posts the review as a comment.
+  const old = "b".repeat(40);
+  const fallback = claudeVerdictOf("findings", { sha: old, commitId: null, source: "comment", url: "https://example/claude-comment", trusted: false });
+  const held = withClaude({ claudeReviews: [fallback, claudeVerdictOf("clean")], reviews: [claudeReviewOf("clean")] });
+  assert.equal(cleanReviewer(held), null);
+  assert.deepEqual(findingsOnHead([], held.reviews, HEAD, held.claudeReviews), { total: 1, blocking: 1, urls: ["https://example/claude-comment"] });
+  const fix = decide(held);
+  assert.deepEqual([fix.type, fix.urls], ["request-fix", ["https://example/claude-comment"]]);
+  // A clean verdict in a comment names no commit GitHub checked, so it clears nothing.
+  const cleanComment = withClaude({ markers: [claudeAsk(10)], claudeReviews: [claudeVerdictOf("clean", { commitId: null, source: "comment" })] });
+  assert.equal(cleanReviewer(cleanComment), null);
+  // End to end: main reads the Actions bot's comments as well as its reviews.
+  const at = new Date(Date.now() - 30 * 60_000).toISOString();
+  const comment = { id: 3, user: { login: "github-actions[bot]", type: "Bot" }, created_at: at, updated_at: at, html_url: "https://example/claude-comment",
+    body: `### Claude review of \`${old.slice(0, 7)}\`: 1 finding\n\n<!-- claude-review verdict=findings sha=${old} run=76 -->` };
+  const fake = fakeGitHub({ claudeClean: true, issueComments: [comment] });
+  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
+  assert.match(fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").at(-1).body.body, /^- https:\/\/example\/claude-comment$/m);
+  // Another account's look-alike comment isn't Claude's.
+  const lookalike = fakeGitHub({ claudeClean: true, issueComments: [{ ...comment, user: { login: "someone-else[bot]", type: "Bot" } }] });
+  await runMain(lookalike, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+  assert.equal(lookalike.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
+  assert.equal(lookalike.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 1);
+});
+
+test("main asks Claude with the owner's token, in a comment the review workflow accepts", async () => {
+  const fake = fakeGitHub({ issueComments: [] });
+  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+  const posts = fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments");
+  assert.equal(posts.length, 1);
+  // .github/workflows/claude-review.yml starts only on an owner's comment that begins with "@claude review".
+  assert.match(posts[0].body.body, new RegExp(`^@claude review\\n\\n<!-- remediation-autopilot:claude sha=${fake.sha} -->$`));
+  assert.equal(posts[0].token, "Bearer t2");
+  assert.equal(fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 0);
+  const noToken = fakeGitHub({ issueComments: [] });
+  await runMain(noToken, { AUTOPILOT_CLAUDE_REVIEW: "true", CODEX_TRIGGER_TOKEN: undefined });
+  assert.deepEqual(noToken.calls.find(call => call.key === "POST /repos/o/r/issues/81/labels")?.body, { labels: ["needs-owner"] });
+  const note = noToken.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").at(-1).body.body;
+  assert.match(note, /needs Claude's review/);
+  assert.doesNotMatch(note, /^@claude/);
+});
+
+test("main never merges on Claude's clean verdict regardless of the referenced run", async () => {
+  const fake = fakeGitHub({ claudeClean: true, issueComments: [] });
+  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+  const merges = fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge");
+  assert.equal(merges.length, 0);
+  assert.equal(fake.calls.filter(call => call.key.includes("/actions/runs/")).length, 0);
+  // Any workflow on main posts as the same bot, so the run has to be this one.
+  for (const change of [{ path: ".github/workflows/other.yml" }, { head_branch: "remediate/R01-handles" }, { event: "pull_request" }, { repository: { full_name: "x/y" } }]) {
+    const forged = fakeGitHub({ claudeClean: true, issueComments: [], claudeRun: { ...CLAUDE_RUN, ...change } });
+    await runMain(forged, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+    assert.equal(forged.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0, JSON.stringify(change));
+  }
+  // Switched off, the verdict clears nothing and its run isn't even looked up.
+  const off = fakeGitHub({ claudeClean: true, issueComments: [] });
+  await runMain(off);
+  assert.equal(off.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
+  assert.equal(off.calls.filter(call => call.key === "GET /repos/o/r/actions/runs/77").length, 0);
+});
+
+test("the autopilot workflow passes the Claude switch and pins its actions to commits", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
+  assert.match(workflow, /^\s+AUTOPILOT_CLAUDE_REVIEW: \$\{\{ vars\.AUTOPILOT_CLAUDE_REVIEW \}\}$/m);
+  // It holds the owner's trigger token, so a moved tag can't swap in other code.
+  const uses = [...workflow.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)];
+  assert.ok(uses.length >= 2, String(uses.length));
+  for (const [, ref, comment] of uses) assert.match(`${ref}${comment}`, /@[0-9a-f]{40} # v\d+(\.\d+)*$/, ref);
+});
+
+
+test("Claude's findings on the latest commit hold the merge even after the fix rounds", () => {
+  // Other review bots' findings turn advisory after 3 rounds; Claude reports
+  // only what should stop a merge, so its findings never do.
+  const findings = withClaude({ reviews: [claudeReviewOf("findings"), copilotReview()], markers: [...fixMarkers(3), reviewAsk()] });
+  assert.equal(findingsOnHead([], findings.reviews, HEAD).blocking, 1);
+  const held = decide(findings);
+  assert.deepEqual([held.type, held.label], ["label-owner", "needs-owner"]);
+  assert.equal(decide({ ...findings, claudeReview: false }).type, "label-owner");
+});
+
+test("the advisory integration needs no workflow run lookup permission", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
+  assert.doesNotMatch(workflow, /^\s+actions: read$/m);
+});
+
+test("disabled entry point does not read credentials or perform I/O", async () => {
+  for (const value of [undefined, "", "false", "TRUE"]) {
+    const env = { AUTOPILOT_ENABLED: value };
+    for (const key of ["GH_TOKEN", "CODEX_TRIGGER_TOKEN", "GITHUB_REPOSITORY"]) {
+      Object.defineProperty(env, key, { get() { throw new Error(`disabled read of ${key}`); } });
+    }
+    await main(env, () => {});
+    const fake = fakeGitHub({ copilotClean: true });
+    await runMain(fake, { AUTOPILOT_ENABLED: value, AUTOPILOT_CLAUDE_REVIEW: "true", AUTOPILOT_START_TASKS: "true" });
+    assert.deepEqual(fake.calls, []);
+  }
+});
+
+test("a Claude run reference cannot authorize merge of another PR or base", async () => {
+  const fake = fakeGitHub({ claudeClean: true, issueComments: [], claudeRun: {
+    ...CLAUDE_RUN, pull_requests: [{ number: 999, head: { sha: "e".repeat(40) } }], head_sha: "f".repeat(40),
+  } });
+  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
+  assert.equal(fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 1);
+});
+
+test("Claude clean alone stays advisory even when marked trusted", () => {
+  const clean = withClaude({ claudeReviews: [claudeVerdictOf("clean")], reviews: [claudeReviewOf("clean")] });
+  assert.equal(cleanReviewer(clean), null);
+  assert.notEqual(decide(clean).type, "merge");
+  assert.equal(cleanReviewer({ ...clean, reviews: [...clean.reviews, copilotReview()] }), "Copilot");
+});
+
+test("the controller does not request Claude on explicitly Claude-written work", async () => {
+  for (const evidence of ["description", "branch", "commit"]) {
+    const fake = fakeGitHub({ issueComments: [] });
+    const fetch = fake.fetch;
+    fake.fetch = async (url, options) => {
+      const response = await fetch(url, options);
+      const data = JSON.parse(await response.text());
+      const path = new URL(url).pathname;
+      if (path === "/repos/o/r/pulls/81") {
+        if (evidence === "description") data.body = "Generated by [Claude Code](https://claude.ai/code)";
+        if (evidence === "branch") data.head.ref = "claude/fix-handles";
+      }
+      if (path === "/repos/o/r/pulls/81/commits" && evidence === "commit") {
+        data[0].sha = fake.sha;
+        data[0].commit.message += "\n\nCo-authored-by: Claude <noreply@anthropic.com>";
+      }
+      return { ...response, text: async () => JSON.stringify(data) };
+    };
+    await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
+    assert.equal(fake.calls.filter(call => call.body?.body?.startsWith("@claude review")).length, 0, evidence);
+    assert.equal(fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 1, evidence);
+  }
+});
+
+test("source landing adds no CI trigger and gates the existing job before credentials", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
+  assert.doesNotMatch(workflow, /^  workflow_run:/m);
+  assert.match(workflow, /if: github\.ref == 'refs\/heads\/main' && vars\.AUTOPILOT_ENABLED == 'true'/);
+});
+
+
+test("post422 fallback findings survive a new head and clean Copilot review", async () => {
+  const comments = [];
+  const old = "b".repeat(40);
+  const result = await postClaudeReview({
+    github: { async request(path, options) {
+      if (path.endsWith("/reviews")) throw Object.assign(new Error("head moved"), { status: 422 });
+      assert.equal(path, "/repos/{repo}/issues/81/comments");
+      comments.push({ id: 23, user: { login: "github-actions[bot]", type: "Bot" }, body: options.body.body,
+        created_at: minutesAgo(50), html_url: "https://example/fallback-23" });
+    } }, repo: "o/r", number: 81, sha: old, runId: 77, conclusion: "success",
+    raw: JSON.stringify({ verdict: "findings", summary: "A blocker.", notes: [],
+      findings: [{ severity: "P1", file: "src/domain/onboarding.ts", line: 1, problem: "A real blocker.", why: "Fails.", fix: "Fix it." }] }),
+  });
+  assert.deepEqual(result, { verdict: "findings", where: "comment" });
+  for (const flag of [undefined, "true"]) {
+    const fake = fakeGitHub({ copilotClean: true, claudeClean: true, issueComments: comments });
+    await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: flag });
+    assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
+    assert.ok(fake.calls.some(call => call.body?.body?.includes("https://example/fallback-23")));
+  }
 });
