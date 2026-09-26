@@ -293,10 +293,25 @@ line, or in a `remediate/<ID>-` branch name.
   approved because "no approval policy required human review". Reviewer
   checks, statuses and routing bots' approvals never count as CI or as a
   clean review.
-- **A new reviewer earns its place.** Devin with credits, or Claude through
-  the Claude Code GitHub Action, can become an outside reviewer for Codex's
-  PRs once the autopilot reads its clean verdict as strictly as Copilot's,
-  with tests. One clearing reviewer is the goal, not a panel.
+- **A new reviewer earns its place.** A reviewer clears task PRs only once
+  the autopilot reads its clean verdict as strictly as Copilot's, with tests.
+  One clearing reviewer is the goal, not a panel.
+- **Claude is the first outside reviewer for Codex's PRs.** Owner decision,
+  2026-09-26. `.github/workflows/claude-review.yml` runs Claude, read-only,
+  when the owner comments `@claude review` on a PR, or from Actions with the
+  PR number. It refuses a PR that Claude wrote or helped write: a `claude/`
+  branch; a PR or commit by the `claude` or `claude[bot]` account or from
+  Claude Code's address; a `Co-Authored-By: Claude` trailer; or Claude
+  Code's footer or session link in a commit or the description. Its settings
+  fence Claude's reads to main and the PR's files, and it can't edit,
+  search file contents, run commands or fetch pages. It posts one review of the commit, and the
+  review's last line is its verdict: clean only when Claude lists no P0 or
+  P1 finding, and no verdict when the run fails, its answer is malformed, or
+  it quotes what looks like a credential (then none of it is posted).
+- **Claude's verdict is advisory for now.** The autopilot doesn't read it,
+  so it clears no task PR. A PR's own text can steer any model that reads
+  it, Copilot included. Before the autopilot counts Claude's verdict, the
+  owner decides whether one AI reviewer's clean verdict is enough to merge.
 
 Why:
 
@@ -1366,6 +1381,18 @@ it opens a one-line `docs:` PR for it.
    task commit, billed to you. With the quota spent, each PR goes to you
    after 6 retries, about 6 hours. Copilot's reviews of #60 to #76 failed on
    quota; its review of #77 worked.
+
+**Claude review setup, once:**
+
+1. On your computer, run `claude setup-token` and copy the token it prints.
+   Pro and Max plans can make one. Reviews then draw on that plan's usage.
+2. In repository settings, Environments: create `reviewers`, limit its
+   deployment branches to `main`, and add the token there as the secret
+   `CLAUDE_CODE_OAUTH_TOKEN`. A repository secret would be readable by
+   workflows on any branch.
+3. Test it: comment `@claude review` on an open Codex PR. A review titled
+   "Claude review of" its commit should appear within a few minutes. If the
+   secret is missing, the workflow says so on the PR instead.
 
 Expect some PRs to wait for you: every one that touches a workflow or
 `vercel.json` (R04, R10, R11, R13, R20, R23, R28, R29, R30), and R07. The

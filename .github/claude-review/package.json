@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "description": "The Claude Code and Bun builds that .github/workflows/claude-review.yml runs. npm ci checks each one against package-lock.json.",
+  "dependencies": {
+    "@anthropic-ai/claude-code-linux-x64": "2.1.283",
+    "@oven/bun-linux-x64": "1.3.14"
+  }
+}
