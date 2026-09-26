@@ -22,3 +22,9 @@ test("relationship context is optional; dates and credential-free HTTPS work lin
   expect(relationshipEditSchema.safeParse({ ...edit, startedAt: "2026-02-30" }).success).toBe(false);
   expect(relationshipEditSchema.safeParse({ ...edit, note: "a".repeat(4001) }).success).toBe(false);
 });
+
+test("a work link that isn't a URL gets the rule's message, not a TypeError", () => {
+  const result = relationshipEditSchema.safeParse({ status: "TESTING", goTo: false, headline: "", note: "", supportingUrl: "not a url" });
+  expect(result.success).toBe(false);
+  expect(result.error?.issues.map(issue => issue.message)).toContain("Use an HTTPS work sample or workflow link without credentials.");
+});
