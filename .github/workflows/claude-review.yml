@@ -102,6 +102,12 @@ jobs:
         id: claude
         if: steps.prepare.outputs.skip == ''
         uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790 # v1.0.235
+        # The action prints every message of the run when ACTIONS_STEP_DEBUG
+        # is "true" in its environment, whatever show_full_output says. Debug
+        # logging doesn't set it there (the runner exports RUNNER_DEBUG), but
+        # a job env or $GITHUB_ENV entry could, and a step's env wins over both.
+        env:
+          ACTIONS_STEP_DEBUG: 'false'
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}

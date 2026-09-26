@@ -416,6 +416,10 @@ test("the workflow gives Claude reading tools only, and the job can comment", ()
   // own and doesn't print the run's messages to the public log.
   assert.match(workflow, /^\s+display_report: 'false'$/m);
   assert.match(workflow, /^\s+show_full_output: 'false'$/m);
+  // The action also prints them when ACTIONS_STEP_DEBUG is "true" in its
+  // environment, so the step pins it: a step's env wins over the job's.
+  const claudeStep = workflow.match(/^ {6}- name: Claude reviews\n[\s\S]*?(?=^ {6}- name: )/m)?.[0] ?? "";
+  assert.match(claudeStep, /^ {8}env:\n {10}ACTIONS_STEP_DEBUG: 'false'$/m);
   assert.match(workflow, /^\s+pull-requests: write$/m);
   assert.match(workflow, /^\s+issues: write$/m);
   // Both ways in are the owner's: a comment by the owner, or the owner's
