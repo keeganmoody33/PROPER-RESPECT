@@ -147,6 +147,15 @@ test("a clean verdict needs the word clean and no findings; anything else clears
   const underHead = readVerdict(JSON.stringify({ verdict: "findings", summary: "", findings: [{ ...finding, file: "/home/runner/work/_temp/claude-review/pr-head/src/domain/onboarding.ts" }], notes: [] }));
   assert.deepEqual([underHead.verdict, underHead.findings[0].file], ["findings", "src/domain/onboarding.ts"]);
   assert.equal(readVerdict(JSON.stringify({ verdict: "findings", summary: "", findings: [{ ...finding, file: "./src/a.ts" }], notes: [] })).findings[0].file, "src/a.ts");
+  // Every field must have the schema's type; nothing is filled in or dropped.
+  const base = { verdict: "clean", summary: "", findings: [], notes: [] };
+  for (const bad of [{ ...base, notes: "invalid" }, { ...base, notes: [1] }, { ...base, summary: 5 }, { ...base, extra: true },
+    { verdict: "clean", summary: "", findings: [] }, { verdict: "clean", findings: [], notes: [] }]) {
+    assert.equal(readVerdict(JSON.stringify(bad)).verdict, "none", JSON.stringify(bad));
+  }
+  for (const bad of [{ ...finding, why: undefined }, { ...finding, fix: 1 }, { ...finding, line: null }, { ...finding, extra: "x" }]) {
+    assert.equal(readVerdict(JSON.stringify({ verdict: "findings", summary: "", findings: [bad], notes: [] })).verdict, "none", JSON.stringify(bad));
+  }
   // A run that didn't finish clears nothing, even with output.
   assert.equal(readVerdict(clean, "failure").verdict, "none");
   assert.equal(readVerdict(clean, "").verdict, "none");
@@ -212,6 +221,15 @@ test("an answer that quotes a credential posts none of Claude's words and clears
     assert.doesNotMatch(body, new RegExp(leak.slice(0, 12)));
     assert.match(body, /quoted what looks like a credential, so none of it was posted\. This review clears nothing\./);
   }
+  // A JSON \u escape hides a token in the raw text, but not once decoded.
+  const escaped = `{"verdict":"clean","summary":"\\u0067hs_${"A".repeat(36)}","findings":[],"notes":[]}`;
+  assert.equal(JSON.parse(escaped).summary, `ghs_${"A".repeat(36)}`);
+  assert.equal(quotesCredential(escaped), true);
+  const hidden = fakeGitHub();
+  assert.equal((await post({ github: hidden, repo: REPO, number: 88, sha: HEAD, runId: RUN, raw: escaped })).verdict, "none");
+  assert.doesNotMatch(hidden.calls.at(-1).body.body, /ghs_A/);
+  const escapedSecret = `{"summary":"plain-secret-\\u0076alue-123"}`;
+  assert.equal(quotesCredential(escapedSecret, ["plain-secret-value-123"]), true);
   // A secret the job holds counts by its exact value, whatever its shape.
   const secret = "plain-secret-value-123";
   assert.equal(quotesCredential(`{"summary":"${secret}"}`, [secret]), true);
@@ -241,6 +259,10 @@ test("the workflow gives Claude reading tools only, and the job can comment", ()
   assert.match(workflow, /"blockReadsOutsideWorkingDirectories":true/);
   assert.match(workflow, /^\s+pull-requests: write$/m);
   assert.match(workflow, /^\s+issues: write$/m);
+  // Both ways in are the owner's: a comment by the owner, or the owner's
+  // manual run. Each review spends the owner's Claude plan.
+  assert.match(workflow, /github\.event_name == 'workflow_dispatch' && github\.actor == github\.repository_owner/);
+  assert.match(workflow, /github\.event\.comment\.user\.login == github\.repository_owner/);
 });
 
 test("main tells the owner why it skipped, and hands the commit to the next steps", async () => {

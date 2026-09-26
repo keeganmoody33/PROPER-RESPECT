@@ -178,10 +178,16 @@ function repoPath(value) {
   return (cut >= 0 ? file.slice(cut + "pr-head/".length) : file).replace(/^\.\//, "");
 }
 
+// The fields of the workflow's --json-schema, and no others.
+const REVIEW_KEYS = ["verdict", "summary", "findings", "notes"];
+const FINDING_KEYS = ["severity", "file", "line", "problem", "why", "fix"];
+const onlyKeys = (value, keys) => Object.keys(value).every(key => keys.includes(key));
+
 function validFinding(finding) {
-  if (!finding || typeof finding !== "object" || Array.isArray(finding)) return false;
+  if (!finding || typeof finding !== "object" || Array.isArray(finding) || !onlyKeys(finding, FINDING_KEYS)) return false;
+  if (![finding.file, finding.problem, finding.why, finding.fix].every(value => typeof value === "string")) return false;
   const file = repoPath(finding.file);
-  const lineOk = finding.line === undefined || finding.line === null || (Number.isInteger(finding.line) && finding.line > 0);
+  const lineOk = finding.line === undefined || (Number.isInteger(finding.line) && finding.line > 0);
   return SEVERITIES.includes(finding.severity) && Boolean(file) && file.length <= LIMITS.file &&
     !file.startsWith("/") && !file.split("/").includes("..") && Boolean(text(finding.problem)) && lineOk;
 }
@@ -211,14 +217,19 @@ export function readVerdict(raw, conclusion = "success") {
     return none("Claude's verdict wasn't valid JSON");
   }
   if (!output || typeof output !== "object" || Array.isArray(output)) return none("Claude's verdict wasn't an object");
-  if (!Array.isArray(output.findings) || !output.findings.every(validFinding)) return none("Claude's findings were malformed");
+  // Every field the schema asks for, with its type, and nothing more. A
+  // malformed answer is no verdict; nothing gets filled in or dropped.
+  const shaped = onlyKeys(output, REVIEW_KEYS) && ["clean", "findings"].includes(output.verdict) &&
+    typeof output.summary === "string" && Array.isArray(output.findings) &&
+    Array.isArray(output.notes) && output.notes.every(note => typeof note === "string");
+  if (!shaped) return none("Claude's answer didn't match the review format");
+  if (!output.findings.every(validFinding)) return none("Claude's findings were malformed");
   const findings = output.findings.slice(0, LIMITS.findings).map(cleanFinding);
   const summary = clip(text(output.summary), LIMITS.summary);
-  const notes = (Array.isArray(output.notes) ? output.notes : [])
-    .map(text).filter(Boolean).slice(0, LIMITS.notes).map(note => clip(note, LIMITS.note));
+  const notes = output.notes.map(text).filter(Boolean).slice(0, LIMITS.notes).map(note => clip(note, LIMITS.note));
   if (findings.length) return { verdict: "findings", summary, findings, notes };
   if (output.verdict === "clean") return { verdict: "clean", summary, findings, notes };
-  return none("Claude's verdict was neither \"clean\" nor a list of findings");
+  return none("Claude answered \"findings\" without listing any");
 }
 
 // Model text goes into the review as plain text: no hidden comments that could
@@ -286,11 +297,18 @@ export function verdictMarker(body) {
 
 // Whether Claude's answer quotes a credential, by its shape or by the exact
 // value of a secret this job holds. Claude reads files a PR's author chose, so
-// a planted instruction could steer it toward one.
+// a planted instruction could steer it toward one. The answer is checked as
+// sent and as decoded, since a JSON \u escape hides a token from the first.
+// This is a backstop: the read fence keeps Claude away from the secrets.
 export function quotesCredential(raw, secrets = []) {
-  const value = String(raw ?? "");
-  return CREDENTIAL_PATTERNS.some(pattern => pattern.test(value)) ||
-    secrets.some(secret => typeof secret === "string" && secret.length >= 8 && value.includes(secret));
+  const forms = [String(raw ?? "")];
+  try {
+    forms.push(JSON.stringify(JSON.parse(raw)));
+  } catch {
+    // Not JSON: no decoded form, and readVerdict posts none of it anyway.
+  }
+  return forms.some(value => CREDENTIAL_PATTERNS.some(pattern => pattern.test(value)) ||
+    secrets.some(secret => typeof secret === "string" && secret.length >= 8 && value.includes(secret)));
 }
 
 export async function post({ github, repo, number, sha, runId, raw, conclusion, secrets = [] }) {
