@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import AxeBuilder from "@axe-core/playwright";
 import { buildSync } from "esbuild";
 import { expect, test } from "@playwright/test";
 import { normalizeProductBrand } from "../../src/domain/product-brand";
@@ -96,6 +97,51 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
     });
   })).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+const LOOM_ID = "e5b8c04bca094dd8a5507925ab887002";
+const demoCard = { ...card, headline: "Building an enrichment table.", activity: undefined, demo: { provider: "LOOM" as const, id: LOOM_ID } };
+const demoCompiled = buildSync({
+  stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement("div", { className: "card-grid" },
+      createElement(ProductCard, { card: ${JSON.stringify(demoCard)}, index: 0 })));`, resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"production"' },
+});
+
+for (const width of [1280, 390]) test(`a demo contacts its provider only after a click, and plays in a dialog at ${width}px`, async ({ page }, testInfo) => {
+  const providerRequests: string[] = [];
+  await page.route(/^https:\/\/([a-z0-9-]+\.)*loom\.com\//, route => {
+    providerRequests.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: "text/html",
+      body: '<!doctype html><html lang="en"><head><title>Synthetic player</title></head><body><p>Synthetic player</p></body></html>' });
+  });
+  await page.setViewportSize({ width, height: 900 });
+  await page.setContent('<!doctype html><html lang="en"><head><title>Demo card fixture</title></head><body><main id="root"></main></body></html>');
+  await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
+  await page.addScriptTag({ content: demoCompiled.outputFiles[0].text });
+  const play = page.getByRole("button", { name: "Watch the demo on Loom", exact: true });
+  await expect(play).toBeVisible();
+  await expect(page.locator("iframe")).toHaveCount(0);
+  expect(providerRequests).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath(`2026-09-26-demo-card-${width}.png`), fullPage: true, animations: "disabled" });
+
+  await play.click();
+  const dialog = page.getByRole("dialog", { name: "Synthetic card demo on Loom" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator("iframe")).toHaveAttribute("src", `https://www.loom.com/embed/${LOOM_ID}`);
+  await expect.poll(() => providerRequests).toEqual([`https://www.loom.com/embed/${LOOM_ID}`]);
+  await expect(dialog.getByRole("link", { name: "Open on Loom ↗" })).toHaveAttribute("href", `https://www.loom.com/share/${LOOM_ID}`);
+  const frame = await dialog.locator(".demo-frame").boundingBox();
+  expect(Math.abs(frame!.width / frame!.height - 16 / 9)).toBeLessThan(0.02);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath(`2026-09-26-demo-dialog-${width}.png`), animations: "disabled" });
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await expect(play).toBeFocused();
 });
 
 for (const width of [320, 390, 1280]) test(`grouped private records fit and switch without saving or merging same-domain products at ${width}px`, async ({ page }, testInfo) => {

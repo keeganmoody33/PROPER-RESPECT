@@ -52,6 +52,20 @@ function renderCard(overrides: Partial<Card> = {}) {
   })));
 }
 
+test("a card's demo is a play button, with no provider URL in the page until someone clicks", () => {
+  const $ = renderCard({ demo: { provider: "LOOM", id: "e5b8c04bca094dd8a5507925ab887002" } });
+  expect($(".card-demo").text()).toBe("▶ Watch the demo on Loom");
+  expect($("iframe")).toHaveLength(0);
+  expect($.html()).not.toMatch(/loom\.com/);
+  expect($("dialog.demo-dialog").attr("open")).toBeUndefined();
+});
+
+test("a stored demo whose parts don't fit a player template renders nothing", () => {
+  const $ = renderCard({ demo: { provider: "LOOM", id: "../../admin" } });
+  expect($(".card-demo")).toHaveLength(0);
+  expect($("dialog")).toHaveLength(0);
+});
+
 test.each([
   { name: "Wispr Flow", slug: "wisprflow", domain: "wisprflow.ai", path: "/product-assets/wisprflow/2026-09-21/app-icon.jpg" },
   { name: "Clay", slug: "clay", domain: "clay.com", path: "/product-assets/clay/2026-09-21/app-icon.png" },

@@ -554,6 +554,10 @@ The table order is the priority order.
       (`components/product-brand-fonts.tsx:28`).
     - `worker-src 'self' blob:`; `style-src 'self' 'unsafe-inline'`;
       `frame-src https://challenges.cloudflare.com https://*.protect.clerk.com`.
+    - Public profiles and the collection's sharing preview play demo videos
+      (issue #79). On `/:handle` and `/app/:path*`, add every origin in
+      `DEMO_FRAME_ORIGINS` (`src/domain/demo-links.ts`) to `frame-src`. Import
+      the list rather than copying it, so a new provider can't be missed.
     - Check Clerk's CSP guide for its current list before coding.
     - Reporting: `report-uri /api/csp-report`, plus `report-to` with a
       `Reporting-Endpoints` header. Add `app/api/csp-report/route.ts`. It

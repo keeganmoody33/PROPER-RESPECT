@@ -1,18 +1,29 @@
 import type { ActivityModule, CuratedProp } from "./public-profile";
 import type { Cost, CostVisibility } from "./cost";
 import { canonicalJson } from "./canonical-json";
+import { parseDemoLink, sameDemo, type DemoLink } from "./demo-links";
 
 export type ReviewCard = {
-  prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & { relationshipVersion?: number };
+  prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & {
+    relationshipVersion?: number;
+    supportingUrl?: string;
+  };
   product: { domain: string };
   links: CuratedProp["links"];
   isPublishedAtCurrentHandle?: boolean;
   publishedActivity?: ActivityModule;
+  publishedDemo?: DemoLink;
 };
 
 function reviewBasis(card: ReviewCard) {
   return canonicalJson({ version: card.prop.relationshipVersion ?? 0, activity: card.prop.activity,
-    isPublishedAtCurrentHandle: card.isPublishedAtCurrentHandle === true, publishedActivity: card.publishedActivity });
+    isPublishedAtCurrentHandle: card.isPublishedAtCurrentHandle === true, publishedActivity: card.publishedActivity,
+    publishedDemo: card.publishedDemo });
+}
+
+/** The saved work-sample link when it's a video that can play on the card. */
+export function reviewDemo(card: ReviewCard) {
+  return card.prop.supportingUrl ? parseDemoLink(card.prop.supportingUrl) : null;
 }
 
 export function isCurrentReview(card: ReviewCard, edit: ReviewEdit) {
@@ -65,6 +76,9 @@ export function defaultReview(card: ReviewCard) {
     linkLabel: primary?.label ?? "Open product",
     approveActivity: card.isPublishedAtCurrentHandle === true && Boolean(card.publishedActivity) &&
       canonicalJson(card.prop.activity) === canonicalJson(card.publishedActivity),
+    // A video goes public only by choice: kept when this card already shows
+    // this same video, off otherwise.
+    includeDemo: card.isPublishedAtCurrentHandle === true && sameDemo(reviewDemo(card), card.publishedDemo),
     autoRefresh: false,
     costAmount: card.prop.cost?.amount.toString() ?? "",
     costCurrency: card.prop.cost?.currency ?? "USD",

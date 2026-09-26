@@ -10,6 +10,7 @@ import type {
   PublicProfile,
 } from "@/src/domain/public-profile";
 import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
+import { demoPresentation } from "@/src/domain/demo-links";
 import { compactNumber } from "@/src/domain/format-activity-number";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
@@ -376,6 +377,52 @@ function ActivityView({ activity }: { activity: ActivityModule }) {
   );
 }
 
+// The owner's recording of using the product. Until someone clicks, the page
+// holds only this button: no player, thumbnail or provider URL, so a visitor's
+// browser contacts the provider only when they choose to watch. The player URL
+// is rebuilt from a fixed template for the stored provider and id.
+function CardDemo({ demo, productName }: { demo: NonNullable<Card["demo"]>; productName: string }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [open, setOpen] = useState(false);
+  const titleId = useId();
+  const presentation = demoPresentation(demo);
+  if (!presentation) return null;
+  const label = `${productName} demo on ${presentation.providerLabel}`;
+  return <>
+    <button
+      type="button"
+      className="card-demo"
+      aria-haspopup="dialog"
+      onClick={() => {
+        setOpen(true);
+        dialogRef.current?.showModal();
+      }}
+    >
+      <span aria-hidden="true">▶</span> Watch the demo <span className="card-demo-provider">on {presentation.providerLabel}</span>
+    </button>
+    <dialog ref={dialogRef} className="demo-dialog" aria-labelledby={titleId} onClose={() => setOpen(false)}>
+      <div className="demo-dialog-bar">
+        <p id={titleId}>{label}</p>
+        <button type="button" className="close-button" onClick={() => dialogRef.current?.close()}>Close video</button>
+      </div>
+      {open && <>
+        <div className="demo-frame">
+          <iframe
+            src={presentation.embedUrl}
+            title={label}
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+        <a className="outbound-link" href={presentation.watchUrl} target="_blank" rel="noopener noreferrer">
+          Open on {presentation.providerLabel} ↗
+        </a>
+      </>}
+    </dialog>
+  </>;
+}
+
 export function ProductCard({
   card,
   displayMode = "relationship",
@@ -493,6 +540,7 @@ export function ProductCard({
           </p>
         ) : null}
         {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
+        {!brandPreview && card.demo && <CardDemo demo={card.demo} productName={card.product.name} />}
 
         <div className="card-footer">
           <span className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>

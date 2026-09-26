@@ -71,6 +71,7 @@ function fromReview(cards: Awaited<ReturnType<Awaited<ReturnType<typeof fixture>
     startedAt: edit.startedAt || undefined,
     primaryLink: { type: edit.linkType, url: edit.linkUrl, label: edit.linkLabel },
     activity: edit.publish && edit.approveActivity ? card.prop.activity : undefined,
+    demoUrl: edit.publish && edit.includeDemo ? card.prop.supportingUrl : undefined,
     autoRefresh: false,
   }));
 }
@@ -370,4 +371,47 @@ test("getState preserves legacy evidence metadata when claim details are disable
   expect(collection?.cards[0].prop._id).toBe(a);
   expect(collection?.evidence).toEqual([]);
   expect(collection?.drafts).toEqual([]);
+});
+
+const LOOM_ID = "e5b8c04bca094dd8a5507925ab887002";
+
+test("a saved demo video goes public only when its review selects it, and only as provider and id", async () => {
+  const { t, owner, propIds: [a], selection, published, reviewCards } = await fixture(1);
+  const pasted = `https://www.loom.com/share/${LOOM_ID}?sid=private-session`;
+  await t.run(ctx => ctx.db.patch(a, { supportingUrl: pasted }));
+
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards[0].demo).toBeUndefined();
+  expect(defaultReview((await reviewCards())[0]).includeDemo).toBe(false);
+
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { demoUrl: pasted })] }));
+  const card = (await published()).profile.cards[0];
+  expect(card.demo).toEqual({ provider: "LOOM", id: LOOM_ID });
+  expect(JSON.stringify(card)).not.toContain("private-session");
+  for (const reader of [api.publicProfiles.getByHandleV2, api.publicProfiles.getByHandle]) {
+    expect((await t.query(reader, { handle: "owner" }))?.cards[0].demo).toEqual({ provider: "LOOM", id: LOOM_ID });
+  }
+  // Opening review again keeps the published video instead of dropping it.
+  const [reviewed] = await reviewCards();
+  expect(reviewed.publishedDemo).toEqual({ provider: "LOOM", id: LOOM_ID });
+  expect(defaultReview(reviewed).includeDemo).toBe(true);
+
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards[0].demo).toBeUndefined();
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { demoUrl: pasted })] }));
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { publish: false })] }));
+  expect((await published()).profile.cards).toEqual([]);
+});
+
+test("publishing a demo needs the saved link and a supported video", async () => {
+  const { t, owner, propIds: [a], selection } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(a, { supportingUrl: `https://www.loom.com/share/${LOOM_ID}` }));
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a, { demoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" })] }))
+    .rejects.toThrow("Save the video link privately before publishing it.");
+  await t.run(ctx => ctx.db.patch(a, { supportingUrl: "https://example.com/work" }));
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a, { demoUrl: "https://example.com/work" })] }))
+    .rejects.toThrow("Only Loom, Cap, YouTube, Vimeo and Arcade videos can play on a card.");
+  await t.run(ctx => ctx.db.patch(a, { supportingUrl: undefined }));
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a, { demoUrl: `https://www.loom.com/share/${LOOM_ID}` })] }))
+    .rejects.toThrow("Save the video link privately before publishing it.");
 });

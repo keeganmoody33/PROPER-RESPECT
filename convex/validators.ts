@@ -156,6 +156,12 @@ export const activityModuleValidator = v.union(
 );
 
 export const profileLinkValidator = v.object({ label: v.string(), url: v.string() });
+// A published demo is a provider and an id, never a URL (src/domain/demo-links.ts).
+export const demoLinkValidator = v.object({
+  provider: v.union(v.literal("LOOM"), v.literal("CAP"), v.literal("YOUTUBE"), v.literal("VIMEO"), v.literal("ARCADE")),
+  id: v.string(),
+  hash: v.optional(v.string()),
+});
 
 export const publicProfileValidator = v.object({
   handle: v.string(),
@@ -186,6 +192,7 @@ export const publicProfileValidator = v.object({
         url: v.string(),
         label: v.string(),
       })),
+      demo: v.optional(demoLinkValidator),
     }),
   ),
 });

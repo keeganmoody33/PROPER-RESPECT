@@ -107,6 +107,7 @@ main {
 .eyebrow,
 .status-row,
 .card-button,
+.card-demo,
 .activity-meta,
 .card-topline,
 .onboarding-kicker {
@@ -176,7 +177,7 @@ main {
   position: relative;
 }
 
-.product-card :is(.eyebrow, .status-row, .card-button, .activity-meta) {
+.product-card :is(.eyebrow, .status-row, .card-button, .card-demo, .activity-meta) {
   font-family: inherit;
   letter-spacing: var(--brand-card-body-tracking, normal);
 }
@@ -654,6 +655,86 @@ main {
 .product-card :is(a, button, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--brand-card-text, var(--paper));
   outline-offset: 3px;
+}
+
+.product-card .card-demo {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--card-line);
+  border-radius: 0.45rem;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  margin: 0.2rem 0 0.9rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  width: 100%;
+}
+
+.product-card .card-demo:hover,
+.product-card .card-demo:focus-visible {
+  background: var(--brand-card-text, var(--paper));
+  color: var(--brand-card-background, var(--ink));
+}
+
+.card-demo-provider {
+  margin-left: auto;
+}
+
+.demo-dialog {
+  background: var(--ink);
+  border: 1px solid var(--card-line);
+  border-radius: 1rem;
+  color: var(--paper);
+  max-height: calc(100dvh - 2rem);
+  padding: 0.9rem;
+  width: min(960px, calc(100vw - 2rem));
+}
+
+.demo-dialog::backdrop {
+  background: rgba(10, 10, 8, 0.78);
+}
+
+.demo-dialog-bar {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.demo-dialog-bar p {
+  font-weight: 700;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.demo-dialog-bar .close-button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.demo-frame {
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 0.6rem;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.demo-frame iframe {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.demo-dialog .outbound-link {
+  color: inherit;
+  margin: 0.75rem 0 0;
 }
 
 .card-brand-provenance {
