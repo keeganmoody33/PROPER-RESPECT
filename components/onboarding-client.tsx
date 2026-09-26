@@ -17,8 +17,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
-import { defaultReview, explicitPublicationCards, isCurrentReview, reviewDemo, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
-import { demoPresentation } from "@/src/domain/demo-links";
+import { defaultReview, explicitPublicationCards, isCurrentReview, reviewUsageLink, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
+import { USAGE_LINK_LABELS, usageLinkLabelText } from "@/src/domain/usage-links";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
 import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/domain/product-destination";
 import { costSchema, type CostVisibility } from "@/src/domain/cost";
@@ -109,7 +109,7 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
     <h3 id="sharing-preview-title">Your visitor’s view</h3>
     <p>This is the public information after your selected changes, including previously approved cards that you kept. Private originals and unselected details are excluded.</p>
     {!current && <p role="status">Your saved collection or sharing choices changed. Preview again before publishing.</p>}
-    {profile.cards.some(card => card.demo) && <p>Visitors can open the videos on these cards, and each plays only if its own sharing settings let anyone watch. Check that each shows nothing private, like other people’s contact details.</p>}
+    {profile.cards.some(card => card.usageLink) && <p>The links on the backs of these cards open only if their own sharing settings allow it. Check that each shows nothing private, like other people’s contact details.</p>}
     <div className="card-grid">{profile.cards.map((card, index) => <ProductCard key={`${card.product.slug}-${index}`} card={card} index={index} goTo={card.goTo} />)}</div>
     {!profile.cards.length && <p>No products will be public.</p>}
     <footer className="profile-footer"><div><strong><ProfileName profile={profile} /></strong><span>@{profile.handle}</span></div><p>{profile.bio}</p><ProfileLinks profile={profile} /></footer>
@@ -310,7 +310,8 @@ function Builder() {
             edit.publish && edit.approveActivity
               ? card.prop.activity
               : undefined,
-          demoUrl: edit.publish && edit.includeDemo && reviewDemo(card) ? card.prop.supportingUrl : undefined,
+          usageLinkUrl: edit.publish && edit.includeUsageLink && reviewUsageLink(card) ? card.prop.supportingUrl : undefined,
+          usageLinkLabel: edit.publish && edit.includeUsageLink && reviewUsageLink(card) ? edit.usageLinkLabel : undefined,
           autoRefresh: false,
         };
       });
@@ -696,21 +697,26 @@ function Builder() {
                       {card.prop.activity.attributionScope.toLowerCase()} activity
                     </label>
                   )}
-                  {(() => {
-                    const demo = reviewDemo(savedCard);
-                    const presentation = demo && demoPresentation(demo);
-                    return presentation && <>
-                      <label className="review-toggle">
-                        <input
-                          type="checkbox"
-                          checked={edit.includeDemo}
-                          onChange={(event) => updateReview(card.prop._id, edit, { includeDemo: event.target.checked })}
-                        />
-                        Show my {presentation.providerLabel} video on this card
-                      </label>
-                      <p>Visitors can open it from the card. It plays for them only if its sharing settings let anyone with the link watch. A screen recording can show other people’s data, like enriched contact rows in Clay, so watch it through first.</p>
-                    </>;
-                  })()}
+                  {reviewUsageLink(savedCard) && <>
+                    <label className="review-toggle">
+                      <input
+                        type="checkbox"
+                        checked={edit.includeUsageLink}
+                        onChange={(event) => updateReview(card.prop._id, edit, { includeUsageLink: event.target.checked })}
+                      />
+                      Show my work-sample link on the back of this card
+                    </label>
+                    <label className="review-field">
+                      Link label
+                      <select
+                        value={edit.usageLinkLabel}
+                        onChange={(event) => updateReview(card.prop._id, edit, { usageLinkLabel: event.target.value as ReviewEdit["usageLinkLabel"] })}
+                      >
+                        {USAGE_LINK_LABELS.map(label => <option key={label} value={label}>{usageLinkLabelText(label)}</option>)}
+                      </select>
+                    </label>
+                    <p>Visitors open it on its own site, if its sharing settings let them. A screen recording can show other people’s data, like enriched contact rows in Clay, so check it first.</p>
+                  </>}
                   </details>
                 </fieldset>
               );

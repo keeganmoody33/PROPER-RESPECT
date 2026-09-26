@@ -52,18 +52,22 @@ function renderCard(overrides: Partial<Card> = {}) {
   })));
 }
 
-test("a card's demo is a play button, with no provider URL in the page until someone clicks", () => {
-  const $ = renderCard({ demo: { provider: "LOOM", id: "e5b8c04bca094dd8a5507925ab887002" } });
-  expect($(".card-demo").text()).toBe("▶ Watch the demo on Loom");
+test("a card's work-sample link sits on the back under the owner's label, and not on the front", () => {
+  const url = "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002";
+  const $ = renderCard({ usageLink: { url, label: "TUTORIAL" } });
+  const link = $(".card-back a.usage-link");
+  expect(link.attr("href")).toBe(url);
+  expect(link.attr("target")).toBe("_blank");
+  expect(link.attr("rel")).toBe("noopener noreferrer");
+  expect(link.text()).toBe("Tutorial ↗loom.com");
+  expect(link.attr("aria-label")).toBe("Tutorial, on loom.com (opens in a new tab)");
+  expect($(".card-front .usage-link")).toHaveLength(0);
   expect($("iframe")).toHaveLength(0);
-  expect($.html()).not.toMatch(/loom\.com/);
-  expect($("dialog.demo-dialog").attr("open")).toBeUndefined();
 });
 
-test("a stored demo whose parts don't fit a player template renders nothing", () => {
-  const $ = renderCard({ demo: { provider: "LOOM", id: "../../admin" } });
-  expect($(".card-demo")).toHaveLength(0);
-  expect($("dialog")).toHaveLength(0);
+test("a stored work-sample link that isn't https never renders", () => {
+  const $ = renderCard({ usageLink: { url: "javascript:alert(1)", label: "DEMO" } });
+  expect($(".usage-link")).toHaveLength(0);
 });
 
 test.each([

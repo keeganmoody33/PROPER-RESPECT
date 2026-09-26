@@ -16,13 +16,12 @@ function preview(cards: PublicProfile["cards"]) {
   })));
 }
 
-test("the preview warns about videos without promising that every visitor can play them", () => {
-  const text = preview([{ ...card, demo: { provider: "LOOM", id: "e5b8c04bca094dd8a5507925ab887002" } }]).text();
-  expect(text).toContain("each plays only if its own sharing settings let anyone watch");
+test("the preview reminds the owner what a work-sample link shows, without promising every visitor can open it", () => {
+  const text = preview([{ ...card, usageLink: { url: "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002", label: "PROOF_OF_USE" } }]).text();
+  expect(text).toContain("open only if their own sharing settings allow it");
   expect(text).toContain("nothing private, like other people’s contact details");
-  expect(text).not.toMatch(/anyone with the link can play/i);
 });
 
-test("the preview says nothing about videos when no card has one", () => {
+test("the preview says nothing about links when no card has one", () => {
   expect(preview([card]).text()).not.toContain("sharing settings");
 });

@@ -11,7 +11,7 @@ import { projectPublicProfile, publicProfileSchema } from "../src/domain/public-
 import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evidence-upload";
 import { resolveProduct } from "../src/domain/discovery";
 import { costSchema } from "../src/domain/cost";
-import { parseDemoLink } from "../src/domain/demo-links";
+import { DEFAULT_USAGE_LINK_LABEL, usageLinkUrlSchema } from "../src/domain/usage-links";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { resolvePublishedCardPropIds } from "./publication";
@@ -24,6 +24,7 @@ import {
   costValidator,
   costVisibilityValidator,
   claimVerdictValidator,
+  usageLinkLabelValidator,
 } from "./validators";
 
 function pendingHandle(subject: string) {
@@ -212,14 +213,14 @@ export const getState = query({
         const publishedActivity = approvedCards.length > 0 && approvedCards.every(card =>
           canonicalJson(card.activity) === canonicalJson(approvedCards[0].activity))
           ? approvedCards[0].activity : undefined;
-        const publishedDemo = approvedCards.length > 0 && approvedCards.every(card =>
-          canonicalJson(card.demo) === canonicalJson(approvedCards[0].demo))
-          ? approvedCards[0].demo : undefined;
+        const publishedUsageLink = approvedCards.length > 0 && approvedCards.every(card =>
+          canonicalJson(card.usageLink) === canonicalJson(approvedCards[0].usageLink))
+          ? approvedCards[0].usageLink : undefined;
         const associatedAccountEvidence = product && args.includeAccountEvidence !== false
           ? await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug)
           : [];
         return { prop, product: product && brand ? { ...product, brand } : product, links, claims,
-          isPublishedAtCurrentHandle: approvedCards.length > 0, publishedActivity, publishedDemo, associatedAccountEvidence };
+          isPublishedAtCurrentHandle: approvedCards.length > 0, publishedActivity, publishedUsageLink, associatedAccountEvidence };
       }),
     );
 
@@ -565,9 +566,10 @@ const selectionValidator = v.object({
   costVisibility: v.optional(costVisibilityValidator),
   connectorId: v.optional(v.id("connectorAccounts")),
   metricKey: v.optional(v.string()),
-  // The saved work-sample link, sent only when the owner chose to show it as
-  // the card's video. It must equal what's saved, so a preview can't drift.
-  demoUrl: v.optional(v.string()),
+  // The saved work-sample link, sent only when the owner chose to show it on
+  // the card. It must equal what's saved, so a preview can't drift.
+  usageLinkUrl: v.optional(v.string()),
+  usageLinkLabel: v.optional(usageLinkLabelValidator),
 });
 
 type PublicationSelection = Infer<typeof selectionValidator>;
@@ -594,9 +596,9 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
       throw new Error("Save relationship changes privately before publishing.");
     }
     if (selection.activity && canonicalJson(selection.activity) !== canonicalJson(prop.activity)) throw new Error("Publish only the supporting activity already saved on this relationship.");
-    if (selection.demoUrl !== undefined) {
-      if (selection.demoUrl !== prop.supportingUrl) throw new Error("Save the video link privately before publishing it.");
-      if (!parseDemoLink(selection.demoUrl)) throw new Error("Only Loom, Cap, YouTube, Vimeo and Arcade videos can play on a card.");
+    if (selection.usageLinkUrl !== undefined) {
+      if (selection.usageLinkUrl !== prop.supportingUrl) throw new Error("Save the link privately before publishing it.");
+      if (!usageLinkUrlSchema.safeParse(selection.usageLinkUrl).success) throw new Error("Use an https link without embedded credentials.");
     }
     if (selection.autoRefresh && selection.connectorId && selection.metricKey && selection.activity) {
       const connector = await ctx.db.get(selection.connectorId);
@@ -632,7 +634,8 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
       costVisibility: selection.costVisibility ?? prop.costVisibility,
       product: { name: product.name, slug: product.slug, domain: product.domain, description: product.description, logoUrl: product.logoUrl },
       links: selection.primaryLink ? [{ ...selection.primaryLink, isPrimary: true }] : [],
-      demo: selection.demoUrl === undefined ? undefined : parseDemoLink(selection.demoUrl) ?? undefined,
+      usageLink: selection.usageLinkUrl === undefined ? undefined
+        : { url: selection.usageLinkUrl, label: selection.usageLinkLabel ?? DEFAULT_USAGE_LINK_LABEL },
     }] }).cards;
     return cards.map(card => ({ card, propId: prop._id }));
   });

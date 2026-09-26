@@ -91,7 +91,7 @@ function RelationshipEditor({ item, evidence, onSave }: { item: Item; evidence: 
       <label>Explanation or workflow (optional)<textarea name="note" rows={2} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
       <label>Work sample or workflow link (optional)<input name="supportingUrl" type="url" defaultValue={item.prop.supportingUrl ?? ""} placeholder="https://…" /></label>
-      <p className={styles.hint}>Stays private. A Loom, Cap, YouTube, Vimeo or Arcade video can also play on your public card, if you choose it when you review sharing.</p>
+      <p className={styles.hint}>Stays private unless you choose, when you review sharing, to show it on the back of your public card with a label like “See how I use it”.</p>
       <label>Started using (optional)<input name="startedAt" type="date" defaultValue={item.prop.startedAt ?? ""} /></label>
       <p className={styles.hint}>Leave the date blank when you do not know. Signup dates and capture dates are not first use.</p>
       {(item.prop.activity || item.prop.activityEvidenceId || evidence.some(source => source.suggestedActivity)) && <label>Supporting snapshot
