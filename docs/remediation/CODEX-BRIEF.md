@@ -1311,8 +1311,24 @@ it opens a one-line `docs:` PR for it.
    - under Code review, turn on Code review and Automatic reviews for this
      repository. Codex's own reviews still count for their findings, but
      never clear a task PR (Section 4, "Review policy");
-   - check that this repository's environment holds no production secret: no
-     Convex deploy key, no `sk_live` Clerk key, no Vercel token.
+   - under Environments, create an environment for this repository if it
+     has none. Codex can't start a task without one. In it:
+     - under Preinstalled packages, set Node.js to 22, the version CI uses;
+     - add the `verify` job's four variables from Section 6 as environment
+       variables. Their values are synthetic;
+     - add no secrets: no Convex deploy key, no `sk_live` Clerk key, no
+       Vercel token;
+     - use a manual setup script. The automatic one runs install commands like
+       `npm install`, which can rewrite the lockfile, and installs no browser
+       for the Playwright checks:
+       ```sh
+       npm ci
+       npm ci --prefix prototypes/public-mcp
+       npx playwright install --with-deps chromium
+       ```
+     - leave agent internet access off. Setup scripts reach the internet
+       either way. If a task fails for lack of it, allow Common dependencies
+       with only GET, HEAD and OPTIONS.
 3. Create a fine-grained GitHub token for this repository only, with just
    Pull requests: Read and write and Issues: Read and write, expiring after
    your trip. With it, the autopilot's `@codex` comments and Copilot review
