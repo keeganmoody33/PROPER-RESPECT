@@ -1311,8 +1311,34 @@ it opens a one-line `docs:` PR for it.
    - under Code review, turn on Code review and Automatic reviews for this
      repository. Codex's own reviews still count for their findings, but
      never clear a task PR (Section 4, "Review policy");
-   - check that this repository's environment holds no production secret: no
-     Convex deploy key, no `sk_live` Clerk key, no Vercel token.
+   - under Environments, create an environment for this repository if it
+     has none. Codex can't start a task without one. In it:
+     - under Preinstalled packages, set Node.js to 22, the version CI uses;
+     - add the `verify` job's four variables from Section 6 as environment
+       variables. Their values are synthetic:
+       - `NEXT_TELEMETRY_DISABLED` = `1`
+       - `NEXT_PUBLIC_CONVEX_URL` = `https://example.convex.cloud`
+       - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` =
+         `pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk`
+       - `PUBLIC_SITE_ORIGIN` = `https://public.example`
+     - add no secrets: no Convex deploy key, no `sk_live` Clerk key, no
+       Vercel token;
+     - use a manual setup script. The automatic one runs install commands like
+       `npm install`, which can rewrite the lockfile, and installs no browser
+       for the Playwright checks. Chromium serves the browser specs, and
+       Chrome serves the Native Chrome WebMCP job
+       (`tests/native-webmcp/config.ts` uses the `chrome` channel):
+       ```sh
+       npm ci
+       npm ci --prefix prototypes/public-mcp
+       npx playwright install --with-deps chromium chrome
+       ```
+     - leave agent internet access off. Setup scripts reach the internet
+       either way
+       ([Cloud environments](https://learn.chatgpt.com/docs/environments/cloud-environment)).
+       If a task fails for lack of it, allow Common dependencies with only
+       GET, HEAD and OPTIONS
+       ([Agent internet access](https://developers.openai.com/codex/cloud/internet-access)).
 3. Create a fine-grained GitHub token for this repository only, with just
    Pull requests: Read and write and Issues: Read and write, expiring after
    your trip. With it, the autopilot's `@codex` comments and Copilot review
