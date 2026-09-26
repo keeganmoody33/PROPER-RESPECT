@@ -300,14 +300,18 @@ line, or in a `remediate/<ID>-` branch name.
   2026-09-26. `.github/workflows/claude-review.yml` runs Claude, read-only,
   when the owner comments `@claude review` on a PR, or from Actions with the
   PR number. It refuses a PR that Claude wrote or helped write: a `claude/`
-  branch, a PR or commit by `claude[bot]`, or a `Co-Authored-By: Claude`
-  trailer. Its settings fence Claude's reads to main and the PR's files, and
-  it can't edit, run commands or fetch pages. It posts one review of the
-  commit, and the review's last line is its verdict: clean only when Claude
-  lists no P0 or P1 finding, and no verdict when the run fails, its answer
-  is malformed, or it quotes what looks like a credential (then none of it
-  is posted). The autopilot doesn't read that verdict yet, so it doesn't
-  clear a task PR today.
+  branch; a PR or commit by the `claude` or `claude[bot]` account or from
+  Claude Code's address; a `Co-Authored-By: Claude` trailer; or Claude
+  Code's footer or session link in a commit or the description. Its settings
+  fence Claude's reads to main and the PR's files, and it can't edit, run
+  commands or fetch pages. It posts one review of the commit, and the
+  review's last line is its verdict: clean only when Claude lists no P0 or
+  P1 finding, and no verdict when the run fails, its answer is malformed, or
+  it quotes what looks like a credential (then none of it is posted).
+- **Claude's verdict is advisory for now.** The autopilot doesn't read it,
+  so it clears no task PR. A PR's own text can steer any model that reads
+  it, Copilot included. Before the autopilot counts Claude's verdict, the
+  owner decides whether one AI reviewer's clean verdict is enough to merge.
 
 Why:
 

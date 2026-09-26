@@ -84,8 +84,9 @@ jobs:
           github_token: ${{ github.token }}
           classify_inline_comments: 'false'
           # Claude reads only the working directory (main) and the review
-          # folder. Non-interactive runs otherwise read anywhere on the
-          # runner, and the action keeps its GitHub token in .git/config.
+          # folder. Claude Code's docs say only this setting makes its file
+          # tools refuse reads outside those in every permission mode, and
+          # the action writes its GitHub token into .git/config.
           settings: >-
             {"permissions":{"blockReadsOutsideWorkingDirectories":true,
             "deny":["Read(./.git/**)","Read(//proc/**)","Read(//sys/**)","Read(//etc/**)",

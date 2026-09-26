@@ -69,6 +69,22 @@ test("Claude's own work is refused, by branch, app, commit or co-author trailer"
   assert.deepEqual(claudeEvidence(pullOf(), [commitOf("fix: x\n\nCo-Authored-By: Claudette <c@example.com>")]), []);
 });
 
+test("Claude's account, address, footer and session link count too, even on another branch", () => {
+  // GitHub credits commits from Claude Code's address to the "claude" account.
+  assert.deepEqual(claudeEvidence(pullOf(), [commitOf("fix: x", { author: { login: "claude" } })]), ["commit bbbbbbb by claude"]);
+  assert.deepEqual(claudeEvidence(pullOf({ user: { login: "claude" } }), []), ["opened by claude"]);
+  const fromAddress = commitOf("fix: x", { author: null, committer: null, commit: { message: "fix: x", author: { email: "NoReply@Anthropic.com" } } });
+  assert.deepEqual(claudeEvidence(pullOf(), [fromAddress]), ["commit bbbbbbb from Claude Code's address"]);
+  const footer = "fix: x\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)";
+  assert.deepEqual(claudeEvidence(pullOf(), [commitOf(footer)]), ["commit bbbbbbb with a Claude Code footer or session link"]);
+  assert.deepEqual(claudeEvidence(pullOf(), [commitOf("fix: x\n\nClaude-Session: https://example.com/s")]).length, 1);
+  assert.deepEqual(claudeEvidence(pullOf(), [commitOf("fix: x (see https://claude.ai/code/session_01abc)")]).length, 1);
+  const described = pullOf({ body: "## Change\n\n...\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)" });
+  assert.deepEqual(claudeEvidence(described, []), ["a Claude Code footer or session link in the description"]);
+  // Naming the product isn't a mark.
+  assert.deepEqual(claudeEvidence(pullOf({ body: "Show Claude Code usage on cards." }), [commitOf("fix: retain Claude Code and Codex card logos")]), []);
+});
+
 test("prepare writes what Claude reads, and returns the reviewed commit", async () => {
   const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
   const fake = fakeGitHub({ files: [fileOf("src/domain/onboarding.ts"), { ...fileOf("public/logo.png"), patch: undefined }] });
@@ -132,7 +148,7 @@ test("the review names its commit and run, and its last line is the verdict", ()
   assert.match(body, /^### Claude review of `aaaaaaa`: 1 finding\n/);
   assert.match(body, /1\. \*\*P1\*\* \[`src\/domain\/onboarding\.ts:9`\]\(https:\/\/github\.com\/o\/r\/blob\/a{40}\/src\/domain\/onboarding\.ts#L9\): `index` stays claimable\. R01 reserves it\. Fix: Add it to RESERVED_HANDLES\./);
   assert.match(body, /<details><summary>Notes that don't block<\/summary>\n\n- Tests read well\./);
-  assert.match(body, /\[run 123\]\(https:\/\/github\.com\/o\/r\/actions\/runs\/123\)/);
+  assert.match(body, /\[run 123\]\(https:\/\/github\.com\/o\/r\/actions\/runs\/123\)\. Advisory: nothing merges on this verdict yet\./);
   assert.deepEqual(verdictMarker(body), { verdict: "findings", sha: HEAD, run: 123 });
   const none = reviewBody({ result: readVerdict("", "failure"), sha: HEAD, runId: RUN, repo: REPO });
   assert.match(none, /^### Claude review of `aaaaaaa`: no verdict\n\nClaude didn't finish \(failure\)\. This review clears nothing\./);

@@ -15,6 +15,10 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 export const CLAUDE_BOT = "claude[bot]";
+// GitHub credits commits from Claude Code's address to the "claude" account,
+// and the Claude app acts as claude[bot].
+export const CLAUDE_LOGINS = [CLAUDE_BOT, "claude"];
+export const CLAUDE_EMAILS = ["noreply@anthropic.com"];
 export const CLAUDE_BRANCH_PREFIX = "claude/";
 // GitHub lists at most 250 commits for a pull request. A list that long may be
 // cut short, so it can't show who wrote the rest.
@@ -24,6 +28,10 @@ export const SEVERITIES = ["P0", "P1"];
 // only logged.
 export const NOTIFY_SKIPS = ["writer", "too-long", "no-token"];
 const CO_AUTHOR = /^co-authored-by:\s*claude\b/im;
+// What Claude Code leaves in commit messages and PR descriptions: its
+// "Generated with [Claude Code]" footer, a claude.ai/code session link, or a
+// Claude-Session trailer.
+const CLAUDE_MARKS = /generated with \[claude code\]|claude\.ai\/code\/session_|^claude-session:/im;
 const MARKER = /^<!-- claude-review verdict=(clean|findings|none) sha=([0-9a-f]{40}) run=(\d+) -->$/;
 // Credential shapes a review must never carry: GitHub tokens, Anthropic keys
 // and OAuth tokens, and JSON Web Tokens such as the runner's.
@@ -71,19 +79,25 @@ export function createGitHub(token, repo) {
 }
 
 // Evidence that Claude wrote or helped write the pull request. Any one is
-// enough to refuse: a Claude branch, a PR or commit by the Claude app, or a
-// commit that credits Claude as a co-author.
+// enough to refuse, so a false match only sends the PR to another reviewer:
+// a Claude branch; a PR opened by a Claude account; a description with Claude
+// Code's footer or session link; a commit by a Claude account or address; or a
+// commit message with a Claude co-author trailer, footer or session link.
 export function claudeEvidence(pull, commits) {
   const evidence = [];
   if (pull.head.ref.startsWith(CLAUDE_BRANCH_PREFIX)) evidence.push(`branch \`${pull.head.ref}\``);
-  if (pull.user?.login === CLAUDE_BOT) evidence.push(`opened by ${CLAUDE_BOT}`);
+  if (CLAUDE_LOGINS.includes(pull.user?.login)) evidence.push(`opened by ${pull.user.login}`);
+  if (CLAUDE_MARKS.test(pull.body ?? "")) evidence.push("a Claude Code footer or session link in the description");
   for (const commit of commits) {
     const sha = commit.sha.slice(0, 7);
-    if ([commit.author?.login, commit.committer?.login].includes(CLAUDE_BOT)) {
-      evidence.push(`commit ${sha} by ${CLAUDE_BOT}`);
-    } else if (CO_AUTHOR.test(commit.commit?.message ?? "")) {
-      evidence.push(`commit ${sha} co-authored by Claude`);
-    }
+    const logins = [commit.author?.login, commit.committer?.login];
+    const emails = [commit.commit?.author?.email, commit.commit?.committer?.email].map(email => email?.toLowerCase());
+    const message = commit.commit?.message ?? "";
+    const login = CLAUDE_LOGINS.find(name => logins.includes(name));
+    if (login) evidence.push(`commit ${sha} by ${login}`);
+    else if (CLAUDE_EMAILS.some(email => emails.includes(email))) evidence.push(`commit ${sha} from Claude Code's address`);
+    else if (CO_AUTHOR.test(message)) evidence.push(`commit ${sha} co-authored by Claude`);
+    else if (CLAUDE_MARKS.test(message)) evidence.push(`commit ${sha} with a Claude Code footer or session link`);
   }
   return evidence;
 }
@@ -224,8 +238,10 @@ export function reviewBody({ result, sha, runId, repo }) {
   if (result.notes.length) {
     lines.push("<details><summary>Notes that don't block</summary>", "", ...result.notes.map(note => `- ${safe(note, { oneLine: true })}`), "", "</details>", "");
   }
+  // A PR's own text can steer any model that reads it, so this verdict is
+  // advisory until the owner decides how an AI verdict may count.
   lines.push(`<sub>Outside review by Claude in [run ${runId}](https://github.com/${repo}/actions/runs/${runId}). ` +
-    "Claude only reads. The model that wrote a PR never clears it.</sub>");
+    "Advisory: nothing merges on this verdict yet. Claude only reads, and the model that wrote a PR never clears it.</sub>");
   lines.push(`<!-- claude-review verdict=${result.verdict} sha=${sha} run=${runId} -->`);
   return lines.join("\n");
 }
