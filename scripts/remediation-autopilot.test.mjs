@@ -85,6 +85,8 @@ test("review findings count only top-level comments on the head from trusted rev
     comment("stranger"),
     comment("vercel[bot]", { inReplyTo: 5 }),
     comment(CODEX_BOT, { originalCommitId: "b".repeat(40) }),
+    // Made on an earlier commit; GitHub has moved its commit_id to the head.
+    comment(CODEX_BOT, { originalCommitId: "b".repeat(40), commitId: HEAD }),
   ];
   const reviews = [
     { login: "stranger", type: "User", association: "NONE", state: "CHANGES_REQUESTED", commitId: HEAD, url: "https://example/r1" },

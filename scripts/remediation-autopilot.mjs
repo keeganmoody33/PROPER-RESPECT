@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 // Remediation autopilot. Runs from main on a schedule
 // (.github/workflows/remediation-autopilot.yml). For each open remediation task
-// pull request it asks Codex to fix failing checks or review comments, asks
-// for a Codex review of the latest commit, and merges the pull request once it
-// is green and reviewed. It can also start the next task. It never deploys.
+// pull request it asks Codex to fix failing checks or review findings, asks
+// Codex and Copilot to review the latest commit, and merges the pull request
+// once it is green and reviewed. It can also start the next task. It never
+// deploys.
 // The rules are in docs/remediation/CODEX-BRIEF.md, Section 4, "Autopilot".
 
 import process from "node:process";
@@ -518,6 +519,9 @@ export async function gatherFacts(github, pull, context) {
     // GitHub leaves Copilot out of requested_reviewers, so its running check counts too.
     copilotPending: (pr.requested_reviewers ?? []).some(user => COPILOT_REVIEWERS.includes(user.login)) ||
       checks.some(check => check.name === "copilot-pull-request-reviewer" && check.status !== "completed"),
+    // original_commit_id is the commit a comment was made on. GitHub moves
+    // commit_id forward to each later commit while the line survives, so
+    // comparing commit_id with the head would re-raise comments already fixed.
     reviewComments: reviewComments.map(comment => ({
       login: comment.user?.login ?? "", type: comment.user?.type ?? "User", association: comment.author_association,
       inReplyTo: comment.in_reply_to_id ?? null, originalCommitId: comment.original_commit_id, url: comment.html_url,
@@ -527,6 +531,8 @@ export async function gatherFacts(github, pull, context) {
     })), context.trustedMarkers),
     codexComments: comments.filter(comment => comment.user?.login === CODEX_BOT)
       .map(comment => ({ body: comment.body ?? "", createdAt: comment.created_at, updatedAt: comment.updated_at })),
+    // No check on this commit can start before it reached the PR, so the
+    // earliest start is a safe stand-in for the push time.
     pushedAt: starts.length ? new Date(Math.min(...starts)).toISOString() : headCommit.commit.committer.date,
     commitAuthors: commits.flatMap(commit => [commit.author?.login, commit.committer?.login]).filter(Boolean),
     commitMessages: commits.map(commit => commit.commit.message),
