@@ -32,12 +32,12 @@ backlog. This table only points into them.
 
 | Outcome | Status in source | Tasks |
 | --- | --- | --- |
-| Reach a useful private collection | Empty state and setup retry work. `/app/*` has no error boundary. | New bug; R05 covers the public page |
-| Review discoveries without retyping | The "use this observed date" shortcut never renders. | New bug |
+| Reach a useful private collection | Empty state and setup retry work. `/app/*` has no error boundary, and production likely replaces every validation message with "Server Error". | #104, #105; R05 covers the public page |
+| Review discoveries without retyping | The "use this observed date" shortcut never renders. | #102 |
 | Add or correct a product without an integration | Adding works. Renaming a product, fixing its website or removing a mistaken relationship doesn't exist. | None yet: owner decides |
 | Save status, go-to, explanation and history | Works (`inventory.save`, `relationshipEvents`). | None |
 | See decisions in a fresh session | Proven in `convex-test` and a fixture only. | R29; K07 step 4 |
-| Inspect supporting information and its limits | Mostly works. Uploaded originals can't be reopened. One-off captures read "Updated" forever. | None yet for reopening; new bug; R12 |
+| Inspect supporting information and its limits | Mostly works. Uploaded originals can't be reopened. One-off captures read "Updated" forever. | None yet for reopening; #103; R12 |
 | Preview, publish selected cards, unpublish | Publish works. Unpublishing is hidden behind a republish. | R15 |
 | Data controls | No delete-original UI, no unpublish-all, no export. Gmail disconnect keeps Google's grant. | R15, R17 |
 | Owner isolation | Denial tests exist across most modules. Cross-owner delete and revoke aren't tested. | R15; K07 step 5 |
