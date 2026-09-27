@@ -632,6 +632,13 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     }
     return [{ card, propId: null }];
   });
+  // Unchanged cards are copied as they are, so one saved before the link caps is checked here too.
+  for (const { card } of preserved) {
+    const link = card.primaryLink;
+    if (link && (link.label.length > LINK_LABEL_MAX || link.url.length > PUBLISHED_URL_MAX)) {
+      throw new Error(`The shared ${card.product.name} card has a link over the length limit. Include it in this change to update or remove it.`);
+    }
+  }
   // There's no avatar editor, so an over-long stored avatar is left off rather than blocking every publish.
   const avatarUrl = user.avatarUrl !== undefined && user.avatarUrl.length <= PUBLISHED_URL_MAX ? user.avatarUrl : undefined;
   const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl, profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl };

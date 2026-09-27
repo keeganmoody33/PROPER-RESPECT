@@ -493,3 +493,26 @@ test("a 160-character product name still publishes with its default link label",
   await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
   expect((await published()).profile.cards[0]).toMatchObject({ product: { name }, primaryLink: { label: `Open ${name}` } });
 });
+
+test.each(["label", "url"] as const)("an unchanged public card with an over-limit link %s blocks sharing until it is updated or removed", async field => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture(2);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  // A card published before the caps existed.
+  await t.run(async ctx => {
+    const row = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    const cards = row.profile.cards.map((card, index) => index !== 0 || !card.primaryLink ? card : {
+      ...card, primaryLink: { ...card.primaryLink, ...(field === "label" ? { label: "L".repeat(201) } : { url: `https://shared.example/${"a".repeat(2049)}` }) },
+    });
+    await ctx.db.patch(row._id, { profile: { ...row.profile, cards } });
+  });
+  const before = await published();
+  const message = "The shared Shared Tool card has a link over the length limit. Include it in this change to update or remove it.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(b, { publish: false })] })).rejects.toThrow(message);
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: before.revision, expectedPreviewHash: "never-approved" })).rejects.toThrow(message);
+  expect(await published()).toEqual(before);
+  // Including the card, with a link inside the limits, repairs it.
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards.map(card => card.primaryLink)).toEqual([
+    expect.objectContaining({ label: "Visit" }), expect.objectContaining({ label: "Visit" }),
+  ]);
+});
