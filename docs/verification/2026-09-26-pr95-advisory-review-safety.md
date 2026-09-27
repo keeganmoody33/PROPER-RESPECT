@@ -23,17 +23,21 @@ before reading repository/credential configuration or making requests.
 
 ## Review dispositions
 
-- PR95 comments4111564647 and4111568313: supplied head already collected
-  fallback findings. Retained and tested through actual `post()`422 fallback
+- PR95 comments 4111564647 and 4111568313: supplied head already collected
+  fallback findings. Retained and tested through actual `post()` 422 fallback
   into the controller with a different head and clean Copilot review.
-- PR95 comment4111568332: supplied grammar correction retained.
+- PR95 comment 4111568332: supplied grammar correction retained.
+- PR95 comments 4111729377 and 4111729392, Copilot's review of `4775dda`
+  posted after the merge: fixed in a follow-up docs PR. Section 9, autopilot
+  setup step 7, no longer implies Claude reviews can clear a task, and this
+  receipt's missing spaces before comment IDs and status codes are restored.
 - Independent A/B/C: unbound Claude run provenance and reviewed base,
   unconditional new recurrence, and known Claude writer dispatch are fixed by
   removing clearance, removing the new trigger, gating disabled execution,
   and reusing writer evidence. No run artifact protocol is claimed.
-- PR89 comment4110738307: Claude clearance remains unavailable; model prompt
+- PR89 comment 4110738307: Claude clearance remains unavailable; model prompt
   instructions alone are not a security boundary.
-- PR89 base/omitted-deletion concerns4111436499,4111464678,4111509194:
+- PR89 base/omitted-deletion concerns 4111436499, 4111464678, 4111509194:
   exact base content remains an advisory review coverage limitation. It can
   no longer support Claude merge authorization.
 - Other inherited PR89 comments retain individual dispositions and raw text
@@ -53,7 +57,7 @@ Local evidence: `/tmp/proper-respect-pr95-review-20260926/receipt.md`, raw
 comments, frozen sources, RED/GREEN transcripts and independent reviews.
 
 Repository and autopilot environment variables were empty at inspection;
-reviewers environment variable lookup returned404, not an empty-list proof.
+reviewers environment variable lookup returned 404, not an empty-list proof.
 No enable flag, secret/token, provider call, bot trigger, manual workflow
 run, live remediation, collection or deployment is authorized by this receipt.
 
