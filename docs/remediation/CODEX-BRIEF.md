@@ -1396,9 +1396,9 @@ it opens a one-line `docs:` PR for it.
    react to its comment within a few minutes. If Codex never reacts, turn
    `AUTOPILOT_START_TASKS` off and start each task yourself (Section 11).
    The autopilot still reviews, fixes and merges.
-7. Keep Copilot code review within budget for the trip. Unless Claude
-   reviews are on, Copilot is the only reviewer that can clear a task PR:
-   the autopilot asks it to review each task commit, billed to you. With the quota spent, each PR goes to you
+7. Keep Copilot code review within budget for the trip. Copilot is the only
+   reviewer that can clear a task PR, with Claude reviews on or off: the
+   autopilot asks it to review each task commit, billed to you. With the quota spent, each PR goes to you
    after 6 retries, about 6 hours. Copilot's reviews of #60 to #76 failed on
    quota; its review of #77 worked.
 
