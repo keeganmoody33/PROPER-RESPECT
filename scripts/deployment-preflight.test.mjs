@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 const validEnvironment = {
@@ -30,6 +30,22 @@ test("GitHub consolidation cannot automatically deploy Vercel or Convex", () => 
   assert.equal(configuration.git?.deploymentEnabled, false);
   assert.match(configuration.buildCommand, /npm run deploy:check/);
   assert.match(configuration.buildCommand, /convex deploy/);
+});
+
+test("every runtime and CI job uses the same Node major (R13)", () => {
+  // Vercel runs Node 24.x; CI, local development and Convex "use node" actions match it.
+  assert.equal(readFileSync(".nvmrc", "utf8").trim(), "24");
+  assert.equal(JSON.parse(readFileSync("package.json", "utf8")).engines?.node, "24.x");
+  assert.equal(JSON.parse(readFileSync("convex.json", "utf8")).node?.nodeVersion, "24");
+  const workflows = readdirSync(".github/workflows").filter(name => /\.ya?ml$/.test(name));
+  assert.ok(workflows.length > 0);
+  for (const name of workflows) {
+    const text = readFileSync(`.github/workflows/${name}`, "utf8");
+    assert.doesNotMatch(text, /node-version:/, `${name} pins a Node version itself`);
+    const setups = text.match(/uses: actions\/setup-node@/g)?.length ?? 0;
+    const pinned = text.match(/node-version-file: \.nvmrc/g)?.length ?? 0;
+    assert.equal(pinned, setups, `${name} must read .nvmrc in every setup-node step`);
+  }
 });
 
 function runPreflight(environment) {
