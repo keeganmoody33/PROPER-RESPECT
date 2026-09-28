@@ -144,16 +144,19 @@ test("a reconnect can't land while its grant is being revoked, and a later recon
   expectNoToken(consoleCalls);
 });
 
-test("a disconnect elsewhere during the revocation leaves the account disconnected and unmarked (R17)", async () => {
+test("the older disconnect is refused while a revocation is in flight, so it can't strand a reconnect's tokens (R17)", async () => {
   const { t, owner } = await setup();
   provider();
   const connection = await connect(owner);
+  let legacy: unknown;
   const fetcher = provider(async () => {
-    await owner.mutation(api.mailboxes.disconnect, { accountId: connection.accountId, expectedGeneration: 1 });
+    legacy = await owner.mutation(api.mailboxes.disconnect, { accountId: connection.accountId, expectedGeneration: 1 })
+      .then(() => "disconnected", error => (error as Error).message);
     return new Response("{}");
   });
   const result = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
-  expect(result).toEqual({ disconnected: false, reason: "GENERATION_CHANGED" });
+  expect(legacy).toContain("Disconnect already in progress.");
+  expect(result).toEqual({ disconnected: true, generation: 2, revocation: "REVOKED" });
   expect(revocations(fetcher)).toHaveLength(1);
   const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
   expect(account.status).toBe("DISCONNECTED");
@@ -485,4 +488,47 @@ test("a late callback leaves the grant alone once a newer reconnect has started 
   // The newer attempt will share the late tokens' grant, so they're left for it rather than revoked.
   expect(revoked).toEqual([REFRESH]);
   expect((await t.run(ctx => ctx.db.get(connection.accountId)))).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "REVOKED" } });
+});
+
+test("starting another account's connection doesn't drop a late callback's revocation (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const { outcome, revoked, STALE } = await staleCallback(owner, connection.accountId, async () => {
+    await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+    await owner.action(start, {});
+  });
+  expect(outcome).toBe("Gmail authorization failed. Start a new connection attempt.");
+  expect(revoked).toEqual([REFRESH, STALE]);
+  expect((await t.run(ctx => ctx.db.get(connection.accountId)))).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "REVOKED" } });
+});
+
+test("if a rotated refresh token can't be revoked, the disconnect reports FAILED (R17)", async () => {
+  const { t, owner } = await setup();
+  const ROTATED = "refresh-SECRET-r17-rotated-1f7e";
+  const ids: { accountId?: Awaited<ReturnType<typeof connect>>["accountId"] } = {};
+  const revoked: string[] = [];
+  vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
+    const url = String(input);
+    const form = new URLSearchParams(String(init?.body ?? ""));
+    if (url === "https://oauth2.googleapis.com/token" && form.get("grant_type") === "refresh_token") {
+      await owner.action(disconnectAndRevoke, { accountId: ids.accountId!, expectedGeneration: 1 });
+      return Response.json({ access_token: "access-rotated", refresh_token: ROTATED, expires_in: 3600, token_type: "Bearer", scope });
+    }
+    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: ACCESS, refresh_token: REFRESH, expires_in: 30, token_type: "Bearer", scope });
+    if (url === "https://openidconnect.googleapis.com/v1/userinfo") return Response.json({ sub: "google-sub", email: "google-sub@example.test", email_verified: true });
+    if (url === REVOKE) {
+      const token = form.get("token") ?? "";
+      revoked.push(token);
+      return new Response("{}", { status: token === ROTATED ? 503 : 200 });
+    }
+    throw new Error("Unexpected HTTP endpoint");
+  }));
+  ids.accountId = (await connect(owner)).accountId;
+  await expect(owner.action(api.mailboxGoogle.read, { accountId: ids.accountId, expectedGeneration: 1 })).rejects.toThrow();
+  expect(revoked).toEqual([REFRESH, ROTATED, ROTATED]);
+  const account = (await t.run(ctx => ctx.db.get(ids.accountId!)))!;
+  expect(account).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "FAILED" } });
+  expect(JSON.stringify(account)).not.toContain(ROTATED);
+  expect(JSON.stringify(consoleCalls)).not.toContain(ROTATED);
 });

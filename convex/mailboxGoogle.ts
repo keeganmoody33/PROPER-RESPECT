@@ -143,10 +143,17 @@ async function readLeasedPage(ctx: ActionCtx, args: { accountId: Id<"mailboxAcco
           credential: encryptMailboxCredential(verified.credential, context, keyring()), scopes: verified.scopes });
       } catch (error) {
         // Refused because the account is being (or was) disconnected. If Google issued a new refresh token, the
-        // disconnect never saw it, so end it here. An unchanged token is already covered by the disconnect.
-        if (error instanceof ConvexError && (error.data as { code?: string } | undefined)?.code === "DISCONNECTING" &&
-            verified.credential.refreshToken && verified.credential.refreshToken !== credential.refreshToken) {
-          await revokeMailboxGrant("GOOGLE", verified.credential.refreshToken).catch(() => undefined);
+        // disconnect never saw it, so end it here (one retry); if that fails, the disconnect reports FAILED.
+        const refusal = error instanceof ConvexError
+          ? error.data as { code?: string; accountId?: Id<"mailboxAccounts">; revocationToken?: string; generation?: number } : undefined;
+        const rotatedToken = verified.credential.refreshToken;
+        if (refusal?.code === "DISCONNECTING" && refusal.accountId && refusal.generation !== undefined &&
+            rotatedToken && rotatedToken !== credential.refreshToken) {
+          const revoked = await revokeMailboxGrant("GOOGLE", rotatedToken).then(() => true, () =>
+            revokeMailboxGrant("GOOGLE", rotatedToken).then(() => true, () => false));
+          if (!revoked) await ctx.runMutation(internal.mailboxes.recordStrandedGrant, {
+            accountId: refusal.accountId, generation: refusal.generation,
+            ...(refusal.revocationToken ? { revocationToken: refusal.revocationToken } : {}) });
         }
         throw error;
       }

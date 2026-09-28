@@ -17,9 +17,16 @@ export const store = internalMutation({
       providerAccountId = account.providerAccountId;
     } else if (args.expectedGeneration !== undefined) throw new Error("Reconnect requires a mailbox.");
     // A single pending consent per owner/provider avoids parallel callbacks
-    // competing to install different versions of the same credentials.
+    // competing to install different versions of the same credentials. Another
+    // account's callback that is already exchanging its code is kept, so it can
+    // still revoke its fresh tokens if that account was disconnected meanwhile.
+    const now = Date.now();
     const pending = await ctx.db.query("mailboxOAuthStates").withIndex("by_owner", q => q.eq("ownerId", owner._id)).collect();
-    for (const state of pending) await ctx.db.delete(state._id);
+    for (const state of pending) {
+      const otherAccountInFlight = state.status === "EXCHANGING" && state.expiresAt > now &&
+        state.providerAccountId !== undefined && state.providerAccountId !== providerAccountId;
+      if (!otherAccountInFlight) await ctx.db.delete(state._id);
+    }
     return await ctx.db.insert("mailboxOAuthStates", {
       ownerId: owner._id, provider: "GOOGLE", stateHash: args.stateHash, verifier: args.verifier,
       accountId: args.accountId, providerAccountId, expectedGeneration: args.expectedGeneration ?? 0,

@@ -180,6 +180,8 @@ export const disconnect = mutation({
     const account = await ctx.db.get(args.accountId);
     if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
     requireMailboxGeneration(account, args.expectedGeneration);
+    // While a revocation is in flight only its own finish may disconnect, so a late callback can tell it apart.
+    if (revocationActive(account)) throw new Error("Disconnect already in progress.");
     return await invalidateConnection(ctx, account, "DISCONNECTED");
   },
 });
@@ -363,7 +365,10 @@ export const rotateCredential = internalMutation({
   handler: async (ctx, args) => {
     // A disconnect is revoking (or has revoked) this grant: the refreshed tokens must not be kept.
     const current = await ctx.db.get(args.accountId);
-    if (current && (revocationActive(current) || current.status === "DISCONNECTED")) throw new ConvexError({ code: "DISCONNECTING" as const });
+    if (current && revocationActive(current)) throw new ConvexError({ code: "DISCONNECTING" as const, accountId: current._id,
+      revocationToken: current.revocationPending!.token, generation: current.generation });
+    if (current?.status === "DISCONNECTED") throw new ConvexError({ code: "DISCONNECTING" as const, accountId: current._id,
+      generation: current.generation - 1 });
     const { account, job } = await activeLease(ctx, args);
     validateConnection({ ...account, expectedGeneration: args.expectedGeneration, credential: args.credential, scopes: args.scopes });
     const secret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
