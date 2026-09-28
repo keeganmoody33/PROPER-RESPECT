@@ -659,3 +659,18 @@ for (const [label, connector, overrides] of [
   await expect(f.owner.query(api.onboarding.previewPublication, { selections: [f.selection(overrides)] })).rejects.toThrow("refresh");
   expect(await f.subscriptions()).toEqual([]);
 });
+
+test("a stale republish with the refresh on cannot roll back a newer public calendar", async () => {
+  const f = await githubFixture();
+  await f.publish();
+  const refreshed = calendar(9, "2026-09-27T10:00:00.000Z");
+  await f.t.run(async ctx => {
+    const published = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    await ctx.db.patch(published._id, { revision: published.revision + 1, profile: { ...published.profile,
+      cards: published.profile.cards.map(card => ({ ...card, activity: refreshed })) } });
+  });
+  // An older review tab still holds the saved calendar and the checked box.
+  await expect(f.publish()).rejects.toThrow("This card's public GitHub calendar refreshed since you reviewed it.");
+  expect((await f.publishedCard())?.activity).toEqual(refreshed);
+  expect((await f.subscriptions()).map(item => item.revokedAt)).toEqual([undefined]);
+});

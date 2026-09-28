@@ -655,6 +655,14 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
           selection.activity.kind !== "contributionCalendar" || selection.activity.attributionScope !== "PERSONAL")) {
         throw new Error("A daily GitHub refresh needs your personal GitHub connection and its personal contribution calendar.");
       }
+      // A refresh changes only the public card, so an older review can hold an older
+      // calendar. Keeping the refresh on must never roll that public calendar back.
+      if (provider === "GITHUB" && await hasActiveGithubRefresh(ctx, user._id, prop._id)) {
+        const submitted = Date.parse(selection.activity.capturedAt);
+        const newerPublic = (published?.profile.cards ?? []).some((card, index) => previousPropIds[index] === prop._id &&
+          card.activity?.kind === "contributionCalendar" && Date.parse(card.activity.capturedAt) > submitted);
+        if (newerPublic) throw new Error("This card's public GitHub calendar refreshed since you reviewed it. Reload to publish the newer calendar.");
+      }
     }
   }
   const products = await Promise.all([...new Set(allProps.map(prop => prop.productId))].map(id => ctx.db.get(id)));
