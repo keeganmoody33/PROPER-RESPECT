@@ -112,27 +112,50 @@ test("an account without a stored credential disconnects with NO_TOKEN and no pr
   expect((await t.run(ctx => ctx.db.get(connection.accountId)))).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "NO_TOKEN" } });
 });
 
-test("a reconnect between the check and the final step leaves the new connection intact (R17)", async () => {
+test("a reconnect can't land while its grant is being revoked, and a later reconnect starts clean (R17)", async () => {
   const { t, owner } = await setup();
   provider();
   const connection = await connect(owner);
   const reconnect = stateFrom(await owner.action(start, { accountId: connection.accountId, expectedGeneration: 1 }));
-  let reconnected: { generation: number } | undefined;
+  let refused: unknown;
   const fetcher = provider(async () => {
-    reconnected = await owner.action(callback, reply(reconnect));
+    // Google is revoking the grant; installing fresh tokens now would hand over tokens Google may be revoking.
+    refused = await owner.action(callback, reply(reconnect)).then(() => "installed", error => (error as Error).message);
     return new Response("{}");
   });
   const result = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
-  expect(reconnected?.generation).toBe(2);
+  expect(refused).toBe("Gmail authorization failed. Start a new connection attempt.");
+  expect(result).toEqual({ disconnected: true, generation: 2, revocation: "REVOKED" });
+  expect(revocations(fetcher)).toHaveLength(1);
+  const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(account).toMatchObject({ status: "DISCONNECTED", generation: 2, lastRevocation: { outcome: "REVOKED" } });
+  expect(account.revocationPendingUntil).toBeUndefined();
+  expect(await t.run(ctx => ctx.db.query("mailboxSecrets").collect())).toEqual([]);
+
+  // Once the disconnect finishes, reconnecting works and drops the old revocation outcome.
+  provider();
+  const again = await owner.action(callback, reply(stateFrom(await owner.action(start, { accountId: connection.accountId, expectedGeneration: 2 }))));
+  expect(again.generation).toBe(3);
+  const reconnected = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(reconnected).toMatchObject({ status: "CONNECTED", generation: 3 });
+  expect(reconnected.lastRevocation).toBeUndefined();
+  expectNoToken(consoleCalls);
+});
+
+test("a disconnect elsewhere during the revocation leaves the account disconnected and unmarked (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const fetcher = provider(async () => {
+    await owner.mutation(api.mailboxes.disconnect, { accountId: connection.accountId, expectedGeneration: 1 });
+    return new Response("{}");
+  });
+  const result = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
   expect(result).toEqual({ disconnected: false, reason: "GENERATION_CHANGED" });
   expect(revocations(fetcher)).toHaveLength(1);
   const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
-  expect(account).toMatchObject({ status: "CONNECTED", generation: 2 });
-  expect(account.lastRevocation).toBeUndefined();
-  const secrets = await t.run(ctx => ctx.db.query("mailboxSecrets").collect());
-  expect(secrets).toHaveLength(1);
-  expect(secrets[0].generation).toBe(2);
-  expectNoToken(consoleCalls);
+  expect(account.status).toBe("DISCONNECTED");
+  expect(account.revocationPendingUntil).toBeUndefined();
 });
 
 test("another user cannot disconnect or revoke your account, and a stale generation fails before provider I/O (R17)", async () => {

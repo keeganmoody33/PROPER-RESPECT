@@ -176,7 +176,7 @@ test("Disconnect asks the backend to revoke the Google grant and reports a faile
 
   await render({ disconnected: false, reason: "GENERATION_CHANGED" });
   await page.getByRole("button", { name: "Disconnect and stop collection" }).click();
-  await expect(page.getByRole("status")).toContainText("This account was reconnected while disconnecting.");
+  await expect(page.getByRole("status")).toContainText("This account's connection changed while disconnecting");
 
   await render({}, { outcome: "FAILED", at: "2026-09-28T12:00:00.000Z" });
   await expect(page.getByRole("alert")).toContainText("Google did not confirm that this app's access was revoked. You can still revoke it in your Google Account permissions.");

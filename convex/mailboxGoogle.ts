@@ -74,14 +74,15 @@ type DisconnectResult =
 
 /**
  * Disconnect a Gmail account and ask Google to revoke the grant. The local
- * disconnect happens whatever Google answers; a reconnect that lands while the
- * revocation is in flight keeps its newer connection. Errors and the stored
- * outcome carry fixed values only, never provider text or tokens.
+ * disconnect happens whatever Google answers. While the revocation is in
+ * flight, reconnects are refused, so Google never revokes a connection that
+ * was just installed. Errors and the stored outcome carry fixed values only,
+ * never provider text or tokens.
  */
 export const disconnectAndRevoke = action({
   args: { accountId: v.id("mailboxAccounts"), expectedGeneration: v.number() },
   handler: async (ctx, args): Promise<DisconnectResult> => {
-    const stored = await ctx.runQuery(internal.mailboxes.revocationCredential, args);
+    const stored = await ctx.runMutation(internal.mailboxes.beginRevocation, args);
     let outcome: "REVOKED" | "FAILED" | "NO_TOKEN" = "NO_TOKEN";
     if (stored.credential) {
       try {

@@ -43,6 +43,8 @@ export const mailboxTables = {
     nextMaintenanceAt: v.optional(v.number()),
     // Outcome of the last disconnect's provider revocation request. Never holds provider text or tokens.
     lastRevocation: v.optional(v.object({ outcome: mailboxRevocationOutcomeValidator, at: v.string() })),
+    // Set while disconnectAndRevoke is asking the provider to revoke the grant; reconnects wait until it clears or expires.
+    revocationPendingUntil: v.optional(v.number()),
     connectedAt: v.string(), updatedAt: v.string(), lastSyncedAt: v.optional(v.string()),
   }).index("by_owner", ["ownerId"])
     .index("by_maintenance_due", ["maintenanceEnabled", "nextMaintenanceAt"])

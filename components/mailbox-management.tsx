@@ -103,7 +103,7 @@ const AUTHORIZATION_FAILED = "Gmail authorization did not complete. Start a new 
 const REVOKE_YOURSELF = "You can still revoke it in your Google Account permissions.";
 
 export function disconnectNotice(result: FunctionReturnType<typeof api.mailboxGoogle.disconnectAndRevoke>) {
-  if (!result.disconnected) return "This account was reconnected while disconnecting. The new connection was kept; disconnect it again if you meant to.";
+  if (!result.disconnected) return "This account's connection changed while disconnecting, for example from another tab. Check its status below and disconnect again if it's still connected.";
   const local = "Disconnected and stopped collection. Evidence and product relationships remain unchanged.";
   return result.revocation === "REVOKED" ? `${local} Google confirmed that this app's access was revoked.` :
     result.revocation === "FAILED" ? `${local} Google did not confirm the revocation. ${REVOKE_YOURSELF}` :
