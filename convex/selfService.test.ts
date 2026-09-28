@@ -265,3 +265,39 @@ test("unpublish all refuses at preview while the page is taken down", async () =
     .rejects.toThrow("This profile is under review. Contact 33@lecturesfrom.com.");
   expect((await publishedProfile(t))?.profile.cards).toHaveLength(published.profile.cards.length);
 });
+
+test("unpublish all revokes every daily refresh the owner approved, and only theirs", async () => {
+  const { owner, t, propIds, userId, otherUserId } = await fixture();
+  await publishAll(owner, t, propIds);
+  const earlier = "2026-09-01T00:00:00.000Z";
+  const ids = await t.run(async ctx => {
+    const connector = (user: typeof userId) => ctx.db.insert("connectorAccounts", {
+      userId: user, provider: "GITHUB", status: "CONNECTED", accountLabel: "octocat", attributionScope: "PERSONAL", connectedAt: capturedAt,
+    });
+    const connectorId = await connector(userId);
+    const subscription = (propId: Id<"props">, revokedAt?: string) => ctx.db.insert("metricSubscriptions", {
+      userId, propId, connectorId, metricKey: "github.contributions", attributionScope: "PERSONAL", refreshCadence: "DAILY", approvedAt: capturedAt,
+      ...(revokedAt ? { revokedAt } : {}),
+    });
+    const active = [await subscription(propIds[0]), await subscription(propIds[1])];
+    const alreadyRevoked = await subscription(propIds[0], earlier);
+    const otherPropId = await ctx.db.insert("props", {
+      userId: otherUserId, productId: (await ctx.db.get(propIds[0]))!.productId, visibility: "PUBLIC", status: "ACTIVE",
+      relationshipVersion: 1, confirmedAt: capturedAt, headline: "Other", note: "",
+    });
+    const others = await ctx.db.insert("metricSubscriptions", {
+      userId: otherUserId, propId: otherPropId, connectorId: await connector(otherUserId), metricKey: "github.contributions",
+      attributionScope: "PERSONAL", refreshCadence: "DAILY", approvedAt: capturedAt,
+    });
+    return { active, alreadyRevoked, others };
+  });
+  await removeAllCards(owner);
+  const rows = await t.run(async ctx => ({
+    active: await Promise.all(ids.active.map(id => ctx.db.get(id))),
+    alreadyRevoked: await ctx.db.get(ids.alreadyRevoked),
+    others: await ctx.db.get(ids.others),
+  }));
+  expect(rows.active.every(row => typeof row?.revokedAt === "string")).toBe(true);
+  expect(rows.alreadyRevoked?.revokedAt).toBe(earlier);
+  expect(rows.others?.revokedAt).toBeUndefined();
+});
