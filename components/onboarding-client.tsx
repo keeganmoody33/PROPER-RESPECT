@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
-import { defaultReview, explicitPublicationCards, isCurrentReview, reviewUsageLink, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
+import { defaultReview, explicitPublicationCards, githubRefreshConnector, isCurrentReview, reviewActivity, reviewUsageLink, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
 import { USAGE_LINK_LABELS, usageLinkLabelText } from "@/src/domain/usage-links";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
 import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/domain/product-destination";
@@ -279,6 +279,8 @@ function Builder() {
         state.cards.flatMap(card => card.product ? [{ ...card, product: card.product }] : []),
         reviewEdits, Boolean(state.privateInventoryAvailable),
       ).map(({ card, edit }) => {
+        // Refresh is sent only while the card can still offer it (R09).
+        const refreshConnector = edit.autoRefresh ? githubRefreshConnector(card, state.connectors, edit) : undefined;
         return {
           propId: card.prop._id,
           ...(state.privateInventoryAvailable ? { expectedRelationshipVersion: card.prop.relationshipVersion ?? 0 } : {}),
@@ -308,11 +310,12 @@ function Builder() {
           costVisibility: edit.costVisibility,
           activity:
             edit.publish && edit.approveActivity
-              ? card.prop.activity
+              ? reviewActivity(card, { autoRefresh: Boolean(refreshConnector) })
               : undefined,
           usageLinkUrl: edit.publish && edit.includeUsageLink && reviewUsageLink(card) ? card.prop.supportingUrl : undefined,
           usageLinkLabel: edit.publish && edit.includeUsageLink && reviewUsageLink(card) ? edit.usageLinkLabel : undefined,
-          autoRefresh: false,
+          autoRefresh: Boolean(refreshConnector),
+          ...(refreshConnector ? { connectorId: refreshConnector._id, metricKey: "github.contributions" } : {}),
         };
       });
   }
@@ -697,6 +700,17 @@ function Builder() {
                       {card.prop.activity.attributionScope.toLowerCase()} activity
                     </label>
                   )}
+                  {githubRefreshConnector(savedCard, state.connectors, edit) && <>
+                    <label className="review-toggle">
+                      <input
+                        type="checkbox"
+                        checked={edit.autoRefresh}
+                        onChange={(event) => updateReview(card.prop._id, edit, { autoRefresh: event.target.checked })}
+                      />
+                      Refresh daily from GitHub
+                    </label>
+                    <p>Updates this card&apos;s public GitHub contribution calendar once a day. To stop, uncheck this and publish again, or disconnect GitHub.</p>
+                  </>}
                   {reviewUsageLink(savedCard) && <>
                     <label className="review-toggle">
                       <input
