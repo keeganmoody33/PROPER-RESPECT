@@ -18,7 +18,7 @@ it("preserves metadata and bodies on homepage, guide and trust documents", async
     [homepage(), homepageMarkdown(), "Proper Respect", "/"],
     [agents(), agentInstructions(), "Proper Respect public-profile reading guide", "/agents.md"],
     [skills(), agentInstructions(), "Proper Respect public-profile reading guide", "/agents.md"],
-    ...(["origins", "contact", "privacy"] as const).map(slug => [trustMarkdownResponse(slug), trustMarkdown(slug), trustDocuments[slug].title, `/about/${slug}`] as const),
+    ...(["origins", "contact", "privacy", "terms"] as const).map(slug => [trustMarkdownResponse(slug), trustMarkdown(slug), trustDocuments[slug].title, `/about/${slug}`] as const),
   ] as const;
   for (const [response, expectedBody, title, path] of documents) {
     const text = await response.text();

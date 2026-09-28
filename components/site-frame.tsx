@@ -22,7 +22,7 @@ export function SiteHeader() {
 const footerGroups = [
   { title: "Product", links: [{ label: "How it works", href: "/#how-it-works" }, { label: "Usage examples", href: "/#example" }, { label: "Your collection", href: "/app/collection" }] },
   { title: "Company", links: [{ label: "Origins", href: "/about/origins" }, { label: "Contact", href: "/about/contact" }, { label: "Social" }] },
-  { title: "Resources", links: [{ label: "Help" }, { label: "Privacy", href: "/about/privacy" }, { label: "Terms" }] },
+  { title: "Resources", links: [{ label: "Help" }, { label: "Privacy", href: "/about/privacy" }, { label: "Terms", href: "/about/terms" }] },
 ];
 
 export function SiteFooter() {
