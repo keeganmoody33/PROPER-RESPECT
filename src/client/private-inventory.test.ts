@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 import type { Id } from "../../convex/_generated/dataModel";
 import { InventoryRelationshipDetails, PrivateInventoryView, type InventoryData, type InventoryEvidence } from "../../components/private-inventory";
+import { ObservedStartDateAction } from "../../components/private-evidence-panel";
 
 const item: InventoryData["cards"][number] = {
   prop: { _id: "test-prop" as Id<"props">, _creationTime: 1, productId: "test-product" as Id<"products">, userId: "test-owner" as Id<"users">,
@@ -16,6 +17,24 @@ const testimony: InventoryEvidence[number] = {
   captureProvenance: undefined, artifact: undefined, suggestedActivity: undefined, originalText: undefined,
   limitations: [], observationCount: 0, ownerStatementQuestion: "Did you use this to dictate notes?", ownerStatement: "Yes, correct.",
 };
+
+test("relationship evidence receives an explicit draft-date action without saving", () => {
+  const save = vi.fn();
+  const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, {
+    item, evidence: [], onSave: save,
+    renderEvidence: (_item, controls) => controls && createElement(ObservedStartDateAction, {
+      observation: { kind: "FIRST_USE", scope: "PERSONAL", date: "2024-06-03", excerpt: "Used this tool on 2024-06-03", acquisition: "USER_SUPPLIED" },
+      verdict: "CORRECT", ...controls,
+    }),
+  })));
+  expect($("button").text()).toContain("Use this observed date as my start date");
+  expect($('input[name="startedAt"]').attr("value")).toBe("");
+  expect($.text()).not.toContain("Unsaved");
+  expect($("aside").attr("aria-label")).toContain("Supporting context");
+  expect($("summary").text()).toContain("Work-sample link and supporting snapshot");
+  expect($('button[form][type="submit"]').text()).toContain("Confirm and save privately");
+  expect(save).not.toHaveBeenCalled();
+});
 
 test("a short retained answer stays with its original question and is not silently rewritten into an owner explanation", () => {
   const html = renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item, evidence: [testimony], onSave: vi.fn() }));
@@ -71,7 +90,9 @@ test("one visible product retains every record and keeps same-domain products se
   const $ = load(renderToStaticMarkup(createElement(PrivateInventoryView, {
     data: { cards: [item, sibling, separate], hasMore: true }, onSave: save, onImport: vi.fn(),
   })));
-  expect($("article.product-card")).toHaveLength(2);
+  expect($("article.product-card")).toHaveLength(1);
+  expect($('nav[aria-label="All tools"] button[aria-pressed]')).toHaveLength(2);
+  expect($('nav[aria-label="All tools"] [data-tool-name]').map((_, node) => $(node).text()).get()).toEqual(["Example product", "Copilot"]);
   expect($("select option").map((_, node) => $(node).attr("value")).get()).toEqual(["test-prop", "second-prop"]);
   expect($.text()).toContain("Different retained decision");
   expect($.text()).toContain("Selecting a record does not merge, confirm, or publish it");
