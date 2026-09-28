@@ -1,0 +1,19 @@
+{
+  "light": {
+    "background": "rgb(240, 238, 231)",
+    "color": "rgb(23, 23, 19)",
+    "focus": true,
+    "offset": "3px",
+    "outline": "rgb(240, 238, 231)",
+    "width": "2px"
+  },
+  "dark": {
+    "background": "rgb(240, 238, 231)",
+    "color": "rgb(23, 23, 19)",
+    "focus": true,
+    "offset": "3px",
+    "outline": "rgb(240, 238, 231)",
+    "width": "2px"
+  },
+  "unchanged": true
+}
