@@ -695,6 +695,8 @@ export const publishSelected = mutation({
   handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash }) => {
     const user = await requireUser(ctx);
     const prepared = await preparePublication(ctx, user, selections);
+    // A republish replaces the snapshot, so it must never lift an operator takedown.
+    if (prepared.published?.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
     if (expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");
     if (expectedPreviewHash !== prepared.previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
     const now = new Date().toISOString();
