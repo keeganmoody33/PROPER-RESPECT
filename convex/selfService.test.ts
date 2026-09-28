@@ -208,3 +208,14 @@ test("the export says exactly when a relationship's history was cut off", async 
   expect(byId.get(over)!.history).toHaveLength(1000);
   expect(byId.get(exact)).toMatchObject({ linksComplete: true });
 });
+
+test("unpublish all refuses at preview, with a way forward, above its supported size", async () => {
+  const { owner, t, propIds } = await fixture({ props: 1001 });
+  // Mark every relationship public directly; publishing 1,001 cards isn't what this tests.
+  await t.run(async ctx => { for (const propId of propIds) await ctx.db.patch(propId, { visibility: "PUBLIC" }); });
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true }))
+    .rejects.toThrow("Unpublish all handles up to 1,000 public cards and daily refreshes at once");
+  await t.run(async ctx => ctx.db.patch(propIds[0], { visibility: "PRIVATE" }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
+  expect(preview.profile.cards).toEqual([]);
+});

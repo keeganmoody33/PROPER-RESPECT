@@ -41,7 +41,10 @@ describe("buildExport (R15)", () => {
       format: "proper-respect-export", version: 1, exportedAt: "2026-09-28T12:00:00.000Z",
       profile: { handle: "owner" }, relationships: [{ id: "p1" }], evidence: [],
     });
-    expect(exported.excluded).toEqual(expect.arrayContaining([expect.stringMatching(/original/i)]));
+    expect(exported.excluded).toEqual(expect.arrayContaining([
+      expect.stringMatching(/original/i),
+      expect.stringMatching(/content hashes and deduplication keys/i),
+    ]));
   });
 
   it("names the file after the handle and date", () => {

@@ -593,6 +593,10 @@ async function hasActiveGithubRefresh(ctx: QueryCtx | MutationCtx, userId: Id<"u
   return subscriptions.some(subscription => subscription.userId === userId && !subscription.revokedAt);
 }
 
+// Remove-all runs as one transaction, so its writes stay far inside Convex's
+// per-mutation limits. Bigger accounts unpublish in batches of 100 instead.
+const REMOVE_ALL_MAX_WRITES = 1000;
+
 // removeAllCards (R15, "Unpublish all cards"): the server drops every published
 // card itself, including older cards that can't be matched to a relationship,
 // in one step with no selection limit. The profile fields are not cards and
@@ -609,6 +613,14 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   if (selectedIds.size !== selections.length) throw new Error("Select each relationship only once.");
   const allProps = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).collect();
   const propsById = new Map(allProps.map(prop => [prop._id, prop]));
+  if (removeAllCards) {
+    // The same count the commit writes: every public relationship and active refresh.
+    const subscriptions = await ctx.db.query("metricSubscriptions").withIndex("by_user", q => q.eq("userId", user._id)).collect();
+    const writes = allProps.filter(prop => prop.visibility === "PUBLIC").length + subscriptions.filter(subscription => !subscription.revokedAt).length;
+    if (writes > REMOVE_ALL_MAX_WRITES) {
+      throw new Error("Unpublish all handles up to 1,000 public cards and daily refreshes at once. Remove cards 100 at a time in Choose what to share, then try again, or ask through the contact page.");
+    }
+  }
   const published = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique();
   const previousPropIds = published ? await resolvePublishedCardPropIds(ctx, published, user._id, allProps) : [];
   for (const selection of selections) {

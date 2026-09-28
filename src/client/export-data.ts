@@ -24,6 +24,7 @@ export async function collectPages<T>(fetchPage: (cursor: string | null) => Prom
 export const EXPORT_EXCLUSIONS = [
   "Original files and retained original text (delete or view them in your private collection).",
   "Connector credentials, upload tokens and storage references.",
+  "Content hashes and deduplication keys, which only identify files and records inside Proper Respect.",
 ] as const;
 
 export function buildExport<P, R, E>({ profile, relationships, evidence, exportedAt }: { profile: P; relationships: R[]; evidence: E[]; exportedAt: string }) {
