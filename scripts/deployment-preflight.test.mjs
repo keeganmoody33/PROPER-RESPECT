@@ -106,6 +106,16 @@ test("the frontend reads the Vercel IDs as K02's environment variables", () => {
   assert.doesNotMatch(frontend, /secrets\.VERCEL_(ORG|PROJECT)_ID/);
 });
 
+test("the frontend refuses Vercel IDs other than the proper-respect project's", () => {
+  const frontend = releaseWorkflow().slice(releaseWorkflow().indexOf("\n  frontend:"));
+  // A missing environment variable falls back to a repository or org one, so
+  // non-empty isn't enough: the IDs must be exactly K02's.
+  assert.match(frontend, /expected_org='team_MfB5K2Npy5oy5SFJ2g9nbL5W'/);
+  assert.match(frontend, /expected_project='prj_yxsUnnPW0ka8mkFr7l66eUSzJgT8'/);
+  assert.match(frontend, /\[ "\$VERCEL_ORG_ID" != "\$expected_org" \]/);
+  assert.match(frontend, /\[ "\$VERCEL_PROJECT_ID" != "\$expected_project" \]/);
+});
+
 test("the deployment URL pattern accepts only a valid vercel.app hostname", () => {
   const pattern = new RegExp(workflowPattern(releaseWorkflow(), "url_pattern"));
   assert.ok(pattern.test("https://proper-respect-abc123-team.vercel.app"));

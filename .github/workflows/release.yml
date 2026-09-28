@@ -161,21 +161,31 @@ jobs:
     # Only the Vercel steps receive the token and IDs. The CLI reads them from
     # the environment, so no step passes --token.
     steps:
-      - name: Require the Vercel token and IDs
-        # A missing-value check only; verify has already required the owner as
-        # reviewer here. The token is an environment secret; the IDs are K02's
-        # environment variables.
+      - name: Require the Vercel token and the proper-respect project's IDs
+        # verify has already required the owner as reviewer here. The token is
+        # an environment secret. The IDs are K02's environment variables, but a
+        # missing one falls back to a repository or org variable, so each must
+        # equal the project's known ID, not just be non-empty.
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
-          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
-            if [ -z "${!name}" ]; then
-              echo "$name is not set on the production-frontend environment. See docs/releases/v0.2.0.md, One-time setup."
-              exit 1
-            fi
-          done
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN is not set on the production-frontend environment. See docs/releases/v0.2.0.md, One-time setup."
+            exit 1
+          fi
+          # The groundskeep team and its proper-respect project (brief K02).
+          expected_org='team_MfB5K2Npy5oy5SFJ2g9nbL5W'
+          expected_project='prj_yxsUnnPW0ka8mkFr7l66eUSzJgT8'
+          if [ "$VERCEL_ORG_ID" != "$expected_org" ]; then
+            echo "VERCEL_ORG_ID must be $expected_org. Set it on the production-frontend environment."
+            exit 1
+          fi
+          if [ "$VERCEL_PROJECT_ID" != "$expected_project" ]; then
+            echo "VERCEL_PROJECT_ID must be $expected_project. Set it on the production-frontend environment."
+            exit 1
+          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
