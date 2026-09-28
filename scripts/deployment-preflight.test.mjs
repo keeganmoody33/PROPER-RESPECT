@@ -75,6 +75,25 @@ test("release Convex commands never download an unlocked CLI", () => {
   assert.match(readFileSync("docs/releases/v0.2.0.md", "utf8"), /git checkout v0\.2\.0\nnpm ci\n/);
 });
 
+test("release secrets reach only the steps that run the CLI they authenticate", () => {
+  const workflow = releaseWorkflow();
+  const steps = job => {
+    const start = workflow.indexOf(`\n  ${job}:`);
+    const body = workflow.slice(start, job === "frontend" ? undefined : workflow.indexOf("\n  frontend:"));
+    return body.split("\n      - ").slice(1);
+  };
+  const holders = (job, secret) => steps(job).filter(step => step.includes(`secrets.${secret}`));
+  const convex = holders("backend", "CONVEX_DEPLOY_KEY");
+  assert.equal(convex.length, 2);
+  for (const step of convex) assert.match(step, /npx --no-install convex /);
+  // The key check runs inside the deploy step, before the CLI.
+  assert.ok(convex[0].indexOf('"prod:${CONVEX_PRODUCTION_DEPLOYMENT}|"') < convex[0].indexOf("npx --no-install convex deploy"));
+  const vercel = holders("frontend", "VERCEL_TOKEN");
+  assert.equal(vercel.length, 2);
+  for (const step of vercel) assert.match(step, /release-tools\/node_modules\/\.bin\/vercel /);
+  assert.ok(vercel[0].indexOf('-z "$VERCEL_TOKEN"') < vercel[0].indexOf("vercel deploy"));
+});
+
 test("the release requires the repository owner as the only reviewer", () => {
   const workflow = releaseWorkflow();
   const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));

@@ -125,10 +125,22 @@ jobs:
     environment: production-backend
     # Only the two Convex steps receive the key, so npm ci's install scripts never see it.
     steps:
-      - name: Require a production deploy key for the checked deployment
-        # verify has already required the owner as reviewer here. A deploy key
-        # targets the deployment it names, so a dev key or another deployment's
-        # key would deploy somewhere else while the release looked successful.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      # The Convex CLI comes from the lockfile; --no-install below fails
+      # rather than download a different version.
+      - run: npm ci
+      - name: Deploy the Convex backend
+        # A deploy key scopes every Convex command to its own deployment, so no --prod.
+        # verify has already required the owner as reviewer here. The key is
+        # checked in this step, before the CLI runs, so no other step holds it:
+        # a dev key or another deployment's key would deploy somewhere else
+        # while the release looked successful.
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
           CONVEX_PRODUCTION_DEPLOYMENT: ${{ needs.verify.outputs.convex_deployment }}
@@ -144,21 +156,7 @@ jobs:
               exit 1
               ;;
           esac
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '22'
-          cache: npm
-      # The Convex CLI comes from the lockfile; --no-install below fails
-      # rather than download a different version.
-      - run: npm ci
-      - name: Deploy the Convex backend
-        # A deploy key scopes every Convex command to its own deployment, so no --prod.
-        env:
-          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-        run: npx --no-install convex deploy -y
+          npx --no-install convex deploy -y
       - name: Record the deployed commit
         # Needs the deploy key's deployment:env:write permission as well as deployment:deploy.
         env:
@@ -175,20 +173,15 @@ jobs:
     # Only the Vercel steps receive the token and IDs. The CLI reads them from
     # the environment, so no step passes --token.
     steps:
-      - name: Require the Vercel token and the proper-respect project's IDs
-        # verify has already required the owner as reviewer here. The token is
-        # an environment secret. The IDs are K02's environment variables, but a
-        # missing one falls back to a repository or org variable, so each must
-        # equal the project's known ID, not just be non-empty.
+      - name: Require the proper-respect project's IDs
+        # verify has already required the owner as reviewer here. The IDs are
+        # K02's environment variables, but a missing one falls back to a
+        # repository or org variable, so each must equal the project's known
+        # ID, not just be non-empty. The token is checked in the deploy step.
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "VERCEL_TOKEN is not set on the production-frontend environment. See docs/releases/v0.2.0.md, One-time setup."
-            exit 1
-          fi
           # The groundskeep team and its proper-respect project (brief K02).
           expected_org='team_MfB5K2Npy5oy5SFJ2g9nbL5W'
           expected_project='prj_yxsUnnPW0ka8mkFr7l66eUSzJgT8'
@@ -222,6 +215,10 @@ jobs:
           # The deployment the backend job just deployed, checked by verify.
           CONVEX_URL: https://${{ needs.verify.outputs.convex_deployment }}.convex.cloud
         run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN is not set on the production-frontend environment. See docs/releases/v0.2.0.md, One-time setup."
+            exit 1
+          fi
           # Bind this build and its runtime to the checked backend, whatever
           # NEXT_PUBLIC_CONVEX_URL Vercel's project settings hold.
           DEPLOYMENT_URL="$(release-tools/node_modules/.bin/vercel deploy --prod --yes \
