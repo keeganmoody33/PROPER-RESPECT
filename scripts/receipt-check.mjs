@@ -36,10 +36,11 @@ export function evaluateReceipt(profile, context) {
   if (!card) return failure(context, "MISSING_CARD");
   const { capturedAt, freshness } = card.activity;
   const captured = Date.parse(capturedAt);
-  const ageHours = Number.isNaN(captured)
-    ? null
-    : Math.round(((context.now.getTime() - captured) / 3_600_000) * 100) / 100;
-  const ok = freshness === "FRESH" && ageHours !== null && ageHours <= MAX_AGE_HOURS;
+  const ageMs = Number.isNaN(captured) ? null : context.now.getTime() - captured;
+  // The limit uses the exact age; rounding is only for the printed field. A
+  // capture time in the future is as untrustworthy as a stale one.
+  const ok = freshness === "FRESH" && ageMs !== null && ageMs >= 0 && ageMs <= MAX_AGE_HOURS * 3_600_000;
+  const ageHours = ageMs === null ? null : Math.round((ageMs / 3_600_000) * 100) / 100;
   return { ...baseLine(context), capturedAt, freshness, ageHours, ok };
 }
 

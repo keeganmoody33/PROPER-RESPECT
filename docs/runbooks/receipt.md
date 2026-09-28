@@ -17,7 +17,8 @@ and the count needs both.
 - **The refresh:** the Convex cron refreshes approved GitHub cards daily at
   06:00 UTC (`convex/crons.ts`).
 - **The witness:** `.github/workflows/receipt.yml` runs at 08:17 UTC, and on
-  demand (Actions, Receipt, Run workflow). It runs
+  demand (Actions, Receipt, Run workflow, from `main`). The job can write, so
+  a run started from any other branch is skipped. It runs
   `scripts/receipt-check.mjs`, which calls the public query
   `publicProfiles:getByHandleV2` for `RECEIPT_HANDLE` at `PUBLIC_CONVEX_URL`.
 - **The line:** every run, pass or fail, appends one JSON line to
@@ -28,8 +29,9 @@ and the count needs both.
   {"checkedAt":"…","event":"schedule","runId":"…","sha":"…","handle":"lecturesfrom","capturedAt":"…","freshness":"FRESH","ageHours":2.28,"ok":true}
   ```
 
-  - `ok` is true only when `freshness` is `FRESH` and `ageHours` is 36 or
-    less.
+  - `ok` is true only when `freshness` is `FRESH` and the exact age is
+    between 0 and 36 hours. The printed `ageHours` is rounded, so a line can
+    show `36` and still fail; a capture time in the future also fails.
   - A failing line carries a `reason`:
 
     | `reason` | Meaning |

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { checkReceipt, evaluateReceipt } from "./receipt-check.mjs";
 
@@ -43,6 +44,19 @@ test("a calendar 37 hours old fails, and one exactly 36 hours old passes", () =>
   const edge = evaluateReceipt(profile([calendarCard({ capturedAt: "2026-09-30T20:17:00.000Z" })]), { handle: "lecturesfrom", now, env });
   assert.equal(edge.ageHours, 36);
   assert.equal(edge.ok, true);
+});
+
+test("the 36-hour limit uses the exact age, not the rounded one", () => {
+  // 36 hours and 15 seconds rounds to 36.00 but is over the limit.
+  const over = evaluateReceipt(profile([calendarCard({ capturedAt: "2026-09-30T20:16:45.000Z" })]), { handle: "lecturesfrom", now, env });
+  assert.equal(over.ageHours, 36);
+  assert.equal(over.ok, false);
+});
+
+test("a capture time in the future fails", () => {
+  const line = evaluateReceipt(profile([calendarCard({ capturedAt: "2026-10-02T09:00:00.000Z" })]), { handle: "lecturesfrom", now, env });
+  assert.ok(line.ageHours < 0);
+  assert.equal(line.ok, false);
 });
 
 test("a missing GitHub calendar card fails", () => {
@@ -130,4 +144,16 @@ test("bad configuration prints a failing line without querying", async () => {
     assert.equal(queried, false);
     assert.equal(JSON.parse(printed[0]).reason, "BAD_CONFIGURATION");
   }
+});
+
+const receiptWorkflow = () => readFileSync(".github/workflows/receipt.yml", "utf8");
+
+test("the write-capable job runs only on the default branch", () => {
+  assert.match(receiptWorkflow(), /if: github\.ref == format\('refs\/heads\/\{0\}', github\.event\.repository\.default_branch\)/);
+});
+
+test("each append attempt starts from a clean clone and tells a missing branch from a fetch error", () => {
+  const workflow = receiptWorkflow();
+  assert.match(workflow, /ls-remote --exit-code --heads origin receipts/);
+  assert.match(workflow, /rm -rf receipts-work/);
 });

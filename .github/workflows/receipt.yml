@@ -16,6 +16,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   witness:
+    # workflow_dispatch can name any branch. This job can write, so it runs
+    # only the default branch's workflow and script.
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -52,27 +55,41 @@ jobs:
           cat "$line_file"
 
           auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
-          git init -q receipts && cd receipts
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          remote="https://github.com/$GITHUB_REPOSITORY.git"
           for attempt in 1 2 3; do
-            if git -c http.extraheader="$auth" fetch -q --depth 1 origin receipts; then
-              git checkout -q -B receipts FETCH_HEAD
-            else
+            # Every attempt starts from a clean clone, so a retry never meets a
+            # branch or file left over from the attempt before.
+            rm -rf receipts-work && git init -q receipts-work
+            git -C receipts-work config user.name "github-actions[bot]"
+            git -C receipts-work config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C receipts-work remote add origin "$remote"
+            # Exit 2 means the branch doesn't exist yet; any other failure is
+            # an error to retry, never a reason to start a new branch.
+            status=0
+            git -C receipts-work -c http.extraheader="$auth" ls-remote --exit-code --heads origin receipts > /dev/null || status=$?
+            if [ "$status" -eq 0 ]; then
+              if ! git -C receipts-work -c http.extraheader="$auth" fetch -q --depth 1 origin receipts; then
+                echo "Fetch attempt $attempt failed."
+                sleep $((attempt * 5))
+                continue
+              fi
+              git -C receipts-work checkout -q -B receipts FETCH_HEAD
+            elif [ "$status" -eq 2 ]; then
               # First run: an orphan branch holding only the receipt.
-              git checkout -q --orphan receipts
-              git rm -rq --cached . 2>/dev/null || true
+              git -C receipts-work checkout -q --orphan receipts
+            else
+              echo "Could not read the receipts branch (attempt $attempt)."
+              sleep $((attempt * 5))
+              continue
             fi
-            mkdir -p receipts
-            cat "$line_file" >> receipts/github-refresh.jsonl
-            git add receipts/github-refresh.jsonl
-            git commit -q -m "receipt: $(jq -r '.checkedAt' "$line_file") ok=$(jq -r '.ok' "$line_file")"
-            if git -c http.extraheader="$auth" push -q origin receipts; then
+            mkdir -p receipts-work/receipts
+            cat "$line_file" >> receipts-work/receipts/github-refresh.jsonl
+            git -C receipts-work add receipts/github-refresh.jsonl
+            git -C receipts-work commit -q -m "receipt: $(jq -r '.checkedAt' "$line_file") ok=$(jq -r '.ok' "$line_file")"
+            if git -C receipts-work -c http.extraheader="$auth" push -q origin receipts; then
               exit 0
             fi
             echo "Push attempt $attempt failed; retrying from the latest receipts branch."
-            git reset -q --hard
             sleep $((attempt * 5))
           done
           echo "Could not append the receipt line."
