@@ -63,7 +63,9 @@ test("a missing GitHub calendar card fails", () => {
   const otherProduct = { ...calendarCard(), product: { ...calendarCard().product, slug: "gitlab" } };
   const otherKind = { ...calendarCard(), activity: { ...calendarCard().activity, kind: "headlineMetrics" } };
   const noActivity = { ...calendarCard(), activity: undefined };
-  for (const cards of [[], [otherProduct], [otherKind], [noActivity]]) {
+  // The receipt is the personal calendar; the refresh never renews other scopes.
+  const organization = { ...calendarCard(), activity: { ...calendarCard().activity, attributionScope: "ORGANIZATION" } };
+  for (const cards of [[], [otherProduct], [otherKind], [noActivity], [organization]]) {
     const line = evaluateReceipt(profile(cards), { handle: "lecturesfrom", now, env });
     assert.equal(line.ok, false);
     assert.equal(line.capturedAt, null);
@@ -156,4 +158,8 @@ test("each append attempt starts from a clean clone and tells a missing branch f
   const workflow = receiptWorkflow();
   assert.match(workflow, /ls-remote --exit-code --heads origin receipts/);
   assert.match(workflow, /rm -rf receipts-work/);
+});
+
+test("a retried append never writes the same line twice", () => {
+  assert.match(receiptWorkflow(), /grep -Fxq -f "\$line_file" receipts-work\/receipts\/github-refresh\.jsonl/);
 });

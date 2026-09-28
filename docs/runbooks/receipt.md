@@ -37,7 +37,7 @@ and the count needs both.
     | `reason` | Meaning |
     |---|---|
     | `NOT_PUBLISHED` | The handle has no public profile. |
-    | `MISSING_CARD` | The profile has no GitHub contribution calendar card. |
+    | `MISSING_CARD` | The profile has no personal GitHub contribution calendar card. |
     | `UNREACHABLE` | The query failed. The run log has the error; the line doesn't. |
     | `BAD_CONFIGURATION` | A variable below is missing or invalid. |
     | `NO_OUTPUT` | The script crashed before printing. |

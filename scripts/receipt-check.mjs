@@ -31,7 +31,11 @@ function failure(context, reason) {
 export function evaluateReceipt(profile, context) {
   if (profile === null || profile === undefined) return failure(context, "NOT_PUBLISHED");
   const card = (profile.cards ?? []).find(
-    candidate => candidate?.product?.slug === "github" && candidate?.activity?.kind === "contributionCalendar",
+    // The receipt is the owner's personal calendar: the refresh renews only
+    // PERSONAL GitHub cards (convex/connectors.ts), so no other scope counts.
+    candidate => candidate?.product?.slug === "github"
+      && candidate?.activity?.kind === "contributionCalendar"
+      && candidate?.activity?.attributionScope === "PERSONAL",
   );
   if (!card) return failure(context, "MISSING_CARD");
   const { capturedAt, freshness } = card.activity;

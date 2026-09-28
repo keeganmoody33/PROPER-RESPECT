@@ -83,6 +83,13 @@ jobs:
               continue
             fi
             mkdir -p receipts-work/receipts
+            touch receipts-work/receipts/github-refresh.jsonl
+            # A push can land and still report failure. The line carries this
+            # run's checkedAt, so finding it already there means it's done.
+            if grep -Fxq -f "$line_file" receipts-work/receipts/github-refresh.jsonl; then
+              echo "This run's line is already on the receipts branch."
+              exit 0
+            fi
             cat "$line_file" >> receipts-work/receipts/github-refresh.jsonl
             git -C receipts-work add receipts/github-refresh.jsonl
             git -C receipts-work commit -q -m "receipt: $(jq -r '.checkedAt' "$line_file") ok=$(jq -r '.ok' "$line_file")"
