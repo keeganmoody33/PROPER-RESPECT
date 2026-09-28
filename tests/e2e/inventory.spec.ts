@@ -233,6 +233,7 @@ for (const width of [390, 1440]) test(`collection editor separates evidence and 
     await theme.selectOption(mode);
     expect(await appearance()).toEqual(brand);
     await expect(page.getByLabel("Started using (optional)", { exact: true })).toHaveValue("2024-06-03");
+    await expect(page.getByLabel("Started using (optional)", { exact: true })).toHaveCSS("border-top-width", "2px");
     await expect(page.getByLabel("Synthetic save operations")).toHaveText("");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -242,6 +243,7 @@ for (const width of [390, 1440]) test(`collection editor separates evidence and 
       const save = (await page.getByRole("button", { name: "Save privately", exact: true }).boundingBox())!;
       expect(evidence.y).toBeGreaterThan(date.y + date.height);
       expect(save.y).toBeGreaterThan(evidence.y + evidence.height);
+      expect(Math.abs(save.width - evidence.width)).toBeLessThan(1);
     }
   }
 });
