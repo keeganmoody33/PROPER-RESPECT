@@ -1,6 +1,6 @@
 # 002 — V2 product motion: multi-user on proper-respect.com
 
-Updated: 2026-09-23. Supersedes [V1 motion](002-v1-product-motion.md) as the active
+Updated: 2026-09-28. Supersedes [V1 motion](002-v1-product-motion.md) as the active
 scope. Reuses the existing evidence and publication decisions; this is not a
 new architecture program.
 
@@ -11,6 +11,20 @@ with the history and context explaining why those products matter. Measurements
 support that story; missing telemetry does not prevent an honest owner statement.
 Go-to is explicit, not earned by activity. Evidence, derived findings and owner
 statements remain distinct; no universal score or cross-product ranking.
+
+## Build now, and later (owner decisions, 2026-09-25)
+
+The brief's [Section 3](remediation/CODEX-BRIEF.md) holds the full decisions.
+
+- **Now:** one link, `proper-respect.com/{handle}`, shows the tools a person
+  uses, tests and used before, plus the usage behind them. The collection is
+  private first; nothing publishes without owner preview and approval.
+- **Sign-up is closed** until the brief's Phase 2 gate. The second user is an
+  invited tester, not a stranger.
+- **Later, only after real users exist:** `@mentions` and "put on by", a count
+  of props received (the owner decides how it fits the no-score rule above
+  before any design), and member subdomains or custom domains (#13). None is
+  built, and the schema is not shaped for them.
 
 ## Existing implementation and source
 
@@ -52,7 +66,7 @@ access stops. New source reads, recurrence, transfer, deployment and publication
 retain separate authorization gates.
 
 Owner-specific custom-domain routing remains the separate [custom-domain milestone #13](https://github.com/keeganmoody33/PROPER-RESPECT/issues/13),
-not a prerequisite for path-based profiles. All historical products, every
+which is **Later** (brief Section 3), not a prerequisite for path-based profiles. All historical products, every
 connector, production Composio replacement, prototype A/B selection and perfect
 styling are not launch prerequisites. No new ADRs or parallel planning program;
 correct existing documents to match reality. New scope must displace existing

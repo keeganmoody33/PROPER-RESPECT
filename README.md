@@ -1,9 +1,11 @@
 # PROPER-RESPECT
 
-Proper Respect lets someone keep a private collection of the tools they use,
-with notes and supporting evidence, and choose which cards to publish on a
-public profile. Evidence proposes; the person confirms. It runs on Next.js,
-Convex and Clerk.
+**Your tools. Your track record.** One link, `proper-respect.com/{handle}`, for
+the tools you use, test and used before, and the usage behind them.
+
+The collection is private first: a person keeps notes and supporting evidence
+for each tool and chooses which cards to publish. Evidence proposes; the person
+confirms. It runs on Next.js, Convex and Clerk.
 
 Two ways to run it locally:
 
