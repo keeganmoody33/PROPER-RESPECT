@@ -37,6 +37,13 @@ test("the Vercel build is frontend-only and no Git push deploys anything", () =>
 // The release workflow is read as text: these pin its safety checks (R10).
 const releaseWorkflow = () => readFileSync(".github/workflows/release.yml", "utf8");
 
+// Reads a shell pattern assigned as name='...' in the workflow.
+function workflowPattern(text, name) {
+  const match = text.match(new RegExp(`\\b${name}='([^']+)'`));
+  assert.ok(match, `${name} is not set in release.yml`);
+  return match[1];
+}
+
 test("the release verifies both deploy environments require a reviewer before deploying", () => {
   const workflow = releaseWorkflow();
   const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
@@ -73,14 +80,39 @@ test("the frontend smoke test uses the handle verify checked", () => {
   assert.match(frontend, /needs\.verify\.outputs\.public_handle/);
 });
 
-test("the backend deploys only with a key for the checked production deployment", () => {
+test("the backend deploys only with a key for the deployment in PUBLIC_CONVEX_URL", () => {
   const workflow = releaseWorkflow();
   const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
   const backend = workflow.slice(workflow.indexOf("\n  backend:"), workflow.indexOf("\n  frontend:"));
-  assert.match(verify, /CONVEX_PRODUCTION_DEPLOYMENT: \$\{\{ vars\.CONVEX_PRODUCTION_DEPLOYMENT \}\}/);
+  // K02 sets PUBLIC_CONVEX_URL; the release derives the deployment name from it.
+  assert.match(verify, /PUBLIC_CONVEX_URL: \$\{\{ vars\.PUBLIC_CONVEX_URL \}\}/);
+  assert.doesNotMatch(workflow, /CONVEX_PRODUCTION_DEPLOYMENT: \$\{\{ vars/);
   assert.match(backend, /needs\.verify\.outputs\.convex_deployment/);
-  assert.doesNotMatch(backend, /vars\.CONVEX_PRODUCTION_DEPLOYMENT/);
   assert.match(backend, /"prod:\$\{CONVEX_PRODUCTION_DEPLOYMENT\}\|"\?\*\)/);
+  const pattern = new RegExp(workflowPattern(verify, "convex_url_pattern"));
+  const deployment = url => url.match(pattern)?.[1] ?? null;
+  assert.equal(deployment("https://striped-chicken-693.convex.cloud"), "striped-chicken-693");
+  for (const bad of ["", "http://striped-chicken-693.convex.cloud", "https://striped-chicken-693.convex.site",
+    "https://evil.com/striped-chicken-693.convex.cloud", "https://striped-chicken-693.convex.cloud/", "https://a.b.convex.cloud"]) {
+    assert.equal(deployment(bad), null, bad);
+  }
+});
+
+test("the frontend reads the Vercel IDs as K02's environment variables", () => {
+  const workflow = releaseWorkflow();
+  const frontend = workflow.slice(workflow.indexOf("\n  frontend:"));
+  assert.match(frontend, /VERCEL_ORG_ID: \$\{\{ vars\.VERCEL_ORG_ID \}\}/);
+  assert.match(frontend, /VERCEL_PROJECT_ID: \$\{\{ vars\.VERCEL_PROJECT_ID \}\}/);
+  assert.doesNotMatch(frontend, /secrets\.VERCEL_(ORG|PROJECT)_ID/);
+});
+
+test("the deployment URL pattern accepts only a valid vercel.app hostname", () => {
+  const pattern = new RegExp(workflowPattern(releaseWorkflow(), "url_pattern"));
+  assert.ok(pattern.test("https://proper-respect-abc123-team.vercel.app"));
+  for (const bad of ["https://-foo.vercel.app", "https://foo-.vercel.app", "https://evil.com/.vercel.app",
+    "https://foo.vercel.app/", "http://foo.vercel.app", "https://Foo.vercel.app", "https://.vercel.app"]) {
+    assert.equal(pattern.test(bad), false, bad);
+  }
 });
 
 test("the release docs never run an unpinned Vercel CLI", () => {
@@ -98,10 +130,6 @@ test("the release runs a pinned Vercel CLI, never one fetched at deploy time", (
   assert.match(pinned ?? "", /^\d+\.\d+\.\d+$/);
   const lock = JSON.parse(readFileSync("release-tools/package-lock.json", "utf8"));
   assert.equal(lock.packages?.["node_modules/vercel"]?.version, pinned);
-});
-
-test("the release accepts only a vercel.app deployment URL from the CLI", () => {
-  assert.match(releaseWorkflow(), /\^https:\/\/\[a-z0-9-\]\+\\\.vercel\\\.app\$/);
 });
 
 function runPreflight(environment) {

@@ -54,18 +54,20 @@ jobs:
             exit 1
           fi
           echo "value=$PUBLIC_HANDLE" >> "$GITHUB_OUTPUT"
-      - name: Require the production Convex deployment name
+      - name: Require the production Convex URL
         id: convex_deployment
+        # K02's repository variable. The backend deploy key must belong to the
+        # deployment it names.
         env:
-          CONVEX_PRODUCTION_DEPLOYMENT: ${{ vars.CONVEX_PRODUCTION_DEPLOYMENT }}
+          PUBLIC_CONVEX_URL: ${{ vars.PUBLIC_CONVEX_URL }}
         run: |
           # Convex deployment names are adjective-animal-number, e.g. striped-chicken-693.
-          deployment_pattern='^[a-z]+-[a-z]+-[0-9]+$'
-          if ! [[ "$CONVEX_PRODUCTION_DEPLOYMENT" =~ $deployment_pattern ]]; then
-            echo "Set the CONVEX_PRODUCTION_DEPLOYMENT repository variable to the production deployment name (striped-chicken-693)."
+          convex_url_pattern='^https://([a-z]+-[a-z]+-[0-9]+)\.convex\.cloud$'
+          if ! [[ "$PUBLIC_CONVEX_URL" =~ $convex_url_pattern ]]; then
+            echo "Set the PUBLIC_CONVEX_URL repository variable to the production Convex URL (https://<deployment>.convex.cloud)."
             exit 1
           fi
-          echo "value=$CONVEX_PRODUCTION_DEPLOYMENT" >> "$GITHUB_OUTPUT"
+          echo "value=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
       - name: Require protected deploy environments
         # environment: only names an environment, and a same-named repository or
         # org secret would still reach a job whose environment is missing or
@@ -156,19 +158,21 @@ jobs:
     environment: production-frontend
     env:
       PUBLIC_HANDLE: ${{ needs.verify.outputs.public_handle }}
-    # Only the two Vercel steps receive the Vercel secrets. The CLI reads them
-    # from the environment, so no step passes --token.
+    # Only the Vercel steps receive the token and IDs. The CLI reads them from
+    # the environment, so no step passes --token.
     steps:
-      - name: Require the Vercel secrets
-        # A missing-secret check only; verify has already required a reviewer here.
+      - name: Require the Vercel token and IDs
+        # A missing-value check only; verify has already required the owner as
+        # reviewer here. The token is an environment secret; the IDs are K02's
+        # environment variables.
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
           for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
             if [ -z "${!name}" ]; then
-              echo "$name is not a secret of the production-frontend environment. See docs/releases/v0.2.0.md, One-time setup."
+              echo "$name is not set on the production-frontend environment. See docs/releases/v0.2.0.md, One-time setup."
               exit 1
             fi
           done
@@ -189,14 +193,15 @@ jobs:
         # build --prebuilt can't work: CLERK_SECRET_KEY is a sensitive variable.
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
           DEPLOYMENT_URL="$(release-tools/node_modules/.bin/vercel deploy --prod --yes \
             --meta githubCommitSha="$GITHUB_SHA" --meta gitTag="$GITHUB_REF_NAME")"
           # Only a plain deployment URL may reach GITHUB_ENV.
           # [[ =~ ]] tests the whole value, so an extra line is rejected too.
-          url_pattern='^https://[a-z0-9-]+\.vercel\.app$'
+          # One DNS label: letters and digits at both ends, hyphens only inside.
+          url_pattern='^https://[a-z0-9]([a-z0-9-]*[a-z0-9])?\.vercel\.app$'
           if ! [[ "$DEPLOYMENT_URL" =~ $url_pattern ]]; then
             echo "The Vercel CLI did not print a deployment URL."
             exit 1
@@ -206,8 +211,8 @@ jobs:
         # After an Instant Rollback, new deployments don't take the domain until one is promoted.
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
           release-tools/node_modules/.bin/vercel inspect "$DEPLOYMENT_URL" > inspect.txt 2>&1
           cat inspect.txt

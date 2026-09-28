@@ -73,8 +73,9 @@ use a `NEXT_PUBLIC_` prefix.
 | `CLERK_FRONTEND_API_URL` | Convex production | No | Clerk issuer used by `convex/auth.config.ts` |
 | `CONNECTOR_ENCRYPTION_KEY` | Convex production | Yes | Encrypts stored connector credentials |
 | `CONVEX_DEPLOY_KEY` | GitHub environment `production-backend` only | Yes | Release workflow's backend deploy; needs `deployment:deploy` and `deployment:env:write`. Before v0.2.0, delete the old key from every Vercel environment ([setup item 6](releases/v0.2.0.md#one-time-setup)); after its backend deploy, revoke it in Convex ([step 7](releases/v0.2.0.md#7-revoke-the-old-deploy-key)) |
-| `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | GitHub environment `production-frontend` | Yes | Release workflow's frontend deploy |
-| `CONVEX_PRODUCTION_DEPLOYMENT` | GitHub repository variable | No | Production deployment name (`striped-chicken-693`); the release refuses a deploy key for any other deployment |
+| `VERCEL_TOKEN` | GitHub environment `production-frontend` (secret) | Yes | Release workflow's frontend deploy |
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | GitHub environment `production-frontend` (variables) | No | Identify the Vercel team and project for the release workflow |
+| `PUBLIC_CONVEX_URL` | GitHub repository variable | No | Production Convex URL; the release refuses a deploy key for any other deployment, and the receipt witness (R11) reads it |
 | `PUBLIC_HANDLE` | GitHub repository variable | No | Profile path the release smoke test requests (`lecturesfrom`) |
 | `DEPLOYED_SHA` | Convex production, set by the release workflow | No | Commit recorded on refresh ledger rows (R08) |
 | `CONTEXT_DEV_API_KEY` | Convex runtime; ignored local env for operator verification | Yes | Fetches product brand presentation; supplies no owner evidence |
