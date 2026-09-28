@@ -516,3 +516,51 @@ test.each(["label", "url"] as const)("an unchanged public card with an over-limi
     expect.objectContaining({ label: "Visit" }), expect.objectContaining({ label: "Visit" }),
   ]);
 });
+
+test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "https://user:pass@example.com/"])("a primary link to %s is refused before any write", async url => {
+  const { t, owner, propIds: [a], selection } = await fixture(1);
+  const selections = [await selection(a, { primaryLink: { type: "CANONICAL", url, label: "Visit" } })];
+  await expect(owner.query(api.onboarding.previewPublication, { selections })).rejects.toThrow("Use an http or https link without embedded credentials.");
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections, expectedPublicationRevision: 0, expectedPreviewHash: "never-approved" }))
+    .rejects.toThrow("Use an http or https link without embedded credentials.");
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
+});
+
+test.each(["javascript:alert(1)", "data:image/png;base64,AAAA"])("a stored %s avatar link is left off the shared profile", async avatarUrl => {
+  const { t, owner, userId, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(userId, { avatarUrl }));
+  expect((await owner.query(api.onboarding.previewPublication, { selections: [] })).profile.avatarUrl).toBeUndefined();
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+  expect((await published()).profile.avatarUrl).toBeUndefined();
+});
+
+test("an unchanged public card with a non-web link blocks sharing until it is updated or removed", async () => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture(2);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  // A card published before the http(s) rule.
+  await t.run(async ctx => {
+    const row = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    const cards = row.profile.cards.map((card, index) => index !== 0 || !card.primaryLink ? card
+      : { ...card, primaryLink: { ...card.primaryLink, url: "javascript:alert(1)" } });
+    await ctx.db.patch(row._id, { profile: { ...row.profile, cards } });
+  });
+  const before = await published();
+  const message = "The shared Shared Tool card links somewhere other than a plain http or https address. Include it in this change to update or remove it.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(b, { publish: false })] })).rejects.toThrow(message);
+  expect(await published()).toEqual(before);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards.map(card => card.primaryLink?.url)).toEqual(["https://shared.example", "https://shared.example"]);
+});
+
+test("stored profile links that aren't plain http(s) are left off the shared profile", async () => {
+  const { t, owner, userId, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(userId, {
+    profileLinks: [{ label: "Bad", url: "javascript:alert(1)" }, { label: "Website", url: "https://owner.example/" }],
+    preferredLinkUrl: "javascript:alert(1)",
+  }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  expect(preview.profile.profileLinks).toEqual([{ label: "Website", url: "https://owner.example/" }]);
+  expect(preview.profile.preferredLinkUrl).toBeUndefined();
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+  expect(JSON.stringify((await published()).profile)).not.toContain("javascript:");
+});
