@@ -1,0 +1,57 @@
+{
+  "date": "2026-09-28",
+  "images": {
+    "mobile-dark-viewport.jpg": [
+      378,
+      818
+    ],
+    "paper-desktop.png": [
+      1440,
+      1079
+    ],
+    "mobile-light-viewport.jpg": [
+      378,
+      818
+    ],
+    "desktop-dark-viewport.jpg": [
+      1428,
+      1071
+    ],
+    "comparison-desktop.jpg": [
+      1713,
+      1141
+    ],
+    "desktop-light-viewport.jpg": [
+      1428,
+      1071
+    ],
+    "paper-mobile.png": [
+      390,
+      1401
+    ],
+    "comparison-mobile.jpg": [
+      1713,
+      1141
+    ]
+  },
+  "contrast": {
+    "light save": 5.23,
+    "dark save": 5.87,
+    "light evidence": 11.01,
+    "dark evidence": 9.73,
+    "light secondary": 6.04,
+    "dark secondary": 8.84
+  },
+  "implementationViewport": {
+    "desktopCss": [
+      1440,
+      1080
+    ],
+    "mobileCss": [
+      390,
+      844
+    ],
+    "observedDpr": 1.2000000476837158
+  },
+  "captureLimit": "In-app browser viewport pixels and full-page stitching are unreliable. No pixel-equivalence claim."
+}

@@ -1,0 +1,47 @@
+{
+  "observedAt": "2026-09-28T18:32:10.592Z",
+  "lightStyles": {
+    "card": {
+      "background": "rgb(37, 37, 31)",
+      "color": "rgb(240, 238, 231)",
+      "font": "Arial, Helvetica, sans-serif"
+    },
+    "date": {
+      "background": "rgb(251, 250, 246)",
+      "color": "rgb(23, 23, 19)",
+      "font": "archivo, \"archivo Fallback\", Helvetica, sans-serif"
+    },
+    "evidence": {
+      "background": "rgb(251, 250, 246)",
+      "color": "rgb(23, 23, 19)",
+      "font": "archivo, \"archivo Fallback\", Helvetica, sans-serif"
+    },
+    "save": {
+      "background": "rgb(199, 44, 57)",
+      "color": "rgb(251, 250, 246)",
+      "font": "archivo, \"archivo Fallback\", Helvetica, sans-serif"
+    }
+  },
+  "darkStyles": {
+    "card": {
+      "background": "rgb(37, 37, 31)",
+      "color": "rgb(240, 238, 231)",
+      "font": "Arial, Helvetica, sans-serif"
+    },
+    "date": {
+      "background": "rgb(36, 36, 31)",
+      "color": "rgb(240, 238, 231)",
+      "font": "archivo, \"archivo Fallback\", Helvetica, sans-serif"
+    },
+    "evidence": {
+      "background": "rgb(36, 36, 31)",
+      "color": "rgb(240, 238, 231)",
+      "font": "archivo, \"archivo Fallback\", Helvetica, sans-serif"
+    },
+    "save": {
+      "background": "rgb(239, 103, 114)",
+      "color": "rgb(23, 23, 19)",
+      "font": "archivo, \"archivo Fallback\", Helvetica, sans-serif"
+    }
+  }
+}
