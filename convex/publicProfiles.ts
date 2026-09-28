@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1 } from "../src/domain/public-profile";
+import { isHttpUrl } from "../src/domain/profile-links";
 
 const cardValidator = publicProfileValidator.fields.cards.element;
 const publicProfileV1Validator = v.object({
@@ -32,7 +33,9 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
       return [slug, product ? { domain: product.domain, brand: await retainedProductBrand(ctx, product) } : null] as const;
     }),
   ));
-  const cards = published.profile.cards.map(card => {
+  // Links from before the http(s) rule are dropped on read; storage is unchanged.
+  const cards = published.profile.cards.map(stored => {
+    const card = stored.primaryLink && !isHttpUrl(stored.primaryLink.url) ? { ...stored, primaryLink: undefined } : stored;
     if (card.product.brand?.provider === "context.dev" && productBrandEligibility(card.product) === "PRODUCT_IDENTITY_REQUIRED") {
       const product = { ...card.product };
       delete product.brand;
@@ -42,7 +45,8 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
     return retained?.brand && retained.domain === card.product.domain
       ? { ...card, product: { ...card.product, brand: retained.brand } } : card;
   });
-  return { ...published.profile, cards };
+  const { avatarUrl, ...profile } = published.profile;
+  return { ...profile, ...(avatarUrl !== undefined && isHttpUrl(avatarUrl) ? { avatarUrl } : {}), cards };
 }
 
 /** Compatibility endpoint for deployed readers that dereference primaryLink. */

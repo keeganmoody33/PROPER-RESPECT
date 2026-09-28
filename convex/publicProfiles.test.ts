@@ -134,3 +134,20 @@ test("100 repeated cards share retained brand reads while mismatched domains rem
   });
   expect((await t.run(ctx => ctx.db.get(id)))?.profile).toEqual(profile);
 });
+
+test.each(["javascript:alert(1)", "data:text/html,x"])("a stored %s link or avatar never leaves the public reader", async url => {
+  const t = convexTest(schema, modules);
+  const [linked] = e2eReferenceProfile.cards;
+  const profile: PublicProfile = {
+    handle: "owner", displayName: "Owner", bio: "", avatarUrl: url,
+    cards: [{ ...linked, primaryLink: { type: "CANONICAL", url, label: "Visit" } }, linked],
+  };
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  const current = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  const legacy = await t.query(api.publicProfiles.getByHandle, { handle: "owner" });
+  expect(JSON.stringify([current, legacy])).not.toContain(url);
+  expect(current?.cards).toHaveLength(2);
+  expect(current?.cards[0].primaryLink).toBeUndefined();
+  expect(current?.cards[1].primaryLink).toEqual(linked.primaryLink);
+  expect(legacy?.cards.map(card => card.primaryLink.url)).toEqual([linked.primaryLink?.url]);
+});

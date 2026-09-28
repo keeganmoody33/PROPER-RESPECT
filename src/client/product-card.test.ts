@@ -622,3 +622,12 @@ test("unknown product retains its initials fallback", () => {
   expect($(".product-logo img")).toHaveLength(0);
   expect($(".product-logo").text()).toBe("EP");
 });
+
+test.each(["javascript:alert(1)", "data:text/html,x"])("a %s primary link renders its label as plain text, never as a link", url => {
+  const card: Card = { ...baseCard, primaryLink: { type: "CANONICAL", url, label: "Visit Example Product" } };
+  const html = renderToStaticMarkup(createElement(ProductCard, { card, index: 0 }));
+  const $ = load(html);
+  expect(html).not.toContain(url);
+  expect($("a").filter((_, element) => $(element).text().includes("Visit Example Product"))).toHaveLength(0);
+  expect($.root().text()).toContain("Visit Example Product");
+});

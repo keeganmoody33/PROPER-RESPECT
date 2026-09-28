@@ -2,6 +2,7 @@ import type { ActivityModule, PublicProfile } from "./public-profile";
 import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
 import { usageLinkLabelText, usageLinkSchema } from "./usage-links";
+import { isHttpUrl } from "./profile-links";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;
@@ -118,7 +119,7 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
         basis: card.cost.basis, cadence: card.cost.cadence, asOf: card.cost.asOf,
         ...(card.cost.period ? { period: { start: card.cost.period.start, end: card.cost.period.end } } : {}),
       } } : {}),
-      ...(card.primaryLink ? { primaryLink: {
+      ...(card.primaryLink && isHttpUrl(card.primaryLink.url) ? { primaryLink: {
         type: card.primaryLink.type, label: card.primaryLink.label, url: card.primaryLink.url,
         ...(card.primaryLink.type === "AFFILIATE" ? { disclosure: "Affiliate link" }
           : card.primaryLink.type === "REFERRAL" ? { disclosure: "Referral link" } : {}),

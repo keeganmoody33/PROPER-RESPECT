@@ -1,6 +1,15 @@
 import { z } from "zod";
 
 export const PROFILE_LINK_LIMIT = 8;
+
+/** Only http and https links are published or rendered; javascript:, data: and the rest never are. */
+export function isHttpUrl(value: string) {
+  try {
+    return ["https:", "http:"].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
 // Zod still runs this refine after a failed url check, so it must not throw.
 export const profileLinkUrlSchema = z.string().trim().max(2048).url().refine(value => {
   try {

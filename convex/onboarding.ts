@@ -1,4 +1,4 @@
-import { validateProfileLinks } from "../src/domain/profile-links";
+import { isHttpUrl, validateProfileLinks } from "../src/domain/profile-links";
 import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { addManualProductArgs, addManualProductHandler } from "./manualProducts";
 import { ensureProductBrand, retainedProductBrand } from "./productBrands";
@@ -73,7 +73,7 @@ export const ensureAccount = mutation({
       displayName:
         args.displayName ?? identity.name ?? identity.email ?? "New linker",
       bio: "",
-      avatarUrl: args.avatarUrl,
+      avatarUrl: args.avatarUrl !== undefined && isHttpUrl(args.avatarUrl) ? args.avatarUrl : undefined,
       onboardingStatus: "PROFILE",
       createdAt: now,
       updatedAt: now,
@@ -591,6 +591,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     }
     if (!selection.publish) continue;
     if (prop.visibility === "DRAFT") throw new Error("Confirm and save this relationship privately before publishing.");
+    if (selection.primaryLink && !isHttpUrl(selection.primaryLink.url)) throw new Error("Use an http or https link.");
     if (selection.status !== prop.status || selection.headline.trim() !== prop.headline ||
         selection.note.trim() !== prop.note || selection.startedAt !== prop.startedAt) {
       throw new Error("Save relationship changes privately before publishing.");
@@ -622,7 +623,15 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     }
     return [{ card, propId: null }];
   });
-  const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl: user.avatarUrl, profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl };
+  // Unchanged cards are copied as they are, so one saved before this rule is checked here too.
+  for (const { card } of preserved) {
+    if (card.primaryLink && !isHttpUrl(card.primaryLink.url)) {
+      throw new Error(`The shared ${card.product.name} card links somewhere other than an http or https address. Include it in this change to update or remove it.`);
+    }
+  }
+  // There's no avatar editor, so a stored avatar that isn't http or https is left off rather than blocking every publish.
+  const avatarUrl = user.avatarUrl !== undefined && isHttpUrl(user.avatarUrl) ? user.avatarUrl : undefined;
+  const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl, profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl };
   const replacements = selections.filter(selection => selection.publish).flatMap(selection => {
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);
