@@ -186,8 +186,14 @@ export const beginRevocation = internalMutation({
     const account = await ctx.db.get(args.accountId);
     if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
     requireMailboxGeneration(account, args.expectedGeneration);
+    // One revocation per disconnect: a second tab can't start another, and a repeat
+    // disconnect can't overwrite the outcome people rely on to revoke access themselves.
+    if (account.status === "DISCONNECTED") throw new Error("Mailbox already disconnected.");
+    if ((account.revocationPendingUntil ?? 0) > Date.now()) throw new Error("Disconnect already in progress.");
     const secret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
-    await ctx.db.patch(account._id, { revocationPendingUntil: Date.now() + MAILBOX_REVOCATION_PENDING_MS });
+    // Stop any scan first, so none reads with a grant that is being revoked.
+    await cancelActiveJob(ctx, account, new Date().toISOString());
+    await ctx.db.patch(account._id, { activeJobId: undefined, revocationPendingUntil: Date.now() + MAILBOX_REVOCATION_PENDING_MS });
     return {
       ownerId: account.ownerId, provider: account.provider, providerAccountId: account.providerAccountId, generation: account.generation,
       credential: secret && secret.generation === account.generation ? secret.credential : null,
@@ -229,6 +235,7 @@ export const markNeedsReauth = internalMutation({
 
 async function startLease(ctx: MutationCtx, account: Doc<"mailboxAccounts">, mode?: MailboxScanMode, scheduled = false, discoveryRunId?: Id<"mailboxDiscoveryRuns">) {
   if (account.status !== "CONNECTED") throw new Error("Mailbox is not connected.");
+  if ((account.revocationPendingUntil ?? 0) > Date.now()) throw new Error("Mailbox disconnect in progress.");
   if (!discoveryRunId) await requireNoDiscoveryRun(ctx, account);
   const secret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
   if (!secret || secret.generation !== account.generation) throw new Error("Mailbox credentials unavailable.");

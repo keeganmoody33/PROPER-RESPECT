@@ -187,3 +187,56 @@ test("the older disconnect mutation keeps working for older frontends (R17)", as
   expect(await t.run(ctx => ctx.db.query("mailboxSecrets").collect())).toEqual([]);
   expect((await t.run(ctx => ctx.db.get(connection.accountId)))?.status).toBe("DISCONNECTED");
 });
+
+test("a second disconnect while one is revoking is refused, so Google gets one request (R17)", async () => {
+  const { owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  let second: unknown;
+  let nested = false;
+  const fetcher = provider(async () => {
+    if (nested) return new Response("{}");
+    nested = true;
+    second = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 })
+      .then(() => "revoked again", error => (error as Error).message);
+    return new Response("{}");
+  });
+  const first = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+  expect(first).toEqual({ disconnected: true, generation: 2, revocation: "REVOKED" });
+  expect(second).toContain("Disconnect already in progress.");
+  expect(revocations(fetcher)).toHaveLength(1);
+});
+
+test("disconnecting an account that's already disconnected keeps its earlier outcome (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const fetcher = provider(async () => new Response("{}", { status: 500 }));
+  expect(await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 }))
+    .toEqual({ disconnected: true, generation: 2, revocation: "FAILED" });
+  fetcher.mockClear();
+  await expect(owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 2 }))
+    .rejects.toThrow("Mailbox already disconnected.");
+  expect(fetcher).not.toHaveBeenCalled();
+  const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(account).toMatchObject({ status: "DISCONNECTED", generation: 2, lastRevocation: { outcome: "FAILED" } });
+});
+
+test("scans stop before Google is asked, and none can start during the revocation (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const scan = await owner.mutation(api.mailboxes.startScan, { accountId: connection.accountId, expectedGeneration: 1 });
+  let during: { job?: string; newScan?: string } = {};
+  const fetcher = provider(async () => {
+    const job = await t.run(ctx => ctx.db.get(scan.jobId));
+    const newScan = await owner.mutation(api.mailboxes.startScan, { accountId: connection.accountId, expectedGeneration: 1 })
+      .then(() => "started", error => (error as Error).message);
+    during = { job: job?.status, newScan };
+    return new Response("{}");
+  });
+  const result = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+  expect(during).toEqual({ job: "CANCELLED", newScan: expect.stringContaining("Mailbox disconnect in progress.") });
+  expect(result).toEqual({ disconnected: true, generation: 2, revocation: "REVOKED" });
+  expect(revocations(fetcher)).toHaveLength(1);
+});
