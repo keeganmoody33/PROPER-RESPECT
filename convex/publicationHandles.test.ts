@@ -185,3 +185,20 @@ test.each(["collection", "app"])("existing %s owners can edit their private iden
   expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Private updated name" });
   expect(await t.query(api.publicProfiles.getByHandleV2, { handle })).toEqual(publishedBefore);
 });
+
+test.each([
+  ["displayName", 80, true], ["displayName", 81, false],
+  ["bio", 500, true], ["bio", 501, false],
+] as const)("claimHandle with a %s of %i characters saves: %s", async (field, length, saves) => {
+  const { t, owner, userId } = await fixture();
+  const before = await t.run(ctx => ctx.db.get(userId));
+  const args = { handle: "owner", displayName: "Owner", bio: "", [field]: `  ${"x".repeat(length)}  ` };
+  if (saves) {
+    await owner.mutation(api.onboarding.claimHandle, args);
+    expect((await t.run(ctx => ctx.db.get(userId)))?.[field]).toBe("x".repeat(length));
+  } else {
+    await expect(owner.mutation(api.onboarding.claimHandle, args))
+      .rejects.toThrow(field === "bio" ? "Use a bio of 500 characters or fewer." : "Use a display name of 80 characters or fewer.");
+    expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
+  }
+});
