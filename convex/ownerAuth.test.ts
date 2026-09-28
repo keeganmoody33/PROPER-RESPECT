@@ -41,3 +41,36 @@ test("matching email labels cannot merge distinct authenticated owners", async (
   expect((await a.query(api.onboarding.getState, {}))?.user._id).toBe(aId);
   expect((await b.query(api.onboarding.getState, {}))?.user._id).toBe(bId);
 });
+
+test.each([
+  ["a supplied name", { displayName: "N".repeat(200) }, {}],
+  ["the identity's name", {}, { name: "N".repeat(200) }],
+] as const)("account setup stores at most 80 characters of %s", async (_label, args, identity) => {
+  const t = convexTest(schema, modules);
+  const owner = t.withIdentity({ subject: "long-name-owner", ...identity });
+  const id = await owner.mutation(api.onboarding.ensureAccount, args);
+  expect((await t.run(ctx => ctx.db.get(id)))?.displayName).toBe("N".repeat(80));
+});
+
+test("account setup trims the name and skips a blank one", async () => {
+  const t = convexTest(schema, modules);
+  const owner = t.withIdentity({ subject: "blank-name-owner", name: "  Identity name  " });
+  const id = await owner.mutation(api.onboarding.ensureAccount, { displayName: "   " });
+  expect((await t.run(ctx => ctx.db.get(id)))?.displayName).toBe("Identity name");
+});
+
+test("account setup never cuts a character in half", async () => {
+  const t = convexTest(schema, modules);
+  const owner = t.withIdentity({ subject: "emoji-owner" });
+  const id = await owner.mutation(api.onboarding.ensureAccount, { displayName: `${"N".repeat(79)}🙂🙂` });
+  expect((await t.run(ctx => ctx.db.get(id)))?.displayName).toBe("N".repeat(79));
+});
+
+test.each([[2048, true], [2049, false]] as const)("account setup keeps a %i-character avatar link: %s", async (length, kept) => {
+  const t = convexTest(schema, modules);
+  const owner = t.withIdentity({ subject: `avatar-owner-${length}` });
+  const avatarUrl = `https://img.example/${"a".repeat(length - "https://img.example/".length)}`;
+  expect(avatarUrl).toHaveLength(length);
+  const id = await owner.mutation(api.onboarding.ensureAccount, { avatarUrl });
+  expect((await t.run(ctx => ctx.db.get(id)))?.avatarUrl).toBe(kept ? avatarUrl : undefined);
+});
