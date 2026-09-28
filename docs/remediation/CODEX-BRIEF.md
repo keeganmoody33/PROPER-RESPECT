@@ -19,6 +19,10 @@ what order, and what proves each fix.
   you to fix failing checks, fix review comments, merge main in, or, on a
   remediation run pull request, do the next eligible task. Push to that
   branch; never open a new pull request.
+- **Another writer may hold a task.** During the owner's delivery pass, a
+  Claude Code session also writes C tasks (`AGENTS.md`, "Active remediation
+  program"). An open PR naming a task, or a `remediate/<ID>-*` branch, means
+  the task is taken. Skip it.
 
 This brief must be on main before the loop runs, because every task branch
 starts from `origin/main`.
