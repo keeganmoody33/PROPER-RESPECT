@@ -47,7 +47,7 @@ async function positiveControl() {
   expect(state.signals[0]).toMatchObject({ value: 7, metricKey: "github.contributions", visibility: "PUBLIC" });
 }
 
-for (const invalid of ["connector-owner", "secret-owner", "secret-provider", "publication", "private-prop"] as const) {
+for (const invalid of ["connector-owner", "secret-owner", "secret-provider", "publication", "private-prop", "taken-down"] as const) {
   test(`refresh blocks provider effects for invalid ${invalid}`, async () => {
     await positiveControl();
     const f = await fixture();
@@ -57,6 +57,7 @@ for (const invalid of ["connector-owner", "secret-owner", "secret-provider", "pu
       if (invalid === "secret-provider") await ctx.db.patch(f.ids.secretId, { provider: "DEVIN" });
       if (invalid === "publication") await ctx.db.delete(f.ids.publishedId);
       if (invalid === "private-prop") await ctx.db.patch(f.ids.propId, { visibility: "PRIVATE" });
+      if (invalid === "taken-down") await ctx.db.patch(f.ids.publishedId, { takenDownAt: "2026-09-28T00:00:00.000Z", takedownReason: "Synthetic report" });
     });
     const before = await f.state(); await f.call();
     expect(f.fetcher).not.toHaveBeenCalled();

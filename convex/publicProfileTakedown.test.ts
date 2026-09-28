@@ -131,3 +131,45 @@ test("restore returns the profile; its dry run and a repeat change nothing", asy
     .toMatchObject({ status: "not-taken-down" });
   expect(await state()).toEqual(original);
 });
+
+test("a Devin refresh or refresh failure leaves a taken-down snapshot unchanged", async () => {
+  const { t, userId, propId, publicationId } = await fixture();
+  const subscriptionId = await t.run(async ctx => {
+    await ctx.db.patch(propId, { visibility: "PUBLIC" });
+    const connectorId = await ctx.db.insert("connectorAccounts", {
+      userId, provider: "DEVIN", status: "CONNECTED", accountLabel: "Synthetic account",
+      attributionScope: "PERSONAL", connectedAt: "2026-09-18T00:00:00.000Z",
+    });
+    return ctx.db.insert("metricSubscriptions", {
+      userId, propId, connectorId, metricKey: "devin.sessions", attributionScope: "PERSONAL",
+      refreshCadence: "DAILY", approvedAt: "2026-09-18T00:00:00.000Z",
+    });
+  });
+  await t.mutation(internal.publicProfiles.takeDownHandle, { handle: "owner", reason, dryRun: false });
+  const takenDown = await t.run(ctx => ctx.db.get(publicationId));
+  const activity = {
+    kind: "headlineMetrics" as const, attributionScope: "PERSONAL" as const,
+    capturedAt: "2026-09-28T01:00:00.000Z", freshness: "FRESH" as const, provenanceLabel: "Synthetic refresh",
+    primary: { label: "Sessions", value: 9 }, supporting: [],
+  };
+  await t.mutation(internal.connectors.applyRefresh, { subscriptionId, activity, value: 9 });
+  expect(await t.run(ctx => ctx.db.get(publicationId))).toEqual(takenDown);
+  await t.mutation(internal.connectors.markRefreshFailed, { subscriptionId, message: "Synthetic failure" });
+  expect(await t.run(ctx => ctx.db.get(publicationId))).toEqual(takenDown);
+});
+
+test("seeding refuses to replace a taken-down reference profile", async () => {
+  const t = convexTest(schema, modules);
+  await t.mutation(internal.seed.seedKeegan, {});
+  await t.mutation(internal.publicProfiles.takeDownHandle, { handle: "keegan", reason, dryRun: false });
+  const state = () => t.run(async ctx => ({
+    users: await ctx.db.query("users").collect(),
+    products: await ctx.db.query("products").collect(),
+    props: await ctx.db.query("props").collect(),
+    publications: await ctx.db.query("publishedProfiles").collect(),
+  }));
+  const before = await state();
+  await expect(t.mutation(internal.seed.seedKeegan, {})).rejects.toThrow("The keegan profile is taken down.");
+  expect(await state()).toEqual(before);
+  expect(await t.query(api.publicProfiles.getByHandleV2, { handle: "keegan" })).toBeNull();
+});

@@ -5,7 +5,9 @@ Updated: 2026-09-28. Written for R06. The owner runs these commands.
 A takedown hides a published profile at its handle and at every old handle
 that redirects to it. The page then returns the same 404 as an unpublished
 handle. The owner can't republish while it lasts: publishing fails with
-"This profile is under review."
+"This profile is under review." Approved activity refreshes skip the
+hidden snapshot, and `seed:seedKeegan` refuses to replace a taken-down
+`keegan` profile.
 
 The takedown doesn't delete or change anything else. The published snapshot,
 the owner's private collection and their account stay as they are, so a
@@ -25,7 +27,7 @@ restore brings back exactly what was taken down.
   deployment.
 - **Record the report** before acting: the date, the reporter's address, the
   URL, and what they say is wrong. The reason you pass below is stored with
-  the takedown. Keep it factual, under 500 characters, and free of the
+  the takedown. Keep it factual, at most 500 characters, and free of the
   reporter's personal details.
 
 ## 1. Dry run
