@@ -1,0 +1,114 @@
+name: Release
+# A pushed v* tag on main deploys the backend, then the frontend. Each deploy
+# waits for the owner's approval in its GitHub environment (R10).
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Synthetic build configuration, the same as verify.yml. No owner credentials are used.
+      NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUBLIC_SITE_ORIGIN: https://public.example
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the tagged commit to be on main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main."
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run typecheck
+
+  backend:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Required reviewers on this environment make the owner approve the deploy.
+    environment: production-backend
+    env:
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Deploy the Convex backend
+        run: npx convex deploy -y
+      - name: Record the deployed commit
+        # Needs the deploy key's deployment:env:write permission as well as deployment:deploy.
+        run: npx convex env set DEPLOYED_SHA "$GITHUB_SHA"
+
+  frontend:
+    needs: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production-frontend
+    env:
+      # The Vercel CLI reads these from the environment, so no step passes --token.
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      PUBLIC_HANDLE: ${{ vars.PUBLIC_HANDLE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Deploy to Vercel production
+        # Builds on Vercel, which holds the production values. vercel pull with
+        # build --prebuilt can't work: CLERK_SECRET_KEY is a sensitive variable.
+        run: |
+          DEPLOYMENT_URL="$(npx --yes vercel deploy --prod --yes \
+            --meta githubCommitSha="$GITHUB_SHA" --meta gitTag="$GITHUB_REF_NAME")"
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
+      - name: Require the production domain on this deployment
+        # After an Instant Rollback, new deployments don't take the domain until one is promoted.
+        run: |
+          npx --yes vercel inspect "$DEPLOYMENT_URL" > inspect.txt 2>&1
+          cat inspect.txt
+          if ! grep -Eq '(^|[^.[:alnum:]-])proper-respect\.com([^.[:alnum:]-]|$)' inspect.txt; then
+            echo "proper-respect.com is not an alias of $DEPLOYMENT_URL. Promote it or undo the rollback first."
+            exit 1
+          fi
+      - name: Smoke test the live site
+        run: |
+          if [ -z "$PUBLIC_HANDLE" ]; then
+            echo "Set the PUBLIC_HANDLE repository variable (lecturesfrom)."
+            exit 1
+          fi
+          for path in "/" "/$PUBLIC_HANDLE" "/sitemap.xml"; do
+            status="$(curl --silent --output /dev/null --write-out '%{http_code}' "https://proper-respect.com$path")"
+            echo "$path -> $status"
+            if [ "$status" != "200" ]; then
+              echo "Expected 200 from https://proper-respect.com$path."
+              exit 1
+            fi
+          done

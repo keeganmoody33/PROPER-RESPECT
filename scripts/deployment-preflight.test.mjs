@@ -25,11 +25,13 @@ test("deployment preflight requires an explicit HTTPS public origin", () => {
   }
 });
 
-test("GitHub consolidation cannot automatically deploy Vercel or Convex", () => {
+test("the Vercel build is frontend-only and no Git push deploys anything", () => {
   const configuration = JSON.parse(readFileSync("vercel.json", "utf8"));
   assert.equal(configuration.git?.deploymentEnabled, false);
   assert.match(configuration.buildCommand, /npm run deploy:check/);
-  assert.match(configuration.buildCommand, /convex deploy/);
+  assert.match(configuration.buildCommand, /npm run build/);
+  // The backend deploys only from the tagged release workflow (R10).
+  assert.doesNotMatch(configuration.buildCommand, /convex\s+deploy/);
 });
 
 function runPreflight(environment) {
