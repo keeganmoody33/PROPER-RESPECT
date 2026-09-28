@@ -43,6 +43,7 @@ export function InventoryFixture() {
   const [data, setData] = useState(initial);
   const [evidence, setEvidence] = useState<InventoryEvidence>([]);
   const [attempts, setAttempts] = useState<string[]>([]);
+  const [deletions, setDeletions] = useState<string[]>([]);
   const [manualAttempts, setManualAttempts] = useState<string[]>([]);
   const [manualInputs, setManualInputs] = useState("");
   const loseManualResponse = useRef(false);
@@ -82,10 +83,15 @@ export function InventoryFixture() {
     <button type="button" onClick={() => setData(groupedGitHub)}>Load grouped GitHub fixture</button>
     <button type="button" onClick={() => { loseNextResponse.current = true; }}>Simulate one lost save response</button>
     <output aria-label="Synthetic save operations">{attempts.join("\n")}</output>
+    <output aria-label="Synthetic delete operations">{deletions.join("\n")}</output>
     <PrivateInventoryView data={data} onSave={onSave} onImport={async packet => {
       if (!packet || typeof packet !== "object" || !("fixture" in packet) || packet.fixture !== "SYNTHETIC_INVENTORY_EVIDENCE") throw new Error("Only the synthetic inventory fixture file is accepted.");
       setEvidence([syntheticEvidence]);
     }} renderDetails={item => <InventoryRelationshipDetails item={item} evidence={evidence} onSave={onSave}
+      onDeleteEvidence={async evidenceId => {
+        setDeletions(current => [...current, evidenceId]);
+        setEvidence(current => current.filter(source => source.id !== evidenceId));
+      }}
       renderHistory={current => <p>Synthetic prior states: {current.previousStatuses.join(", ") || "none"}</p>} />} />
     <button type="button" onClick={() => { loseManualResponse.current = true; }}>Simulate one lost add response</button>
     <AddProductForm onAdd={async input => {

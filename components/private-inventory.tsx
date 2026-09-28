@@ -107,13 +107,44 @@ function RelationshipEditor({ item, evidence, onSave }: { item: Item; evidence: 
   </form>;
 }
 
-export function InventoryRelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, renderEvidence, renderHistory }: {
+// Delete an original (R15): a second, explicit step before anything is removed.
+export function DeleteOriginal({ sourceLabel, onDelete, onDeleted }: {
+  sourceLabel: string; onDelete: () => Promise<unknown>; onDeleted: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function confirm() {
+    setBusy(true);
+    setError("");
+    try {
+      await onDelete();
+      setConfirming(false);
+      onDeleted();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The original was not deleted. Try again.");
+    } finally { setBusy(false); }
+  }
+  if (!confirming) return <button type="button" className="secondary-action" onClick={() => { setConfirming(true); setError(""); }}>Delete original</button>;
+  return <div role="group" aria-label={`Confirm deleting the original from ${sourceLabel}`}>
+    <p>Delete this original? Its file and retained text are removed and can&apos;t be restored. Your saved relationship and any published card stay as they are.</p>
+    <div className="action-row">
+      <button type="button" className="secondary-action" disabled={busy} onClick={() => void confirm()}>{busy ? "Deleting…" : "Delete permanently"}</button>
+      <button type="button" className="secondary-action" disabled={busy} onClick={() => setConfirming(false)}>Cancel</button>
+    </div>
+    {error && <p role="status">{error}</p>}
+  </div>;
+}
+
+export function InventoryRelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, onDeleteEvidence, renderEvidence, renderHistory }: {
   item: Item; evidence: InventoryEvidence; selectedEvidence?: InventoryEvidence[number] | null;
   hasMoreEvidence?: boolean; loadingMoreEvidence?: boolean; onLoadMoreEvidence?: () => void;
   onSave: (input: SaveInput) => Promise<SaveResult>;
+  onDeleteEvidence?: (evidenceId: InventoryEvidence[number]["id"]) => Promise<unknown>;
   renderEvidence?: (item: Item) => ReactNode; renderHistory?: (item: Item) => ReactNode;
 }) {
   const [saveNotice, setSaveNotice] = useState("");
+  const [deleteNotice, setDeleteNotice] = useState("");
   async function save(input: SaveInput) {
     setSaveNotice("");
     const result = await onSave(input);
@@ -125,6 +156,7 @@ export function InventoryRelationshipDetails({ item, evidence, selectedEvidence,
     <RelationshipEditor key={`${item.prop._id}:${item.prop.relationshipVersion ?? 0}`} item={item} evidence={sources} onSave={save} />
     {saveNotice && <p role="status">{saveNotice}</p>}
     <h3>Supporting context</h3>
+    {deleteNotice && <p role="status">{deleteNotice}</p>}
     {item.prop.activityEvidenceId && !sources.some(source => source.id === item.prop.activityEvidenceId) && <p>The original for your saved supporting snapshot is unavailable. You can keep or remove the saved preview.</p>}
     {sources.length === 0 && <p>{hasMoreEvidence ? "No available sources in the loaded evidence pages. More sources may be available below." : "No retained source is attached. Your explanation is an owner statement."}</p>}
     {sources.map(source => <div className={styles.source} key={source.id}>
@@ -139,6 +171,9 @@ export function InventoryRelationshipDetails({ item, evidence, selectedEvidence,
       {source.ownerStatement && <><p>Your recorded answer:</p><blockquote>{source.ownerStatement}</blockquote></>}
       {source.originalText && <details><summary>Retained snapshot original</summary><pre className="raw-evidence">{source.originalText}</pre></details>}
       {source.limitations.length > 0 && <details><summary>Coverage and limitations</summary><ul>{source.limitations.map(limit => <li key={limit}>{limit}</li>)}</ul></details>}
+      {onDeleteEvidence && (source.uploadedFile || source.originalText) && <DeleteOriginal sourceLabel={source.sourceLabel}
+        onDelete={() => onDeleteEvidence(source.id)}
+        onDeleted={() => setDeleteNotice(`Deleted the original from ${source.sourceLabel}. Your saved relationship and any published card are unchanged.`)} />}
     </div>)}
     {hasMoreEvidence && <button type="button" className="secondary-action" disabled={loadingMoreEvidence} onClick={onLoadMoreEvidence}>{loadingMoreEvidence ? "Loading retained sources…" : "Load more retained sources"}</button>}
     {renderEvidence && <details className={styles.claims}><summary>Inspect extracted claims and correct evidence</summary>{renderEvidence(item)}</details>}
@@ -150,9 +185,11 @@ export function InventoryRelationshipDetails({ item, evidence, selectedEvidence,
 function InventoryDetails({ item, onSave, brandEnrichmentAvailable }: { item: Item; onSave: (input: SaveInput) => Promise<SaveResult>; brandEnrichmentAvailable: boolean }) {
   const evidence = usePaginatedQuery(api.inventory.evidence, { propId: item.prop._id }, { initialNumItems: 10 });
   const selectedEvidence = useQuery(api.inventory.selectedActivity, { propId: item.prop._id });
+  const deleteEvidence = useMutation(api.onboarding.deleteEvidence);
   if (evidence.status === "LoadingFirstPage" || selectedEvidence === undefined) return <p role="status">Loading relationship and supporting context…</p>;
   return <><InventoryRelationshipDetails item={item} evidence={evidence.results} selectedEvidence={selectedEvidence}
     hasMoreEvidence={evidence.status !== "Exhausted"} loadingMoreEvidence={evidence.status === "LoadingMore"} onLoadMoreEvidence={() => evidence.loadMore(10)} onSave={onSave}
+    onDeleteEvidence={evidenceId => deleteEvidence({ evidenceId })}
     renderEvidence={current => <PrivateEvidencePanel propId={current.prop._id} productName={current.product.name} productSlug={current.product.slug} />}
     renderHistory={current => <History propId={current.prop._id} />} />
     {brandEnrichmentAvailable && <details className={styles.brand}><summary>Product appearance</summary><p>Retained logos, fonts, and brand styling describe the product. They do not establish your relationship with it.</p><ProductBrandControls propId={item.prop._id} /></details>}

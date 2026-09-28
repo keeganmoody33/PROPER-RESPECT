@@ -90,6 +90,28 @@ export function setReviewCostVisibility<T extends ReviewCard & { prop: { _id: st
   return next;
 }
 
+// Unpublish all (R15): every relationship of each product that has a
+// published card, each with publish: false. An older published card can stand
+// for all of a product's relationships, and the server refuses a partial
+// selection for it, so the whole product goes together. Handle, name, bio and
+// profile links are not cards and stay public.
+export function unpublishAllSelections<T extends ReviewCard & { prop: { _id: string } }>(cards: T[], includeVersion: boolean): Array<{
+  propId: T["prop"]["_id"]; expectedRelationshipVersion?: number; publish: false;
+  status: T["prop"]["status"]; headline: string; note: string; autoRefresh: false;
+}> {
+  const publishedProducts = new Set(cards.filter(card => card.isPublishedAtCurrentHandle === true)
+    .map(card => card.product.slug ?? card.product.domain));
+  return cards.filter(card => publishedProducts.has(card.product.slug ?? card.product.domain)).map(card => ({
+    propId: card.prop._id,
+    ...(includeVersion ? { expectedRelationshipVersion: card.prop.relationshipVersion ?? 0 } : {}),
+    publish: false as const,
+    status: card.prop.status,
+    headline: card.prop.headline,
+    note: card.prop.note,
+    autoRefresh: false as const,
+  }));
+}
+
 // Opening review must not promote a proposed relationship or change the owner's link.
 export function defaultReview(card: ReviewCard) {
   const primary = card.links.find(link => link.isPrimary);

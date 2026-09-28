@@ -187,3 +187,83 @@ export const history = query({
     return ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", propId)).order("desc").paginate(boundedPage(paginationOpts, 25));
   },
 });
+
+// Self-service export (R15). Owner-only, and each record comes from an explicit
+// allowlist so nothing secret is copied by accident: no retained original text,
+// storage references, upload tokens, connector credentials or raw requests.
+// Relationships and evidence are paged so a large history stays within
+// Convex's per-function read limits; the client assembles the pages.
+
+const EXPORT_HISTORY_LIMIT = 1000;
+
+export const exportProfile = query({
+  args: {},
+  handler: async ctx => {
+    const user = await requireUser(ctx);
+    const published = user.handle
+      ? await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique()
+      : null;
+    return {
+      handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl: user.avatarUrl,
+      profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl,
+      onboardingStatus: user.onboardingStatus, createdAt: user.createdAt, updatedAt: user.updatedAt,
+      publicPage: published ? { revision: published.revision, publishedAt: published.publishedAt, profile: published.profile } : null,
+    };
+  },
+});
+
+export const exportRelationships = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    const options = boundedPage(paginationOpts, 10);
+    const user = await requireUser(ctx);
+    const result = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).paginate(options);
+    const page = await Promise.all(result.page.map(async prop => {
+      const product = await ctx.db.get(prop.productId);
+      const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).take(100);
+      const events = await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", prop._id)).take(EXPORT_HISTORY_LIMIT);
+      return {
+        id: prop._id,
+        product: product ? { name: product.name, slug: product.slug, domain: product.domain } : null,
+        status: prop.status, visibility: prop.visibility, goTo: prop.goTo ?? false,
+        headline: prop.headline, note: prop.note, confirmedAt: prop.confirmedAt,
+        relationshipVersion: prop.relationshipVersion ?? 0, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
+        supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId,
+        activity: prop.activity, cost: prop.cost, costVisibility: prop.costVisibility,
+        links: links.map(link => ({ type: link.type, url: link.url, label: link.label, isPrimary: link.isPrimary })),
+        history: events.map(event => ({ version: event.version, recordedAt: event.recordedAt, basis: event.basis, before: event.before, after: event.after })),
+        historyComplete: events.length < EXPORT_HISTORY_LIMIT,
+      };
+    }));
+    return { ...result, page };
+  },
+});
+
+export const exportEvidence = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    // Reading a row reads its retained original too, so pages stay small to
+    // keep large mailbox captures within the per-function read limit.
+    const options = boundedPage(paginationOpts, 10);
+    const user = await requireUser(ctx);
+    const result = await ctx.db.query("rawEvidence").withIndex("by_user", q => q.eq("userId", user._id)).paginate(options);
+    const page = await Promise.all(result.page.map(async raw => {
+      const source = await ctx.db.get(raw.evidenceSourceId);
+      const deleted = raw.deletedAt !== undefined;
+      return {
+        id: raw._id,
+        sourceType: source?.userId === user._id ? source.type : undefined,
+        sourceLabel: source?.userId === user._id ? source.label ?? source.type : undefined,
+        capturedAt: raw.capturedAt, sourceUrl: raw.sourceUrl, captureProvenance: raw.captureProvenance,
+        filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize,
+        detectedVendor: raw.detectedVendor, detectedUrl: raw.detectedUrl,
+        retainedArtifact: raw.retainedArtifact, limitations: raw.limitations ?? [],
+        suggestedActivity: deleted ? undefined : raw.suggestedActivity,
+        // A deleted original's extracted text goes with it.
+        observations: deleted ? [] : raw.observations ?? [],
+        deletedAt: raw.deletedAt,
+      };
+    }));
+    return { ...result, page };
+  },
+});

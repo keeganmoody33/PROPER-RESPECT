@@ -1,0 +1,35 @@
+import { describe, expect, it, vi } from "vitest";
+import { buildExport, collectPages, exportFilename } from "./export-data";
+
+describe("collectPages (R15)", () => {
+  it("follows the cursor until the last page", async () => {
+    const pages = [
+      { page: [1, 2], isDone: false, continueCursor: "c1" },
+      { page: [3, 4], isDone: false, continueCursor: "c2" },
+      { page: [5], isDone: true, continueCursor: "c3" },
+    ];
+    const fetchPage = vi.fn(async (cursor: string | null) => pages[cursor === null ? 0 : cursor === "c1" ? 1 : 2]);
+    expect(await collectPages(fetchPage)).toEqual([1, 2, 3, 4, 5]);
+    expect(fetchPage.mock.calls.map(([cursor]) => cursor)).toEqual([null, "c1", "c2"]);
+  });
+
+  it("stops rather than loop forever if the cursor never advances", async () => {
+    const fetchPage = vi.fn(async () => ({ page: [1], isDone: false, continueCursor: "same" }));
+    await expect(collectPages(fetchPage, 5)).rejects.toThrow("The export did not finish");
+  });
+});
+
+describe("buildExport (R15)", () => {
+  it("labels the export and keeps each section", () => {
+    const exported = buildExport({ profile: { handle: "owner" }, relationships: [{ id: "p1" }], evidence: [], exportedAt: "2026-09-28T12:00:00.000Z" });
+    expect(exported).toMatchObject({
+      format: "proper-respect-export", version: 1, exportedAt: "2026-09-28T12:00:00.000Z",
+      profile: { handle: "owner" }, relationships: [{ id: "p1" }], evidence: [],
+    });
+    expect(exported.excluded).toEqual(expect.arrayContaining([expect.stringMatching(/original/i)]));
+  });
+
+  it("names the file after the handle and date", () => {
+    expect(exportFilename("owner", "2026-09-28T12:00:00.000Z")).toBe("proper-respect-owner-2026-09-28.json");
+  });
+});
