@@ -44,6 +44,8 @@ describe("buildExport (R15)", () => {
     expect(exported.excluded).toEqual(expect.arrayContaining([
       expect.stringMatching(/original/i),
       expect.stringMatching(/content hashes and deduplication keys/i),
+      // Records the export doesn't carry yet are named, so the file doesn't read as complete.
+      expect.stringMatching(/connected accounts.*daily refresh.*earlier handles/i),
     ]));
   });
 

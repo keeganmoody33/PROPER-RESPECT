@@ -792,7 +792,7 @@ function Builder() {
       <section className="onboarding-panel" id="collection-data" aria-labelledby="collection-data-title">
         <p className="onboarding-kicker">YOUR DATA</p>
         <h2 id="collection-data-title">Download your data</h2>
-        <p>A JSON file with your profile, relationships, links, relationship history, and evidence details and observations. Original files, retained original text, and connector credentials are not included. To remove an original, open the relationship in your private collection.</p>
+        <p>A JSON file with your profile, relationships, links, relationship history, and evidence details and observations. Original files, retained original text, and connector credentials are not included; the file lists everything else it leaves out. To remove an original, open the relationship in your private collection.</p>
         <button type="button" className="secondary-action" onClick={() => void downloadMyData()} disabled={busy}>Download my data</button>
       </section>
     </main>
