@@ -227,11 +227,26 @@ for (const width of [390, 1440]) test(`collection editor separates evidence and 
   const theme = page.getByRole("combobox", { name: "Appearance", exact: true }).first();
   const card = page.getByRole("article", { name: "GitHub card", exact: true });
   await theme.selectOption("light");
-  const appearance = () => card.evaluate(element => [element, ...element.querySelectorAll("h2, .product-logo, .card-button")].map(node => { const style = getComputedStyle(node); return { color: style.color, background: style.backgroundColor, font: style.fontFamily }; }));
+  const appearance = () => card.evaluate(element => [element, ...element.querySelectorAll("h2, .product-logo, .card-button")].map(node => { const style = getComputedStyle(node); return { color: style.color, background: style.backgroundColor, font: style.fontFamily, outlineColor: style.outlineColor, outlineWidth: style.outlineWidth, outlineStyle: style.outlineStyle, outlineOffset: style.outlineOffset }; }));
+  const details = card.getByRole("button", { name: "Details", exact: true });
+  const focusCard = async () => {
+    await details.focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    await expect(details).toBeFocused();
+    expect(await details.evaluate(element => element.matches(":focus-visible"))).toBe(true);
+    await expect(details).toHaveCSS("outline-style", "solid");
+  };
+  await theme.focus();
   const brand = await appearance();
+  await focusCard();
+  const focusedBrand = await appearance();
   for (const mode of ["light", "dark"]) {
     await theme.selectOption(mode);
+    await theme.focus();
     expect(await appearance()).toEqual(brand);
+    await focusCard();
+    expect(await appearance()).toEqual(focusedBrand);
     await expect(page.getByLabel("Started using (optional)", { exact: true })).toHaveValue("2024-06-03");
     await expect(page.getByLabel("Started using (optional)", { exact: true })).toHaveCSS("border-top-width", "2px");
     await expect(page.getByLabel("Synthetic save operations")).toHaveText("");
