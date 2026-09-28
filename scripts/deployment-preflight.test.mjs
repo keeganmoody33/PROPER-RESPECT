@@ -98,6 +98,15 @@ test("the backend deploys only with a key for the deployment in PUBLIC_CONVEX_UR
   }
 });
 
+test("the release accepts only the pinned production Convex deployment", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  // verify has no environment, so vars can fall back to an org variable naming
+  // another deployment; the deployment itself is pinned here.
+  assert.match(verify, /expected_deployment='striped-chicken-693'/);
+  assert.match(verify, /\[ "\$\{BASH_REMATCH\[1\]\}" != "\$expected_deployment" \]/);
+});
+
 test("the frontend reads the Vercel IDs as K02's environment variables", () => {
   const workflow = releaseWorkflow();
   const frontend = workflow.slice(workflow.indexOf("\n  frontend:"));

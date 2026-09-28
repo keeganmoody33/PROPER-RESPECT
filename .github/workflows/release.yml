@@ -67,7 +67,15 @@ jobs:
             echo "Set the PUBLIC_CONVEX_URL repository variable to the production Convex URL (https://<deployment>.convex.cloud)."
             exit 1
           fi
-          echo "value=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          # This job has no environment, so vars can fall back to an org-level
+          # variable naming another deployment. The production deployment is
+          # pinned; moving it takes a reviewed change here.
+          expected_deployment='striped-chicken-693'
+          if [ "${BASH_REMATCH[1]}" != "$expected_deployment" ]; then
+            echo "PUBLIC_CONVEX_URL must be https://$expected_deployment.convex.cloud."
+            exit 1
+          fi
+          echo "value=$expected_deployment" >> "$GITHUB_OUTPUT"
       - name: Require protected deploy environments
         # environment: only names an environment, and a same-named repository or
         # org secret would still reach a job whose environment is missing or
