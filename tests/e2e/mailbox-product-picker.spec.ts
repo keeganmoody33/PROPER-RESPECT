@@ -13,7 +13,7 @@ test.beforeAll(async () => {
       builder.onLoad({ filter: /.*/, namespace: "synthetic" }, () => ({ resolveDir: process.cwd(), contents: `
         import {getFunctionName} from "convex/server";
         export function useConvexAuth(){return {isAuthenticated:true,isLoading:false}}
-        export function useQuery(){return []}
+        export function useQuery(reference){return getFunctionName(reference)==="mailboxes:listAccounts" ? (window.mailboxAccounts ?? []) : []}
         export function useMutation(reference){return async args=>{window.saved.push({name:getFunctionName(reference),args});return {}}}
         export function usePaginatedQuery(reference,args){
           const name=getFunctionName(reference);
@@ -61,3 +61,28 @@ for (const width of [1280, 390]) {
     await expect(page.getByText("Gmail discovery is open only to invited testers right now.")).toHaveCount(0);
   });
 }
+
+test("an existing account can't be reconnected when Gmail isn't open to this user (R16)", async ({ page }) => {
+  await page.route("**/*", route => route.abort());
+  await page.setContent('<main id="root"></main>');
+  await page.evaluate(() => {
+    const w = window as unknown as { mailboxProps: unknown; mailboxAccounts: unknown };
+    w.mailboxProps = { available: false };
+    w.mailboxAccounts = [{ accountId: "synthetic-account", provider: "GOOGLE", status: "NEEDS_REAUTH", accountLabel: "Synthetic mailbox", generation: 1, maintenanceEnabled: false, contexts: [] }];
+  });
+  await page.addScriptTag({ content: compiled });
+  await page.getByText("Automatic discovery and account controls").click();
+  await expect(page.getByRole("button", { name: "Reconnect this Gmail account" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Disconnect and stop collection" })).toBeVisible();
+  await expect(page.locator("article").getByText("Gmail discovery is open only to invited testers right now.")).toBeVisible();
+
+  await page.setContent('<main id="root"></main>');
+  await page.evaluate(() => {
+    const w = window as unknown as { mailboxProps: unknown; mailboxAccounts: unknown };
+    w.mailboxProps = { available: true };
+    w.mailboxAccounts = [{ accountId: "synthetic-account", provider: "GOOGLE", status: "NEEDS_REAUTH", accountLabel: "Synthetic mailbox", generation: 1, maintenanceEnabled: false, contexts: [] }];
+  });
+  await page.addScriptTag({ content: compiled });
+  await page.getByText("Automatic discovery and account controls").click();
+  await expect(page.getByRole("button", { name: "Reconnect this Gmail account" })).toBeVisible();
+});

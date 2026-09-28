@@ -185,10 +185,10 @@ export function MailboxManagement({ available }: { available: boolean }) {
         <button className="secondary-action" disabled={busy || (!account.maintenanceEnabled && (account.status !== "CONNECTED" || discoveryRunOwnsSearch(account.discoveryRun)))}
           onClick={() => void operation(() => maintenance({ accountId: account.accountId, expectedGeneration: account.generation, enabled: !account.maintenanceEnabled }), account.maintenanceEnabled ? "Daily hosted discovery disabled. Existing evidence is retained." : "Daily hosted discovery enabled for this account. The first bounded page will run within 15 minutes, then at most once daily.")}>{account.maintenanceEnabled ? "Stop daily discovery" : "Enable daily discovery for this account"}</button>
         {account.nextMaintenanceAt && <p>Next read due: {date(new Date(account.nextMaintenanceAt).toISOString())}.</p>}
-        <form method="post" action="/api/connect/mailboxes/google/start">
+        {available ? <form method="post" action="/api/connect/mailboxes/google/start">
           <input type="hidden" name="accountId" value={account.accountId}/><input type="hidden" name="expectedGeneration" value={account.generation}/>
           <button className="secondary-action" disabled={busy}>Reconnect this Gmail account</button>
-        </form>
+        </form> : <p>{MAILBOX_TESTERS_ONLY}</p>}
         <button className="secondary-action" disabled={busy || account.status === "DISCONNECTED"}
           onClick={() => void operation(() => disconnect({ accountId: account.accountId, expectedGeneration: account.generation }), "Disconnected and stopped collection. Evidence and product relationships remain unchanged.")}>Disconnect and stop collection</button>
         <p>Disconnecting removes the saved credentials and stops future reads. Existing private evidence and relationship history are retained. You can also revoke this app in your Google account permissions.</p>
