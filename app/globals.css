@@ -779,6 +779,13 @@ main {
   color: var(--brand-card-background, var(--ink));
 }
 
+.evidence-link {
+  color: inherit;
+  display: inline-block;
+  font-size: 0.8rem;
+  margin: 0 0 0.5rem;
+}
+
 .close-button {
   background: var(--ink);
   border: 0;
