@@ -2,23 +2,21 @@ import { z } from "zod";
 
 export const PROFILE_LINK_LIMIT = 8;
 
-/** Only http and https links are published or rendered; javascript:, data: and the rest never are. */
+/**
+ * Only http and https links without embedded credentials are published or
+ * rendered; javascript:, data:, user:pass@ and the rest never are.
+ */
 export function isHttpUrl(value: string) {
-  try {
-    return ["https:", "http:"].includes(new URL(value).protocol);
-  } catch {
-    return false;
-  }
-}
-// Zod still runs this refine after a failed url check, so it must not throw.
-export const profileLinkUrlSchema = z.string().trim().max(2048).url().refine(value => {
   try {
     const url = new URL(value);
     return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password;
   } catch {
     return false;
   }
-}, "Use an http or https link without embedded credentials.");
+}
+// Zod still runs this refine after a failed url check, so it must not throw.
+export const profileLinkUrlSchema = z.string().trim().max(2048).url()
+  .refine(isHttpUrl, "Use an http or https link without embedded credentials.");
 export const profileLinksSchema = z.array(z.object({
   label: z.string().trim().min(1).max(60),
   url: profileLinkUrlSchema,

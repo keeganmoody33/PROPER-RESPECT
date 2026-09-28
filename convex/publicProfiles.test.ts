@@ -135,7 +135,7 @@ test("100 repeated cards share retained brand reads while mismatched domains rem
   expect((await t.run(ctx => ctx.db.get(id)))?.profile).toEqual(profile);
 });
 
-test.each(["javascript:alert(1)", "data:text/html,x"])("a stored %s link or avatar never leaves the public reader", async url => {
+test.each(["javascript:alert(1)", "data:text/html,x", "https://user:pass@example.com/"])("a stored %s link or avatar never leaves the public reader", async url => {
   const t = convexTest(schema, modules);
   const [linked] = e2eReferenceProfile.cards;
   const profile: PublicProfile = {

@@ -130,7 +130,7 @@ it("carries a card's work-sample link as its visible label and URL, and drops a 
 });
 
 describe("link schemes", () => {
-  it.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/"])("omits a %s primary link from the visitor projection", url => {
+  it.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/", "https://user:pass@example.com/"])("omits a %s primary link from the visitor projection", url => {
     const source = profile(); source.cards[0].primaryLink = { type: "CANONICAL", label: "Visit example", url };
     const result = projectVisiblePublicProfile(source);
     expect(result.cards[0].primaryLink).toBeUndefined();

@@ -42,7 +42,7 @@ test("matching email labels cannot merge distinct authenticated owners", async (
   expect((await b.query(api.onboarding.getState, {}))?.user._id).toBe(bId);
 });
 
-test.each(["javascript:alert(1)", "data:image/png;base64,AAAA", "ftp://img.example/a.png"])("account setup drops a %s avatar link", async avatarUrl => {
+test.each(["javascript:alert(1)", "data:image/png;base64,AAAA", "ftp://img.example/a.png", "https://user:pass@example.com/"])("account setup drops a %s avatar link", async avatarUrl => {
   const t = convexTest(schema, modules);
   const owner = t.withIdentity({ subject: "scheme-owner" });
   const id = await owner.mutation(api.onboarding.ensureAccount, { avatarUrl });

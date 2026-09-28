@@ -623,7 +623,7 @@ test("unknown product retains its initials fallback", () => {
   expect($(".product-logo").text()).toBe("EP");
 });
 
-test.each(["javascript:alert(1)", "data:text/html,x"])("a %s primary link renders its label as plain text, never as a link", url => {
+test.each(["javascript:alert(1)", "data:text/html,x", "https://user:pass@example.com/"])("a %s primary link renders its label as plain text, never as a link", url => {
   const card: Card = { ...baseCard, primaryLink: { type: "CANONICAL", url, label: "Visit Example Product" } };
   const html = renderToStaticMarkup(createElement(ProductCard, { card, index: 0 }));
   const $ = load(html);
