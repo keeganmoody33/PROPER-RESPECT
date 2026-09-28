@@ -9,7 +9,7 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   page.on("request", request => { if (!new URL(request.url()).hostname.match(/^(127\.0\.0\.1|localhost)$/)) external.push(request.url()); });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
-  const fontFaces = await page.evaluate(() => ["h1", ".site-navigation"].map(selector => {
+  const fontFaces = await page.evaluate(() => ["h1", ".site-navigation", ".site-footer"].map(selector => {
     const element = document.querySelector(selector)!;
     const family = getComputedStyle(element).fontFamily.split(",")[0].trim().replace(/["']/g, "");
     const faces = [...document.fonts].filter(face => face.family.replace(/["']/g, "") === family);
@@ -17,7 +17,8 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   }));
   expect(fontFaces[0].family).toMatch(/archivo/i);
   expect(await page.locator("body").evaluate(element => getComputedStyle(element).fontFamily)).toMatch(/archivo/i);
-  expect(fontFaces[1].family).toMatch(/mono/i);
+  expect(fontFaces[1].family).toMatch(/archivo/i);
+  expect(fontFaces[2].family).toMatch(/mono/i);
   for (const face of fontFaces) expect(face.statuses).toEqual(["loaded"]);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your tools.Your track record.");
   await expect(page.getByRole("img", { name: /Blueprint/ })).toHaveCount(0);
