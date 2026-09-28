@@ -81,6 +81,13 @@ export function InventoryFixture() {
     return result;
   }
   return <>
+    <button type="button" onClick={() => {
+      setData({ hasMore: false, cards: [{ ...groupedGitHub.cards[0], prop: { ...groupedGitHub.cards[0].prop,
+        status: "ACTIVE", visibility: "PRIVATE", confirmedAt: "2026-09-18T12:00:00.000Z", goTo: true,
+        headline: "Keep delivery work and its decisions together.",
+        note: "I keep code, reviews and the reasons behind changes here. I return to the history when a decision needs explaining.",
+      } }] });
+    }}>Load design fixture</button>
     <button type="button" onClick={() => setData(groupedGitHub)}>Load grouped GitHub fixture</button>
     <button type="button" onClick={() => { loseNextResponse.current = true; }}>Simulate one lost save response</button>
     <output aria-label="Synthetic save operations">{attempts.join("\n")}</output>
@@ -93,9 +100,15 @@ export function InventoryFixture() {
         setDeletions(current => [...current, evidenceId]);
         setEvidence(current => current.filter(source => source.id !== evidenceId));
       }}
-      renderEvidence={(_current, controls) => <ObservedStartDateAction
+      renderEvidence={(_current, controls) => <>
+        <strong>Retained activity record</strong>
+        <p>Observed · <time dateTime="2024-06-03">03 Jun 2024</time><br />Captured · <time dateTime="2026-09-18">18 Sep 2026</time></p>
+        <blockquote>First contribution in the supplied record: 2024-06-03.</blockquote>
+        <ObservedStartDateAction
         observation={{ kind: "FIRST_USE", scope: "PERSONAL", acquisition: "USER_SUPPLIED", date: "2024-06-03", excerpt: "Synthetic observed first use: 2024-06-03" }}
-        verdict="CORRECT" {...controls} />}
+        verdict="CORRECT" {...controls} />
+        <p>This synthetic snapshot does not establish continuous use or a healthy live connection.</p>
+      </>}
       renderHistory={current => <p>Synthetic prior states: {current.previousStatuses.join(", ") || "none"}</p>} />} />
     <button type="button" onClick={() => { loseManualResponse.current = true; }}>Simulate one lost add response</button>
     <AddProductForm onAdd={async input => {
