@@ -264,12 +264,17 @@ export const exportEvidence = query({
     const result = await ctx.db.query("rawEvidence").withIndex("by_user", q => q.eq("userId", user._id)).paginate(options);
     const page = await Promise.all(result.page.map(async raw => {
       const source = await ctx.db.get(raw.evidenceSourceId);
-      const deleted = raw.deletedAt !== undefined;
-      return {
+      const identity = {
         id: raw._id,
         sourceType: source?.userId === user._id ? source.type : undefined,
         sourceLabel: source?.userId === user._id ? source.label ?? source.type : undefined,
-        capturedAt: raw.capturedAt, sourceUrl: raw.sourceUrl, captureProvenance: exportedProvenance(raw.captureProvenance),
+        capturedAt: raw.capturedAt,
+      };
+      // A deleted original exports only that it existed and when it was deleted;
+      // its file details, links and extracted text go with it.
+      if (raw.deletedAt !== undefined) return { ...identity, deletedAt: raw.deletedAt };
+      return {
+        ...identity, sourceUrl: raw.sourceUrl, captureProvenance: exportedProvenance(raw.captureProvenance),
         filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize,
         detectedVendor: raw.detectedVendor, detectedUrl: raw.detectedUrl,
         // Everything but the file's content hash.
@@ -279,10 +284,8 @@ export const exportEvidence = query({
           preparedAt: raw.retainedArtifact.preparedAt, adapterVersion: raw.retainedArtifact.adapterVersion,
         } : undefined,
         limitations: raw.limitations ?? [],
-        suggestedActivity: deleted ? undefined : raw.suggestedActivity,
-        // A deleted original's extracted text goes with it.
-        observations: deleted ? [] : raw.observations ?? [],
-        deletedAt: raw.deletedAt,
+        suggestedActivity: raw.suggestedActivity,
+        observations: raw.observations ?? [],
       };
     }));
     return { ...result, page };

@@ -46,6 +46,8 @@ describe("buildExport (R15)", () => {
       expect.stringMatching(/content hashes and deduplication keys/i),
       // Records the export doesn't carry yet are named, so the file doesn't read as complete.
       expect.stringMatching(/connected accounts.*daily refresh.*earlier handles/i),
+      // The activity saved on each relationship is exported; only the separate connector readings aren't.
+      expect.stringMatching(/usage readings collected from connected accounts \(the activity saved on each relationship is included\)/i),
     ]));
   });
 

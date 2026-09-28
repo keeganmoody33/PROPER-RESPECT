@@ -25,7 +25,7 @@ export const EXPORT_EXCLUSIONS = [
   "Original files and retained original text (delete or view them in your private collection).",
   "Connector credentials, upload tokens and storage references.",
   "Content hashes and deduplication keys, which only identify files and records inside Proper Respect.",
-  "Not in this file yet: connected accounts, usage metrics, daily refresh settings and their run history, your verdicts on individual observations, supporting proofs and artifacts, earlier handles, and imports still in review. Ask through the contact page for a copy.",
+  "Not in this file yet: connected accounts, usage readings collected from connected accounts (the activity saved on each relationship is included), daily refresh settings and their run history, your verdicts on individual observations, supporting proofs and artifacts, earlier handles, and imports still in review. Ask through the contact page for a copy.",
 ] as const;
 
 export function buildExport<P, R, E>({ profile, relationships, evidence, exportedAt }: { profile: P; relationships: R[]; evidence: E[]; exportedAt: string }) {

@@ -99,9 +99,11 @@ test("the export leaves out raw originals, storage references and tokens", async
   expect(serialized).not.toContain(TOKEN);
   expect(serialized).not.toContain(ARTIFACT_HASH);
   expect(serialized).not.toContain(storageId);
-  expect(evidence.page[0].captureProvenance).toMatchObject({ route: "UPLOAD", origin: { issuer: "OWNER_SUPPLIED_FILE" } });
-  expect(evidence.page[0].captureProvenance?.origin).not.toHaveProperty("artifactRef");
-  expect(evidence.page[0].retainedArtifact).toMatchObject({ kind: "GITHUB_ACTIVITY", sourceFile: "activity.json", sourceCapturedDate: "2026-09-17" });
+  const [row] = evidence.page;
+  if ("deletedAt" in row) throw new Error("The fixture original isn't deleted.");
+  expect(row.captureProvenance).toMatchObject({ route: "UPLOAD", origin: { issuer: "OWNER_SUPPLIED_FILE" } });
+  expect(row.captureProvenance?.origin).not.toHaveProperty("artifactRef");
+  expect(row.retainedArtifact).toMatchObject({ kind: "GITHUB_ACTIVITY", sourceFile: "activity.json", sourceCapturedDate: "2026-09-17" });
   expect(evidence.page[0]).not.toHaveProperty("payload");
   expect(evidence.page[0]).not.toHaveProperty("storageId");
   expect(evidence.page[0]).not.toHaveProperty("uploadAttribution");
@@ -300,4 +302,15 @@ test("unpublish all revokes every daily refresh the owner approved, and only the
   expect(rows.active.every(row => typeof row?.revokedAt === "string")).toBe(true);
   expect(rows.alreadyRevoked?.revokedAt).toBe(earlier);
   expect(rows.others?.revokedAt).toBeUndefined();
+});
+
+test("a deleted original exports only that it existed and when it was deleted", async () => {
+  const { owner, t, evidenceId } = await fixture();
+  await t.run(ctx => ctx.db.patch(evidenceId, { sourceUrl: "https://mail.example/message/42", detectedUrl: "https://shared.example/account", detectedVendor: "Shared Tool" }));
+  await owner.mutation(api.onboarding.deleteEvidence, { evidenceId });
+  const rows = await collectPages(cursor => owner.query(api.inventory.exportEvidence, { paginationOpts: { numItems: 10, cursor } }));
+  const row = rows.find(item => item.id === evidenceId)!;
+  expect(Object.keys(row).sort()).toEqual(["capturedAt", "deletedAt", "id", "sourceLabel", "sourceType"]);
+  const serialized = JSON.stringify(rows);
+  for (const identifying of ["receipt.txt", "mail.example", "shared.example/account", "activity.json"]) expect(serialized).not.toContain(identifying);
 });
