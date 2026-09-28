@@ -73,6 +73,22 @@ test("the frontend smoke test uses the handle verify checked", () => {
   assert.match(frontend, /needs\.verify\.outputs\.public_handle/);
 });
 
+test("the backend deploys only with a key for the checked production deployment", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  const backend = workflow.slice(workflow.indexOf("\n  backend:"), workflow.indexOf("\n  frontend:"));
+  assert.match(verify, /CONVEX_PRODUCTION_DEPLOYMENT: \$\{\{ vars\.CONVEX_PRODUCTION_DEPLOYMENT \}\}/);
+  assert.match(backend, /needs\.verify\.outputs\.convex_deployment/);
+  assert.doesNotMatch(backend, /vars\.CONVEX_PRODUCTION_DEPLOYMENT/);
+  assert.match(backend, /"prod:\$\{CONVEX_PRODUCTION_DEPLOYMENT\}\|"\?\*\)/);
+});
+
+test("the release docs never run an unpinned Vercel CLI", () => {
+  for (const file of ["docs/releases/TEMPLATE.md", "docs/releases/v0.2.0.md", "docs/DEPLOYMENT.md"]) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /npx[^\n`]*vercel/, file);
+  }
+});
+
 test("the release runs a pinned Vercel CLI, never one fetched at deploy time", () => {
   const workflow = releaseWorkflow();
   assert.doesNotMatch(workflow, /npx[^\n]*vercel/);

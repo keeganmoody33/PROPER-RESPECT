@@ -8,8 +8,12 @@ every step. Setup (GitHub environments, secrets, `PUBLIC_HANDLE`) is in
    release, promote the deployment you want live before tagging, or the new
    deployment won't take the production domain:
 
+   Use the pinned CLI from `release-tools/`, the same version the release
+   workflow runs, not one fetched at run time:
+
    ```sh
-   npx vercel promote <deployment-url>
+   npm ci --ignore-scripts --prefix release-tools
+   release-tools/node_modules/.bin/vercel promote <deployment-url>
    ```
 
 2. **Tag the release** on a commit that is on `main`:

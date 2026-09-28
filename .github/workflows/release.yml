@@ -21,6 +21,8 @@ jobs:
       # The frontend smoke test uses this checked value, not vars.PUBLIC_HANDLE,
       # which an environment-level variable could override there.
       public_handle: ${{ steps.handle.outputs.value }}
+      # The backend deploy key must belong to this deployment.
+      convex_deployment: ${{ steps.convex_deployment.outputs.value }}
     env:
       # Synthetic build configuration, the same as verify.yml. No owner credentials are used.
       NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
@@ -52,6 +54,18 @@ jobs:
             exit 1
           fi
           echo "value=$PUBLIC_HANDLE" >> "$GITHUB_OUTPUT"
+      - name: Require the production Convex deployment name
+        id: convex_deployment
+        env:
+          CONVEX_PRODUCTION_DEPLOYMENT: ${{ vars.CONVEX_PRODUCTION_DEPLOYMENT }}
+        run: |
+          # Convex deployment names are adjective-animal-number, e.g. striped-chicken-693.
+          deployment_pattern='^[a-z]+-[a-z]+-[0-9]+$'
+          if ! [[ "$CONVEX_PRODUCTION_DEPLOYMENT" =~ $deployment_pattern ]]; then
+            echo "Set the CONVEX_PRODUCTION_DEPLOYMENT repository variable to the production deployment name (striped-chicken-693)."
+            exit 1
+          fi
+          echo "value=$CONVEX_PRODUCTION_DEPLOYMENT" >> "$GITHUB_OUTPUT"
       - name: Require protected deploy environments
         # environment: only names an environment, and a same-named repository or
         # org secret would still reach a job whose environment is missing or
@@ -97,15 +111,25 @@ jobs:
     environment: production-backend
     # Only the two Convex steps receive the key, so npm ci's install scripts never see it.
     steps:
-      - name: Require the deploy key
-        # A missing-secret check only; verify has already required a reviewer here.
+      - name: Require a production deploy key for the checked deployment
+        # verify has already required the owner as reviewer here. A deploy key
+        # targets the deployment it names, so a dev key or another deployment's
+        # key would deploy somewhere else while the release looked successful.
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          CONVEX_PRODUCTION_DEPLOYMENT: ${{ needs.verify.outputs.convex_deployment }}
         run: |
-          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
-            echo "CONVEX_DEPLOY_KEY is not a secret of the production-backend environment. See docs/releases/v0.2.0.md, One-time setup."
+          if [ -z "$CONVEX_PRODUCTION_DEPLOYMENT" ]; then
+            echo "verify did not pass the production deployment name."
             exit 1
           fi
+          case "$CONVEX_DEPLOY_KEY" in
+            "prod:${CONVEX_PRODUCTION_DEPLOYMENT}|"?*) ;;
+            *)
+              echo "CONVEX_DEPLOY_KEY must be a production key for $CONVEX_PRODUCTION_DEPLOYMENT. See docs/releases/v0.2.0.md, One-time setup."
+              exit 1
+              ;;
+          esac
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
