@@ -38,7 +38,9 @@ preview or production deployment. Its build command is
 `npm run deploy:check && npm run build`: a Vercel build is frontend-only and
 never deploys Convex. The backend deploys only from the release workflow's
 `backend` job, with `CONVEX_DEPLOY_KEY` from the `production-backend` GitHub
-environment. Don't remove the Git guard to obtain a PR check; previews wait
+environment. Each secret is an environment secret, passed only to the steps
+that use it, and each deploy job stops at its first step when its secret is
+missing, so an environment without required reviewers can't deploy. Don't remove the Git guard to obtain a PR check; previews wait
 for R30.
 
 PROPER-RESPECT has three configuration boundaries:

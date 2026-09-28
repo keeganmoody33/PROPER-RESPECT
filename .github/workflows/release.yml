@@ -46,9 +46,18 @@ jobs:
     timeout-minutes: 20
     # Required reviewers on this environment make the owner approve the deploy.
     environment: production-backend
-    env:
-      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+    # The key exists only as a secret of this protected environment, and only
+    # the two Convex steps receive it, so npm ci's install scripts never see it.
     steps:
+      - name: Require the environment's deploy key
+        # A missing or unprotected environment has no secret, so it can't deploy.
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "CONVEX_DEPLOY_KEY is not a secret of the production-backend environment. See docs/releases/v0.2.0.md, One-time setup."
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -58,9 +67,14 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Deploy the Convex backend
+        # A deploy key scopes every Convex command to its own deployment, so no --prod.
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: npx convex deploy -y
       - name: Record the deployed commit
         # Needs the deploy key's deployment:env:write permission as well as deployment:deploy.
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: npx convex env set DEPLOYED_SHA "$GITHUB_SHA"
 
   frontend:
@@ -69,12 +83,24 @@ jobs:
     timeout-minutes: 20
     environment: production-frontend
     env:
-      # The Vercel CLI reads these from the environment, so no step passes --token.
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       PUBLIC_HANDLE: ${{ vars.PUBLIC_HANDLE }}
+    # The Vercel secrets exist only in this protected environment, and only the
+    # two Vercel steps receive them. The CLI reads them from the environment,
+    # so no step passes --token.
     steps:
+      - name: Require the environment's Vercel secrets
+        # A missing or unprotected environment has no secrets, so it can't deploy.
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!name}" ]; then
+              echo "$name is not a secret of the production-frontend environment. See docs/releases/v0.2.0.md, One-time setup."
+              exit 1
+            fi
+          done
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -85,12 +111,20 @@ jobs:
       - name: Deploy to Vercel production
         # Builds on Vercel, which holds the production values. vercel pull with
         # build --prebuilt can't work: CLERK_SECRET_KEY is a sensitive variable.
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           DEPLOYMENT_URL="$(npx --yes vercel deploy --prod --yes \
             --meta githubCommitSha="$GITHUB_SHA" --meta gitTag="$GITHUB_REF_NAME")"
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
       - name: Require the production domain on this deployment
         # After an Instant Rollback, new deployments don't take the domain until one is promoted.
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           npx --yes vercel inspect "$DEPLOYMENT_URL" > inspect.txt 2>&1
           cat inspect.txt

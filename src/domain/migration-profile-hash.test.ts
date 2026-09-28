@@ -14,7 +14,7 @@ afterAll(() => rmSync(directory, { recursive: true, force: true }));
 const run = (value: unknown, ...args: string[]) => {
   const file = join(directory, `${Math.random().toString(36).slice(2)}.json`);
   writeFileSync(file, JSON.stringify(value));
-  return spawnSync(process.execPath, ["--no-warnings", "scripts/migration-profile-hash.mjs", file, ...args], { encoding: "utf8" });
+  return spawnSync(process.execPath, ["--no-warnings", "--experimental-strip-types", "scripts/migration-profile-hash.mjs", file, ...args], { encoding: "utf8" });
 };
 
 it.each([
