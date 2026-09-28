@@ -12,6 +12,7 @@ import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evide
 import { resolveProduct } from "../src/domain/discovery";
 import { costSchema } from "../src/domain/cost";
 import { DEFAULT_USAGE_LINK_LABEL, usageLinkUrlSchema } from "../src/domain/usage-links";
+import { BIO_MAX, DISPLAY_NAME_MAX, LINK_LABEL_MAX, PUBLISHED_URL_MAX, trimToLength } from "../src/domain/published-text-limits";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { resolvePublishedCardPropIds } from "./publication";
@@ -67,13 +68,14 @@ export const ensureAccount = mutation({
 
     const handle = await availablePendingHandle(ctx, identity.subject);
     const now = new Date().toISOString();
+    const displayName = [args.displayName, identity.name, identity.email]
+      .map(name => trimToLength(name ?? "", DISPLAY_NAME_MAX)).find(Boolean) ?? "New linker";
     return await ctx.db.insert("users", {
       authSubject: identity.subject,
       handle,
-      displayName:
-        args.displayName ?? identity.name ?? identity.email ?? "New linker",
+      displayName,
       bio: "",
-      avatarUrl: args.avatarUrl,
+      avatarUrl: args.avatarUrl !== undefined && args.avatarUrl.length <= PUBLISHED_URL_MAX ? args.avatarUrl : undefined,
       onboardingStatus: "PROFILE",
       createdAt: now,
       updatedAt: now,
@@ -92,6 +94,9 @@ export const claimHandle = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const handle = claimableHandleSchema.parse(args.handle);
+    const displayName = args.displayName.trim(), bio = args.bio.trim();
+    if (displayName.length > DISPLAY_NAME_MAX) throw new Error("Use a display name of 80 characters or fewer.");
+    if (bio.length > BIO_MAX) throw new Error("Use a bio of 500 characters or fewer.");
     if (await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).first()) {
       throw new Error("That handle is reserved by an existing public profile.");
     }
@@ -116,8 +121,8 @@ export const claimHandle = mutation({
     await ctx.db.patch(user._id, {
       handle,
       ...linkFields,
-      displayName: args.displayName.trim(),
-      bio: args.bio.trim(),
+      displayName,
+      bio,
       onboardingStatus: "IMPORT",
       updatedAt: now,
     });
@@ -578,6 +583,9 @@ type PublicationSelection = Infer<typeof selectionValidator>;
 async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users">, selections: PublicationSelection[]) {
   const owners = await ownersForHandle(ctx, user.handle);
   if (owners.length !== 1 || owners[0]._id !== user._id) throw new Error("Publication requires the unique owner of this handle. Resolve account ownership before sharing.");
+  // Older rows were saved before these caps, so every publish checks them.
+  if (user.displayName.length > DISPLAY_NAME_MAX) throw new Error("Shorten your display name to 80 characters or fewer before sharing.");
+  if (user.bio.length > BIO_MAX) throw new Error("Shorten your bio to 500 characters or fewer before sharing.");
   if (selections.length > 100) throw new Error("Select at most 100 relationships to change.");
   const selectedIds = new Set(selections.map(selection => selection.propId));
   if (selectedIds.size !== selections.length) throw new Error("Select each relationship only once.");
@@ -591,6 +599,8 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     }
     if (!selection.publish) continue;
     if (prop.visibility === "DRAFT") throw new Error("Confirm and save this relationship privately before publishing.");
+    if (selection.primaryLink && selection.primaryLink.label.length > LINK_LABEL_MAX) throw new Error("Use a link label of 200 characters or fewer.");
+    if (selection.primaryLink && selection.primaryLink.url.length > PUBLISHED_URL_MAX) throw new Error("Use a link of 2,048 characters or fewer.");
     if (selection.status !== prop.status || selection.headline.trim() !== prop.headline ||
         selection.note.trim() !== prop.note || selection.startedAt !== prop.startedAt) {
       throw new Error("Save relationship changes privately before publishing.");
@@ -622,7 +632,16 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     }
     return [{ card, propId: null }];
   });
-  const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl: user.avatarUrl, profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl };
+  // Unchanged cards are copied as they are, so one saved before the link caps is checked here too.
+  for (const { card } of preserved) {
+    const link = card.primaryLink;
+    if (link && (link.label.length > LINK_LABEL_MAX || link.url.length > PUBLISHED_URL_MAX)) {
+      throw new Error(`The shared ${card.product.name} card has a link over the length limit. Include it in this change to update or remove it.`);
+    }
+  }
+  // There's no avatar editor, so an over-long stored avatar is left off rather than blocking every publish.
+  const avatarUrl = user.avatarUrl !== undefined && user.avatarUrl.length <= PUBLISHED_URL_MAX ? user.avatarUrl : undefined;
+  const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl, profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl };
   const replacements = selections.filter(selection => selection.publish).flatMap(selection => {
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);
