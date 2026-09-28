@@ -128,3 +128,20 @@ test("a failed discovery run doesn't tell an unlisted user to reconnect either (
   await render(true);
   await expect(page.getByText("Reconnect this Gmail account before starting another run.")).toBeVisible();
 });
+
+test("a failed-authorization notice doesn't invite an unlisted user to try again (R16)", async ({ page }) => {
+  await page.route("**/*", route => route.request().url().startsWith("http://synthetic.test/")
+    ? route.fulfill({ contentType: "text/html", body: '<main id="root"></main>' }) : route.abort());
+  for (const available of [false, true]) {
+    await page.goto("http://synthetic.test/onboarding?gmail=failed");
+    await page.evaluate(isAvailable => { (window as unknown as { mailboxProps: unknown }).mailboxProps = { available: isAvailable }; }, available);
+    await page.addScriptTag({ content: compiled });
+    const notice = page.getByRole("status").filter({ hasText: "Gmail authorization did not complete." });
+    await expect(notice).toBeVisible();
+    if (available) await expect(notice).toContainText("Start a new connection attempt.");
+    else {
+      await expect(notice).not.toContainText(/new connection attempt|reconnect/i);
+      await expect(notice).toContainText("Gmail discovery is open only to invited testers right now.");
+    }
+  }
+});

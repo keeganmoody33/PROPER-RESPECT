@@ -99,6 +99,8 @@ function UnmatchedRecords() {
   </div>;
 }
 
+const AUTHORIZATION_FAILED = "Gmail authorization did not complete. Start a new connection attempt.";
+
 export function MailboxManagement({ available }: { available: boolean }) {
   const { isAuthenticated } = useConvexAuth();
   const accounts = useQuery(api.mailboxes.listAccounts, isAuthenticated ? {} : "skip");
@@ -113,7 +115,7 @@ export function MailboxManagement({ available }: { available: boolean }) {
   const [notice, setNotice] = useState(() => {
     const result = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("gmail");
     return result === "connected" ? "Gmail connected. Choose a bounded private discovery read below." :
-      result === "failed" ? "Gmail authorization did not complete. Start a new connection attempt." : "";
+      result === "failed" ? AUTHORIZATION_FAILED : "";
   });
   async function operation(work: () => Promise<unknown>, success: string) {
     setBusy(true);
@@ -160,7 +162,7 @@ export function MailboxManagement({ available }: { available: boolean }) {
     {available ? <form method="post" action="/api/connect/mailboxes/google/start">
       <button className="secondary-action" disabled={busy || !isAuthenticated}>Add Gmail account</button>
     </form> : <p>{MAILBOX_TESTERS_ONLY}</p>}
-    <p role="status" aria-live="polite">{notice}</p>
+    <p role="status" aria-live="polite">{notice === AUTHORIZATION_FAILED && !available ? `Gmail authorization did not complete. ${MAILBOX_TESTERS_ONLY}` : notice}</p>
     {isAuthenticated && available && <MailboxConnectionNotice loading={accounts === undefined} gmailCount={gmailAccounts?.length ?? 0} connectedCount={gmailAccounts?.filter(account => account.status === "CONNECTED").length ?? 0}/>}
     {gmailAccounts?.map(account => <article key={account.accountId} style={{ borderTop: "1px solid currentColor", paddingBlock: "1rem", overflowWrap: "anywhere" }}>
       <h4>{account.accountLabel}</h4>
