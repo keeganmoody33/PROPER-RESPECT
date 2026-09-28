@@ -1,49 +1,118 @@
 # PROPER-RESPECT
 
-**Continue development here:** [Working guide and next deliverable](docs/DEVELOPMENT.md) · [September 17 browser dogfood](docs/dogfood-reports/2026-09-17-codex-proper-respect-self-test-20260916-dogfood.md) · [Canonical Ref](https://plan.ref.tools/oUl8LCIQb32SAicK). These dated records govern the current owner checkout; the initial bootstrap commands below are not continuation steps for its existing development data.
+Proper Respect lets someone keep a private collection of the tools they use,
+with notes and supporting evidence, and choose which cards to publish on a
+public profile. Evidence proposes; the person confirms. It runs on Next.js,
+Convex and Clerk.
 
-PROPER-RESPECT prepares evidence-backed product profiles: evidence proposes, the person confirms. The first
-runnable slice serves Keegan's seeded public Product Usage Identity from
-Next.js and Convex while keeping draft and private source records out of the
-public read model. The current slice also includes Clerk-backed multi-user
-onboarding, retained private evidence uploads, bulk approval/publication,
-GitHub and Devin connectors, and daily refreshes limited to explicitly
-approved metrics.
+Two ways to run it locally:
 
-## Run the first slice
+1. **Fixture mode** (no accounts, about 5 minutes): the public pages with
+   synthetic data. Good for UI work and reading the code.
+2. **Full mode** (your own Convex and Clerk, about 30 minutes): sign-in,
+   onboarding, a private collection and publishing, against a development
+   backend of your own.
 
-```bash
-npm install
-npx convex dev
-npm run convex:seed
-npm run dev
-```
+## Requirements
 
-Convex writes `NEXT_PUBLIC_CONVEX_URL` to `.env.local`. Visit
-`http://localhost:3000/keegan`.
+- **Node 24** (`.nvmrc`). With nvm: `nvm use`. Vercel, CI and the Convex Node
+  actions all run 24.
+- **npm**, which comes with Node.
+- **Git.**
 
-## Configure accounts and connectors
-
-1. Copy `.env.example` to `.env.local` and add the Clerk publishable and secret
-   keys.
-2. Activate Clerk's Convex integration.
-3. Set `CLERK_FRONTEND_API_URL` and a long random
-   `CONNECTOR_ENCRYPTION_KEY` in the Convex dashboard.
-4. Enable GitHub as a Clerk social connection if the GitHub connector should be
-   available.
-5. Run `npx convex dev`, then visit `http://localhost:3000/onboarding`.
-
-Connector tokens are encrypted before persistence and are never returned by
-public or owner-facing queries. Screenshot and CSV originals remain private
-until their owner deletes them.
-
-For variable ownership, production commands, deployment order, smoke tests, and
-rollback guidance, see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Before a
-deployment, run:
+## 1. Fixture mode: no accounts
 
 ```bash
-npm run deploy:check
+git clone https://github.com/keeganmoody33/PROPER-RESPECT.git
+cd PROPER-RESPECT
+npm ci
+PROPER_RESPECT_E2E_REFERENCE=1 npm run dev
 ```
+
+Don't create `.env.local` for this mode. With no Clerk or Convex keys, the app
+serves synthetic data instead of calling a backend:
+
+- `http://localhost:3000/`: the homepage.
+- `http://localhost:3000/lecturesfrom`: a public profile built from
+  synthetic reference data (`src/data/e2e-reference-profile.ts`).
+- `http://localhost:3000/evidence-fixture` and
+  `http://localhost:3000/evidence-fixture/inventory`: fixture views of the
+  evidence cards and the private collection.
+- `http://localhost:3000/about/methodology`: how evidence works.
+
+Sign-in, onboarding and anything that saves data need full mode.
+
+The browser tests use this same mode (`playwright.config.ts`).
+
+## 2. Full mode: your own Convex and Clerk
+
+This uses a Convex **development** deployment and a Clerk **development**
+instance, both yours. It never touches production.
+
+1. **Install and copy the environment file.**
+
+   ```bash
+   npm ci
+   cp .env.example .env.local
+   ```
+
+   `.env.local` is ignored by Git. Keep `PUBLIC_SITE_ORIGIN=http://localhost:3000`.
+
+2. **Create a Convex dev deployment.**
+
+   ```bash
+   npx convex dev
+   ```
+
+   Log in and create a new project when asked. The command writes
+   `CONVEX_DEPLOYMENT` and `NEXT_PUBLIC_CONVEX_URL` to `.env.local` and keeps
+   running, pushing the functions in `convex/` as you edit. Leave it running in
+   its own terminal.
+
+3. **Create a Clerk development instance** at
+   [dashboard.clerk.com](https://dashboard.clerk.com).
+   - Copy its publishable and secret keys (`pk_test_…` and `sk_test_…`, both
+     from the same instance) into `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and
+     `CLERK_SECRET_KEY` in `.env.local`.
+   - Open the Convex integration in the Clerk dashboard, select **Activate
+     Convex integration**, and copy the Frontend API URL it shows
+     (`https://<instance>.clerk.accounts.dev`).
+   - Optional: enable GitHub under social connections, to try the GitHub
+     connector.
+
+4. **Give your Convex deployment its two server settings.** Enter each value
+   when prompted, so it stays out of your shell history:
+
+   ```bash
+   npx convex env set CLERK_FRONTEND_API_URL
+   npx convex env set CONNECTOR_ENCRYPTION_KEY
+   ```
+
+   Use the Frontend API URL from step 3, and a key from
+   `openssl rand -base64 32`. Keep the key: connector credentials saved with
+   it can't be read with a different one.
+
+5. **Start the app** in a second terminal:
+
+   ```bash
+   npm run dev -- --hostname localhost
+   ```
+
+   Open `http://localhost:3000/onboarding`, sign in, and build a collection.
+   Use `localhost`, not `127.0.0.1`, so Clerk accepts the session.
+
+6. **Optional: seed the reference profile** into your dev deployment:
+
+   ```bash
+   npm run convex:seed
+   ```
+
+   It creates the synthetic `keegan` profile. Run it only against your own dev
+   deployment.
+
+Gmail discovery and Context.dev brand data need more server settings; see
+`.env.example` and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Neither is needed
+to try the app.
 
 ## Verify
 
@@ -51,114 +120,32 @@ npm run deploy:check
 npm run lint
 npm run typecheck
 npm test
-npm run build
+PUBLIC_SITE_ORIGIN=https://public.example npm run build
 npx playwright install chromium
 npm run test:e2e
 ```
 
-> One place for the products you actually use: affiliate links, proof, and the story of who put you on.
+A production build accepts only an HTTPS `PUBLIC_SITE_ORIGIN`, so the build
+line sets a placeholder; it overrides the `http://localhost:3000` in
+`.env.local`, which `npm run dev` still uses. Use your real origin when you
+build for a deployment.
+`npm test` runs the Vitest suite (including the Convex backend tests) and the
+Node script tests. `npm run test:e2e` starts the app in fixture mode itself.
 
-PROPER-RESPECT is a product-stack profile. It is not trying to predict a person's whole software life from surveillance data. It helps a linker collect the products they use, attach the best available proof, add their affiliate/referral links where they exist, and credit the people, content, communities, or events that introduced them.
+## Where to go next
 
-## Current Direction
-
-The default motion is authorize sources → discover products and dated claims → review the evidence → publish. Manual entry is a fallback. The person controls source access and publication; the app should do the preparation.
-
-See [the current thesis](docs/000-current-product-thesis.md) for permission boundaries and claim semantics. As of 2026-09-18, Google sign-in and separately consented Gmail OAuth, bounded header discovery/extraction, capture provenance, and private claim review are implemented; the authorized live capture/candidate gate passed. Google sign-in does not grant Gmail consent, and email evidence does not establish current or continuous use. The approved read budget is exhausted; additional mailbox reads are paused and recurring collection remains off. Historical expansion, live failure/recovery proof, and hosted release acceptance remain gated. Structured dated observations are reviewed privately with original source excerpts and append-only corrections; publication requires explicit approval.
-
-## What Problem This Solves
-
-Affiliate and referral links are fragmented across product dashboards, YouTube descriptions, notes apps, old tweets, newsletters, and link-in-bio tools. Most products either have no referral program or make it hard for actual users to present their advocacy in one place.
-
-PROPER-RESPECT gives linkers a single surface for:
-
-- Products they actively use
-- Products they are testing
-- Products they used and archived
-- Affiliate/referral links when available
-- Proof that they know the product
-- Lineage for who put them on
-
-## What We Are Not Building Right Now
-
-These ideas are parked in `docs/future/` until the core profile works:
-
-- B2B dashboards
-- Pricing and paid tiers
-- Company reward configuration
-- Public API monetization
-- Analytics dashboards
-- Mobile screen-time tracking
-- Company outreach workflows
-
-## Proof Sources
-
-The product should support multiple proof sources because no single source covers every product.
-
-| Source | Best For | Signal | Launch Priority |
-| --- | --- | --- | --- |
-| Manual curation | Everything | User says this belongs on their stack | Now |
-| Content proof | Loom, YouTube, screenshots, articles | Shows the product in use | Now |
-| Link imports | Linktree, Beacons, GitHub README, Twitter bio | Existing public curation | Now |
-| Receipt forward | Paid products | User chooses a receipt to convert into a draft prop | Next |
-| Claim-on-visit extension | Web products | User clicks while on a product page and captures URL/screenshot | Next |
-| Public profile scan | GitHub repos, public articles, YouTube descriptions | Public evidence of usage or mention | Next |
-| Product API/OAuth | GitHub, Linear, Vercel, Notion, Figma | Product-specific verification | Later |
-| Read-only email discovery | Signup, receipt, and dated evidence proposals | Broad but noisy | Planned; separate authorization required |
-
-## MVP App Flow
-
-```text
-Linker signs up
-  -> creates profile
-  -> imports existing links or starts manually
-  -> adds product cards
-  -> adds affiliate/referral/canonical links
-  -> attaches proof
-  -> adds "put on by" lineage
-  -> publishes profile
-```
-
-Visitor flow:
-
-```text
-Visitor opens profile
-  -> browses Active / Testing / Archived products
-  -> sees proof and lineage
-  -> clicks affiliate/referral/canonical link
-```
-
-## Suggested Technical Stack
-
-This remains a small web app until the profile builder proves itself.
-
-- Frontend: Next.js + TypeScript
-- Styling: Tailwind or plain CSS modules; design should feel like a polished product stack, not a generic SaaS dashboard
-- Auth: Clerk or a simple auth provider
-- Database: Postgres (Neon is fine)
-- ORM: Prisma or Drizzle
-- Storage: Vercel Blob/S3 for screenshots; external embeds for Loom/YouTube
-- Hosting: Vercel
-
-## Documentation
-
-- `CONTEXT.md` - domain language and product principles
-- `PRD.md` - current MVP requirements and architecture
-- `docs/DEPLOYMENT.md` - Clerk, Convex, connector, and Vercel deployment runbook
-- `GRILL-SESSION.md` - latest grilling decisions and unresolved questions
-- `INDEX.md` - active and future documentation map
-- `docs/adr/` - accepted active decisions
-- `docs/future/` - parked ideas that are not part of the current build
-
-## Current Build Target
-
-Build the smallest useful product:
-
-- A public profile for one linker
-- Product cards with status: Active, Testing, Archived
-- Link slots: affiliate URL, referral code, canonical URL
-- Proof attachments: Loom, YouTube, screenshot, article, GitHub repo
-- Put-on-by lineage: person, content, community, event
-- Import from existing public surfaces where easy
-
-If a feature does not make the profile more useful for the linker or more credible for the visitor, it waits.
+- [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md): the working guide and current
+  delivery state.
+- [`AGENTS.md`](AGENTS.md): repository rules for anyone, human or agent,
+  making changes.
+- [`docs/000-current-product-thesis.md`](docs/000-current-product-thesis.md):
+  what the product is for and its permission boundaries.
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md): configuration, releases and
+  rollback. Production changes are the owner's to make; don't deploy from a
+  development checkout.
+- [`docs/remediation/CODEX-BRIEF.md`](docs/remediation/CODEX-BRIEF.md): the
+  current task list.
+- `CONTEXT.md`, `PRD.md` and `INDEX.md`: domain language, requirements and a
+  map of the docs.
+- [`docs/history/README-2026-06.md`](docs/history/README-2026-06.md): the
+  earlier product framing that used to live in this README.
