@@ -353,7 +353,8 @@ export default defineSchema({
     subscriptionId: v.id("metricSubscriptions"),
     userId: v.id("users"),
     propId: v.id("props"),
-    provider: v.union(v.literal("GITHUB"), v.literal("DEVIN")),
+    // UNKNOWN: a subscription whose connector and metric name no supported provider.
+    provider: v.union(v.literal("GITHUB"), v.literal("DEVIN"), v.literal("UNKNOWN")),
     attemptedAt: v.string(),
     outcome: v.union(v.literal("SUCCESS"), v.literal("FAILURE"), v.literal("SKIPPED")),
     capturedAt: v.optional(v.string()),

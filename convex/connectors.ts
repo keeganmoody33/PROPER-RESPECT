@@ -584,7 +584,9 @@ type RefreshAttempt = {
 
 function refreshProvider(provider: string | undefined, metricKey: string) {
   if (provider === "GITHUB" || provider === "DEVIN") return provider;
-  return metricKey === "github.contributions" ? "GITHUB" as const : "DEVIN" as const;
+  if (metricKey === "github.contributions") return "GITHUB" as const;
+  if (metricKey === "devin.sessions") return "DEVIN" as const;
+  return "UNKNOWN" as const;
 }
 
 /** Appends one ledger row for a refresh attempt (R08). Outcomes only; no provider text. */

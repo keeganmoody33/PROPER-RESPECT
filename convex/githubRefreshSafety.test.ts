@@ -478,3 +478,13 @@ test("a Devin failure for a relationship made private records SKIPPED and leaves
   expect((await f.t.run(ctx => ctx.db.get(devin.propId)))?.activity).toEqual(activity);
   expect((await f.t.run(ctx => ctx.db.get(devin.connectorId)))?.status).toBe("CONNECTED");
 });
+
+test("an unsupported metric with no connector records an UNKNOWN provider instead of guessing", async () => {
+  const f = await fixture();
+  await f.t.run(async ctx => {
+    await ctx.db.patch(f.ids.subscriptionId, { metricKey: "unknown.metric" });
+    await ctx.db.delete(f.ids.connectorId);
+  });
+  await f.call();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "UNKNOWN", outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
+});
