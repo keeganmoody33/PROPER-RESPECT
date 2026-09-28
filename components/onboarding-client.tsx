@@ -439,7 +439,7 @@ function Builder() {
         <p>Gmail discovery uses separately authorized read-only access when this environment is configured. Signing in with Google does not grant mailbox access. Microsoft mailbox connection is not available yet.</p>
         <p>Sources bring discoveries and supporting context into your private collection. Your relationship and go-to choices remain yours.</p>
         <div className="connector-grid">
-          <MailboxManagement />
+          <MailboxManagement available={state.mailboxAvailable === true} />
           <div className="connector-card">
             <strong>GitHub</strong>
             <p>Authorized account contributions. Account creation is separate from first use. A capture is a snapshot; no continuous coverage is implied.</p>

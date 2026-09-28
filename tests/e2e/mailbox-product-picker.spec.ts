@@ -1,10 +1,11 @@
 import { build } from "esbuild";
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 let compiled: string;
 test.beforeAll(async () => {
   const result = await build({
-    stdin: { resolveDir: process.cwd(), contents: `import {createElement} from "react"; import {createRoot} from "react-dom/client"; import {MailboxManagement} from "./components/mailbox-management"; window.saved=[]; createRoot(document.getElementById("root")).render(createElement(MailboxManagement));` },
+    stdin: { resolveDir: process.cwd(), contents: `import {createElement} from "react"; import {createRoot} from "react-dom/client"; import {MailboxManagement} from "./components/mailbox-management"; window.saved=[]; createRoot(document.getElementById("root")).render(createElement(MailboxManagement, window.mailboxProps ?? {available:true}));` },
     bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
     define: { "process.env.NODE_ENV": '"production"' },
     plugins: [{ name: "bounded-picker", setup(builder) {
@@ -38,3 +39,25 @@ test("unmatched retained header can select a product without account-evidence jo
   expect(await page.evaluate(() => (window as unknown as {saved:unknown[]}).saved)).toEqual([{name:"mailboxDiscovery:reviewUnknown",args:{id:"retained-header",decision:"LINKED",propId:"github-prop"}}]);
   expect(requests).toEqual([]);
 });
+
+for (const width of [1280, 390]) {
+  test(`Gmail is offered only to listed testers at ${width}px (R16)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("**/*", route => route.abort());
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(() => { (window as unknown as { mailboxProps: unknown }).mailboxProps = { available: false }; });
+    await page.addScriptTag({ content: compiled });
+    await expect(page.getByRole("heading", { name: "Gmail discovery" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add Gmail account" })).toHaveCount(0);
+    await expect(page.getByText("Gmail discovery is open only to invited testers right now.")).toBeVisible();
+    await expect(page.getByText(/Use Add Gmail account/)).toHaveCount(0);
+    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(() => { (window as unknown as { mailboxProps: unknown }).mailboxProps = { available: true }; });
+    await page.addScriptTag({ content: compiled });
+    await expect(page.getByRole("button", { name: "Add Gmail account" })).toBeVisible();
+    await expect(page.getByText("Gmail discovery is open only to invited testers right now.")).toHaveCount(0);
+  });
+}

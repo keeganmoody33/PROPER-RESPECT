@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { MAILBOX_TESTERS_ONLY } from "@/src/domain/mailbox-testers";
 import { useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
@@ -98,7 +99,7 @@ function UnmatchedRecords() {
   </div>;
 }
 
-export function MailboxManagement() {
+export function MailboxManagement({ available }: { available: boolean }) {
   const { isAuthenticated } = useConvexAuth();
   const accounts = useQuery(api.mailboxes.listAccounts, isAuthenticated ? {} : "skip");
   const disconnect = useMutation(api.mailboxes.disconnect);
@@ -155,11 +156,12 @@ export function MailboxManagement() {
   return <div className="connector-card" aria-labelledby="gmail-management-title">
     <h3 id="gmail-management-title">Gmail discovery</h3>
     <p>Find product clues in read-only message headers. Email presence never establishes use, importance, or a recommendation. Every account keeps separate evidence and search progress.</p>
-    <form method="post" action="/api/connect/mailboxes/google/start">
+    {/* Only listed testers can start a Gmail authorization (R16). */}
+    {available ? <form method="post" action="/api/connect/mailboxes/google/start">
       <button className="secondary-action" disabled={busy || !isAuthenticated}>Add Gmail account</button>
-    </form>
+    </form> : <p>{MAILBOX_TESTERS_ONLY}</p>}
     <p role="status" aria-live="polite">{notice}</p>
-    {isAuthenticated && <MailboxConnectionNotice loading={accounts === undefined} gmailCount={gmailAccounts?.length ?? 0} connectedCount={gmailAccounts?.filter(account => account.status === "CONNECTED").length ?? 0}/>}
+    {isAuthenticated && available && <MailboxConnectionNotice loading={accounts === undefined} gmailCount={gmailAccounts?.length ?? 0} connectedCount={gmailAccounts?.filter(account => account.status === "CONNECTED").length ?? 0}/>}
     {gmailAccounts?.map(account => <article key={account.accountId} style={{ borderTop: "1px solid currentColor", paddingBlock: "1rem", overflowWrap: "anywhere" }}>
       <h4>{account.accountLabel}</h4>
       <p>{account.status === "CONNECTED" ? "Connected" : account.status === "NEEDS_REAUTH" ? "Reconnect required" : "Disconnected"} · read-only headers · {account.maintenanceEnabled ? "Daily hosted discovery enabled" : "Manual discovery"}</p>
