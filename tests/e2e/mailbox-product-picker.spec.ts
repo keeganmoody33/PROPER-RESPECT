@@ -86,3 +86,20 @@ test("an existing account can't be reconnected when Gmail isn't open to this use
   await page.getByText("Automatic discovery and account controls").click();
   await expect(page.getByRole("button", { name: "Reconnect this Gmail account" })).toBeVisible();
 });
+
+test("recovery messages don't tell an unlisted user to reconnect (R16)", async ({ page }) => {
+  await page.route("**/*", route => route.abort());
+  for (const lastFailure of ["REAUTHORIZE", "TEMPORARY"]) {
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(failure => {
+      const w = window as unknown as { mailboxProps: unknown; mailboxAccounts: unknown };
+      w.mailboxProps = { available: false };
+      w.mailboxAccounts = [{ accountId: "synthetic-account", provider: "GOOGLE", status: "NEEDS_REAUTH", accountLabel: "Synthetic mailbox", generation: 1, maintenanceEnabled: false, contexts: [], lastFailure: failure }];
+    }, lastFailure);
+    await page.addScriptTag({ content: compiled });
+    const alert = page.getByRole("alert");
+    await expect(alert).toBeVisible();
+    await expect(alert).not.toContainText(/reconnect/i);
+    await expect(alert).toContainText("Your retained evidence");
+  }
+});
