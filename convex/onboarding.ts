@@ -622,6 +622,12 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     }
   }
   const published = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique();
+  if (removeAllCards) {
+    // Remove-all only takes cards down; it must never create a first publication.
+    if (!published) throw new Error("There is no published page to remove cards from.");
+    // Publishing is refused during a takedown, so say so before the owner approves.
+    if (published.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
+  }
   const previousPropIds = published ? await resolvePublishedCardPropIds(ctx, published, user._id, allProps) : [];
   for (const selection of selections) {
     const prop = propsById.get(selection.propId);

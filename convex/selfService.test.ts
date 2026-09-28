@@ -217,6 +217,7 @@ test("the export says exactly when a relationship's history was cut off", async 
 
 test("unpublish all refuses at preview, with a way forward, above its supported size", async () => {
   const { owner, t, propIds } = await fixture({ props: 1001 });
+  await publishAll(owner, t, propIds.slice(0, 1));
   // Mark every relationship public directly; publishing 1,001 cards isn't what this tests.
   await t.run(async ctx => { for (const propId of propIds) await ctx.db.patch(propId, { visibility: "PUBLIC" }); });
   await expect(owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true }))
@@ -243,4 +244,24 @@ test("the export shows the public page as visitors see it", async () => {
   const takenDown = (await owner.query(api.inventory.exportProfile, {})).publicPage;
   expect(takenDown).toMatchObject({ revision: stored.revision, takenDown: true, profile: null });
   expect(JSON.stringify(takenDown)).not.toContain("Operator note");
+});
+
+test("unpublish all can't create a first publication", async () => {
+  const { owner, t } = await fixture();
+  const refusal = "There is no published page to remove cards from.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true })).rejects.toThrow(refusal);
+  await expect(owner.mutation(api.onboarding.publishSelected, {
+    selections: [], removeAllCards: true, expectedPublicationRevision: 0, expectedPreviewHash: "any",
+  })).rejects.toThrow(refusal);
+  expect(await publishedProfile(t)).toBeNull();
+});
+
+test("unpublish all refuses at preview while the page is taken down", async () => {
+  const { owner, t, propIds } = await fixture();
+  await publishAll(owner, t, propIds);
+  const published = (await publishedProfile(t))!;
+  await t.run(ctx => ctx.db.patch(published._id, { takenDownAt: "2026-09-28T00:00:00.000Z", takedownReason: "Operator note" }));
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true }))
+    .rejects.toThrow("This profile is under review. Contact 33@lecturesfrom.com.");
+  expect((await publishedProfile(t))?.profile.cards).toHaveLength(published.profile.cards.length);
 });
