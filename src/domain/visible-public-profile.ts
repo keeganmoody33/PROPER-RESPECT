@@ -102,10 +102,11 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
 }
 
 export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePublicProfile {
-  const nameLink = profile.profileLinks?.find(link => link.url === profile.preferredLinkUrl)?.url;
+  const profileLinks = (profile.profileLinks ?? []).filter(link => isHttpUrl(link.url));
+  const nameLink = profileLinks.find(link => link.url === profile.preferredLinkUrl)?.url;
   return {
     handle: profile.handle, displayName: profile.displayName, bio: profile.bio,
-    profileLinks: (profile.profileLinks ?? []).map(link => ({ label: link.label, url: link.url })),
+    profileLinks: profileLinks.map(link => ({ label: link.label, url: link.url })),
     ...(nameLink ? { nameLink } : {}),
     cards: profile.cards.map(card => ({
       product: { name: card.product.name, description: card.product.description },

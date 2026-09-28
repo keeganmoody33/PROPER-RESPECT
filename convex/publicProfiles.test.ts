@@ -151,3 +151,34 @@ test.each(["javascript:alert(1)", "data:text/html,x", "https://user:pass@example
   expect(current?.cards[1].primaryLink).toEqual(linked.primaryLink);
   expect(legacy?.cards.map(card => card.primaryLink.url)).toEqual([linked.primaryLink?.url]);
 });
+
+test("stored profile links that aren't plain http(s) never leave the public reader", async () => {
+  const t = convexTest(schema, modules);
+  const profile: PublicProfile = {
+    handle: "owner", displayName: "Owner", bio: "", cards: [],
+    profileLinks: [
+      { label: "Bad script", url: "javascript:alert(1)" },
+      { label: "Bad data", url: "data:text/html,x" },
+      { label: "Website", url: "https://owner.example/" },
+    ],
+    preferredLinkUrl: "javascript:alert(1)",
+  };
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  const current = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(current?.profileLinks).toEqual([{ label: "Website", url: "https://owner.example/" }]);
+  expect(current?.preferredLinkUrl).toBeUndefined();
+  expect(JSON.stringify(current)).not.toMatch(/javascript:|data:text/);
+});
+
+test("a stored preferred link that is still valid stays preferred", async () => {
+  const t = convexTest(schema, modules);
+  const profile: PublicProfile = {
+    handle: "owner", displayName: "Owner", bio: "", cards: [],
+    profileLinks: [{ label: "Bad", url: "javascript:alert(1)" }, { label: "Website", url: "https://owner.example/" }],
+    preferredLinkUrl: "https://owner.example/",
+  };
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  expect(await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" })).toMatchObject({
+    profileLinks: [{ label: "Website", url: "https://owner.example/" }], preferredLinkUrl: "https://owner.example/",
+  });
+});
