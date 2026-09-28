@@ -53,19 +53,36 @@ const mutations = {
   },
   "onboarding:publishSelected": async args => {
     record("publishSelected", args);
-    throw new Error("Publication is intentionally outside this fixture journey.");
+    // Only "unpublish all" (R15) publishes here.
+    if (!args.removeAllCards) throw new Error("Publication is intentionally outside this fixture journey.");
+    retain({ ...state, cards: state.cards.map(card => ({ ...card, isPublishedAtCurrentHandle: false, prop: { ...card.prop, visibility: card.prop.visibility === "PUBLIC" ? "PRIVATE" : card.prop.visibility } })) });
+    return null;
   },
+};
+// Synthetic export pages (R15): one relationship per page, so assembling the
+// download must follow the cursor.
+const exportQueries = {
+  "inventory:exportProfile": () => ({ handle: state.user.handle, displayName: state.user.displayName, bio: state.user.bio, publicPage: null }),
+  "inventory:exportRelationships": args => {
+    const index = args.paginationOpts.cursor === null ? 0 : Number(args.paginationOpts.cursor);
+    const card = state.cards[index];
+    const page = card ? [{ id: card.prop._id, product: { name: card.product.name, slug: card.product.slug }, status: card.prop.status, headline: card.prop.headline, links: card.links, history: [] }] : [];
+    return { page, isDone: index + 1 >= state.cards.length, continueCursor: String(index + 1) };
+  },
+  "inventory:exportEvidence": () => ({ page: [], isDone: true, continueCursor: "" }),
 };
 const client = {
   query: async (ref, args) => {
+    const exportQuery = exportQueries[getFunctionName(ref)];
+    if (exportQuery) { record(getFunctionName(ref), args); return exportQuery(args); }
     if (getFunctionName(ref) !== "onboarding:previewPublication") throw new Error("Unexpected fixture query.");
     record("previewPublication", args);
-    const cards = args.selections.filter(selection => selection.publish).map(selection => {
+    const cards = args.removeAllCards ? [] : args.selections.filter(selection => selection.publish).map(selection => {
       const saved = state.cards.find(card => card.prop._id === selection.propId);
       if (saved.prop.visibility !== "PRIVATE") throw new Error("Save privately before preview.");
       return { product: saved.product, status: selection.status, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink };
     });
-    return { profile: publicProfileSchema.parse({ ...state.user, cards }), revision: 0, previewHash: "synthetic-preview" };
+    return { profile: publicProfileSchema.parse({ ...state.user, cards }), revision: 0, previewHash: args.removeAllCards ? "synthetic-remove-all-preview" : "synthetic-preview" };
   },
 };
 export const useConvex = () => client;

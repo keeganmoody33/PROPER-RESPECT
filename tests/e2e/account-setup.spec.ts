@@ -201,3 +201,71 @@ for (const identityState of ["claimed", "unclaimed-after-upload", "unknown"] as 
   const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
   expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toEqual([]);
 });
+
+// R15: unpublish every card through the approved preview, and download the owner's data.
+for (const width of [1280, 390]) test(`unpublish all and download my data at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  await expect(page.getByRole("heading", { name: "Start with one tool" })).toBeVisible();
+  await page.evaluate(() => {
+    const key = "proper-respect-fresh-user-fixture";
+    const state = JSON.parse(localStorage.getItem(key)!);
+    const card = (id: string, name: string, slug: string) => ({
+      product: { _id: `${id}-product`, _creationTime: 1, name, slug, domain: `${slug}.example`, description: "Synthetic" },
+      prop: { _id: id, _creationTime: 1, userId: state.user._id, productId: `${id}-product`, status: "ACTIVE", visibility: "PUBLIC", headline: `Why ${name}`, note: "", relationshipVersion: 1, confirmedAt: "2026-09-22T12:00:00Z" },
+      links: [{ type: "CANONICAL", url: `https://${slug}.example`, label: `Open ${name}`, isPrimary: true }],
+      claims: [], previousStatuses: [], isPublishedAtCurrentHandle: true,
+    });
+    state.user.handle = "synthetic-owner";
+    state.user.bio = "Synthetic public bio";
+    state.hasClaimedPublicIdentity = true;
+    state.hasPublicationAtCurrentHandle = true;
+    state.cards = [card("prop-one", "Field Notes", "field-notes"), card("prop-two", "Sketchpad", "sketchpad")];
+    localStorage.setItem(key, JSON.stringify(state));
+    localStorage.removeItem(`${key}-calls`);
+  });
+  await page.reload();
+
+  // Approving an ordinary preview must not carry over to the remove-all preview.
+  await page.getByRole("button", { name: "Preview sharing", exact: true }).click();
+  const firstPreview = page.getByRole("region", { name: "Your visitor’s view" });
+  await firstPreview.getByRole("checkbox").check();
+  await expect(firstPreview.getByRole("button", { name: "Publish this preview" })).toBeEnabled();
+
+  const removeAll = page.getByRole("region", { name: "Remove every card" });
+  await expect(removeAll).toContainText("Your handle, display name, bio and profile links stay public.");
+  await expect(removeAll.getByRole("link", { name: "ask through the contact page" })).toHaveAttribute("href", "/about/contact");
+  await removeAll.getByRole("button", { name: "Unpublish all cards", exact: true }).click();
+  const preview = page.getByRole("region", { name: "Your visitor’s view" });
+  await expect(preview).toContainText("No products will be public.");
+  await expect(preview).toContainText("@synthetic-owner");
+  await expect(preview).toContainText("Synthetic public bio");
+  await expect(preview.getByRole("checkbox")).not.toBeChecked();
+  await expect(preview.getByRole("button", { name: "Publish this preview" })).toBeDisabled();
+  await preview.getByRole("checkbox").check();
+  await preview.getByRole("button", { name: "Publish this preview" }).click();
+  await expect(page.getByText("Your approved preview is now shared.", { exact: false })).toBeVisible();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Download my data", exact: true }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^proper-respect-synthetic-owner-\d{4}-\d{2}-\d{2}\.json$/);
+  const exported = JSON.parse(readFileSync(await download.path(), "utf8"));
+  expect(exported).toMatchObject({ format: "proper-respect-export", version: 1, profile: { handle: "synthetic-owner" }, evidence: [] });
+  expect(exported.relationships.map((row: { id: string }) => row.id)).toEqual(["prop-one", "prop-two"]);
+  await expect(page.getByText("Your data was downloaded.", { exact: false })).toBeVisible();
+
+  const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
+  const published = calls.filter((call: { name: string }) => call.name === "publishSelected");
+  expect(published).toHaveLength(1);
+  expect(published[0].args).toMatchObject({ selections: [], removeAllCards: true });
+  // Two relationship pages prove the download follows the cursor.
+  expect(calls.filter((call: { name: string }) => call.name === "inventory:exportRelationships")).toHaveLength(2);
+  expect(errors).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

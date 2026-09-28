@@ -18,6 +18,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
 import { defaultReview, explicitPublicationCards, githubRefreshConnector, isCurrentReview, reviewActivity, reviewUsageLink, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
+import { buildExport, collectPages, downloadJson, exportFilename } from "@/src/client/export-data";
 import { USAGE_LINK_LABELS, usageLinkLabelText } from "@/src/domain/usage-links";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
 import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/domain/product-destination";
@@ -140,6 +141,7 @@ function Builder() {
   >({});
   const [preview, setPreview] = useState<{
     profile: PublicProfile; revision: number; previewHash: string; selections: FunctionArgs<typeof api.onboarding.publishSelected>["selections"]; basis: string;
+    removeAllCards?: boolean;
   } | null>(null);
   const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, cards: state?.cards, user: state?.user }), [reviewEdits, state?.cards, state?.user]);
 
@@ -329,13 +331,37 @@ function Builder() {
     });
   }
 
+  // Unpublish all (R15): the server removes every card, including older ones it
+  // can't match to a relationship, after the same preview and approval.
+  async function previewUnpublishAll() {
+    if (!state) return;
+    await run("Preview ready: no product cards would stay public. Your handle, name, bio and profile links stay public. Approve it to publish.", async () => {
+      const result = await convex.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
+      setPreview({ ...result, selections: [], basis: previewBasis, removeAllCards: true });
+    });
+  }
+
+  // Download my data (R15): every page of the owner-only export queries.
+  async function downloadMyData() {
+    await run("Your data was downloaded. Original files, retained original text and credentials are not included.", async () => {
+      const exportedAt = new Date().toISOString();
+      const [profile, relationships, evidence] = await Promise.all([
+        convex.query(api.inventory.exportProfile, {}),
+        collectPages(cursor => convex.query(api.inventory.exportRelationships, { paginationOpts: { numItems: 10, cursor } })),
+        collectPages(cursor => convex.query(api.inventory.exportEvidence, { paginationOpts: { numItems: 10, cursor } })),
+      ]);
+      downloadJson(exportFilename(profile.handle, exportedAt), buildExport({ profile, relationships, evidence, exportedAt }));
+    });
+  }
+
   async function publish() {
     if (!preview || preview.basis !== previewBasis) {
       setMessage("Preview your current saved collection and sharing choices before publishing.");
       return;
     }
     await run("Your approved preview is now shared. Other private information remains private.", async () => {
-      await publishSelected({ selections: preview.selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+      await publishSelected({ selections: preview.selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+        ...(preview.removeAllCards ? { removeAllCards: true } : {}) });
       setPreview(null);
       setReviewEdits({});
     });
@@ -752,7 +778,22 @@ function Builder() {
         {publicIdentityClaimed === false && <p>Ready to preview a public page? <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Set up your public identity</a> with a handle and display name. Social links are optional.</p>}
         {publicIdentityClaimed === null && <p>Public identity status is unavailable. Reload before previewing sharing.</p>}
         {state.hasPublicationAtCurrentHandle === false && <p>{publicIdentityClaimed === true ? `Nothing is published at /${state.user.handle} yet.` : "Nothing is published yet."}</p>}
-        {preview && <SharingPreview key={preview.basis} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
+        {state.hasPublicationAtCurrentHandle === true && <section className="unpublish-all" aria-labelledby="unpublish-all-title">
+          <h3 id="unpublish-all-title">Remove every card</h3>
+          <p>Unpublish all cards removes every product card from your public page after you preview and approve it. Your handle, display name, bio and profile links stay public. To take down the whole page,{" "}
+            {/* A plain link: this component is also bundled without the Next router (tests/e2e/components.config.ts). */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/about/contact">ask through the contact page</a>.</p>
+          <button type="button" className="secondary-action" onClick={() => void previewUnpublishAll()} disabled={busy}>Unpublish all cards</button>
+        </section>}
+        {/* A different preview (a new hash) starts unapproved. */}
+        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
+      </section>
+      <section className="onboarding-panel" id="collection-data" aria-labelledby="collection-data-title">
+        <p className="onboarding-kicker">YOUR DATA</p>
+        <h2 id="collection-data-title">Download your data</h2>
+        <p>A JSON file with your profile, relationships, links, relationship history, and evidence details and observations. Original files, retained original text, and connector credentials are not included; the file lists everything else it leaves out. To remove an original, open the relationship in your private collection.</p>
+        <button type="button" className="secondary-action" onClick={() => void downloadMyData()} disabled={busy}>Download my data</button>
       </section>
     </main>
   );

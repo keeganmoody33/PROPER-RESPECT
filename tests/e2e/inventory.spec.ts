@@ -153,3 +153,29 @@ for (const width of [1280, 390]) test(`usage stays with its explicitly selected 
   await expect(page.getByLabel("Synthetic publication status")).toHaveText("Nothing published");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+// R15: deleting an original takes a second, explicit step.
+test("deleting an original asks first, can be cancelled, and removes only that original", async ({ page }) => {
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByText("Bring in retained evidence", { exact: true }).click();
+  await page.getByLabel("Prepared evidence files").setInputFiles({ name: "synthetic-inventory-2026-09-18.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ fixture: "SYNTHETIC_INVENTORY_EVIDENCE" })) });
+  await page.getByRole("button", { name: "Retain privately", exact: true }).click();
+  await page.getByText("Review this discovery", { exact: true }).click();
+  const deletions = page.getByLabel("Synthetic delete operations");
+
+  await page.getByRole("button", { name: "Delete original", exact: true }).click();
+  const confirm = page.getByRole("group", { name: "Confirm deleting the original from Synthetic retained source" });
+  await expect(confirm).toContainText("can't be restored");
+  expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+  await confirm.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(deletions).toHaveText("");
+  await expect(page.getByText("Synthetic retained source", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete original", exact: true }).click();
+  await page.getByRole("button", { name: "Delete permanently", exact: true }).click();
+  await expect(deletions).toHaveText("synthetic-raw-evidence");
+  await expect(page.getByText("Deleted the original from Synthetic retained source.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Retained snapshot original", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Delete original", exact: true })).toHaveCount(0);
+});
