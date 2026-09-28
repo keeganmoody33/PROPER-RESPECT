@@ -18,5 +18,14 @@ describe("evidence rules", () => {
     for (const rule of evidenceRules) expect(markdown).toContain(rule);
     expect(markdown).toContain("https://github.com/keeganmoody33/PROPER-RESPECT/blob/receipts/receipts/github-refresh.jsonl");
     expect(trustDocuments.methodology.title).toBe("How evidence works");
+    // Section 10's counting rules, so a reader can redo the count from the file.
+    for (const rule of [
+      "The line from the scheduled run is the one that counts",
+      "a check started by hand the same UTC day stands in",
+      "must hold a row for every daily refresh",
+      "unless it leaves the refresh code unchanged",
+      "deploying outside the tagged release process",
+    ]) expect(markdown).toContain(rule);
+    expect(markdown).toContain("08:17 UTC, a little over two hours after the 06:00 UTC refresh");
   });
 });

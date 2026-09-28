@@ -225,9 +225,10 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
       {
         heading: "The 30-day receipt",
         paragraphs: [
-          "A GitHub card can refresh its contribution calendar once a day, after its owner turns that on. To show the refresh keeps working, a check that runs outside Proper Respect reads the published profile every day at 08:17 UTC, two hours after the 06:00 UTC refresh.",
+          "A GitHub card can refresh its contribution calendar once a day, after its owner turns that on. To show the refresh keeps working, a check that runs outside Proper Respect reads the published profile every day at 08:17 UTC, a little over two hours after the 06:00 UTC refresh.",
           "The check passes only when the owner's personal GitHub calendar is marked fresh and was captured within the last 36 hours. Every run, pass or fail, adds one line to a public file, with the time it checked and the capture time it saw. The file is never edited; a correction is a new run.",
-          "A day counts when it passes with a newer capture than the day before. A day that fails restarts the count at zero, and so does a release that changes how the refresh works. The receipt is complete after 30 counted days in a row.",
+          "A UTC day counts when it has a passing line whose capture time is later than the previous counted day's. The line from the scheduled run is the one that counts; if GitHub skips that day's scheduled run, a check started by hand the same UTC day stands in. Any day that doesn't count restarts the count at zero.",
+          "The backend's own refresh record must hold a row for every daily refresh in the window. A tagged release restarts the count unless it leaves the refresh code unchanged. Editing data by hand, changing the refresh schedule in the dashboard, or deploying outside the tagged release process always restarts it. The receipt is complete after 30 counted days in a row.",
           "The receipt shows that the published calendar kept being refreshed. It doesn't show who made the contributions, or how much someone uses GitHub beyond what the calendar counts.",
           "Until the GitHub card is published with the daily refresh on, each check fails and records why. The file appears once the first check has run.",
         ],
