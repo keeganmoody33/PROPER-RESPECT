@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Updated: 2026-09-26.
+Updated: 2026-09-27.
 
 ## Active remediation program
 
@@ -28,6 +28,23 @@ replaces five rules in this file:
   policy").
 
 Every other rule here still applies to remediation work.
+
+**Delivery-pass lead.** Owner assignment, 2026-09-27. For the invited-tester
+delivery, a Claude Code session leads implementation. It may write the
+brief's Codex (C) tasks under every brief rule, one `remediate/<ID>-<slug>`
+branch and PR per task. That also applies:
+
+- **Claiming a task.** Before starting one, check that no open PR and no
+  `remediate/<ID>-*` branch already names it. Either one means another writer
+  holds the task.
+- **Review.** It never reviews or clears its own PRs. A reviewer other than
+  Claude (today Copilot) reviews them, and the owner merges while the
+  autopilot is off.
+- **Autopilot.** Its task PRs carry the `needs-owner` label, so a re-enabled
+  autopilot doesn't send them to Codex to fix.
+- **Authority.** The role adds no authority to deploy, change production
+  configuration, run migrations, read providers, turn on recurring collection,
+  change sign-up or publish. Owner (K) tasks stay with the owner.
 
 ## Project Structure & Module Organization
 
@@ -68,7 +85,8 @@ Keep secrets in ignored configuration and private originals outside Git. Follow 
 
 ## Concurrent Review Protocol
 
-Devin reports; Codex writes. Do not build on a Devin-pushed branch or commit;
+Devin reports; Codex, or the delivery-pass lead named under "Active
+remediation program", writes. Do not build on a Devin-pushed branch or commit;
 report it to the owner first. Record every review comment in the current dated
 verification receipt as fix now, deferred with reason, superseded, or not a bug
 with evidence before changing code. Resolve contradictory findings by regression
