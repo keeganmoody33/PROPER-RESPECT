@@ -11,6 +11,7 @@ import {
   claimVerdictValidator,
   activityModuleValidator,
   attributionScopeValidator,
+  refreshErrorClassValidator,
   publicProfileValidator,
   profileLinkValidator,
   statusValidator,
@@ -345,6 +346,22 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_connector", ["connectorId"])
     .index("by_prop_metric", ["propId", "metricKey"]),
+
+  // Append-only record of every scheduled refresh attempt (R08). It holds a
+  // fixed error class, never provider text, tokens or response bodies.
+  refreshAttempts: defineTable({
+    subscriptionId: v.id("metricSubscriptions"),
+    userId: v.id("users"),
+    propId: v.id("props"),
+    // UNKNOWN when the connector is missing or unsupported and the metric key
+    // is neither github.contributions nor devin.sessions.
+    provider: v.union(v.literal("GITHUB"), v.literal("DEVIN"), v.literal("UNKNOWN")),
+    attemptedAt: v.string(),
+    outcome: v.union(v.literal("SUCCESS"), v.literal("FAILURE"), v.literal("SKIPPED")),
+    capturedAt: v.optional(v.string()),
+    errorClass: v.optional(refreshErrorClassValidator),
+    sourceVersion: v.string(),
+  }).index("by_subscription_attemptedAt", ["subscriptionId", "attemptedAt"]),
 
   artifacts: defineTable({
     userId: v.id("users"),

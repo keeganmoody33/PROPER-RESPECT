@@ -51,6 +51,17 @@ export const attributionScopeValidator = v.union(
   v.literal("ORGANIZATION"),
 );
 
+// Why a refresh attempt failed or was skipped (R08). Never provider text.
+export const refreshErrorClassValidator = v.union(
+  v.literal("NOT_ELIGIBLE"),
+  v.literal("STALE_GRANT"),
+  v.literal("PROVIDER_UNAVAILABLE"),
+  v.literal("INVALID_RESPONSE"),
+  v.literal("MISSING_METRIC"),
+  v.literal("SCOPE_EXCEEDED"),
+  v.literal("UNEXPECTED"),
+);
+
 export const freshnessValidator = v.union(
   v.literal("FRESH"),
   v.literal("STALE"),
