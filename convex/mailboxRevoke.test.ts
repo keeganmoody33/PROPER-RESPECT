@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import { createHash } from "node:crypto";
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import schema from "./schema";
@@ -403,4 +404,85 @@ test("a stranded-grant report only marks the revocation it came from (R17)", asy
   await owner.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, revocationToken: b.revocationToken, generation: 3 });
   account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
   expect(account.revocationPending?.strandedGrant).toBe(true);
+});
+
+/** A reconnect whose code exchange is still in flight when `during` runs (a disconnect, maybe a newer reconnect). */
+async function staleCallback(owner: Awaited<ReturnType<typeof setup>>["owner"], accountId: string, during: () => Promise<void>, freshRevoke = 200) {
+  const STALE = "refresh-SECRET-r17-stale-3d9a";
+  const revoked: string[] = [];
+  let exchanges = 0;
+  const reconnect = stateFrom(await owner.action(start, { accountId: accountId as never, expectedGeneration: 1 }));
+  vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url === "https://oauth2.googleapis.com/token") {
+      exchanges += 1;
+      if (exchanges === 1) await during();
+      return Response.json({ access_token: exchanges === 1 ? "access-stale" : ACCESS, refresh_token: exchanges === 1 ? STALE : REFRESH, expires_in: 3600, token_type: "Bearer", scope });
+    }
+    if (url === "https://openidconnect.googleapis.com/v1/userinfo") return Response.json({ sub: "google-sub", email: "google-sub@example.test", email_verified: true });
+    if (url === REVOKE) {
+      const token = new URLSearchParams(String(init?.body)).get("token") ?? "";
+      revoked.push(token);
+      return new Response("{}", { status: token === STALE ? freshRevoke : 200 });
+    }
+    throw new Error("Unexpected HTTP endpoint");
+  }));
+  const outcome = await owner.action(callback, reply(reconnect)).then(() => "installed", error => (error as Error).message);
+  return { outcome, revoked, STALE };
+}
+
+test("tokens a reconnect receives after the disconnect finished are revoked, not left live at Google (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const { outcome, revoked, STALE } = await staleCallback(owner, connection.accountId, async () => {
+    await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+  });
+  expect(outcome).toBe("Gmail authorization failed. Start a new connection attempt.");
+  expect(revoked).toEqual([REFRESH, STALE]);
+  const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(account).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "REVOKED" } });
+  expect(JSON.stringify(consoleCalls)).not.toContain(STALE);
+});
+
+test("if those late tokens can't be revoked, the disconnect reports FAILED (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const { revoked, STALE } = await staleCallback(owner, connection.accountId, async () => {
+    await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+  }, 503);
+  expect(revoked).toEqual([REFRESH, STALE, STALE]);
+  const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(account).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "FAILED" } });
+  expect(JSON.stringify(account)).not.toContain(STALE);
+});
+
+test("a late callback never revokes the grant a newer reconnect is using (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const { outcome, revoked } = await staleCallback(owner, connection.accountId, async () => {
+    await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+    await owner.action(callback, reply(stateFrom(await owner.action(start, { accountId: connection.accountId, expectedGeneration: 2 }))));
+  });
+  expect(outcome).toBe("Gmail authorization failed. Start a new connection attempt.");
+  // Google shares one grant per user and app, so revoking the late tokens would end the new connection too.
+  expect(revoked).toEqual([REFRESH]);
+  expect((await t.run(ctx => ctx.db.get(connection.accountId)))).toMatchObject({ status: "CONNECTED", generation: 3 });
+});
+
+test("a late callback leaves the grant alone once a newer reconnect has started (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const { outcome, revoked } = await staleCallback(owner, connection.accountId, async () => {
+    await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+    const newer = stateFrom(await owner.action(start, { accountId: connection.accountId, expectedGeneration: 2 }));
+    await owner.mutation(internal.mailboxOAuthState.consume, { stateHash: createHash("sha256").update(newer, "ascii").digest("hex") });
+  });
+  expect(outcome).toBe("Gmail authorization failed. Start a new connection attempt.");
+  // The newer attempt will share the late tokens' grant, so they're left for it rather than revoked.
+  expect(revoked).toEqual([REFRESH]);
+  expect((await t.run(ctx => ctx.db.get(connection.accountId)))).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "REVOKED" } });
 });

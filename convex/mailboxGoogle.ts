@@ -68,14 +68,15 @@ export const callback = action({
       } catch (error) {
         const refusal = error instanceof ConvexError
           ? error.data as { code?: string; accountId?: Id<"mailboxAccounts">; revocationToken?: string; generation?: number } : undefined;
-        if (refusal?.code === "REVOCATION_PENDING" && refusal.accountId && refusal.revocationToken && refusal.generation !== undefined) {
-          // This account is being disconnected: end the grant these fresh tokens belong to as well. Retry once; if the
-          // provider still won't revoke them, record it so the disconnect reports FAILED instead of REVOKED.
+        if ((refusal?.code === "REVOCATION_PENDING" || refusal?.code === "DISCONNECTED_SINCE") && refusal.accountId && refusal.generation !== undefined) {
+          // This account is being, or was just, disconnected: end the grant these fresh tokens belong to as well. Retry
+          // once; if the provider still won't revoke them, record it so the disconnect reports FAILED instead of REVOKED.
           const token = verified.credential.refreshToken || verified.credential.accessToken;
           const revoked = await revokeMailboxGrant("GOOGLE", token).then(() => true, () =>
             revokeMailboxGrant("GOOGLE", token).then(() => true, () => false));
           if (!revoked) await ctx.runMutation(internal.mailboxes.recordStrandedGrant, {
-            accountId: refusal.accountId, revocationToken: refusal.revocationToken, generation: refusal.generation });
+            accountId: refusal.accountId, generation: refusal.generation,
+            ...(refusal.revocationToken ? { revocationToken: refusal.revocationToken } : {}) });
         }
         throw error;
       }
