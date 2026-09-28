@@ -5,6 +5,7 @@ import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/s
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
+import { readPublishedProfile } from "./publicProfiles";
 import { statusValidator } from "./validators";
 import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
 import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
@@ -208,7 +209,11 @@ export const exportProfile = query({
       handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl: user.avatarUrl,
       profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl,
       onboardingStatus: user.onboardingStatus, createdAt: user.createdAt, updatedAt: user.updatedAt,
-      publicPage: published ? { revision: published.revision, publishedAt: published.publishedAt, profile: published.profile } : null,
+      // The page as visitors see it: the public read drops old unsafe links, and a taken-down page shows nothing.
+      publicPage: published ? {
+        revision: published.revision, publishedAt: published.publishedAt, takenDown: Boolean(published.takenDownAt),
+        profile: published.takenDownAt ? null : await readPublishedProfile(ctx, published.handle),
+      } : null,
     };
   },
 });

@@ -225,3 +225,22 @@ test("unpublish all refuses at preview, with a way forward, above its supported 
   const preview = await owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
   expect(preview.profile.cards).toEqual([]);
 });
+
+test("the export shows the public page as visitors see it", async () => {
+  const { owner, t, propIds } = await fixture();
+  await publishAll(owner, t, propIds);
+  const stored = (await publishedProfile(t))!;
+  // A card link stored before the http(s) rule is dropped when the page is read.
+  const cards = stored.profile.cards.map((card, index) => index === 0
+    ? { ...card, primaryLink: { ...card.primaryLink!, url: "javascript:alert(1)" } } : card);
+  await t.run(ctx => ctx.db.patch(stored._id, { profile: { ...stored.profile, cards } }));
+  const live = (await owner.query(api.inventory.exportProfile, {})).publicPage;
+  expect(live).toMatchObject({ revision: stored.revision, takenDown: false });
+  expect(JSON.stringify(live)).not.toContain("javascript:");
+  expect(live?.profile?.cards).toHaveLength(cards.length);
+
+  await t.run(ctx => ctx.db.patch(stored._id, { takenDownAt: "2026-09-28T00:00:00.000Z", takedownReason: "Operator note" }));
+  const takenDown = (await owner.query(api.inventory.exportProfile, {})).publicPage;
+  expect(takenDown).toMatchObject({ revision: stored.revision, takenDown: true, profile: null });
+  expect(JSON.stringify(takenDown)).not.toContain("Operator note");
+});
