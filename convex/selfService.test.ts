@@ -41,6 +41,9 @@ async function fixture({ props = 2 }: { props?: number } = {}) {
     const evidenceId = await ctx.db.insert("rawEvidence", {
       evidenceSourceId: sourceId, userId, payload: SECRET_TEXT, storageId, capturedAt, dedupKey: "owner-upload-1",
       filename: "receipt.txt", mimeType: "text/plain", byteSize: SECRET_TEXT.length,
+      // What evidenceUpload stores: the storage id as the artifact reference.
+      captureProvenance: { version: 1, route: "UPLOAD", adapter: { id: "evidence-upload", version: "2" },
+        origin: { issuer: "OWNER_SUPPLIED_FILE", artifactRef: storageId }, collector: { kind: "UNKNOWN" }, activityActor: { kind: "UNKNOWN" } },
       retainedArtifact: { kind: "GITHUB_ACTIVITY", sourceFile: "activity.json", sha256: ARTIFACT_HASH, byteLength: 10, sourceCapturedDate: "2026-09-17", sourceCaptureBasis: "RETAINED_SOURCE_DATE", preparedAt: capturedAt, adapterVersion: "1" },
       uploadAttribution: { status: "VERIFIED_OWNER_SESSION", userId, tokenIdentifier: TOKEN, ticketId, receivedAt: capturedAt, sha256: "a".repeat(64) },
     });
@@ -89,12 +92,15 @@ test("the export returns only the caller's own records", async () => {
 });
 
 test("the export leaves out raw originals, storage references and tokens", async () => {
-  const { owner } = await fixture();
+  const { owner, storageId } = await fixture();
   const evidence = await owner.query(api.inventory.exportEvidence, { paginationOpts: { numItems: 25, cursor: null } });
   const serialized = JSON.stringify(evidence.page);
   expect(serialized).not.toContain(SECRET_TEXT);
   expect(serialized).not.toContain(TOKEN);
   expect(serialized).not.toContain(ARTIFACT_HASH);
+  expect(serialized).not.toContain(storageId);
+  expect(evidence.page[0].captureProvenance).toMatchObject({ route: "UPLOAD", origin: { issuer: "OWNER_SUPPLIED_FILE" } });
+  expect(evidence.page[0].captureProvenance?.origin).not.toHaveProperty("artifactRef");
   expect(evidence.page[0].retainedArtifact).toMatchObject({ kind: "GITHUB_ACTIVITY", sourceFile: "activity.json", sourceCapturedDate: "2026-09-17" });
   expect(evidence.page[0]).not.toHaveProperty("payload");
   expect(evidence.page[0]).not.toHaveProperty("storageId");

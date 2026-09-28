@@ -242,6 +242,13 @@ export const exportRelationships = query({
   },
 });
 
+// origin.artifactRef holds a storage id or content hash, which only locates files inside Proper Respect.
+function exportedProvenance(provenance: Doc<"rawEvidence">["captureProvenance"]) {
+  if (!provenance) return undefined;
+  const { issuer, accountId, recordId } = provenance.origin;
+  return { ...provenance, origin: { issuer, accountId, recordId } };
+}
+
 export const exportEvidence = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (ctx, { paginationOpts }) => {
@@ -257,7 +264,7 @@ export const exportEvidence = query({
         id: raw._id,
         sourceType: source?.userId === user._id ? source.type : undefined,
         sourceLabel: source?.userId === user._id ? source.label ?? source.type : undefined,
-        capturedAt: raw.capturedAt, sourceUrl: raw.sourceUrl, captureProvenance: raw.captureProvenance,
+        capturedAt: raw.capturedAt, sourceUrl: raw.sourceUrl, captureProvenance: exportedProvenance(raw.captureProvenance),
         filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize,
         detectedVendor: raw.detectedVendor, detectedUrl: raw.detectedUrl,
         // Everything but the file's content hash.
