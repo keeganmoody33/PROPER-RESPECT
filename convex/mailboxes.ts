@@ -61,11 +61,15 @@ function validateConnection(args: {
 
 /**
  * A callback that started before this account's disconnect finished holds tokens Google issued too late for that
- * disconnect to revoke, so tell the caller to revoke them. Its OAuth state still existing means no newer connection
- * attempt has started (each start replaces the owner's pending state), so no newer connection shares that grant.
+ * disconnect to revoke, so tell the caller to revoke them. Not while a newer reconnect of this account is exchanging
+ * its code: Google shares one grant per user and app, so revoking would end that connection as well.
  */
-async function refuseAfterDisconnect(account: Doc<"mailboxAccounts">, expectedGeneration: number) {
+async function refuseAfterDisconnect(ctx: MutationCtx, account: Doc<"mailboxAccounts">, expectedGeneration: number, stateId?: Id<"mailboxOAuthStates">) {
   if (account.generation === expectedGeneration || account.status !== "DISCONNECTED" || revocationActive(account)) return;
+  const now = Date.now();
+  const reconnecting = (await ctx.db.query("mailboxOAuthStates").withIndex("by_owner", q => q.eq("ownerId", account.ownerId)).collect())
+    .some(state => state._id !== stateId && state.status === "EXCHANGING" && state.expiresAt > now && state.accountId === account._id);
+  if (reconnecting) return;
   throw new ConvexError({ code: "DISCONNECTED_SINCE" as const, accountId: account._id, generation: account.generation - 1 });
 }
 
@@ -92,7 +96,7 @@ export const finalizeVerifiedConnection = internalMutation({
       if (state.accountId) {
         const intended = await ctx.db.get(state.accountId);
         if (!intended || intended.ownerId !== args.ownerId || intended.provider !== args.provider || intended.providerAccountId !== args.providerAccountId) throw new Error("Mailbox identity changed.");
-        await refuseAfterDisconnect(intended, state.expectedGeneration);
+        await refuseAfterDisconnect(ctx, intended, state.expectedGeneration, state._id);
         requireMailboxGeneration(intended, state.expectedGeneration);
       }
       await ctx.db.patch(state._id, { status: "COMPLETE", verifier: undefined });
@@ -103,7 +107,7 @@ export const finalizeVerifiedConnection = internalMutation({
       .unique();
     const now = new Date().toISOString();
     if (account) {
-      await refuseAfterDisconnect(account, args.expectedGeneration);
+      await refuseAfterDisconnect(ctx, account, args.expectedGeneration, args.oauthStateId);
       requireMailboxGeneration(account, args.expectedGeneration);
       await cancelActiveJob(ctx, account, now);
     } else {
@@ -126,7 +130,7 @@ export const finalizeVerifiedConnection = internalMutation({
     // A disconnect is asking the provider to revoke this grant: install nothing, and tell the caller to revoke the
     // tokens it just received so they don't outlive the disconnect at the provider.
     if (revocationActive(account)) throw new ConvexError({ code: "REVOCATION_PENDING" as const, accountId: account._id,
-      revocationToken: account.revocationPending!.token, generation: account.generation });
+      revocationToken: account.revocationPending!.token, until: account.revocationPending!.until, generation: account.generation });
     const generation = args.expectedGeneration + 1;
     const priorSecret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
     if (priorSecret) await ctx.db.delete(priorSecret._id);
@@ -213,9 +217,10 @@ export const beginRevocation = internalMutation({
     // Stop any scan first, so none reads with a grant that is being revoked.
     await cancelActiveJob(ctx, account, new Date().toISOString());
     const revocationToken = crypto.randomUUID();
-    await ctx.db.patch(account._id, { activeJobId: undefined, revocationPending: { token: revocationToken, until: Date.now() + MAILBOX_REVOCATION_PENDING_MS } });
+    const until = Date.now() + MAILBOX_REVOCATION_PENDING_MS;
+    await ctx.db.patch(account._id, { activeJobId: undefined, revocationPending: { token: revocationToken, until } });
     return {
-      revocationToken,
+      revocationToken, until,
       ownerId: account.ownerId, provider: account.provider, providerAccountId: account.providerAccountId, generation: account.generation,
       credential: secret && secret.generation === account.generation ? secret.credential : null,
     };
@@ -252,11 +257,11 @@ export const finishDisconnect = internalMutation({
  * disconnect report FAILED, so the person is told to revoke the app themselves. Records no token.
  */
 export const recordStrandedGrant = internalMutation({
-  args: { accountId: v.id("mailboxAccounts"), revocationToken: v.optional(v.string()), generation: v.number() },
+  args: { accountId: v.id("mailboxAccounts"), ownerId: v.id("users"), revocationToken: v.optional(v.string()), generation: v.number() },
   handler: async (ctx, args) => {
-    const owner = await requireUser(ctx);
+    // Background scans have no signed-in user, so the trusted caller names the owner it acted for.
     const account = await ctx.db.get(args.accountId);
-    if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
+    if (!account || account.ownerId !== args.ownerId) throw new Error("Mailbox unavailable.");
     // Only the revocation that refused the reconnect: still pending under its token, or finished from its generation.
     if (args.revocationToken && account.revocationPending?.token === args.revocationToken) {
       await ctx.db.patch(account._id, { revocationPending: { ...account.revocationPending, strandedGrant: true } });
@@ -366,7 +371,7 @@ export const rotateCredential = internalMutation({
     // A disconnect is revoking (or has revoked) this grant: the refreshed tokens must not be kept.
     const current = await ctx.db.get(args.accountId);
     if (current && revocationActive(current)) throw new ConvexError({ code: "DISCONNECTING" as const, accountId: current._id,
-      revocationToken: current.revocationPending!.token, generation: current.generation });
+      revocationToken: current.revocationPending!.token, until: current.revocationPending!.until, generation: current.generation });
     if (current?.status === "DISCONNECTED") throw new ConvexError({ code: "DISCONNECTING" as const, accountId: current._id,
       generation: current.generation - 1 });
     const { account, job } = await activeLease(ctx, args);

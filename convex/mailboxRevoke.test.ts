@@ -398,23 +398,24 @@ test("a stranded-grant report only marks the revocation it came from (R17)", asy
   const b = await owner.mutation(internal.mailboxes.beginRevocation, { accountId: connection.accountId, expectedGeneration: 3 });
 
   // A's delayed report must not touch B.
-  await owner.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, revocationToken: a.revocationToken, generation: 1 });
+  const ownerId = (await t.run(ctx => ctx.db.get(connection.accountId)))!.ownerId;
+  await owner.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, ownerId, revocationToken: a.revocationToken, generation: 1 });
   let account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
   expect(account.revocationPending?.strandedGrant).toBeUndefined();
   expect(account.lastRevocation?.outcome).toBe("REVOKED");
 
   // B's own report does.
-  await owner.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, revocationToken: b.revocationToken, generation: 3 });
+  await owner.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, ownerId, revocationToken: b.revocationToken, generation: 3 });
   account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
   expect(account.revocationPending?.strandedGrant).toBe(true);
 });
 
 /** A reconnect whose code exchange is still in flight when `during` runs (a disconnect, maybe a newer reconnect). */
-async function staleCallback(owner: Awaited<ReturnType<typeof setup>>["owner"], accountId: string, during: () => Promise<void>, freshRevoke = 200) {
+async function staleCallback(owner: Awaited<ReturnType<typeof setup>>["owner"], accountId: string | undefined, during: () => Promise<void>, freshRevoke = 200) {
   const STALE = "refresh-SECRET-r17-stale-3d9a";
   const revoked: string[] = [];
   let exchanges = 0;
-  const reconnect = stateFrom(await owner.action(start, { accountId: accountId as never, expectedGeneration: 1 }));
+  const reconnect = stateFrom(await owner.action(start, accountId ? { accountId: accountId as never, expectedGeneration: 1 } : {}));
   vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
     const url = String(input);
     if (url === "https://oauth2.googleapis.com/token") {
@@ -531,4 +532,38 @@ test("if a rotated refresh token can't be revoked, the disconnect reports FAILED
   expect(account).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "FAILED" } });
   expect(JSON.stringify(account)).not.toContain(ROTATED);
   expect(JSON.stringify(consoleCalls)).not.toContain(ROTATED);
+});
+
+test("a new connection mid-exchange survives another connection starting (R17)", async () => {
+  const { t, owner } = await setup();
+  const { outcome, revoked } = await staleCallback(owner, undefined, async () => { await owner.action(start, {}); });
+  expect(outcome).toBe("installed");
+  expect(revoked).toEqual([]);
+  expect(await t.run(ctx => ctx.db.query("mailboxAccounts").collect())).toMatchObject([{ status: "CONNECTED", generation: 1 }]);
+});
+
+test("a late new-connection callback leaves a disconnected account's grant alone while that account is reconnecting (R17)", async () => {
+  const { owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const { outcome, revoked } = await staleCallback(owner, undefined, async () => {
+    await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+    const newer = stateFrom(await owner.action(start, { accountId: connection.accountId, expectedGeneration: 2 }));
+    await owner.mutation(internal.mailboxOAuthState.consume, { stateHash: createHash("sha256").update(newer, "ascii").digest("hex") });
+  });
+  expect(outcome).toBe("Gmail authorization failed. Start a new connection attempt.");
+  // The reconnect in flight will share this grant.
+  expect(revoked).toEqual([REFRESH]);
+});
+
+test("a background scan can report a stranded grant without a signed-in user, but only for the account's owner (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+  const ownerId = (await t.run(ctx => ctx.db.get(connection.accountId)))!.ownerId;
+  const otherId = await t.run(async ctx => (await ctx.db.query("users").collect()).find(user => user._id !== ownerId)!._id);
+  await expect(t.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, ownerId: otherId, generation: 1 })).rejects.toThrow("Mailbox unavailable.");
+  await t.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, ownerId, generation: 1 });
+  expect((await t.run(ctx => ctx.db.get(connection.accountId)))!.lastRevocation?.outcome).toBe("FAILED");
 });

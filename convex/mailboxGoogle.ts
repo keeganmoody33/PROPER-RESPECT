@@ -10,6 +10,7 @@ import { decryptMailboxCredential, encryptMailboxCredential, type MailboxKeyring
 import { readGmailPage, MailboxCursorError } from "../src/server/mailbox-gmail";
 import { mailboxScanModeValidator } from "./mailboxTables";
 import { MAILBOX_TESTERS_ONLY, mailboxTesterAllowed } from "../src/domain/mailbox-testers";
+import { revocationWindowOpen } from "../src/domain/mailbox-revocation";
 
 function config() {
   const clientId = process.env.MAILBOX_GOOGLE_CLIENT_ID;
@@ -43,15 +44,32 @@ export const start = action({
     return { url: buildAuthorizationUrl(oauth, { state, verifier }) };
   },
 });
+type Refusal = { code?: string; accountId?: Id<"mailboxAccounts">; revocationToken?: string; until?: number; generation?: number };
+
+/**
+ * Revoke tokens Google issued around a disconnect, retrying once. If that fails, or a pending revocation's window is
+ * too short to be sure the request ends before a reconnect could land, record it so the disconnect reports FAILED.
+ */
+async function revokeOrRecord(ctx: ActionCtx, token: string, ownerId: Id<"users">, refusal: Refusal & { accountId: Id<"mailboxAccounts">; generation: number }) {
+  const inTime = refusal.until === undefined || revocationWindowOpen(refusal.until);
+  const revoked = inTime && await revokeMailboxGrant("GOOGLE", token).then(() => true, () =>
+    revokeMailboxGrant("GOOGLE", token).then(() => true, () => false));
+  if (!revoked) await ctx.runMutation(internal.mailboxes.recordStrandedGrant, {
+    accountId: refusal.accountId, ownerId, generation: refusal.generation,
+    ...(refusal.revocationToken ? { revocationToken: refusal.revocationToken } : {}) });
+}
+
 export const callback = action({
   args: { query: v.string() },
   handler: async (ctx, args): Promise<{ accountId: Id<"mailboxAccounts">; generation: number }> => {
+    let consumed: Id<"mailboxOAuthStates"> | undefined;
     try {
       if (args.query.length > 16384) throw new Error();
       const params = new URLSearchParams(args.query);
       const state = params.get("state") ?? "";
       if (!/^[A-Za-z0-9_-]{43,128}$/.test(state) || params.getAll("state").length !== 1) throw new Error();
       const pending = await ctx.runMutation(internal.mailboxOAuthState.consume, { stateHash: digest(state) });
+      consumed = pending._id;
       const { code } = parseOAuthCallback(params, state);
       const { oauth, clientSecret } = config();
       const verified = await exchangeMailboxAuthorization(oauth, { code, verifier: pending.verifier!, clientSecret });
@@ -67,20 +85,19 @@ export const callback = action({
         });
       } catch (error) {
         const refusal = error instanceof ConvexError
-          ? error.data as { code?: string; accountId?: Id<"mailboxAccounts">; revocationToken?: string; generation?: number } : undefined;
+          ? error.data as Refusal : undefined;
         if ((refusal?.code === "REVOCATION_PENDING" || refusal?.code === "DISCONNECTED_SINCE") && refusal.accountId && refusal.generation !== undefined) {
           // This account is being, or was just, disconnected: end the grant these fresh tokens belong to as well. Retry
           // once; if the provider still won't revoke them, record it so the disconnect reports FAILED instead of REVOKED.
-          const token = verified.credential.refreshToken || verified.credential.accessToken;
-          const revoked = await revokeMailboxGrant("GOOGLE", token).then(() => true, () =>
-            revokeMailboxGrant("GOOGLE", token).then(() => true, () => false));
-          if (!revoked) await ctx.runMutation(internal.mailboxes.recordStrandedGrant, {
-            accountId: refusal.accountId, generation: refusal.generation,
-            ...(refusal.revocationToken ? { revocationToken: refusal.revocationToken } : {}) });
+          await revokeOrRecord(ctx, verified.credential.refreshToken || verified.credential.accessToken, pending.ownerId,
+            { ...refusal, accountId: refusal.accountId, generation: refusal.generation });
         }
         throw error;
       }
-    } catch { throw new Error("Gmail authorization failed. Start a new connection attempt."); }
+    } catch {
+      if (consumed) await ctx.runMutation(internal.mailboxOAuthState.release, { stateId: consumed }).catch(() => undefined);
+      throw new Error("Gmail authorization failed. Start a new connection attempt.");
+    }
   },
 });
 
@@ -100,7 +117,9 @@ export const disconnectAndRevoke = action({
   handler: async (ctx, args): Promise<DisconnectResult> => {
     const stored = await ctx.runMutation(internal.mailboxes.beginRevocation, args);
     let outcome: "REVOKED" | "FAILED" | "NO_TOKEN" = "NO_TOKEN";
-    if (stored.credential) {
+    // Too late to be sure the request ends before reconnects are allowed again: don't ask Google at all.
+    if (stored.credential && !revocationWindowOpen(stored.until)) outcome = "FAILED";
+    else if (stored.credential) {
       try {
         const credential = decryptMailboxCredential(stored.credential, { ownerId: stored.ownerId, provider: stored.provider,
           providerAccountId: stored.providerAccountId, generation: stored.generation }, keyring());
@@ -144,16 +163,11 @@ async function readLeasedPage(ctx: ActionCtx, args: { accountId: Id<"mailboxAcco
       } catch (error) {
         // Refused because the account is being (or was) disconnected. If Google issued a new refresh token, the
         // disconnect never saw it, so end it here (one retry); if that fails, the disconnect reports FAILED.
-        const refusal = error instanceof ConvexError
-          ? error.data as { code?: string; accountId?: Id<"mailboxAccounts">; revocationToken?: string; generation?: number } : undefined;
+        const refusal = error instanceof ConvexError ? error.data as Refusal : undefined;
         const rotatedToken = verified.credential.refreshToken;
         if (refusal?.code === "DISCONNECTING" && refusal.accountId && refusal.generation !== undefined &&
             rotatedToken && rotatedToken !== credential.refreshToken) {
-          const revoked = await revokeMailboxGrant("GOOGLE", rotatedToken).then(() => true, () =>
-            revokeMailboxGrant("GOOGLE", rotatedToken).then(() => true, () => false));
-          if (!revoked) await ctx.runMutation(internal.mailboxes.recordStrandedGrant, {
-            accountId: refusal.accountId, generation: refusal.generation,
-            ...(refusal.revocationToken ? { revocationToken: refusal.revocationToken } : {}) });
+          await revokeOrRecord(ctx, rotatedToken, stored.account.ownerId, { ...refusal, accountId: refusal.accountId, generation: refusal.generation });
         }
         throw error;
       }
