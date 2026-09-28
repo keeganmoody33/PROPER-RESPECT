@@ -1,0 +1,97 @@
+name: Receipt
+# The 30-day receipt's outside witness (R11, docs/runbooks/receipt.md). Reads
+# the public GitHub card once a day, two hours after the 06:00 UTC refresh
+# cron, and appends one line to receipts/github-refresh.jsonl on the receipts
+# branch, pass or fail. A failing check also opens or updates a receipt issue.
+on:
+  schedule:
+    # Off the top of the hour, when GitHub delays or drops the most scheduled runs.
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: receipt
+  cancel-in-progress: false
+jobs:
+  witness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      # No token is in scope here, and install scripts don't run.
+      - run: npm ci --ignore-scripts
+      - name: Check the public GitHub card
+        id: check
+        continue-on-error: true
+        env:
+          PUBLIC_CONVEX_URL: ${{ vars.PUBLIC_CONVEX_URL }}
+          RECEIPT_HANDLE: ${{ vars.RECEIPT_HANDLE }}
+        run: node scripts/receipt-check.mjs > "$RUNNER_TEMP/receipt-line.json"
+      - name: Append the line to the receipts branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          line_file="$RUNNER_TEMP/receipt-line.json"
+          # The script prints exactly one line on every path; if it crashed
+          # before printing, record that the run happened and failed.
+          if ! [ -s "$line_file" ] || [ "$(wc -l < "$line_file")" -ne 1 ] || ! jq -e 'type == "object"' "$line_file" > /dev/null; then
+            jq -cn --arg checkedAt "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" --arg event "$GITHUB_EVENT_NAME" \
+              --arg runId "$GITHUB_RUN_ID" --arg sha "$GITHUB_SHA" \
+              '{checkedAt: $checkedAt, event: $event, runId: $runId, sha: $sha, handle: null,
+                capturedAt: null, freshness: null, ageHours: null, ok: false, reason: "NO_OUTPUT"}' > "$line_file"
+          fi
+          cat "$line_file"
+
+          auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git init -q receipts && cd receipts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          for attempt in 1 2 3; do
+            if git -c http.extraheader="$auth" fetch -q --depth 1 origin receipts; then
+              git checkout -q -B receipts FETCH_HEAD
+            else
+              # First run: an orphan branch holding only the receipt.
+              git checkout -q --orphan receipts
+              git rm -rq --cached . 2>/dev/null || true
+            fi
+            mkdir -p receipts
+            cat "$line_file" >> receipts/github-refresh.jsonl
+            git add receipts/github-refresh.jsonl
+            git commit -q -m "receipt: $(jq -r '.checkedAt' "$line_file") ok=$(jq -r '.ok' "$line_file")"
+            if git -c http.extraheader="$auth" push -q origin receipts; then
+              exit 0
+            fi
+            echo "Push attempt $attempt failed; retrying from the latest receipts branch."
+            git reset -q --hard
+            sleep $((attempt * 5))
+          done
+          echo "Could not append the receipt line."
+          exit 1
+      - name: Open or update the receipt issue
+        if: steps.check.outcome != 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          line="$(cat "$RUNNER_TEMP/receipt-line.json")"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          body="$(printf 'The receipt check failed.\n\n```json\n%s\n```\n\nRun: %s\n\nSee docs/runbooks/receipt.md.' "$line" "$run_url")"
+          gh label create receipt --force --color B60205 --description "30-day receipt check failed" --repo "$GITHUB_REPOSITORY"
+          issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --label receipt --state open --limit 1 --json number --jq '.[0].number // empty')"
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label receipt --title "Receipt check failed" --body "$body"
+          fi
+      - name: Fail the run when the check failed
+        if: steps.check.outcome != 'success'
+        run: exit 1
