@@ -93,7 +93,7 @@ export const disconnectAndRevoke = action({
         outcome = "REVOKED";
       } catch { outcome = "FAILED"; }
     }
-    return await ctx.runMutation(internal.mailboxes.finishDisconnect, { ...args, outcome });
+    return await ctx.runMutation(internal.mailboxes.finishDisconnect, { ...args, outcome, revocationToken: stored.revocationToken });
   },
 });
 

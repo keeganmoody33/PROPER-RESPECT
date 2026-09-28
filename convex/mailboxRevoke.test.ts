@@ -2,7 +2,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import schema from "./schema";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 const modules = import.meta.glob("./**/*.ts");
 const start = api.mailboxGoogle.start;
 const callback = api.mailboxGoogle.callback;
@@ -129,7 +129,7 @@ test("a reconnect can't land while its grant is being revoked, and a later recon
   expect(revocations(fetcher)).toHaveLength(1);
   const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
   expect(account).toMatchObject({ status: "DISCONNECTED", generation: 2, lastRevocation: { outcome: "REVOKED" } });
-  expect(account.revocationPendingUntil).toBeUndefined();
+  expect(account.revocationPending).toBeUndefined();
   expect(await t.run(ctx => ctx.db.query("mailboxSecrets").collect())).toEqual([]);
 
   // Once the disconnect finishes, reconnecting works and drops the old revocation outcome.
@@ -155,7 +155,7 @@ test("a disconnect elsewhere during the revocation leaves the account disconnect
   expect(revocations(fetcher)).toHaveLength(1);
   const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
   expect(account.status).toBe("DISCONNECTED");
-  expect(account.revocationPendingUntil).toBeUndefined();
+  expect(account.revocationPending).toBeUndefined();
 });
 
 test("another user cannot disconnect or revoke your account, and a stale generation fails before provider I/O (R17)", async () => {
@@ -239,4 +239,30 @@ test("scans stop before Google is asked, and none can start during the revocatio
   expect(during).toEqual({ job: "CANCELLED", newScan: expect.stringContaining("Mailbox disconnect in progress.") });
   expect(result).toEqual({ disconnected: true, generation: 2, revocation: "REVOKED" });
   expect(revocations(fetcher)).toHaveLength(1);
+});
+
+test("a revocation that outlived its window can't finish or clear a newer one (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const args = { accountId: connection.accountId, expectedGeneration: 1 };
+  const older = await owner.mutation(internal.mailboxes.beginRevocation, args);
+  // The older action stalls past the pending window; a newer disconnect starts.
+  await t.run(async ctx => {
+    const account = (await ctx.db.get(connection.accountId))!;
+    await ctx.db.patch(account._id, { revocationPending: { ...account.revocationPending!, until: Date.now() - 1 } });
+  });
+  const newer = await owner.mutation(internal.mailboxes.beginRevocation, args);
+  expect(newer.revocationToken).not.toBe(older.revocationToken);
+
+  const stale = await owner.mutation(internal.mailboxes.finishDisconnect, { ...args, outcome: "REVOKED", revocationToken: older.revocationToken });
+  expect(stale).toEqual({ disconnected: false, reason: "GENERATION_CHANGED" });
+  const during = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(during).toMatchObject({ status: "CONNECTED", generation: 1, revocationPending: { token: newer.revocationToken } });
+
+  const current = await owner.mutation(internal.mailboxes.finishDisconnect, { ...args, outcome: "REVOKED", revocationToken: newer.revocationToken });
+  expect(current).toEqual({ disconnected: true, generation: 2, revocation: "REVOKED" });
+  const after = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(after.status).toBe("DISCONNECTED");
+  expect(after.revocationPending).toBeUndefined();
 });

@@ -112,7 +112,7 @@ export const finalizeVerifiedConnection = internalMutation({
       account = (await ctx.db.get(accountId))!;
     }
     // A disconnect is asking the provider to revoke this grant; tokens installed now could be revoked with it.
-    if ((account.revocationPendingUntil ?? 0) > Date.now()) throw new Error("Mailbox revocation pending.");
+    if (revocationActive(account)) throw new Error("Mailbox revocation pending.");
     const generation = args.expectedGeneration + 1;
     const priorSecret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
     if (priorSecret) await ctx.db.delete(priorSecret._id);
@@ -120,7 +120,7 @@ export const finalizeVerifiedConnection = internalMutation({
     await ctx.db.patch(account._id, {
       status: "CONNECTED", generation, accountLabel: args.accountLabel, scopes: [...new Set(args.scopes)],
       activeJobId: undefined, lastReadStatus: undefined, lastFailure: undefined, updatedAt: now,
-      maintenanceEnabled: false, nextMaintenanceAt: undefined, lastRevocation: undefined, revocationPendingUntil: undefined,
+      maintenanceEnabled: false, nextMaintenanceAt: undefined, lastRevocation: undefined, revocationPending: undefined,
     });
     return { accountId: account._id, generation };
   },
@@ -172,6 +172,9 @@ export const disconnect = mutation({
 
 /** Longer than the provider request timeout, so a crashed revocation can't block reconnects for long. */
 export const MAILBOX_REVOCATION_PENDING_MS = 60 * 1000;
+function revocationActive(account: Doc<"mailboxAccounts">) {
+  return (account.revocationPending?.until ?? 0) > Date.now();
+}
 
 /**
  * Step 1 of disconnectAndRevoke: the caller owns the account at the expected
@@ -189,12 +192,14 @@ export const beginRevocation = internalMutation({
     // One revocation per disconnect: a second tab can't start another, and a repeat
     // disconnect can't overwrite the outcome people rely on to revoke access themselves.
     if (account.status === "DISCONNECTED") throw new Error("Mailbox already disconnected.");
-    if ((account.revocationPendingUntil ?? 0) > Date.now()) throw new Error("Disconnect already in progress.");
+    if (revocationActive(account)) throw new Error("Disconnect already in progress.");
     const secret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
     // Stop any scan first, so none reads with a grant that is being revoked.
     await cancelActiveJob(ctx, account, new Date().toISOString());
-    await ctx.db.patch(account._id, { activeJobId: undefined, revocationPendingUntil: Date.now() + MAILBOX_REVOCATION_PENDING_MS });
+    const revocationToken = crypto.randomUUID();
+    await ctx.db.patch(account._id, { activeJobId: undefined, revocationPending: { token: revocationToken, until: Date.now() + MAILBOX_REVOCATION_PENDING_MS } });
     return {
+      revocationToken,
       ownerId: account.ownerId, provider: account.provider, providerAccountId: account.providerAccountId, generation: account.generation,
       credential: secret && secret.generation === account.generation ? secret.credential : null,
     };
@@ -207,18 +212,19 @@ export const beginRevocation = internalMutation({
  * local disconnect runs whatever the revocation outcome was.
  */
 export const finishDisconnect = internalMutation({
-  args: { accountId: v.id("mailboxAccounts"), expectedGeneration: v.number(), outcome: mailboxRevocationOutcomeValidator },
+  args: { accountId: v.id("mailboxAccounts"), expectedGeneration: v.number(), outcome: mailboxRevocationOutcomeValidator, revocationToken: v.string() },
   handler: async (ctx, args) => {
     const owner = await requireUser(ctx);
     const account = await ctx.db.get(args.accountId);
     if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
-    try { requireMailboxGeneration(account, args.expectedGeneration); }
-    catch {
-      await ctx.db.patch(account._id, { revocationPendingUntil: undefined });
+    const ours = account.revocationPending?.token === args.revocationToken;
+    // A newer disconnect took over after this one's window lapsed, or the connection moved on: touch nothing of theirs.
+    if (!ours || account.generation !== args.expectedGeneration) {
+      if (ours) await ctx.db.patch(account._id, { revocationPending: undefined });
       return { disconnected: false as const, reason: "GENERATION_CHANGED" as const };
     }
     const { generation } = await invalidateConnection(ctx, account, "DISCONNECTED");
-    await ctx.db.patch(account._id, { lastRevocation: { outcome: args.outcome, at: new Date().toISOString() }, revocationPendingUntil: undefined });
+    await ctx.db.patch(account._id, { lastRevocation: { outcome: args.outcome, at: new Date().toISOString() }, revocationPending: undefined });
     return { disconnected: true as const, generation, revocation: args.outcome };
   },
 });
@@ -235,7 +241,7 @@ export const markNeedsReauth = internalMutation({
 
 async function startLease(ctx: MutationCtx, account: Doc<"mailboxAccounts">, mode?: MailboxScanMode, scheduled = false, discoveryRunId?: Id<"mailboxDiscoveryRuns">) {
   if (account.status !== "CONNECTED") throw new Error("Mailbox is not connected.");
-  if ((account.revocationPendingUntil ?? 0) > Date.now()) throw new Error("Mailbox disconnect in progress.");
+  if (revocationActive(account)) throw new Error("Mailbox disconnect in progress.");
   if (!discoveryRunId) await requireNoDiscoveryRun(ctx, account);
   const secret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
   if (!secret || secret.generation !== account.generation) throw new Error("Mailbox credentials unavailable.");
