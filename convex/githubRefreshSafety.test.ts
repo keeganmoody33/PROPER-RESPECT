@@ -488,3 +488,11 @@ test("an unsupported metric with no connector records an UNKNOWN provider instea
   await f.call();
   expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "UNKNOWN", outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
 });
+
+test("a scheduled run over malformed stored timestamps records INVALID_RESPONSE, like its completion path", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { lastSuccessfulAt: "not-a-timestamp" }));
+  await f.call();
+  expect(f.fetcher).not.toHaveBeenCalled();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "GITHUB", outcome: "FAILURE", errorClass: "INVALID_RESPONSE" })]);
+});

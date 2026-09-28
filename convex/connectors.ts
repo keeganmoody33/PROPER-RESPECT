@@ -589,6 +589,12 @@ function refreshProvider(provider: string | undefined, metricKey: string) {
   return "UNKNOWN" as const;
 }
 
+/** Malformed stored refresh timestamps are a bad attempt state, not a changed grant. */
+function hasMalformedRefreshTimestamps(subscription: Pick<Doc<"metricSubscriptions">, "lastAttemptedAt" | "lastSuccessfulAt">) {
+  return [subscription.lastAttemptedAt, subscription.lastSuccessfulAt]
+    .some(value => value !== undefined && canonicalTimestamp(value) === null);
+}
+
 /** Appends one ledger row for a refresh attempt (R08). Outcomes only; no provider text. */
 async function recordRefreshAttempt(ctx: MutationCtx, attempt: RefreshAttempt) {
   await ctx.db.insert("refreshAttempts", {
@@ -615,7 +621,10 @@ export const recordRefreshAttemptOutcome = internalMutation({
   handler: async (ctx, args) => {
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) return;
-    await recordRefreshAttempt(ctx, { subscription, outcome: args.outcome, errorClass: args.errorClass, provider: args.provider });
+    // A skip caused by malformed stored timestamps is recorded as the completion path records it.
+    const malformed = args.outcome === "SKIPPED" && hasMalformedRefreshTimestamps(subscription);
+    await recordRefreshAttempt(ctx, { subscription, provider: args.provider,
+      ...(malformed ? { outcome: "FAILURE", errorClass: "INVALID_RESPONSE" } : { outcome: args.outcome, errorClass: args.errorClass }) });
   },
 });
 
@@ -639,9 +648,7 @@ export const completeGithubRefresh = internalMutation({
     const authority = await githubRefreshAuthority(ctx, grant.subscriptionId);
     if (!authority || authority.fingerprint !== grant.fingerprint) {
       const current = await ctx.db.get(grant.subscriptionId);
-      // Malformed stored timestamps are a bad attempt state, not a changed grant.
-      const malformed = current && [current.lastAttemptedAt, current.lastSuccessfulAt]
-        .some(value => value !== undefined && canonicalTimestamp(value) === null);
+      const malformed = current && hasMalformedRefreshTimestamps(current);
       if (current) await recordRefreshAttempt(ctx, { subscription: current, provider: "GITHUB",
         ...(malformed ? { outcome: "FAILURE", errorClass: "INVALID_RESPONSE" } : { outcome: "SKIPPED", errorClass: "STALE_GRANT" }) });
       return false;
