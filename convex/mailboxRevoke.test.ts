@@ -126,7 +126,8 @@ test("a reconnect can't land while its grant is being revoked, and a later recon
   const result = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
   expect(refused).toBe("Gmail authorization failed. Start a new connection attempt.");
   expect(result).toEqual({ disconnected: true, generation: 2, revocation: "REVOKED" });
-  expect(revocations(fetcher)).toHaveLength(1);
+  // The disconnect's own revocation, plus one for the refused reconnect's freshly issued tokens.
+  expect(revocations(fetcher)).toHaveLength(2);
   const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
   expect(account).toMatchObject({ status: "DISCONNECTED", generation: 2, lastRevocation: { outcome: "REVOKED" } });
   expect(account.revocationPending).toBeUndefined();
@@ -285,4 +286,37 @@ test("discovery runs and scheduled scans claim nothing during a revocation (R17)
   });
   await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
   expect(during).toEqual({ run: expect.stringContaining("Mailbox disconnect in progress."), scheduled: null, nextMaintenanceAt: due, runs: 0 });
+});
+
+test("tokens a reconnect receives during a revocation are revoked, not left live at Google (R17)", async () => {
+  const { owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const reconnect = stateFrom(await owner.action(start, { accountId: connection.accountId, expectedGeneration: 1 }));
+  const NEW_REFRESH = "refresh-SECRET-r17-new-4b2d";
+  const revoked: string[] = [];
+  let refused: unknown;
+  let nested = false;
+  const fetcher = vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "access-new", refresh_token: NEW_REFRESH, expires_in: 3600, token_type: "Bearer", scope });
+    if (url === "https://openidconnect.googleapis.com/v1/userinfo") return Response.json({ sub: "google-sub", email: "google-sub@example.test", email_verified: true });
+    if (url === REVOKE) {
+      revoked.push(new URLSearchParams(String(init?.body)).get("token") ?? "");
+      if (!nested) {
+        nested = true;
+        // The reconnect's code exchange lands while this disconnect is revoking.
+        refused = await owner.action(callback, reply(reconnect)).then(() => "installed", error => (error as Error).message);
+      }
+      return new Response("{}");
+    }
+    throw new Error("Unexpected HTTP endpoint");
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const result = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+  expect(refused).toBe("Gmail authorization failed. Start a new connection attempt.");
+  expect(result).toMatchObject({ disconnected: true, revocation: "REVOKED" });
+  expect(revoked).toEqual([REFRESH, NEW_REFRESH]);
+  expectNoToken(consoleCalls);
+  expect(JSON.stringify(consoleCalls)).not.toContain(NEW_REFRESH);
 });

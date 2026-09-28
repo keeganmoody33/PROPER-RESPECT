@@ -1,5 +1,5 @@
 import { internal } from "./_generated/api";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
@@ -111,8 +111,9 @@ export const finalizeVerifiedConnection = internalMutation({
       });
       account = (await ctx.db.get(accountId))!;
     }
-    // A disconnect is asking the provider to revoke this grant; tokens installed now could be revoked with it.
-    if (revocationActive(account)) throw new Error("Mailbox revocation pending.");
+    // A disconnect is asking the provider to revoke this grant: install nothing, and tell the caller to revoke the
+    // tokens it just received so they don't outlive the disconnect at the provider.
+    if (revocationActive(account)) throw new ConvexError({ code: "REVOCATION_PENDING" as const });
     const generation = args.expectedGeneration + 1;
     const priorSecret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
     if (priorSecret) await ctx.db.delete(priorSecret._id);

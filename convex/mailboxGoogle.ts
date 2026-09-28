@@ -1,6 +1,6 @@
 "use node";
 import { createHash } from "node:crypto";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -60,10 +60,18 @@ export const callback = action({
         ownerId: pending.ownerId, provider: "GOOGLE", providerAccountId: verified.identity.providerAccountId,
         generation: pending.expectedGeneration + 1,
       }, keyring());
-      return await ctx.runMutation(internal.mailboxes.finalizeVerifiedConnection, {
-        oauthStateId: pending._id, ownerId: pending.ownerId, provider: "GOOGLE", ...verified.identity,
-        scopes: verified.scopes, expectedGeneration: pending.expectedGeneration, credential,
-      });
+      try {
+        return await ctx.runMutation(internal.mailboxes.finalizeVerifiedConnection, {
+          oauthStateId: pending._id, ownerId: pending.ownerId, provider: "GOOGLE", ...verified.identity,
+          scopes: verified.scopes, expectedGeneration: pending.expectedGeneration, credential,
+        });
+      } catch (error) {
+        if (error instanceof ConvexError && (error.data as { code?: string } | undefined)?.code === "REVOCATION_PENDING") {
+          // This account is being disconnected: end the grant these fresh tokens belong to as well.
+          await revokeMailboxGrant("GOOGLE", verified.credential.refreshToken || verified.credential.accessToken).catch(() => undefined);
+        }
+        throw error;
+      }
     } catch { throw new Error("Gmail authorization failed. Start a new connection attempt."); }
   },
 });
