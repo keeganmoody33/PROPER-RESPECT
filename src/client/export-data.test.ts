@@ -15,7 +15,22 @@ describe("collectPages (R15)", () => {
 
   it("stops rather than loop forever if the cursor never advances", async () => {
     const fetchPage = vi.fn(async () => ({ page: [1], isDone: false, continueCursor: "same" }));
-    await expect(collectPages(fetchPage, 5)).rejects.toThrow("The export did not finish");
+    await expect(collectPages(fetchPage)).rejects.toThrow("The export did not finish");
+  });
+
+  it("stops if a cursor comes back around", async () => {
+    const cursors = ["a", "b", "a"];
+    const fetchPage = vi.fn(async (cursor: string | null) => ({ page: [cursor], isDone: false, continueCursor: cursors[cursor === null ? 0 : cursor === "a" ? 1 : 2] }));
+    await expect(collectPages(fetchPage)).rejects.toThrow("The export did not finish");
+  });
+
+  it("has no page limit for a large account", async () => {
+    const pages = 1500;
+    const fetchPage = vi.fn(async (cursor: string | null) => {
+      const index = cursor === null ? 0 : Number(cursor);
+      return { page: [index], isDone: index + 1 === pages, continueCursor: String(index + 1) };
+    });
+    expect(await collectPages(fetchPage)).toHaveLength(pages);
   });
 });
 

@@ -230,6 +230,12 @@ for (const width of [1280, 390]) test(`unpublish all and download my data at ${w
   });
   await page.reload();
 
+  // Approving an ordinary preview must not carry over to the remove-all preview.
+  await page.getByRole("button", { name: "Preview sharing", exact: true }).click();
+  const firstPreview = page.getByRole("region", { name: "Your visitor’s view" });
+  await firstPreview.getByRole("checkbox").check();
+  await expect(firstPreview.getByRole("button", { name: "Publish this preview" })).toBeEnabled();
+
   const removeAll = page.getByRole("region", { name: "Remove every card" });
   await expect(removeAll).toContainText("Your handle, display name, bio and profile links stay public.");
   await expect(removeAll.getByRole("link", { name: "ask through the contact page" })).toHaveAttribute("href", "/about/contact");
@@ -238,6 +244,7 @@ for (const width of [1280, 390]) test(`unpublish all and download my data at ${w
   await expect(preview).toContainText("No products will be public.");
   await expect(preview).toContainText("@synthetic-owner");
   await expect(preview).toContainText("Synthetic public bio");
+  await expect(preview.getByRole("checkbox")).not.toBeChecked();
   await expect(preview.getByRole("button", { name: "Publish this preview" })).toBeDisabled();
   await preview.getByRole("checkbox").check();
   await preview.getByRole("button", { name: "Publish this preview" }).click();

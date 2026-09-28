@@ -786,7 +786,8 @@ function Builder() {
             <a href="/about/contact">ask through the contact page</a>.</p>
           <button type="button" className="secondary-action" onClick={() => void previewUnpublishAll()} disabled={busy}>Unpublish all cards</button>
         </section>}
-        {preview && <SharingPreview key={preview.basis} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
+        {/* A different preview (a new hash) starts unapproved. */}
+        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
       </section>
       <section className="onboarding-panel" id="collection-data" aria-labelledby="collection-data-title">
         <p className="onboarding-kicker">YOUR DATA</p>

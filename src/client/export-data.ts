@@ -4,18 +4,21 @@
 
 export type ExportPage<T> = { page: T[]; isDone: boolean; continueCursor: string };
 
-/** Reads every page, following the cursor, and stops if it fails to advance. */
-export async function collectPages<T>(fetchPage: (cursor: string | null) => Promise<ExportPage<T>>, maxPages = 1000): Promise<T[]> {
+/** Reads every page, however many, and stops if a cursor repeats. */
+export async function collectPages<T>(fetchPage: (cursor: string | null) => Promise<ExportPage<T>>): Promise<T[]> {
   const rows: T[] = [];
+  const seen = new Set<string>();
   let cursor: string | null = null;
-  for (let pages = 0; pages < maxPages; pages++) {
+  for (;;) {
     const result: ExportPage<T> = await fetchPage(cursor);
     rows.push(...result.page);
     if (result.isDone) return rows;
-    if (result.continueCursor === cursor) break;
+    if (seen.has(result.continueCursor) || result.continueCursor === cursor) {
+      throw new Error("The export did not finish. Try again; nothing was changed.");
+    }
+    seen.add(result.continueCursor);
     cursor = result.continueCursor;
   }
-  throw new Error("The export did not finish. Try again; nothing was changed.");
 }
 
 export const EXPORT_EXCLUSIONS = [

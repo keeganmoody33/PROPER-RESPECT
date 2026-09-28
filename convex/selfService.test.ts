@@ -12,6 +12,7 @@ const modules = import.meta.glob("./**/*.ts");
 const capturedAt = "2026-09-18T00:00:00.000Z";
 const SECRET_TEXT = "RAW-ORIGINAL-PAYLOAD-SENTINEL";
 const TOKEN = "TOKEN-IDENTIFIER-SENTINEL";
+const ARTIFACT_HASH = "c".repeat(64);
 
 async function fixture({ props = 2 }: { props?: number } = {}) {
   const t = convexTest(schema, modules);
@@ -40,6 +41,7 @@ async function fixture({ props = 2 }: { props?: number } = {}) {
     const evidenceId = await ctx.db.insert("rawEvidence", {
       evidenceSourceId: sourceId, userId, payload: SECRET_TEXT, storageId, capturedAt, dedupKey: "owner-upload-1",
       filename: "receipt.txt", mimeType: "text/plain", byteSize: SECRET_TEXT.length,
+      retainedArtifact: { kind: "GITHUB_ACTIVITY", sourceFile: "activity.json", sha256: ARTIFACT_HASH, byteLength: 10, sourceCapturedDate: "2026-09-17", sourceCaptureBasis: "RETAINED_SOURCE_DATE", preparedAt: capturedAt, adapterVersion: "1" },
       uploadAttribution: { status: "VERIFIED_OWNER_SESSION", userId, tokenIdentifier: TOKEN, ticketId, receivedAt: capturedAt, sha256: "a".repeat(64) },
     });
     const otherSourceId = await ctx.db.insert("evidenceSources", { userId: otherUserId, type: "FILE_UPLOAD", label: "Other upload", connectedAt: capturedAt });
@@ -92,6 +94,8 @@ test("the export leaves out raw originals, storage references and tokens", async
   const serialized = JSON.stringify(evidence.page);
   expect(serialized).not.toContain(SECRET_TEXT);
   expect(serialized).not.toContain(TOKEN);
+  expect(serialized).not.toContain(ARTIFACT_HASH);
+  expect(evidence.page[0].retainedArtifact).toMatchObject({ kind: "GITHUB_ACTIVITY", sourceFile: "activity.json", sourceCapturedDate: "2026-09-17" });
   expect(evidence.page[0]).not.toHaveProperty("payload");
   expect(evidence.page[0]).not.toHaveProperty("storageId");
   expect(evidence.page[0]).not.toHaveProperty("uploadAttribution");

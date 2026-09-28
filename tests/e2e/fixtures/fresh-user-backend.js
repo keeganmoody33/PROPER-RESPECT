@@ -82,7 +82,7 @@ const client = {
       if (saved.prop.visibility !== "PRIVATE") throw new Error("Save privately before preview.");
       return { product: saved.product, status: selection.status, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink };
     });
-    return { profile: publicProfileSchema.parse({ ...state.user, cards }), revision: 0, previewHash: "synthetic-preview" };
+    return { profile: publicProfileSchema.parse({ ...state.user, cards }), revision: 0, previewHash: args.removeAllCards ? "synthetic-remove-all-preview" : "synthetic-preview" };
   },
 };
 export const useConvex = () => client;

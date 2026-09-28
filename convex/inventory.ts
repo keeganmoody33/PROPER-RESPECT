@@ -260,7 +260,13 @@ export const exportEvidence = query({
         capturedAt: raw.capturedAt, sourceUrl: raw.sourceUrl, captureProvenance: raw.captureProvenance,
         filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize,
         detectedVendor: raw.detectedVendor, detectedUrl: raw.detectedUrl,
-        retainedArtifact: raw.retainedArtifact, limitations: raw.limitations ?? [],
+        // Everything but the file's content hash.
+        retainedArtifact: raw.retainedArtifact ? {
+          kind: raw.retainedArtifact.kind, sourceFile: raw.retainedArtifact.sourceFile, byteLength: raw.retainedArtifact.byteLength,
+          sourceCapturedDate: raw.retainedArtifact.sourceCapturedDate, sourceCaptureBasis: raw.retainedArtifact.sourceCaptureBasis,
+          preparedAt: raw.retainedArtifact.preparedAt, adapterVersion: raw.retainedArtifact.adapterVersion,
+        } : undefined,
+        limitations: raw.limitations ?? [],
         suggestedActivity: deleted ? undefined : raw.suggestedActivity,
         // A deleted original's extracted text goes with it.
         observations: deleted ? [] : raw.observations ?? [],
