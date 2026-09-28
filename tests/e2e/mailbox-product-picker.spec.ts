@@ -174,6 +174,11 @@ test("Disconnect asks the backend to revoke the Google grant and reports a faile
   await expect(page.getByRole("status")).toContainText("Google did not confirm the revocation.");
   await expect(page.getByRole("status")).toContainText("Google Account permissions");
 
+  await render({ disconnected: true, generation: 4, revocation: "NO_TOKEN" });
+  await page.getByRole("button", { name: "Disconnect and stop collection" }).click();
+  await expect(page.getByRole("status")).toContainText("No saved Google credential remained to revoke.");
+  await expect(page.getByRole("status")).toContainText("Google Account permissions");
+
   await render({ disconnected: false, reason: "GENERATION_CHANGED" });
   await page.getByRole("button", { name: "Disconnect and stop collection" }).click();
   await expect(page.getByRole("status")).toContainText("This account's connection changed while disconnecting");
