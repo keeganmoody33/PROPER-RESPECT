@@ -164,14 +164,14 @@ export function MailboxManagement({ available }: { available: boolean }) {
     {isAuthenticated && available && <MailboxConnectionNotice loading={accounts === undefined} gmailCount={gmailAccounts?.length ?? 0} connectedCount={gmailAccounts?.filter(account => account.status === "CONNECTED").length ?? 0}/>}
     {gmailAccounts?.map(account => <article key={account.accountId} style={{ borderTop: "1px solid currentColor", paddingBlock: "1rem", overflowWrap: "anywhere" }}>
       <h4>{account.accountLabel}</h4>
-      <p>{account.status === "CONNECTED" ? "Connected" : account.status === "NEEDS_REAUTH" ? "Reconnect required" : "Disconnected"} · read-only headers · {account.maintenanceEnabled ? "Daily hosted discovery enabled" : "Manual discovery"}</p>
+      <p>{account.status === "CONNECTED" ? "Connected" : account.status === "NEEDS_REAUTH" ? (available ? "Reconnect required" : "Google access expired") : "Disconnected"} · read-only headers · {account.maintenanceEnabled ? "Daily hosted discovery enabled" : "Manual discovery"}</p>
       <p>{account.lastSyncedAt ? `Last successful read: ${date(account.lastSyncedAt)}.` : "No successful read recorded yet."}</p>
       {account.lastFailure === "TEMPORARY" && <p role="alert">{available ? "The last read failed. Try again; if it keeps failing, reconnect. Your retained evidence and relationships are unchanged." :
         "The last read failed. Try again. Your retained evidence and relationships are unchanged."}</p>}
       {account.lastFailure === "REAUTHORIZE" && <p role="alert">{available ? "Google access expired or was revoked. Reconnect this account. Daily discovery is off until you explicitly enable it again." :
         `Google access expired or was revoked. ${MAILBOX_TESTERS_ONLY} You can disconnect this account. Your retained evidence and relationships are unchanged.`}</p>}
       {account.lastFailure === "CURSOR_EXPIRED" && <p role="alert">A saved search page expired. Restart that search below. Repeated messages will not create duplicate evidence.</p>}
-      <MailboxDiscoveryRun run={account.discoveryRun} connected={account.status === "CONNECTED"} busy={busy} onStart={() => void startRun(account)} onControl={action => void controlRun(account, action)}/>
+      <MailboxDiscoveryRun run={account.discoveryRun} connected={account.status === "CONNECTED"} busy={busy} canReconnect={available} onStart={() => void startRun(account)} onControl={action => void controlRun(account, action)}/>
       <div className="action-row">
         {modes.map(({ mode, action, continueAction, restartAction }) => {
           const progress = account.contexts?.find(context => context.mode === mode);

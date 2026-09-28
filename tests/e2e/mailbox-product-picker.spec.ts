@@ -103,3 +103,28 @@ test("recovery messages don't tell an unlisted user to reconnect (R16)", async (
     await expect(alert).toContainText("Your retained evidence");
   }
 });
+
+test("a failed discovery run doesn't tell an unlisted user to reconnect either (R16)", async ({ page }) => {
+  await page.route("**/*", route => route.abort());
+  const render = async (available: boolean) => {
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(isAvailable => {
+      const w = window as unknown as { mailboxProps: unknown; mailboxAccounts: unknown };
+      w.mailboxProps = { available: isAvailable };
+      w.mailboxAccounts = [{
+        accountId: "synthetic-account", provider: "GOOGLE", status: "NEEDS_REAUTH", accountLabel: "Synthetic mailbox", generation: 1,
+        maintenanceEnabled: false, contexts: [], lastFailure: "REAUTHORIZE",
+        discoveryRun: { id: "synthetic-run", status: "FAILED", failure: "REAUTHORIZE", phase: "KNOWN_PRODUCTS", phaseAttempts: 3, totalAttempts: 3,
+          pagesRead: 1, messagesRead: 5, retainedRecords: 2, maxAttemptsPerPhase: 100, maxHeaders: 1000, updatedAt: "2026-09-19T12:00:00Z" },
+      }];
+    }, available);
+    await page.addScriptTag({ content: compiled });
+    await page.getByText("Automatic discovery and account controls").click();
+  };
+  await render(false);
+  const card = page.locator("article");
+  await expect(card.getByText("Google access expired or was revoked.", { exact: false }).first()).toBeVisible();
+  await expect(card).not.toContainText(/reconnect/i);
+  await render(true);
+  await expect(page.getByText("Reconnect this Gmail account before starting another run.")).toBeVisible();
+});
