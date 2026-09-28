@@ -26,6 +26,7 @@
 .relationshipChoices { display: grid; gap: 0 1.5rem; align-items: center; }
 .editor .dateField { grid-template-columns: minmax(0, 1fr) auto; }
 .dateField input { grid-row: 2; grid-column: 1 / -1; font-variant-numeric: tabular-nums; }
+.editor .dateField:has(.draftLabel) input { border: 2px solid var(--collection-evidence-ink, var(--ink)); }
 .draftLabel { grid-column: 2; grid-row: 1; color: var(--collection-evidence-ink, var(--ink)); font-size: .875rem; font-weight: 400; }
 .dateNotice { color: var(--collection-evidence-ink, var(--ink)); font-size: .875rem; line-height: 1.6; }
 .evidencePanel { min-width: 0; padding: 1.5rem; background: var(--panel); border-top: 3px solid var(--collection-evidence-ink, var(--ink)); overflow-wrap: anywhere; }
@@ -55,7 +56,7 @@
 .claims > summary { font-weight: 700; }
 .claims :global(.private-evidence) { border: 0; padding: 0; margin-top: 1rem; }
 .claims :global(.raw-evidence) { max-height: 24rem; }
-.inventory :is(button, summary, input, select, textarea, a):focus-visible { outline: 2px solid var(--collection-evidence-ink, var(--ink)); outline-offset: 4px; }
+.inventory :is(button, summary, input, select, textarea, a):not(:global(.product-card *)):focus-visible { outline: 2px solid var(--collection-evidence-ink, var(--ink)); outline-offset: 4px; }
 @media (min-width: 760px) {
   .editorLayout { grid-template-columns: minmax(0, 1fr) minmax(280px, 336px); }
   .editor { grid-column: 1; grid-row: 1; }
@@ -72,4 +73,5 @@
   .relationshipHeading { flex-wrap: wrap; }
   .editor .hint:last-child { margin-bottom: 0; }
   .saveBoundary { padding-top: .5rem; }
+  .saveBoundary > button { width: 100%; }
 }

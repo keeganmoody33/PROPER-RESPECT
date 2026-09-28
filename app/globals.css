@@ -12,6 +12,8 @@
   --secondary: #5b5951;
   --sample-text: #45443e;
   --action-text: #fbfaf6;
+  --collection-evidence-ink: #1e3a5f;
+  --collection-control-line: #817f77;
   --feature-background: #171713;
   --feature-text: #f0eee7;
   --feature-muted: #ccc9be;
@@ -33,6 +35,8 @@
   --secondary: #b8b6ac;
   --sample-text: #b8b6ac;
   --action-text: #171713;
+  --collection-evidence-ink: #b3cff1;
+  --collection-control-line: #97978b;
   --feature-background: #24241f;
   color-scheme: dark;
 }
@@ -855,6 +859,7 @@ main {
   margin: 0 auto;
   max-width: 88rem;
   padding: clamp(2rem, 5vw, 5rem);
+  --control-line: var(--collection-control-line);
 }
 
 .onboarding-intro {
@@ -996,9 +1001,9 @@ main {
 }
 
 .primary-action {
-  background: var(--ink);
-  border: 1px solid var(--ink);
-  color: var(--paper);
+  background: var(--respect-red);
+  border: 1px solid var(--respect-red);
+  color: var(--action-text);
   cursor: pointer;
   font-weight: 800;
   padding: 0.9rem 1.2rem;
@@ -1123,7 +1128,7 @@ main {
 .site-wordmark { display: inline-flex; align-items: center; gap: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: -.03em; text-decoration: none; }
 .site-wordmark img { width: 32px; height: auto; }
 .site-navigation, .site-footer, .profile-context, .collection-navigation, .auth-intro figcaption { font-family: var(--homepage-mono), monospace; font-size: .7rem; line-height: 1.6; }
-.site-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.4rem; padding-block: .5rem; }
+.site-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.4rem; padding-block: .5rem; font: 500 .875rem/1.5 var(--homepage-sans), Arial, sans-serif; }
 .site-start { border: 1px solid var(--ink); padding: .55rem .8rem; text-decoration: none; }
 .auth-steps { padding-left: 1.3rem; line-height: 1.6; }
 .auth-steps li { padding: .6rem 0; }
@@ -1156,7 +1161,7 @@ main {
 .section-heading h1, .system-message h1, .onboarding-shell h1, .onboarding-panel > h2 { font-weight: 900; line-height: .98; letter-spacing: -.045em; }
 .onboarding-kicker, .onboarding-panel > .eyebrow { color: var(--respect-red); }
 .collection-navigation { border-color: var(--ink); margin-bottom: 2rem; }
-.primary-action:not(:disabled):hover { background: var(--respect-red); border-color: var(--respect-red); }
+.primary-action:not(:disabled):hover { filter: brightness(.9); }
 .site-header a:focus-visible, .site-footer a:focus-visible, .collection-navigation a:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 4px; }
 .auth-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 6rem); align-items: center; padding: clamp(2rem, 5vw, 6rem); min-height: 80vh; max-width: 1600px; margin: auto; }
 .auth-intro h1 { font-size: clamp(2.8rem, 4.7vw, 5.5rem); font-weight: 900; line-height: .96; letter-spacing: -.05em; text-transform: uppercase; margin: 1.5rem 0; }
@@ -1210,7 +1215,7 @@ main {
 .site-mark { display: inline-flex; flex: 0 0 auto; background: currentColor; mask: url("/brand/homepage/PR-mark-black.png") center / contain no-repeat; }
 .site-mark img { display: block; opacity: 0; }
 .site-theme { order: 3; }
-.theme-selector { display: flex; align-items: center; gap: .5rem; font: 700 .65rem/1.5 var(--homepage-mono), monospace; }
+.theme-selector { display: flex; align-items: center; gap: .5rem; font: 400 .875rem/1.5 var(--homepage-sans), Arial, sans-serif; }
 .theme-selector select { min-height: 44px; max-width: 100%; padding: .5rem .35rem; background: var(--panel); color: var(--ink); border: 1px solid var(--control-line); border-radius: 0; cursor: pointer; }
 .theme-selector select:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 3px; }
 input, textarea, select { accent-color: var(--respect-red); }

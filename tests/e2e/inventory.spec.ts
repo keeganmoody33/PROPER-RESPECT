@@ -216,3 +216,49 @@ test("deleting an original asks first, can be cancelled, and removes only that o
   await expect(page.getByText("Retained snapshot original", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete original", exact: true })).toHaveCount(0);
 });
+
+for (const width of [390, 1440]) test(`collection editor separates evidence and keeps card branding at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("button", { name: "Load design fixture", exact: true }).click();
+  await page.getByText("Manage relationship and context", { exact: true }).click();
+  await page.getByText("Inspect extracted claims and correct evidence", { exact: true }).click();
+  await page.getByRole("button", { name: "Use this observed date as my start date", exact: true }).click();
+  const theme = page.getByRole("combobox", { name: "Appearance", exact: true }).first();
+  const card = page.getByRole("article", { name: "GitHub card", exact: true });
+  await theme.selectOption("light");
+  const appearance = () => card.evaluate(element => [element, ...element.querySelectorAll("h2, .product-logo, .card-button")].map(node => { const style = getComputedStyle(node); return { color: style.color, background: style.backgroundColor, font: style.fontFamily, outlineColor: style.outlineColor, outlineWidth: style.outlineWidth, outlineStyle: style.outlineStyle, outlineOffset: style.outlineOffset }; }));
+  const details = card.getByRole("button", { name: "Details", exact: true });
+  const focusCard = async () => {
+    await details.focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    await expect(details).toBeFocused();
+    expect(await details.evaluate(element => element.matches(":focus-visible"))).toBe(true);
+    await expect(details).toHaveCSS("outline-style", "solid");
+  };
+  await theme.focus();
+  const brand = await appearance();
+  await focusCard();
+  const focusedBrand = await appearance();
+  for (const mode of ["light", "dark"]) {
+    await theme.selectOption(mode);
+    await theme.focus();
+    expect(await appearance()).toEqual(brand);
+    await focusCard();
+    expect(await appearance()).toEqual(focusedBrand);
+    await expect(page.getByLabel("Started using (optional)", { exact: true })).toHaveValue("2024-06-03");
+    await expect(page.getByLabel("Started using (optional)", { exact: true })).toHaveCSS("border-top-width", "2px");
+    await expect(page.getByLabel("Synthetic save operations")).toHaveText("");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    if (width === 390) {
+      const date = (await page.getByLabel("Started using (optional)", { exact: true }).boundingBox())!;
+      const evidence = (await page.getByRole("complementary", { name: "Supporting context for GitHub", exact: true }).boundingBox())!;
+      const save = (await page.getByRole("button", { name: "Save privately", exact: true }).boundingBox())!;
+      expect(evidence.y).toBeGreaterThan(date.y + date.height);
+      expect(save.y).toBeGreaterThan(evidence.y + evidence.height);
+      expect(Math.abs(save.width - evidence.width)).toBeLessThan(1);
+    }
+  }
+});

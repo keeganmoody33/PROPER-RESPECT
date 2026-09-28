@@ -1,0 +1,110 @@
+{
+  "desktop-light-top.jpg": {
+    "pixels": [
+      1425,
+      1068
+    ],
+    "cssViewport": [
+      1440,
+      1079
+    ]
+  },
+  "mobile-light-top.jpg": {
+    "pixels": [
+      375,
+      1347
+    ],
+    "cssViewport": [
+      390,
+      1401
+    ]
+  },
+  "mobile-keyboard-saved.jpg": {
+    "pixels": [
+      375,
+      1347
+    ],
+    "cssViewport": [
+      390,
+      1401
+    ]
+  },
+  "desktop-dark-editor.jpg": {
+    "pixels": [
+      1425,
+      980
+    ],
+    "cssViewport": [
+      1440,
+      1079
+    ]
+  },
+  "paired-themes.jpg": {
+    "pixels": [
+      1265,
+      712
+    ],
+    "cssViewport": "comparison browser; source and target normalized together"
+  },
+  "mobile-light-date-save.jpg": {
+    "pixels": [
+      375,
+      1347
+    ],
+    "cssViewport": [
+      390,
+      1401
+    ]
+  },
+  "desktop-light-editor.jpg": {
+    "pixels": [
+      1425,
+      980
+    ],
+    "cssViewport": [
+      1440,
+      1079
+    ]
+  },
+  "mobile-light-editor.jpg": {
+    "pixels": [
+      375,
+      1347
+    ],
+    "cssViewport": [
+      390,
+      1401
+    ]
+  },
+  "paired-desktop.jpg": {
+    "pixels": [
+      1425,
+      1068
+    ],
+    "cssViewport": "comparison browser; source and target normalized together"
+  },
+  "paired-focus.jpg": {
+    "pixels": [
+      1265,
+      712
+    ],
+    "cssViewport": "comparison browser; source and target normalized together"
+  },
+  "mobile-dark-date-save.jpg": {
+    "pixels": [
+      375,
+      1347
+    ],
+    "cssViewport": [
+      390,
+      1401
+    ]
+  },
+  "paired-mobile.jpg": {
+    "pixels": [
+      1265,
+      712
+    ],
+    "cssViewport": "comparison browser; source and target normalized together"
+  }
+}
