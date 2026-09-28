@@ -74,3 +74,10 @@ test.each([[2048, true], [2049, false]] as const)("account setup keeps a %i-char
   const id = await owner.mutation(api.onboarding.ensureAccount, { avatarUrl });
   expect((await t.run(ctx => ctx.db.get(id)))?.avatarUrl).toBe(kept ? avatarUrl : undefined);
 });
+
+test.each(["javascript:alert(1)", "data:image/png;base64,AAAA", "ftp://img.example/a.png", "https://user:pass@example.com/"])("account setup drops a %s avatar link", async avatarUrl => {
+  const t = convexTest(schema, modules);
+  const owner = t.withIdentity({ subject: "scheme-owner" });
+  const id = await owner.mutation(api.onboarding.ensureAccount, { avatarUrl });
+  expect((await t.run(ctx => ctx.db.get(id)))?.avatarUrl).toBeUndefined();
+});

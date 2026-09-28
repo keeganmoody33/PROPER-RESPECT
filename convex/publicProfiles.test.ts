@@ -134,3 +134,59 @@ test("100 repeated cards share retained brand reads while mismatched domains rem
   });
   expect((await t.run(ctx => ctx.db.get(id)))?.profile).toEqual(profile);
 });
+
+test.each(["javascript:alert(1)", "data:text/html,x", "https://user:pass@example.com/"])("a stored %s link or avatar never leaves the public reader", async url => {
+  const t = convexTest(schema, modules);
+  const [linked] = e2eReferenceProfile.cards;
+  const profile: PublicProfile = {
+    handle: "owner", displayName: "Owner", bio: "", avatarUrl: url,
+    cards: [{ ...linked, primaryLink: { type: "CANONICAL", url, label: "Visit" } }, linked],
+  };
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  const current = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  const legacy = await t.query(api.publicProfiles.getByHandle, { handle: "owner" });
+  expect(JSON.stringify([current, legacy])).not.toContain(url);
+  expect(current?.cards).toHaveLength(2);
+  expect(current?.cards[0].primaryLink).toBeUndefined();
+  expect(current?.cards[1].primaryLink).toEqual(linked.primaryLink);
+  expect(legacy?.cards.map(card => card.primaryLink.url)).toEqual([linked.primaryLink?.url]);
+});
+
+test("stored profile links that aren't plain http(s) never leave the public reader", async () => {
+  const t = convexTest(schema, modules);
+  const profile: PublicProfile = {
+    handle: "owner", displayName: "Owner", bio: "", cards: [],
+    profileLinks: [
+      { label: "Bad script", url: "javascript:alert(1)" },
+      { label: "Bad data", url: "data:text/html,x" },
+      { label: "Website", url: "https://owner.example/" },
+    ],
+    preferredLinkUrl: "javascript:alert(1)",
+  };
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  const current = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(current?.profileLinks).toEqual([{ label: "Website", url: "https://owner.example/" }]);
+  expect(current?.preferredLinkUrl).toBeUndefined();
+  expect(JSON.stringify(current)).not.toMatch(/javascript:|data:text/);
+});
+
+test("a stored preferred link that is still valid stays preferred", async () => {
+  const t = convexTest(schema, modules);
+  const profile: PublicProfile = {
+    handle: "owner", displayName: "Owner", bio: "", cards: [],
+    profileLinks: [{ label: "Bad", url: "javascript:alert(1)" }, { label: "Website", url: "https://owner.example/" }],
+    preferredLinkUrl: "https://owner.example/",
+  };
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  expect(await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" })).toMatchObject({
+    profileLinks: [{ label: "Website", url: "https://owner.example/" }], preferredLinkUrl: "https://owner.example/",
+  });
+});
+
+test("a stored avatar link over 2,048 characters never leaves the public reader", async () => {
+  const t = convexTest(schema, modules);
+  const avatarUrl = `https://img.example/${"a".repeat(2049 - "https://img.example/".length)}`;
+  const profile: PublicProfile = { handle: "owner", displayName: "Owner", bio: "", avatarUrl, cards: [] };
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  expect((await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" }))?.avatarUrl).toBeUndefined();
+});
