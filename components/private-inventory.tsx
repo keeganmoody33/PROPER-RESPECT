@@ -43,12 +43,11 @@ function History({ propId }: { propId: Id<"props"> }) {
   </div>;
 }
 
-function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChange, dateNotice, supportingContext, saveNotice }: {
+function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChange, dateNotice, formId }: {
   item: Item; evidence: InventoryEvidence; onSave: (input: SaveInput) => Promise<SaveResult>;
   startedAt: string; onStartDateChange: (value: string) => void; dateNotice: string;
-  supportingContext: ReactNode; saveNotice: string;
+  formId: string;
 }) {
-  const formId = useId();
   const confirmed = isRelationshipConfirmed(item.prop);
   const [status, setStatus] = useState(item.prop.status as string);
   const [selectedRelationship, setSelectedRelationship] = useState(confirmed);
@@ -78,7 +77,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       setMessage(error instanceof Error ? error.message : "Save failed. Your previous decisions remain intact.");
     } finally { setBusy(false); }
   }
-  return <div className={styles.editorLayout}><form id={formId} onSubmit={event => {
+  return <form id={formId} onSubmit={event => {
     event.preventDefault();
     void submit(new FormData(event.currentTarget));
   }} className={styles.editor}>
@@ -113,13 +112,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       <p className={styles.hint}>Leave the date blank when you do not know. Signup dates and capture dates are not first use.</p>
     </fieldset>
     {message && <p role="status">{message}</p>}
-  </form>
-  {supportingContext}
-  <div className={styles.saveBoundary}>
-    <button className="primary-action" form={formId} type="submit" disabled={busy}>{busy ? "Saving…" : confirmed ? "Save privately" : "Confirm and save privately"}</button>
-    <p>Your public profile will not change.</p>
-    {saveNotice && <p className={styles.saveNotice} role="status">{saveNotice}</p>}
-  </div></div>;
+  </form>;
 }
 
 // Delete an original (R15): a second, explicit step before anything is removed.
@@ -165,6 +158,7 @@ export function InventoryRelationshipDetails(props: RelationshipDetailsProps) {
 }
 
 function RelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, onDeleteEvidence, renderEvidence, renderHistory }: RelationshipDetailsProps) {
+  const formId = useId();
   const [saveNotice, setSaveNotice] = useState("");
   const [deleteNotice, setDeleteNotice] = useState("");
   const [saving, setSaving] = useState(false);
@@ -214,10 +208,17 @@ function RelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence
   </aside>;
   return <>
     <div className={styles.relationshipHeading}><h3>{item.product.name}</h3><p>Private relationship</p></div>
+    <div className={styles.editorLayout}>
     <RelationshipEditor key={`${item.prop._id}:${version}`} item={item} evidence={sources} onSave={save}
       startedAt={currentDraft?.value ?? item.prop.startedAt ?? ""} dateNotice={currentDraft?.notice ?? ""}
       onStartDateChange={value => setDateDraft({ value, version, notice: "" })}
-      supportingContext={supportingContext} saveNotice={saveNotice} />
+      formId={formId} />
+    {supportingContext}
+    <div className={styles.saveBoundary}>
+      <button className="primary-action" form={formId} type="submit" disabled={saving}>{saving ? "Saving…" : isRelationshipConfirmed(item.prop) ? "Save privately" : "Confirm and save privately"}</button>
+      <p>Your public profile will not change.</p>
+      {saveNotice && <p className={styles.saveNotice} role="status">{saveNotice}</p>}
+    </div></div>
     <details className={styles.history}><summary>Relationship history</summary>
       {renderHistory?.(item)}
     </details>
