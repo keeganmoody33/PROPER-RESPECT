@@ -182,3 +182,11 @@ test("a stored preferred link that is still valid stays preferred", async () => 
     profileLinks: [{ label: "Website", url: "https://owner.example/" }], preferredLinkUrl: "https://owner.example/",
   });
 });
+
+test("a stored avatar link over 2,048 characters never leaves the public reader", async () => {
+  const t = convexTest(schema, modules);
+  const avatarUrl = `https://img.example/${"a".repeat(2049 - "https://img.example/".length)}`;
+  const profile: PublicProfile = { handle: "owner", displayName: "Owner", bio: "", avatarUrl, cards: [] };
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  expect((await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" }))?.avatarUrl).toBeUndefined();
+});

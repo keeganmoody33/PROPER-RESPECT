@@ -551,3 +551,16 @@ test("an unchanged public card with a non-web link blocks sharing until it is up
   await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
   expect((await published()).profile.cards.map(card => card.primaryLink?.url)).toEqual(["https://shared.example", "https://shared.example"]);
 });
+
+test("stored profile links that aren't plain http(s) are left off the shared profile", async () => {
+  const { t, owner, userId, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(userId, {
+    profileLinks: [{ label: "Bad", url: "javascript:alert(1)" }, { label: "Website", url: "https://owner.example/" }],
+    preferredLinkUrl: "javascript:alert(1)",
+  }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  expect(preview.profile.profileLinks).toEqual([{ label: "Website", url: "https://owner.example/" }]);
+  expect(preview.profile.preferredLinkUrl).toBeUndefined();
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+  expect(JSON.stringify((await published()).profile)).not.toContain("javascript:");
+});

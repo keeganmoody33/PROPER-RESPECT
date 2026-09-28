@@ -645,7 +645,10 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   }
   // There's no avatar editor, so a stored avatar that isn't http or https, or is over-long, is left off rather than blocking every publish.
   const avatarUrl = user.avatarUrl !== undefined && isHttpUrl(user.avatarUrl) && user.avatarUrl.length <= PUBLISHED_URL_MAX ? user.avatarUrl : undefined;
-  const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl, profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl };
+  // Profile links saved before the http(s) rule are left off the same way; the preview shows it.
+  const profileLinks = user.profileLinks?.filter(link => isHttpUrl(link.url));
+  const preferredLinkUrl = profileLinks?.some(link => link.url === user.preferredLinkUrl) ? user.preferredLinkUrl : undefined;
+  const profileUser = { handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl, profileLinks, preferredLinkUrl };
   const replacements = selections.filter(selection => selection.publish).flatMap(selection => {
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);

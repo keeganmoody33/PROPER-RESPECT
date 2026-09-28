@@ -4,6 +4,7 @@ import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1 } from "../src/domain/public-profile";
 import { isHttpUrl } from "../src/domain/profile-links";
+import { PUBLISHED_URL_MAX } from "../src/domain/published-text-limits";
 
 const cardValidator = publicProfileValidator.fields.cards.element;
 const publicProfileV1Validator = v.object({
@@ -49,7 +50,7 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
   const links = profileLinks?.filter(link => isHttpUrl(link.url));
   return {
     ...profile,
-    ...(avatarUrl !== undefined && isHttpUrl(avatarUrl) ? { avatarUrl } : {}),
+    ...(avatarUrl !== undefined && isHttpUrl(avatarUrl) && avatarUrl.length <= PUBLISHED_URL_MAX ? { avatarUrl } : {}),
     ...(links !== undefined ? { profileLinks: links } : {}),
     ...(preferredLinkUrl !== undefined && links?.some(link => link.url === preferredLinkUrl) ? { preferredLinkUrl } : {}),
     cards,
