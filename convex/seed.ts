@@ -86,6 +86,9 @@ async function upsertSite(
 export const seedKeegan = internalMutation({
   args: {},
   handler: async (ctx) => {
+    const current = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "keegan")).unique();
+    // Reseeding replaces the snapshot, so it must never lift an operator takedown (R06).
+    if (current?.takenDownAt) throw new Error("The keegan profile is taken down. Restore it before seeding.");
     const userId = await upsertUser(ctx, {
       seedKey: "keegan",
       handle: "keegan",

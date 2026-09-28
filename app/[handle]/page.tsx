@@ -75,6 +75,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <div>
           <span>@{profile.handle}</span>
         </div>
+        <a href={`mailto:33@lecturesfrom.com?subject=${encodeURIComponent(`Report proper-respect.com/${profile.handle}`)}`}>
+          Report this page
+        </a>
         <Link href="/app/collection">Open your private collection →</Link>
       </footer>
     </main>

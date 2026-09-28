@@ -549,7 +549,8 @@ async function githubRefreshAuthority(ctx: QueryCtx | MutationCtx, subscriptionI
   const publications = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).take(2);
   if (publications.length !== 1) return null;
   const published = publications[0];
-  if (published.profile.handle !== user.handle) return null;
+  // A taken-down snapshot stays frozen until an operator restores it (R06).
+  if (published.profile.handle !== user.handle || published.takenDownAt) return null;
   const indices = await publishedCardIndicesForProp(ctx, published, prop);
   if (indices.length !== 1) return null;
   const card = published.profile.cards[indices[0]];
@@ -674,7 +675,8 @@ export const applyRefresh = internalMutation({
         .query("publishedProfiles")
         .withIndex("by_handle", (q) => q.eq("handle", user.handle))
         .unique();
-      if (published) {
+      // A taken-down snapshot stays frozen until an operator restores it (R06).
+      if (published && !published.takenDownAt) {
         const indices = new Set(await publishedCardIndicesForProp(ctx, published, prop));
         await ctx.db.patch(published._id, {
           revision: published.revision + 1,
@@ -736,7 +738,8 @@ export const markRefreshFailed = internalMutation({
         .query("publishedProfiles")
         .withIndex("by_handle", (q) => q.eq("handle", user.handle))
         .unique();
-      if (published) {
+      // A taken-down snapshot stays frozen until an operator restores it (R06).
+      if (published && !published.takenDownAt) {
         const indices = new Set(await publishedCardIndicesForProp(ctx, published, prop));
         await ctx.db.patch(published._id, {
           profile: {

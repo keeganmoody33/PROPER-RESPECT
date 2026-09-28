@@ -374,5 +374,9 @@ export default defineSchema({
     // Private relationship identity; never part of the public card projection.
     // Null preserves a legacy card whose relationship cannot be resolved safely.
     cardPropIds: v.optional(v.array(v.union(v.id("props"), v.null()))),
+    // Operator takedown (R06). Set, the profile and its aliases read as absent
+    // and publishing is refused until an operator restores it.
+    takenDownAt: v.optional(v.string()),
+    takedownReason: v.optional(v.string()),
   }).index("by_handle", ["handle"]),
 });
