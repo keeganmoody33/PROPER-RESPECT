@@ -1,6 +1,6 @@
 # ADR-060: Data Export and Portability — The Right to Take Your Data
 
-> **Status correction — 2026-09-20:** Account export/restore/merge remains unimplemented intent. Universal-score examples are superseded; retained originals and provenance must not be rewritten to match a proposal. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+> **Status correction — 2026-09-20:** Account export/restore/merge remains unimplemented intent. Universal-score examples are superseded, and on 2026-09-28 (R14) the `credibilityWeight` field was removed from the example below, which keeps the `verification` method label; retained originals and provenance must not be rewritten to match a proposal. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
 
 ## Status
 Accepted — 2026-06-05
@@ -39,7 +39,6 @@ Users own their data. GDPR and CCPA require data portability. But more important
       },
       "status": "ACTIVE",
       "firstTriedAt": "2022-03-01T00:00:00Z",
-      "credibilityWeight": 114,
       "verification": "OAUTH_VERIFIED",
       "affiliateUrl": "https://linear.app?ref=keegan",
       "note": "Switched from Jira. Never looked back.",
