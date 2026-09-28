@@ -120,11 +120,15 @@ to try the app.
 npm run lint
 npm run typecheck
 npm test
-npm run build
+PUBLIC_SITE_ORIGIN=https://public.example npm run build
 npx playwright install chromium
 npm run test:e2e
 ```
 
+A production build accepts only an HTTPS `PUBLIC_SITE_ORIGIN`, so the build
+line sets a placeholder; it overrides the `http://localhost:3000` in
+`.env.local`, which `npm run dev` still uses. Use your real origin when you
+build for a deployment.
 `npm test` runs the Vitest suite (including the Convex backend tests) and the
 Node script tests. `npm run test:e2e` starts the app in fixture mode itself.
 
