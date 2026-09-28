@@ -21,8 +21,9 @@ the owner's local machine.
 | On main, not deployed | 17 Convex files: #52's migration, #58, #60, #64, #81, #90, #91 and R01. `/lecturesfrom` depends on #52. | `git diff 082e90c main -- convex/` |
 | Runtime checks | Last run 2026-09-23. Clerk sign-up read `restricted` on 2026-09-26. None since. | receipts |
 
-Do not deploy main as a shortcut. Releases follow the brief: R10, then K02,
-then K03.
+Do not deploy main outside the release workflow. Releases push a `v*` tag and
+run `.github/workflows/release.yml` ([deployment runbook](DEPLOYMENT.md),
+[v0.2.0](releases/v0.2.0.md)); after R10, the brief's next steps are K02, then K03.
 
 ### Invited-tester outcomes and the tasks that cover them
 
@@ -88,8 +89,8 @@ operator receipts and originals remain private.
 
 The native `proper-respect.com` cutover is complete. Do not restart the former
 apex-to-`props.lecturesfrom.com` transition. Git-triggered deployments remain
-disabled, and the repository's Vercel build command still deploys Convex.
-Follow the deployment runbook for a separately reviewed selective release.
+disabled, and the Vercel build is frontend-only. The backend deploys only from
+the tagged release workflow, after the owner's approval.
 Additional provider reads, recurrence, data transfer, and publication retain
 their separate authorization boundaries.
 
