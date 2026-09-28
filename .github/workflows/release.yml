@@ -13,6 +13,10 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      # Reads the deploy environments' protection rules below.
+      actions: read
     env:
       # Synthetic build configuration, the same as verify.yml. No owner credentials are used.
       NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
@@ -31,6 +35,28 @@ jobs:
             echo "Tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main."
             exit 1
           fi
+      - name: Require protected deploy environments
+        # environment: only names an environment, and a same-named repository or
+        # org secret would still reach a job whose environment is missing or
+        # unprotected. So both environments must exist and require a reviewer
+        # before any deploy job starts. An unreadable environment also fails.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for name in production-backend production-frontend; do
+            status="$(curl --silent --output environment.json --write-out '%{http_code}' \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/environments/$name")"
+            if [ "$status" != "200" ]; then
+              echo "Could not read the $name environment (HTTP $status). Create it with a required reviewer first."
+              exit 1
+            fi
+            if ! jq -e '[.protection_rules[]? | select(.type == "required_reviewers") | (.reviewers // [])[]] | length > 0' environment.json > /dev/null; then
+              echo "The $name environment has no required reviewer. Add one before releasing."
+              exit 1
+            fi
+          done
+          rm -f environment.json
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -46,11 +72,10 @@ jobs:
     timeout-minutes: 20
     # Required reviewers on this environment make the owner approve the deploy.
     environment: production-backend
-    # The key exists only as a secret of this protected environment, and only
-    # the two Convex steps receive it, so npm ci's install scripts never see it.
+    # Only the two Convex steps receive the key, so npm ci's install scripts never see it.
     steps:
-      - name: Require the environment's deploy key
-        # A missing or unprotected environment has no secret, so it can't deploy.
+      - name: Require the deploy key
+        # A missing-secret check only; verify has already required a reviewer here.
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
         run: |
@@ -84,12 +109,11 @@ jobs:
     environment: production-frontend
     env:
       PUBLIC_HANDLE: ${{ vars.PUBLIC_HANDLE }}
-    # The Vercel secrets exist only in this protected environment, and only the
-    # two Vercel steps receive them. The CLI reads them from the environment,
-    # so no step passes --token.
+    # Only the two Vercel steps receive the Vercel secrets. The CLI reads them
+    # from the environment, so no step passes --token.
     steps:
-      - name: Require the environment's Vercel secrets
-        # A missing or unprotected environment has no secrets, so it can't deploy.
+      - name: Require the Vercel secrets
+        # A missing-secret check only; verify has already required a reviewer here.
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -108,6 +132,11 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: release-tools/package-lock.json
+      - name: Install the pinned Vercel CLI
+        # Exact version from release-tools/package-lock.json, installed before
+        # any secret is in scope and without install scripts.
+        run: npm ci --ignore-scripts --prefix release-tools
       - name: Deploy to Vercel production
         # Builds on Vercel, which holds the production values. vercel pull with
         # build --prebuilt can't work: CLERK_SECRET_KEY is a sensitive variable.
@@ -116,8 +145,15 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          DEPLOYMENT_URL="$(npx --yes vercel deploy --prod --yes \
+          DEPLOYMENT_URL="$(release-tools/node_modules/.bin/vercel deploy --prod --yes \
             --meta githubCommitSha="$GITHUB_SHA" --meta gitTag="$GITHUB_REF_NAME")"
+          # Only a plain deployment URL may reach GITHUB_ENV.
+          # [[ =~ ]] tests the whole value, so an extra line is rejected too.
+          url_pattern='^https://[a-z0-9-]+\.vercel\.app$'
+          if ! [[ "$DEPLOYMENT_URL" =~ $url_pattern ]]; then
+            echo "The Vercel CLI did not print a deployment URL."
+            exit 1
+          fi
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
       - name: Require the production domain on this deployment
         # After an Instant Rollback, new deployments don't take the domain until one is promoted.
@@ -126,7 +162,7 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          npx --yes vercel inspect "$DEPLOYMENT_URL" > inspect.txt 2>&1
+          release-tools/node_modules/.bin/vercel inspect "$DEPLOYMENT_URL" > inspect.txt 2>&1
           cat inspect.txt
           if ! grep -Eq '(^|[^.[:alnum:]-])proper-respect\.com([^.[:alnum:]-]|$)' inspect.txt; then
             echo "proper-respect.com is not an alias of $DEPLOYMENT_URL. Promote it or undo the rollback first."

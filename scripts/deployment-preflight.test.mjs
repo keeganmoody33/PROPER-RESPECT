@@ -34,6 +34,33 @@ test("the Vercel build is frontend-only and no Git push deploys anything", () =>
   assert.doesNotMatch(configuration.buildCommand, /convex\s+deploy/);
 });
 
+// The release workflow is read as text: these pin its safety checks (R10).
+const releaseWorkflow = () => readFileSync(".github/workflows/release.yml", "utf8");
+
+test("the release verifies both deploy environments require a reviewer before deploying", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  assert.match(verify, /actions: read/);
+  assert.match(verify, /environments\/\$name/);
+  assert.match(verify, /required_reviewers/);
+  assert.match(verify, /for name in production-backend production-frontend/);
+});
+
+test("the release runs a pinned Vercel CLI, never one fetched at deploy time", () => {
+  const workflow = releaseWorkflow();
+  assert.doesNotMatch(workflow, /npx[^\n]*vercel/);
+  assert.match(workflow, /npm ci --ignore-scripts --prefix release-tools/);
+  const manifest = JSON.parse(readFileSync("release-tools/package.json", "utf8"));
+  const pinned = manifest.dependencies?.vercel;
+  assert.match(pinned ?? "", /^\d+\.\d+\.\d+$/);
+  const lock = JSON.parse(readFileSync("release-tools/package-lock.json", "utf8"));
+  assert.equal(lock.packages?.["node_modules/vercel"]?.version, pinned);
+});
+
+test("the release accepts only a vercel.app deployment URL from the CLI", () => {
+  assert.match(releaseWorkflow(), /\^https:\/\/\[a-z0-9-\]\+\\\.vercel\\\.app\$/);
+});
+
 function runPreflight(environment) {
   return spawnSync(
     process.execPath,

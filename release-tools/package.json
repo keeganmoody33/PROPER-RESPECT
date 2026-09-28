@@ -1,0 +1,8 @@
+{
+  "name": "proper-respect-release-tools",
+  "private": true,
+  "description": "The Vercel CLI the release workflow runs, pinned to one version (R10). Change it only in a reviewed PR.",
+  "dependencies": {
+    "vercel": "60.1.3"
+  }
+}
