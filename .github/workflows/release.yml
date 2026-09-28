@@ -17,6 +17,10 @@ jobs:
       contents: read
       # Reads the deploy environments' protection rules below.
       actions: read
+    outputs:
+      # The frontend smoke test uses this checked value, not vars.PUBLIC_HANDLE,
+      # which an environment-level variable could override there.
+      public_handle: ${{ steps.handle.outputs.value }}
     env:
       # Synthetic build configuration, the same as verify.yml. No owner credentials are used.
       NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
@@ -24,7 +28,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: '1'
       PUBLIC_SITE_ORIGIN: https://public.example
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -36,6 +40,7 @@ jobs:
             exit 1
           fi
       - name: Require the smoke-test handle
+        id: handle
         # Checked here so a missing or malformed variable stops the release
         # before anything deploys, not after (same rule as handleSchema).
         env:
@@ -46,6 +51,7 @@ jobs:
             echo "Set the PUBLIC_HANDLE repository variable to a published handle (lecturesfrom)."
             exit 1
           fi
+          echo "value=$PUBLIC_HANDLE" >> "$GITHUB_OUTPUT"
       - name: Require protected deploy environments
         # environment: only names an environment, and a same-named repository or
         # org secret would still reach a job whose environment is missing or
@@ -62,13 +68,19 @@ jobs:
               echo "Could not read the $name environment (HTTP $status). Create it with a required reviewer first."
               exit 1
             fi
-            if ! jq -e '[.protection_rules[]? | select(.type == "required_reviewers") | (.reviewers // [])[]] | length > 0' environment.json > /dev/null; then
-              echo "The $name environment has no required reviewer. Add one before releasing."
+            # The repository owner must be the only required reviewer: another
+            # user or a team could otherwise approve a production deploy.
+            if ! jq -e --arg owner "$GITHUB_REPOSITORY_OWNER" '
+              [.protection_rules[]? | select(.type == "required_reviewers") | (.reviewers // [])[]] as $reviewers
+              | ($reviewers | length > 0)
+                and ($reviewers | all(.type == "User" and .reviewer.login == $owner))
+            ' environment.json > /dev/null; then
+              echo "The $name environment must require $GITHUB_REPOSITORY_OWNER, and only $GITHUB_REPOSITORY_OWNER, as reviewer."
               exit 1
             fi
           done
           rm -f environment.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -94,10 +106,10 @@ jobs:
             echo "CONVEX_DEPLOY_KEY is not a secret of the production-backend environment. See docs/releases/v0.2.0.md, One-time setup."
             exit 1
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -114,12 +126,12 @@ jobs:
         run: npx convex env set DEPLOYED_SHA "$GITHUB_SHA"
 
   frontend:
-    needs: backend
+    needs: [verify, backend]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production-frontend
     env:
-      PUBLIC_HANDLE: ${{ vars.PUBLIC_HANDLE }}
+      PUBLIC_HANDLE: ${{ needs.verify.outputs.public_handle }}
     # Only the two Vercel steps receive the Vercel secrets. The CLI reads them
     # from the environment, so no step passes --token.
     steps:
@@ -136,10 +148,10 @@ jobs:
               exit 1
             fi
           done
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -180,7 +192,7 @@ jobs:
             exit 1
           fi
       - name: Smoke test the live site
-        # verify has already checked PUBLIC_HANDLE.
+        # PUBLIC_HANDLE is the value verify checked.
         run: |
           for path in "/" "/$PUBLIC_HANDLE" "/sitemap.xml"; do
             status="$(curl --silent --output /dev/null --write-out '%{http_code}' "https://proper-respect.com$path")"

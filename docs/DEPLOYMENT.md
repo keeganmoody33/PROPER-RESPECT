@@ -39,7 +39,8 @@ preview or production deployment. Its build command is
 never deploys Convex. The backend deploys only from the release workflow's
 `backend` job, with `CONVEX_DEPLOY_KEY` from the `production-backend` GitHub
 environment. The release's `verify` job stops unless both
-`production-backend` and `production-frontend` exist with a required reviewer.
+`production-backend` and `production-frontend` exist with the repository owner as
+their only required reviewer, and every action it uses is pinned to a commit.
 Each secret is passed only to the steps that use it, and each deploy job's
 first step stops when a secret is empty. That is only a missing-secret check,
 so keep the secrets in their environments and delete any repository or

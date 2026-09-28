@@ -53,6 +53,26 @@ test("the release checks the smoke-test handle before anything deploys", () => {
   assert.match(verify, /\[\[ "\$PUBLIC_HANDLE" =~/);
 });
 
+test("the release pins every action to a commit SHA", () => {
+  const uses = releaseWorkflow().split("\n").filter(line => /^\s*(- )?uses:/.test(line));
+  assert.ok(uses.length > 0);
+  for (const line of uses) assert.match(line, /@[0-9a-f]{40} # v\d/);
+});
+
+test("the release requires the repository owner as the only reviewer", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  assert.match(verify, /--arg owner "\$GITHUB_REPOSITORY_OWNER"/);
+  assert.match(verify, /\.reviewer\.login == \$owner/);
+});
+
+test("the frontend smoke test uses the handle verify checked", () => {
+  const workflow = releaseWorkflow();
+  const frontend = workflow.slice(workflow.indexOf("\n  frontend:"));
+  assert.doesNotMatch(frontend, /vars\.PUBLIC_HANDLE/);
+  assert.match(frontend, /needs\.verify\.outputs\.public_handle/);
+});
+
 test("the release runs a pinned Vercel CLI, never one fetched at deploy time", () => {
   const workflow = releaseWorkflow();
   assert.doesNotMatch(workflow, /npx[^\n]*vercel/);
