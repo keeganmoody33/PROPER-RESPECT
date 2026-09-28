@@ -400,3 +400,19 @@ test("a Devin response without a sessions count records MISSING_METRIC and keeps
   expectNoSecrets(rows);
   expect((await f.t.run(ctx => ctx.db.get(devinSubscriptionId)))?.lastError).toBe("Devin usage response did not include a sessions count.");
 });
+
+test("a grant whose subscription timestamps became malformed records INVALID_RESPONSE, not a stale grant", async () => {
+  const f = await fixture();
+  const prepared = await f.t.query(makeFunctionReference<"query">("connectors:prepareGithubRefresh"), { subscriptionId: f.ids.subscriptionId });
+  await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { lastAttemptedAt: "not-a-timestamp" }));
+  expect(await f.t.mutation(makeFunctionReference<"mutation">("connectors:completeGithubRefresh"), {
+    grant: prepared.grant, outcome: { kind: "failure" } })).toBe(false);
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ outcome: "FAILURE", errorClass: "INVALID_RESPONSE" })]);
+});
+
+test("a skipped attempt names the connector's provider, not the metric key's", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { metricKey: "devin.sessions" }));
+  await f.call();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE", provider: "GITHUB" })]);
+});

@@ -568,12 +568,15 @@ const REFRESH_SCOPE_ERROR = "Refresh exceeds the approved metric or scope.";
 type RefreshAttempt = {
   subscription: Pick<Doc<"metricSubscriptions">, "_id" | "userId" | "propId" | "metricKey">;
   outcome: "SUCCESS" | "FAILURE" | "SKIPPED";
+  // The connector's provider when known; otherwise it follows the metric key.
+  provider?: string;
   errorClass?: RefreshErrorClass;
   capturedAt?: string;
   attemptedAt?: string;
 };
 
-function providerForMetric(metricKey: string) {
+function refreshProvider(provider: string | undefined, metricKey: string) {
+  if (provider === "GITHUB" || provider === "DEVIN") return provider;
   return metricKey === "github.contributions" ? "GITHUB" as const : "DEVIN" as const;
 }
 
@@ -583,7 +586,7 @@ async function recordRefreshAttempt(ctx: MutationCtx, attempt: RefreshAttempt) {
     subscriptionId: attempt.subscription._id,
     userId: attempt.subscription.userId,
     propId: attempt.subscription.propId,
-    provider: providerForMetric(attempt.subscription.metricKey),
+    provider: refreshProvider(attempt.provider, attempt.subscription.metricKey),
     attemptedAt: attempt.attemptedAt ?? new Date().toISOString(),
     outcome: attempt.outcome,
     ...(attempt.capturedAt !== undefined ? { capturedAt: attempt.capturedAt } : {}),
@@ -598,11 +601,12 @@ export const recordRefreshAttemptOutcome = internalMutation({
     subscriptionId: v.id("metricSubscriptions"),
     outcome: v.union(v.literal("FAILURE"), v.literal("SKIPPED")),
     errorClass: refreshErrorClassValidator,
+    provider: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) return;
-    await recordRefreshAttempt(ctx, { subscription, outcome: args.outcome, errorClass: args.errorClass });
+    await recordRefreshAttempt(ctx, { subscription, outcome: args.outcome, errorClass: args.errorClass, provider: args.provider });
   },
 });
 
@@ -626,12 +630,16 @@ export const completeGithubRefresh = internalMutation({
     const authority = await githubRefreshAuthority(ctx, grant.subscriptionId);
     if (!authority || authority.fingerprint !== grant.fingerprint) {
       const current = await ctx.db.get(grant.subscriptionId);
-      if (current) await recordRefreshAttempt(ctx, { subscription: current, outcome: "SKIPPED", errorClass: "STALE_GRANT" });
+      // Malformed stored timestamps are a bad attempt state, not a changed grant.
+      const malformed = current && [current.lastAttemptedAt, current.lastSuccessfulAt]
+        .some(value => value !== undefined && canonicalTimestamp(value) === null);
+      if (current) await recordRefreshAttempt(ctx, { subscription: current, provider: "GITHUB",
+        ...(malformed ? { outcome: "FAILURE", errorClass: "INVALID_RESPONSE" } : { outcome: "SKIPPED", errorClass: "STALE_GRANT" }) });
       return false;
     }
     const { subscription, connector, prop, published, index } = authority;
     const rejected = async () => {
-      await recordRefreshAttempt(ctx, { subscription, outcome: "FAILURE", errorClass: "INVALID_RESPONSE" });
+      await recordRefreshAttempt(ctx, { subscription, provider: "GITHUB", outcome: "FAILURE", errorClass: "INVALID_RESPONSE" });
       return false;
     };
     const previousAttempt = canonicalTimestamp(subscription.lastAttemptedAt) ?? -1;
@@ -658,7 +666,7 @@ export const completeGithubRefresh = internalMutation({
         value: outcome.value, capturedAt: activity.capturedAt, attributionScope: "PERSONAL", evidenceRuleVersion: "provider-v1", visibility: "PUBLIC" });
       await ctx.db.patch(subscription._id, { lastAttemptedAt: attemptedAt, lastSuccessfulAt: activity.capturedAt, lastError: undefined });
       await ctx.db.patch(connector._id, { status: "CONNECTED", lastSyncedAt: activity.capturedAt, lastError: undefined });
-      await recordRefreshAttempt(ctx, { subscription, outcome: "SUCCESS", capturedAt: activity.capturedAt, attemptedAt });
+      await recordRefreshAttempt(ctx, { subscription, provider: "GITHUB", outcome: "SUCCESS", capturedAt: activity.capturedAt, attemptedAt });
     } else {
       if (prop.activity && !prop.activityEvidenceId && !prop.relationshipVersion) {
         await ctx.db.patch(prop._id, { activity: { ...prop.activity, freshness: "STALE" } });
@@ -669,7 +677,7 @@ export const completeGithubRefresh = internalMutation({
       const message = "GitHub activity response unavailable.";
       await ctx.db.patch(subscription._id, { lastAttemptedAt: attemptedAt, lastError: message });
       await ctx.db.patch(connector._id, { status: "ERROR", lastError: message });
-      await recordRefreshAttempt(ctx, { subscription, outcome: "FAILURE", errorClass: "PROVIDER_UNAVAILABLE", attemptedAt });
+      await recordRefreshAttempt(ctx, { subscription, provider: "GITHUB", outcome: "FAILURE", errorClass: "PROVIDER_UNAVAILABLE", attemptedAt });
     }
     return true;
   },
@@ -716,7 +724,7 @@ export const applyRefresh = internalMutation({
     const prop = await ctx.db.get(subscription.propId);
     if (!connector || connector.provider !== "DEVIN" || connector.status === "REVOKED" ||
         !prop || prop.visibility !== "PUBLIC" || prop.userId !== subscription.userId || connector.userId !== subscription.userId) {
-      await recordRefreshAttempt(ctx, { subscription, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
+      await recordRefreshAttempt(ctx, { subscription, provider: connector?.provider, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
       return;
     }
 
@@ -769,7 +777,7 @@ export const applyRefresh = internalMutation({
       lastSyncedAt: args.activity.capturedAt,
       lastError: undefined,
     });
-    await recordRefreshAttempt(ctx, { subscription, outcome: "SUCCESS", capturedAt: args.activity.capturedAt });
+    await recordRefreshAttempt(ctx, { subscription, provider: connector.provider, outcome: "SUCCESS", capturedAt: args.activity.capturedAt });
   },
 });
 
@@ -786,7 +794,7 @@ export const markRefreshFailed = internalMutation({
     const prop = await ctx.db.get(subscription.propId);
     if (subscription.revokedAt || !connector || connector.provider !== "DEVIN" || connector.status === "REVOKED" ||
         connector.userId !== subscription.userId || !prop || prop.userId !== subscription.userId) {
-      await recordRefreshAttempt(ctx, { subscription, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
+      await recordRefreshAttempt(ctx, { subscription, provider: connector?.provider, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
       return;
     }
     if (prop.activity && !prop.activityEvidenceId && !prop.relationshipVersion) {
@@ -824,7 +832,7 @@ export const markRefreshFailed = internalMutation({
       status: "ERROR",
       lastError: args.message,
     });
-    await recordRefreshAttempt(ctx, { subscription, outcome: "FAILURE", errorClass: args.errorClass ?? "UNEXPECTED" });
+    await recordRefreshAttempt(ctx, { subscription, provider: connector.provider, outcome: "FAILURE", errorClass: args.errorClass ?? "UNEXPECTED" });
   },
 });
 
@@ -834,8 +842,9 @@ export const refreshApproved = internalAction({
     const work = await ctx.runQuery(internal.connectors.listRefreshWork, {});
     for (const item of work) {
       const subscriptionId = item.subscription._id;
+      const provider = item.connector?.provider;
       const skip = () => ctx.runMutation(internal.connectors.recordRefreshAttemptOutcome, {
-        subscriptionId, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
+        subscriptionId, provider, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
       const fail = (message: string, errorClass: RefreshErrorClass) =>
         ctx.runMutation(internal.connectors.markRefreshFailed, { subscriptionId, message, errorClass });
       // Each attempt writes one ledger row. A throw here is recorded and never
@@ -892,7 +901,7 @@ export const refreshApproved = internalAction({
       } catch {
         try {
           await ctx.runMutation(internal.connectors.recordRefreshAttemptOutcome, {
-            subscriptionId, outcome: "FAILURE", errorClass: "UNEXPECTED" });
+            subscriptionId, provider, outcome: "FAILURE", errorClass: "UNEXPECTED" });
         } catch {
           // The ledger write failed as well. Later subscriptions still run.
         }
