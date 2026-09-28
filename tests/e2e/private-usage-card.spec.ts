@@ -56,8 +56,10 @@ test.beforeAll(async () => {
       const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
       const path = resolve(base, `.${pathname === "/" ? "/index.html" : pathname}`);
       if (!path.startsWith(`${base}/`)) { response.writeHead(404).end(); return; }
-      try { response.writeHead(200, { "Content-Type": types[extname(path)] ?? "application/octet-stream" }).end(readFileSync(path)); }
-      catch { response.writeHead(404).end(); }
+      let body: Buffer;
+      try { body = readFileSync(path); }
+      catch { response.writeHead(404).end(); return; }
+      response.writeHead(200, { "Content-Type": types[extname(path)] ?? "application/octet-stream" }).end(body);
     });
     await new Promise<void>(done => instance.listen(0, "127.0.0.1", done));
     const address = instance.address();
