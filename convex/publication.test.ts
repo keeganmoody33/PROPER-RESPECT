@@ -568,11 +568,13 @@ test("stored profile links that aren't plain http(s) are left off the shared pro
 // R09: owner opt-in for the daily GitHub refresh.
 const calendar = (total: number, capturedAt: string) => ({ kind: "contributionCalendar" as const, total, days: [],
   attributionScope: "PERSONAL" as const, capturedAt, freshness: "FRESH" as const, provenanceLabel: "Synthetic GitHub calendar" });
-async function githubFixture(connector: { status?: "CONNECTED" | "ERROR" | "REVOKED" | "NEEDS_REAUTH"; provider?: "GITHUB" | "DEVIN"; scope?: "PERSONAL" | "ORGANIZATION" } = {}) {
+async function githubFixture(connector: { status?: "CONNECTED" | "ERROR" | "REVOKED" | "NEEDS_REAUTH"; provider?: "GITHUB" | "DEVIN"; scope?: "PERSONAL" | "ORGANIZATION"; productSlug?: string } = {}) {
   const t = convexTest(schema, modules);
   const ids = await t.run(async ctx => {
     const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
-    const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "Synthetic" });
+    const productId = await ctx.db.insert("products", connector.productSlug
+      ? { name: "Other tool", slug: connector.productSlug, domain: "other.example", description: "Synthetic" }
+      : { name: "GitHub", slug: "github", domain: "github.com", description: "Synthetic" });
     const propId = await ctx.db.insert("props", { userId, productId, visibility: "PRIVATE", status: "ACTIVE", relationshipVersion: 1,
       confirmedAt: capturedAt, headline: "Daily commits", note: "Owner context", activity: calendar(3, "2026-09-20T10:00:00.000Z") });
     const connectorId = await ctx.db.insert("connectorAccounts", { userId, provider: connector.provider ?? "GITHUB", status: connector.status ?? "CONNECTED",
@@ -649,6 +651,9 @@ for (const [label, connector, overrides] of [
   ["a Devin connector for the GitHub metric", { provider: "DEVIN" as const }, {}],
   ["a GitHub connector that needs reauthorization", { status: "NEEDS_REAUTH" as const }, {}],
   ["an organization-scoped GitHub connector", { scope: "ORGANIZATION" as const }, {}],
+  ["a relationship whose product is not GitHub", { productSlug: "other-tool" }, {}],
+  ["a checked refresh without its connector", {}, { connectorId: undefined }],
+  ["a checked refresh without its metric", {}, { metricKey: undefined }],
 ] as const) test(`refresh is refused for ${label}`, async () => {
   const f = await githubFixture(connector);
   await expect(f.owner.query(api.onboarding.previewPublication, { selections: [f.selection(overrides)] })).rejects.toThrow("refresh");

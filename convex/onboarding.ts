@@ -636,6 +636,11 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
       if (selection.usageLinkUrl !== prop.supportingUrl) throw new Error("Save the link privately before publishing it.");
       if (!usageLinkUrlSchema.safeParse(selection.usageLinkUrl).success) throw new Error("Use an https link without embedded credentials.");
     }
+    // A checked refresh for published activity must name its connection and metric.
+    // Withholding the activity instead stops the refresh, as unchecking does.
+    if (selection.autoRefresh && selection.activity && (!selection.connectorId || !selection.metricKey)) {
+      throw new Error("A refresh needs its connected account and measurement. Reload and review this card again.");
+    }
     if (selection.autoRefresh && selection.connectorId && selection.metricKey && selection.activity) {
       const provider = REFRESH_METRIC_PROVIDERS[selection.metricKey];
       if (!provider) throw new Error("This measurement can't refresh automatically.");
@@ -644,7 +649,9 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
         throw new Error("A connected account is required for refresh.");
       }
       // The same connector states the scheduled GitHub refresh accepts (convex/connectors.ts).
-      if (provider === "GITHUB" && (connector.attributionScope !== "PERSONAL" || !["CONNECTED", "ERROR"].includes(connector.status) ||
+      const product = provider === "GITHUB" ? await ctx.db.get(prop.productId) : null;
+      if (provider === "GITHUB" && (product?.slug !== "github" || connector.attributionScope !== "PERSONAL" ||
+          !["CONNECTED", "ERROR"].includes(connector.status) ||
           selection.activity.kind !== "contributionCalendar" || selection.activity.attributionScope !== "PERSONAL")) {
         throw new Error("A daily GitHub refresh needs your personal GitHub connection and its personal contribution calendar.");
       }
