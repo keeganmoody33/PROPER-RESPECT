@@ -1,10 +1,11 @@
 import { build } from "esbuild";
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 let compiled: string;
 test.beforeAll(async () => {
   const result = await build({
-    stdin: { resolveDir: process.cwd(), contents: `import {createElement} from "react"; import {createRoot} from "react-dom/client"; import {MailboxManagement} from "./components/mailbox-management"; window.saved=[]; createRoot(document.getElementById("root")).render(createElement(MailboxManagement));` },
+    stdin: { resolveDir: process.cwd(), contents: `import {createElement} from "react"; import {createRoot} from "react-dom/client"; import {MailboxManagement} from "./components/mailbox-management"; window.saved=[]; createRoot(document.getElementById("root")).render(createElement(MailboxManagement, window.mailboxProps ?? {available:true}));` },
     bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
     define: { "process.env.NODE_ENV": '"production"' },
     plugins: [{ name: "bounded-picker", setup(builder) {
@@ -12,7 +13,7 @@ test.beforeAll(async () => {
       builder.onLoad({ filter: /.*/, namespace: "synthetic" }, () => ({ resolveDir: process.cwd(), contents: `
         import {getFunctionName} from "convex/server";
         export function useConvexAuth(){return {isAuthenticated:true,isLoading:false}}
-        export function useQuery(){return []}
+        export function useQuery(reference){return getFunctionName(reference)==="mailboxes:listAccounts" ? (window.mailboxAccounts ?? []) : []}
         export function useMutation(reference){return async args=>{window.saved.push({name:getFunctionName(reference),args});return {}}}
         export function usePaginatedQuery(reference,args){
           const name=getFunctionName(reference);
@@ -37,4 +38,110 @@ test("unmatched retained header can select a product without account-evidence jo
   await expect(page.getByText("Header evidence attached privately. Your relationship and usage claims are unchanged.")).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as {saved:unknown[]}).saved)).toEqual([{name:"mailboxDiscovery:reviewUnknown",args:{id:"retained-header",decision:"LINKED",propId:"github-prop"}}]);
   expect(requests).toEqual([]);
+});
+
+for (const width of [1280, 390]) {
+  test(`Gmail is offered only to listed testers at ${width}px (R16)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route("**/*", route => route.abort());
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(() => { (window as unknown as { mailboxProps: unknown }).mailboxProps = { available: false }; });
+    await page.addScriptTag({ content: compiled });
+    await expect(page.getByRole("heading", { name: "Gmail discovery" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add Gmail account" })).toHaveCount(0);
+    await expect(page.getByText("Gmail discovery is open only to invited testers right now.")).toBeVisible();
+    await expect(page.getByText(/Use Add Gmail account/)).toHaveCount(0);
+    expect((await new AxeBuilder({ page }).include("main").analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(() => { (window as unknown as { mailboxProps: unknown }).mailboxProps = { available: true }; });
+    await page.addScriptTag({ content: compiled });
+    await expect(page.getByRole("button", { name: "Add Gmail account" })).toBeVisible();
+    await expect(page.getByText("Gmail discovery is open only to invited testers right now.")).toHaveCount(0);
+  });
+}
+
+test("an existing account can't be reconnected when Gmail isn't open to this user (R16)", async ({ page }) => {
+  await page.route("**/*", route => route.abort());
+  await page.setContent('<main id="root"></main>');
+  await page.evaluate(() => {
+    const w = window as unknown as { mailboxProps: unknown; mailboxAccounts: unknown };
+    w.mailboxProps = { available: false };
+    w.mailboxAccounts = [{ accountId: "synthetic-account", provider: "GOOGLE", status: "NEEDS_REAUTH", accountLabel: "Synthetic mailbox", generation: 1, maintenanceEnabled: false, contexts: [] }];
+  });
+  await page.addScriptTag({ content: compiled });
+  await page.getByText("Automatic discovery and account controls").click();
+  await expect(page.getByRole("button", { name: "Reconnect this Gmail account" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Disconnect and stop collection" })).toBeVisible();
+  await expect(page.locator("article").getByText("Gmail discovery is open only to invited testers right now.")).toBeVisible();
+
+  await page.setContent('<main id="root"></main>');
+  await page.evaluate(() => {
+    const w = window as unknown as { mailboxProps: unknown; mailboxAccounts: unknown };
+    w.mailboxProps = { available: true };
+    w.mailboxAccounts = [{ accountId: "synthetic-account", provider: "GOOGLE", status: "NEEDS_REAUTH", accountLabel: "Synthetic mailbox", generation: 1, maintenanceEnabled: false, contexts: [] }];
+  });
+  await page.addScriptTag({ content: compiled });
+  await page.getByText("Automatic discovery and account controls").click();
+  await expect(page.getByRole("button", { name: "Reconnect this Gmail account" })).toBeVisible();
+});
+
+test("recovery messages don't tell an unlisted user to reconnect (R16)", async ({ page }) => {
+  await page.route("**/*", route => route.abort());
+  for (const lastFailure of ["REAUTHORIZE", "TEMPORARY"]) {
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(failure => {
+      const w = window as unknown as { mailboxProps: unknown; mailboxAccounts: unknown };
+      w.mailboxProps = { available: false };
+      w.mailboxAccounts = [{ accountId: "synthetic-account", provider: "GOOGLE", status: "NEEDS_REAUTH", accountLabel: "Synthetic mailbox", generation: 1, maintenanceEnabled: false, contexts: [], lastFailure: failure }];
+    }, lastFailure);
+    await page.addScriptTag({ content: compiled });
+    const alert = page.getByRole("alert");
+    await expect(alert).toBeVisible();
+    await expect(alert).not.toContainText(/reconnect/i);
+    await expect(alert).toContainText("Your retained evidence");
+  }
+});
+
+test("a failed discovery run doesn't tell an unlisted user to reconnect either (R16)", async ({ page }) => {
+  await page.route("**/*", route => route.abort());
+  const render = async (available: boolean) => {
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(isAvailable => {
+      const w = window as unknown as { mailboxProps: unknown; mailboxAccounts: unknown };
+      w.mailboxProps = { available: isAvailable };
+      w.mailboxAccounts = [{
+        accountId: "synthetic-account", provider: "GOOGLE", status: "NEEDS_REAUTH", accountLabel: "Synthetic mailbox", generation: 1,
+        maintenanceEnabled: false, contexts: [], lastFailure: "REAUTHORIZE",
+        discoveryRun: { id: "synthetic-run", status: "FAILED", failure: "REAUTHORIZE", phase: "KNOWN_PRODUCTS", phaseAttempts: 3, totalAttempts: 3,
+          pagesRead: 1, messagesRead: 5, retainedRecords: 2, maxAttemptsPerPhase: 100, maxHeaders: 1000, updatedAt: "2026-09-19T12:00:00Z" },
+      }];
+    }, available);
+    await page.addScriptTag({ content: compiled });
+    await page.getByText("Automatic discovery and account controls").click();
+  };
+  await render(false);
+  const card = page.locator("article");
+  await expect(card.getByText("Google access expired or was revoked.", { exact: false }).first()).toBeVisible();
+  await expect(card).not.toContainText(/reconnect/i);
+  await render(true);
+  await expect(page.getByText("Reconnect this Gmail account before starting another run.")).toBeVisible();
+});
+
+test("a failed-authorization notice doesn't invite an unlisted user to try again (R16)", async ({ page }) => {
+  await page.route("**/*", route => route.request().url().startsWith("http://synthetic.test/")
+    ? route.fulfill({ contentType: "text/html", body: '<main id="root"></main>' }) : route.abort());
+  for (const available of [false, true]) {
+    await page.goto("http://synthetic.test/onboarding?gmail=failed");
+    await page.evaluate(isAvailable => { (window as unknown as { mailboxProps: unknown }).mailboxProps = { available: isAvailable }; }, available);
+    await page.addScriptTag({ content: compiled });
+    const notice = page.getByRole("status").filter({ hasText: "Gmail authorization did not complete." });
+    await expect(notice).toBeVisible();
+    if (available) await expect(notice).toContainText("Start a new connection attempt.");
+    else {
+      await expect(notice).not.toContainText(/new connection attempt|reconnect/i);
+      await expect(notice).toContainText("Gmail discovery is open only to invited testers right now.");
+    }
+  }
 });

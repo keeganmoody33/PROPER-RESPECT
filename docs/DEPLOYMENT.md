@@ -355,6 +355,14 @@ Prerequisites for an operator-authorized development run:
   provision privately, never commit its output. Keep old versions available
   while their envelopes exist. Gmail keys are separate from the legacy
   `CONNECTOR_ENCRYPTION_KEY`.
+- Configure `MAILBOX_GOOGLE_TEST_EMAILS` in Convex (R16): the sign-in emails
+  allowed to add or reconnect a Gmail account, separated by commas. Matching
+  ignores case. **A missing or empty value allows nobody**, so set it in every
+  deployment that should offer Gmail, including development. Keep it to the
+  owner and the invited testers, the same accounts listed as Google test users.
+  Others don't see **Add Gmail account**, and `mailboxGoogle.start` refuses
+  them before any authorization begins. Gmail accounts that are already
+  connected keep working. To cut one off, disconnect it.
 - Enable the Gmail API and configure consent/test-user access for the
   requested `openid`, `email`, and `gmail.readonly` scopes. Public release
   depends on Google's applicable restricted-scope verification requirements.

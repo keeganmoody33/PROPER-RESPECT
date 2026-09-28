@@ -1,4 +1,5 @@
 import { isHttpUrl, validateProfileLinks } from "../src/domain/profile-links";
+import { mailboxTesterAllowed } from "../src/domain/mailbox-testers";
 import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { addManualProductArgs, addManualProductHandler } from "./manualProducts";
 import { ensureProductBrand, retainedProductBrand } from "./productBrands";
@@ -237,6 +238,7 @@ export const getState = query({
       hasClaimedPublicIdentity: site?.handle === user.handle,
       brandEnrichmentAvailable: true,
       privateInventoryAvailable: true,
+      mailboxAvailable: mailboxTesterAllowed(identity.email, process.env.MAILBOX_GOOGLE_TEST_EMAILS),
       drafts,
       connectors: connectors.map((connector) => ({
         _id: connector._id,

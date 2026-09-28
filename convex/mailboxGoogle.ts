@@ -9,6 +9,7 @@ import { exchangeMailboxAuthorization, refreshMailboxAuthorization, MailboxProvi
 import { decryptMailboxCredential, encryptMailboxCredential, type MailboxKeyring } from "../src/server/mailbox-credentials";
 import { readGmailPage, MailboxCursorError } from "../src/server/mailbox-gmail";
 import { mailboxScanModeValidator } from "./mailboxTables";
+import { MAILBOX_TESTERS_ONLY, mailboxTesterAllowed } from "../src/domain/mailbox-testers";
 
 function config() {
   const clientId = process.env.MAILBOX_GOOGLE_CLIENT_ID;
@@ -31,6 +32,9 @@ const digest = (state: string) => createHash("sha256").update(state, "ascii").di
 export const start = action({
   args: { accountId: v.optional(v.id("mailboxAccounts")), expectedGeneration: v.optional(v.number()) },
   handler: async (ctx, args): Promise<{ url: string }> => {
+    // Only listed testers may start (or restart) a Gmail authorization.
+    const identity = await ctx.auth.getUserIdentity();
+    if (!mailboxTesterAllowed(identity?.email, process.env.MAILBOX_GOOGLE_TEST_EMAILS)) throw new Error(MAILBOX_TESTERS_ONLY);
     const { oauth } = config();
     keyring();
     const state = createOAuthState();

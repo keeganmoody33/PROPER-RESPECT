@@ -16,13 +16,14 @@ beforeEach(() => {
   vi.stubEnv("MAILBOX_APPLICATION_ORIGIN", "https://props.example.test");
   vi.stubEnv("MAILBOX_ENCRYPTION_ACTIVE_VERSION", "v1");
   vi.stubEnv("MAILBOX_ENCRYPTION_KEYS", JSON.stringify(keyring.keys));
+  vi.stubEnv("MAILBOX_GOOGLE_TEST_EMAILS", "owner@example.test,other@example.test");
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 async function setup() {
   const t = convexTest(schema, modules);
   const ownerId = await t.run(ctx => ctx.db.insert("users", { handle: "owner", authSubject: "owner", displayName: "Owner", bio: "" }));
   await t.run(ctx => ctx.db.insert("users", { handle: "other", authSubject: "other", displayName: "Other", bio: "" }));
-  return { t, ownerId, owner: t.withIdentity({ subject: "owner" }), other: t.withIdentity({ subject: "other" }) };
+  return { t, ownerId, owner: t.withIdentity({ subject: "owner", email: "owner@example.test" }), other: t.withIdentity({ subject: "other", email: "other@example.test" }) };
 }
 function provider(account = "google-sub", grantedScope = scope) {
   const fetcher = vi.fn<typeof fetch>().mockImplementation(async input => {
