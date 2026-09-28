@@ -5,6 +5,7 @@ import type { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { InventoryRelationshipDetails, PrivateInventoryView, type InventoryData, type InventoryEvidence } from "@/components/private-inventory";
 import { AddProductForm, SharingPreview } from "@/components/onboarding-client";
+import { ObservedStartDateAction } from "@/components/private-evidence-panel";
 
 const initial: InventoryData = { hasMore: false, cards: [{
   prop: { _id: "synthetic-prop" as Id<"props">, _creationTime: 1, userId: "synthetic-owner" as Id<"users">,
@@ -92,6 +93,9 @@ export function InventoryFixture() {
         setDeletions(current => [...current, evidenceId]);
         setEvidence(current => current.filter(source => source.id !== evidenceId));
       }}
+      renderEvidence={(_current, controls) => <ObservedStartDateAction
+        observation={{ kind: "FIRST_USE", scope: "PERSONAL", acquisition: "USER_SUPPLIED", date: "2024-06-03", excerpt: "Synthetic observed first use: 2024-06-03" }}
+        verdict="CORRECT" {...controls} />}
       renderHistory={current => <p>Synthetic prior states: {current.previousStatuses.join(", ") || "none"}</p>} />} />
     <button type="button" onClick={() => { loseManualResponse.current = true; }}>Simulate one lost add response</button>
     <AddProductForm onAdd={async input => {
