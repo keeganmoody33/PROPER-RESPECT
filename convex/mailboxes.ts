@@ -415,7 +415,8 @@ export const startScheduledScan = internalMutation({
   handler: async (ctx, args) => {
     const account = await ctx.db.get(args.accountId);
     if (!account || account.generation !== args.expectedGeneration || account.status !== "CONNECTED" || account.provider !== "GOOGLE" ||
-        !account.maintenanceEnabled || account.nextMaintenanceAt === undefined || account.nextMaintenanceAt > Date.now()) return null;
+        !account.maintenanceEnabled || account.nextMaintenanceAt === undefined || account.nextMaintenanceAt > Date.now() ||
+        revocationActive(account)) return null;
     if (account.discoveryRunId) {
       const run = await ctx.db.get(account.discoveryRunId);
       if (run && !isDiscoveryTerminal(run)) return null;
@@ -470,6 +471,7 @@ export const startDiscoveryRun = mutation({
     }
     await requireNoDiscoveryRun(ctx, account);
     if (account.status !== "CONNECTED") throw new Error("Reconnect this mailbox first.");
+    if (revocationActive(account)) throw new Error("Mailbox disconnect in progress.");
     if (account.activeJobId) {
       const job = await ctx.db.get(account.activeJobId);
       if (job?.status === "ACTIVE" && job.leaseExpiresAt > Date.now()) throw new Error("Wait for the active mailbox read to finish.");

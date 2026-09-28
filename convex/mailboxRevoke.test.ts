@@ -266,3 +266,23 @@ test("a revocation that outlived its window can't finish or clear a newer one (R
   expect(after.status).toBe("DISCONNECTED");
   expect(after.revocationPending).toBeUndefined();
 });
+
+test("discovery runs and scheduled scans claim nothing during a revocation (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const due = Date.now() - 1000;
+  await t.run(ctx => ctx.db.patch(connection.accountId, { maintenanceEnabled: true, nextMaintenanceAt: due }));
+  let during: { run?: string; scheduled?: unknown; nextMaintenanceAt?: number; runs?: number } = {};
+  provider(async () => {
+    const run = await owner.mutation(api.mailboxes.startDiscoveryRun, { accountId: connection.accountId, expectedGeneration: 1, requestId: "request-r17-01" })
+      .then(() => "started", error => (error as Error).message);
+    const scheduled = await t.mutation(internal.mailboxes.startScheduledScan, { accountId: connection.accountId, expectedGeneration: 1 });
+    const account = await t.run(ctx => ctx.db.get(connection.accountId));
+    const runs = (await t.run(ctx => ctx.db.query("mailboxDiscoveryRuns").collect())).length;
+    during = { run, scheduled, nextMaintenanceAt: account?.nextMaintenanceAt, runs };
+    return new Response("{}");
+  });
+  await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+  expect(during).toEqual({ run: expect.stringContaining("Mailbox disconnect in progress."), scheduled: null, nextMaintenanceAt: due, runs: 0 });
+});
