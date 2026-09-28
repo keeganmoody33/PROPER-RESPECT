@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
-import { defaultReview, explicitPublicationCards, githubRefreshConnector, isCurrentReview, reviewActivity, reviewUsageLink, setReviewCostVisibility, unpublishAllSelections, type ReviewEdit } from "@/src/domain/review";
+import { defaultReview, explicitPublicationCards, githubRefreshConnector, isCurrentReview, reviewActivity, reviewUsageLink, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
 import { buildExport, collectPages, downloadJson, exportFilename } from "@/src/client/export-data";
 import { USAGE_LINK_LABELS, usageLinkLabelText } from "@/src/domain/usage-links";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
@@ -141,6 +141,7 @@ function Builder() {
   >({});
   const [preview, setPreview] = useState<{
     profile: PublicProfile; revision: number; previewHash: string; selections: FunctionArgs<typeof api.onboarding.publishSelected>["selections"]; basis: string;
+    removeAllCards?: boolean;
   } | null>(null);
   const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, cards: state?.cards, user: state?.user }), [reviewEdits, state?.cards, state?.user]);
 
@@ -330,15 +331,13 @@ function Builder() {
     });
   }
 
-  // Unpublish all (R15): the same preview and approval as any other change.
+  // Unpublish all (R15): the server removes every card, including older ones it
+  // can't match to a relationship, after the same preview and approval.
   async function previewUnpublishAll() {
     if (!state) return;
     await run("Preview ready: no product cards would stay public. Your handle, name, bio and profile links stay public. Approve it to publish.", async () => {
-      const cards = state.cards.flatMap(card => card.product ? [{ ...card, product: card.product }] : []);
-      const selections = unpublishAllSelections(cards, Boolean(state.privateInventoryAvailable));
-      if (selections.length === 0) throw new Error("No published cards to remove.");
-      const result = await convex.query(api.onboarding.previewPublication, { selections });
-      setPreview({ ...result, selections, basis: previewBasis });
+      const result = await convex.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
+      setPreview({ ...result, selections: [], basis: previewBasis, removeAllCards: true });
     });
   }
 
@@ -361,7 +360,8 @@ function Builder() {
       return;
     }
     await run("Your approved preview is now shared. Other private information remains private.", async () => {
-      await publishSelected({ selections: preview.selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+      await publishSelected({ selections: preview.selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+        ...(preview.removeAllCards ? { removeAllCards: true } : {}) });
       setPreview(null);
       setReviewEdits({});
     });

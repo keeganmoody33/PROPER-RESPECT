@@ -6,7 +6,6 @@ import { expect, test } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { unpublishAllSelections } from "../src/domain/review";
 import { collectPages } from "../src/client/export-data";
 
 const modules = import.meta.glob("./**/*.ts");
@@ -113,29 +112,95 @@ test("an export larger than one page arrives complete", async () => {
   }
 });
 
+async function publishAll(owner: Awaited<ReturnType<typeof fixture>>["owner"], t: Awaited<ReturnType<typeof fixture>>["t"], propIds: Id<"props">[]) {
+  for (let start = 0; start < propIds.length; start += 100) {
+    const selections = await Promise.all(propIds.slice(start, start + 100).map(async propId => {
+      const prop = (await t.run(ctx => ctx.db.get(propId)))!;
+      return { propId, expectedRelationshipVersion: prop.relationshipVersion ?? 0, publish: true, status: prop.status, headline: prop.headline, note: prop.note,
+        primaryLink: { type: "CANONICAL" as const, url: "https://shared.example", label: "Visit" }, autoRefresh: false };
+    }));
+    const preview = await owner.query(api.onboarding.previewPublication, { selections });
+    await owner.mutation(api.onboarding.publishSelected, { selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  }
+}
+
+async function removeAllCards(owner: Awaited<ReturnType<typeof fixture>>["owner"]) {
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
+  expect(preview.profile.cards).toEqual([]);
+  await owner.mutation(api.onboarding.publishSelected, { selections: [], removeAllCards: true, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  return preview;
+}
+
+const publishedProfile = (t: Awaited<ReturnType<typeof fixture>>["t"]) =>
+  t.run(ctx => ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique());
+
 test("unpublish all removes every card and keeps the profile fields public", async () => {
   const { owner, t, propIds } = await fixture();
-  const publishArgs = async (selections: unknown[]) => {
-    const preview = await owner.query(api.onboarding.previewPublication, { selections } as never);
-    return { selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash } as never;
-  };
-  const publishSelections = await Promise.all(propIds.map(async propId => {
-    const prop = await t.run(ctx => ctx.db.get(propId));
-    return { propId, expectedRelationshipVersion: prop?.relationshipVersion ?? 0, publish: true, status: prop!.status, headline: prop!.headline, note: prop!.note,
-      primaryLink: { type: "CANONICAL" as const, url: "https://shared.example", label: "Visit" }, autoRefresh: false };
-  }));
-  await owner.mutation(api.onboarding.publishSelected, await publishArgs(publishSelections));
-  const state = await owner.query(api.onboarding.getState, { includeClaims: false });
-  const cards = state!.cards.flatMap(card => card.product ? [{ ...card, product: card.product }] : []);
-  const selections = unpublishAllSelections(cards, true);
-  expect(selections.map(selection => selection.propId).sort()).toEqual([...propIds].sort());
-  const preview = await owner.query(api.onboarding.previewPublication, { selections });
-  expect(preview.profile.cards).toEqual([]);
+  await publishAll(owner, t, propIds);
+  const preview = await removeAllCards(owner);
   expect(preview.profile).toMatchObject({ handle: "owner", displayName: "Owner", bio: "My bio" });
-  await owner.mutation(api.onboarding.publishSelected, await publishArgs(selections));
-  const published = await t.run(ctx => ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique());
+  const published = await publishedProfile(t);
   expect(published?.profile.cards).toEqual([]);
+  expect(published?.cardPropIds).toEqual([]);
   expect(published?.profile).toMatchObject({ handle: "owner", displayName: "Owner", bio: "My bio" });
   const props = await t.run(ctx => Promise.all(propIds.map(propId => ctx.db.get(propId))));
   expect(props.every(prop => prop?.visibility === "PRIVATE")).toBe(true);
+});
+
+test("unpublish all removes older cards that can't be matched to a relationship", async () => {
+  const { owner, t, propIds } = await fixture();
+  await publishAll(owner, t, propIds);
+  const before = await publishedProfile(t);
+  // An older publication stored no relationship identity for its cards.
+  await t.run(ctx => ctx.db.patch(before!._id, { cardPropIds: undefined }));
+  const state = await owner.query(api.onboarding.getState, { includeClaims: false });
+  expect(state!.cards.some(card => card.isPublishedAtCurrentHandle)).toBe(false);
+  await removeAllCards(owner);
+  expect((await publishedProfile(t))?.profile.cards).toEqual([]);
+  const props = await t.run(ctx => Promise.all(propIds.map(propId => ctx.db.get(propId))));
+  expect(props.every(prop => prop?.visibility === "PRIVATE")).toBe(true);
+});
+
+test("unpublish all works for more than 100 relationships in one step", async () => {
+  const { owner, t, propIds } = await fixture({ props: 101 });
+  await publishAll(owner, t, propIds);
+  expect((await publishedProfile(t))?.profile.cards).toHaveLength(101);
+  await removeAllCards(owner);
+  expect((await publishedProfile(t))?.profile.cards).toEqual([]);
+});
+
+test("a remove-all preview can't approve a different publish, and remove-all takes no other changes", async () => {
+  const { owner, t, propIds } = await fixture();
+  await publishAll(owner, t, propIds);
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash }))
+    .rejects.toThrow("The sharing preview changed");
+  const prop = (await t.run(ctx => ctx.db.get(propIds[0])))!;
+  await expect(owner.query(api.onboarding.previewPublication, { removeAllCards: true, selections: [{ propId: propIds[0], expectedRelationshipVersion: prop.relationshipVersion ?? 0, publish: false, status: prop.status, headline: prop.headline, note: prop.note, autoRefresh: false }] }))
+    .rejects.toThrow("Remove all cards on its own");
+  expect((await publishedProfile(t))?.profile.cards).toHaveLength(2);
+});
+
+test("the export says exactly when a relationship's history was cut off", async () => {
+  const { owner, t, userId, propIds } = await fixture({ props: 2 });
+  const [exact, over] = propIds;
+  await t.run(async ctx => {
+    // Each relationship already has one event; top them up to 1,000 and 1,001.
+    for (const [propId, count] of [[exact, 999], [over, 1000]] as const) {
+      for (let index = 0; index < count; index++) {
+        await ctx.db.insert("relationshipEvents", {
+          userId, propId, operationId: `extra-${index}`, version: index + 2, recordedAt: capturedAt, basis: "OWNER_ASSERTED",
+          before: { status: "ACTIVE", goTo: false, confirmed: true, headline: "", note: "" },
+          after: { status: "ACTIVE", goTo: false, confirmed: true, headline: "", note: "" }, requestJson: "{}",
+        });
+      }
+    }
+  });
+  const rows = await collectPages(cursor => owner.query(api.inventory.exportRelationships, { paginationOpts: { numItems: 10, cursor } }));
+  const byId = new Map(rows.map(row => [row.id, row]));
+  expect(byId.get(exact)).toMatchObject({ historyComplete: true });
+  expect(byId.get(exact)!.history).toHaveLength(1000);
+  expect(byId.get(over)).toMatchObject({ historyComplete: false });
+  expect(byId.get(over)!.history).toHaveLength(1000);
+  expect(byId.get(exact)).toMatchObject({ linksComplete: true });
 });

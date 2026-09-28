@@ -593,12 +593,17 @@ async function hasActiveGithubRefresh(ctx: QueryCtx | MutationCtx, userId: Id<"u
   return subscriptions.some(subscription => subscription.userId === userId && !subscription.revokedAt);
 }
 
-async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users">, selections: PublicationSelection[]) {
+// removeAllCards (R15, "Unpublish all cards"): the server drops every published
+// card itself, including older cards that can't be matched to a relationship,
+// in one step with no selection limit. The profile fields are not cards and
+// stay public. It can't be combined with other changes.
+async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users">, selections: PublicationSelection[], removeAllCards = false) {
   const owners = await ownersForHandle(ctx, user.handle);
   if (owners.length !== 1 || owners[0]._id !== user._id) throw new Error("Publication requires the unique owner of this handle. Resolve account ownership before sharing.");
   // Older rows were saved before these caps, so every publish checks them.
   if (user.displayName.length > DISPLAY_NAME_MAX) throw new Error("Shorten your display name to 80 characters or fewer before sharing.");
   if (user.bio.length > BIO_MAX) throw new Error("Shorten your bio to 500 characters or fewer before sharing.");
+  if (removeAllCards && selections.length > 0) throw new Error("Remove all cards on its own, without other card changes.");
   if (selections.length > 100) throw new Error("Select at most 100 relationships to change.");
   const selectedIds = new Set(selections.map(selection => selection.propId));
   if (selectedIds.size !== selections.length) throw new Error("Select each relationship only once.");
@@ -668,7 +673,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   const products = await Promise.all([...new Set(allProps.map(prop => prop.productId))].map(id => ctx.db.get(id)));
   const productById = new Map(products.flatMap(product => product ? [[product._id, product] as const] : []));
   const selectedProducts = new Set(allProps.filter(prop => selectedIds.has(prop._id)).map(prop => productById.get(prop.productId)?.slug));
-  const preserved = (published?.profile.cards ?? []).flatMap<{
+  const preserved = removeAllCards ? [] : (published?.profile.cards ?? []).flatMap<{
     card: Doc<"publishedProfiles">["profile"]["cards"][number]; propId: Id<"props"> | null;
   }>((card, index) => {
     const propId = previousPropIds[index];
@@ -724,29 +729,39 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   }));
   const displayProfile = publicProfileSchema.parse({ ...profile, cards: displayCards });
   const revision = published?.revision ?? 0;
-  const previewHash = await sha256(canonicalJson({ profile: displayProfile, revision, selections, userId: user._id }));
+  // The flag is part of what the owner approved, so a remove-all preview can't approve another publish.
+  const previewHash = await sha256(canonicalJson({ profile: displayProfile, revision, selections, userId: user._id, ...(removeAllCards ? { removeAllCards: true } : {}) }));
   return { profile, displayProfile, previewHash, revision, published, propsById, productById,
     cardPropIds: cardsWithIdentity.map(entry => entry.propId) };
 }
 
 export const previewPublication = query({
-  args: { selections: v.array(selectionValidator) },
-  handler: async (ctx, { selections }) => {
-    const preview = await preparePublication(ctx, await requireUser(ctx), selections);
+  args: { selections: v.array(selectionValidator), removeAllCards: v.optional(v.boolean()) },
+  handler: async (ctx, { selections, removeAllCards }) => {
+    const preview = await preparePublication(ctx, await requireUser(ctx), selections, removeAllCards === true);
     return { profile: preview.displayProfile, revision: preview.revision, previewHash: preview.previewHash };
   },
 });
 
 export const publishSelected = mutation({
-  args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.number(), expectedPreviewHash: v.string() },
-  handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash }) => {
+  args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.number(), expectedPreviewHash: v.string(), removeAllCards: v.optional(v.boolean()) },
+  handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash, removeAllCards }) => {
     const user = await requireUser(ctx);
-    const prepared = await preparePublication(ctx, user, selections);
+    const prepared = await preparePublication(ctx, user, selections, removeAllCards === true);
     // A republish replaces the snapshot, so it must never lift an operator takedown.
     if (prepared.published?.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
     if (expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");
     if (expectedPreviewHash !== prepared.previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
     const now = new Date().toISOString();
+    if (removeAllCards === true) {
+      // Every public relationship goes private and stops refreshing, as each
+      // one would if unpublished on its own.
+      for (const prop of prepared.propsById.values()) {
+        if (prop.visibility === "PUBLIC") await ctx.db.patch(prop._id, { visibility: "PRIVATE" });
+      }
+      const subscriptions = await ctx.db.query("metricSubscriptions").withIndex("by_user", q => q.eq("userId", user._id)).collect();
+      for (const subscription of subscriptions) if (!subscription.revokedAt) await ctx.db.patch(subscription._id, { revokedAt: now });
+    }
     const brandProductIds = new Set<Id<"products">>();
     for (const selection of selections) {
       const prop = prepared.propsById.get(selection.propId)!;

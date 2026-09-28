@@ -53,10 +53,9 @@ const mutations = {
   },
   "onboarding:publishSelected": async args => {
     record("publishSelected", args);
-    // Only "unpublish all" (R15) publishes here: every selection removes a card.
-    if (!args.selections.length || args.selections.some(selection => selection.publish)) throw new Error("Publication is intentionally outside this fixture journey.");
-    const removed = new Set(args.selections.map(selection => selection.propId));
-    retain({ ...state, cards: state.cards.map(card => removed.has(card.prop._id) ? { ...card, isPublishedAtCurrentHandle: false, prop: { ...card.prop, visibility: "PRIVATE" } } : card) });
+    // Only "unpublish all" (R15) publishes here.
+    if (!args.removeAllCards) throw new Error("Publication is intentionally outside this fixture journey.");
+    retain({ ...state, cards: state.cards.map(card => ({ ...card, isPublishedAtCurrentHandle: false, prop: { ...card.prop, visibility: card.prop.visibility === "PUBLIC" ? "PRIVATE" : card.prop.visibility } })) });
     return null;
   },
 };
@@ -78,7 +77,7 @@ const client = {
     if (exportQuery) { record(getFunctionName(ref), args); return exportQuery(args); }
     if (getFunctionName(ref) !== "onboarding:previewPublication") throw new Error("Unexpected fixture query.");
     record("previewPublication", args);
-    const cards = args.selections.filter(selection => selection.publish).map(selection => {
+    const cards = args.removeAllCards ? [] : args.selections.filter(selection => selection.publish).map(selection => {
       const saved = state.cards.find(card => card.prop._id === selection.propId);
       if (saved.prop.visibility !== "PRIVATE") throw new Error("Save privately before preview.");
       return { product: saved.product, status: selection.status, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink };

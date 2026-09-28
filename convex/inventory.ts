@@ -195,6 +195,7 @@ export const history = query({
 // Convex's per-function read limits; the client assembles the pages.
 
 const EXPORT_HISTORY_LIMIT = 1000;
+const EXPORT_LINK_LIMIT = 100;
 
 export const exportProfile = query({
   args: {},
@@ -220,8 +221,9 @@ export const exportRelationships = query({
     const result = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).paginate(options);
     const page = await Promise.all(result.page.map(async prop => {
       const product = await ctx.db.get(prop.productId);
-      const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).take(100);
-      const events = await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", prop._id)).take(EXPORT_HISTORY_LIMIT);
+      // One extra row shows whether anything was left out.
+      const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).take(EXPORT_LINK_LIMIT + 1);
+      const events = await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", prop._id)).take(EXPORT_HISTORY_LIMIT + 1);
       return {
         id: prop._id,
         product: product ? { name: product.name, slug: product.slug, domain: product.domain } : null,
@@ -230,9 +232,10 @@ export const exportRelationships = query({
         relationshipVersion: prop.relationshipVersion ?? 0, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
         supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId,
         activity: prop.activity, cost: prop.cost, costVisibility: prop.costVisibility,
-        links: links.map(link => ({ type: link.type, url: link.url, label: link.label, isPrimary: link.isPrimary })),
-        history: events.map(event => ({ version: event.version, recordedAt: event.recordedAt, basis: event.basis, before: event.before, after: event.after })),
-        historyComplete: events.length < EXPORT_HISTORY_LIMIT,
+        links: links.slice(0, EXPORT_LINK_LIMIT).map(link => ({ type: link.type, url: link.url, label: link.label, isPrimary: link.isPrimary })),
+        linksComplete: links.length <= EXPORT_LINK_LIMIT,
+        history: events.slice(0, EXPORT_HISTORY_LIMIT).map(event => ({ version: event.version, recordedAt: event.recordedAt, basis: event.basis, before: event.before, after: event.after })),
+        historyComplete: events.length <= EXPORT_HISTORY_LIMIT,
       };
     }));
     return { ...result, page };

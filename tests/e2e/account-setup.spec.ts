@@ -256,8 +256,7 @@ for (const width of [1280, 390]) test(`unpublish all and download my data at ${w
   const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
   const published = calls.filter((call: { name: string }) => call.name === "publishSelected");
   expect(published).toHaveLength(1);
-  expect(published[0].args.selections.map((selection: { propId: string; publish: boolean }) => [selection.propId, selection.publish]))
-    .toEqual([["prop-one", false], ["prop-two", false]]);
+  expect(published[0].args).toMatchObject({ selections: [], removeAllCards: true });
   // Two relationship pages prove the download follows the cursor.
   expect(calls.filter((call: { name: string }) => call.name === "inventory:exportRelationships")).toHaveLength(2);
   expect(errors).toEqual([]);
