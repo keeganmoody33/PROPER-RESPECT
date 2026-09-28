@@ -94,12 +94,16 @@ jobs:
             fi
             # The repository owner must be the only required reviewer: another
             # user or a team could otherwise approve a production deploy.
+            # prevent_self_review would stop the owner, who pushes the tag, from
+            # approving their own release, so the run would wait forever.
             if ! jq -e --arg owner "$GITHUB_REPOSITORY_OWNER" '
-              [.protection_rules[]? | select(.type == "required_reviewers") | (.reviewers // [])[]] as $reviewers
+              [.protection_rules[]? | select(.type == "required_reviewers")] as $rules
+              | [$rules[] | (.reviewers // [])[]] as $reviewers
               | ($reviewers | length > 0)
                 and ($reviewers | all(.type == "User" and .reviewer.login == $owner))
+                and ($rules | all(.prevent_self_review != true))
             ' environment.json > /dev/null; then
-              echo "The $name environment must require $GITHUB_REPOSITORY_OWNER, and only $GITHUB_REPOSITORY_OWNER, as reviewer."
+              echo "The $name environment must require $GITHUB_REPOSITORY_OWNER, and only $GITHUB_REPOSITORY_OWNER, as reviewer, with \"Prevent self-review\" off."
               exit 1
             fi
           done
@@ -213,8 +217,13 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+          # The deployment the backend job just deployed, checked by verify.
+          CONVEX_URL: https://${{ needs.verify.outputs.convex_deployment }}.convex.cloud
         run: |
+          # Bind this build and its runtime to the checked backend, whatever
+          # NEXT_PUBLIC_CONVEX_URL Vercel's project settings hold.
           DEPLOYMENT_URL="$(release-tools/node_modules/.bin/vercel deploy --prod --yes \
+            --build-env NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL" --env NEXT_PUBLIC_CONVEX_URL="$CONVEX_URL" \
             --meta githubCommitSha="$GITHUB_SHA" --meta gitTag="$GITHUB_REF_NAME")"
           # Only a plain deployment URL may reach GITHUB_ENV.
           # [[ =~ ]] tests the whole value, so an extra line is rejected too.

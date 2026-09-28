@@ -107,6 +107,19 @@ test("the release accepts only the pinned production Convex deployment", () => {
   assert.match(verify, /\[ "\$\{BASH_REMATCH\[1\]\}" != "\$expected_deployment" \]/);
 });
 
+test("the owner can approve their own release: prevent_self_review is refused", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  assert.match(verify, /\.prevent_self_review != true/);
+});
+
+test("the frontend is built against the same Convex deployment the backend deployed", () => {
+  const frontend = releaseWorkflow().slice(releaseWorkflow().indexOf("\n  frontend:"));
+  assert.match(frontend, /CONVEX_URL: https:\/\/\$\{\{ needs\.verify\.outputs\.convex_deployment \}\}\.convex\.cloud/);
+  assert.match(frontend, /--build-env NEXT_PUBLIC_CONVEX_URL="\$CONVEX_URL"/);
+  assert.match(frontend, /--env NEXT_PUBLIC_CONVEX_URL="\$CONVEX_URL"/);
+});
+
 test("the frontend reads the Vercel IDs as K02's environment variables", () => {
   const workflow = releaseWorkflow();
   const frontend = workflow.slice(workflow.indexOf("\n  frontend:"));
