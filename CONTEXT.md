@@ -23,7 +23,7 @@ The product is not an affiliate network, a payment processor, a review site, a c
 | Product Stack | The set of products a linker uses, tests, or has archived | Link list |
 | Prop | A linker's relationship with one product | Link entry |
 | Product | The tool, app, service, course, community, or physical item being logged | Company page |
-| Link Slot | The one primary link on a card. Its type is canonical, affiliate, referral or invite, and affiliate and referral links are disclosed on the card. Several slots per card are **Later** | Ad placement |
+| Link Slot | A card's optional primary link, at most one. Its type is canonical, affiliate, referral or invite, and affiliate and referral links are disclosed on the card. Several slots per card are **Later** | Ad placement |
 | Affiliate Link | A product-provided link that can credit the linker, used as a card's primary link and labeled "Affiliate link" | Tracking link |
 | Referral Code | **Later.** A code the visitor can use to give the linker credit | Coupon |
 | Canonical Link | The normal product link used when no affiliate/referral link exists | Fallback ad |
@@ -85,8 +85,9 @@ Lineage is allowed to be self-attested. The point is to preserve the story of in
 ## Link Model
 
 **Now:** the profile is one link, `proper-respect.com/{handle}`. Each
-published card has one primary link, whose type is canonical, affiliate,
-referral or invite. Affiliate and referral links carry a visible disclosure.
+published card has at most one primary link, whose type is canonical,
+affiliate, referral or invite. A card for a product without a website can
+have none. Affiliate and referral links carry a visible disclosure.
 A card may also have a usage link to the evidence behind it. Member
 subdomains and custom domains (issue #13) are **Later**.
 
