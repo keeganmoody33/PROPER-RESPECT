@@ -66,6 +66,15 @@ test("the release pins every action to a commit SHA", () => {
   for (const line of uses) assert.match(line, /@[0-9a-f]{40} # v\d/);
 });
 
+test("release Convex commands never download an unlocked CLI", () => {
+  for (const file of [".github/workflows/release.yml", "docs/releases/v0.2.0.md"]) {
+    const text = readFileSync(file, "utf8");
+    assert.match(text, /npx --no-install convex /, file);
+    assert.doesNotMatch(text, /npx (?!--no-install )convex/, file);
+  }
+  assert.match(readFileSync("docs/releases/v0.2.0.md", "utf8"), /git checkout v0\.2\.0\nnpm ci\n/);
+});
+
 test("the release requires the repository owner as the only reviewer", () => {
   const workflow = releaseWorkflow();
   const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));

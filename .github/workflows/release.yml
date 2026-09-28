@@ -151,17 +151,19 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+      # The Convex CLI comes from the lockfile; --no-install below fails
+      # rather than download a different version.
       - run: npm ci
       - name: Deploy the Convex backend
         # A deploy key scopes every Convex command to its own deployment, so no --prod.
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-        run: npx convex deploy -y
+        run: npx --no-install convex deploy -y
       - name: Record the deployed commit
         # Needs the deploy key's deployment:env:write permission as well as deployment:deploy.
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-        run: npx convex env set DEPLOYED_SHA "$GITHUB_SHA"
+        run: npx --no-install convex env set DEPLOYED_SHA "$GITHUB_SHA"
 
   frontend:
     needs: [verify, backend]
