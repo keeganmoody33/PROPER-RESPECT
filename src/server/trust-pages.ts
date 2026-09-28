@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { publicSiteOrigin } from "./public-site";
-import { creatorBusinessIdentity, markdownResponse } from "./agent-discovery";
+import { creatorBusinessIdentity, markdownResponse, repositoryUrl } from "./agent-discovery";
+import { evidenceRules } from "@/src/domain/evidence-rules";
 
-export type TrustSlug = "origins" | "contact" | "privacy" | "terms";
+export type TrustSlug = "origins" | "contact" | "privacy" | "terms" | "methodology";
 type TrustSection = Readonly<{
   heading: string;
   paragraphs: readonly string[];
@@ -201,6 +202,38 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         links: [
           { label: "Email Proper Respect", href: "mailto:33@lecturesfrom.com" },
           { label: "How your data is handled", href: "/about/privacy" },
+        ],
+      },
+    ],
+  },
+  methodology: {
+    title: "How evidence works",
+    description: "How to read the relationships, activity and evidence on a Proper Respect card, and how the daily GitHub refresh is checked from outside.",
+    eyebrow: "Methodology",
+    updatedAt: "2026-09-28",
+    introduction: [
+      "A card on Proper Respect pairs what someone says about a tool with whatever supporting evidence they chose to share. This page explains what each part can and can't tell you, and how we check that a refreshed card stays current.",
+    ],
+    sections: [
+      {
+        heading: "What a card shows, and what it doesn't",
+        paragraphs: [
+          "These are the same rules we give to agents that read public profiles.",
+          ...evidenceRules,
+        ],
+      },
+      {
+        heading: "The 30-day receipt",
+        paragraphs: [
+          "A GitHub card can refresh its contribution calendar once a day, after its owner turns that on. To show the refresh keeps working, a check that runs outside Proper Respect reads the published profile every day at 08:17 UTC, two hours after the 06:00 UTC refresh.",
+          "The check passes only when the owner's personal GitHub calendar is marked fresh and was captured within the last 36 hours. Every run, pass or fail, adds one line to a public file, with the time it checked and the capture time it saw. The file is never edited; a correction is a new run.",
+          "A day counts when it passes with a newer capture than the day before. A day that fails restarts the count at zero, and so does a release that changes how the refresh works. The receipt is complete after 30 counted days in a row.",
+          "The receipt shows that the published calendar kept being refreshed. It doesn't show who made the contributions, or how much someone uses GitHub beyond what the calendar counts.",
+          "Until the GitHub card is published with the daily refresh on, each check fails and records why. The file appears once the first check has run.",
+        ],
+        links: [
+          { label: "The receipt file (receipts/github-refresh.jsonl on the receipts branch)", href: `${repositoryUrl}/blob/receipts/receipts/github-refresh.jsonl` },
+          { label: "How the receipt check works", href: `${repositoryUrl}/blob/main/docs/runbooks/receipt.md` },
         ],
       },
     ],

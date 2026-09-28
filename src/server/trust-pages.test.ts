@@ -3,7 +3,7 @@ import { trustDocuments, trustMarkdown, trustMarkdownResponse, trustMetadata } f
 
 afterEach(() => vi.unstubAllEnvs());
 
-it.each(["origins", "contact", "privacy", "terms"] as const)("keeps %s previews out of indexing without overriding inherited HTML robots", async slug => {
+it.each(["origins", "contact", "privacy", "terms", "methodology"] as const)("keeps %s previews out of indexing without overriding inherited HTML robots", async slug => {
   vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
   vi.stubEnv("VERCEL_ENV", "preview");
   vi.stubEnv("VERCEL_URL", "preview.example");
