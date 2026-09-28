@@ -423,6 +423,100 @@ test("publishing a work-sample link needs the saved https link and a listed labe
     .rejects.toThrow("Save the link privately before publishing it.");
 });
 
+test.each([
+  ["display name", 80, true], ["display name", 81, false],
+  ["bio", 500, true], ["bio", 501, false],
+] as const)("a stored %s of %i characters can be shared: %s", async (field, length, allowed) => {
+  const { t, owner, userId, published } = await fixture(1);
+  const text = "x".repeat(length);
+  await t.run(ctx => ctx.db.patch(userId, field === "bio" ? { bio: text } : { displayName: text }));
+  if (allowed) {
+    await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+    expect((await published()).profile[field === "bio" ? "bio" : "displayName"]).toBe(text);
+    return;
+  }
+  const message = field === "bio"
+    ? "Shorten your bio to 500 characters or fewer before sharing."
+    : "Shorten your display name to 80 characters or fewer before sharing.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [] })).rejects.toThrow(message);
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: 0, expectedPreviewHash: "never-approved" }))
+    .rejects.toThrow(message);
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
+});
+
+test.each([
+  ["label", 200, true], ["label", 201, false],
+  ["url", 2048, true], ["url", 2049, false],
+] as const)("a primary link %s of %i characters publishes: %s", async (field, length, allowed) => {
+  const { t, owner, propIds: [a], selection, published } = await fixture(1);
+  const base = "https://shared.example/";
+  const primaryLink = {
+    type: "CANONICAL" as const,
+    url: field === "url" ? `${base}${"a".repeat(length - base.length)}` : "https://shared.example",
+    label: field === "label" ? "L".repeat(length) : "Visit",
+  };
+  const selections = [await selection(a, { primaryLink })];
+  if (allowed) {
+    await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
+    expect((await published()).profile.cards[0].primaryLink).toMatchObject({ url: primaryLink.url, label: primaryLink.label });
+    return;
+  }
+  const message = field === "label" ? "Use a link label of 200 characters or fewer." : "Use a link of 2,048 characters or fewer.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections })).rejects.toThrow(message);
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections, expectedPublicationRevision: 0, expectedPreviewHash: "never-approved" }))
+    .rejects.toThrow(message);
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
+});
+
+test.each([[2048, true], [2049, false]] as const)("a stored %i-character avatar link is shared: %s", async (length, shared) => {
+  const { t, owner, userId, published } = await fixture(1);
+  const avatarUrl = `https://img.example/${"a".repeat(length - "https://img.example/".length)}`;
+  await t.run(ctx => ctx.db.patch(userId, { avatarUrl }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  expect(preview.profile.avatarUrl).toBe(shared ? avatarUrl : undefined);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+  expect((await published()).profile.avatarUrl).toBe(shared ? avatarUrl : undefined);
+});
+
+test("a 160-character product name still publishes with its default link label", async () => {
+  const { t, owner, published } = await fixture(0);
+  const name = "P".repeat(160);
+  const propId = await owner.mutation(api.onboarding.addManualProduct, { name, website: "https://long-name.example" });
+  const link = await t.run(ctx => ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", propId)).unique());
+  if (!link) throw new Error("Test link missing");
+  expect(link.label).toBe(`Open ${name}`);
+  await t.run(ctx => ctx.db.patch(propId, { visibility: "PRIVATE", status: "ACTIVE", relationshipVersion: 1, confirmedAt: capturedAt }));
+  const selections: Selection[] = [{
+    propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "", note: "",
+    primaryLink: { type: link.type, url: link.url, label: link.label }, autoRefresh: false,
+  }];
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
+  expect((await published()).profile.cards[0]).toMatchObject({ product: { name }, primaryLink: { label: `Open ${name}` } });
+});
+
+test.each(["label", "url"] as const)("an unchanged public card with an over-limit link %s blocks sharing until it is updated or removed", async field => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture(2);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  // A card published before the caps existed.
+  await t.run(async ctx => {
+    const row = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    const cards = row.profile.cards.map((card, index) => index !== 0 || !card.primaryLink ? card : {
+      ...card, primaryLink: { ...card.primaryLink, ...(field === "label" ? { label: "L".repeat(201) } : { url: `https://shared.example/${"a".repeat(2049)}` }) },
+    });
+    await ctx.db.patch(row._id, { profile: { ...row.profile, cards } });
+  });
+  const before = await published();
+  const message = "The shared Shared Tool card has a link over the length limit. Include it in this change to update or remove it.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(b, { publish: false })] })).rejects.toThrow(message);
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: before.revision, expectedPreviewHash: "never-approved" })).rejects.toThrow(message);
+  expect(await published()).toEqual(before);
+  // Including the card, with a link inside the limits, repairs it.
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards.map(card => card.primaryLink)).toEqual([
+    expect.objectContaining({ label: "Visit" }), expect.objectContaining({ label: "Visit" }),
+  ]);
+});
+
 test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "https://user:pass@example.com/"])("a primary link to %s is refused before any write", async url => {
   const { t, owner, propIds: [a], selection } = await fixture(1);
   const selections = [await selection(a, { primaryLink: { type: "CANONICAL", url, label: "Visit" } })];
