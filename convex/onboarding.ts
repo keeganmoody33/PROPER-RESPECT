@@ -224,7 +224,8 @@ export const getState = query({
         const associatedAccountEvidence = product && args.includeAccountEvidence !== false
           ? await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug)
           : [];
-        return { prop, product: product && brand ? { ...product, brand } : product, links, claims,
+        const refreshApproved = await hasActiveGithubRefresh(ctx, user._id, prop._id);
+        return { prop, product: product && brand ? { ...product, brand } : product, links, claims, refreshApproved,
           isPublishedAtCurrentHandle: approvedCards.length > 0, publishedActivity, publishedUsageLink, associatedAccountEvidence };
       }),
     );
@@ -580,6 +581,18 @@ const selectionValidator = v.object({
 type PublicationSelection = Infer<typeof selectionValidator>;
 
 /** Both preview and commit use this projection, before any write occurs. */
+// The metrics a public card may refresh, and the connector provider each needs (R09).
+const REFRESH_METRIC_PROVIDERS: Record<string, "GITHUB" | "DEVIN" | undefined> = {
+  "github.contributions": "GITHUB",
+  "devin.sessions": "DEVIN",
+};
+
+async function hasActiveGithubRefresh(ctx: QueryCtx | MutationCtx, userId: Id<"users">, propId: Id<"props">) {
+  const subscriptions = await ctx.db.query("metricSubscriptions")
+    .withIndex("by_prop_metric", q => q.eq("propId", propId).eq("metricKey", "github.contributions")).collect();
+  return subscriptions.some(subscription => subscription.userId === userId && !subscription.revokedAt);
+}
+
 async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users">, selections: PublicationSelection[]) {
   const owners = await ownersForHandle(ctx, user.handle);
   if (owners.length !== 1 || owners[0]._id !== user._id) throw new Error("Publication requires the unique owner of this handle. Resolve account ownership before sharing.");
@@ -591,6 +604,8 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   if (selectedIds.size !== selections.length) throw new Error("Select each relationship only once.");
   const allProps = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).collect();
   const propsById = new Map(allProps.map(prop => [prop._id, prop]));
+  const published = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique();
+  const previousPropIds = published ? await resolvePublishedCardPropIds(ctx, published, user._id, allProps) : [];
   for (const selection of selections) {
     const prop = propsById.get(selection.propId);
     if (!prop) throw new Error("Cannot publish another user's product.");
@@ -606,21 +621,38 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
         selection.note.trim() !== prop.note || selection.startedAt !== prop.startedAt) {
       throw new Error("Save relationship changes privately before publishing.");
     }
-    if (selection.activity && canonicalJson(selection.activity) !== canonicalJson(prop.activity)) throw new Error("Publish only the supporting activity already saved on this relationship.");
+    if (selection.activity && canonicalJson(selection.activity) !== canonicalJson(prop.activity)) {
+      // A refresh updates only the public card of a privately saved relationship,
+      // so a republish that keeps the refresh on may keep that newer public calendar (R09).
+      const activity = selection.activity;
+      const carriesRefreshedCalendar = selection.autoRefresh && selection.metricKey === "github.contributions" &&
+        activity.kind === "contributionCalendar" && activity.attributionScope === "PERSONAL" &&
+        await hasActiveGithubRefresh(ctx, user._id, prop._id) &&
+        (published?.profile.cards ?? []).some((card, index) =>
+          previousPropIds[index] === prop._id && canonicalJson(card.activity) === canonicalJson(activity));
+      if (!carriesRefreshedCalendar) throw new Error("Publish only the supporting activity already saved on this relationship.");
+    }
     if (selection.usageLinkUrl !== undefined) {
       if (selection.usageLinkUrl !== prop.supportingUrl) throw new Error("Save the link privately before publishing it.");
       if (!usageLinkUrlSchema.safeParse(selection.usageLinkUrl).success) throw new Error("Use an https link without embedded credentials.");
     }
     if (selection.autoRefresh && selection.connectorId && selection.metricKey && selection.activity) {
+      const provider = REFRESH_METRIC_PROVIDERS[selection.metricKey];
+      if (!provider) throw new Error("This measurement can't refresh automatically.");
       const connector = await ctx.db.get(selection.connectorId);
-      if (!connector || connector.userId !== user._id || connector.status === "REVOKED") throw new Error("A connected account is required for refresh.");
+      if (!connector || connector.userId !== user._id || connector.status === "REVOKED" || connector.provider !== provider) {
+        throw new Error("A connected account is required for refresh.");
+      }
+      // The same connector states the scheduled GitHub refresh accepts (convex/connectors.ts).
+      if (provider === "GITHUB" && (connector.attributionScope !== "PERSONAL" || !["CONNECTED", "ERROR"].includes(connector.status) ||
+          selection.activity.kind !== "contributionCalendar" || selection.activity.attributionScope !== "PERSONAL")) {
+        throw new Error("A daily GitHub refresh needs your personal GitHub connection and its personal contribution calendar.");
+      }
     }
   }
-  const published = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique();
   const products = await Promise.all([...new Set(allProps.map(prop => prop.productId))].map(id => ctx.db.get(id)));
   const productById = new Map(products.flatMap(product => product ? [[product._id, product] as const] : []));
   const selectedProducts = new Set(allProps.filter(prop => selectedIds.has(prop._id)).map(prop => productById.get(prop.productId)?.slug));
-  const previousPropIds = published ? await resolvePublishedCardPropIds(ctx, published, user._id, allProps) : [];
   const preserved = (published?.profile.cards ?? []).flatMap<{
     card: Doc<"publishedProfiles">["profile"]["cards"][number]; propId: Id<"props"> | null;
   }>((card, index) => {

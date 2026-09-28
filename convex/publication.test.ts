@@ -564,3 +564,93 @@ test("stored profile links that aren't plain http(s) are left off the shared pro
   await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
   expect(JSON.stringify((await published()).profile)).not.toContain("javascript:");
 });
+
+// R09: owner opt-in for the daily GitHub refresh.
+const calendar = (total: number, capturedAt: string) => ({ kind: "contributionCalendar" as const, total, days: [],
+  attributionScope: "PERSONAL" as const, capturedAt, freshness: "FRESH" as const, provenanceLabel: "Synthetic GitHub calendar" });
+async function githubFixture(connector: { status?: "CONNECTED" | "ERROR" | "REVOKED" | "NEEDS_REAUTH"; provider?: "GITHUB" | "DEVIN"; scope?: "PERSONAL" | "ORGANIZATION" } = {}) {
+  const t = convexTest(schema, modules);
+  const ids = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "Synthetic" });
+    const propId = await ctx.db.insert("props", { userId, productId, visibility: "PRIVATE", status: "ACTIVE", relationshipVersion: 1,
+      confirmedAt: capturedAt, headline: "Daily commits", note: "Owner context", activity: calendar(3, "2026-09-20T10:00:00.000Z") });
+    const connectorId = await ctx.db.insert("connectorAccounts", { userId, provider: connector.provider ?? "GITHUB", status: connector.status ?? "CONNECTED",
+      accountLabel: "github.com/synthetic", attributionScope: connector.scope ?? "PERSONAL", connectedAt: capturedAt });
+    return { userId, propId, connectorId };
+  });
+  const owner = t.withIdentity({ subject: "owner" });
+  const selection = (overrides: Partial<Selection> = {}): Selection => ({
+    propId: ids.propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "Daily commits", note: "Owner context",
+    primaryLink: { type: "CANONICAL", url: "https://github.com", label: "Open GitHub" }, activity: calendar(3, "2026-09-20T10:00:00.000Z"),
+    autoRefresh: true, connectorId: ids.connectorId, metricKey: "github.contributions", ...overrides,
+  });
+  const publish = async (overrides: Partial<Selection> = {}) =>
+    owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [selection(overrides)] }));
+  const subscriptions = () => t.run(ctx => ctx.db.query("metricSubscriptions").collect());
+  const publishedCard = () => t.run(async ctx => (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())?.profile.cards[0]);
+  const refreshApproved = async () => (await owner.query(api.onboarding.getState, { includeClaims: false }))?.cards[0].refreshApproved;
+  return { t, owner, ...ids, selection, publish, subscriptions, publishedCard, refreshApproved };
+}
+
+test("a checked GitHub publish creates one active subscription that getState reports as approved", async () => {
+  const f = await githubFixture();
+  expect(await f.refreshApproved()).toBe(false);
+  await f.publish();
+  const subscriptions = await f.subscriptions();
+  expect(subscriptions).toEqual([expect.objectContaining({ propId: f.propId, connectorId: f.connectorId,
+    metricKey: "github.contributions", attributionScope: "PERSONAL" })]);
+  expect(subscriptions[0].revokedAt).toBeUndefined();
+  expect(await f.refreshApproved()).toBe(true);
+});
+
+test("republishing a refreshed, privately saved card with the box checked keeps its subscription and newest calendar", async () => {
+  const f = await githubFixture({ status: "ERROR" });
+  await f.publish();
+  const [subscription] = await f.subscriptions();
+  // What completeGithubRefresh writes for a versioned relationship: the public card only.
+  const refreshed = calendar(9, "2026-09-27T10:00:00.000Z");
+  await f.t.run(async ctx => {
+    const published = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    await ctx.db.patch(published._id, { revision: published.revision + 1, profile: { ...published.profile,
+      cards: published.profile.cards.map(card => ({ ...card, activity: refreshed })) } });
+  });
+  await f.publish({ activity: refreshed });
+  const after = await f.subscriptions();
+  expect(after.map(item => item._id)).toEqual([subscription._id]);
+  expect(after[0].revokedAt).toBeUndefined();
+  expect((await f.publishedCard())?.activity).toEqual(refreshed);
+  expect((await f.t.run(ctx => ctx.db.get(f.propId)))?.activity).toEqual(calendar(3, "2026-09-20T10:00:00.000Z"));
+});
+
+test("the published calendar can only be carried forward while the refresh stays checked", async () => {
+  const f = await githubFixture();
+  await f.publish();
+  const refreshed = calendar(9, "2026-09-27T10:00:00.000Z");
+  await f.t.run(async ctx => {
+    const published = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    await ctx.db.patch(published._id, { profile: { ...published.profile, cards: published.profile.cards.map(card => ({ ...card, activity: refreshed })) } });
+  });
+  await expect(f.publish({ activity: refreshed, autoRefresh: false })).rejects.toThrow("Publish only the supporting activity already saved on this relationship.");
+  // An activity that was never published is never accepted, even with refresh on.
+  await expect(f.publish({ activity: calendar(99, "2026-09-28T10:00:00.000Z") })).rejects.toThrow("Publish only the supporting activity already saved on this relationship.");
+});
+
+test("an unchecked republish revokes the refresh", async () => {
+  const f = await githubFixture();
+  await f.publish();
+  await f.publish({ autoRefresh: false, connectorId: undefined, metricKey: undefined });
+  expect(await f.subscriptions()).toEqual([expect.objectContaining({ revokedAt: expect.any(String) })]);
+  expect(await f.refreshApproved()).toBe(false);
+});
+
+for (const [label, connector, overrides] of [
+  ["an unsupported metric", {}, { metricKey: "unknown.metric" }],
+  ["a Devin connector for the GitHub metric", { provider: "DEVIN" as const }, {}],
+  ["a GitHub connector that needs reauthorization", { status: "NEEDS_REAUTH" as const }, {}],
+  ["an organization-scoped GitHub connector", { scope: "ORGANIZATION" as const }, {}],
+] as const) test(`refresh is refused for ${label}`, async () => {
+  const f = await githubFixture(connector);
+  await expect(f.owner.query(api.onboarding.previewPublication, { selections: [f.selection(overrides)] })).rejects.toThrow("refresh");
+  expect(await f.subscriptions()).toEqual([]);
+});
