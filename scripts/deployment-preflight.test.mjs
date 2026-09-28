@@ -46,6 +46,13 @@ test("the release verifies both deploy environments require a reviewer before de
   assert.match(verify, /for name in production-backend production-frontend/);
 });
 
+test("the release checks the smoke-test handle before anything deploys", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  assert.match(verify, /PUBLIC_HANDLE: \$\{\{ vars\.PUBLIC_HANDLE \}\}/);
+  assert.match(verify, /\[\[ "\$PUBLIC_HANDLE" =~/);
+});
+
 test("the release runs a pinned Vercel CLI, never one fetched at deploy time", () => {
   const workflow = releaseWorkflow();
   assert.doesNotMatch(workflow, /npx[^\n]*vercel/);

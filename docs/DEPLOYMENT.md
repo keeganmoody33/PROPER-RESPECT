@@ -71,7 +71,7 @@ use a `NEXT_PUBLIC_` prefix.
 | `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | Vercel | No | `/onboarding` |
 | `CLERK_FRONTEND_API_URL` | Convex production | No | Clerk issuer used by `convex/auth.config.ts` |
 | `CONNECTOR_ENCRYPTION_KEY` | Convex production | Yes | Encrypts stored connector credentials |
-| `CONVEX_DEPLOY_KEY` | GitHub environment `production-backend` only | Yes | Release workflow's backend deploy; needs `deployment:deploy` and `deployment:env:write`. Remove it from Vercel after v0.2.0 |
+| `CONVEX_DEPLOY_KEY` | GitHub environment `production-backend` only | Yes | Release workflow's backend deploy; needs `deployment:deploy` and `deployment:env:write`. After v0.2.0, delete the old key from every Vercel environment and revoke it in Convex ([v0.2.0 step 7](releases/v0.2.0.md#7-after-verifying)) |
 | `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | GitHub environment `production-frontend` | Yes | Release workflow's frontend deploy |
 | `PUBLIC_HANDLE` | GitHub repository variable | No | Profile path the release smoke test requests (`lecturesfrom`) |
 | `DEPLOYED_SHA` | Convex production, set by the release workflow | No | Commit recorded on refresh ledger rows (R08) |

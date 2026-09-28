@@ -35,6 +35,17 @@ jobs:
             echo "Tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main."
             exit 1
           fi
+      - name: Require the smoke-test handle
+        # Checked here so a missing or malformed variable stops the release
+        # before anything deploys, not after (same rule as handleSchema).
+        env:
+          PUBLIC_HANDLE: ${{ vars.PUBLIC_HANDLE }}
+        run: |
+          handle_pattern='^[a-z0-9]([a-z0-9-]{0,37}[a-z0-9])?$'
+          if ! [[ "$PUBLIC_HANDLE" =~ $handle_pattern ]]; then
+            echo "Set the PUBLIC_HANDLE repository variable to a published handle (lecturesfrom)."
+            exit 1
+          fi
       - name: Require protected deploy environments
         # environment: only names an environment, and a same-named repository or
         # org secret would still reach a job whose environment is missing or
@@ -169,11 +180,8 @@ jobs:
             exit 1
           fi
       - name: Smoke test the live site
+        # verify has already checked PUBLIC_HANDLE.
         run: |
-          if [ -z "$PUBLIC_HANDLE" ]; then
-            echo "Set the PUBLIC_HANDLE repository variable (lecturesfrom)."
-            exit 1
-          fi
           for path in "/" "/$PUBLIC_HANDLE" "/sitemap.xml"; do
             status="$(curl --silent --output /dev/null --write-out '%{http_code}' "https://proper-respect.com$path")"
             echo "$path -> $status"
