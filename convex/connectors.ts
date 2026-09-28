@@ -77,6 +77,13 @@ type DevinUsage = {
   sessions_count?: unknown;
 };
 
+/** A Devin response that arrived but can't be used; its class feeds the refresh ledger (R08). */
+class DevinResponseError extends Error {
+  constructor(message: string, readonly errorClass: "MISSING_METRIC" | "INVALID_RESPONSE") {
+    super(message);
+  }
+}
+
 // A count Devin leaves out, or sends as null, is unknown. It never becomes 0
 // and never appears on the card (docs/003-evidence-surfaces.md, "Lifecycle").
 function reportedDevinCounts(usage: DevinUsage) {
@@ -89,7 +96,7 @@ function reportedDevinCounts(usage: DevinUsage) {
   return counts.flatMap(([label, value]) => {
     if (value === undefined || value === null) return [];
     if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
-      throw new Error("Devin usage response included an invalid count.");
+      throw new DevinResponseError("Devin usage response included an invalid count.", "INVALID_RESPONSE");
     }
     return [{ label, value }];
   });
@@ -121,7 +128,7 @@ async function fetchDevinActivity(
   // Sessions leads when reported; otherwise the first count Devin did report.
   const [primary, ...supporting] = reportedDevinCounts(usage);
   if (!primary) {
-    throw new Error("Devin usage response did not include any usage counts.");
+    throw new DevinResponseError("Devin usage response did not include any usage counts.", "MISSING_METRIC");
   }
   const capturedAt = new Date().toISOString();
   return {
@@ -792,8 +799,9 @@ export const markRefreshFailed = internalMutation({
     if (!subscription) return;
     const connector = await ctx.db.get(subscription.connectorId);
     const prop = await ctx.db.get(subscription.propId);
+    // The same eligibility boundary as applyRefresh: only a public relationship refreshes.
     if (subscription.revokedAt || !connector || connector.provider !== "DEVIN" || connector.status === "REVOKED" ||
-        connector.userId !== subscription.userId || !prop || prop.userId !== subscription.userId) {
+        connector.userId !== subscription.userId || !prop || prop.visibility !== "PUBLIC" || prop.userId !== subscription.userId) {
       await recordRefreshAttempt(ctx, { subscription, provider: connector?.provider, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
       return;
     }
@@ -879,7 +887,8 @@ export const refreshApproved = internalAction({
           const parsed = JSON.parse(cleartext) as { token: string; organizationId: string };
           snapshot = await fetchDevinActivity(parsed.token, parsed.organizationId);
         } catch (error) {
-          await fail(error instanceof Error ? error.message : "Connector refresh failed.", "PROVIDER_UNAVAILABLE");
+          await fail(error instanceof Error ? error.message : "Connector refresh failed.",
+            error instanceof DevinResponseError ? error.errorClass : "PROVIDER_UNAVAILABLE");
           continue;
         }
         // The subscription approves devin.sessions. Without a reported

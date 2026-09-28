@@ -416,3 +416,65 @@ test("a skipped attempt names the connector's provider, not the metric key's", a
   await f.call();
   expect(await attempts(f.t)).toEqual([expect.objectContaining({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE", provider: "GITHUB" })]);
 });
+
+// Adds an encrypted Devin subscription for the owner; `usage` is what the stubbed Devin API returns.
+async function addDevin(f: Awaited<ReturnType<typeof fixture>>, options: { secret?: boolean } = {}) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("synthetic-refresh-only"));
+  const key = await crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt"]);
+  const iv = new Uint8Array(12).fill(2);
+  const secret = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key,
+    new TextEncoder().encode(JSON.stringify({ token: "synthetic-devin-token", organizationId: "synthetic-org" }))));
+  const base64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+  return f.t.run(async ctx => {
+    const productId = await ctx.db.insert("products", { name: "Devin", slug: "devin", domain: "devin.ai", description: "Synthetic" });
+    const propId = await ctx.db.insert("props", { userId: f.ids.userId, productId, status: "ACTIVE", visibility: "PUBLIC", headline: "Devin", note: "" });
+    const secretId = options.secret === false ? undefined : await ctx.db.insert("connectorSecrets", { userId: f.ids.userId, provider: "DEVIN", ciphertext: base64(secret), iv: base64(iv), createdAt: "2026-09-22T00:00:00.000Z" });
+    const connectorId = await ctx.db.insert("connectorAccounts", { userId: f.ids.userId, provider: "DEVIN", status: "CONNECTED", accountLabel: "Devin organization synthetic-org", attributionScope: "ORGANIZATION", ...(secretId ? { secretRef: secretId } : {}), connectedAt: "2026-09-22T00:00:00.000Z" });
+    const subscriptionId = await ctx.db.insert("metricSubscriptions", { userId: f.ids.userId, propId, connectorId, metricKey: "devin.sessions", attributionScope: "ORGANIZATION", refreshCadence: "DAILY", approvedAt: "2026-09-22T00:00:00.000Z" });
+    return { subscriptionId, connectorId, propId };
+  });
+}
+const devinFetch = (usage: unknown) => vi.fn(async (url: string | URL | Request) => String(url).includes("api.devin.ai")
+  ? new Response(JSON.stringify(usage), { status: 200, headers: { "Content-Type": "application/json" } })
+  : response()) as unknown as Parameters<typeof fixture>[0];
+
+for (const [label, usage, errorClass] of [
+  ["no usage counts", {}, "MISSING_METRIC"],
+  ["an invalid count", { sessions_count: -1 }, "INVALID_RESPONSE"],
+] as const) test(`a Devin response with ${label} records ${errorClass}`, async () => {
+  const f = await fixture(devinFetch(usage));
+  const devin = await addDevin(f);
+  await f.call();
+  const rows = (await attempts(f.t)).filter(row => row.subscriptionId === devin.subscriptionId);
+  expect(rows).toEqual([expect.objectContaining({ provider: "DEVIN", outcome: "FAILURE", errorClass })]);
+  expectNoSecrets(rows);
+});
+
+test("a Devin connector without a saved secret records one SKIPPED attempt", async () => {
+  const f = await fixture();
+  const devin = await addDevin(f, { secret: false });
+  await f.call();
+  expect((await attempts(f.t)).filter(row => row.subscriptionId === devin.subscriptionId))
+    .toEqual([expect.objectContaining({ provider: "DEVIN", outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
+});
+
+test("a subscription whose connector is gone records one SKIPPED attempt named from its metric", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.delete(f.ids.connectorId));
+  await f.call();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "GITHUB", outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
+});
+
+test("a Devin failure for a relationship made private records SKIPPED and leaves its private activity alone", async () => {
+  const f = await fixture(vi.fn(async (url: string | URL | Request) => String(url).includes("api.devin.ai")
+    ? new Response("unavailable", { status: 503 }) : response()) as unknown as Parameters<typeof fixture>[0]);
+  const devin = await addDevin(f);
+  const activity = { kind: "headlineMetrics" as const, attributionScope: "ORGANIZATION" as const, capturedAt: "2026-09-22T10:00:00.000Z",
+    freshness: "FRESH" as const, provenanceLabel: "Devin organization metrics", primary: { label: "Sessions", value: 2 }, supporting: [] };
+  await f.t.run(ctx => ctx.db.patch(devin.propId, { visibility: "PRIVATE", activity }));
+  await f.call();
+  expect((await attempts(f.t)).filter(row => row.subscriptionId === devin.subscriptionId))
+    .toEqual([expect.objectContaining({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
+  expect((await f.t.run(ctx => ctx.db.get(devin.propId)))?.activity).toEqual(activity);
+  expect((await f.t.run(ctx => ctx.db.get(devin.connectorId)))?.status).toBe("CONNECTED");
+});
