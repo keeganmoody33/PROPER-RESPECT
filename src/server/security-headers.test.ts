@@ -14,7 +14,10 @@ describe("Clerk Frontend API host", () => {
   });
 
   it.each([undefined, "", "pk_test_", "pk_test_%%%", "sk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk",
-    `pk_test_${Buffer.from("not a host$").toString("base64")}`, `pk_test_${Buffer.from("example.com").toString("base64")}`])(
+    `pk_test_${Buffer.from("not a host$").toString("base64")}`, `pk_test_${Buffer.from("example.com").toString("base64")}`,
+    // Buffer's decoder is lenient; these still decode to "example.clerk.accounts.dev$".
+    `${SYNTHETIC_KEY}====`, "pk_test_ZXhhbXBsZS5j=bGVyay5hY2NvdW50cy5kZXYk", "pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk=",
+    "pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk_-"])(
     "gives no host for a malformed key %s without throwing", key => {
       expect(clerkFrontendApiHost(key)).toBeUndefined();
     });

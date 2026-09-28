@@ -9,14 +9,14 @@ const HOST_PATTERN = /^(?=.{1,253}$)(?!-)[a-z0-9-]{1,63}(?<!-)(?:\.(?!-)[a-z0-9-
  * Anything else gives no host, so a malformed key never breaks the build.
  */
 export function clerkFrontendApiHost(publishableKey: string | undefined): string | undefined {
-  const match = /^pk_(?:test|live)_([A-Za-z0-9+/=_-]+)$/.exec(publishableKey ?? "");
+  const match = /^pk_(?:test|live)_([A-Za-z0-9+/]+={0,2})$/.exec(publishableKey ?? "");
   if (!match) return undefined;
-  let decoded: string;
-  try {
-    decoded = Buffer.from(match[1], "base64").toString("utf8");
-  } catch {
-    return undefined;
-  }
+  const bytes = Buffer.from(match[1], "base64");
+  // Buffer's decoder skips bad padding, so accept only the canonical encoding,
+  // with or without its padding.
+  const canonical = bytes.toString("base64");
+  if (match[1] !== canonical && match[1] !== canonical.replace(/=+$/, "")) return undefined;
+  const decoded = bytes.toString("utf8");
   if (!decoded.endsWith("$")) return undefined;
   const host = decoded.slice(0, -1).toLowerCase();
   return HOST_PATTERN.test(host) ? host : undefined;
