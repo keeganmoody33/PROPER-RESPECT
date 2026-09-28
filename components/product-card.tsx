@@ -594,6 +594,9 @@ export function ProductCard({
             {webLink.label} ↗
             {linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}
           </a> : card.primaryLink && <span className="outbound-link">{card.primaryLink.label}</span>}
+          {/* The card also renders without a Next.js router (standalone bundles), so a plain link. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          {!brandPreview && <a className="evidence-link" href="/about/methodology">How evidence works</a>}
         </div>
       </section>
     </article>

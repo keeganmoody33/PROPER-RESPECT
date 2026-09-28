@@ -91,9 +91,19 @@ test("an optional headline falls back to the saved owner explanation on the comp
 
 test("an owner-described product without a website needs neither an invented link nor telemetry", () => {
   const card = renderCard({ product: { ...baseCard.product, domain: "" }, primaryLink: undefined, activity: undefined });
-  expect(card("a")).toHaveLength(0);
+  // The only link left is the site's own explanation of evidence.
+  expect(card("a").not(".evidence-link")).toHaveLength(0);
   expect(card(".card-headline").text()).toBe(baseCard.headline);
   expect(card(".activity-placeholder")).toHaveLength(0);
+});
+
+test("the back of a card links to how evidence works; a brand preview doesn't", () => {
+  const link = renderCard()(".card-back a.evidence-link");
+  expect(link).toHaveLength(1);
+  expect(link.attr("href")).toBe("/about/methodology");
+  expect(link.text()).toBe("How evidence works");
+  const preview = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, displayMode: "brand-preview" })));
+  expect(preview("a.evidence-link")).toHaveLength(0);
 });
 
 test("a brand preview makes no owner relationship or activity claim", () => {
