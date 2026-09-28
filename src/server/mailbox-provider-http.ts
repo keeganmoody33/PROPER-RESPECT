@@ -1,6 +1,6 @@
 import {
-  buildCodeExchangeRequest, buildRefreshRequest, buildIdentityRequest, parseProviderIdentity,
-  parseTokenResponse, type MailboxOAuthConfig,
+  buildCodeExchangeRequest, buildRefreshRequest, buildIdentityRequest, buildRevocationRequest, parseProviderIdentity,
+  parseTokenResponse, type MailboxOAuthConfig, type MailboxProvider,
 } from "./mailbox-oauth";
 import type { MailboxCredential } from "./mailbox-credentials";
 
@@ -56,6 +56,24 @@ export async function requestMailboxJson(request: ReturnType<typeof buildIdentit
     throw new Error("Mailbox provider request failed.");
   }
   return await readProviderJson(response);
+}
+
+/**
+ * Asks the provider to revoke the grant behind a token. Resolves only on a
+ * direct 2xx; otherwise throws a status-only MailboxProviderError or a fixed
+ * message. The response body is discarded unread, and the token never appears
+ * in an error. The injected fetcher is a test seam, never client input.
+ */
+export async function revokeMailboxGrant(provider: MailboxProvider, token: string, fetcher: typeof fetch = fetch): Promise<void> {
+  const { url, ...options } = buildRevocationRequest(provider, token);
+  let response: Response;
+  try {
+    response = await fetcher(url, { ...options, credentials: "omit", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  } catch {
+    throw new Error("Mailbox provider request failed.");
+  }
+  await response.body?.cancel().catch(() => undefined);
+  if (!response.ok || response.redirected) throw new MailboxProviderError(response.status);
 }
 
 /**

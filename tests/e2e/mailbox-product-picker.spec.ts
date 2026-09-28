@@ -15,6 +15,7 @@ test.beforeAll(async () => {
         export function useConvexAuth(){return {isAuthenticated:true,isLoading:false}}
         export function useQuery(reference){return getFunctionName(reference)==="mailboxes:listAccounts" ? (window.mailboxAccounts ?? []) : []}
         export function useMutation(reference){return async args=>{window.saved.push({name:getFunctionName(reference),args});return {}}}
+        export function useAction(reference){return async args=>{window.saved.push({name:getFunctionName(reference),args});return window.actionResult ?? {}}}
         export function usePaginatedQuery(reference,args){
           const name=getFunctionName(reference);
           if(name==="inventory:list" && args.includeAccountEvidence!==false) throw new Error("Synthetic proof-heavy query exceeds raw read budget");
@@ -144,4 +145,39 @@ test("a failed-authorization notice doesn't invite an unlisted user to try again
       await expect(notice).toContainText("Gmail discovery is open only to invited testers right now.");
     }
   }
+});
+
+test("Disconnect asks the backend to revoke the Google grant and reports a failed revocation honestly (R17)", async ({ page }) => {
+  await page.route("**/*", route => route.abort());
+  const render = async (actionResult: unknown, lastRevocation?: unknown) => {
+    await page.setContent('<main id="root"></main>');
+    await page.evaluate(([result, revocation]) => {
+      const w = window as unknown as { mailboxAccounts: unknown; actionResult: unknown };
+      w.actionResult = result;
+      w.mailboxAccounts = [{ accountId: "synthetic-account", provider: "GOOGLE", status: revocation ? "DISCONNECTED" : "CONNECTED", accountLabel: "Synthetic mailbox", generation: 3,
+        maintenanceEnabled: false, contexts: [], ...(revocation ? { lastRevocation: revocation } : {}) }];
+    }, [actionResult, lastRevocation]);
+    await page.addScriptTag({ content: compiled });
+    await page.getByText("Automatic discovery and account controls").click();
+  };
+  await render({ disconnected: true, generation: 4, revocation: "REVOKED" });
+  await expect(page.getByText("Disconnecting also asks Google to revoke this app's access.", { exact: false })).toBeVisible();
+  await expect(page.getByText("You can also revoke this app in your Google account permissions.")).toHaveCount(0);
+  await page.getByRole("button", { name: "Disconnect and stop collection" }).click();
+  await expect(page.getByRole("status")).toContainText("Google confirmed that this app's access was revoked.");
+  expect(await page.evaluate(() => (window as unknown as { saved: unknown[] }).saved)).toEqual([
+    { name: "mailboxGoogle:disconnectAndRevoke", args: { accountId: "synthetic-account", expectedGeneration: 3 } },
+  ]);
+
+  await render({ disconnected: true, generation: 4, revocation: "FAILED" });
+  await page.getByRole("button", { name: "Disconnect and stop collection" }).click();
+  await expect(page.getByRole("status")).toContainText("Google did not confirm the revocation.");
+  await expect(page.getByRole("status")).toContainText("Google Account permissions");
+
+  await render({ disconnected: false, reason: "GENERATION_CHANGED" });
+  await page.getByRole("button", { name: "Disconnect and stop collection" }).click();
+  await expect(page.getByRole("status")).toContainText("This account was reconnected while disconnecting.");
+
+  await render({}, { outcome: "FAILED", at: "2026-09-28T12:00:00.000Z" });
+  await expect(page.getByRole("alert")).toContainText("Google did not confirm that this app's access was revoked. You can still revoke it in your Google Account permissions.");
 });

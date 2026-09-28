@@ -111,7 +111,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
       {
         heading: "Disconnecting and deleting are different",
         paragraphs: [
-          "Disconnecting a mailbox removes its saved credentials and stops future reads through that connection. Existing private evidence, source history and relationship history are retained. Disconnecting locally does not revoke the grant in your Google account. You can separately revoke the app through your provider's account permissions.",
+          "Disconnecting a mailbox removes its saved credentials and stops future reads through that connection. Existing private evidence, source history and relationship history are retained. Disconnecting a Gmail account also asks Google to revoke this app's access. If that request fails, the local disconnect still completes, and you can revoke the app yourself in your Google Account permissions.",
           "Activity-connector disconnection removes the local saved secret and stops that connection's updates. Existing snapshots, relationships and published cards can remain. It does not establish that a linked provider account or its grant has been removed.",
           "Deleting an original evidence payload does not erase all information derived from it. Observations, excerpts, source identifiers, hashes, provenance, relationships and published records may remain. A complete self-service account deletion workflow and automatic evidence-expiry schedule are not implemented. Disconnecting or deleting an original does not fully erase your data.",
         ],

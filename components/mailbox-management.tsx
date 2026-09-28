@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { MAILBOX_TESTERS_ONLY } from "@/src/domain/mailbox-testers";
-import { useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useAction, useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -100,11 +100,20 @@ function UnmatchedRecords() {
 }
 
 const AUTHORIZATION_FAILED = "Gmail authorization did not complete. Start a new connection attempt.";
+const REVOKE_YOURSELF = "You can still revoke it in your Google Account permissions.";
+
+export function disconnectNotice(result: FunctionReturnType<typeof api.mailboxGoogle.disconnectAndRevoke>) {
+  if (!result.disconnected) return "This account was reconnected while disconnecting. The new connection was kept; disconnect it again if you meant to.";
+  const local = "Disconnected and stopped collection. Evidence and product relationships remain unchanged.";
+  return result.revocation === "REVOKED" ? `${local} Google confirmed that this app's access was revoked.` :
+    result.revocation === "FAILED" ? `${local} Google did not confirm the revocation. ${REVOKE_YOURSELF}` :
+      `${local} No saved Google credential remained to revoke. ${REVOKE_YOURSELF}`;
+}
 
 export function MailboxManagement({ available }: { available: boolean }) {
   const { isAuthenticated } = useConvexAuth();
   const accounts = useQuery(api.mailboxes.listAccounts, isAuthenticated ? {} : "skip");
-  const disconnect = useMutation(api.mailboxes.disconnect);
+  const disconnect = useAction(api.mailboxGoogle.disconnectAndRevoke);
   const maintenance = useMutation(api.mailboxes.setMaintenance);
   const restart = useMutation(api.mailboxes.restartSearch);
   const startDiscoveryRun = useMutation(api.mailboxes.startDiscoveryRun);
@@ -120,6 +129,12 @@ export function MailboxManagement({ available }: { available: boolean }) {
   async function operation(work: () => Promise<unknown>, success: string) {
     setBusy(true);
     try { await work(); setNotice(success); }
+    catch { setNotice("This change could not be saved. Check the connection status and retry."); }
+    finally { setBusy(false); }
+  }
+  async function disconnectAccount(account: Account) {
+    setBusy(true);
+    try { setNotice(disconnectNotice(await disconnect({ accountId: account.accountId, expectedGeneration: account.generation }))); }
     catch { setNotice("This change could not be saved. Check the connection status and retry."); }
     finally { setBusy(false); }
   }
@@ -172,6 +187,7 @@ export function MailboxManagement({ available }: { available: boolean }) {
         "The last read failed. Try again. Your retained evidence and relationships are unchanged."}</p>}
       {account.lastFailure === "REAUTHORIZE" && <p role="alert">{available ? "Google access expired or was revoked. Reconnect this account. Daily discovery is off until you explicitly enable it again." :
         `Google access expired or was revoked. ${MAILBOX_TESTERS_ONLY} You can disconnect this account. Your retained evidence and relationships are unchanged.`}</p>}
+      {account.status === "DISCONNECTED" && account.lastRevocation?.outcome === "FAILED" && <p role="alert">When you disconnected, Google did not confirm that this app&apos;s access was revoked. {REVOKE_YOURSELF}</p>}
       {account.lastFailure === "CURSOR_EXPIRED" && <p role="alert">A saved search page expired. Restart that search below. Repeated messages will not create duplicate evidence.</p>}
       <MailboxDiscoveryRun run={account.discoveryRun} connected={account.status === "CONNECTED"} busy={busy} canReconnect={available} onStart={() => void startRun(account)} onControl={action => void controlRun(account, action)}/>
       <div className="action-row">
@@ -194,8 +210,8 @@ export function MailboxManagement({ available }: { available: boolean }) {
           <button className="secondary-action" disabled={busy}>Reconnect this Gmail account</button>
         </form> : <p>{MAILBOX_TESTERS_ONLY}</p>}
         <button className="secondary-action" disabled={busy || account.status === "DISCONNECTED"}
-          onClick={() => void operation(() => disconnect({ accountId: account.accountId, expectedGeneration: account.generation }), "Disconnected and stopped collection. Evidence and product relationships remain unchanged.")}>Disconnect and stop collection</button>
-        <p>Disconnecting removes the saved credentials and stops future reads. Existing private evidence and relationship history are retained. You can also revoke this app in your Google account permissions.</p>
+          onClick={() => void disconnectAccount(account)}>Disconnect and stop collection</button>
+        <p>Disconnecting removes the saved credentials and stops future reads. Disconnecting also asks Google to revoke this app&apos;s access. If that request fails, you can still revoke it in your Google Account permissions. Existing private evidence and relationship history are retained.</p>
       </details>
     </article>)}
     <button className="secondary-action" aria-expanded={showUnknown} onClick={() => setShowUnknown(value => !value)}>{showUnknown ? "Hide unmatched headers" : "Review unmatched headers"}</button>

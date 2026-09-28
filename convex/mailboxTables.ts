@@ -5,6 +5,7 @@ export const mailboxProviderValidator = v.union(v.literal("GOOGLE"), v.literal("
 export const mailboxCursorValidator = v.union(v.string(), v.null());
 export const mailboxScanModeValidator = v.union(v.literal("KNOWN_PRODUCTS"), v.literal("HISTORY"), v.literal("INCREMENTAL"));
 export const mailboxFailureValidator = v.union(v.literal("TEMPORARY"), v.literal("REAUTHORIZE"), v.literal("CURSOR_EXPIRED"));
+export const mailboxRevocationOutcomeValidator = v.union(v.literal("REVOKED"), v.literal("FAILED"), v.literal("NO_TOKEN"));
 export const mailboxCredentialValidator = v.object({
   algorithm: v.literal("AES-256-GCM"), keyVersion: v.string(),
   ciphertext: v.string(), iv: v.string(),
@@ -40,6 +41,8 @@ export const mailboxTables = {
     maintenanceEnabled: v.optional(v.boolean()),
     maintenanceApprovedAt: v.optional(v.string()),
     nextMaintenanceAt: v.optional(v.number()),
+    // Outcome of the last disconnect's provider revocation request. Never holds provider text or tokens.
+    lastRevocation: v.optional(v.object({ outcome: mailboxRevocationOutcomeValidator, at: v.string() })),
     connectedAt: v.string(), updatedAt: v.string(), lastSyncedAt: v.optional(v.string()),
   }).index("by_owner", ["ownerId"])
     .index("by_maintenance_due", ["maintenanceEnabled", "nextMaintenanceAt"])

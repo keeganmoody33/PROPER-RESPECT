@@ -5,7 +5,7 @@ import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { buildAuthorizationUrl, createMailboxOAuthConfig, createOAuthState, createPkce, parseOAuthCallback } from "../src/server/mailbox-oauth";
-import { exchangeMailboxAuthorization, refreshMailboxAuthorization, MailboxProviderError } from "../src/server/mailbox-provider-http";
+import { exchangeMailboxAuthorization, refreshMailboxAuthorization, revokeMailboxGrant, MailboxProviderError } from "../src/server/mailbox-provider-http";
 import { decryptMailboxCredential, encryptMailboxCredential, type MailboxKeyring } from "../src/server/mailbox-credentials";
 import { readGmailPage, MailboxCursorError } from "../src/server/mailbox-gmail";
 import { mailboxScanModeValidator } from "./mailboxTables";
@@ -65,6 +65,34 @@ export const callback = action({
         scopes: verified.scopes, expectedGeneration: pending.expectedGeneration, credential,
       });
     } catch { throw new Error("Gmail authorization failed. Start a new connection attempt."); }
+  },
+});
+
+type DisconnectResult =
+  | { disconnected: true; generation: number; revocation: "REVOKED" | "FAILED" | "NO_TOKEN" }
+  | { disconnected: false; reason: "GENERATION_CHANGED" };
+
+/**
+ * Disconnect a Gmail account and ask Google to revoke the grant. The local
+ * disconnect happens whatever Google answers; a reconnect that lands while the
+ * revocation is in flight keeps its newer connection. Errors and the stored
+ * outcome carry fixed values only, never provider text or tokens.
+ */
+export const disconnectAndRevoke = action({
+  args: { accountId: v.id("mailboxAccounts"), expectedGeneration: v.number() },
+  handler: async (ctx, args): Promise<DisconnectResult> => {
+    const stored = await ctx.runQuery(internal.mailboxes.revocationCredential, args);
+    let outcome: "REVOKED" | "FAILED" | "NO_TOKEN" = "NO_TOKEN";
+    if (stored.credential) {
+      try {
+        const credential = decryptMailboxCredential(stored.credential, { ownerId: stored.ownerId, provider: stored.provider,
+          providerAccountId: stored.providerAccountId, generation: stored.generation }, keyring());
+        // Revoking the refresh token ends the whole grant; the access token is a fallback only.
+        await revokeMailboxGrant(stored.provider, credential.refreshToken || credential.accessToken);
+        outcome = "REVOKED";
+      } catch { outcome = "FAILED"; }
+    }
+    return await ctx.runMutation(internal.mailboxes.finishDisconnect, { ...args, outcome });
   },
 });
 

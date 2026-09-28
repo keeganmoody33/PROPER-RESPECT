@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
-import { mailboxCredentialValidator, mailboxProviderValidator, mailboxScanModeValidator, mailboxFailureValidator } from "./mailboxTables";
+import { mailboxCredentialValidator, mailboxProviderValidator, mailboxScanModeValidator, mailboxFailureValidator, mailboxRevocationOutcomeValidator } from "./mailboxTables";
 import { mailboxSearchWindow, MAILBOX_DAILY_INTERVAL_MS, type MailboxScanMode } from "../src/server/mailbox-search";
 
 export const MAILBOX_LEASE_MS = 2 * 60 * 1000;
@@ -135,7 +135,7 @@ export const listAccounts = query({
       connectedAt: account.connectedAt, lastSyncedAt: account.lastSyncedAt,
       lastReadStatus: account.lastReadStatus, hasMore: account.cursor !== null,
       lastFailure: account.lastFailure, maintenanceEnabled: account.maintenanceEnabled ?? false,
-      nextMaintenanceAt: account.nextMaintenanceAt,
+      nextMaintenanceAt: account.nextMaintenanceAt, lastRevocation: account.lastRevocation,
       capability: "READ_ONLY_HEADERS" as const,
       discoveryRun: account.discoveryRunId ? publicDiscoveryRun(await ctx.db.get(account.discoveryRunId)) : null,
       contexts: await ctx.db.query("mailboxScanContexts").withIndex("by_account_mode", q => q.eq("accountId", account._id)).take(3),
@@ -165,6 +165,45 @@ export const disconnect = mutation({
     if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
     requireMailboxGeneration(account, args.expectedGeneration);
     return await invalidateConnection(ctx, account, "DISCONNECTED");
+  },
+});
+
+/**
+ * Step 1 of disconnectAndRevoke: the caller owns the account at the expected
+ * generation. Returns the current-generation credential envelope, if any, for
+ * the action to decrypt and revoke. Nothing is changed here.
+ */
+export const revocationCredential = internalQuery({
+  args: { accountId: v.id("mailboxAccounts"), expectedGeneration: v.number() },
+  handler: async (ctx, args) => {
+    const owner = await requireUser(ctx);
+    const account = await ctx.db.get(args.accountId);
+    if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
+    requireMailboxGeneration(account, args.expectedGeneration);
+    const secret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
+    return {
+      ownerId: account.ownerId, provider: account.provider, providerAccountId: account.providerAccountId, generation: account.generation,
+      credential: secret && secret.generation === account.generation ? secret.credential : null,
+    };
+  },
+});
+
+/**
+ * Step 3 of disconnectAndRevoke. A reconnect or disconnect since step 1 moved
+ * the generation, so the newer connection is left untouched. Otherwise the
+ * local disconnect runs whatever the revocation outcome was.
+ */
+export const finishDisconnect = internalMutation({
+  args: { accountId: v.id("mailboxAccounts"), expectedGeneration: v.number(), outcome: mailboxRevocationOutcomeValidator },
+  handler: async (ctx, args) => {
+    const owner = await requireUser(ctx);
+    const account = await ctx.db.get(args.accountId);
+    if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
+    try { requireMailboxGeneration(account, args.expectedGeneration); }
+    catch { return { disconnected: false as const, reason: "GENERATION_CHANGED" as const }; }
+    const { generation } = await invalidateConnection(ctx, account, "DISCONNECTED");
+    await ctx.db.patch(account._id, { lastRevocation: { outcome: args.outcome, at: new Date().toISOString() } });
+    return { disconnected: true as const, generation, revocation: args.outcome };
   },
 });
 
