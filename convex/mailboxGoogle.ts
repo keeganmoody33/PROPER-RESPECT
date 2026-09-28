@@ -66,14 +66,16 @@ export const callback = action({
           scopes: verified.scopes, expectedGeneration: pending.expectedGeneration, credential,
         });
       } catch (error) {
-        const refusal = error instanceof ConvexError ? error.data as { code?: string; accountId?: Id<"mailboxAccounts"> } : undefined;
-        if (refusal?.code === "REVOCATION_PENDING" && refusal.accountId) {
+        const refusal = error instanceof ConvexError
+          ? error.data as { code?: string; accountId?: Id<"mailboxAccounts">; revocationToken?: string; generation?: number } : undefined;
+        if (refusal?.code === "REVOCATION_PENDING" && refusal.accountId && refusal.revocationToken && refusal.generation !== undefined) {
           // This account is being disconnected: end the grant these fresh tokens belong to as well. Retry once; if the
           // provider still won't revoke them, record it so the disconnect reports FAILED instead of REVOKED.
           const token = verified.credential.refreshToken || verified.credential.accessToken;
           const revoked = await revokeMailboxGrant("GOOGLE", token).then(() => true, () =>
             revokeMailboxGrant("GOOGLE", token).then(() => true, () => false));
-          if (!revoked) await ctx.runMutation(internal.mailboxes.recordStrandedGrant, { accountId: refusal.accountId });
+          if (!revoked) await ctx.runMutation(internal.mailboxes.recordStrandedGrant, {
+            accountId: refusal.accountId, revocationToken: refusal.revocationToken, generation: refusal.generation });
         }
         throw error;
       }
@@ -134,8 +136,19 @@ async function readLeasedPage(ctx: ActionCtx, args: { accountId: Id<"mailboxAcco
       const { oauth, clientSecret } = config();
       const verified = await refreshMailboxAuthorization(oauth, { refreshToken: credential.refreshToken, clientSecret,
         expectedProviderAccountId: stored.account.providerAccountId });
-      const rotated = await ctx.runMutation(internal.mailboxes.rotateCredential, { ...lease, expectedRevision: revision,
-        credential: encryptMailboxCredential(verified.credential, context, keyring()), scopes: verified.scopes });
+      let rotated;
+      try {
+        rotated = await ctx.runMutation(internal.mailboxes.rotateCredential, { ...lease, expectedRevision: revision,
+          credential: encryptMailboxCredential(verified.credential, context, keyring()), scopes: verified.scopes });
+      } catch (error) {
+        // Refused because the account is being (or was) disconnected. If Google issued a new refresh token, the
+        // disconnect never saw it, so end it here. An unchanged token is already covered by the disconnect.
+        if (error instanceof ConvexError && (error.data as { code?: string } | undefined)?.code === "DISCONNECTING" &&
+            verified.credential.refreshToken && verified.credential.refreshToken !== credential.refreshToken) {
+          await revokeMailboxGrant("GOOGLE", verified.credential.refreshToken).catch(() => undefined);
+        }
+        throw error;
+      }
       credential = verified.credential;
       revision = rotated.revision;
       refreshed = true;

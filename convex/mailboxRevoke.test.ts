@@ -354,3 +354,53 @@ test("if a refused reconnect's fresh tokens can't be revoked, the disconnect rep
   expect(JSON.stringify(account)).not.toContain(NEW_REFRESH);
   expect(JSON.stringify(consoleCalls)).not.toContain(NEW_REFRESH);
 });
+
+test("a refresh token Google rotates mid-disconnect is revoked, not stranded (R17)", async () => {
+  const { t, owner } = await setup();
+  const ROTATED = "refresh-SECRET-r17-rotated-6a0c";
+  const ids: { accountId?: Awaited<ReturnType<typeof connect>>["accountId"] } = {};
+  const revoked: string[] = [];
+  let disconnected: unknown;
+  vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
+    const url = String(input);
+    const form = new URLSearchParams(String(init?.body ?? ""));
+    if (url === "https://oauth2.googleapis.com/token" && form.get("grant_type") === "refresh_token") {
+      // The disconnect runs to completion while this scan's refresh is in flight at Google.
+      disconnected = await owner.action(disconnectAndRevoke, { accountId: ids.accountId!, expectedGeneration: 1 });
+      return Response.json({ access_token: "access-rotated", refresh_token: ROTATED, expires_in: 3600, token_type: "Bearer", scope });
+    }
+    // A short-lived first access token makes the scan refresh before reading.
+    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: ACCESS, refresh_token: REFRESH, expires_in: 30, token_type: "Bearer", scope });
+    if (url === "https://openidconnect.googleapis.com/v1/userinfo") return Response.json({ sub: "google-sub", email: "google-sub@example.test", email_verified: true });
+    if (url === REVOKE) { revoked.push(form.get("token") ?? ""); return new Response("{}"); }
+    throw new Error("Unexpected HTTP endpoint");
+  }));
+  ids.accountId = (await connect(owner)).accountId;
+  await expect(owner.action(api.mailboxGoogle.read, { accountId: ids.accountId, expectedGeneration: 1 })).rejects.toThrow();
+  expect(disconnected).toMatchObject({ disconnected: true });
+  expect(revoked).toEqual([REFRESH, ROTATED]);
+  expect(await t.run(ctx => ctx.db.query("mailboxSecrets").collect())).toEqual([]);
+  expect(JSON.stringify(consoleCalls)).not.toContain(ROTATED);
+});
+
+test("a stranded-grant report only marks the revocation it came from (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const a = await owner.mutation(internal.mailboxes.beginRevocation, { accountId: connection.accountId, expectedGeneration: 1 });
+  await owner.mutation(internal.mailboxes.finishDisconnect, { accountId: connection.accountId, expectedGeneration: 1, outcome: "REVOKED", revocationToken: a.revocationToken });
+  // Reconnected since (generation 3), and a newer disconnect B is now revoking.
+  await t.run(ctx => ctx.db.patch(connection.accountId, { status: "CONNECTED", generation: 3 }));
+  const b = await owner.mutation(internal.mailboxes.beginRevocation, { accountId: connection.accountId, expectedGeneration: 3 });
+
+  // A's delayed report must not touch B.
+  await owner.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, revocationToken: a.revocationToken, generation: 1 });
+  let account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(account.revocationPending?.strandedGrant).toBeUndefined();
+  expect(account.lastRevocation?.outcome).toBe("REVOKED");
+
+  // B's own report does.
+  await owner.mutation(internal.mailboxes.recordStrandedGrant, { accountId: connection.accountId, revocationToken: b.revocationToken, generation: 3 });
+  account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(account.revocationPending?.strandedGrant).toBe(true);
+});
