@@ -320,3 +320,37 @@ test("tokens a reconnect receives during a revocation are revoked, not left live
   expectNoToken(consoleCalls);
   expect(JSON.stringify(consoleCalls)).not.toContain(NEW_REFRESH);
 });
+
+test("if a refused reconnect's fresh tokens can't be revoked, the disconnect reports FAILED (R17)", async () => {
+  const { t, owner } = await setup();
+  provider();
+  const connection = await connect(owner);
+  const reconnect = stateFrom(await owner.action(start, { accountId: connection.accountId, expectedGeneration: 1 }));
+  const NEW_REFRESH = "refresh-SECRET-r17-new-8e1f";
+  const revoked: string[] = [];
+  let nested = false;
+  vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "access-new", refresh_token: NEW_REFRESH, expires_in: 3600, token_type: "Bearer", scope });
+    if (url === "https://openidconnect.googleapis.com/v1/userinfo") return Response.json({ sub: "google-sub", email: "google-sub@example.test", email_verified: true });
+    if (url === REVOKE) {
+      const token = new URLSearchParams(String(init?.body)).get("token") ?? "";
+      revoked.push(token);
+      if (token === NEW_REFRESH) return new Response("{}", { status: 503 });
+      if (!nested) {
+        nested = true;
+        await owner.action(callback, reply(reconnect)).catch(() => undefined);
+      }
+      return new Response("{}");
+    }
+    throw new Error("Unexpected HTTP endpoint");
+  }));
+  const result = await owner.action(disconnectAndRevoke, { accountId: connection.accountId, expectedGeneration: 1 });
+  // One retry for the fresh tokens, then the failure is recorded rather than dropped.
+  expect(revoked).toEqual([REFRESH, NEW_REFRESH, NEW_REFRESH]);
+  expect(result).toMatchObject({ disconnected: true, revocation: "FAILED" });
+  const account = (await t.run(ctx => ctx.db.get(connection.accountId)))!;
+  expect(account).toMatchObject({ status: "DISCONNECTED", lastRevocation: { outcome: "FAILED" } });
+  expect(JSON.stringify(account)).not.toContain(NEW_REFRESH);
+  expect(JSON.stringify(consoleCalls)).not.toContain(NEW_REFRESH);
+});

@@ -45,7 +45,8 @@ export const mailboxTables = {
     lastRevocation: v.optional(v.object({ outcome: mailboxRevocationOutcomeValidator, at: v.string() })),
     // Set while disconnectAndRevoke is asking the provider to revoke the grant; reconnects and scans wait until it
     // clears or expires. The token fences cleanup to the revocation that set it.
-    revocationPending: v.optional(v.object({ token: v.string(), until: v.number() })),
+    // strandedGrant: a reconnect refused during this revocation got fresh tokens that couldn't be revoked.
+    revocationPending: v.optional(v.object({ token: v.string(), until: v.number(), strandedGrant: v.optional(v.boolean()) })),
     connectedAt: v.string(), updatedAt: v.string(), lastSyncedAt: v.optional(v.string()),
   }).index("by_owner", ["ownerId"])
     .index("by_maintenance_due", ["maintenanceEnabled", "nextMaintenanceAt"])

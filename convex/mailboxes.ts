@@ -113,7 +113,7 @@ export const finalizeVerifiedConnection = internalMutation({
     }
     // A disconnect is asking the provider to revoke this grant: install nothing, and tell the caller to revoke the
     // tokens it just received so they don't outlive the disconnect at the provider.
-    if (revocationActive(account)) throw new ConvexError({ code: "REVOCATION_PENDING" as const });
+    if (revocationActive(account)) throw new ConvexError({ code: "REVOCATION_PENDING" as const, accountId: account._id });
     const generation = args.expectedGeneration + 1;
     const priorSecret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
     if (priorSecret) await ctx.db.delete(priorSecret._id);
@@ -224,9 +224,29 @@ export const finishDisconnect = internalMutation({
       if (ours) await ctx.db.patch(account._id, { revocationPending: undefined });
       return { disconnected: false as const, reason: "GENERATION_CHANGED" as const };
     }
+    // A refused reconnect's tokens that couldn't be revoked mean a grant may still be live: report FAILED.
+    const outcome = account.revocationPending?.strandedGrant ? "FAILED" as const : args.outcome;
     const { generation } = await invalidateConnection(ctx, account, "DISCONNECTED");
-    await ctx.db.patch(account._id, { lastRevocation: { outcome: args.outcome, at: new Date().toISOString() }, revocationPending: undefined });
-    return { disconnected: true as const, generation, revocation: args.outcome };
+    await ctx.db.patch(account._id, { lastRevocation: { outcome, at: new Date().toISOString() }, revocationPending: undefined });
+    return { disconnected: true as const, generation, revocation: outcome };
+  },
+});
+
+/**
+ * A reconnect refused during a revocation received fresh tokens that the provider wouldn't revoke. Makes the
+ * disconnect report FAILED, so the person is told to revoke the app themselves. Records no token.
+ */
+export const recordStrandedGrant = internalMutation({
+  args: { accountId: v.id("mailboxAccounts") },
+  handler: async (ctx, args) => {
+    const owner = await requireUser(ctx);
+    const account = await ctx.db.get(args.accountId);
+    if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
+    if (account.revocationPending) {
+      await ctx.db.patch(account._id, { revocationPending: { ...account.revocationPending, strandedGrant: true } });
+    } else if (account.status === "DISCONNECTED") {
+      await ctx.db.patch(account._id, { lastRevocation: { outcome: "FAILED", at: new Date().toISOString() } });
+    }
   },
 });
 
