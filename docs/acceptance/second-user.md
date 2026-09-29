@@ -50,7 +50,7 @@ Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
 
 - [ ] The tester claims a handle under **Choose what to share → Public
   identity**, then **Save public identity**.
-- [ ] One manual product added with **Add a product**.
+- [ ] One manual product added under **Add a product**, with **Add for private review**.
 - [ ] One GitHub card, with **Connect GitHub** (only if the tester has GitHub
   linked under Connected accounts). If not, mark this check "skipped" and say
   why.
@@ -62,7 +62,8 @@ Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
 
 ### 4. Private save persists
 
-- [ ] The tester saves with **Save privately**.
+- [ ] The tester saves each product with **Confirm and save privately** (the
+  button reads **Save privately** on later edits).
 - [ ] After a page reload, everything is still there.
 - [ ] After signing out and back in, everything is still there.
 

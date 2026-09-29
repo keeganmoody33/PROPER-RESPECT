@@ -12,7 +12,8 @@ Everything you add starts private. Your collection lives at
 - **Private until you share:** products you add, your notes and dates,
   screenshots and files you upload, and anything imported from GitHub or
   Gmail.
-- **Saving never publishes.** **Save privately** saves for you alone.
+- **Saving never publishes.** **Confirm and save privately** (later **Save
+  privately**) saves for you alone.
 - **Uploaded files are never published.** A shared card shows only the
   details in the preview you approved.
 - **Gmail discovery** is open only to invited testers. It asks Google for
@@ -32,6 +33,13 @@ Nothing becomes public until you approve a preview.
 
 Only that approved version appears at `proper-respect.com/<your-handle>`. If you
 change something later, it stays private until you preview and approve again.
+
+**One exception: the daily GitHub refresh.** On a GitHub card you can tick
+**Refresh daily from GitHub** before publishing. If you do, that card's public
+GitHub contribution calendar updates once a day without a new preview. Only
+the calendar changes: its numbers, its capture date, or an "out of date" mark
+if a refresh fails. To stop it, untick the box and publish again, or
+disconnect GitHub.
 
 ## Removing your data
 
