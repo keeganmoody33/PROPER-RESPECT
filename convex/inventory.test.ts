@@ -2,7 +2,7 @@
 /// <reference types="vite/client" />
 import { convexTest, type TestConvex } from "convex-test";
 import { makeFunctionReference, type FunctionReturnType } from "convex/server";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import schema from "./schema";
 import type { api } from "./_generated/api";
 
@@ -110,11 +110,15 @@ test("private edits to a published card stay private when another publication om
   expect(await t.run(ctx => ctx.db.get(propId))).toMatchObject({ note: "Private note", status: "ARCHIVED", relationshipVersion: 2 });
 });
 
-test("the latest primary link stays available after more than 25 publications", async () => {
+test("the latest primary link stays available after more than 25 publications", async ({ onTestFinished }) => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  onTestFinished(() => { vi.useRealTimers(); });
   const { owner, propId } = await fixture();
   const publish = makeFunctionReference<"mutation">("onboarding:publishSelected");
   await owner.mutation(save, { propId, expectedVersion: 0, operationId: "first", status: "ACTIVE", goTo: false, headline: "", note: "" });
   for (let revision = 1; revision <= 26; revision++) {
+    // Keep all 26 revisions while respecting R18's 20-publications/hour limit.
+    vi.setSystemTime(new Date(Date.UTC(2026, 8, 29, 12 + Math.floor((revision - 1) / 20))));
     await owner.mutation(publish, await reviewedPublication(owner, { selections: [{
       propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "", note: "",
       primaryLink: { type: "CANONICAL", url: `https://wisprflow.ai/?revision=${revision}`, label: `Published link ${revision}` }, autoRefresh: false,

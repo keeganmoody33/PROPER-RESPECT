@@ -1,7 +1,7 @@
 import { v, type ObjectType } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import { requireUser } from "./authHelpers";
+import { consumeWriteLimit, requireUser } from "./authHelpers";
 import { registerProductSources } from "./productKnowledge";
 import { ensureProductBrand } from "./productBrands";
 import {
@@ -74,6 +74,8 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
     return prop._id;
   }
 
+  // A committed receipt is a read-only replay, even when the allowance is used.
+  await consumeWriteLimit(ctx, user._id, "addManualProduct");
   const catalog = resolveCatalog(name, website);
   const domain = website ? extractDomain(website)! : "";
   const identityHash = await sha256(JSON.stringify([user._id, name.toLowerCase(), domain]));
