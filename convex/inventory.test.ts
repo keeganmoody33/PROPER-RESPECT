@@ -200,3 +200,51 @@ test("inventory reads stay bounded with long histories and many proofs, while al
   }
   expect(versions).toEqual(Array.from({ length: 105 }, (_, index) => 105 - index));
 });
+
+const locator = makeFunctionReference<"query">("inventory:locator");
+const detail = makeFunctionReference<"query">("inventory:detail");
+const related = makeFunctionReference<"query">("inventory:related");
+
+test("the lightweight owner locator reaches later pages and keeps duplicate relationships distinct", async () => {
+  const { t, owner, other, propId, userId } = await fixture();
+  const later = await t.run(async ctx => {
+    for (let i = 0; i < 30; i++) {
+      const productId = await ctx.db.insert("products", { name: `Tool ${i}`, slug: `tool-${i}`, domain: `tool-${i}.example`, description: "" });
+      await ctx.db.insert("props", { userId, productId, status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "Private note excluded from locator" });
+    }
+    const original = (await ctx.db.get(propId))!;
+    return ctx.db.insert("props", { userId, productId: original.productId, status: "ARCHIVED", visibility: "PRIVATE", headline: "Later relationship", note: "Private history" });
+  });
+  let cursor: string | null = null;
+  const records = [];
+  do {
+    const result: FunctionReturnType<typeof api.inventory.locator> = await owner.query(locator, { paginationOpts: { numItems: 100, cursor } });
+    expect(result.page.length).toBeLessThanOrEqual(25);
+    records.push(...result.page);
+    cursor = result.isDone ? null : result.continueCursor;
+  } while (cursor);
+  expect(records).toHaveLength(32);
+  expect(records.filter(record => record.name === "Wispr Flow").map(record => record.propId)).toEqual([propId, later]);
+  expect(records.every(record => !("note" in record) && !("activity" in record) && !("evidence" in record))).toBe(true);
+  expect((await owner.query(detail, { propId: later })).prop.note).toBe("Private history");
+  expect((await other.query(locator, firstPage)).page).toEqual([]);
+  expect(await other.query(detail, { propId: later })).toBeNull();
+  expect(await owner.query(detail, { propId: "not-a-valid-id" })).toBeNull();
+  await expect(t.query(locator, firstPage)).rejects.toThrow();
+  await expect(other.query(related, { propId, ...firstPage })).rejects.toThrow("unavailable");
+  expect((await owner.query(related, { propId, ...firstPage })).page.map((record: { propId: string }) => record.propId)).toEqual([propId, later]);
+});
+
+test("direct relationship reload preserves exact duplicate decisions and the public snapshot", async () => {
+  const { t, owner, propId, userId } = await fixture();
+  const sibling = await t.run(async ctx => {
+    const original = (await ctx.db.get(propId))!;
+    return ctx.db.insert("props", { userId, productId: original.productId, status: "ARCHIVED", visibility: "PRIVATE", headline: "Sibling", note: "Do not change" });
+  });
+  const publicBefore = await t.run(ctx => ctx.db.query("publishedProfiles").collect());
+  await owner.mutation(save, { propId, expectedVersion: 0, operationId: "focused-save", status: "ACTIVE", goTo: true, headline: "My everyday tool", note: "Why it matters" });
+  const fresh = t.withIdentity({ subject: "owner", tokenIdentifier: "another-session" });
+  expect((await fresh.query(detail, { propId })).prop).toMatchObject({ status: "ACTIVE", goTo: true, note: "Why it matters", relationshipVersion: 1 });
+  expect((await fresh.query(detail, { propId: sibling })).prop).toMatchObject({ status: "ARCHIVED", note: "Do not change" });
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual(publicBefore);
+});

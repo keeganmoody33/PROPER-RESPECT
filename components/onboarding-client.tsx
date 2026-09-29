@@ -28,7 +28,8 @@ import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
 import { ProductBrandControls } from "./product-brand-controls";
-import { PrivateInventory } from "./private-inventory";
+import { OwnerCollection } from "./owner-collection";
+import { openRelationship } from "@/src/client/relationship-location";
 import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 
@@ -64,7 +65,7 @@ function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
   </div>;
 }
 
-export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) => Promise<unknown> }) {
+export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProductInput) => Promise<unknown>; onAdded?: (propId: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
   const retry = useRef<{ body: string; id: string } | null>(null);
@@ -80,7 +81,8 @@ export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) =
     setBusy(true);
     setNotice(null);
     try {
-      await onAdd({ ...values, operationId: retry.current.id });
+      const propId = await onAdd({ ...values, operationId: retry.current.id });
+      if (typeof propId === "string") onAdded?.(propId);
       setNotice({ kind: "saved", text: "Saved privately. Review the card to choose how you use this tool and add your explanation. Existing products keep their saved choices and notes." });
       retry.current = null;
       form.reset();
@@ -429,8 +431,8 @@ function Builder() {
         <a className="primary-action" href="#add-product">Add your first tool</a>
       </section>}
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
-      {state.privateInventoryAvailable ? <PrivateInventory brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
-      <AddProductForm onAdd={addManualProduct} />
+      {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
+      <AddProductForm onAdd={addManualProduct} onAdded={openRelationship} />
 
       <section className="onboarding-panel" id="collection-sources" aria-labelledby="collection-sources-title">
         <p className="onboarding-kicker">SOURCES / PRIVATE DISCOVERY</p>

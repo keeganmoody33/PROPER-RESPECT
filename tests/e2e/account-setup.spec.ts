@@ -115,21 +115,20 @@ for (const width of [1280, 390]) test(`first private manual card reaches exact p
   await add.getByLabel("What you want to remember (optional)").fill("I tried it for research notes.");
   await add.getByRole("button", { name: "Add for private review" }).click();
   await expect(page.getByRole("link", { name: "Review your collection" })).toBeVisible();
-  await page.getByRole("link", { name: "Review your collection" }).click();
-  const inventory = page.getByRole("region", { name: "Field Notes in your collection" });
-  await inventory.getByText("Review this discovery", { exact: true }).click();
+  await expect(page).toHaveURL(/#relationship=manual-prop$/);
+  const inventory = page.getByRole("region", { name: "Field Notes", exact: true });
   await inventory.getByRole("combobox", { name: "How it fits", exact: true }).selectOption("ACTIVE");
   await inventory.getByLabel("What it helps you do (optional)").fill("My research log");
   await expect(inventory.getByLabel("Explanation or workflow (optional)")).toHaveValue("I tried it for research notes.");
   await inventory.getByLabel("Explanation or workflow (optional)").fill("I keep interview notes here.");
   await inventory.getByRole("button", { name: "Confirm and save privately" }).click();
-  await expect(inventory.getByText("My research log", { exact: true })).toBeVisible();
+  await expect(inventory.getByLabel("What it helps you do (optional)")).toHaveValue("My research log");
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Publish this preview" })).toHaveCount(0);
   const beforeReload = await page.evaluate(() => localStorage.getItem("proper-respect-fresh-user-fixture"));
   await page.reload();
   await expect(page.getByRole("heading", { name: "Start with one tool" })).toHaveCount(0);
-  await expect(inventory.getByText("My research log", { exact: true })).toBeVisible();
+  await expect(inventory.getByLabel("What it helps you do (optional)")).toHaveValue("My research log");
   await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
   expect(await page.evaluate(() => localStorage.getItem("proper-respect-fresh-user-fixture"))).toBe(beforeReload);
   await page.getByRole("link", { name: "Set up your public identity", exact: true }).click();
@@ -268,4 +267,69 @@ for (const width of [1280, 390]) test(`unpublish all and download my data at ${w
   expect(calls.filter((call: { name: string }) => call.name === "inventory:exportRelationships")).toHaveLength(2);
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+for (const width of [1280, 390]) test(`owner finds later duplicate records, saves one, and returns at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  await expect(page.getByRole("heading", { name: "Start with one tool" })).toBeVisible();
+  await page.evaluate(() => {
+    const key = "proper-respect-fresh-user-fixture";
+    const state = JSON.parse(localStorage.getItem(key)!);
+    state.cards = Array.from({ length: 34 }, (_, i) => {
+      const shared = i >= 32;
+      const productId = shared ? "shared-product" : `product-${i}`;
+      return {
+        product: { _id: productId, _creationTime: i, name: shared ? "Shared Tool" : `Tool ${i}`, slug: productId, domain: `${productId}.example`, description: "Synthetic" },
+        prop: { _id: `record-${i}`, _creationTime: i, userId: state.user._id, productId, status: i === 33 ? "TESTING" : "ACTIVE", visibility: i === 33 ? "DRAFT" : "PRIVATE", headline: i === 33 ? "Uncertain clue" : `Work ${i}`, note: i === 33 ? "Unreviewed source text" : `Reason ${i}`, relationshipVersion: 0 },
+        links: [], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false,
+      };
+    });
+    localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.reload();
+  const collection = page.getByRole("region", { name: "My collection", exact: true });
+  await expect(collection.getByText("25 relationships checked. More remain to check.", { exact: true })).toBeVisible();
+  await collection.getByRole("button", { name: "All", exact: true }).click();
+  await collection.getByRole("searchbox", { name: "Find a tool" }).fill("Shared Tool");
+  await expect(collection.getByText("2 matching relationships.", { exact: true })).toBeVisible();
+  await collection.getByRole("link", { name: /Shared Tool Currently use/ }).click();
+  await expect(page).toHaveURL(/#relationship=record-32$/);
+  const focused = page.getByRole("region", { name: "Shared Tool", exact: true });
+  await expect(focused.getByRole("heading", { name: "Shared Tool", exact: true })).toBeFocused();
+  await expect(focused.getByLabel("Explanation or workflow (optional)")).toHaveValue("Reason 32");
+  await focused.getByLabel("One of my go-to tools").check();
+  await focused.getByLabel("Explanation or workflow (optional)").fill("Essential for my current work.");
+  await focused.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(focused.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  await expect(focused.getByRole("heading", { name: "Saved decisions" })).toBeVisible();
+  await focused.getByRole("combobox", { name: "Relationship record", exact: true }).selectOption("record-33");
+  await expect(focused.getByLabel("How it fits")).toHaveValue("");
+  await expect(focused.getByLabel("Explanation or workflow (optional)")).toHaveValue("");
+  await expect(focused.getByText("No retained source is attached. Your explanation is an owner statement.", { exact: true })).toBeVisible();
+  await focused.getByRole("combobox", { name: "Relationship record", exact: true }).selectOption("record-32");
+  await expect(focused.getByLabel("One of my go-to tools")).toBeChecked();
+  await page.reload();
+  await expect(focused.getByLabel("Explanation or workflow (optional)")).toHaveValue("Essential for my current work.");
+  await focused.getByLabel("How it fits").selectOption("ARCHIVED");
+  await focused.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(focused.getByText("active → archived", { exact: false })).toBeVisible();
+  await focused.getByRole("heading", { name: "Shared Tool", exact: true }).scrollIntoViewIfNeeded();
+  await focused.screenshot({ path: testInfo.outputPath(`2026-09-29-owner-relationship-${width}.png`) });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await focused.getByRole("link", { name: "Back to my collection" }).click();
+  await collection.getByRole("button", { name: "Past use", exact: true }).click();
+  await expect(collection.getByRole("link", { name: /Shared Tool Past use/ })).toBeVisible();
+  await collection.getByRole("button", { name: "Discoveries", exact: true }).click();
+  await expect(collection.getByRole("link", { name: /Shared Tool Needs your decision/ })).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!));
+  expect(saved.cards[33].prop).toMatchObject({ visibility: "DRAFT", note: "Unreviewed source text", relationshipVersion: 0 });
+  expect(saved.history).toHaveLength(2);
+  const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
+  expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toHaveLength(0);
+  expect(errors).toEqual([]);
 });

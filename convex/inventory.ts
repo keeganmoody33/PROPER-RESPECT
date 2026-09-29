@@ -121,6 +121,52 @@ export const list = query({
   },
 });
 
+function locatorRow(prop: Doc<"props">, product: Doc<"products">) {
+  return { propId: prop._id, productId: product._id, name: product.name, domain: product.domain,
+    status: prop.status, confirmed: isRelationshipConfirmed(prop), goTo: prop.goTo ?? false,
+    headline: prop.headline };
+}
+
+export const locator = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    const user = await requireUser(ctx);
+    const result = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id))
+      .paginate(boundedPage(paginationOpts, 25));
+    const page = await Promise.all(result.page.map(async prop => {
+      const product = await ctx.db.get(prop.productId);
+      return product ? locatorRow(prop, product) : null;
+    }));
+    return { ...result, page: page.filter(row => row !== null) };
+  },
+});
+
+export const detail = query({
+  args: { propId: v.string() },
+  handler: async (ctx, { propId }) => {
+    const user = await requireUser(ctx);
+    const id = ctx.db.normalizeId("props", propId);
+    const prop = id ? await ctx.db.get(id) : null;
+    if (!prop || prop.userId !== user._id) return null;
+    const product = await ctx.db.get(prop.productId);
+    if (!product) return null;
+    const brand = await retainedProductBrand(ctx, product);
+    const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").take(25);
+    return { prop, product: { ...product, brand }, links, associatedAccountEvidence: [], previousStatuses: [] };
+  },
+});
+
+export const related = query({
+  args: { propId: v.id("props"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { propId, paginationOpts }) => {
+    const { user, prop } = await ownedProp(ctx, propId);
+    const product = await ctx.db.get(prop.productId);
+    const result = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", user._id).eq("productId", prop.productId))
+      .paginate(boundedPage(paginationOpts, 25));
+    return { ...result, page: product ? result.page.map(row => locatorRow(row, product)) : [] };
+  },
+});
+
 export const accountEvidencePage = query({
   args: { propId: v.id("props"), paginationOpts: paginationOptsValidator },
   handler: async (ctx, { propId, paginationOpts }) => {

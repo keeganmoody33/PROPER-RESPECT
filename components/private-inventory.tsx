@@ -136,7 +136,8 @@ export function DeleteOriginal({ sourceLabel, onDelete, onDeleted }: {
   </div>;
 }
 
-export function InventoryRelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, onDeleteEvidence, renderEvidence, renderHistory }: {
+export function InventoryRelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, onDeleteEvidence, renderEvidence, renderHistory, focused = false }: {
+  focused?: boolean;
   item: Item; evidence: InventoryEvidence; selectedEvidence?: InventoryEvidence[number] | null;
   hasMoreEvidence?: boolean; loadingMoreEvidence?: boolean; onLoadMoreEvidence?: () => void;
   onSave: (input: SaveInput) => Promise<SaveResult>;
@@ -152,42 +153,48 @@ export function InventoryRelationshipDetails({ item, evidence, selectedEvidence,
     return result;
   }
   const sources = [...new Map([...(selectedEvidence ? [selectedEvidence] : []), ...evidence].map(source => [source.id, source])).values()];
-  return <>
-    <RelationshipEditor key={`${item.prop._id}:${item.prop.relationshipVersion ?? 0}`} item={item} evidence={sources} onSave={save} />
-    {saveNotice && <p role="status">{saveNotice}</p>}
-    <h3>Supporting context</h3>
-    {deleteNotice && <p role="status">{deleteNotice}</p>}
-    {item.prop.activityEvidenceId && !sources.some(source => source.id === item.prop.activityEvidenceId) && <p>The original for your saved supporting snapshot is unavailable. You can keep or remove the saved preview.</p>}
-    {sources.length === 0 && <p>{hasMoreEvidence ? "No available sources in the loaded evidence pages. More sources may be available below." : "No retained source is attached. Your explanation is an owner statement."}</p>}
-    {sources.map(source => <div className={styles.source} key={source.id}>
-      <strong>{source.sourceLabel}</strong>
-      {source.uploadedFile && <p>Original file: {source.uploadedFile.filename ?? "Filename unavailable"} · {source.uploadedFile.mimeType ?? "Format unavailable"} · {source.uploadedFile.byteSize === undefined ? "Size unavailable" : `${source.uploadedFile.byteSize.toLocaleString()} bytes`}. Retained privately; contents have not been parsed or authenticated. {source.uploadedFile.attribution === "VERIFIED_OWNER_SESSION" ? "Uploaded through your verified owner session; authorship and product usage are not verified." : "Legacy upload: stored account ownership is known, but the original uploader is unverified."}</p>}
-      {source.id === item.prop.activityEvidenceId && <p>Saved supporting snapshot</p>}
-      <p>{source.artifact ? `Static capture · source date ${source.artifact.sourceCapturedDate} · ${source.artifact.kind === "WISPR_OWNER_REVIEW" ? "recorded time retained in original" : "original time unknown"} · imported ${source.capturedAt.slice(0, 10)}.` : `Retained evidence · captured ${source.capturedAt}.`}</p>
-      <p>{source.artifact ? "Refresh: manual import. This is not live usage tracking." : "This capture alone does not establish continuous source coverage."}</p>
-      <p>{source.observationCount} extracted observations. Relationship decisions are separate.</p>
-      {source.suggestedActivity && source.id !== item.prop.activityEvidenceId && <p>Supporting snapshot available for review; it has not replaced your saved card.</p>}
-      {source.ownerStatementQuestion && <><p>Previously recorded question:</p><blockquote>{source.ownerStatementQuestion}</blockquote></>}
-      {source.ownerStatement && <><p>Your recorded answer:</p><blockquote>{source.ownerStatement}</blockquote></>}
-      {source.originalText && <details><summary>Retained snapshot original</summary><pre className="raw-evidence">{source.originalText}</pre></details>}
-      {source.limitations.length > 0 && <details><summary>Coverage and limitations</summary><ul>{source.limitations.map(limit => <li key={limit}>{limit}</li>)}</ul></details>}
-      {onDeleteEvidence && (source.uploadedFile || source.originalText) && <DeleteOriginal sourceLabel={source.sourceLabel}
-        onDelete={() => onDeleteEvidence(source.id)}
-        onDeleted={() => setDeleteNotice(`Deleted the original from ${source.sourceLabel}. Your saved relationship and any published card are unchanged.`)} />}
-    </div>)}
-    {hasMoreEvidence && <button type="button" className="secondary-action" disabled={loadingMoreEvidence} onClick={onLoadMoreEvidence}>{loadingMoreEvidence ? "Loading retained sources…" : "Load more retained sources"}</button>}
-    {renderEvidence && <details className={styles.claims}><summary>Inspect extracted claims and correct evidence</summary>{renderEvidence(item)}</details>}
-    <h3>Relationship history</h3>
-    {renderHistory?.(item)}
-  </>;
+  return <div className={focused ? styles.relationshipColumns : undefined}>
+    <div>
+      <RelationshipEditor key={`${item.prop._id}:${item.prop.relationshipVersion ?? 0}`} item={item} evidence={sources} onSave={save} />
+      {saveNotice && <p role="status">{saveNotice}</p>}
+    </div>
+    <div>
+      <h3>Evidence and limitations</h3>
+      {deleteNotice && <p role="status">{deleteNotice}</p>}
+      {item.prop.activityEvidenceId && !sources.some(source => source.id === item.prop.activityEvidenceId) && <p>The original for your saved supporting snapshot is unavailable. You can keep or remove the saved preview.</p>}
+      {sources.length === 0 && <p>{hasMoreEvidence ? "No available sources in the loaded evidence pages. More sources may be available below." : "No retained source is attached. Your explanation is an owner statement."}</p>}
+      {sources.map(source => <div className={styles.source} key={source.id}>
+        <strong>{source.sourceLabel}</strong>
+        {source.uploadedFile && <p>Original file: {source.uploadedFile.filename ?? "Filename unavailable"} · {source.uploadedFile.mimeType ?? "Format unavailable"} · {source.uploadedFile.byteSize === undefined ? "Size unavailable" : `${source.uploadedFile.byteSize.toLocaleString()} bytes`}. Retained privately; contents have not been parsed or authenticated. {source.uploadedFile.attribution === "VERIFIED_OWNER_SESSION" ? "Uploaded through your verified owner session; authorship and product usage are not verified." : "Legacy upload: stored account ownership is known, but the original uploader is unverified."}</p>}
+        {source.id === item.prop.activityEvidenceId && <p>Saved supporting snapshot</p>}
+        <p>{source.artifact ? `Static capture · source date ${source.artifact.sourceCapturedDate} · ${source.artifact.kind === "WISPR_OWNER_REVIEW" ? "recorded time retained in original" : "original time unknown"} · imported ${source.capturedAt.slice(0, 10)}.` : `Retained evidence · captured ${source.capturedAt}.`}</p>
+        <p>{source.artifact ? "Refresh: manual import. This is not live usage tracking." : "This capture alone does not establish continuous source coverage."}</p>
+        <p>{source.observationCount} extracted observations. Relationship decisions are separate.</p>
+        {source.suggestedActivity && source.id !== item.prop.activityEvidenceId && <p>Supporting snapshot available for review; it has not replaced your saved card.</p>}
+        {source.ownerStatementQuestion && <><p>Previously recorded question:</p><blockquote>{source.ownerStatementQuestion}</blockquote></>}
+        {source.ownerStatement && <><p>Your recorded answer:</p><blockquote>{source.ownerStatement}</blockquote></>}
+        {source.originalText && <details><summary>Retained snapshot original</summary><pre className="raw-evidence">{source.originalText}</pre></details>}
+        {source.limitations.length > 0 && <details><summary>Coverage and limitations</summary><ul>{source.limitations.map(limit => <li key={limit}>{limit}</li>)}</ul></details>}
+        {onDeleteEvidence && (source.uploadedFile || source.originalText) && <DeleteOriginal sourceLabel={source.sourceLabel}
+          onDelete={() => onDeleteEvidence(source.id)}
+          onDeleted={() => setDeleteNotice(`Deleted the original from ${source.sourceLabel}. Your saved relationship and any published card are unchanged.`)} />}
+      </div>)}
+      {hasMoreEvidence && <button type="button" className="secondary-action" disabled={loadingMoreEvidence} onClick={onLoadMoreEvidence}>{loadingMoreEvidence ? "Loading retained sources…" : "Load more retained sources"}</button>}
+      {renderEvidence && <details className={styles.claims}><summary>Inspect extracted claims and correct evidence</summary>{renderEvidence(item)}</details>}
+    </div>
+    <div className={styles.savedDecisions}>
+      <h3>Saved decisions</h3>
+      {renderHistory?.(item)}
+    </div>
+  </div>;
 }
 
-function InventoryDetails({ item, onSave, brandEnrichmentAvailable }: { item: Item; onSave: (input: SaveInput) => Promise<SaveResult>; brandEnrichmentAvailable: boolean }) {
+export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focused = false }: { item: Item; onSave: (input: SaveInput) => Promise<SaveResult>; brandEnrichmentAvailable: boolean; focused?: boolean }) {
   const evidence = usePaginatedQuery(api.inventory.evidence, { propId: item.prop._id }, { initialNumItems: 10 });
   const selectedEvidence = useQuery(api.inventory.selectedActivity, { propId: item.prop._id });
   const deleteEvidence = useMutation(api.onboarding.deleteEvidence);
   if (evidence.status === "LoadingFirstPage" || selectedEvidence === undefined) return <p role="status">Loading relationship and supporting context…</p>;
-  return <><InventoryRelationshipDetails item={item} evidence={evidence.results} selectedEvidence={selectedEvidence}
+  return <><InventoryRelationshipDetails focused={focused} item={item} evidence={evidence.results} selectedEvidence={selectedEvidence}
     hasMoreEvidence={evidence.status !== "Exhausted"} loadingMoreEvidence={evidence.status === "LoadingMore"} onLoadMoreEvidence={() => evidence.loadMore(10)} onSave={onSave}
     onDeleteEvidence={evidenceId => deleteEvidence({ evidenceId })}
     renderEvidence={current => <PrivateEvidencePanel propId={current.prop._id} productName={current.product.name} productSlug={current.product.slug} />}
@@ -215,20 +222,8 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
   onLoadMore?: () => void; renderDetails?: (item: Item) => ReactNode; renderHistory?: (item: Item) => ReactNode;
 }) {
   const [view, setView] = useState<InventoryView>("All");
-  const [notice, setNotice] = useState("");
-  const [importing, setImporting] = useState(false);
   const [inspectedRecords, setInspectedRecords] = useState<Record<string, string>>({});
   const [opened, setOpened] = useState<Record<string, boolean>>({});
-  async function importFiles(form: FormData) {
-    setImporting(true);
-    try {
-      const files = form.getAll("packets").filter((file): file is File => file instanceof File && file.size > 0);
-      if (!files.length || files.length > 3 || files.some(file => file.size > 256_000)) throw new Error("Choose one to three prepared evidence files, each under 256 KB.");
-      for (const file of files) await onImport(JSON.parse(await file.text()));
-      setNotice("Retained evidence is ready for private review. No relationship or public profile was changed.");
-    } catch { setNotice("Import did not complete. Successfully retained originals remain private; retrying the same files will not duplicate them."); }
-    finally { setImporting(false); }
-  }
   // usePaginatedQuery accumulates pages: regroup the whole loaded collection on
   // every update so a later page cannot create a second visible product card.
   const groups = new Map<string, Item[]>();
@@ -279,11 +274,7 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
       <p>Views group the {data.cards.length} records loaded so far by product. More records, including other records for these products, may be available.</p>
       <button type="button" className="secondary-action" disabled={data.loadingMore} onClick={onLoadMore}>{data.loadingMore ? "Loading products…" : "Load more products"}</button>
     </>}
-    <details className={styles.intake}><summary>Bring in retained evidence</summary>
-      <p>Import prepared Wispr Insights, your retained explanation, or a GitHub response. Existing originals are reused; this does not connect or refresh a provider. You can also add a product without a file below.</p>
-      <form onSubmit={event => { event.preventDefault(); void importFiles(new FormData(event.currentTarget)); }}><label>Prepared evidence files<input type="file" name="packets" accept=".json,application/json" multiple required /></label><button className="secondary-action" disabled={importing}>{importing ? "Retaining…" : "Retain privately"}</button></form>
-      <p role="status">{notice}</p>
-    </details>
+    <RetainedEvidenceIntake onImport={onImport} />
   </section>;
 }
 
@@ -296,4 +287,26 @@ export function PrivateInventory({ brandEnrichmentAvailable = false }: { brandEn
     renderCard={(item, index) => <AccountEvidence key={item.prop._id} propId={item.prop._id} productSlug={item.product.slug}>{(evidence, progress) => <><InventoryCard item={{ ...item, associatedAccountEvidence: evidence }} index={index} />{progress}</>}</AccountEvidence>}
     onLoadMore={() => inventory.loadMore(25)} onSave={save} onImport={packet => importPacket({ packet })}
     renderDetails={item => <InventoryDetails item={item} onSave={save} brandEnrichmentAvailable={brandEnrichmentAvailable} />} /></>;
+}
+
+export function RetainedEvidenceIntake({ onImport }: { onImport: (packet: unknown) => Promise<unknown> }) {
+  const [notice, setNotice] = useState("");
+  const [importing, setImporting] = useState(false);
+  async function importFiles(form: FormData) {
+    setImporting(true);
+    try {
+      const files = form.getAll("packets").filter((file): file is File => file instanceof File && file.size > 0);
+      if (!files.length || files.length > 3 || files.some(file => file.size > 256_000)) throw new Error("Choose one to three prepared evidence files, each under 256 KB.");
+      for (const file of files) await onImport(JSON.parse(await file.text()));
+      setNotice("Retained evidence is ready for private review. No relationship or public profile was changed.");
+    } catch { setNotice("Import did not complete. Successfully retained originals remain private; retrying the same files will not duplicate them."); }
+    finally { setImporting(false); }
+  }
+  return (
+    <details className={styles.intake}><summary>Bring in retained evidence</summary>
+      <p>Import prepared Wispr Insights, your retained explanation, or a GitHub response. Existing originals are reused; this does not connect or refresh a provider. You can also add a product without a file below.</p>
+      <form onSubmit={event => { event.preventDefault(); void importFiles(new FormData(event.currentTarget)); }}><label>Prepared evidence files<input type="file" name="packets" accept=".json,application/json" multiple required /></label><button className="secondary-action" disabled={importing}>{importing ? "Retaining…" : "Retain privately"}</button></form>
+      <p role="status">{notice}</p>
+    </details>
+  );
 }
