@@ -27,7 +27,8 @@ Nothing becomes public until you approve a preview.
 1. Under **Choose what to share**, claim a handle and set your display name
    and an optional short bio (**Public identity**). You only need these if you
    want to share.
-2. Pick the saved cards you want to share, then open the preview. It shows
+2. Tick **Share this saved card** on each saved card you want to share, then
+   open the preview. It shows
    exactly what a visitor will see ("Your visitor's view").
 3. Tick the approval box and click **Publish this preview**.
 
@@ -43,8 +44,9 @@ disconnect GitHub.
 
 ## Removing your data
 
-- **Take one card down:** leave it out of your next preview and publish
-  again.
+- **Take one card down:** untick **Share this saved card** on it, then preview
+  and click **Publish this preview**. Just leaving a card out of a later
+  preview doesn't take it down: cards you don't change stay as published.
 - **Take every card down:** **Unpublish all cards**, then approve that
   preview. Your handle, display name, bio and profile links stay public; only
   the product cards are removed. To remove your public profile completely,

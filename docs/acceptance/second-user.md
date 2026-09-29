@@ -54,7 +54,8 @@ Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
 - [ ] One GitHub card, with **Connect GitHub** (only if the tester has GitHub
   linked under Connected accounts). If not, mark this check "skipped" and say
   why.
-- [ ] One screenshot added with **Upload an export or screenshot**.
+- [ ] One screenshot added under **Upload an export or screenshot**, with
+  **Upload privately**.
 
 | Result | Evidence | Notes |
 |---|---|---|
@@ -87,7 +88,7 @@ automated ownership tests, for example `convex/ownerAuth.test.ts`.
 
 ### 6. Preview and publish exactly one card
 
-- [ ] The tester includes one saved card, previews it ("Your visitor's view"),
+- [ ] The tester ticks **Share this saved card** on one saved card, previews it ("Your visitor's view"),
   ticks the approval box and clicks **Publish this preview**.
 - [ ] Signed out, `proper-respect.com/<tester-handle>` shows only that card.
 
@@ -97,8 +98,10 @@ automated ownership tests, for example `convex/ownerAuth.test.ts`.
 
 ### 7. Unpublish
 
-- [ ] The tester removes the card: either unselects it and publishes a new
-  preview, or uses **Unpublish all cards** and approves that preview.
+- [ ] The tester removes the card: either unticks **Share this saved card** on
+  it, then previews and clicks **Publish this preview**, or uses **Unpublish all
+  cards** and approves that preview. Leaving the card out of a later preview
+  does not remove it.
 - [ ] Signed out, the card no longer appears on the tester's profile. The
   handle, name and bio remain, as the guide explains.
 
