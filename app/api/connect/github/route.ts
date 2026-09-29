@@ -1,5 +1,6 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { ConvexHttpClient } from "convex/browser";
+import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
 
 export async function POST(request: Request) {
@@ -37,8 +38,20 @@ export async function POST(request: Request) {
 
   const convex = new ConvexHttpClient(convexUrl);
   convex.setAuth(convexToken);
-  const result = await convex.action(api.connectors.connectGithub, {
-    token: githubToken,
-  });
-  return Response.json(result);
+  try {
+    const result = await convex.action(api.connectors.connectGithub, {
+      token: githubToken,
+    });
+    return Response.json(result);
+  } catch (error) {
+    const message = error instanceof ConvexError && typeof error.data === "string" ? error.data : "";
+    const limit = /^Too many GitHub connection attempts\. Try again in ([1-9]|[1-5][0-9]|60) minutes?\.$/.exec(message);
+    if (limit) {
+      return Response.json({ error: message }, {
+        status: 429,
+        headers: { "Retry-After": String(Number(limit[1]) * 60) },
+      });
+    }
+    return Response.json({ error: "GitHub connection failed. Please try again." }, { status: 500 });
+  }
 }
