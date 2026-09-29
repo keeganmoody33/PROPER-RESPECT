@@ -131,6 +131,17 @@ test("the latest primary link stays available after more than 25 publications", 
   expect(card.links.find(link => link.isPrimary)?.url).toBe("https://wisprflow.ai/?revision=26");
   const sharing: FunctionReturnType<typeof api.onboarding.sharingCards> = await owner.query(makeFunctionReference<"query">("onboarding:sharingCards"), firstPage);
   expect(sharing.page[0].links.find(link => link.isPrimary)?.url).toBe("https://wisprflow.ai/?revision=26");
+  await owner.mutation(publish, await reviewedPublication(owner, { selections: [{
+    propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "", note: "",
+    primaryLink: { type: "CANONICAL", url: "https://wisprflow.ai/?revision=1", label: "Published link 1" }, autoRefresh: false,
+  }] }));
+  const rereadSharing: FunctionReturnType<typeof api.onboarding.sharingCards> = await owner.query(makeFunctionReference<"query">("onboarding:sharingCards"), firstPage);
+  const rereadInventory: FunctionReturnType<typeof api.inventory.list> = await owner.query(list, firstPage);
+  const exact: FunctionReturnType<typeof api.inventory.detail> = await owner.query(makeFunctionReference<"query">("inventory:detail"), { propId });
+  for (const links of [rereadSharing.page[0].links, rereadInventory.page[0].links, exact!.links]) {
+    expect(links.length).toBeLessThanOrEqual(25);
+    expect(links.find(link => link.isPrimary)?.url).toBe("https://wisprflow.ai/?revision=1");
+  }
 });
 
 test("clearing optional context removes current fields and preserves their earlier values in history", async () => {

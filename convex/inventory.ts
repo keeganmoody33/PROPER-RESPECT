@@ -1,3 +1,4 @@
+import { relationshipLinks } from "./relationshipLinks";
 import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { paginationOptsValidator, type PaginationOptions } from "convex/server";
 import { v } from "convex/values";
@@ -108,7 +109,7 @@ export const list = query({
       const product = await ctx.db.get(prop.productId);
       if (!product) throw new Error("Product unavailable.");
       const brand = await retainedProductBrand(ctx, product);
-      const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").take(25);
+      const links = await relationshipLinks(ctx, prop._id);
       const latestEvent = await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").first();
       const associatedAccountEvidence = includeAccountEvidence === false ? [] : await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug);
       return { prop, product: { ...product, brand }, links, associatedAccountEvidence,
@@ -151,7 +152,7 @@ export const detail = query({
     const product = await ctx.db.get(prop.productId);
     if (!product) return null;
     const brand = await retainedProductBrand(ctx, product);
-    const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").take(25);
+    const links = await relationshipLinks(ctx, prop._id);
     return { prop, product: { ...product, brand }, links, associatedAccountEvidence: [], previousStatuses: [] };
   },
 });

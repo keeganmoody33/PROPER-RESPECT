@@ -21,8 +21,7 @@ inside the focused relationship. An uncertain discovery can be left undecided
 without saving. Existing retained
 imports, source controls, sharing previews and data export remain available.
 
-No schema, release infrastructure, provider connector or public projection was
-changed. Private saves retain their existing optimistic-version, replay and
+One additive link index was required by final outside review; no new fields, release infrastructure, provider connector or public projection was changed. Private saves retain their existing optimistic-version, replay and
 ownership checks. New queries must be released before the new frontend.
 
 ## Verification
@@ -98,3 +97,7 @@ The shell regression failed before the fix because `includeCards` was unsupporte
 Sequential full verification passed: 1,664 Vitest tests (2 skipped) and 121 Node script tests.
 
 Copilot review 5359808285 at `dde5a7e1d16413f9586d5161cde5af12d5b06aae` cleared the parent-read blocker and raised comment 4139413990: **fix now**, read the newest 25 links in the bounded sharing query so revision 26 retains its primary destination. Extend the existing 26-publication regression to sharing.
+
+Copilot review 5359845490 at `c60013b597ebce244529889d9c3663f23b9e4463`, comments 4139446725 and 4139446756: **fix now**. A reselected historical primary retains its creation order. Include it through an indexed lookup in private list/detail and sharing reads, independently of the recent-link page. Add only an index on existing `propId`/`isPrimary` fields; no new field, relationship concept, or data migration.
+
+The reselected-primary regression failed with a missing revision-1 destination before the indexed lookup. It now passes for private list, exact detail and sharing, each returning at most 25 links. Full unit/script verification, typecheck and lint pass after this correction.

@@ -1,3 +1,4 @@
+import { relationshipLinks } from "./relationshipLinks";
 import { isHttpUrl, validateProfileLinks } from "../src/domain/profile-links";
 import { mailboxTesterAllowed } from "../src/domain/mailbox-testers";
 import { uploadAttributionStatus } from "../src/domain/evidence-upload";
@@ -194,10 +195,7 @@ async function getStateHandler(ctx: QueryCtx, args: {
     const cards = await Promise.all(
       props.map(async (prop) => {
         const product = await ctx.db.get(prop.productId);
-        const links = await ctx.db
-          .query("links")
-          .withIndex("by_prop", (q) => q.eq("propId", prop._id))
-          .order("desc").take(25);
+        const links = await relationshipLinks(ctx, prop._id);
         const proofs = args.includeClaims === false ? [] : await ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", prop._id)).take(100);
         const claims = [];
         for (const evidenceId of new Set(proofs.flatMap(proof => proof.rawEvidenceId ? [proof.rawEvidenceId] : []))) {
