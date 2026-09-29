@@ -12,8 +12,23 @@ export async function resolvePublishedCardPropIds(
   if (!user || user.handle !== published.handle) {
     return published.profile.cards.map(() => null);
   }
-  const props = (ownedProps ?? await ctx.db.query("props")
-    .withIndex("by_user", q => q.eq("userId", userId)).collect())
+  if (!ownedProps) {
+    const counts = new Map<string, number>();
+    for (const card of published.profile.cards) counts.set(card.product.slug, (counts.get(card.product.slug) ?? 0) + 1);
+    return Promise.all(published.profile.cards.map(async (card, index) => {
+      const explicit = published.cardPropIds?.[index];
+      if (explicit) {
+        const prop = await ctx.db.get(explicit);
+        return prop?.userId === userId ? explicit : null;
+      }
+      if (counts.get(card.product.slug) !== 1) return null;
+      const products = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", card.product.slug)).take(2);
+      if (products.length !== 1) return null;
+      const candidates = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", userId).eq("productId", products[0]._id)).take(2);
+      return candidates.length === 1 ? candidates[0]._id : null;
+    }));
+  }
+  const props = ownedProps
     .filter(prop => prop.userId === userId);
   const propIds = new Set(props.map(prop => prop._id));
   const resolved = published.profile.cards.map((_, index) => {

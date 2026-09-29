@@ -294,6 +294,9 @@ for (const width of [1280, 390]) test(`owner finds later duplicate records, save
   await page.reload();
   const collection = page.getByRole("region", { name: "My collection", exact: true });
   await expect(collection.getByText("25 relationships checked. More remain to check.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("group", { name: / review$/ })).toHaveCount(25);
+  await page.getByRole("button", { name: "Load more sharing choices" }).click();
+  await expect(page.getByRole("group", { name: / review$/ })).toHaveCount(34);
   await collection.getByRole("button", { name: "All", exact: true }).click();
   await collection.getByRole("searchbox", { name: "Find a tool" }).fill("Shared Tool");
   await expect(collection.getByText("2 matching relationships.", { exact: true })).toBeVisible();

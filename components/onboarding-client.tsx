@@ -11,7 +11,7 @@ import {
   useAuth,
   useClerk,
 } from "@clerk/nextjs";
-import { useAction, useConvex, useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useAction, useConvex, useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionArgs } from "convex/server";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
@@ -134,7 +134,9 @@ function Builder() {
   const publishSelected = useMutation(api.onboarding.publishSelected);
   const revokeConnector = useMutation(api.connectors.revokeConnector);
   const connectDevin = useAction(api.connectors.connectDevin);
-  const state = useQuery(api.onboarding.getState, { includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
+  const shell = useQuery(api.onboarding.getState, { includeCards: false, includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
+  const sharing = usePaginatedQuery(api.onboarding.sharingCards, {}, { initialNumItems: 25 });
+  const state = useMemo(() => shell ? { ...shell, cards: sharing.results } : shell, [shell, sharing.results]);
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -765,6 +767,10 @@ function Builder() {
             }}</AccountEvidence>;
           })}
         </div>
+        {sharing.status !== "Exhausted" && <div className="action-row">
+          <p>Showing {state.cards.length} relationships for sharing. More remain to load; existing public cards stay unchanged.</p>
+          <button type="button" className="secondary-action" disabled={sharing.status !== "CanLoadMore"} onClick={() => sharing.loadMore(25)}>Load more sharing choices</button>
+        </div>}
         <div className="action-row">
           <button
             className="primary-action"

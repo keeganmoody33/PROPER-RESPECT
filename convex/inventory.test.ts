@@ -28,7 +28,7 @@ async function fixture() {
     const propId = await ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: "A discovery", note: "Unreviewed suggestion" });
     await ctx.db.insert("draftImports", { userId, resultPropId: propId, status: "PENDING", suggestedProductSlug: "wisprflow", suggestedProductName: "Wispr Flow", suggestedDomain: "wisprflow.ai", suggestedDescription: "Dictation", suggestedUrl: "https://wisprflow.ai", rawEvidenceIds: [] });
     await ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-16", profile: { handle: "owner", displayName: "Owner", bio: "", cards: [] } });
-    return { userId, propId };
+    return { userId, productId, propId };
   });
   return { t, ...ids, owner: t.withIdentity({ subject: "owner" }), other: t.withIdentity({ subject: "other" }) };
 }
@@ -247,4 +247,25 @@ test("direct relationship reload preserves exact duplicate decisions and the pub
   expect((await fresh.query(detail, { propId })).prop).toMatchObject({ status: "ACTIVE", goTo: true, note: "Why it matters", relationshipVersion: 1 });
   expect((await fresh.query(detail, { propId: sibling })).prop).toMatchObject({ status: "ARCHIVED", note: "Do not change" });
   expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual(publicBefore);
+});
+
+test("collection shell omits cards and sharing reads bounded pages without misbinding duplicates", async () => {
+  const { t, owner, other, userId, productId, propId } = await fixture();
+  await t.run(async ctx => {
+    for (let index = 0; index < 31; index++) await ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: `Record ${index}`, note: "" });
+  });
+  const shell = await owner.query(makeFunctionReference<"query">("onboarding:getState"), {
+    includeCards: false, includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false,
+  });
+  expect(shell.cards).toEqual([]);
+  const sharing = makeFunctionReference<"query">("onboarding:sharingCards");
+  const first = await owner.query(sharing, { paginationOpts: { numItems: 100, cursor: null } });
+  expect(first.page).toHaveLength(25);
+  expect(first.isDone).toBe(false);
+  expect(first.page[0].prop._id).toBe(propId);
+  const second = await owner.query(sharing, { paginationOpts: { numItems: 25, cursor: first.continueCursor } });
+  expect(second.page).toHaveLength(7);
+  expect(second.isDone).toBe(true);
+  expect(new Set([...first.page, ...second.page].map(card => card.prop._id)).size).toBe(32);
+  expect((await other.query(sharing, firstPage)).page).toEqual([]);
 });

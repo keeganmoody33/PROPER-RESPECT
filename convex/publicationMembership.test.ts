@@ -107,3 +107,19 @@ test("keeping all costs private does not remove an unresolved legacy card throug
   expect(selections).toEqual([]);
   expect(await t.run(ctx => ctx.db.get(publicationId))).toEqual(before);
 });
+
+test.each(["explicit", "unique legacy", "ambiguous legacy"])("sharing pages preserve %s publication membership across page boundaries", async mapping => {
+  const { t, owner, userId, publicationId, propIds } = await fixture("original", 26);
+  await t.run(async ctx => {
+    if (mapping === "explicit") await ctx.db.patch(publicationId, { cardPropIds: propIds });
+    if (mapping === "ambiguous legacy") {
+      const original = (await ctx.db.get(propIds[0]))!;
+      await ctx.db.insert("props", { userId, productId: original.productId, visibility: "PRIVATE", status: "TESTING", headline: "Sibling beyond page one", note: "" });
+    }
+  });
+  const first = await owner.query(api.onboarding.sharingCards, { paginationOpts: { numItems: 25, cursor: null } });
+  const second = await owner.query(api.onboarding.sharingCards, { paginationOpts: { numItems: 25, cursor: first.continueCursor } });
+  expect(first.page[0].isPublishedAtCurrentHandle).toBe(mapping !== "ambiguous legacy");
+  expect(second.page[0]).toMatchObject({ prop: { _id: propIds[25] }, isPublishedAtCurrentHandle: true });
+  if (mapping === "ambiguous legacy") expect(second.page[1].isPublishedAtCurrentHandle).toBe(false);
+});

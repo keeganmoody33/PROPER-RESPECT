@@ -88,3 +88,11 @@ production deploy, provider read, seed, recurring collection or publication was
 performed by this implementation receipt. Use the existing owner-gated release
 workflow after review. No data migration is required. Preserve the v0.2.2 tag
 and frontend artifact; never restore old data to roll back this UI.
+
+## Final outside review
+
+Copilot review 5359748269, head `ab0d6eb7a13753e79082b6d2440faa58fb81fb7d`: comment 4139362094 is **fix now**. The parent onboarding query still collected and enriched all relationships before rendering the bounded finder. Split shell reads from paginated sharing-card reads; bound brand preparation to loaded records and preserve publication identity across pages. No schema change.
+
+The shell regression failed before the fix because `includeCards` was unsupported; it passes with an empty card projection and bounded sharing pages. Nineteen inventory/publication tests pass, including explicit and legacy publication identity across page boundaries. All 49 component browser tests passed; the 11 owner/account journeys passed again with explicit 25-to-34 sharing pagination assertions. Typecheck, lint and production build passed. One full-suite run concurrent with the build hit the existing mailbox test's five-second timeout; verification was repeated sequentially.
+
+Sequential full verification passed: 1,664 Vitest tests (2 skipped) and 121 Node script tests.

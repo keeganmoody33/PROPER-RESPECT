@@ -40,7 +40,7 @@ vi.mock("convex/react", async (importOriginal) => ({
   useAction: () => vi.fn(),
   usePaginatedQuery: (reference: FunctionReference<"query">) => getFunctionName(reference) === "inventory:accountEvidencePage"
     ? { results: auth.accountRows, status: auth.accountStatus, loadMore: vi.fn() }
-    : { results: [], status: "Exhausted", loadMore: vi.fn() },
+    : { results: getFunctionName(reference) === "onboarding:sharingCards" ? auth.ownerState?.cards ?? [] : [], status: "Exhausted", loadMore: vi.fn() },
 }));
 
 const render = () => renderToString(createElement(OnboardingClient));

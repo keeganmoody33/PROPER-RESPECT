@@ -95,7 +95,7 @@ export const useAction = () => async () => { throw new Error("Provider reads are
 export function useQuery(ref, args) {
   const current = useSyncExternalStore(subscribe, snapshot, snapshot);
   switch (getFunctionName(ref)) {
-    case "onboarding:getState": return current;
+    case "onboarding:getState": return current && args?.includeCards === false ? { ...current, cards: empty } : current;
     case "inventory:selectedActivity": return null;
     case "inventory:detail": return current?.cards.find(card => card.prop._id === args.propId) ?? null;
     case "mailboxes:listAccounts": return empty;
@@ -112,6 +112,7 @@ export function usePaginatedQuery(ref, args, options) {
   const [count, setCount] = useState(options?.initialNumItems ?? 25);
   let rows = empty;
   switch (getFunctionName(ref)) {
+    case "onboarding:sharingCards":
     case "inventory:list": rows = current?.cards ?? empty; break;
     case "inventory:locator": rows = (current?.cards ?? empty).map(located); break;
     case "inventory:related": {

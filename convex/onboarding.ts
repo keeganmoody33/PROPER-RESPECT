@@ -4,6 +4,7 @@ import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { addManualProductArgs, addManualProductHandler } from "./manualProducts";
 import { ensureProductBrand, retainedProductBrand } from "./productBrands";
 import { v, type Infer } from "convex/values";
+import { paginationOptsValidator, type PaginationOptions } from "convex/server";
 import { mutation, query, internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { consumeWriteLimit, requireIdentity, requireUser } from "./authHelpers";
@@ -147,9 +148,10 @@ export const claimHandle = mutation({
   },
 });
 
-export const getState = query({
-  args: { includeClaims: v.optional(v.boolean()), includeLegacyCollections: v.optional(v.boolean()), includeAccountEvidence: v.optional(v.boolean()) },
-  handler: async (ctx, args) => {
+async function getStateHandler(ctx: QueryCtx, args: {
+  includeCards?: boolean; includeClaims?: boolean; includeLegacyCollections?: boolean; includeAccountEvidence?: boolean;
+  paginationOpts?: PaginationOptions;
+}) {
     const identity = await requireIdentity(ctx);
     const user = await ctx.db
       .query("users")
@@ -158,11 +160,12 @@ export const getState = query({
       )
       .unique();
     if (!user) return null;
+    const propQuery = ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id));
+    const propPage = args.paginationOpts
+      ? await propQuery.paginate({ ...args.paginationOpts, numItems: Math.min(args.paginationOpts.numItems, 25), maximumRowsRead: 25 })
+      : null;
     const [props, drafts, connectors, evidence, published, site] = await Promise.all([
-      ctx.db
-        .query("props")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
-        .collect(),
+      args.includeCards === false ? [] : propPage ? propPage.page : propQuery.collect(),
       args.includeLegacyCollections === false ? [] : ctx.db
         .query("draftImports")
         .filter((q) => q.eq(q.field("userId"), user._id))
@@ -184,8 +187,8 @@ export const getState = query({
         .withIndex("by_owner", q => q.eq("ownerId", user._id))
         .unique(),
     ]);
-    const publishedPropIds = published
-      ? await resolvePublishedCardPropIds(ctx, published, user._id, props)
+    const publishedPropIds = published && props.length > 0
+      ? await resolvePublishedCardPropIds(ctx, published, user._id, propPage ? undefined : props)
       : [];
 
     const cards = await Promise.all(
@@ -194,7 +197,7 @@ export const getState = query({
         const links = await ctx.db
           .query("links")
           .withIndex("by_prop", (q) => q.eq("propId", prop._id))
-          .collect();
+          .take(25);
         const proofs = args.includeClaims === false ? [] : await ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", prop._id)).take(100);
         const claims = [];
         for (const evidenceId of new Set(proofs.flatMap(proof => proof.rawEvidenceId ? [proof.rawEvidenceId] : []))) {
@@ -235,6 +238,8 @@ export const getState = query({
     return {
       user,
       cards,
+      isDone: propPage?.isDone ?? true,
+      continueCursor: propPage?.continueCursor ?? "",
       hasPublicationAtCurrentHandle: published !== null,
       hasClaimedPublicIdentity: site?.handle === user.handle,
       brandEnrichmentAvailable: true,
@@ -268,6 +273,19 @@ export const getState = query({
         deletedAt: item.deletedAt,
       })),
     };
+}
+
+export const getState = query({
+  args: { includeCards: v.optional(v.boolean()), includeClaims: v.optional(v.boolean()), includeLegacyCollections: v.optional(v.boolean()), includeAccountEvidence: v.optional(v.boolean()) },
+  handler: getStateHandler,
+});
+
+export const sharingCards = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    if (!Number.isSafeInteger(args.paginationOpts.numItems) || args.paginationOpts.numItems < 1) throw new Error("Invalid page size.");
+    const state = await getStateHandler(ctx, { ...args, includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
+    return { page: state?.cards ?? [], isDone: state?.isDone ?? true, continueCursor: state?.continueCursor ?? "" };
   },
 });
 
