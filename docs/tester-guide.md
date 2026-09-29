@@ -57,8 +57,10 @@ disconnect GitHub.
   so do notes you added from the file, such as observations or excerpts.
 - **Disconnect GitHub:** click **Disconnect GitHub**. We delete the stored
   GitHub credential. What you already saved or published stays until you
-  remove it. To end GitHub's permission as well, also remove GitHub under
-  Connected accounts in your account menu.
+  remove it. To end GitHub's permission as well, revoke it in GitHub: go to
+  Settings, then Applications, then Authorized OAuth Apps, and revoke the app
+  you used to connect Proper Respect. Removing GitHub under Connected
+  accounts in your account menu only unlinks it here.
 - **Disconnect Gmail:** click **Disconnect and stop collection**. We also ask
   Google to revoke the app's access, and tell you if Google doesn't confirm
   it. In that case, remove the app in your Google Account permissions.
