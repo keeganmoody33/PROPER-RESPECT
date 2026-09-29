@@ -1,6 +1,43 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+for (const width of [1280, 390]) test(`observed date remains an editable private draft at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await page.getByText("Inspect extracted claims and correct evidence", { exact: true }).click();
+  const date = page.getByLabel("Started using (optional)", { exact: true });
+  const operations = page.getByLabel("Synthetic save operations");
+  await page.getByRole("button", { name: "Use this observed date as my start date", exact: true }).click();
+  await expect(date).toHaveValue("2024-06-03");
+  await expect(operations).toHaveText("");
+  await expect(page.getByText("PRIVATE DISCOVERY", { exact: true }).first()).toBeVisible();
+  await date.fill("2024-05-20");
+  await page.getByLabel("How it fits").selectOption("ACTIVE");
+  await page.getByRole("button", { name: "Simulate one lost save response", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("Synthetic lost save response. Retry unchanged decisions.", { exact: true })).toBeVisible();
+  await expect(date).toHaveValue("2024-05-20");
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  await expect(date).toHaveValue("2024-05-20");
+  const attempts = (await operations.textContent())!.trim().split(/\s+/);
+  expect(attempts).toHaveLength(2);
+  expect(attempts[1]).toBe(attempts[0]);
+  await date.fill("");
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(date).toHaveValue("");
+  await page.getByRole("button", { name: "Open synthetic sharing preview", exact: true }).click();
+  await expect(page.getByLabel("Synthetic publication status")).toHaveText("Nothing published");
+  await page.getByRole("button", { name: "Load grouped GitHub fixture", exact: true }).click();
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await page.getByText("Inspect extracted claims and correct evidence", { exact: true }).click();
+  await page.getByRole("button", { name: "Use this observed date as my start date", exact: true }).click();
+  await page.getByLabel("Record to inspect for GitHub").selectOption("synthetic-github-2");
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await expect(date).toHaveValue("");
+});
+
 for (const width of [1280, 390]) test(`private collection interaction and reversible card at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto("/evidence-fixture/inventory");
