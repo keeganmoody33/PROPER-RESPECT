@@ -4,6 +4,7 @@ import { resolve, join, extname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import { expect, test, type Locator } from "@playwright/test";
+import { captureScreenshot } from "../support/screenshot";
 
 let server: Server;
 let nativeServer: Server;
@@ -114,7 +115,7 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     await expect(logo).toBeVisible();
     await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath(`2026-09-24-private-usage-front-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+    await captureScreenshot(page, { path: testInfo.outputPath(`2026-09-24-private-usage-front-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
     const details = claude.getByRole("button", { name: "Details", exact: true });
     await details.focus();
     await page.keyboard.press("Enter");
@@ -140,10 +141,10 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     await native.locator("details.private-native-observations > summary").click();
     await expect(native).toContainText("2026-09-24T12:00:00.000Z");
     await expect(native).toContainText("2026-09-24T13:00:00.000Z");
-    await native.screenshot({ path: testInfo.outputPath(`2026-09-24-native-mixed-${width}-${theme}.png`), animations: "disabled" });
+    await captureScreenshot(native, { path: testInfo.outputPath(`2026-09-24-native-mixed-${width}-${theme}.png`), animations: "disabled" });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath(`2026-09-24-private-usage-details-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
-    await back.getByRole("region", { name: "Coverage row 1", exact: true }).screenshot({ path: testInfo.outputPath(`2026-09-24-private-usage-exact-row-${width}-${theme}.png`), animations: "disabled" });
+    await captureScreenshot(page, { path: testInfo.outputPath(`2026-09-24-private-usage-details-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+    await captureScreenshot(back.getByRole("region", { name: "Coverage row 1", exact: true }), { path: testInfo.outputPath(`2026-09-24-private-usage-exact-row-${width}-${theme}.png`), animations: "disabled" });
     await back.locator("details.private-usage-observations > summary").filter({ hasText: /^Source observations \(/ }).click();
     await expect(back.getByText("Source observation 1", { exact: true })).toBeVisible();
     await expect(back).toContainText("not additive");
@@ -171,7 +172,7 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     await expectKnownLogo(claude, "claude-code", 266);
     await expect(claude).toContainText("Synthetic");
     await expect(claude).toContainText("2 independent coverage rows");
-    await page.screenshot({ path: testInfo.outputPath(`2026-09-24-native-only-front-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
+    await captureScreenshot(page, { path: testInfo.outputPath(`2026-09-24-native-only-front-${width}-${theme}.png`), fullPage: true, animations: "disabled" });
     const details = claude.getByRole("button", { name: "Details", exact: true });
     await details.focus();
     await page.keyboard.press("Enter");
@@ -194,7 +195,7 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     await expect(observations).toContainText("2026-09-24T13:00:00.000Z");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await native.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
-    await native.screenshot({ path: testInfo.outputPath(`2026-09-24-native-only-${width}-${theme}.png`), animations: "disabled" });
+    await captureScreenshot(native, { path: testInfo.outputPath(`2026-09-24-native-only-${width}-${theme}.png`), animations: "disabled" });
     expect(await page.locator("body").textContent()).not.toMatch(/[a-f0-9]{64}|SYNTHETIC-PRIVATE/);
     expect(external).toEqual([]);
     expect(errors).toEqual([]);
