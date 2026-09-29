@@ -7,7 +7,10 @@ Button names below are the ones you'll see on the site.
 ## What stays private
 
 Everything you add starts private. Your collection lives at
-`proper-respect.com/app/collection`, and only you can see it.
+`proper-respect.com/app/collection`. Other people using the site and visitors
+can't see it. It's stored by the service, not only on your device, and the
+people who run Proper Respect can reach stored data when they operate or
+support the service (for example, to handle a deletion request).
 
 - **Private until you share:** products you add, your notes and dates,
   screenshots and files you upload, and anything imported from GitHub or
