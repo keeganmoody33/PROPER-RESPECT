@@ -16,7 +16,9 @@ reload. Adding a product opens the returned relationship ID.
 The focused editor reuses existing status, explicit go-to, explanation, start
 date, work link, evidence inspection, limitations, claim reviews and saved
 decisions. Past use is a status view; saved decisions are recorded-time history.
-An uncertain discovery can be left undecided without saving. Existing retained
+A lazy saved-card preview keeps usage and account-link inspection accessible
+inside the focused relationship. An uncertain discovery can be left undecided
+without saving. Existing retained
 imports, source controls, sharing previews and data export remain available.
 
 No schema, release infrastructure, provider connector or public projection was
@@ -38,6 +40,8 @@ ownership checks. New queries must be released before the new frontend.
   exercised at 1280px and 390px through a synthetic Convex boundary. The journeys
   cover immediate manual-add opening, later-page finding, duplicate switching,
   private save, reload, history, past-use filtering and unchanged publication.
+- After adding the lazy saved-card preview, the 11 affected account/owner-loop
+  browser scenarios passed again, together with typecheck and lint.
 - Existing inventory browser scenarios: 9 passed during this batch.
 - Browser test data is synthetic. Browser reload uses local fixture persistence;
   the fresh authenticated session and ownership checks use convex-test. Neither

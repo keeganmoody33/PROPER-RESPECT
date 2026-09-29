@@ -41,3 +41,6 @@
 .savedDecisions { grid-column: 1 / -1; border-top: 1px solid var(--control-line, #8888); padding-top: 1rem; }
 .savedDecisions li { padding-block: .6rem; overflow-wrap: anywhere; }
 @media (max-width: 700px) { .relationshipColumns { grid-template-columns: minmax(0, 1fr); gap: 1rem; } .focus { padding-top: 1rem; } }
+
+.savedPreview { margin-block: 1rem; max-width: 440px; }
+.savedPreview > summary { cursor: pointer; padding-block: .7rem; font-weight: 600; }

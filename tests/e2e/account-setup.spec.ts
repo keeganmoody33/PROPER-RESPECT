@@ -307,6 +307,9 @@ for (const width of [1280, 390]) test(`owner finds later duplicate records, save
   await focused.getByRole("button", { name: "Save privately", exact: true }).click();
   await expect(focused.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
   await expect(focused.getByRole("heading", { name: "Saved decisions" })).toBeVisible();
+  await focused.getByText("Preview saved card and usage", { exact: true }).click();
+  await expect(focused.locator(".product-card")).toHaveCount(1);
+  await focused.getByText("Preview saved card and usage", { exact: true }).click();
   await focused.getByRole("combobox", { name: "Relationship record", exact: true }).selectOption("record-33");
   await expect(focused.getByLabel("How it fits")).toHaveValue("");
   await expect(focused.getByLabel("Explanation or workflow (optional)")).toHaveValue("");

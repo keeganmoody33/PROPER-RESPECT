@@ -215,6 +215,17 @@ function InventoryCard({ item, index }: { item: Item; index: number }) {
   }} />;
 }
 
+export function SavedRelationshipPreview({ item }: { item: Item }) {
+  const [open, setOpen] = useState(false);
+  return <details className={styles.savedPreview} onToggle={event => setOpen(event.currentTarget.open)}>
+    <summary>Preview saved card and usage</summary>
+    {open && <AccountEvidence propId={item.prop._id} productSlug={item.product.slug}>{(evidence, progress) => <>
+      <InventoryCard item={{ ...item, associatedAccountEvidence: evidence }} index={0} />
+      {progress}
+    </>}</AccountEvidence>}
+  </details>;
+}
+
 export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, renderDetails, renderHistory, renderCard }: {
   renderCard?: (item: Item, index: number) => ReactNode;
   data: InventoryData; onSave: (input: SaveInput) => Promise<SaveResult>;
