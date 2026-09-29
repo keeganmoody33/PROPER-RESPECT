@@ -165,6 +165,7 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
   await page.addScriptTag({ content: grouped.outputFiles.find(file => file.path.endsWith(".js"))!.text });
   const github = page.locator('section[aria-label="GitHub in your collection"]');
   const copilot = page.locator('section[aria-label="Copilot in your collection"]');
+  const toolList = page.getByRole("navigation", { name: "All tools", exact: true });
   const selector = github.getByRole("combobox", { name: "Record to inspect for GitHub", exact: true });
   const note = github.getByRole("textbox", { name: "Explanation or workflow (optional)", exact: true });
   const assertInspected = async (id: string, status: string, headline: string, savedNote: string) => {
@@ -177,8 +178,10 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
     await expect(note).toHaveValue(savedNote);
     await expect(page.locator("#save-count")).toHaveText("0");
   };
-  await expect(page.locator(".product-card")).toHaveCount(2);
-  await expect(copilot.locator(".card-title h2")).toHaveText("Copilot");
+  await expect(page.locator(".product-card")).toHaveCount(1);
+  await expect(toolList.getByRole("button", { name: /GitHub/i })).toHaveCount(1);
+  await expect(toolList.getByRole("button", { name: /Copilot/i })).toHaveCount(1);
+  await expect(copilot).toHaveCount(0);
   await expect(selector.locator("option")).toHaveCount(3);
   await page.screenshot({ path: testInfo.outputPath(`2026-09-19-record-selector-${width}.png`), fullPage: true, animations: "disabled" });
   const selectorBounds = (await selector.boundingBox())!;
@@ -196,7 +199,8 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
   await assertInspected("synthetic-archived", "ARCHIVED", "Earlier GitHub workflow", "Synthetic archived note.");
   await page.getByRole("button", { name: "Current", exact: true }).click();
   await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
-  await expect(copilot).toBeVisible();
+  await expect(toolList.getByRole("button", { name: /Copilot/i })).toHaveCount(1);
+  await expect(copilot).toHaveCount(0);
   await page.getByRole("button", { name: "Testing", exact: true }).click();
   await assertInspected("synthetic-testing", "TESTING", "Testing a GitHub workflow", "Synthetic testing note.");
   await expect(copilot).toHaveCount(0);
@@ -204,7 +208,9 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
   await assertInspected("synthetic-archived", "ARCHIVED", "Earlier GitHub workflow", "Synthetic archived note.");
   await page.getByRole("button", { name: "All", exact: true }).click();
   await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
-  await expect(page.locator(".product-card")).toHaveCount(2);
+  await expect(page.locator(".product-card")).toHaveCount(1);
+  await toolList.getByRole("button", { name: /Copilot/i }).click();
+  await expect(copilot).toHaveCount(1);
   await expect(copilot.locator(".card-headline")).toHaveText("Separate Copilot workflow");
   await expect(page.locator("#save-count")).toHaveText("0");
 });

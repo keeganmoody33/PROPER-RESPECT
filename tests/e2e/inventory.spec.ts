@@ -1,6 +1,44 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+for (const width of [1280, 390]) test(`observed date remains an editable private draft at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await page.getByText("Inspect extracted claims and correct evidence", { exact: true }).click();
+  const date = page.getByLabel("Started using (optional)", { exact: true });
+  const operations = page.getByLabel("Synthetic save operations");
+  await page.getByRole("button", { name: "Use this observed date as my start date", exact: true }).click();
+  await expect(date).toHaveValue("2024-06-03");
+  await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+  await expect(operations).toHaveText("");
+  await expect(page.getByText("PRIVATE DISCOVERY", { exact: true }).first()).toBeVisible();
+  await date.fill("2024-05-20");
+  await page.getByLabel("How it fits").selectOption("ACTIVE");
+  await page.getByRole("button", { name: "Simulate one lost save response", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("Synthetic lost save response. Retry unchanged decisions.", { exact: true })).toBeVisible();
+  await expect(date).toHaveValue("2024-05-20");
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  await expect(date).toHaveValue("2024-05-20");
+  const attempts = (await operations.textContent())!.trim().split(/\s+/);
+  expect(attempts).toHaveLength(2);
+  expect(attempts[1]).toBe(attempts[0]);
+  await date.fill("");
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(date).toHaveValue("");
+  await page.getByRole("button", { name: "Open synthetic sharing preview", exact: true }).click();
+  await expect(page.getByLabel("Synthetic publication status")).toHaveText("Nothing published");
+  await page.getByRole("button", { name: "Load grouped GitHub fixture", exact: true }).click();
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await page.getByText("Inspect extracted claims and correct evidence", { exact: true }).click();
+  await page.getByRole("button", { name: "Use this observed date as my start date", exact: true }).click();
+  await page.getByLabel("Record to inspect for GitHub").selectOption("synthetic-github-2");
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await expect(date).toHaveValue("");
+});
+
 for (const width of [1280, 390]) test(`private collection interaction and reversible card at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto("/evidence-fixture/inventory");
@@ -178,4 +216,50 @@ test("deleting an original asks first, can be cancelled, and removes only that o
   await expect(page.getByText("Deleted the original from Synthetic retained source.", { exact: false })).toBeVisible();
   await expect(page.getByText("Retained snapshot original", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete original", exact: true })).toHaveCount(0);
+});
+
+for (const width of [390, 1440]) test(`collection workspace follows the Paper editor at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("button", { name: "Load design fixture", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "All tools" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "All tools" }).getByRole("button", { name: /GitHub/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("navigation", { name: "All tools" }).getByRole("button", { name: /Wispr Flow/ })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "All tools" }).getByRole("button", { name: /Devin/ })).toBeVisible();
+  await page.getByText("Manage relationship and context", { exact: true }).click();
+  await page.getByText("Inspect extracted claims and correct evidence", { exact: true }).click();
+  await page.getByRole("button", { name: "Use this observed date as my start date", exact: true }).click();
+  const card = page.getByRole("article", { name: "GitHub card", exact: true });
+  await expect(card).toBeVisible();
+  const theme = page.getByRole("combobox", { name: "Appearance", exact: true }).first();
+  const appearance = () => card.evaluate(element => [element, ...element.querySelectorAll("h2, .product-logo, .card-button")].map(node => {
+    const style = getComputedStyle(node);
+    return { color: style.color, background: style.backgroundColor, font: style.fontFamily };
+  }));
+  await theme.selectOption("light");
+  const brand = await appearance();
+  for (const mode of ["light", "dark"]) {
+    await theme.selectOption(mode);
+    expect(await appearance()).toEqual(brand);
+    await expect(page.getByLabel("Started using (optional)", { exact: true })).toHaveValue("2024-06-03");
+    await expect(page.getByText("Unsaved", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Synthetic save operations")).toHaveText("");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  }
+  const date = (await page.getByLabel("Started using (optional)", { exact: true }).boundingBox())!;
+  const evidence = (await page.getByRole("complementary", { name: "Supporting context for GitHub", exact: true }).boundingBox())!;
+  const save = (await page.getByRole("button", { name: "Save privately", exact: true }).boundingBox())!;
+  const extra = (await page.getByText("Work-sample link and supporting snapshot", { exact: true }).boundingBox())!;
+  if (width === 390) {
+    expect(evidence.y).toBeGreaterThan(date.y + date.height);
+    expect(save.y).toBeGreaterThan(evidence.y + evidence.height);
+    expect(extra.y).toBeGreaterThan(save.y);
+  } else {
+    const tools = (await page.getByRole("navigation", { name: "All tools" }).boundingBox())!;
+    expect(tools.x + tools.width).toBeLessThan(date.x);
+    expect(evidence.x).toBeGreaterThan(date.x + date.width);
+    expect(save.y).toBeGreaterThan(date.y + date.height);
+    expect(extra.y).toBeGreaterThan(save.y);
+  }
 });

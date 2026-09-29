@@ -2,7 +2,7 @@
 
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
-import { useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
@@ -24,6 +24,13 @@ export type InventoryEvidence = FunctionReturnType<typeof api.inventory.evidence
 type SaveInput = FunctionArgs<typeof api.inventory.save>;
 type SaveResult = FunctionReturnType<typeof api.inventory.save>;
 
+function relationshipListLabel(item: Item) {
+  if (!isRelationshipConfirmed(item.prop)) return "Needs review";
+  if (item.prop.status === "ACTIVE") return "Active";
+  if (item.prop.status === "TESTING") return "Testing";
+  return "Archived";
+}
+
 function History({ propId }: { propId: Id<"props"> }) {
   const { results, status, loadMore } = usePaginatedQuery(api.inventory.history, { propId }, { initialNumItems: 10 });
   return <div>
@@ -43,13 +50,18 @@ function History({ propId }: { propId: Id<"props"> }) {
   </div>;
 }
 
-function RelationshipEditor({ item, evidence, onSave }: { item: Item; evidence: InventoryEvidence; onSave: (input: SaveInput) => Promise<SaveResult> }) {
+function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChange, dateNotice, formId }: {
+  item: Item; evidence: InventoryEvidence; onSave: (input: SaveInput) => Promise<SaveResult>;
+  startedAt: string; onStartDateChange: (value: string) => void; dateNotice: string; formId: string;
+}) {
   const confirmed = isRelationshipConfirmed(item.prop);
   const [status, setStatus] = useState(item.prop.status as string);
   const [selectedRelationship, setSelectedRelationship] = useState(confirmed);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [extraOpen, setExtraOpen] = useState(true);
   const retry = useRef<{ body: string; id: string } | null>(null);
+  const showSnapshot = Boolean(item.prop.activity || item.prop.activityEvidenceId || evidence.some(source => source.suggestedActivity));
   async function submit(form: FormData) {
     if (!selectedRelationship) { setMessage("Choose how this product fits your collection."); return; }
     setBusy(true);
@@ -73,38 +85,49 @@ function RelationshipEditor({ item, evidence, onSave }: { item: Item; evidence: 
       setMessage(error instanceof Error ? error.message : "Save failed. Your previous decisions remain intact.");
     } finally { setBusy(false); }
   }
-  return <form onSubmit={event => {
-    event.preventDefault();
-    void submit(new FormData(event.currentTarget));
-  }} className={styles.editor}>
-    <fieldset disabled={busy}>
-      <legend>{confirmed ? "Your relationship" : "Confirm this discovery"}</legend>
-      <label>How it fits
-        <select name="status" value={selectedRelationship ? status : ""} onChange={event => { setStatus(event.target.value); setSelectedRelationship(Boolean(event.target.value)); }} required>
-          <option value="" disabled>Choose a relationship</option>
-          <option value="ACTIVE">Currently use</option><option value="TESTING">Testing now</option><option value="ARCHIVED">Past use / archived</option>
-        </select>
-      </label>
-      <label className={styles.toggle}><input name="goTo" type="checkbox" defaultChecked={item.prop.goTo ?? false} />One of my go-to tools</label>
-      <p className={styles.hint}>Your designation. Frequency and activity never award it automatically. Archiving keeps earlier choices in history.</p>
-      <label>What it helps you do (optional)<input name="headline" maxLength={240} defaultValue={confirmed ? item.prop.headline : ""} /></label>
-      <label>Explanation or workflow (optional)<textarea name="note" rows={2} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
-      {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
-      <label>Work sample or workflow link (optional)<input name="supportingUrl" type="url" defaultValue={item.prop.supportingUrl ?? ""} placeholder="https://…" /></label>
+  return <>
+    <form id={formId} onSubmit={event => {
+      event.preventDefault();
+      void submit(new FormData(event.currentTarget));
+    }} className={styles.editor}>
+      <fieldset disabled={busy}>
+        <legend>{confirmed ? "Your relationship" : "Confirm this discovery"}</legend>
+        <div className={styles.relationshipChoices}>
+          <label>How it fits
+            <select name="status" value={selectedRelationship ? status : ""} onChange={event => { setStatus(event.target.value); setSelectedRelationship(Boolean(event.target.value)); }} required>
+              <option value="" disabled>Choose a relationship</option>
+              <option value="ACTIVE">Currently use</option><option value="TESTING">Testing now</option><option value="ARCHIVED">Past use / archived</option>
+            </select>
+          </label>
+          <label className={styles.toggle}><input name="goTo" type="checkbox" defaultChecked={item.prop.goTo ?? false} />One of my go-to tools</label>
+        </div>
+        <p className={styles.hint}>Your designation. Frequency and activity never award it automatically. Archiving keeps earlier choices in history.</p>
+        <label>What it helps you do (optional)<input name="headline" maxLength={240} defaultValue={confirmed ? item.prop.headline : ""} /></label>
+        <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
+        {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
+        <label className={styles.dateField}><span>Started using (optional)</span>
+          <input name="startedAt" type="date" aria-label="Started using (optional)" value={startedAt} onChange={event => onStartDateChange(event.target.value)} />
+          {startedAt !== (item.prop.startedAt ?? "") && <span className={styles.draftLabel}>Unsaved</span>}
+        </label>
+        {dateNotice && <p className={styles.dateNotice} role="status">{dateNotice}</p>}
+        <p className={styles.hint}>Copied from an observation for your confirmation only after you choose it. Signup dates and capture dates are not first use. Edit or clear the date before saving.</p>
+      </fieldset>
+      {message && <p role="status">{message}</p>}
+    </form>
+    <details className={styles.extraFields} open={extraOpen} onToggle={event => setExtraOpen(event.currentTarget.open)}>
+      <summary>Work-sample link and supporting snapshot</summary>
+      <p className={styles.hint}>These stay reachable here. They do not publish with a private save.</p>
+      <label>Work sample or workflow link (optional)<input form={formId} name="supportingUrl" type="url" defaultValue={item.prop.supportingUrl ?? ""} placeholder="https://…" /></label>
       <p className={styles.hint}>Stays private unless you choose, when you review sharing, to show it on the back of your public card with a label like “See how I use it”.</p>
-      <label>Started using (optional)<input name="startedAt" type="date" defaultValue={item.prop.startedAt ?? ""} /></label>
-      <p className={styles.hint}>Leave the date blank when you do not know. Signup dates and capture dates are not first use.</p>
-      {(item.prop.activity || item.prop.activityEvidenceId || evidence.some(source => source.suggestedActivity)) && <label>Supporting snapshot
-        <select name="activityEvidenceId" defaultValue={evidence.some(source => source.id === item.prop.activityEvidenceId && source.suggestedActivity) ? item.prop.activityEvidenceId : ""}>
+      {showSnapshot && <label>Supporting snapshot
+        <select form={formId} name="activityEvidenceId" defaultValue={evidence.some(source => source.id === item.prop.activityEvidenceId && source.suggestedActivity) ? item.prop.activityEvidenceId : ""}>
           <option value="">{item.prop.activity || item.prop.activityEvidenceId ? "Keep saved supporting activity" : "Do not add a metric preview"}</option>
           {(item.prop.activity || item.prop.activityEvidenceId) && <option value="__remove__">Remove saved supporting snapshot</option>}
           {evidence.filter(source => source.suggestedActivity).map(source => <option key={source.id} value={source.id}>{source.sourceLabel} · {source.artifact?.sourceCapturedDate ?? source.capturedAt.slice(0, 10)}</option>)}
         </select>
       </label>}
-      <button className="primary-action" type="submit">{busy ? "Saving…" : confirmed ? "Save privately" : "Confirm and save privately"}</button>
-    </fieldset>
-    <p role="status">{message}</p>
-  </form>;
+    </details>
+  </>;
 }
 
 // Delete an original (R15): a second, explicit step before anything is removed.
@@ -136,26 +159,49 @@ export function DeleteOriginal({ sourceLabel, onDelete, onDeleted }: {
   </div>;
 }
 
-export function InventoryRelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, onDeleteEvidence, renderEvidence, renderHistory }: {
+type EvidenceControls = { onUseStartDate: (date: string) => void; disabled: boolean };
+type RelationshipDetailsProps = {
   item: Item; evidence: InventoryEvidence; selectedEvidence?: InventoryEvidence[number] | null;
   hasMoreEvidence?: boolean; loadingMoreEvidence?: boolean; onLoadMoreEvidence?: () => void;
   onSave: (input: SaveInput) => Promise<SaveResult>;
   onDeleteEvidence?: (evidenceId: InventoryEvidence[number]["id"]) => Promise<unknown>;
-  renderEvidence?: (item: Item) => ReactNode; renderHistory?: (item: Item) => ReactNode;
-}) {
+  renderEvidence?: (item: Item, controls: EvidenceControls) => ReactNode;
+  renderHistory?: (item: Item) => ReactNode;
+};
+
+export function InventoryRelationshipDetails(props: RelationshipDetailsProps) {
+  return <RelationshipDetails key={props.item.prop._id} {...props} />;
+}
+
+function RelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, onDeleteEvidence, renderEvidence, renderHistory }: RelationshipDetailsProps) {
+  const formId = useId();
   const [saveNotice, setSaveNotice] = useState("");
   const [deleteNotice, setDeleteNotice] = useState("");
+  const [saving, setSaving] = useState(false);
+  const version = item.prop.relationshipVersion ?? 0;
+  const [dateDraft, setDateDraft] = useState<{ value: string; version: number; notice: string }>();
+  const currentDraft = dateDraft?.version === version ? dateDraft : undefined;
+  function useStartDate(date: string) {
+    if (saving) return;
+    setDateDraft({ value: date, version, notice: "Observed date copied to your draft. Edit or clear it, then save privately to confirm." });
+    setSaveNotice("");
+  }
   async function save(input: SaveInput) {
     setSaveNotice("");
-    const result = await onSave(input);
-    setSaveNotice("Saved privately. Your public profile has not changed.");
-    return result;
+    setSaving(true);
+    try {
+      const result = await onSave(input);
+      setSaveNotice("Saved privately. Your public profile has not changed.");
+      setDateDraft(current => current && { ...current, notice: "" });
+      return result;
+    } finally { setSaving(false); }
   }
   const sources = [...new Map([...(selectedEvidence ? [selectedEvidence] : []), ...evidence].map(source => [source.id, source])).values()];
-  return <>
-    <RelationshipEditor key={`${item.prop._id}:${item.prop.relationshipVersion ?? 0}`} item={item} evidence={sources} onSave={save} />
-    {saveNotice && <p role="status">{saveNotice}</p>}
+  const supportingContext = <aside className={styles.evidencePanel} aria-label={`Supporting context for ${item.product.name}`}>
+    <p className={styles.evidenceKicker}>Supporting evidence</p>
     <h3>Supporting context</h3>
+    <p>A date to consider. An observation can help you remember. You decide whether it marks your first use.</p>
+    {renderEvidence && <details className={styles.claims}><summary>Inspect extracted claims and correct evidence</summary>{renderEvidence(item, { onUseStartDate: useStartDate, disabled: saving })}</details>}
     {deleteNotice && <p role="status">{deleteNotice}</p>}
     {item.prop.activityEvidenceId && !sources.some(source => source.id === item.prop.activityEvidenceId) && <p>The original for your saved supporting snapshot is unavailable. You can keep or remove the saved preview.</p>}
     {sources.length === 0 && <p>{hasMoreEvidence ? "No available sources in the loaded evidence pages. More sources may be available below." : "No retained source is attached. Your explanation is an owner statement."}</p>}
@@ -176,9 +222,25 @@ export function InventoryRelationshipDetails({ item, evidence, selectedEvidence,
         onDeleted={() => setDeleteNotice(`Deleted the original from ${source.sourceLabel}. Your saved relationship and any published card are unchanged.`)} />}
     </div>)}
     {hasMoreEvidence && <button type="button" className="secondary-action" disabled={loadingMoreEvidence} onClick={onLoadMoreEvidence}>{loadingMoreEvidence ? "Loading retained sources…" : "Load more retained sources"}</button>}
-    {renderEvidence && <details className={styles.claims}><summary>Inspect extracted claims and correct evidence</summary>{renderEvidence(item)}</details>}
-    <h3>Relationship history</h3>
-    {renderHistory?.(item)}
+  </aside>;
+  return <>
+    <div className={styles.relationshipHeading}><h3>{item.product.name}</h3><p>Private relationship</p></div>
+    <div className={styles.editorLayout}>
+      <RelationshipEditor key={`${item.prop._id}:${version}`} item={item} evidence={sources} onSave={save}
+        startedAt={currentDraft?.value ?? item.prop.startedAt ?? ""} dateNotice={currentDraft?.notice ?? ""}
+        onStartDateChange={value => setDateDraft({ value, version, notice: "" })}
+        formId={formId} />
+      {supportingContext}
+      <div className={styles.saveBoundary}>
+        <button className={`primary-action ${styles.save}`} form={formId} type="submit" disabled={saving}>{saving ? "Saving…" : isRelationshipConfirmed(item.prop) ? "Save privately" : "Confirm and save privately"}</button>
+        <p>Your public profile will not change.</p>
+        <p className={styles.hint}>Work-sample link and supporting snapshot remain available below.</p>
+        {saveNotice && <p className={styles.saveNotice} role="status">{saveNotice}</p>}
+      </div>
+    </div>
+    <details className={styles.history}><summary>Relationship history</summary>
+      {renderHistory?.(item)}
+    </details>
   </>;
 }
 
@@ -190,7 +252,7 @@ function InventoryDetails({ item, onSave, brandEnrichmentAvailable }: { item: It
   return <><InventoryRelationshipDetails item={item} evidence={evidence.results} selectedEvidence={selectedEvidence}
     hasMoreEvidence={evidence.status !== "Exhausted"} loadingMoreEvidence={evidence.status === "LoadingMore"} onLoadMoreEvidence={() => evidence.loadMore(10)} onSave={onSave}
     onDeleteEvidence={evidenceId => deleteEvidence({ evidenceId })}
-    renderEvidence={current => <PrivateEvidencePanel propId={current.prop._id} productName={current.product.name} productSlug={current.product.slug} />}
+    renderEvidence={(current, controls) => <PrivateEvidencePanel propId={current.prop._id} productName={current.product.name} productSlug={current.product.slug} {...controls} />}
     renderHistory={current => <History propId={current.prop._id} />} />
     {brandEnrichmentAvailable && <details className={styles.brand}><summary>Product appearance</summary><p>Retained logos, fonts, and brand styling describe the product. They do not establish your relationship with it.</p><ProductBrandControls propId={item.prop._id} /></details>}
   </>;
@@ -219,6 +281,7 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
   const [importing, setImporting] = useState(false);
   const [inspectedRecords, setInspectedRecords] = useState<Record<string, string>>({});
   const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const [selectedGroup, setSelectedGroup] = useState<string>();
   async function importFiles(form: FormData) {
     setImporting(true);
     try {
@@ -237,44 +300,66 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
     groups.set(key, [...(groups.get(key) ?? []), item]);
   }
   const cards = [...groups.entries()].filter(([, members]) => members.some(item => inInventoryView(view, item)));
+  const selectedEntry = cards.find(([groupId]) => groupId === selectedGroup) ?? cards[0];
   return <section className={styles.inventory} aria-labelledby="private-collection-title">
-    <p className="onboarding-kicker">YOUR PRIVATE COLLECTION</p>
-    <h2 id="private-collection-title">What you use, test, and come back to.</h2>
-    <p>Your go-to stack is your choice. Evidence and work context support the story; saving here keeps it private.</p>
-    <nav className={styles.views} aria-label="Collection views">{inventoryViews.map(option => <button type="button" className="secondary-action" key={option} aria-pressed={view === option} onClick={() => { setView(option); setInspectedRecords({}); }}>{option}</button>)}</nav>
+    <div className={styles.masthead}>
+      <div>
+        <h2 id="private-collection-title">Your tools. Your track record.</h2>
+        <p>Keep the relationship current. Keep the evidence attached.</p>
+      </div>
+      <a className={styles.addProduct} href="#add-product">Add a product</a>
+    </div>
+    <nav className={styles.views} aria-label="Collection views">{inventoryViews.map(option => <button type="button" className="secondary-action" key={option} aria-pressed={view === option} onClick={() => { setView(option); setInspectedRecords({}); setSelectedGroup(undefined); }}>{option}</button>)}</nav>
     <p className={styles.hint}>Views can overlap. History preserves earlier decisions when a tool becomes go-to, is archived, or returns to your stack.</p>
     {!cards.length && <p>{data.hasMore ? "No matches among the products loaded so far." : "No products in this view yet."}</p>}
-    <div className={styles.grid}>{cards.map(([groupId, members], index) => {
-      const matching = members.filter(item => inInventoryView(view, item));
-      const item = members.find(member => member.prop._id === inspectedRecords[groupId]) ?? matching[0];
-      const confirmed = isRelationshipConfirmed(item.prop);
-      const otherUsageRecords = members.filter(member => member.prop._id !== item.prop._id && member.prop.activity).length;
-      return <section className={styles.item} key={groupId} aria-label={`${item.product.name} in your collection`}>
-        {members.length > 1 && <div className={styles.source}>
-          <label>Record to inspect for {item.product.name}
-            <select value={item.prop._id} onChange={event => setInspectedRecords(current => ({ ...current, [groupId]: event.target.value }))}>
-              {members.map((member, recordIndex) => <option key={member.prop._id} value={member.prop._id}>
-                {`Record ${recordIndex + 1} · ${member.prop.activity ? "Usage snapshot" : member.prop.activityEvidenceId ? "Snapshot unavailable" : "No usage snapshot"} · ${isRelationshipConfirmed(member.prop) ? member.prop.status.toLowerCase() : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
-              </option>)}
-            </select>
-          </label>
-          <p>{members.length} retained records for this product. Inspect each record’s decisions and evidence here. Selecting a record does not merge, confirm, or publish it.</p>
-        </div>}
-        <div className={styles.usageSummary} aria-live="polite">
-          <p>{item.prop.activity
-            ? "This record has a saved usage snapshot. Open Details to see its source and coverage."
-            : item.prop.activityEvidenceId
-              ? "The selected usage snapshot is unavailable. Usage is unknown."
-              : "No usage snapshot is selected for this record. Usage is unknown."}</p>
-          {otherUsageRecords > 0 && <p>{otherUsageRecords} other loaded {otherUsageRecords === 1 ? "record has" : "records have"} a saved usage snapshot. Choose {otherUsageRecords === 1 ? "it" : "one"} above to inspect its own evidence.</p>}
-        </div>
-        {renderCard?.(item, index) ?? <InventoryCard key={item.prop._id} item={item} index={index} />}
-        <details key={`details:${item.prop._id}`} onToggle={event => { const open = event.currentTarget.open; setOpened(current => ({ ...current, [item.prop._id]: open })); }}>
-          <summary>{confirmed ? "Manage relationship and context" : "Review this discovery"}</summary>
-          {opened[item.prop._id] && (renderDetails?.(item) ?? <InventoryRelationshipDetails item={item} evidence={[]} onSave={onSave} renderHistory={renderHistory} />)}
-        </details>
-      </section>;
-    })}</div>
+    {cards.length > 0 && selectedEntry && <div className={styles.workspace}>
+      <nav className={styles.toolList} aria-label="All tools">
+        <p className={styles.toolListHeader}><span>All tools</span><span>{cards.length}</span></p>
+        {cards.map(([groupId, members]) => {
+          const preview = members.find(member => member.prop._id === inspectedRecords[groupId]) ?? members.find(item => inInventoryView(view, item)) ?? members[0];
+          return <button type="button" className={styles.tool} key={groupId} aria-pressed={groupId === selectedEntry[0]} onClick={() => setSelectedGroup(groupId)}>
+            <span className={styles.mark} aria-hidden="true">{preview.product.name.slice(0, 1)}</span>
+            <span className={styles.toolName} data-tool-name>{preview.product.name}</span>
+            <span className={styles.toolStatus}>{relationshipListLabel(preview)}</span>
+          </button>;
+        })}
+      </nav>
+      {(() => {
+        const [groupId, members] = selectedEntry;
+        const matching = members.filter(item => inInventoryView(view, item));
+        const item = members.find(member => member.prop._id === inspectedRecords[groupId]) ?? matching[0];
+        const confirmed = isRelationshipConfirmed(item.prop);
+        const otherUsageRecords = members.filter(member => member.prop._id !== item.prop._id && member.prop.activity).length;
+        const index = cards.findIndex(entry => entry[0] === groupId);
+        return <section className={styles.item} key={groupId} aria-label={`${item.product.name} in your collection`}>
+          <div className={styles.cardContext}>
+            {members.length > 1 && <div className={styles.source}>
+              <label>Record to inspect for {item.product.name}
+                <select value={item.prop._id} onChange={event => setInspectedRecords(current => ({ ...current, [groupId]: event.target.value }))}>
+                  {members.map((member, recordIndex) => <option key={member.prop._id} value={member.prop._id}>
+                    {`Record ${recordIndex + 1} · ${member.prop.activity ? "Usage snapshot" : member.prop.activityEvidenceId ? "Snapshot unavailable" : "No usage snapshot"} · ${isRelationshipConfirmed(member.prop) ? member.prop.status.toLowerCase() : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
+                  </option>)}
+                </select>
+              </label>
+              <p>{members.length} retained records for this product. Inspect each record’s decisions and evidence here. Selecting a record does not merge, confirm, or publish it.</p>
+            </div>}
+            <div className={styles.usageSummary} aria-live="polite">
+              <p>{item.prop.activity
+                ? "This record has a saved usage snapshot. Open Details to see its source and coverage."
+                : item.prop.activityEvidenceId
+                  ? "The selected usage snapshot is unavailable. Usage is unknown."
+                  : "No usage snapshot is selected for this record. Usage is unknown."}</p>
+              {otherUsageRecords > 0 && <p>{otherUsageRecords} other loaded {otherUsageRecords === 1 ? "record has" : "records have"} a saved usage snapshot. Choose {otherUsageRecords === 1 ? "it" : "one"} above to inspect its own evidence.</p>}
+            </div>
+            {renderCard?.(item, index) ?? <InventoryCard key={item.prop._id} item={item} index={index} />}
+          </div>
+          <details key={`details:${item.prop._id}`} onToggle={event => { const open = event.currentTarget.open; setOpened(current => ({ ...current, [item.prop._id]: open })); }}>
+            <summary>{confirmed ? "Manage relationship and context" : "Review this discovery"}</summary>
+            {opened[item.prop._id] && (renderDetails?.(item) ?? <InventoryRelationshipDetails item={item} evidence={[]} onSave={onSave} renderHistory={renderHistory} />)}
+          </details>
+        </section>;
+      })()}
+    </div>}
     {data.hasMore && <>
       <p>Views group the {data.cards.length} records loaded so far by product. More records, including other records for these products, may be available.</p>
       <button type="button" className="secondary-action" disabled={data.loadingMore} onClick={onLoadMore}>{data.loadingMore ? "Loading products…" : "Load more products"}</button>

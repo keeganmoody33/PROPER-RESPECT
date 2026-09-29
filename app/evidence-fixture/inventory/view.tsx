@@ -5,6 +5,7 @@ import type { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { InventoryRelationshipDetails, PrivateInventoryView, type InventoryData, type InventoryEvidence } from "@/components/private-inventory";
 import { AddProductForm, SharingPreview } from "@/components/onboarding-client";
+import { ObservedStartDateAction } from "@/components/private-evidence-panel";
 
 const initial: InventoryData = { hasMore: false, cards: [{
   prop: { _id: "synthetic-prop" as Id<"props">, _creationTime: 1, userId: "synthetic-owner" as Id<"users">,
@@ -37,6 +38,34 @@ const groupedGitHub: InventoryData = {
       } : index === 2 ? { activityEvidenceId: "synthetic-unavailable-snapshot" as Id<"rawEvidence"> } : {}),
     },
   })),
+};
+
+const designFixture: InventoryData = {
+  hasMore: false,
+  cards: [
+    {
+      ...groupedGitHub.cards[0],
+      prop: {
+        ...groupedGitHub.cards[0].prop,
+        status: "ACTIVE",
+        visibility: "PRIVATE",
+        confirmedAt: "2026-09-18T12:00:00.000Z",
+        goTo: true,
+        headline: "Keep delivery work and its decisions together.",
+        note: "I keep code, reviews and the reasons behind changes here. I return to the history when a decision needs explaining.",
+      },
+    },
+    {
+      ...initial.cards[0],
+      product: { ...initial.cards[0].product, _id: "synthetic-wispr" as Id<"products">, name: "Wispr Flow", slug: "wisprflow", domain: "wisprflow.ai" },
+      prop: { ...initial.cards[0].prop, _id: "synthetic-wispr" as Id<"props">, productId: "synthetic-wispr" as Id<"products">, status: "TESTING", visibility: "PRIVATE", confirmedAt: "2026-09-18T12:00:00.000Z" },
+    },
+    {
+      ...initial.cards[0],
+      product: { ...initial.cards[0].product, _id: "synthetic-devin" as Id<"products">, name: "Devin", slug: "devin", domain: "devin.ai" },
+      prop: { ...initial.cards[0].prop, _id: "synthetic-devin" as Id<"props">, productId: "synthetic-devin" as Id<"products">, status: "ARCHIVED", visibility: "PRIVATE", confirmedAt: "2026-09-18T12:00:00.000Z" },
+    },
+  ],
 };
 
 export function InventoryFixture() {
@@ -80,6 +109,7 @@ export function InventoryFixture() {
     return result;
   }
   return <>
+    <button type="button" onClick={() => setData(designFixture)}>Load design fixture</button>
     <button type="button" onClick={() => setData(groupedGitHub)}>Load grouped GitHub fixture</button>
     <button type="button" onClick={() => { loseNextResponse.current = true; }}>Simulate one lost save response</button>
     <output aria-label="Synthetic save operations">{attempts.join("\n")}</output>
@@ -92,6 +122,15 @@ export function InventoryFixture() {
         setDeletions(current => [...current, evidenceId]);
         setEvidence(current => current.filter(source => source.id !== evidenceId));
       }}
+      renderEvidence={(_current, controls) => <>
+        <strong>Retained activity record</strong>
+        <p>Observed · <time dateTime="2024-06-03">03 Jun 2024</time><br />Captured · <time dateTime="2026-09-18">18 Sep 2026</time></p>
+        <blockquote>First contribution in the supplied record: 2024-06-03.</blockquote>
+        <ObservedStartDateAction
+          observation={{ kind: "FIRST_USE", scope: "PERSONAL", acquisition: "USER_SUPPLIED", date: "2024-06-03", excerpt: "Synthetic observed first use: 2024-06-03" }}
+          verdict="CORRECT" {...controls} />
+        <p>This is a dated snapshot. It does not establish continuous use or a healthy live connection.</p>
+      </>}
       renderHistory={current => <p>Synthetic prior states: {current.previousStatuses.join(", ") || "none"}</p>} />} />
     <button type="button" onClick={() => { loseManualResponse.current = true; }}>Simulate one lost add response</button>
     <AddProductForm onAdd={async input => {
