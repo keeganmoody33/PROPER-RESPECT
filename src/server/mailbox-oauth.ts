@@ -3,6 +3,8 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 // Provider contracts checked 2026-09-16:
 // https://developers.google.com/identity/protocols/oauth2/web-server
 // https://developers.google.com/identity/openid-connect/openid-connect
+// Revocation contract checked 2026-09-28 (the "Revoking a token" section):
+// https://developers.google.com/identity/protocols/oauth2/web-server
 // https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
 // https://learn.microsoft.com/en-us/graph/api/user-get?view=graph-rest-1.0
 
@@ -14,6 +16,7 @@ const providers = {
     authorize: "https://accounts.google.com/o/oauth2/v2/auth",
     token: "https://oauth2.googleapis.com/token",
     identity: "https://openidconnect.googleapis.com/v1/userinfo",
+    revoke: "https://oauth2.googleapis.com/revoke",
     scopes: ["openid", "email", GOOGLE_MAIL],
   },
   MICROSOFT: {
@@ -179,6 +182,21 @@ export function parseTokenResponse(provider: MailboxProvider, input: unknown, op
 export function buildIdentityRequest(provider: MailboxProvider, accessToken: string): ProviderRequest {
   return { url: providerContract(provider).identity, method: "GET", redirect: "error", cache: "no-store",
     headers: { Authorization: `Bearer ${bearerToken(accessToken)}`, Accept: "application/json" } };
+}
+
+/**
+ * Google revokes the whole grant for a refresh or access token, form-encoded
+ * with no client credentials. Microsoft has no equivalent per-app revocation.
+ */
+export function buildRevocationRequest(provider: MailboxProvider, token: string): ProviderRequest & { body: string } {
+  const contract = providerContract(provider);
+  if (!("revoke" in contract)) throw new Error("Mailbox provider revocation is unsupported.");
+  let value: string;
+  try { value = boundedText(token, "revocation token", 32768); }
+  catch { throw new Error("Invalid revocation token."); }
+  return { url: contract.revoke, method: "POST", redirect: "error", cache: "no-store",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token: value }).toString() };
 }
 
 /** Parse only a successful HTTPS response from buildIdentityRequest. This parser alone does not authenticate input. Never pass client JSON or decoded JWT claims. */

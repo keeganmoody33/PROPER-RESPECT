@@ -1,15 +1,16 @@
 "use node";
 import { createHash } from "node:crypto";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { action, internalAction, type ActionCtx } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { buildAuthorizationUrl, createMailboxOAuthConfig, createOAuthState, createPkce, parseOAuthCallback } from "../src/server/mailbox-oauth";
-import { exchangeMailboxAuthorization, refreshMailboxAuthorization, MailboxProviderError } from "../src/server/mailbox-provider-http";
+import { exchangeMailboxAuthorization, refreshMailboxAuthorization, revokeMailboxGrant, MailboxProviderError } from "../src/server/mailbox-provider-http";
 import { decryptMailboxCredential, encryptMailboxCredential, type MailboxKeyring } from "../src/server/mailbox-credentials";
 import { readGmailPage, MailboxCursorError } from "../src/server/mailbox-gmail";
 import { mailboxScanModeValidator } from "./mailboxTables";
 import { MAILBOX_TESTERS_ONLY, mailboxTesterAllowed } from "../src/domain/mailbox-testers";
+import { revocationWindowOpen } from "../src/domain/mailbox-revocation";
 
 function config() {
   const clientId = process.env.MAILBOX_GOOGLE_CLIENT_ID;
@@ -43,15 +44,32 @@ export const start = action({
     return { url: buildAuthorizationUrl(oauth, { state, verifier }) };
   },
 });
+type Refusal = { code?: string; accountId?: Id<"mailboxAccounts">; revocationToken?: string; until?: number; generation?: number };
+
+/**
+ * Revoke tokens Google issued around a disconnect, retrying once. If that fails, or a pending revocation's window is
+ * too short to be sure the request ends before a reconnect could land, record it so the disconnect reports FAILED.
+ */
+async function revokeOrRecord(ctx: ActionCtx, token: string, ownerId: Id<"users">, refusal: Refusal & { accountId: Id<"mailboxAccounts">; generation: number }) {
+  const inTime = refusal.until === undefined || revocationWindowOpen(refusal.until);
+  const revoked = inTime && await revokeMailboxGrant("GOOGLE", token).then(() => true, () =>
+    revokeMailboxGrant("GOOGLE", token).then(() => true, () => false));
+  if (!revoked) await ctx.runMutation(internal.mailboxes.recordStrandedGrant, {
+    accountId: refusal.accountId, ownerId, generation: refusal.generation,
+    ...(refusal.revocationToken ? { revocationToken: refusal.revocationToken } : {}) });
+}
+
 export const callback = action({
   args: { query: v.string() },
   handler: async (ctx, args): Promise<{ accountId: Id<"mailboxAccounts">; generation: number }> => {
+    let consumed: Id<"mailboxOAuthStates"> | undefined;
     try {
       if (args.query.length > 16384) throw new Error();
       const params = new URLSearchParams(args.query);
       const state = params.get("state") ?? "";
       if (!/^[A-Za-z0-9_-]{43,128}$/.test(state) || params.getAll("state").length !== 1) throw new Error();
       const pending = await ctx.runMutation(internal.mailboxOAuthState.consume, { stateHash: digest(state) });
+      consumed = pending._id;
       const { code } = parseOAuthCallback(params, state);
       const { oauth, clientSecret } = config();
       const verified = await exchangeMailboxAuthorization(oauth, { code, verifier: pending.verifier!, clientSecret });
@@ -60,11 +78,57 @@ export const callback = action({
         ownerId: pending.ownerId, provider: "GOOGLE", providerAccountId: verified.identity.providerAccountId,
         generation: pending.expectedGeneration + 1,
       }, keyring());
-      return await ctx.runMutation(internal.mailboxes.finalizeVerifiedConnection, {
-        oauthStateId: pending._id, ownerId: pending.ownerId, provider: "GOOGLE", ...verified.identity,
-        scopes: verified.scopes, expectedGeneration: pending.expectedGeneration, credential,
-      });
-    } catch { throw new Error("Gmail authorization failed. Start a new connection attempt."); }
+      try {
+        return await ctx.runMutation(internal.mailboxes.finalizeVerifiedConnection, {
+          oauthStateId: pending._id, ownerId: pending.ownerId, provider: "GOOGLE", ...verified.identity,
+          scopes: verified.scopes, expectedGeneration: pending.expectedGeneration, credential,
+        });
+      } catch (error) {
+        const refusal = error instanceof ConvexError
+          ? error.data as Refusal : undefined;
+        if ((refusal?.code === "REVOCATION_PENDING" || refusal?.code === "DISCONNECTED_SINCE") && refusal.accountId && refusal.generation !== undefined) {
+          // This account is being, or was just, disconnected: end the grant these fresh tokens belong to as well. Retry
+          // once; if the provider still won't revoke them, record it so the disconnect reports FAILED instead of REVOKED.
+          await revokeOrRecord(ctx, verified.credential.refreshToken || verified.credential.accessToken, pending.ownerId,
+            { ...refusal, accountId: refusal.accountId, generation: refusal.generation });
+        }
+        throw error;
+      }
+    } catch {
+      if (consumed) await ctx.runMutation(internal.mailboxOAuthState.release, { stateId: consumed }).catch(() => undefined);
+      throw new Error("Gmail authorization failed. Start a new connection attempt.");
+    }
+  },
+});
+
+type DisconnectResult =
+  | { disconnected: true; generation: number; revocation: "REVOKED" | "FAILED" | "NO_TOKEN" }
+  | { disconnected: false; reason: "GENERATION_CHANGED" };
+
+/**
+ * Disconnect a Gmail account and ask Google to revoke the grant. The local
+ * disconnect happens whatever Google answers. While the revocation is in
+ * flight, reconnects are refused, so Google never revokes a connection that
+ * was just installed. Errors and the stored outcome carry fixed values only,
+ * never provider text or tokens.
+ */
+export const disconnectAndRevoke = action({
+  args: { accountId: v.id("mailboxAccounts"), expectedGeneration: v.number() },
+  handler: async (ctx, args): Promise<DisconnectResult> => {
+    const stored = await ctx.runMutation(internal.mailboxes.beginRevocation, args);
+    let outcome: "REVOKED" | "FAILED" | "NO_TOKEN" = "NO_TOKEN";
+    // Too late to be sure the request ends before reconnects are allowed again: don't ask Google at all.
+    if (stored.credential && !revocationWindowOpen(stored.until)) outcome = "FAILED";
+    else if (stored.credential) {
+      try {
+        const credential = decryptMailboxCredential(stored.credential, { ownerId: stored.ownerId, provider: stored.provider,
+          providerAccountId: stored.providerAccountId, generation: stored.generation }, keyring());
+        // Revoking the refresh token ends the whole grant; the access token is a fallback only.
+        await revokeMailboxGrant(stored.provider, credential.refreshToken || credential.accessToken);
+        outcome = "REVOKED";
+      } catch { outcome = "FAILED"; }
+    }
+    return await ctx.runMutation(internal.mailboxes.finishDisconnect, { ...args, outcome, revocationToken: stored.revocationToken });
   },
 });
 
@@ -92,8 +156,21 @@ async function readLeasedPage(ctx: ActionCtx, args: { accountId: Id<"mailboxAcco
       const { oauth, clientSecret } = config();
       const verified = await refreshMailboxAuthorization(oauth, { refreshToken: credential.refreshToken, clientSecret,
         expectedProviderAccountId: stored.account.providerAccountId });
-      const rotated = await ctx.runMutation(internal.mailboxes.rotateCredential, { ...lease, expectedRevision: revision,
-        credential: encryptMailboxCredential(verified.credential, context, keyring()), scopes: verified.scopes });
+      let rotated;
+      try {
+        rotated = await ctx.runMutation(internal.mailboxes.rotateCredential, { ...lease, expectedRevision: revision,
+          credential: encryptMailboxCredential(verified.credential, context, keyring()), scopes: verified.scopes });
+      } catch (error) {
+        // Refused because the account is being (or was) disconnected. If Google issued a new refresh token, the
+        // disconnect never saw it, so end it here (one retry); if that fails, the disconnect reports FAILED.
+        const refusal = error instanceof ConvexError ? error.data as Refusal : undefined;
+        const rotatedToken = verified.credential.refreshToken;
+        if (refusal?.code === "DISCONNECTING" && refusal.accountId && refusal.generation !== undefined &&
+            rotatedToken && rotatedToken !== credential.refreshToken) {
+          await revokeOrRecord(ctx, rotatedToken, stored.account.ownerId, { ...refusal, accountId: refusal.accountId, generation: refusal.generation });
+        }
+        throw error;
+      }
       credential = verified.credential;
       revision = rotated.revision;
       refreshed = true;
