@@ -235,17 +235,26 @@ jobs:
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> "$GITHUB_ENV"
       - name: Require the production domain on this deployment
         # After an Instant Rollback, new deployments don't take the domain until one is promoted.
+        # Reads the aliases from Vercel's API. In v0.2.0 the CLI's inspect command failed here and hid why.
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
-          release-tools/node_modules/.bin/vercel inspect "$DEPLOYMENT_URL" > inspect.txt 2>&1
-          cat inspect.txt
-          if ! grep -Eq '(^|[^.[:alnum:]-])proper-respect\.com([^.[:alnum:]-]|$)' inspect.txt; then
+          host="${DEPLOYMENT_URL#https://}"
+          status="$(curl -sS -o deployment.json -w '%{http_code}' --max-time 30 \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v13/deployments/${host}?teamId=${VERCEL_ORG_ID}")" || status="000"
+          if [ "$status" != "200" ]; then
+            echo "Vercel's API answered HTTP $status for $host, so the production domain can't be confirmed. Check the token's team scope."
+            exit 1
+          fi
+          # Print only the URL and aliases, never the rest of the deployment record.
+          jq -c '{url, alias}' deployment.json
+          if ! jq -e '(.alias // []) | index("proper-respect.com") != null' deployment.json > /dev/null; then
             echo "proper-respect.com is not an alias of $DEPLOYMENT_URL. Promote it or undo the rollback first."
             exit 1
           fi
+          echo "proper-respect.com serves $DEPLOYMENT_URL."
       - name: Smoke test the live site
         # PUBLIC_HANDLE is the value verify checked.
         run: |
