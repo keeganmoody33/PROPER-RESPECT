@@ -6,7 +6,7 @@ import { ensureProductBrand, retainedProductBrand } from "./productBrands";
 import { v, type Infer } from "convex/values";
 import { mutation, query, internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requireIdentity, requireUser } from "./authHelpers";
+import { consumeWriteLimit, requireIdentity, requireUser } from "./authHelpers";
 import { claimableHandleSchema } from "../src/domain/onboarding";
 import { projectPublicProfile, publicProfileSchema } from "../src/domain/public-profile";
 import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evidence-upload";
@@ -95,6 +95,7 @@ export const claimHandle = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const handle = claimableHandleSchema.parse(args.handle);
+    await consumeWriteLimit(ctx, user._id, "claimHandle");
     const displayName = args.displayName.trim(), bio = args.bio.trim();
     if (displayName.length > DISPLAY_NAME_MAX) throw new Error("Use a display name of 80 characters or fewer.");
     if (bio.length > BIO_MAX) throw new Error("Use a bio of 500 characters or fewer.");
@@ -303,6 +304,7 @@ export const beginUpload = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const identity = await requireIdentity(ctx);
+    await consumeWriteLimit(ctx, user._id, "beginUpload");
     const { mimeType } = classifyEvidenceUpload(args);
     if ((args.vendor?.length ?? 0) > 200) throw new Error("Invalid product name.");
     const site = process.env.CONVEX_SITE_URL;
@@ -767,6 +769,7 @@ export const publishSelected = mutation({
   args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.number(), expectedPreviewHash: v.string(), removeAllCards: v.optional(v.boolean()) },
   handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash, removeAllCards }) => {
     const user = await requireUser(ctx);
+    await consumeWriteLimit(ctx, user._id, "publishSelected");
     const prepared = await preparePublication(ctx, user, selections, removeAllCards === true);
     // A republish replaces the snapshot, so it must never lift an operator takedown.
     if (prepared.published?.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
