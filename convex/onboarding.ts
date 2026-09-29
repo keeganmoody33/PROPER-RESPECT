@@ -197,7 +197,7 @@ async function getStateHandler(ctx: QueryCtx, args: {
         const links = await ctx.db
           .query("links")
           .withIndex("by_prop", (q) => q.eq("propId", prop._id))
-          .take(25);
+          .order("desc").take(25);
         const proofs = args.includeClaims === false ? [] : await ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", prop._id)).take(100);
         const claims = [];
         for (const evidenceId of new Set(proofs.flatMap(proof => proof.rawEvidenceId ? [proof.rawEvidenceId] : []))) {

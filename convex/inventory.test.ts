@@ -129,6 +129,8 @@ test("the latest primary link stays available after more than 25 publications", 
   expect(card.links).toHaveLength(25);
   expect(card.links[0]).toMatchObject({ url: "https://wisprflow.ai/?revision=26", label: "Published link 26", isPrimary: true });
   expect(card.links.find(link => link.isPrimary)?.url).toBe("https://wisprflow.ai/?revision=26");
+  const sharing: FunctionReturnType<typeof api.onboarding.sharingCards> = await owner.query(makeFunctionReference<"query">("onboarding:sharingCards"), firstPage);
+  expect(sharing.page[0].links.find(link => link.isPrimary)?.url).toBe("https://wisprflow.ai/?revision=26");
 });
 
 test("clearing optional context removes current fields and preserves their earlier values in history", async () => {

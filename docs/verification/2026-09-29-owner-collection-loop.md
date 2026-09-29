@@ -96,3 +96,5 @@ Copilot review 5359748269, head `ab0d6eb7a13753e79082b6d2440faa58fb81fb7d`: comm
 The shell regression failed before the fix because `includeCards` was unsupported; it passes with an empty card projection and bounded sharing pages. Nineteen inventory/publication tests pass, including explicit and legacy publication identity across page boundaries. All 49 component browser tests passed; the 11 owner/account journeys passed again with explicit 25-to-34 sharing pagination assertions. Typecheck, lint and production build passed. One full-suite run concurrent with the build hit the existing mailbox test's five-second timeout; verification was repeated sequentially.
 
 Sequential full verification passed: 1,664 Vitest tests (2 skipped) and 121 Node script tests.
+
+Copilot review 5359808285 at `dde5a7e1d16413f9586d5161cde5af12d5b06aae` cleared the parent-read blocker and raised comment 4139413990: **fix now**, read the newest 25 links in the bounded sharing query so revision 26 retains its primary destination. Extend the existing 26-publication regression to sharing.
