@@ -90,8 +90,25 @@ test("release secrets reach only the steps that run the CLI they authenticate", 
   assert.ok(convex[0].indexOf('"prod:${CONVEX_PRODUCTION_DEPLOYMENT}|"') < convex[0].indexOf("npx --no-install convex deploy"));
   const vercel = holders("frontend", "VERCEL_TOKEN");
   assert.equal(vercel.length, 2);
-  for (const step of vercel) assert.match(step, /release-tools\/node_modules\/\.bin\/vercel /);
+  // The deploy runs the pinned CLI; the domain check reads Vercel's API directly and sends the token nowhere else.
+  assert.match(vercel[0], /release-tools\/node_modules\/\.bin\/vercel deploy/);
   assert.ok(vercel[0].indexOf('-z "$VERCEL_TOKEN"') < vercel[0].indexOf("vercel deploy"));
+  assert.deepEqual([...vercel[1].matchAll(/https:\/\/[a-z][^\s"'?]*/g)].map(m => m[0]), ["https://api.vercel.com/v13/deployments/${host}"]);
+});
+
+test("the production-domain check reads the deployment's aliases and says why it fails", () => {
+  // v0.2.0: `vercel inspect` exited non-zero under bash -e before its output was printed,
+  // so a deployment that did hold proper-respect.com failed the release with no message.
+  const workflow = releaseWorkflow();
+  const start = workflow.indexOf("- name: Require the production domain on this deployment");
+  const step = workflow.slice(start, workflow.indexOf("\n      - name:", start + 1));
+  assert.ok(start > 0);
+  assert.doesNotMatch(step, /vercel inspect/);
+  assert.match(step, /https:\/\/api\.vercel\.com\/v13\/deployments\/\$\{?host\}?\?teamId=\$\{?VERCEL_ORG_ID\}?/);
+  assert.match(step, /\.alias/);
+  assert.match(step, /"proper-respect\.com"/);
+  // Every failure path prints a reason before it exits.
+  for (const exit of step.split("exit 1").slice(0, -1)) assert.match(exit.slice(-400), /echo "/);
 });
 
 test("the release requires the repository owner as the only reviewer", () => {
