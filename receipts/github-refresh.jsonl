@@ -2,3 +2,4 @@
 {"checkedAt":"2026-09-29T14:52:18.566Z","event":"schedule","runId":"36585842924","sha":"36583a07b695f0124273f58d58d9e86799495fbb","handle":"","capturedAt":null,"freshness":null,"ageHours":null,"ok":false,"reason":"BAD_CONFIGURATION"}
 {"checkedAt":"2026-09-30T14:57:12.272Z","event":"schedule","runId":"36732946955","sha":"3e6d6527546cc3ebdaf2fb2030c12864f140736a","handle":"","capturedAt":null,"freshness":null,"ageHours":null,"ok":false,"reason":"BAD_CONFIGURATION"}
 {"checkedAt":"2026-09-30T22:32:47.663Z","event":"workflow_dispatch","runId":"36786162129","sha":"a8a573de77cc445cea71c9104cab3b2a1bd7300d","handle":"lecturesfrom","capturedAt":null,"freshness":null,"ageHours":null,"ok":false,"reason":"MISSING_CARD"}
+{"checkedAt":"2026-09-30T22:47:45.874Z","event":"workflow_dispatch","runId":"36787571575","sha":"a8a573de77cc445cea71c9104cab3b2a1bd7300d","handle":"lecturesfrom","capturedAt":"2026-09-30T00:46:31.043Z","freshness":"FRESH","ageHours":22.02,"ok":true}
