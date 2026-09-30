@@ -136,7 +136,7 @@ function Builder() {
   const connectDevin = useAction(api.connectors.connectDevin);
   const shell = useQuery(api.onboarding.getState, { includeCards: false, includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
   const sharing = usePaginatedQuery(api.onboarding.sharingCards, {}, { initialNumItems: 25 });
-  const state = useMemo(() => shell ? { ...shell, cards: sharing.results } : shell, [shell, sharing.results]);
+  const state = useMemo(() => shell && sharing.status !== "LoadingFirstPage" ? { ...shell, cards: sharing.results } : undefined, [shell, sharing.results, sharing.status]);
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);

@@ -101,3 +101,7 @@ Copilot review 5359808285 at `dde5a7e1d16413f9586d5161cde5af12d5b06aae` cleared 
 Copilot review 5359845490 at `c60013b597ebce244529889d9c3663f23b9e4463`, comments 4139446725 and 4139446756: **fix now**. A reselected historical primary retains its creation order. Include it through an indexed lookup in private list/detail and sharing reads, independently of the recent-link page. Add only an index on existing `propId`/`isPrimary` fields; no new field, relationship concept, or data migration.
 
 The reselected-primary regression failed with a missing revision-1 destination before the indexed lookup. It now passes for private list, exact detail and sharing, each returning at most 25 links. Full unit/script verification, typecheck and lint pass after this correction.
+
+Final follow-up review 5359924123, comment 4139517641: **fix now**, superseding the initially deferred loading presentation observation. Keep card-dependent UI/actions unavailable until the first sharing page resolves, while allowing later pages to load incrementally. The release-note title wording is also corrected.
+
+The shell/sharing race regression failed before the gate and passed after it. All 18 onboarding auth/render tests, 11 owner/account browser journeys and typecheck passed after the gate.
