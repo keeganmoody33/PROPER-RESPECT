@@ -78,9 +78,9 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     title: "How your data is handled",
     description: "Current account, evidence, connection and publication behavior in Proper Respect, including retention and deletion limits.",
     eyebrow: "Privacy / Current practices",
-    updatedAt: "2026-09-28",
+    updatedAt: "2026-09-30",
     introduction: [
-      "This page describes how Proper Respect handles accounts, evidence and publication as of September 28, 2026.",
+      "This page describes how Proper Respect handles accounts, evidence and publication as of September 30, 2026.",
       "Proper Respect is created by lecturesfrom, a business in the United States, and operated by Keegan Moody. Contact 33@lecturesfrom.com with questions about your data.",
     ],
     sections: [
@@ -121,6 +121,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         paragraphs: [
           "Product presentation can use Context.dev and official product sources. Brand lookups send the product domain to the branding service. Product images and fonts can load from external hosts, so visiting a page can make requests to those hosts.",
           "Your appearance preference is saved in your browser's local storage. Authentication and hosting services also process requests and may use cookies and logs as part of their services.",
+          "Searchable Analytics measures visits and referral traffic, including referrals from AI services, on our production website. Its tracker receives page URLs, page titles, referrers and interaction events, and uses browser storage for visitor and session identifiers. We configure the tracker with cookies disabled.",
         ],
       },
       {
