@@ -123,7 +123,8 @@ export default defineSchema({
     isPrimary: v.boolean(),
   })
     .index("by_seed_key", ["seedKey"])
-    .index("by_prop", ["propId"]),
+    .index("by_prop", ["propId"])
+    .index("by_prop_primary", ["propId", "isPrimary"]),
 
   sites: defineTable({
     seedKey: v.optional(v.string()),

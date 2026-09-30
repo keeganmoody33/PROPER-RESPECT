@@ -43,7 +43,7 @@ for (const width of [1280, 390]) test(`private collection interaction and revers
 
 test("synthetic file import, invalid JSON, and removing a supporting snapshot preserve the retained source", async ({ page }) => {
   await page.goto("/evidence-fixture/inventory");
-  await expect(page.getByRole("heading", { name: "Supporting context", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Evidence and limitations", exact: true })).toHaveCount(0);
   await page.getByText("Bring in retained evidence", { exact: true }).click();
   await page.getByLabel("Prepared evidence files").setInputFiles({ name: "invalid-synthetic-2026-09-18.json", mimeType: "application/json", buffer: Buffer.from("{not valid JSON}") });
   await page.getByRole("button", { name: "Retain privately", exact: true }).click();
