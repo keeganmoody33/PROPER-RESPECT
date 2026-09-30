@@ -7,13 +7,35 @@ export async function resolvePublishedCardPropIds(
   published: Doc<"publishedProfiles">,
   userId: Id<"users">,
   ownedProps?: Doc<"props">[],
+  pageProps?: Doc<"props">[],
 ): Promise<Array<Id<"props"> | null>> {
   const user = await ctx.db.get(userId);
   if (!user || user.handle !== published.handle) {
     return published.profile.cards.map(() => null);
   }
-  const props = (ownedProps ?? await ctx.db.query("props")
-    .withIndex("by_user", q => q.eq("userId", userId)).collect())
+  if (!ownedProps) {
+    const page = pageProps?.filter(prop => prop.userId === userId);
+    const pageIds = page && new Set(page.map(prop => prop._id));
+    const pageProducts = page ? await Promise.all([...new Set(page.map(prop => prop.productId))].map(id => ctx.db.get(id))) : undefined;
+    const pageSlugs = pageProducts && new Set(pageProducts.flatMap(product => product ? [product.slug] : []));
+    const counts = new Map<string, number>();
+    for (const card of published.profile.cards) counts.set(card.product.slug, (counts.get(card.product.slug) ?? 0) + 1);
+    return Promise.all(published.profile.cards.map(async (card, index) => {
+      const explicit = published.cardPropIds?.[index];
+      if (explicit) {
+        if (pageIds) return pageIds.has(explicit) ? explicit : null;
+        const prop = await ctx.db.get(explicit);
+        return prop?.userId === userId ? explicit : null;
+      }
+      if (pageSlugs && !pageSlugs.has(card.product.slug)) return null;
+      if (counts.get(card.product.slug) !== 1) return null;
+      const products = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", card.product.slug)).take(2);
+      if (products.length !== 1) return null;
+      const candidates = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", userId).eq("productId", products[0]._id)).take(2);
+      return candidates.length === 1 ? candidates[0]._id : null;
+    }));
+  }
+  const props = ownedProps
     .filter(prop => prop.userId === userId);
   const propIds = new Set(props.map(prop => prop._id));
   const resolved = published.profile.cards.map((_, index) => {

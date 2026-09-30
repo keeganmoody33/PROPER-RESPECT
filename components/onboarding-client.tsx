@@ -11,7 +11,7 @@ import {
   useAuth,
   useClerk,
 } from "@clerk/nextjs";
-import { useAction, useConvex, useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useAction, useConvex, useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionArgs } from "convex/server";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
@@ -28,7 +28,8 @@ import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
 import { ProductBrandControls } from "./product-brand-controls";
-import { PrivateInventory } from "./private-inventory";
+import { OwnerCollection } from "./owner-collection";
+import { openRelationship } from "@/src/client/relationship-location";
 import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 
@@ -64,7 +65,7 @@ function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
   </div>;
 }
 
-export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) => Promise<unknown> }) {
+export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProductInput) => Promise<unknown>; onAdded?: (propId: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
   const retry = useRef<{ body: string; id: string } | null>(null);
@@ -80,7 +81,8 @@ export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) =
     setBusy(true);
     setNotice(null);
     try {
-      await onAdd({ ...values, operationId: retry.current.id });
+      const propId = await onAdd({ ...values, operationId: retry.current.id });
+      if (typeof propId === "string") onAdded?.(propId);
       setNotice({ kind: "saved", text: "Saved privately. Review the card to choose how you use this tool and add your explanation. Existing products keep their saved choices and notes." });
       retry.current = null;
       form.reset();
@@ -132,7 +134,9 @@ function Builder() {
   const publishSelected = useMutation(api.onboarding.publishSelected);
   const revokeConnector = useMutation(api.connectors.revokeConnector);
   const connectDevin = useAction(api.connectors.connectDevin);
-  const state = useQuery(api.onboarding.getState, { includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
+  const shell = useQuery(api.onboarding.getState, { includeCards: false, includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
+  const sharing = usePaginatedQuery(api.onboarding.sharingCards, {}, { initialNumItems: 25 });
+  const state = useMemo(() => shell && sharing.status !== "LoadingFirstPage" ? { ...shell, cards: sharing.results } : undefined, [shell, sharing.results, sharing.status]);
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -429,8 +433,8 @@ function Builder() {
         <a className="primary-action" href="#add-product">Add your first tool</a>
       </section>}
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
-      {state.privateInventoryAvailable ? <PrivateInventory brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
-      <AddProductForm onAdd={addManualProduct} />
+      {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
+      <AddProductForm onAdd={addManualProduct} onAdded={openRelationship} />
 
       <section className="onboarding-panel" id="collection-sources" aria-labelledby="collection-sources-title">
         <p className="onboarding-kicker">SOURCES / PRIVATE DISCOVERY</p>
@@ -763,6 +767,10 @@ function Builder() {
             }}</AccountEvidence>;
           })}
         </div>
+        {sharing.status !== "Exhausted" && <div className="action-row">
+          <p>Showing {state.cards.length} relationships for sharing. More remain to load; existing public cards stay unchanged.</p>
+          <button type="button" className="secondary-action" disabled={sharing.status !== "CanLoadMore"} onClick={() => sharing.loadMore(25)}>Load more sharing choices</button>
+        </div>}
         <div className="action-row">
           <button
             className="primary-action"

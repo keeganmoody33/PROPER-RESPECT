@@ -14,6 +14,7 @@ const auth = vi.hoisted(() => ({
   brandState: undefined as Record<string, unknown> | undefined,
   accountRows: [] as Array<Record<string, unknown>>,
   accountStatus: "Exhausted",
+  sharingStatus: "Exhausted",
 }));
 
 vi.mock("@clerk/nextjs", () => ({
@@ -40,7 +41,7 @@ vi.mock("convex/react", async (importOriginal) => ({
   useAction: () => vi.fn(),
   usePaginatedQuery: (reference: FunctionReference<"query">) => getFunctionName(reference) === "inventory:accountEvidencePage"
     ? { results: auth.accountRows, status: auth.accountStatus, loadMore: vi.fn() }
-    : { results: [], status: "Exhausted", loadMore: vi.fn() },
+    : { results: getFunctionName(reference) === "onboarding:sharingCards" ? auth.ownerState?.cards ?? [] : [], status: getFunctionName(reference) === "onboarding:sharingCards" ? auth.sharingStatus : "Exhausted", loadMore: vi.fn() },
 }));
 
 const render = () => renderToString(createElement(OnboardingClient));
@@ -53,6 +54,7 @@ beforeEach(() => {
   auth.brandState = undefined;
   auth.accountRows = [];
   auth.accountStatus = "Exhausted";
+  auth.sharingStatus = "Exhausted";
 });
 
 test("Clerk sign-in waits for Convex token acceptance before owner queries mount", () => {
@@ -227,4 +229,17 @@ test("absent identity capability keeps sharing disabled without claiming a publi
   expect(html).not.toContain("Nothing is published at /current yet.");
   expect(html).not.toContain("Set up your public identity");
   expect(html).not.toContain("Open current public page");
+});
+
+
+test("the account shell cannot expose empty sharing controls before the first card page", () => {
+  auth.convex = { isLoading: false, isAuthenticated: true };
+  auth.ownerState = { user: { _id: "owner", handle: "owner" }, cards: [], connectors: [], privateInventoryAvailable: true, hasClaimedPublicIdentity: true };
+  auth.sharingStatus = "LoadingFirstPage";
+  const html = render();
+  expect(html).toContain("Loading your profile");
+  expect(html).not.toContain("Preview sharing");
+  expect(html).not.toContain("Start with one tool");
+  auth.sharingStatus = "Exhausted";
+  expect(render()).toContain("Start with one tool");
 });

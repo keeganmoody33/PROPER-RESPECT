@@ -1,6 +1,6 @@
 // Synthetic Convex boundary for the real onboarding, inventory and preview components.
 // Persists only test data across browser reloads; it does not prove hosted storage or auth.
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { getFunctionName } from "convex/server";
 import { publicProfileSchema } from "../../../src/domain/public-profile";
 
@@ -35,7 +35,7 @@ const mutations = {
     const product = { _id: "manual-product", _creationTime: 1, name: args.name, slug: "field-notes", domain: "field-notes.example", description: "A synthetic note-taking tool." };
     const prop = { _id: "manual-prop", _creationTime: 1, userId: state.user._id, productId: product._id, status: "TESTING", visibility: "DRAFT", ownerEntered: true, headline: "", note: args.description ?? "" };
     retain({ ...state, cards: [{ product, prop, links: [{ type: "CANONICAL", url: "https://field-notes.example", label: "Open Field Notes", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false }] });
-    return { propId: prop._id, duplicate: false };
+    return prop._id;
   },
   "inventory:save": async args => {
     record("savePrivately", args);
@@ -43,7 +43,7 @@ const mutations = {
     if (!card || args.expectedVersion !== (card.prop.relationshipVersion ?? 0)) throw new Error("Stale fixture relationship.");
     const { status, goTo, headline, note, startedAt, supportingUrl } = args;
     const version = args.expectedVersion + 1;
-    retain({ ...state, cards: state.cards.map(item => item === card ? { ...item, prop: { ...item.prop, status, goTo, headline, note, startedAt, supportingUrl, relationshipVersion: version, confirmedAt: "2026-09-22T12:00:00Z", visibility: "PRIVATE" } } : item) });
+    retain({ ...state, history: [...(state.history ?? []), { _id: `event-${args.propId}-${version}`, propId: args.propId, recordedAt: new Date().toISOString(), before: { ...card.prop, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT" }, after: { status, goTo, headline, note, startedAt, supportingUrl } }], cards: state.cards.map(item => item === card ? { ...item, prop: { ...item.prop, status, goTo, headline, note, startedAt, supportingUrl, relationshipVersion: version, confirmedAt: "2026-09-22T12:00:00Z", visibility: "PRIVATE" } } : item) });
     return { version, duplicate: false };
   },
   "onboarding:claimHandle": async args => {
@@ -92,17 +92,34 @@ export function useMutation(ref) {
   return mutations[name] ?? (async () => { throw new Error(`Unexpected fixture mutation: ${name}`); });
 }
 export const useAction = () => async () => { throw new Error("Provider reads are outside this fixture."); };
-export function useQuery(ref) {
+export function useQuery(ref, args) {
   const current = useSyncExternalStore(subscribe, snapshot, snapshot);
   switch (getFunctionName(ref)) {
-    case "onboarding:getState": return current;
+    case "onboarding:getState": return current && args?.includeCards === false ? { ...current, cards: empty } : current;
     case "inventory:selectedActivity": return null;
+    case "inventory:detail": return current?.cards.find(card => card.prop._id === args.propId) ?? null;
     case "mailboxes:listAccounts": return empty;
     case "productKnowledge:getForProduct": return { supported: false, sources: empty };
     default: return undefined;
   }
 }
-export function usePaginatedQuery(ref) {
+function located(card) {
+  return { propId: card.prop._id, productId: card.product._id, name: card.product.name, domain: card.product.domain,
+    status: card.prop.status, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT", goTo: card.prop.goTo ?? false, headline: card.prop.headline };
+}
+export function usePaginatedQuery(ref, args, options) {
   const current = useSyncExternalStore(subscribe, snapshot, snapshot);
-  return { results: getFunctionName(ref) === "inventory:list" ? current?.cards ?? empty : empty, status: "Exhausted", loadMore: () => {} };
+  const [count, setCount] = useState(options?.initialNumItems ?? 25);
+  let rows = empty;
+  switch (getFunctionName(ref)) {
+    case "onboarding:sharingCards":
+    case "inventory:list": rows = current?.cards ?? empty; break;
+    case "inventory:locator": rows = (current?.cards ?? empty).map(located); break;
+    case "inventory:related": {
+      const selected = current?.cards.find(card => card.prop._id === args.propId);
+      rows = (current?.cards ?? empty).filter(card => card.prop.productId === selected?.prop.productId).map(located); break;
+    }
+    case "inventory:history": rows = (current?.history ?? empty).filter(event => event.propId === args.propId).toReversed(); break;
+  }
+  return { results: rows.slice(0, count), status: count < rows.length ? "CanLoadMore" : "Exhausted", loadMore: amount => setCount(value => value + amount) };
 }
