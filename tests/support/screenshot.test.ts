@@ -3,36 +3,41 @@ import { captureScreenshot } from "./screenshot";
 
 const captureError = () => new Error("page.screenshot: Protocol error (Page.captureScreenshot): Unable to capture screenshot");
 
-function target(failures: Error[]) {
+function fixture(failures: Error[]) {
+  const events: string[] = [];
   const calls: unknown[] = [];
-  return {
-    calls,
+  const page = { async evaluate() { events.push("frame"); } };
+  const target = {
     async screenshot(options: unknown) {
       calls.push(options);
+      events.push("shot");
       const failure = failures.shift();
       if (failure) throw failure;
       return Buffer.from("png");
     },
   };
+  const sleep = async (ms: number) => { events.push(`wait ${ms}`); };
+  return { page, target, calls, events, sleep };
 }
 
 describe("captureScreenshot", () => {
-  it("retries Chromium's transient capture failure and returns the image", async () => {
-    const page = target([captureError(), captureError()]);
+  it("backs off and waits for a fresh frame before each retry", async () => {
+    const { page, target, calls, events, sleep } = fixture([captureError(), captureError(), captureError()]);
     const options = { path: "shot.png", fullPage: true };
-    await expect(captureScreenshot(page, options, { delayMs: 0 })).resolves.toEqual(Buffer.from("png"));
-    expect(page.calls).toEqual([options, options, options]);
+    await expect(captureScreenshot(page, target, options, { sleep })).resolves.toEqual(Buffer.from("png"));
+    expect(calls).toEqual([options, options, options, options]);
+    expect(events).toEqual(["shot", "wait 500", "frame", "shot", "wait 1000", "frame", "shot", "wait 2000", "frame", "shot"]);
   });
 
-  it("gives up after three attempts", async () => {
-    const page = target([captureError(), captureError(), captureError()]);
-    await expect(captureScreenshot(page, {}, { delayMs: 0 })).rejects.toThrow("Unable to capture screenshot");
-    expect(page.calls).toHaveLength(3);
+  it("gives up after four attempts", async () => {
+    const { page, target, calls, sleep } = fixture([captureError(), captureError(), captureError(), captureError()]);
+    await expect(captureScreenshot(page, target, {}, { sleep })).rejects.toThrow("Unable to capture screenshot");
+    expect(calls).toHaveLength(4);
   });
 
   it("does not retry any other failure", async () => {
-    const page = target([new Error("locator.screenshot: Timeout 30000ms exceeded")]);
-    await expect(captureScreenshot(page, {}, { delayMs: 0 })).rejects.toThrow("Timeout 30000ms exceeded");
-    expect(page.calls).toHaveLength(1);
+    const { page, target, calls, sleep } = fixture([new Error("locator.screenshot: Timeout 30000ms exceeded")]);
+    await expect(captureScreenshot(page, target, {}, { sleep })).rejects.toThrow("Timeout 30000ms exceeded");
+    expect(calls).toHaveLength(1);
   });
 });

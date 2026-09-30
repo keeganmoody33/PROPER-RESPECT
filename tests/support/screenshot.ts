@@ -1,24 +1,32 @@
 /**
  * Chromium intermittently rejects Page.captureScreenshot with "Unable to capture screenshot"
- * (seen on 390px full-page captures in CI). Retry only that failure; anything else is real.
+ * in CI (390px full-page captures). Immediate retries fail the same way, so each retry
+ * backs off and waits for the page to paint a fresh frame first. Any other failure is real.
  */
 const TRANSIENT_CAPTURE_FAILURE = "Unable to capture screenshot";
-const ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [500, 1000, 2000];
 
 type Screenshottable<Options> = { screenshot(options: Options): Promise<Buffer> };
+type Paintable = { evaluate(callback: () => Promise<void>): Promise<unknown> };
+
+const nextFrame = () =>
+  new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done())));
+const wait = (ms: number) => new Promise<void>(done => setTimeout(done, ms));
 
 export async function captureScreenshot<Options>(
+  page: Paintable,
   target: Screenshottable<Options>,
   options: Options,
-  { delayMs = 250 }: { delayMs?: number } = {},
+  { sleep = wait }: { sleep?: (ms: number) => Promise<void> } = {},
 ): Promise<Buffer> {
-  for (let attempt = 1; ; attempt += 1) {
+  for (let attempt = 0; ; attempt += 1) {
     try {
       return await target.screenshot(options);
     } catch (error) {
       const transient = error instanceof Error && error.message.includes(TRANSIENT_CAPTURE_FAILURE);
-      if (!transient || attempt >= ATTEMPTS) throw error;
-      await new Promise<void>(done => setTimeout(done, delayMs));
+      if (!transient || attempt >= RETRY_DELAYS_MS.length) throw error;
+      await sleep(RETRY_DELAYS_MS[attempt]);
+      await page.evaluate(nextFrame);
     }
   }
 }
