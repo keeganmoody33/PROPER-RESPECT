@@ -105,3 +105,7 @@ The reselected-primary regression failed with a missing revision-1 destination b
 Final follow-up review 5359924123, comment 4139517641: **fix now**, superseding the initially deferred loading presentation observation. Keep card-dependent UI/actions unavailable until the first sharing page resolves, while allowing later pages to load incrementally. The release-note title wording is also corrected.
 
 The shell/sharing race regression failed before the gate and passed after it. All 18 onboarding auth/render tests, 11 owner/account browser journeys and typecheck passed after the gate.
+
+Copilot review 5359955924, comment 4139546263: **fix now**. Limit publication identity database lookups to current-page relationships; compare explicit IDs against owned page IDs and perform legacy ambiguity queries only for page slugs. This preserves duplicate safety without repeated whole-publication reads.
+
+Explicit and legacy page-identity regressions failed before scoping and pass after it. They verify other-page identities remain unresolved by this page and database reads are restricted to relevant identities. Full unit/script verification, typecheck and lint pass after this change.

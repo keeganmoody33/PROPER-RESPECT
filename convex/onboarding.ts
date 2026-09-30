@@ -189,7 +189,7 @@ async function getStateHandler(ctx: QueryCtx, args: {
         .unique(),
     ]);
     const publishedPropIds = published && props.length > 0
-      ? await resolvePublishedCardPropIds(ctx, published, user._id, propPage ? undefined : props)
+      ? await resolvePublishedCardPropIds(ctx, published, user._id, propPage ? undefined : props, propPage ? props : undefined)
       : [];
 
     const cards = await Promise.all(
