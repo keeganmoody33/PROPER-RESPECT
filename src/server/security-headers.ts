@@ -33,10 +33,11 @@ export function contentSecurityPolicyReportOnly({ clerkHost, development }: { cl
     "default-src": ["'self'"],
     // The inline theme bootstrap (app/layout.tsx) and Next's payload scripts need 'unsafe-inline'.
     "script-src": ["'self'", "'unsafe-inline'", ...(development ? ["'unsafe-eval'"] : []), ...clerk,
-      "https://challenges.cloudflare.com", "https://*.protect.clerk.com"],
+      "https://challenges.cloudflare.com", "https://*.protect.clerk.com", "https://tracker.searchableanalytics.com"],
     // Evidence uploads POST to the Convex site URL.
     "connect-src": ["'self'", ...clerk, "https://*.protect.clerk.com:*", "https://clerk-telemetry.com",
-      "https://*.clerk-telemetry.com", "https://*.convex.cloud", "wss://*.convex.cloud", "https://*.convex.site"],
+      "https://*.clerk-telemetry.com", "https://*.convex.cloud", "wss://*.convex.cloud", "https://*.convex.site",
+      "https://tracker.searchableanalytics.com"],
     // Brand logos and fonts come from many hosts; Clerk needs https://img.clerk.com.
     "img-src": ["'self'", "data:", "https:"],
     "font-src": ["'self'", "data:", "https:"],

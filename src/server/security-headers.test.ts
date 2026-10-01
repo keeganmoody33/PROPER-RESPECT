@@ -48,6 +48,13 @@ describe("report-only content security policy", () => {
     expect(policy["script-src"]).toContain("'unsafe-eval'");
     expect(JSON.stringify(policy)).not.toContain("undefined");
   });
+
+  it("allows Searchable's tracker and beacon without allowing arbitrary script hosts", () => {
+    const policy = directives(contentSecurityPolicyReportOnly({ development: false }));
+    expect(policy["script-src"]).toContain("https://tracker.searchableanalytics.com");
+    expect(policy["connect-src"]).toContain("https://tracker.searchableanalytics.com");
+    expect(policy["script-src"]).not.toContain("https:");
+  });
 });
 
 describe("next.config headers", () => {
