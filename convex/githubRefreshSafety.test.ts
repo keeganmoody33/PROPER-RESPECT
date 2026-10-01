@@ -496,3 +496,50 @@ test("a scheduled run over malformed stored timestamps records INVALID_RESPONSE,
   expect(f.fetcher).not.toHaveBeenCalled();
   expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "GITHUB", outcome: "FAILURE", errorClass: "INVALID_RESPONSE" })]);
 });
+
+for (const category of ["DECRYPTION", "HTTP", "GRAPHQL", "PARSER", "TRANSPORT"] as const) {
+  test(`scheduled ${category} failures log only fixed diagnostic metadata`, async () => {
+    const sentinel = "PRIVATE-TOKEN-PAYLOAD-SENTINEL";
+    const fetcher = vi.fn(async () => {
+      if (category === "TRANSPORT") throw new Error(sentinel, { cause: sentinel });
+      if (category === "HTTP") return new Response(sentinel, { status: 401 });
+      return new Response(category === "GRAPHQL"
+        ? JSON.stringify({ errors: [{ message: sentinel }] })
+        : JSON.stringify({ private: sentinel }), { headers: { "Content-Type": "application/json" } });
+    });
+    const f = await fixture(fetcher, sentinel);
+    if (category === "DECRYPTION") vi.stubEnv("CONNECTOR_ENCRYPTION_KEY", "synthetic-wrong-key");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const before = await f.state();
+      await f.call();
+      expect(warn.mock.calls).toEqual([["GitHub refresh failed", {
+        category, ...(category === "HTTP" ? { httpStatus: 401 } : {}),
+      }]]);
+      expect(JSON.stringify(warn.mock.calls)).not.toContain(sentinel);
+      const after = await f.state();
+      expect(after.published?.profile.cards[0].activity).toMatchObject({
+        capturedAt: before.published!.profile.cards[0].activity!.capturedAt, freshness: "STALE",
+      });
+      const rows = await f.t.run(ctx => ctx.db.query("refreshAttempts").collect());
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ outcome: "FAILURE", errorClass: "PROVIDER_UNAVAILABLE" });
+      expect(JSON.stringify(rows)).not.toContain(sentinel);
+      if (category === "DECRYPTION") expect(fetcher).not.toHaveBeenCalled();
+    } finally { warn.mockRestore(); }
+  });
+}
+
+test("successful refresh publishes the same calendar without a diagnostic warning", async () => {
+  const f = await fixture();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  try {
+    await f.call();
+    expect(warn).not.toHaveBeenCalled();
+    const after = await f.state();
+    expect(after.published?.profile.cards[0].activity).toMatchObject({ total: 7, freshness: "FRESH", attributionScope: "PERSONAL" });
+    const rows = await f.t.run(ctx => ctx.db.query("refreshAttempts").collect());
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ outcome: "SUCCESS", capturedAt: after.published!.profile.cards[0].activity!.capturedAt });
+  } finally { warn.mockRestore(); }
+});
