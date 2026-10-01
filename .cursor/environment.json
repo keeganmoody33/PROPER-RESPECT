@@ -1,0 +1,15 @@
+{
+  "name": "PROPER-RESPECT",
+  "install": "npm ci",
+  "start": "bash .cursor/setup-convex.sh",
+  "terminals": [
+    {
+      "name": "convex",
+      "command": "CONVEX_AGENT_MODE=anonymous npx convex dev --typecheck disable --run seed:seedKeegan"
+    },
+    {
+      "name": "next",
+      "command": "npm run dev -- --hostname 127.0.0.1 --port 3000"
+    }
+  ]
+}
