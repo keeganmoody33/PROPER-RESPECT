@@ -3,7 +3,23 @@ import type { ActivityModule } from "../domain/public-profile";
 
 export const GITHUB_RESPONSE_BYTES = 128 * 1024;
 export const GITHUB_REQUEST_TIMEOUT_MS = 10_000;
-const unavailable = () => new Error("GitHub activity response unavailable.");
+type GithubFailureCategory = "HTTP" | "GRAPHQL" | "PARSER" | "TRANSPORT" | "TIMEOUT" | "RESPONSE";
+export class GithubActivityError extends Error {
+  constructor(readonly category: GithubFailureCategory, readonly httpStatus?: number) {
+    super("GitHub activity response unavailable.");
+  }
+}
+const unavailable = (category: GithubFailureCategory = "PARSER", httpStatus?: number) => new GithubActivityError(category, httpStatus);
+
+/** Only fixed categories and a bounded status may enter runtime logs. Never retain causes. */
+export function githubFailureDiagnostic(error: unknown) {
+  if (!(error instanceof GithubActivityError)) return { category: "TRANSPORT" as const };
+  const category = ["HTTP", "GRAPHQL", "PARSER", "TRANSPORT", "TIMEOUT", "RESPONSE"].includes(error.category)
+    ? error.category : "TRANSPORT";
+  const status = error.httpStatus;
+  return { category, ...(category === "HTTP" && typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599
+    ? { httpStatus: status } : {}) };
+}
 const levels = ["NONE", "FIRST_QUARTILE", "SECOND_QUARTILE", "THIRD_QUARTILE", "FOURTH_QUARTILE"] as const;
 const login = z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$/i);
 const count = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
@@ -42,7 +58,11 @@ function exactCount(token: string, value: number) {
 export function parseGithubActivity(text: string, window: Window): GithubActivity {
   try {
     if (text.length > GITHUB_RESPONSE_BYTES || new TextEncoder().encode(text).byteLength > GITHUB_RESPONSE_BYTES) throw unavailable();
-    const viewer = numericSchema.parse(JSON.parse(text)).data.viewer;
+    const raw: unknown = JSON.parse(text);
+    if (raw && typeof raw === "object" && "errors" in raw && Array.isArray(raw.errors) && raw.errors.length > 0) {
+      throw unavailable("GRAPHQL");
+    }
+    const viewer = numericSchema.parse(raw).data.viewer;
     const lexicalText = text.replace(/"(?:\\[\s\S]|[^"\\])*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/g,
       token => token.startsWith('"') ? token : JSON.stringify(token));
     const lexical = lexicalSchema.parse(JSON.parse(lexicalText)).data.viewer.contributionsCollection.contributionCalendar;
@@ -72,7 +92,7 @@ export function parseGithubActivity(text: string, window: Window): GithubActivit
         total: calendar.totalContributions, memberSince: viewer.createdAt.slice(0, 10), days,
       },
     };
-  } catch { throw unavailable(); }
+  } catch (error) { throw error instanceof GithubActivityError ? error : unavailable(); }
 }
 
 export async function fetchGithubActivity(token: string, fetcher: typeof fetch = fetch): Promise<GithubActivity> {
@@ -87,7 +107,7 @@ export async function fetchGithubActivity(token: string, fetcher: typeof fetch =
     timeout = setTimeout(() => {
       controller.abort();
       cancelReader();
-      reject(unavailable());
+      reject(unavailable("TIMEOUT"));
     }, GITHUB_REQUEST_TIMEOUT_MS);
   });
   const retrieve = async () => {
@@ -110,33 +130,40 @@ export async function fetchGithubActivity(token: string, fetcher: typeof fetch =
         variables: window,
       }),
     });
-    if (controller.signal.aborted || !response.ok || response.redirected ||
+    if (!response.ok) {
+      void response.body?.cancel().catch(() => undefined);
+      throw unavailable("HTTP", response.status);
+    }
+    if (controller.signal.aborted || response.redirected ||
         response.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json" ||
         Number(response.headers.get("content-length")) > GITHUB_RESPONSE_BYTES) {
       void response.body?.cancel().catch(() => undefined);
-      throw unavailable();
+      throw unavailable("RESPONSE");
     }
     reader = response.body?.getReader();
-    if (!reader) throw unavailable();
+    if (!reader) throw unavailable("RESPONSE");
     const chunks: Uint8Array[] = [];
     let bytes = 0;
     try {
       while (true) {
         const part = await reader.read();
-        if (controller.signal.aborted) throw unavailable();
+        if (controller.signal.aborted) throw unavailable("TIMEOUT");
         if (part.done) break;
         bytes += part.value.byteLength;
-        if (bytes > GITHUB_RESPONSE_BYTES) throw unavailable();
+        if (bytes > GITHUB_RESPONSE_BYTES) throw unavailable("RESPONSE");
         chunks.push(part.value);
       }
       const body = new Uint8Array(bytes);
       let offset = 0;
       for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
-      return parseGithubActivity(new TextDecoder("utf-8", { fatal: true }).decode(body), window);
-    } catch { cancelReader(); throw unavailable(); }
+      let text: string;
+      try { text = new TextDecoder("utf-8", { fatal: true }).decode(body); }
+      catch { throw unavailable("PARSER"); }
+      return parseGithubActivity(text, window);
+    } catch (error) { cancelReader(); throw error instanceof GithubActivityError ? error : unavailable("TRANSPORT"); }
     finally { reader.releaseLock(); }
   };
   try { return await Promise.race([retrieve(), deadline]); }
-  catch { controller.abort(); cancelReader(); throw unavailable(); }
+  catch (error) { controller.abort(); cancelReader(); throw error instanceof GithubActivityError ? error : unavailable("TRANSPORT"); }
   finally { clearTimeout(timeout); }
 }
