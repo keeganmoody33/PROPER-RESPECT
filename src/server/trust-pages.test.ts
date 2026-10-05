@@ -36,3 +36,12 @@ it("covers each required terms section and links contact and data handling", () 
   const links = trustDocuments.terms.sections.flatMap(section => section.links ?? []).map(link => link.href);
   expect(links).toEqual(expect.arrayContaining(["mailto:33@lecturesfrom.com", "/about/privacy"]));
 });
+
+it("discloses PostHog analytics, replay limits and private-route handling on the privacy page", () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
+  const markdown = trustMarkdown("privacy");
+  expect(markdown).toContain("PostHog");
+  expect(markdown).toMatch(/session replay/i);
+  expect(markdown).toMatch(/signed-in|sign-in/i);
+  expect(markdown).toMatch(/bot/i);
+});
