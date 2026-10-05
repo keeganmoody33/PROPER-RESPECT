@@ -43,6 +43,12 @@ describe("report-only content security policy", () => {
     expect(policy).not.toHaveProperty("upgrade-insecure-requests");
   });
 
+  it("allows PostHog's direct hosts and the flow.proper-respect.com managed proxy", () => {
+    const policy = directives(contentSecurityPolicyReportOnly({ development: false }));
+    expect(policy["script-src"]).toEqual(expect.arrayContaining(["https://us-assets.i.posthog.com", "https://flow.proper-respect.com"]));
+    expect(policy["connect-src"]).toEqual(expect.arrayContaining(["https://us.i.posthog.com", "https://us-assets.i.posthog.com", "https://flow.proper-respect.com"]));
+  });
+
   it("adds unsafe-eval only in development, and leaves out a Clerk host it can't derive", () => {
     const policy = directives(contentSecurityPolicyReportOnly({ development: true }));
     expect(policy["script-src"]).toContain("'unsafe-eval'");
