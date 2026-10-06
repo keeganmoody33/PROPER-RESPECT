@@ -183,15 +183,26 @@ pagination and search ambiguity, all three observed CSV layouts, malformed
 inputs, byte/row/page/window limits, and replacement/replay/freshness conflicts.
 The verification receipt records independent review dispositions.
 
-Project dependencies and a TypeScript compiler are absent. No dependencies were
-installed because this task forbids installation. Full `npm run typecheck`,
-`npm run lint`, and `npm test` remain integration checks. The new `.test.mjs`
-tests run with Node explicitly and are not added to the shared package scripts.
+The initial pass deferred dependency installation after interpreting the
+installation restriction broadly. The parent then clarified that pinned cloud
+repository dependencies are authorized. `npm ci` with a worktree cache installed
+448 packages without changing the lock file. Typecheck and lint now pass with no
+warnings; the separate Node-script phase passes 122 tests. The new Cursor
+`.test.mjs` tests run with Node explicitly and are not added to shared scripts.
 
-After approved integration in an environment with existing dependencies, run
-the focused command plus the project checks. A live Cursor connection and
-historical retention proof require separately authorized provider acquisition.
-Fixture results establish neither live access nor a production release.
+The full Vitest phase reported 1,938 passed, 50 failed, and 2 skipped. Failures
+are confined to unchanged Codex/evidence tests whose synthetic fixtures fall
+under the environment's read-only `/tmp/.git` marker. `/workspace` also has a
+Git marker. A per-command request for a clean `/var/tmp` test directory failed
+with `Read-only file system`; no permission bypass or guard change followed.
+The [verification receipt](../verification/2026-10-06-cursor-report-adapter.md)
+records the exact commands, denial, and excluded failed-setup rerun.
+
+A fully passing full suite remains an integration check in an environment with
+an authorized writable temporary directory outside Git ancestry. A live Cursor
+connection and historical retention proof require separately authorized provider
+acquisition. Fixture results establish neither live access nor a production
+release.
 
 ## Apply the delivery
 
@@ -202,6 +213,9 @@ outcome. For another checkout at the named base, apply the delivered patch:
 git am /path/to/cursor-report-adapter.patch
 ```
 
-The portable file is generated with `git format-patch -1 --stdout`; it contains
-only the Cursor directory, this handoff, the source-contract document, and the
-verification receipt. No push or PR was authorized.
+The original portable file was generated with `git format-patch -1 --stdout` for
+commit `5729cbd`; it contains only the Cursor directory and its documentation.
+The follow-up validation and lint-cleanup commit is local and is reported in the
+task outcome. No updated patch was generated or transferred under the clarified
+no-transfer restriction. Use both local commits for integration. No push or PR
+was authorized.

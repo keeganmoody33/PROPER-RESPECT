@@ -46,7 +46,7 @@ const alterJson = (text, mutate) => {
 const reportEvents = (pages = eventPages, context = team, filters = {}) => normalizeCursorAdminEvents(pages, context, filters);
 const reportSpend = (pages = spendPages, context = team, options = { pageSize: 2 }) => normalizeCursorAdminSpend(pages, context, options);
 const reportCsv = (text = csv[0], context = personal, options = { window }) => normalizeCursorCsv(text, context, options);
-const withoutPosition = ({ position, ...event }) => event;
+const withoutPosition = event => Object.fromEntries(Object.entries(event).filter(([key]) => key !== "position"));
 const automatedEventPage = alterJson(eventPages[1], (page) => {
   page.totalUsageEventsCount = 1;
   page.pagination = { numPages: 1, currentPage: 1, pageSize: 2, hasNextPage: false, hasPreviousPage: false };

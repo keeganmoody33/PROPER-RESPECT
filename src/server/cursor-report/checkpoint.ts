@@ -16,7 +16,8 @@ export type CursorReplacement =
   | { status: "blocked"; reason: "incomplete-report" | "invalid-report" | "different-source" | "different-report" | "stale-report" | "conflicting-capture"; checkpoint: CursorReportCheckpoint | null };
 const digest = (value: unknown) => createHash("sha256").update(canonicalJson(value)).digest("hex");
 function keys(report: CursorReport) {
-  const { capturedAt: _capturedAt, contentDigest, ...content } = report;
+  const content = { ...report, capturedAt: undefined, contentDigest: undefined };
+  const contentDigest = report.contentDigest;
   if (instant(report.capturedAt) !== report.capturedAt || digest(content) !== contentDigest) throw new Error();
   const sourceKey = digest([report.source, report.identityBasis]);
   const reportKey = digest([sourceKey, report.schema, report.window, report.billingWindow, report.filters]);

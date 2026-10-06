@@ -53,7 +53,7 @@ function base(input: CursorContext) {
 }
 function finish<T extends Omit<CursorReport, "contentDigest">>(report: T): T & { contentDigest: string } {
   // Capture time does not create new usage; content identity belongs to the report.
-  const { capturedAt: _capturedAt, ...content } = report;
+  const content = { ...report, capturedAt: undefined };
   return { ...report, contentDigest: createHash("sha256").update(canonicalJson(content)).digest("hex") };
 }
 function emptyTokens(): CursorTokens {

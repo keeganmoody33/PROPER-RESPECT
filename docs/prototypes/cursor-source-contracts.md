@@ -245,7 +245,8 @@ established reconciliation contract. Shared Codex acquisition, pairing,
 durable synchronization, and hosted measurement integration remain outside this
 Cursor module.
 
-Historical retention, a real connection, installation, credential creation,
+Historical retention, a real connection, live connector installation on the
+user's computer, credential creation,
 backend configuration, production deployment, and public sharing require their
 own authorized work. No such operation is proved or enabled by this document
 or its synthetic fixtures.
