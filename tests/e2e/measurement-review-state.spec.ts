@@ -11,10 +11,13 @@ const captures = ["first", "second"].map((source, index) => {
   const parsed = parseMeasurementImport(JSON.stringify({
     format: "proper-measurements-v1", captureId: source, capturedAt: "2026-10-06T10:00:00.000Z",
     source: { namespace: "fixture-tool", identityBasis: "OWNER_SUPPLIED", sourceAlias: source, ownerAlias: "synthetic-owner", accountAlias: `private-${source}`, workspaceAlias: null, deviceAlias: null },
-    measurements: [{ id: "tokens", metric: "tokens", value: String(17 + index), unit: "tokens", period: { kind: "unknown" }, scope: "ACCOUNT", coverage: "UNKNOWN", temporality: "SNAPSHOT", aggregation: "NON_ADDITIVE", overlapGroup: source }],
+    measurements: [
+      { id: "tokens", metric: "tokens", value: String(17 + index), unit: "tokens" },
+      { id: "sessions", metric: "sessions", value: "0", unit: "sessions" },
+    ].map(row => ({ ...row, period: { kind: "unknown" }, scope: "ACCOUNT", coverage: "UNKNOWN", temporality: "SNAPSHOT", aggregation: "NON_ADDITIVE", overlapGroup: source })),
   }));
   const measurements = reviewMeasurementImports([parsed]);
-  return { propId, rawEvidenceId: `evidence-${source}`, digest: parsed.digest, capturedAt: parsed.capturedAt, source: parsed.source, adapter: parsed.adapter, measurements, reviewedMeasurementIds: measurements.map(row => row.id), reviewVersion: 1, captureCount: 1 };
+  return { propId, rawEvidenceId: `evidence-${source}`, digest: parsed.digest, capturedAt: parsed.capturedAt, source: parsed.source, adapter: parsed.adapter, measurements, reviewedMeasurementIds: [measurements[0].id], reviewVersion: 1, captureCount: 1 };
 });
 const initialState = {
   user: { _id: "synthetic-owner", handle: "synthetic-owner", displayName: "Synthetic owner", bio: "" },
@@ -77,10 +80,14 @@ test.beforeAll(async () => {
   fixtureHtml = `<meta name="viewport" content="width=device-width, initial-scale=1"><style>${readFileSync("app/globals.css", "utf8")}\n${styles}</style><div id="root"></div><script>${javascript.text.replaceAll("</script", "<\\/script")}</script>`;
 });
 
-async function updateQuery(page: Page, update: { captures?: typeof captures; loading?: boolean }) {
+async function updateQuery(page: Page, update: { captures?: typeof captures; loading?: boolean; headline?: string }) {
   await page.evaluate(({ stateKey, loadingKey, update }) => {
     const state: typeof initialState = JSON.parse(localStorage.getItem(stateKey)!);
     if (update.captures) state.measurementCaptures = update.captures;
+    if (update.headline !== undefined) {
+      state.cards[0].prop.headline = update.headline;
+      state.cards[0].prop.relationshipVersion += 1;
+    }
     if (update.loading !== undefined) localStorage.setItem(loadingKey, String(update.loading));
     const newValue = JSON.stringify(state);
     localStorage.setItem(stateKey, newValue);
@@ -162,4 +169,69 @@ for (const width of [1280, 390]) for (const change of ["invalidate", "delete"]) 
   expect(calls.filter(name => name === "publishSelected")).toHaveLength(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await review.screenshot({ path: testInfo.outputPath(`measurement-review-${change}-${width}.png`) });
+});
+
+for (const width of [1280, 390]) test(`selected review revisions and saved context invalidate exact approval at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.addInitScript(({ stateKey, loadingKey, initialState }) => {
+    localStorage.setItem(stateKey, JSON.stringify(initialState));
+    localStorage.setItem(loadingKey, "true");
+  }, { stateKey, loadingKey, initialState });
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8883/")
+    ? route.fulfill({ contentType: "text/html", body: fixtureHtml }) : route.abort());
+  await page.goto("http://127.0.0.1:8883/app/collection");
+  const review = page.getByRole("group", { name: "Fixture Tool review", exact: true });
+  const first = review.getByRole("checkbox", { name: /private-first$/ });
+  const previewButton = page.getByRole("button", { name: "Preview sharing", exact: true });
+  const preview = page.getByRole("region", { name: "Your visitor’s view", exact: true });
+  const approve = async () => {
+    await preview.getByRole("checkbox").check();
+    await expect(preview.getByRole("button", { name: "Publish this preview", exact: true })).toBeEnabled();
+  };
+  const requireNewPreview = async () => {
+    await expect(first).toBeChecked();
+    await expect(preview.getByRole("status")).toContainText("Preview again before publishing");
+    await expect(preview.getByRole("button", { name: "Publish this preview", exact: true })).toBeDisabled();
+    await previewButton.click();
+    await expect(preview.getByRole("status")).toHaveCount(0);
+    await expect(preview.getByRole("checkbox")).not.toBeChecked();
+    await expect(preview.getByRole("button", { name: "Publish this preview", exact: true })).toBeDisabled();
+  };
+  await review.getByLabel("Share this saved card", { exact: true }).check();
+  await previewButton.click();
+  await approve();
+  await updateQuery(page, { loading: false });
+  await expect(first).not.toBeChecked();
+  await expect(preview.getByRole("status")).toHaveCount(0);
+  await expect(preview.getByRole("button", { name: "Publish this preview", exact: true })).toBeEnabled();
+  await first.check();
+  await previewButton.click();
+  await expect(preview.getByText("17", { exact: true }).first()).toBeVisible();
+  await approve();
+
+  const revised = { ...captures[0], reviewVersion: 2, reviewedMeasurementIds: [captures[0].measurements[1].id] };
+  await updateQuery(page, { captures: [revised, captures[1]] });
+  await requireNewPreview();
+  await expect(preview.getByText("0", { exact: true }).first()).toBeVisible();
+  await expect(preview.getByText("17", { exact: true })).toHaveCount(0);
+  await approve();
+
+  const restored = { ...captures[0], reviewVersion: 3 };
+  await updateQuery(page, { captures: [restored, captures[1]] });
+  await requireNewPreview();
+  await expect(preview.getByText("17", { exact: true }).first()).toBeVisible();
+  await approve();
+
+  await updateQuery(page, { captures: [{ ...restored, digest: "updated-source-digest" }, captures[1]] });
+  await requireNewPreview();
+  await approve();
+
+  await updateQuery(page, { headline: "Changed private relationship context" });
+  await expect(preview.getByRole("button", { name: "Publish this preview", exact: true })).toBeDisabled();
+  await expect(review.getByLabel("Share this saved card", { exact: true })).not.toBeChecked();
+  await review.getByLabel("Share this saved card", { exact: true }).check();
+  await requireNewPreview();
+  await expect(preview).toContainText("Changed private relationship context");
+  const calls = await page.evaluate(stateKey => JSON.parse(localStorage.getItem(`${stateKey}-calls`) ?? "[]"), stateKey);
+  expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toHaveLength(0);
 });

@@ -162,6 +162,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [measurementSelections, setMeasurementSelections] = useState<Record<string, Id<"rawEvidence">[]>>({});
+  const [measurementReviewBasis, setMeasurementReviewBasis] = useState<Record<string, string>>({});
   const [reviewEdits, setReviewEdits] = useState<
     Record<string, ReviewEdit>
   >({});
@@ -169,7 +170,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     profile: PublicProfile; revision: number; previewHash: string; selections: FunctionArgs<typeof api.onboarding.publishSelected>["selections"]; basis: string;
     removeAllCards?: boolean; refreshAccounts?: { accountLabel: string }[];
   } | null>(null);
-  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, measurementSelections, cards: state?.cards, user: state?.user, connectors: state?.connectors }), [reviewEdits, measurementSelections, state?.cards, state?.user, state?.connectors]);
+  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, measurementSelections, measurementReviewBasis, cards: state?.cards, user: state?.user, connectors: state?.connectors }), [reviewEdits, measurementSelections, measurementReviewBasis, state?.cards, state?.user, state?.connectors]);
 
   const [setupAttempt, setSetupAttempt] = useState(0);
   const [setupFailed, setSetupFailed] = useState(false);
@@ -586,7 +587,8 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                     }} />
                   </details>
                   <MeasurementSharingChoices propId={card.prop._id} selected={measurementSelections[card.prop._id] ?? []} disabled={busy || !edit.publish}
-                    onChange={ids => setMeasurementSelections(current => ({ ...current, [card.prop._id]: ids }))} />
+                    onChange={ids => setMeasurementSelections(current => ({ ...current, [card.prop._id]: ids }))}
+                    onReviewBasisChange={basis => setMeasurementReviewBasis(current => (current[card.prop._id] ?? "[]") === basis ? current : { ...current, [card.prop._id]: basis })} />
                   <details><summary>Product and evidence records</summary>
                     {state.brandEnrichmentAvailable && <ProductBrandControls propId={card.prop._id} />}
                     <ProductKnowledgePanel propId={card.prop._id} />

@@ -53,17 +53,24 @@ export function PrivateMeasurements({ propId }: { propId: Id<"props"> }) {
   </section>;
 }
 
-export function MeasurementSharingChoices({ propId, selected, onChange, disabled }: {
+export function MeasurementSharingChoices({ propId, selected, onChange, onReviewBasisChange, disabled }: {
   propId: Id<"props">; selected: Id<"rawEvidence">[]; onChange: (ids: Id<"rawEvidence">[]) => void; disabled: boolean;
+  onReviewBasisChange?: (basis: string) => void;
 }) {
   const captures = useQuery(api.retainedEvidence.measurements, { propId });
+  // Bind the visible preview to the same source digest and review revision as
+  // the server approval, even when a source stays selected with different rows.
+  const reviewBasis = captures === undefined ? undefined : JSON.stringify(captures
+    .filter(capture => selected.includes(capture.rawEvidenceId) && capture.reviewedMeasurementIds.length > 0)
+    .map(capture => ({ id: capture.rawEvidenceId, digest: capture.digest, reviewVersion: capture.reviewVersion, rows: capture.reviewedMeasurementIds })));
   useEffect(() => {
     // A new capture or deleted source can invalidate review while its sharing
     // choice is held in the parent. Loading does not revoke that choice.
     if (captures === undefined) return;
     const available = selected.filter(id => captures.some(capture => capture.rawEvidenceId === id && capture.reviewedMeasurementIds.length > 0));
     if (available.length !== selected.length) onChange(available);
-  }, [captures, selected, onChange]);
+    if (reviewBasis !== undefined) onReviewBasisChange?.(reviewBasis);
+  }, [captures, selected, onChange, reviewBasis, onReviewBasisChange]);
   const reviewed = captures?.filter(capture => capture.reviewedMeasurementIds.length > 0) ?? [];
   if (!reviewed.length) return null;
   return <fieldset disabled={disabled}>

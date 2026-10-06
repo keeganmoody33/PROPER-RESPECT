@@ -27,10 +27,10 @@ function capture(rawEvidenceId: Id<"rawEvidence">, reviewedMeasurementIds = ["fi
   };
 }
 
-function render(captures: Captures | undefined, selected: Id<"rawEvidence">[], onChange: (ids: Id<"rawEvidence">[]) => void, disabled = false) {
+function render(captures: Captures | undefined, selected: Id<"rawEvidence">[], onChange: (ids: Id<"rawEvidence">[]) => void, disabled = false, onReviewBasisChange?: (basis: string) => void) {
   boundary.query.mockReturnValue(captures);
   const html = renderToStaticMarkup(createElement(MeasurementSharingChoices, {
-    propId: "fixture-prop" as Id<"props">, selected, onChange, disabled,
+    propId: "fixture-prop" as Id<"props">, selected, onChange, disabled, onReviewBasisChange,
   }));
   for (const effect of boundary.effects.splice(0)) effect();
   return html;
@@ -81,4 +81,29 @@ describe("reviewed measurement sharing selections", () => {
     expect(selected).toEqual([]);
     expect(onChange).toHaveBeenCalledExactlyOnceWith([]);
   });
+});
+
+it("binds selected-source preview state to digest, revision and reviewed rows, without revoking during loading", () => {
+  const onChange = vi.fn();
+  const basis = vi.fn();
+  const original = capture(first, ["row-a"]);
+  render([original, capture(second)], [first], onChange, false, basis);
+  expect(basis).toHaveBeenCalledOnce();
+  const initial = basis.mock.calls.at(-1)![0];
+  for (const changed of [
+    { ...original, reviewVersion: 2 },
+    { ...original, digest: "changed-source-digest" },
+    { ...original, reviewedMeasurementIds: ["row-b"] },
+    { ...original, reviewedMeasurementIds: [] },
+  ]) {
+    render([changed, capture(second)], [first], onChange, false, basis);
+    expect(basis.mock.calls.at(-1)![0]).not.toBe(initial);
+  }
+  const calls = basis.mock.calls.length;
+  render(undefined, [first], onChange, false, basis);
+  expect(basis).toHaveBeenCalledTimes(calls);
+  render([original, { ...capture(second), reviewVersion: 9 }], [first], onChange, false, basis);
+  expect(basis.mock.calls.at(-1)![0]).toBe(initial);
+  render([original], [], onChange, false, basis);
+  expect(basis.mock.calls.at(-1)![0]).toBe("[]");
 });
