@@ -2,7 +2,7 @@
 
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
-import { useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
@@ -43,24 +43,27 @@ function History({ propId }: { propId: Id<"props"> }) {
   </div>;
 }
 
-function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChange, dateNotice }: {
+function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChange, dateNotice, supportingContext, saveNotice }: {
   item: Item; evidence: InventoryEvidence; onSave: (input: SaveInput) => Promise<SaveResult>;
   startedAt: string; onStartDateChange: (value: string) => void; dateNotice: string;
+  supportingContext: ReactNode; saveNotice: string;
 }) {
+  const formId = useId();
   const confirmed = isRelationshipConfirmed(item.prop);
-  const [status, setStatus] = useState(item.prop.status as string);
-  const [selectedRelationship, setSelectedRelationship] = useState(confirmed);
+  const version = item.prop.relationshipVersion ?? 0;
+  const [relationshipDraft, setRelationshipDraft] = useState({ version, status: item.prop.status as string, selected: confirmed });
+  const currentRelationship = relationshipDraft.version === version ? relationshipDraft : { version, status: item.prop.status, selected: confirmed };
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState({ version, text: "" });
   const retry = useRef<{ body: string; id: string } | null>(null);
   async function submit(form: FormData) {
-    if (!selectedRelationship) { setMessage("Choose how this product fits your collection."); return; }
+    if (!currentRelationship.selected) { setMessage({ version, text: "Choose how this product fits your collection." }); return; }
     setBusy(true);
-    setMessage("");
+    setMessage({ version, text: "" });
     const activityChoice = String(form.get("activityEvidenceId") ?? "");
     const fields = {
       propId: item.prop._id, expectedVersion: item.prop.relationshipVersion ?? 0,
-      status: status as SaveInput["status"], goTo: form.get("goTo") === "on",
+      status: currentRelationship.status as SaveInput["status"], goTo: form.get("goTo") === "on",
       headline: String(form.get("headline") ?? ""), note: String(form.get("note") ?? ""),
       startedAt: String(form.get("startedAt") ?? "") || undefined,
       supportingUrl: String(form.get("supportingUrl") ?? "") || undefined,
@@ -73,42 +76,55 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       await onSave({ ...fields, operationId: retry.current.id });
       retry.current = null;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Save failed. Your previous decisions remain intact.");
+      setMessage({ version, text: error instanceof Error ? error.message : "Save failed. Your previous decisions remain intact." });
     } finally { setBusy(false); }
   }
-  return <form onSubmit={event => {
+  return <><form key={version} id={formId} onSubmit={event => {
     event.preventDefault();
     void submit(new FormData(event.currentTarget));
   }} className={styles.editor}>
     <fieldset disabled={busy}>
       <legend>{confirmed ? "Your relationship" : "Confirm this discovery"}</legend>
-      <label>How it fits
-        <select name="status" value={selectedRelationship ? status : ""} onChange={event => { setStatus(event.target.value); setSelectedRelationship(Boolean(event.target.value)); }} required>
+      <div className={styles.relationshipChoices}><label>How it fits
+        <select name="status" value={currentRelationship.selected ? currentRelationship.status : ""} onChange={event => setRelationshipDraft({ version, status: event.target.value, selected: Boolean(event.target.value) })} required>
           <option value="" disabled>Choose a relationship</option>
           <option value="ACTIVE">Currently use</option><option value="TESTING">Testing now</option><option value="ARCHIVED">Past use / archived</option>
         </select>
       </label>
-      <label className={styles.toggle}><input name="goTo" type="checkbox" defaultChecked={item.prop.goTo ?? false} />One of my go-to tools</label>
+      <label className={styles.toggle}><input name="goTo" type="checkbox" defaultChecked={item.prop.goTo ?? false} />One of my go-to tools</label></div>
       <p className={styles.hint}>Your designation. Frequency and activity never award it automatically. Archiving keeps earlier choices in history.</p>
       <label>What it helps you do (optional)<input name="headline" maxLength={240} defaultValue={confirmed ? item.prop.headline : ""} /></label>
-      <label>Explanation or workflow (optional)<textarea name="note" rows={2} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
+      <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
-      <label>Work sample or workflow link (optional)<input name="supportingUrl" type="url" defaultValue={item.prop.supportingUrl ?? ""} placeholder="https://…" /></label>
-      <p className={styles.hint}>Stays private unless you choose, when you review sharing, to show it on the back of your public card with a label like “See how I use it”.</p>
-      <label>Started using (optional)<input name="startedAt" type="date" value={startedAt} onChange={event => onStartDateChange(event.target.value)} /></label>
-      {dateNotice && <p role="status">{dateNotice}</p>}
+      <label className={styles.dateField}><span>Started using (optional)</span><input name="startedAt" type="date" aria-label="Started using (optional)" value={startedAt} onChange={event => onStartDateChange(event.target.value)} />
+        {startedAt !== (item.prop.startedAt ?? "") && <span className={styles.draftLabel}>Unsaved</span>}
+      </label>
+      {dateNotice && <p className={styles.dateNotice} role="status">{dateNotice}</p>}
       <p className={styles.hint}>Leave the date blank when you do not know. Signup dates and capture dates are not first use.</p>
+    </fieldset>
+    {message.version === version && message.text && <p role="status">{message.text}</p>}
+  </form>
+    {supportingContext}
+    <div className={styles.saveBoundary}>
+      <button className={`primary-action ${styles.save}`} form={formId} type="submit" disabled={busy}>{busy ? "Saving…" : confirmed ? "Save privately" : "Confirm and save privately"}</button>
+      <p>Your public profile will not change.</p>
+      {saveNotice && <p className={styles.saveNotice} role="status">{saveNotice}</p>}
+    </div>
+    <details key={`extras:${version}`} className={styles.extraFields}>
+      <summary>Work sample and supporting snapshot (optional)</summary>
+      <fieldset disabled={busy} onInvalid={event => { const details = event.currentTarget.closest("details"); if (details) details.open = true; }}>
+      <label>Work sample or workflow link (optional)<input form={formId} name="supportingUrl" type="url" defaultValue={item.prop.supportingUrl ?? ""} placeholder="https://…" /></label>
+      <p className={styles.hint}>Stays private unless you choose, when you review sharing, to show it on the back of your public card with a label like “See how I use it”.</p>
       {(item.prop.activity || item.prop.activityEvidenceId || evidence.some(source => source.suggestedActivity)) && <label>Supporting snapshot
-        <select name="activityEvidenceId" defaultValue={evidence.some(source => source.id === item.prop.activityEvidenceId && source.suggestedActivity) ? item.prop.activityEvidenceId : ""}>
+        <select form={formId} name="activityEvidenceId" defaultValue={evidence.some(source => source.id === item.prop.activityEvidenceId && source.suggestedActivity) ? item.prop.activityEvidenceId : ""}>
           <option value="">{item.prop.activity || item.prop.activityEvidenceId ? "Keep saved supporting activity" : "Do not add a metric preview"}</option>
           {(item.prop.activity || item.prop.activityEvidenceId) && <option value="__remove__">Remove saved supporting snapshot</option>}
           {evidence.filter(source => source.suggestedActivity).map(source => <option key={source.id} value={source.id}>{source.sourceLabel} · {source.artifact?.sourceCapturedDate ?? source.capturedAt.slice(0, 10)}</option>)}
         </select>
       </label>}
-      <button className="primary-action" type="submit">{busy ? "Saving…" : confirmed ? "Save privately" : "Confirm and save privately"}</button>
-    </fieldset>
-    <p role="status">{message}</p>
-  </form>;
+      </fieldset>
+    </details>
+  </>;
 }
 
 // Delete an original (R15): a second, explicit step before anything is removed.
@@ -177,14 +193,7 @@ function RelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence
     } finally { setSaving(false); }
   }
   const sources = [...new Map([...(selectedEvidence ? [selectedEvidence] : []), ...evidence].map(source => [source.id, source])).values()];
-  return <div className={focused ? styles.relationshipColumns : undefined}>
-    <div>
-      <RelationshipEditor key={`${item.prop._id}:${version}`} item={item} evidence={sources} onSave={save}
-        startedAt={currentDraft?.value ?? item.prop.startedAt ?? ""} dateNotice={currentDraft?.notice ?? ""}
-        onStartDateChange={value => setDateDraft({ value, version, notice: "" })} />
-      {saveNotice && <p role="status">{saveNotice}</p>}
-    </div>
-    <div>
+  const supportingContext = <aside className={styles.evidencePanel} aria-label={`Evidence for ${item.product.name}`}>
       <h3>Evidence and limitations</h3>
       {deleteNotice && <p role="status">{deleteNotice}</p>}
       {item.prop.activityEvidenceId && !sources.some(source => source.id === item.prop.activityEvidenceId) && <p>The original for your saved supporting snapshot is unavailable. You can keep or remove the saved preview.</p>}
@@ -207,7 +216,12 @@ function RelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence
       </div>)}
       {hasMoreEvidence && <button type="button" className="secondary-action" disabled={loadingMoreEvidence} onClick={onLoadMoreEvidence}>{loadingMoreEvidence ? "Loading retained sources…" : "Load more retained sources"}</button>}
       {renderEvidence && <details className={styles.claims}><summary>Inspect extracted claims and correct evidence</summary>{renderEvidence(item, { onUseStartDate: useStartDate, disabled: saving })}</details>}
-    </div>
+    </aside>;
+  return <div className={focused ? `${styles.relationshipColumns} ${styles.focusedColumns}` : styles.relationshipColumns}>
+      <RelationshipEditor item={item} evidence={sources} onSave={save}
+        startedAt={currentDraft?.value ?? item.prop.startedAt ?? ""} dateNotice={currentDraft?.notice ?? ""}
+        onStartDateChange={value => setDateDraft({ value, version, notice: "" })}
+        supportingContext={supportingContext} saveNotice={saveNotice} />
     <div className={styles.savedDecisions}>
       <h3>Saved decisions</h3>
       {renderHistory?.(item)}
