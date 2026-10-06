@@ -6,7 +6,7 @@ let script: string;
 test.beforeAll(async () => {
   const result = await build({
     stdin: { contents: `import {createElement} from "react"; import {createRoot} from "react-dom/client"; import {OnboardingClient} from "./components/onboarding-client";
-      createRoot(document.getElementById("root")).render(createElement(OnboardingClient));`, resolveDir: process.cwd() },
+      createRoot(document.getElementById("root")).render(createElement(OnboardingClient, {publicOrigin:"https://public.example"}));`, resolveDir: process.cwd() },
     bundle: true, write: false, outfile: "account-fixture.js", platform: "browser", format: "iife", jsx: "automatic",
     loader: { ".css": "empty" }, define: { "process.env.NODE_ENV": '"production"' },
     plugins: [{ name: "synthetic-account", setup(builder) {
@@ -65,7 +65,7 @@ for (const width of [1280, 390]) test(`new account setup failure is recoverable 
   await retry.click();
   await expect(retry).toBeDisabled();
   await page.evaluate(() => (window as unknown as { finishSetup: () => void }).finishSetup());
-  await expect(page.getByRole("heading", { name: "Add a product", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Add a tool", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Publish this preview" })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -74,7 +74,7 @@ let journeyScript: string;
 test.beforeAll(async () => {
   const result = await build({
     stdin: { contents: `import {createElement} from "react"; import {createRoot} from "react-dom/client"; import {OnboardingClient} from "./components/onboarding-client";
-      createRoot(document.getElementById("root")).render(createElement(OnboardingClient));`, resolveDir: process.cwd() },
+      createRoot(document.getElementById("root")).render(createElement(OnboardingClient, {publicOrigin:"https://public.example"}));`, resolveDir: process.cwd() },
     bundle: true, write: false, outfile: "fresh-user-fixture.js", platform: "browser", format: "iife", jsx: "automatic",
     loader: { ".css": "local-css" }, define: { "process.env.NODE_ENV": '"production"' },
     plugins: [{ name: "fresh-user-boundary", setup(builder) {
@@ -98,6 +98,72 @@ test.beforeAll(async () => {
   journeyScript = `<style>${readFileSync("app/globals.css", "utf8")}\n${styles}</style><main id="root"></main><script>${javascript.replaceAll("</script", "<\\/script")}</script>`;
 });
 
+for (const width of [1280, 390]) for (const [choice, status] of [
+  ["ACTIVE", "ACTIVE"], ["TESTING", "TESTING"], ["ARCHIVED", "ARCHIVED"], ["LATER", undefined],
+] as const) test(`named tool saves ${choice} with no optional details at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  const add = page.locator("#add-product");
+  await add.getByLabel("Product name", { exact: true }).fill("Field Notes");
+  await expect(add.getByLabel("How do you use it?", { exact: true })).toHaveValue("");
+  await add.getByRole("button", { name: "Save tool privately" }).click();
+  await expect(page.getByRole("heading", { name: "Start with one tool" })).toBeVisible();
+  await add.getByLabel("How do you use it?", { exact: true }).selectOption(choice);
+  await add.getByRole("button", { name: "Save tool privately" }).click();
+  await expect(page.getByRole("link", { name: "Review your collection" })).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!));
+  expect(saved.cards[0].prop).toMatchObject({ status: status ?? "TESTING", visibility: status ? "PRIVATE" : "DRAFT", note: "" });
+  expect(saved.history).toHaveLength(status ? 1 : 0);
+  if (status) expect(saved.cards[0].prop).toMatchObject({ relationshipVersion: 1, confirmedAt: expect.any(String) });
+  else expect(saved.cards[0].prop).not.toHaveProperty("confirmedAt");
+  if (status) {
+    await expect(page).not.toHaveURL(/#relationship=/);
+    await expect(page.getByRole("link", { name: /Field Notes/ })).toBeVisible();
+  }
+  const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
+  const added = calls.filter((call: { name: string }) => call.name === "addManualProduct");
+  expect(added).toHaveLength(1);
+  expect(added[0].args).not.toHaveProperty("website");
+  expect(added[0].args).not.toHaveProperty("description");
+  if (status) expect(added[0].args.status).toBe(status);
+  else expect(added[0].args).not.toHaveProperty("status");
+  expect(calls.filter((call: { name: string }) => ["savePrivately", "publishSelected"].includes(call.name))).toHaveLength(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (choice === "TESTING") await page.screenshot({ path: testInfo.outputPath(`2026-10-06-one-step-tool-${width}.png`), fullPage: true });
+});
+
+for (const width of [1280, 390]) for (const denied of [false, true]) test(`published profile link ${denied ? "manual fallback" : "copies canonical URL"} at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.addInitScript(({ denied }) => {
+    localStorage.setItem("proper-respect-fresh-user-fixture", JSON.stringify({
+      user: { _id: "synthetic-owner", handle: "synthetic-owner", displayName: "Synthetic owner", bio: "" },
+      cards: [], connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
+      hasPublicationAtCurrentHandle: true, hasClaimedPublicIdentity: true,
+    }));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (url: string) => {
+      if (denied) throw new Error("Synthetic permission denied");
+      (window as unknown as { copiedProfileLink: string }).copiedProfileLink = url;
+    } } });
+  }, { denied });
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  await page.getByRole("button", { name: "Copy profile link", exact: true }).click();
+  if (denied) {
+    await expect(page.getByText("Clipboard access is unavailable. Select and copy your link below.", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Profile link", { exact: true })).toHaveValue("https://public.example/synthetic-owner");
+  } else {
+    await expect(page.getByText("Profile link copied.", { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => (window as unknown as { copiedProfileLink: string }).copiedProfileLink)).toBe("https://public.example/synthetic-owner");
+  }
+  const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
+  expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toHaveLength(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath(`2026-10-06-copy-profile-${denied ? "fallback" : "copied"}-${width}.png`), fullPage: true });
+});
+
 for (const width of [1280, 390]) test(`first private manual card reaches exact preview without publishing at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 900 });
   const errors: string[] = [];
@@ -111,17 +177,22 @@ for (const width of [1280, 390]) test(`first private manual card reaches exact p
   await page.getByRole("link", { name: "Add your first tool", exact: true }).click();
   const add = page.locator("#add-product");
   await add.getByLabel("Product name", { exact: true }).fill("Field Notes");
+  await expect(add.getByLabel("How do you use it?", { exact: true })).toHaveValue("");
+  await add.getByLabel("How do you use it?", { exact: true }).selectOption("ACTIVE");
+  await add.getByText("Website or a note (optional)", { exact: true }).click();
   await add.getByLabel("Website (optional)", { exact: true }).fill("https://field-notes.example");
   await add.getByLabel("What you want to remember (optional)").fill("I tried it for research notes.");
-  await add.getByRole("button", { name: "Add for private review" }).click();
+  await add.getByRole("button", { name: "Save tool privately" }).click();
   await expect(page.getByRole("link", { name: "Review your collection" })).toBeVisible();
+  await expect(page).not.toHaveURL(/#relationship=/);
+  await page.getByRole("link", { name: /Field Notes/ }).click();
   await expect(page).toHaveURL(/#relationship=manual-prop$/);
   const inventory = page.getByRole("region", { name: "Field Notes", exact: true });
   await inventory.getByRole("combobox", { name: "How it fits", exact: true }).selectOption("ACTIVE");
   await inventory.getByLabel("What it helps you do (optional)").fill("My research log");
   await expect(inventory.getByLabel("Explanation or workflow (optional)")).toHaveValue("I tried it for research notes.");
   await inventory.getByLabel("Explanation or workflow (optional)").fill("I keep interview notes here.");
-  await inventory.getByRole("button", { name: "Confirm and save privately" }).click();
+  await inventory.getByRole("button", { name: "Save privately", exact: true }).click();
   await expect(inventory.getByLabel("What it helps you do (optional)")).toHaveValue("My research log");
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Publish this preview" })).toHaveCount(0);
