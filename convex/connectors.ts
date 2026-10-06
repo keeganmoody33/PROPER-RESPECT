@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { fetchGithubActivity } from "../src/server/github-activity";
+import { fetchGithubActivity, githubFailureDiagnostic } from "../src/server/github-activity";
 import { ensureProductBrand } from "./productBrands";
 import {
   action,
@@ -883,10 +883,20 @@ export const refreshApproved = internalAction({
             continue;
           }
           let outcome: { kind: "failure" } | ({ kind: "success" } & Awaited<ReturnType<typeof fetchGithubActivity>>);
+          let token: string | undefined;
           try {
-            const token = await decryptSecret(prepared.credential.ciphertext, prepared.credential.iv);
-            outcome = { kind: "success", ...await fetchGithubActivity(token) };
+            token = await decryptSecret(prepared.credential.ciphertext, prepared.credential.iv);
           } catch {
+            console.warn("GitHub refresh failed", { category: "DECRYPTION" });
+          }
+          if (token !== undefined) {
+            try {
+              outcome = { kind: "success", ...await fetchGithubActivity(token) };
+            } catch (error) {
+              console.warn("GitHub refresh failed", githubFailureDiagnostic(error));
+              outcome = { kind: "failure" };
+            }
+          } else {
             outcome = { kind: "failure" };
           }
           await ctx.runMutation(internal.connectors.completeGithubRefresh, { grant: prepared.grant, outcome });

@@ -1,11 +1,49 @@
-# PROPER-RESPECT
+# Proper Respect
 
-**Your tools. Your track record.** One link, `proper-respect.com/{handle}`, for
-the tools you use, test and used before, and the usage behind them.
+**A profile for the tools you use and try.** Keep your stack in one place,
+record what you are testing, and share the cards you choose at
+`proper-respect.com/{handle}`.
 
-The collection is private first: a person keeps notes and supporting evidence
-for each tool and chooses which cards to publish. Evidence proposes; the person
-confirms. It runs on Next.js, Convex and Clerk.
+[Open your collection](https://proper-respect.com/app/collection) ·
+[See a published profile](https://proper-respect.com/lecturesfrom)
+
+## Build your tool profile
+
+1. **Add a tool.** A product name is enough. You can add a new tool without
+   connecting an account, uploading evidence, or measuring its usage.
+2. **Choose how it fits.** Confirm whether you currently use it, are testing
+   it, or used it before. An explanation, website, and dates are optional.
+   Mark your go-to tools when you want to.
+3. **Choose what to share.** Select cards, inspect the visitor's preview, and
+   approve that exact preview before publishing.
+4. **Share your link.** Anyone with your published profile URL can view the
+   selected cards without signing in. Saving a private change does not update
+   the published version until you approve a new preview.
+
+Your collection also keeps discoveries, supporting evidence, and relationship
+history. Connections and uploads can help you build it; you decide what belongs
+on your profile.
+
+## Usage is optional
+
+A tool can be on your profile without a usage counter. Available measurements
+depend on the source and its coverage.
+
+| Source | Available implementation |
+| --- | --- |
+| GitHub | Contribution snapshots, with an optional daily refresh. Cards show the measured period and freshness. |
+| Manual tools | Your confirmed relationship and optional context. No telemetry is required. |
+| Uploaded evidence | Retained supporting originals. Uploading does not automatically extract usage from every app. |
+| Codex and Claude Code | Local usage parsers, reports, and private card previews. These previews are not saved to the hosted collection or publishable. |
+
+[Codex and Claude Code measurement](docs/usage-measurement.md) records the
+supported sources, existing work, and remaining integration boundaries.
+Token counts, cost estimates, subscription payments, and billed charges are
+separate facts. Proper Respect has no universal token-spend connector today.
+
+## Run the project locally
+
+Proper Respect runs on Next.js, Convex, and Clerk.
 
 Two ways to run it locally:
 
