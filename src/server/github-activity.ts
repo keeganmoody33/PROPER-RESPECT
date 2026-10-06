@@ -26,6 +26,7 @@ const count = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const sourceSchema = <T extends z.ZodType>(value: T) => z.object({
   errors: z.array(z.unknown()).max(0).optional(),
   data: z.object({ viewer: z.object({
+    id: z.string().regex(/^[\x21-\x7e]{1,256}$/),
     login, createdAt: z.iso.datetime({ offset: true }),
     contributionsCollection: z.object({ contributionCalendar: z.object({
       totalContributions: value,
@@ -38,7 +39,7 @@ const sourceSchema = <T extends z.ZodType>(value: T) => z.object({
 const numericSchema = sourceSchema(count);
 const lexicalSchema = sourceSchema(z.string());
 type Window = { from: string; to: string };
-type GithubActivity = { accountLabel: string; activity: ActivityModule; value: number };
+type GithubActivity = { providerAccountId: string; accountLabel: string; activity: ActivityModule; value: number };
 
 function exactCount(token: string, value: number) {
   const match = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(token);
@@ -84,6 +85,7 @@ export function parseGithubActivity(text: string, window: Window): GithubActivit
       caveats.push("Returned calendar includes dates outside the requested period; those dates do not establish period coverage");
     }
     return {
+      providerAccountId: viewer.id,
       accountLabel: `github.com/${viewer.login}`,
       value: calendar.totalContributions,
       activity: {
@@ -117,6 +119,7 @@ export async function fetchGithubActivity(token: string, fetcher: typeof fetch =
       body: JSON.stringify({
         query: `query ViewerActivity($from: DateTime!, $to: DateTime!) {
           viewer {
+            id
             login
             createdAt
             contributionsCollection(from: $from, to: $to) {
