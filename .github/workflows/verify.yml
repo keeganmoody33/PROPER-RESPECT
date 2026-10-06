@@ -51,6 +51,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Verify the pinned release CLI without credentials
+        run: |
+          npm ci --ignore-scripts --prefix release-tools
+          node scripts/check-release-cli.mjs
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
