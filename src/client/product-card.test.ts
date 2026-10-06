@@ -328,6 +328,31 @@ const activityExamples: ActivityModule[] = [
   { ...activityEvidence, kind: "codingActivity", primary: { label: "Changes recorded", value: 72 }, supporting: [{ label: "Sessions", value: 5 }] },
 ];
 
+for (const audience of ["owner", "visitor"] as const) {
+  test.each(activityExamples)(`${audience}: $kind presents a successful capture as a dated snapshot, not an ongoing update`, (example) => {
+    const activity = { ...example, freshness: "FRESH" as const };
+    const $ = load(renderToStaticMarkup(createElement(ProductCard, {
+      card: { ...baseCard, status: "ARCHIVED", activity }, index: 0, audience,
+    })));
+
+    const meta = $(".activity-meta");
+    expect(meta.text()).not.toContain("Updated");
+    expect(meta.text()).toContain("Snapshot recorded 2026-09-18");
+    expect(meta.text()).toContain("2026-09-01 to 2026-09-15");
+    expect(meta.text()).toContain(activity.provenanceLabel);
+    expect($(".status-row").text()).toContain("ARCHIVED");
+  });
+}
+
+test.each(["STALE", "ERROR"] as const)("%s keeps its warning alongside the retained snapshot date", (freshness) => {
+  const $ = renderCard({ activity: { ...activityExamples[0], freshness } });
+
+  expect($(".card-front [data-freshness]").text()).toContain(freshness.toLowerCase());
+  expect($(".activity-meta [data-freshness]").text()).toBe(freshness.toLowerCase());
+  expect($(".activity-meta").text()).toContain("Snapshot recorded 2026-09-18");
+  expect($(".status-row").text()).toContain("TESTING");
+});
+
 test("the compact front leads with the owner relationship and leaves full evidence on its reverse", () => {
   const $ = renderCard({ activity: activityExamples[1] });
   const front = $(".card-front");

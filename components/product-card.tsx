@@ -211,11 +211,9 @@ function ActivityMeta({ activity }: { activity: ActivityModule }) {
           ? `${activity.period.start} to ${activity.period.end}`
           : "Measurement period not supplied"}
       </span>
-      <span data-freshness={activity.freshness}>
-        {activity.freshness === "FRESH"
-          ? "Updated"
-          : activity.freshness.toLowerCase()}
-      </span>
+      {activity.freshness !== "FRESH" && (
+        <span data-freshness={activity.freshness}>{activity.freshness.toLowerCase()}</span>
+      )}
       <span>Snapshot recorded {activity.capturedAt.slice(0, 10)}</span>
     </div>
   );
