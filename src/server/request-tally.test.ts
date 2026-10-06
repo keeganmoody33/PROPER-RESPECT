@@ -35,6 +35,17 @@ describe("isCountablePageRequest", () => {
     expect(isCountablePageRequest("GET", "/", h({ rsc: "1" }))).toBe(false);
     expect(isCountablePageRequest("GET", "/", h({ "sec-purpose": "prefetch;prerender" }))).toBe(false);
   });
+
+  it.each(["/__clerk/v1/client", "/trpc/x", "/.well-known/ard.json", "/robots.txt", "/sitemap.xml", "/llms.txt", "/icon", "/apple-icon"])(
+    "skips non-page endpoint %s",
+    path => {
+      expect(isCountablePageRequest("GET", path, h())).toBe(false);
+    },
+  );
+
+  it("still counts markdown twins of pages", () => {
+    expect(isCountablePageRequest("GET", "/about/origins.md", h())).toBe(true);
+  });
 });
 
 describe("toSnapshot", () => {
@@ -76,6 +87,11 @@ describe("tally store", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([{ result: ["presumed_human", "7", "monitoring", "2"] }, { result: "2026-10-06T07:00:00.000Z" }]))));
     const snap = await readTally(env);
     expect(snap).toMatchObject({ presumedHuman: 7, automated: 2, since: "2026-10-06T07:00:00.000Z" });
+  });
+
+  it("fails a read when a pipeline command errors, instead of reporting zeros", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify([{ error: "WRONGTYPE" }, { result: null }]))));
+    await expect(readTally(env)).rejects.toThrow(/WRONGTYPE/);
   });
 
   it("returns null without configuration", async () => {

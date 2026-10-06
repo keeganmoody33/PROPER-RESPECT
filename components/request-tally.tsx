@@ -61,7 +61,7 @@ export function RequestTally() {
         </span>
         <button type="button" className="site-tally-count" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={panelId} disabled={!data}>
           <span className="site-tally-live">{human ? "Presumed human requests" : "Automated requests"}</span>
-          <strong>{value === null ? "Counting" : fmt(value)}</strong>
+          <strong>{value === null ? "Counting" : fmt(value)}</strong>{" "}
           <span>{open ? "Close" : "Breakdown"}</span>
         </button>
       </span>

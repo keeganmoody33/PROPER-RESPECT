@@ -27,7 +27,9 @@ async function pipeline(commands: unknown[][], env?: Env): Promise<unknown[] | n
   });
   if (!response.ok) throw new Error(`tally store ${response.status}`);
   const results = (await response.json()) as Array<{ result?: unknown; error?: string }>;
-  return results.map(r => (r.error ? null : r.result));
+  const failed = results.find(r => r.error);
+  if (failed) throw new Error(`tally store command failed: ${failed.error}`);
+  return results.map(r => r.result);
 }
 
 /** Adds one page request to the running total. Never throws: counting must not break a page. */
