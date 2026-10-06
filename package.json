@@ -2,13 +2,16 @@
   "name": "proper-respect",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run && node --test scripts/deployment-preflight.test.mjs scripts/replay-evidence.test.mjs scripts/remediation-autopilot.test.mjs",
+    "test": "vitest run && node --test scripts/claude-review.test.mjs scripts/deployment-preflight.test.mjs scripts/replay-evidence.test.mjs scripts/remediation-autopilot.test.mjs scripts/receipt-check.test.mjs",
     "test:watch": "vitest",
     "evidence:replay": "node --experimental-strip-types scripts/replay-evidence.mjs",
     "test:e2e": "playwright test",
@@ -24,6 +27,7 @@
     "cheerio": "1.2.0",
     "convex": "^1.42.3",
     "next": "^16.3.5",
+    "posthog-js": "^1.436.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "zod": "^4.4.3"

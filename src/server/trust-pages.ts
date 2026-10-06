@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { publicSiteOrigin } from "./public-site";
-import { creatorBusinessIdentity, markdownResponse } from "./agent-discovery";
+import { creatorBusinessIdentity, markdownResponse, repositoryUrl } from "./agent-discovery";
+import { evidenceRules } from "@/src/domain/evidence-rules";
 
-export type TrustSlug = "origins" | "contact" | "privacy";
+export type TrustSlug = "origins" | "contact" | "privacy" | "terms" | "methodology";
 type TrustSection = Readonly<{
   heading: string;
   paragraphs: readonly string[];
@@ -77,9 +78,9 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     title: "How your data is handled",
     description: "Current account, evidence, connection and publication behavior in Proper Respect, including retention and deletion limits.",
     eyebrow: "Privacy / Current practices",
-    updatedAt: "2026-09-22",
+    updatedAt: "2026-09-28",
     introduction: [
-      "This page describes how Proper Respect handles accounts, evidence and publication as of September 22, 2026.",
+      "This page describes how Proper Respect handles accounts, evidence and publication as of September 28, 2026.",
       "Proper Respect is created by lecturesfrom, a business in the United States, and operated by Keegan Moody. Contact 33@lecturesfrom.com with questions about your data.",
     ],
     sections: [
@@ -96,7 +97,9 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
           "Connecting Gmail grants read-only Gmail access, a broader permission than the metadata the current reader requests. The reader requests message identifiers, timestamps and the From, Subject and Date headers. It does not request message bodies or attachments. These headers can contain personal information, and unmatched headers can be retained as private evidence.",
           "New and reconnected mailboxes start with scheduled maintenance disabled. The collection provides controls for supported reads and maintenance. Saved mailbox credentials are encrypted by the application; this does not mean all stored evidence is end-to-end encrypted.",
           "Supported activity connections can retain snapshots and their measurement periods. For example, the GitHub connection requests account information and a contribution calendar for a one-year period. A snapshot does not establish complete usage, every repository or all work performed.",
+          "Proper Respect's use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements.",
         ],
+        links: [{ label: "Google API Services User Data Policy", href: "https://developers.google.com/terms/api-services-user-data-policy" }],
       },
       {
         heading: "What becomes public",
@@ -108,7 +111,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
       {
         heading: "Disconnecting and deleting are different",
         paragraphs: [
-          "Disconnecting a mailbox removes its saved credentials and stops future reads through that connection. Existing private evidence, source history and relationship history are retained. Disconnecting locally does not revoke the grant in your Google account. You can separately revoke the app through your provider's account permissions.",
+          "Disconnecting a mailbox removes its saved credentials and stops future reads through that connection. Existing private evidence, source history and relationship history are retained. Disconnecting a Gmail account also asks Google to revoke this app's access. If that request fails, the local disconnect still completes, and you can revoke the app yourself in your Google Account permissions.",
           "Activity-connector disconnection removes the local saved secret and stops that connection's updates. Existing snapshots, relationships and published cards can remain. It does not establish that a linked provider account or its grant has been removed.",
           "Deleting an original evidence payload does not erase all information derived from it. Observations, excerpts, source identifiers, hashes, provenance, relationships and published records may remain. A complete self-service account deletion workflow and automatic evidence-expiry schedule are not implemented. Disconnecting or deleting an original does not fully erase your data.",
         ],
@@ -118,7 +121,16 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         paragraphs: [
           "Product presentation can use Context.dev and official product sources. Brand lookups send the product domain to the branding service. Product images and fonts can load from external hosts, so visiting a page can make requests to those hosts.",
           "Your appearance preference is saved in your browser's local storage. Authentication and hosting services also process requests and may use cookies and logs as part of their services.",
+          "Proper Respect uses PostHog for product analytics. On public pages it records page views, clicks, page performance, JavaScript errors and session replay, with every form field masked. On signed-in, sign-in, sign-up and onboarding pages it sends no replay, clicks or errors: only a page view reduced to the route name, such as /app, without card names, IDs or page text. Visitors are not identified to PostHog by account. Requests from bots and crawlers are labeled as bots rather than dropped, so human and automated visits can be counted separately. PostHog stores this data in the United States and uses cookies and local storage to recognize a returning browser.",
         ],
+      },
+      {
+        heading: "How to request deletion",
+        paragraphs: [
+          "Email 33@lecturesfrom.com from the address you sign in with. Say whether you want your whole account deleted, specific evidence removed, or your public profile taken down, and include your handle. Do not send passwords, tokens or private originals.",
+          "Deletion is handled by hand while a self-service workflow is not available. We will reply to confirm what was deleted and to name anything that remains, such as records described in the section on disconnecting and deleting above.",
+        ],
+        links: [{ label: "Email a deletion request", href: "mailto:33@lecturesfrom.com" }],
       },
       {
         heading: "Questions about your data",
@@ -126,6 +138,105 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
           "Contact Keegan Moody at 33@lecturesfrom.com about access, retained evidence or deletion. Describe what you need without sending passwords, tokens or private originals. The disconnecting and deletion section above explains what the application currently retains.",
         ],
         links: [{ label: "Contact Proper Respect", href: "/about/contact" }],
+      },
+    ],
+  },
+  terms: {
+    title: "Terms of use",
+    description: "The rules for using Proper Respect and publishing a public profile, including what may be removed and how.",
+    eyebrow: "Terms / Using Proper Respect",
+    updatedAt: "2026-09-28",
+    introduction: [
+      "These terms apply when you use Proper Respect, including when you keep a private collection or publish a public profile. Proper Respect is created by lecturesfrom, a business in the United States, and operated by Keegan Moody.",
+      "By creating an account or publishing a profile, you agree to these terms. If you do not agree, do not use the service.",
+    ],
+    sections: [
+      {
+        heading: "Acceptable use",
+        paragraphs: [
+          "Use Proper Respect to record and share your own experience with the tools you use. Do not publish anything unlawful, anything that infringes someone else's rights, or anything that harasses or threatens a person.",
+          "Do not impersonate a person or company, or suggest that a company endorses you when it does not. Do not publish false claims about a product, or evidence you know to be altered.",
+          "Do not try to reach another person's private collection, get around sign-in or other security, overload the service, or use it to distribute spam or malicious code.",
+        ],
+      },
+      {
+        heading: "Your content and our right to display it",
+        paragraphs: [
+          "You keep ownership of what you add: your notes, evidence, links and profile details. Your collection stays private until you choose cards and details to publish.",
+          "When you publish, you allow us to store, reproduce and display the published content on your public profile, in its Markdown and structured versions, and to the browser agents and tools that read public profiles. We use this permission only to operate Proper Respect. It ends for future display when you unpublish, although copies that others already made may remain.",
+          "You are responsible for having the right to publish what you share, including any logos, screenshots or quotes.",
+        ],
+      },
+      {
+        heading: "What we may remove and how",
+        paragraphs: [
+          "Anyone can report a public profile with the \"Report this page\" link on it or by email. We may take down a public profile, or refuse to publish it, if it breaks these terms, if the law requires it, or while we review a report.",
+          "A taken-down profile stops being shown publicly, and republishing is paused until the review ends. Your private collection is not deleted. Where we can, we will tell you what was removed and why, and you can reply to ask us to look again.",
+        ],
+      },
+      {
+        heading: "Disclose affiliate and referral links",
+        paragraphs: [
+          "If you earn money, credit or another benefit when someone uses a link on your profile, or if you are paid by, employed by or otherwise connected to a product you share, say so plainly on that card. Follow the rules on endorsements and advertising that apply where you live.",
+          "We may remove a link or card that hides a paid relationship.",
+        ],
+      },
+      {
+        heading: "No warranty",
+        paragraphs: [
+          "Proper Respect is provided as it is and as it is available, without any warranty. We do not promise that it will always be available, free of errors, or suitable for a particular purpose.",
+          "Published cards reflect what their owners chose to share. We do not verify them, and a card is not a guarantee of anyone's complete activity or a recommendation from us.",
+        ],
+      },
+      {
+        heading: "Changes to these terms",
+        paragraphs: [
+          "We may update these terms. The date at the top of this page shows the latest version. If a change affects what we may do with your content, we will say so on this page before it takes effect.",
+          "Continuing to use Proper Respect after a change means you accept the updated terms.",
+        ],
+      },
+      {
+        heading: "Contact",
+        paragraphs: [
+          "Questions about these terms, reports and appeals go to 33@lecturesfrom.com. The data-handling page explains what we keep and how to request deletion.",
+        ],
+        links: [
+          { label: "Email Proper Respect", href: "mailto:33@lecturesfrom.com" },
+          { label: "How your data is handled", href: "/about/privacy" },
+        ],
+      },
+    ],
+  },
+  methodology: {
+    title: "How evidence works",
+    description: "How to read the relationships, activity and evidence on a Proper Respect card, and how the daily GitHub refresh is checked from outside.",
+    eyebrow: "Methodology",
+    updatedAt: "2026-09-28",
+    introduction: [
+      "A card on Proper Respect pairs what someone says about a tool with whatever supporting evidence they chose to share. This page explains what each part can and can't tell you, and how we check that a refreshed card stays current.",
+    ],
+    sections: [
+      {
+        heading: "What a card shows, and what it doesn't",
+        paragraphs: [
+          "These are the same rules we give to agents that read public profiles.",
+          ...evidenceRules,
+        ],
+      },
+      {
+        heading: "The 30-day receipt",
+        paragraphs: [
+          "A GitHub card can refresh its contribution calendar once a day, after its owner turns that on. To show the refresh keeps working, a check that runs outside Proper Respect reads the published profile every day at 08:17 UTC, a little over two hours after the 06:00 UTC refresh.",
+          "The check passes only when the owner's personal GitHub calendar is marked fresh and was captured within the last 36 hours. Every run, pass or fail, adds one line to a public file, with the time it checked and the capture time it saw. The file is never edited; a correction is a new run.",
+          "A UTC day counts when it has a passing line whose capture time is later than the previous counted day's. The line from the scheduled run is the one that counts; if GitHub skips that day's scheduled run, a check started by hand the same UTC day stands in. Any day that doesn't count restarts the count at zero.",
+          "The backend's own refresh record must hold a row for every daily refresh in the window. A tagged release restarts the count unless it leaves the refresh code unchanged. Editing data by hand, changing the refresh schedule in the dashboard, or deploying outside the tagged release process always restarts it. The receipt is complete after 30 counted days in a row.",
+          "The receipt shows that the published calendar kept being refreshed. It doesn't show who made the contributions, or how much someone uses GitHub beyond what the calendar counts.",
+          "Until the GitHub card is published with the daily refresh on, each check fails and records why. The file appears once the first check has run.",
+        ],
+        links: [
+          { label: "The receipt file (receipts/github-refresh.jsonl on the receipts branch)", href: `${repositoryUrl}/blob/receipts/receipts/github-refresh.jsonl` },
+          { label: "How the receipt check works", href: `${repositoryUrl}/blob/main/docs/runbooks/receipt.md` },
+        ],
       },
     ],
   },

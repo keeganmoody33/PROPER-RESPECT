@@ -11,9 +11,14 @@ export const relationshipEditSchema = z.object({
   headline: z.string().trim().max(240),
   note: z.string().trim().max(4000),
   startedAt: optionalDate,
+  // Zod still runs this refine after a failed url check, so it must not throw.
   supportingUrl: z.string().url().max(2048).refine(value => {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password;
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" && !url.username && !url.password;
+    } catch {
+      return false;
+    }
   }, "Use an HTTPS work sample or workflow link without credentials.").optional(),
 });
 

@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { fetchGithubActivity, GITHUB_REQUEST_TIMEOUT_MS, GITHUB_RESPONSE_BYTES, parseGithubActivity } from "./github-activity";
+import { GithubActivityError, githubFailureDiagnostic, fetchGithubActivity, GITHUB_REQUEST_TIMEOUT_MS, GITHUB_RESPONSE_BYTES, parseGithubActivity } from "./github-activity";
 const window = { from: "2025-09-22T12:00:00.000Z", to: "2026-09-22T12:00:00.000Z" };
 const source = () => ({ data: { viewer: { login: "Synthetic-Account", createdAt: "2020-01-01T00:00:00Z", contributionsCollection: { contributionCalendar: { totalContributions: 2, weeks: [{ contributionDays: [{ date: "2026-09-20", contributionCount: 2, contributionLevel: "FIRST_QUARTILE" }] }] } } } } });
 const text = () => JSON.stringify(source());
@@ -98,7 +98,7 @@ test("times out an ignored fetch signal and cancels its late response", async ()
   const stream = new ReadableStream<Uint8Array>({ cancel });
   const fetcher = vi.fn(() => new Promise<Response>(resolve => { settle = resolve; }));
   const pending = fetchGithubActivity("synthetic", fetcher);
-  const checked = expect(pending).rejects.toThrow(error);
+  const checked = expect(pending).rejects.toMatchObject({ category: "TIMEOUT", message: error });
   await vi.advanceTimersByTimeAsync(GITHUB_REQUEST_TIMEOUT_MS);
   await checked;
   settle(response(stream));
@@ -112,7 +112,7 @@ test("one deadline cancels a stalled read without awaiting stalled cancellation"
   const stream = new ReadableStream<Uint8Array>({ cancel });
   const fetcher = vi.fn(async () => { await new Promise(resolve => setTimeout(resolve, 4_000)); return response(stream); });
   const pending = fetchGithubActivity("synthetic", fetcher);
-  const checked = expect(pending).rejects.toThrow(error);
+  const checked = expect(pending).rejects.toMatchObject({ category: "TIMEOUT", message: error });
   await vi.advanceTimersByTimeAsync(GITHUB_REQUEST_TIMEOUT_MS);
   await checked;
   expect(cancel).toHaveBeenCalledOnce();
@@ -135,7 +135,43 @@ test("counts encoded UTF-8 bytes rather than string code units", () => {
 test("rejects a declared oversized response without reading its body", async () => {
   const cancel = vi.fn();
   const stream = new ReadableStream<Uint8Array>({ cancel });
-  await expect(fetchGithubActivity("synthetic", vi.fn(async () => response(stream, { "Content-Length": String(GITHUB_RESPONSE_BYTES + 1) })))).rejects.toThrow(error);
+  await expect(fetchGithubActivity("synthetic", vi.fn(async () => response(stream, { "Content-Length": String(GITHUB_RESPONSE_BYTES + 1) })))).rejects.toMatchObject({ category: "RESPONSE", message: error });
   expect(cancel).toHaveBeenCalledOnce();
   expect(stream.locked).toBe(false);
+});
+
+test.each([
+  [401, "HTTP"], [403, "HTTP"], [503, "HTTP"],
+])("classifies HTTP %s without retaining private response", async (status, category) => {
+  const sentinel = "PRIVATE-TOKEN-BODY-SENTINEL";
+  const fetcher = vi.fn(async () => new Response(sentinel, { status }));
+  const failure = await fetchGithubActivity(sentinel, fetcher).catch(error => error);
+  expect(failure).toMatchObject({ category, httpStatus: status, message: error });
+  expect(JSON.stringify(failure)).not.toContain(sentinel);
+  expect(failure.cause).toBeUndefined();
+});
+test.each([
+  [JSON.stringify({ errors: [{ message: "PRIVATE-PAYLOAD-SENTINEL" }] }), "GRAPHQL"],
+  ['{"private":"PRIVATE-PAYLOAD-SENTINEL"}', "PARSER"],
+])("classifies rejected bodies without retaining their contents", async (body, category) => {
+  const failure = await fetchGithubActivity("PRIVATE-TOKEN-SENTINEL", vi.fn(async () => response(body))).catch(error => error);
+  expect(failure).toMatchObject({ category, message: error });
+  expect(JSON.stringify(failure)).not.toContain("PRIVATE");
+  expect(failure.cause).toBeUndefined();
+});
+test("network exceptions cannot leak their messages or causes", async () => {
+  const failure = await fetchGithubActivity("PRIVATE-TOKEN-SENTINEL", vi.fn(async () => {
+    throw new Error("PRIVATE-PAYLOAD-SENTINEL", { cause: "PRIVATE-TOKEN-SENTINEL" });
+  })).catch(error => error);
+  expect(failure).toMatchObject({ category: "TRANSPORT", message: error });
+  expect(JSON.stringify(failure)).not.toContain("PRIVATE");
+  expect(failure.cause).toBeUndefined();
+});
+
+test("diagnostic projection rejects arbitrary categories, statuses, messages and causes", () => {
+  const failure = new GithubActivityError("HTTP", 401);
+  Object.assign(failure, { category: "PRIVATE-CATEGORY", httpStatus: "PRIVATE-STATUS", message: "PRIVATE-MESSAGE", cause: "PRIVATE-CAUSE" });
+  expect(githubFailureDiagnostic(failure)).toEqual({ category: "TRANSPORT" });
+  expect(githubFailureDiagnostic(new Error("PRIVATE-MESSAGE"))).toEqual({ category: "TRANSPORT" });
+  expect(githubFailureDiagnostic(new GithubActivityError("HTTP", 999))).toEqual({ category: "HTTP" });
 });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { OnboardingClient } from "@/components/onboarding-client";
+import { publicSiteOrigin } from "@/src/server/public-site";
 
 export const metadata = { robots: { index: false, follow: false } };
 
@@ -24,5 +25,5 @@ export default function CollectionPage() {
     );
   }
 
-  return <OnboardingClient />;
+  return <OnboardingClient publicOrigin={publicSiteOrigin().origin} />;
 }

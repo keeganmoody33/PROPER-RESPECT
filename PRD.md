@@ -1,8 +1,22 @@
 # PRD - PROPER-RESPECT MVP
 
-> Status: Current MVP direction  
-> Updated: 2026-09-16
-> Direction and implementation boundary: `docs/000-current-product-thesis.md`.
+> **Status: historical MVP requirements** (2026-09-28, R14). Not the active
+> scope or release checklist; `INDEX.md` lists it the same way.
+>
+> - **Current product:** the owner decisions of 2026-09-25 in
+>   `docs/remediation/CODEX-BRIEF.md`, Section 3. One link,
+>   `proper-respect.com/{handle}`, shows the tools a person uses, tests and
+>   used before, plus the usage behind them. The collection is private first,
+>   and nothing publishes without owner preview and approval. Public sign-up
+>   is closed until the brief's Phase 2 gate.
+> - **Later, not built:** the lineage and "put on by" requirements (US-006,
+>   US-009 and the `Lineage` model below), `@mentions`, a props count, member
+>   subdomains or custom domains (#13), and open sign-up (the "Sign up" step
+>   in the linker flow). Do not shape the schema for them.
+> - **Direction and boundaries:** `docs/000-current-product-thesis.md` and
+>   `docs/002-v2-product-motion.md`.
+>
+> Last updated before this note: 2026-09-16.
 
 ## 1. Overview
 

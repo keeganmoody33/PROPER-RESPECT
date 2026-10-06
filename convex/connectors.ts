@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { fetchGithubActivity } from "../src/server/github-activity";
+import { fetchGithubActivity, githubFailureDiagnostic } from "../src/server/github-activity";
 import { ensureProductBrand } from "./productBrands";
 import {
   action,
@@ -11,12 +11,13 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { activityModuleValidator } from "./validators";
+import { activityModuleValidator, refreshErrorClassValidator } from "./validators";
+import type { Infer } from "convex/values";
 import { activityModuleSchema, type ActivityModule } from "../src/domain/public-profile";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { canRefreshMetric } from "../src/domain/onboarding";
-import { requireUser } from "./authHelpers";
+import { consumeWriteLimit, requireUser } from "./authHelpers";
 import type { Doc, Id } from "./_generated/dataModel";
 import { githubDateObservations } from "../src/domain/evidence-claims";
 import { publishedCardIndicesForProp } from "./publication";
@@ -70,11 +71,36 @@ async function decryptSecret(ciphertext: string, iv: string) {
 }
 
 type DevinUsage = {
-  prs_created_count?: number;
-  prs_merged_count?: number;
-  searches_count?: number;
-  sessions_count?: number;
+  prs_created_count?: unknown;
+  prs_merged_count?: unknown;
+  searches_count?: unknown;
+  sessions_count?: unknown;
 };
+
+/** A Devin response that arrived but can't be used; its class feeds the refresh ledger (R08). */
+class DevinResponseError extends Error {
+  constructor(message: string, readonly errorClass: "MISSING_METRIC" | "INVALID_RESPONSE") {
+    super(message);
+  }
+}
+
+// A count Devin leaves out, or sends as null, is unknown. It never becomes 0
+// and never appears on the card (docs/003-evidence-surfaces.md, "Lifecycle").
+function reportedDevinCounts(usage: DevinUsage) {
+  const counts = [
+    ["Sessions", usage.sessions_count],
+    ["Searches", usage.searches_count],
+    ["PRs created", usage.prs_created_count],
+    ["PRs merged", usage.prs_merged_count],
+  ] as const;
+  return counts.flatMap(([label, value]) => {
+    if (value === undefined || value === null) return [];
+    if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+      throw new DevinResponseError("Devin usage response included an invalid count.", "INVALID_RESPONSE");
+    }
+    return [{ label, value }];
+  });
+}
 
 async function fetchDevinActivity(
   token: string,
@@ -82,7 +108,8 @@ async function fetchDevinActivity(
 ): Promise<{
   accountLabel: string;
   activity: ActivityModule;
-  value: number;
+  // The devin.sessions value. Undefined when Devin did not report sessions.
+  value?: number;
 }> {
   const response = await fetch(
     `https://api.devin.ai/v3/organizations/${encodeURIComponent(organizationId)}/metrics/usage`,
@@ -98,23 +125,23 @@ async function fetchDevinActivity(
   }
   const raw = (await response.json()) as DevinUsage & { data?: DevinUsage };
   const usage = raw.data ?? raw;
-  const sessions = usage.sessions_count ?? 0;
+  // Sessions leads when reported; otherwise the first count Devin did report.
+  const [primary, ...supporting] = reportedDevinCounts(usage);
+  if (!primary) {
+    throw new DevinResponseError("Devin usage response did not include any usage counts.", "MISSING_METRIC");
+  }
   const capturedAt = new Date().toISOString();
   return {
     accountLabel: `Devin organization ${organizationId}`,
-    value: sessions,
+    value: primary.label === "Sessions" ? primary.value : undefined,
     activity: {
       kind: "headlineMetrics",
       attributionScope: "ORGANIZATION",
       capturedAt,
       freshness: "FRESH",
       provenanceLabel: "Devin organization metrics",
-      primary: { label: "Sessions", value: sessions },
-      supporting: [
-        { label: "Searches", value: usage.searches_count ?? 0 },
-        { label: "PRs created", value: usage.prs_created_count ?? 0 },
-        { label: "PRs merged", value: usage.prs_merged_count ?? 0 },
-      ],
+      primary,
+      supporting,
     },
   };
 }
@@ -126,7 +153,9 @@ type GithubSnapshotInput = {
   product: { name: string; slug: string; domain: string; description: string; logoUrl?: string };
   activity: ActivityModule;
   metricKey: string;
-  value: number;
+  // Optional in the shared mutation for Devin; a GitHub capture without it
+  // fails the value check below before any write.
+  value?: number;
 };
 
 function githubAccount(label: string) {
@@ -248,7 +277,8 @@ export const saveConnectedSnapshot = internalMutation({
     }),
     activity: activityModuleValidator,
     metricKey: v.string(),
-    value: v.number(),
+    // Absent when the provider did not report the metric. Never read as 0.
+    value: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
@@ -351,16 +381,18 @@ export const saveConnectedSnapshot = internalMutation({
     }
 
     await ensureProductBrand(ctx, product);
-    await ctx.db.insert("usageSignals", {
-      userId: user._id,
-      propId: prop._id,
-      metricKey: args.metricKey,
-      value: args.value,
-      capturedAt: args.activity.capturedAt,
-      attributionScope: args.activity.attributionScope,
-      evidenceRuleVersion: "provider-v1",
-      visibility: "DRAFT",
-    });
+    if (args.value !== undefined) {
+      await ctx.db.insert("usageSignals", {
+        userId: user._id,
+        propId: prop._id,
+        metricKey: args.metricKey,
+        value: args.value,
+        capturedAt: args.activity.capturedAt,
+        attributionScope: args.activity.attributionScope,
+        evidenceRuleVersion: "provider-v1",
+        visibility: "DRAFT",
+      });
+    }
 
     const snapshotEvidenceIds: Id<"rawEvidence">[] = [];
 
@@ -395,6 +427,14 @@ export const saveConnectedSnapshot = internalMutation({
   },
 });
 
+export const consumeGithubConnectLimit = internalMutation({
+  args: {},
+  handler: async ctx => {
+    const user = await requireUser(ctx);
+    await consumeWriteLimit(ctx, user._id, "connectGithub");
+  },
+});
+
 export const connectGithub = action({
   args: { token: v.string() },
   handler: async (
@@ -406,6 +446,7 @@ export const connectGithub = action({
   }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication required.");
+    await ctx.runMutation(internal.connectors.consumeGithubConnectLimit, {});
     const snapshot = await fetchGithubActivity(token);
     const encrypted = await encryptSecret(token);
     return await ctx.runMutation(internal.connectors.saveConnectedSnapshot, {
@@ -525,7 +566,8 @@ async function githubRefreshAuthority(ctx: QueryCtx | MutationCtx, subscriptionI
   const publications = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).take(2);
   if (publications.length !== 1) return null;
   const published = publications[0];
-  if (published.profile.handle !== user.handle) return null;
+  // A taken-down snapshot stays frozen until an operator restores it (R06).
+  if (published.profile.handle !== user.handle || published.takenDownAt) return null;
   const indices = await publishedCardIndicesForProp(ctx, published, prop);
   if (indices.length !== 1) return null;
   const card = published.profile.cards[indices[0]];
@@ -536,6 +578,64 @@ async function githubRefreshAuthority(ctx: QueryCtx | MutationCtx, subscriptionI
     owner: { id: user._id, handle: user.handle }, published, indices }));
   return { subscription, connector, secret, prop, published, index: indices[0], account, fingerprint };
 }
+
+type RefreshErrorClass = Infer<typeof refreshErrorClassValidator>;
+const REFRESH_SCOPE_ERROR = "Refresh exceeds the approved metric or scope.";
+type RefreshAttempt = {
+  subscription: Pick<Doc<"metricSubscriptions">, "_id" | "userId" | "propId" | "metricKey">;
+  outcome: "SUCCESS" | "FAILURE" | "SKIPPED";
+  // The connector's provider when known; otherwise it follows the metric key.
+  provider?: string;
+  errorClass?: RefreshErrorClass;
+  capturedAt?: string;
+  attemptedAt?: string;
+};
+
+function refreshProvider(provider: string | undefined, metricKey: string) {
+  if (provider === "GITHUB" || provider === "DEVIN") return provider;
+  if (metricKey === "github.contributions") return "GITHUB" as const;
+  if (metricKey === "devin.sessions") return "DEVIN" as const;
+  return "UNKNOWN" as const;
+}
+
+/** Malformed stored refresh timestamps are a bad attempt state, not a changed grant. */
+function hasMalformedRefreshTimestamps(subscription: Pick<Doc<"metricSubscriptions">, "lastAttemptedAt" | "lastSuccessfulAt">) {
+  return [subscription.lastAttemptedAt, subscription.lastSuccessfulAt]
+    .some(value => value !== undefined && canonicalTimestamp(value) === null);
+}
+
+/** Appends one ledger row for a refresh attempt (R08). Outcomes only; no provider text. */
+async function recordRefreshAttempt(ctx: MutationCtx, attempt: RefreshAttempt) {
+  await ctx.db.insert("refreshAttempts", {
+    subscriptionId: attempt.subscription._id,
+    userId: attempt.subscription.userId,
+    propId: attempt.subscription.propId,
+    provider: refreshProvider(attempt.provider, attempt.subscription.metricKey),
+    attemptedAt: attempt.attemptedAt ?? new Date().toISOString(),
+    outcome: attempt.outcome,
+    ...(attempt.capturedAt !== undefined ? { capturedAt: attempt.capturedAt } : {}),
+    ...(attempt.errorClass !== undefined ? { errorClass: attempt.errorClass } : {}),
+    sourceVersion: process.env.DEPLOYED_SHA || "unknown",
+  });
+}
+
+/** Records an attempt that ended in the refresh action, outside the guarded mutations. */
+export const recordRefreshAttemptOutcome = internalMutation({
+  args: {
+    subscriptionId: v.id("metricSubscriptions"),
+    outcome: v.union(v.literal("FAILURE"), v.literal("SKIPPED")),
+    errorClass: refreshErrorClassValidator,
+    provider: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) return;
+    // A skip caused by malformed stored timestamps is recorded as the completion path records it.
+    const malformed = args.outcome === "SKIPPED" && hasMalformedRefreshTimestamps(subscription);
+    await recordRefreshAttempt(ctx, { subscription, provider: args.provider,
+      ...(malformed ? { outcome: "FAILURE", errorClass: "INVALID_RESPONSE" } : { outcome: args.outcome, errorClass: args.errorClass }) });
+  },
+});
 
 export const prepareGithubRefresh = internalQuery({
   args: { subscriptionId: v.id("metricSubscriptions") },
@@ -555,25 +655,35 @@ export const completeGithubRefresh = internalMutation({
   },
   handler: async (ctx, { grant, outcome }) => {
     const authority = await githubRefreshAuthority(ctx, grant.subscriptionId);
-    if (!authority || authority.fingerprint !== grant.fingerprint) return false;
+    if (!authority || authority.fingerprint !== grant.fingerprint) {
+      const current = await ctx.db.get(grant.subscriptionId);
+      const malformed = current && hasMalformedRefreshTimestamps(current);
+      if (current) await recordRefreshAttempt(ctx, { subscription: current, provider: "GITHUB",
+        ...(malformed ? { outcome: "FAILURE", errorClass: "INVALID_RESPONSE" } : { outcome: "SKIPPED", errorClass: "STALE_GRANT" }) });
+      return false;
+    }
     const { subscription, connector, prop, published, index } = authority;
+    const rejected = async () => {
+      await recordRefreshAttempt(ctx, { subscription, provider: "GITHUB", outcome: "FAILURE", errorClass: "INVALID_RESPONSE" });
+      return false;
+    };
     const previousAttempt = canonicalTimestamp(subscription.lastAttemptedAt) ?? -1;
     const attemptedAtMs = Math.max(Date.now(), previousAttempt + 1);
-    if (!Number.isSafeInteger(attemptedAtMs) || attemptedAtMs > 8.64e15) return false;
+    if (!Number.isSafeInteger(attemptedAtMs) || attemptedAtMs > 8.64e15) return await rejected();
     const attemptedAt = new Date(attemptedAtMs).toISOString();
     if (outcome.kind === "success") {
       const parsed = activityModuleSchema.safeParse(outcome.activity);
-      if (!parsed.success || parsed.data.kind !== "contributionCalendar" || parsed.data.attributionScope !== "PERSONAL") return false;
+      if (!parsed.success || parsed.data.kind !== "contributionCalendar" || parsed.data.attributionScope !== "PERSONAL") return await rejected();
       const activity = parsed.data;
       let account: string;
-      try { account = githubAccount(outcome.accountLabel); } catch { return false; }
+      try { account = githubAccount(outcome.accountLabel); } catch { return await rejected(); }
       const captured = canonicalTimestamp(activity.capturedAt);
       const priorSuccess = canonicalTimestamp(subscription.lastSuccessfulAt) ?? -1;
       const priorPublic = canonicalTimestamp(published.profile.cards[index].activity?.capturedAt);
       if (account !== authority.account || captured === null || priorPublic === null || captured <= Math.max(priorSuccess, priorPublic) ||
           captured > Date.now() + 60_000 || outcome.value !== activity.total || !Number.isSafeInteger(activity.total) ||
           activity.days.length > 400 || activity.days.some(day => !Number.isSafeInteger(day.count)) ||
-          new Set(activity.days.map(day => day.date)).size !== activity.days.length) return false;
+          new Set(activity.days.map(day => day.date)).size !== activity.days.length) return await rejected();
       if (!prop.activityEvidenceId && !prop.relationshipVersion) await ctx.db.patch(prop._id, { activity });
       await ctx.db.patch(published._id, { revision: published.revision + 1, publishedAt: activity.capturedAt,
         profile: { ...published.profile, cards: published.profile.cards.map((card, i) => i === index ? { ...card, activity } : card) } });
@@ -581,6 +691,7 @@ export const completeGithubRefresh = internalMutation({
         value: outcome.value, capturedAt: activity.capturedAt, attributionScope: "PERSONAL", evidenceRuleVersion: "provider-v1", visibility: "PUBLIC" });
       await ctx.db.patch(subscription._id, { lastAttemptedAt: attemptedAt, lastSuccessfulAt: activity.capturedAt, lastError: undefined });
       await ctx.db.patch(connector._id, { status: "CONNECTED", lastSyncedAt: activity.capturedAt, lastError: undefined });
+      await recordRefreshAttempt(ctx, { subscription, provider: "GITHUB", outcome: "SUCCESS", capturedAt: activity.capturedAt, attemptedAt });
     } else {
       if (prop.activity && !prop.activityEvidenceId && !prop.relationshipVersion) {
         await ctx.db.patch(prop._id, { activity: { ...prop.activity, freshness: "STALE" } });
@@ -591,6 +702,7 @@ export const completeGithubRefresh = internalMutation({
       const message = "GitHub activity response unavailable.";
       await ctx.db.patch(subscription._id, { lastAttemptedAt: attemptedAt, lastError: message });
       await ctx.db.patch(connector._id, { status: "ERROR", lastError: message });
+      await recordRefreshAttempt(ctx, { subscription, provider: "GITHUB", outcome: "FAILURE", errorClass: "PROVIDER_UNAVAILABLE", attemptedAt });
     }
     return true;
   },
@@ -627,16 +739,19 @@ export const applyRefresh = internalMutation({
     if (!subscription) return;
     if (
       !canRefreshMetric(subscription, {
-        metricKey: subscription.metricKey,
+        metricKey: "devin.sessions",
         attributionScope: args.activity.attributionScope,
       })
     ) {
-      throw new Error("Refresh exceeds the approved metric or scope.");
+      throw new Error(REFRESH_SCOPE_ERROR);
     }
     const connector = await ctx.db.get(subscription.connectorId);
-    if (!connector || connector.provider !== "DEVIN" || connector.status === "REVOKED") return;
     const prop = await ctx.db.get(subscription.propId);
-    if (!prop || prop.visibility !== "PUBLIC" || prop.userId !== subscription.userId || connector.userId !== subscription.userId) return;
+    if (!connector || connector.provider !== "DEVIN" || connector.status === "REVOKED" ||
+        !prop || prop.visibility !== "PUBLIC" || prop.userId !== subscription.userId || connector.userId !== subscription.userId) {
+      await recordRefreshAttempt(ctx, { subscription, provider: connector?.provider, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
+      return;
+    }
 
     // An approved public refresh cannot replace an owner's private choice of
     // retained supporting evidence. The public subscription remains separate.
@@ -650,7 +765,8 @@ export const applyRefresh = internalMutation({
         .query("publishedProfiles")
         .withIndex("by_handle", (q) => q.eq("handle", user.handle))
         .unique();
-      if (published) {
+      // A taken-down snapshot stays frozen until an operator restores it (R06).
+      if (published && !published.takenDownAt) {
         const indices = new Set(await publishedCardIndicesForProp(ctx, published, prop));
         await ctx.db.patch(published._id, {
           revision: published.revision + 1,
@@ -686,6 +802,7 @@ export const applyRefresh = internalMutation({
       lastSyncedAt: args.activity.capturedAt,
       lastError: undefined,
     });
+    await recordRefreshAttempt(ctx, { subscription, provider: connector.provider, outcome: "SUCCESS", capturedAt: args.activity.capturedAt });
   },
 });
 
@@ -693,14 +810,19 @@ export const markRefreshFailed = internalMutation({
   args: {
     subscriptionId: v.id("metricSubscriptions"),
     message: v.string(),
+    errorClass: v.optional(refreshErrorClassValidator),
   },
   handler: async (ctx, args) => {
     const subscription = await ctx.db.get(args.subscriptionId);
-    if (!subscription || subscription.revokedAt) return;
+    if (!subscription) return;
     const connector = await ctx.db.get(subscription.connectorId);
-    if (!connector || connector.provider !== "DEVIN" || connector.status === "REVOKED" || connector.userId !== subscription.userId) return;
     const prop = await ctx.db.get(subscription.propId);
-    if (!prop || prop.userId !== subscription.userId) return;
+    // The same eligibility boundary as applyRefresh: only a public relationship refreshes.
+    if (subscription.revokedAt || !connector || connector.provider !== "DEVIN" || connector.status === "REVOKED" ||
+        connector.userId !== subscription.userId || !prop || prop.visibility !== "PUBLIC" || prop.userId !== subscription.userId) {
+      await recordRefreshAttempt(ctx, { subscription, provider: connector?.provider, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
+      return;
+    }
     if (prop.activity && !prop.activityEvidenceId && !prop.relationshipVersion) {
       await ctx.db.patch(prop._id, {
         activity: { ...prop.activity, freshness: "STALE" as const },
@@ -712,7 +834,8 @@ export const markRefreshFailed = internalMutation({
         .query("publishedProfiles")
         .withIndex("by_handle", (q) => q.eq("handle", user.handle))
         .unique();
-      if (published) {
+      // A taken-down snapshot stays frozen until an operator restores it (R06).
+      if (published && !published.takenDownAt) {
         const indices = new Set(await publishedCardIndicesForProp(ctx, published, prop));
         await ctx.db.patch(published._id, {
           profile: {
@@ -735,6 +858,7 @@ export const markRefreshFailed = internalMutation({
       status: "ERROR",
       lastError: args.message,
     });
+    await recordRefreshAttempt(ctx, { subscription, provider: connector.provider, outcome: "FAILURE", errorClass: args.errorClass ?? "UNEXPECTED" });
   },
 });
 
@@ -743,47 +867,83 @@ export const refreshApproved = internalAction({
   handler: async (ctx) => {
     const work = await ctx.runQuery(internal.connectors.listRefreshWork, {});
     for (const item of work) {
-      if (item.connector?.provider === "GITHUB") {
-        const prepared = await ctx.runQuery(internal.connectors.prepareGithubRefresh, { subscriptionId: item.subscription._id });
-        if (!prepared) continue;
-        let outcome: { kind: "failure" } | ({ kind: "success" } & Awaited<ReturnType<typeof fetchGithubActivity>>);
-        try {
-          const token = await decryptSecret(prepared.credential.ciphertext, prepared.credential.iv);
-          outcome = { kind: "success", ...await fetchGithubActivity(token) };
-        } catch {
-          outcome = { kind: "failure" };
-        }
-        await ctx.runMutation(internal.connectors.completeGithubRefresh, { grant: prepared.grant, outcome });
-        continue;
-      }
-      if (!item.connector || !item.secret) continue;
+      const subscriptionId = item.subscription._id;
+      const provider = item.connector?.provider;
+      const skip = () => ctx.runMutation(internal.connectors.recordRefreshAttemptOutcome, {
+        subscriptionId, provider, outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
+      const fail = (message: string, errorClass: RefreshErrorClass) =>
+        ctx.runMutation(internal.connectors.markRefreshFailed, { subscriptionId, message, errorClass });
+      // Each attempt writes one ledger row. A throw here is recorded and never
+      // stops the subscriptions after it (R08).
       try {
-        const cleartext = await decryptSecret(
-          item.secret.ciphertext,
-          item.secret.iv,
-        );
-        const snapshot = await (async () => {
-                const parsed = JSON.parse(cleartext) as {
-                  token: string;
-                  organizationId: string;
-                };
-                return await fetchDevinActivity(
-                  parsed.token,
-                  parsed.organizationId,
-                );
-              })();
-        await ctx.runMutation(internal.connectors.applyRefresh, {
-          subscriptionId: item.subscription._id,
-          activity: snapshot.activity,
-          value: snapshot.value,
-        });
-      } catch (error) {
-        await ctx.runMutation(internal.connectors.markRefreshFailed, {
-          subscriptionId: item.subscription._id,
-          message:
-            error instanceof Error ? error.message : "Connector refresh failed.",
-        });
+        if (item.connector?.provider === "GITHUB") {
+          const prepared = await ctx.runQuery(internal.connectors.prepareGithubRefresh, { subscriptionId });
+          if (!prepared) {
+            await skip();
+            continue;
+          }
+          let outcome: { kind: "failure" } | ({ kind: "success" } & Awaited<ReturnType<typeof fetchGithubActivity>>);
+          let token: string | undefined;
+          try {
+            token = await decryptSecret(prepared.credential.ciphertext, prepared.credential.iv);
+          } catch {
+            console.warn("GitHub refresh failed", { category: "DECRYPTION" });
+          }
+          if (token !== undefined) {
+            try {
+              outcome = { kind: "success", ...await fetchGithubActivity(token) };
+            } catch (error) {
+              console.warn("GitHub refresh failed", githubFailureDiagnostic(error));
+              outcome = { kind: "failure" };
+            }
+          } else {
+            outcome = { kind: "failure" };
+          }
+          await ctx.runMutation(internal.connectors.completeGithubRefresh, { grant: prepared.grant, outcome });
+          continue;
+        }
+        if (!item.connector || !item.secret || !canRefreshMetric(item.subscription, {
+          metricKey: "devin.sessions",
+          attributionScope: "ORGANIZATION",
+        })) {
+          await skip();
+          continue;
+        }
+        let snapshot: Awaited<ReturnType<typeof fetchDevinActivity>>;
+        try {
+          const cleartext = await decryptSecret(item.secret.ciphertext, item.secret.iv);
+          const parsed = JSON.parse(cleartext) as { token: string; organizationId: string };
+          snapshot = await fetchDevinActivity(parsed.token, parsed.organizationId);
+        } catch (error) {
+          await fail(error instanceof Error ? error.message : "Connector refresh failed.",
+            error instanceof DevinResponseError ? error.errorClass : "PROVIDER_UNAVAILABLE");
+          continue;
+        }
+        // The subscription approves devin.sessions. Without a reported
+        // sessions count, the card keeps its last capture, marked stale.
+        if (snapshot.value === undefined) {
+          await fail("Devin usage response did not include a sessions count.", "MISSING_METRIC");
+          continue;
+        }
+        try {
+          await ctx.runMutation(internal.connectors.applyRefresh, {
+            subscriptionId,
+            activity: snapshot.activity,
+            value: snapshot.value,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Connector refresh failed.";
+          await fail(message, message.includes(REFRESH_SCOPE_ERROR) ? "SCOPE_EXCEEDED" : "UNEXPECTED");
+        }
+      } catch {
+        try {
+          await ctx.runMutation(internal.connectors.recordRefreshAttemptOutcome, {
+            subscriptionId, provider, outcome: "FAILURE", errorClass: "UNEXPECTED" });
+        } catch {
+          // The ledger write failed as well. Later subscriptions still run.
+        }
       }
     }
   },
 });
+

@@ -47,7 +47,7 @@ async function positiveControl() {
   expect(state.signals[0]).toMatchObject({ value: 7, metricKey: "github.contributions", visibility: "PUBLIC" });
 }
 
-for (const invalid of ["connector-owner", "secret-owner", "secret-provider", "publication", "private-prop"] as const) {
+for (const invalid of ["connector-owner", "secret-owner", "secret-provider", "publication", "private-prop", "taken-down"] as const) {
   test(`refresh blocks provider effects for invalid ${invalid}`, async () => {
     await positiveControl();
     const f = await fixture();
@@ -57,6 +57,7 @@ for (const invalid of ["connector-owner", "secret-owner", "secret-provider", "pu
       if (invalid === "secret-provider") await ctx.db.patch(f.ids.secretId, { provider: "DEVIN" });
       if (invalid === "publication") await ctx.db.delete(f.ids.publishedId);
       if (invalid === "private-prop") await ctx.db.patch(f.ids.propId, { visibility: "PRIVATE" });
+      if (invalid === "taken-down") await ctx.db.patch(f.ids.publishedId, { takenDownAt: "2026-09-28T00:00:00.000Z", takedownReason: "Synthetic report" });
     });
     const before = await f.state(); await f.call();
     expect(f.fetcher).not.toHaveBeenCalled();
@@ -288,4 +289,257 @@ for (const mode of ["withheld", "fixed", "removed"] as const) test(`GitHub ${mod
   expect(after.published?.profile.cards.find((_, i) => after.published?.cardPropIds?.[i] === f.ids.propId)).toEqual(firstBefore);
   expect(after.published?.profile.cards.find((_, i) => after.published?.cardPropIds?.[i] === sibling)?.activity).toMatchObject({ total: 7 });
   expect(after.signals).toHaveLength(1); expect(after.signals[0].propId).toBe(sibling);
+});
+
+// R08: every attempt leaves exactly one ledger row, with a fixed class and no provider text.
+const attempts = (t: ReturnType<typeof convexTest>) => t.run(ctx => ctx.db.query("refreshAttempts").collect());
+function expectNoSecrets(rows: unknown[]) {
+  const text = JSON.stringify(rows);
+  for (const secret of ["synthetic-token-never-sent", "synthetic-devin-token", "totalContributions", "Devin API error", "different-account"]) {
+    expect(text).not.toContain(secret);
+  }
+}
+
+test("a successful refresh records one SUCCESS attempt with its capture time and source version", async () => {
+  vi.stubEnv("DEPLOYED_SHA", "synthetic-sha");
+  const f = await fixture(); await f.call();
+  const rows = await attempts(f.t);
+  const published = (await f.state()).published;
+  expect(rows).toEqual([expect.objectContaining({ subscriptionId: f.ids.subscriptionId, userId: f.ids.userId, propId: f.ids.propId,
+    provider: "GITHUB", outcome: "SUCCESS", capturedAt: published?.profile.cards[0].activity?.capturedAt, sourceVersion: "synthetic-sha" })]);
+  expect(rows[0].errorClass).toBeUndefined();
+  expect(Date.parse(rows[0].attemptedAt)).not.toBeNaN();
+});
+
+test("source version reads unknown when no deployed SHA is configured", async () => {
+  const f = await fixture(); await f.call();
+  expect((await attempts(f.t)).map(row => row.sourceVersion)).toEqual(["unknown"]);
+});
+
+for (const invalid of ["connector-owner", "private-prop", "taken-down"] as const) test(`an ineligible ${invalid} refresh records one SKIPPED attempt`, async () => {
+  const f = await fixture();
+  await f.t.run(async ctx => {
+    if (invalid === "connector-owner") await ctx.db.patch(f.ids.connectorId, { userId: f.ids.otherId });
+    if (invalid === "private-prop") await ctx.db.patch(f.ids.propId, { visibility: "PRIVATE" });
+    if (invalid === "taken-down") await ctx.db.patch(f.ids.publishedId, { takenDownAt: "2026-09-28T00:00:00.000Z", takedownReason: "Synthetic report" });
+  });
+  await f.call();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE", provider: "GITHUB" })]);
+});
+
+test("a rejected provider response records one FAILURE attempt as an invalid response", async () => {
+  const f = await fixture(vi.fn(async () => response("different-account")));
+  await f.call();
+  const rows = await attempts(f.t);
+  expect(rows).toEqual([expect.objectContaining({ outcome: "FAILURE", errorClass: "INVALID_RESPONSE" })]);
+  expectNoSecrets(rows);
+});
+
+test("an unavailable provider records one FAILURE attempt without provider text", async () => {
+  const f = await fixture(vi.fn(async () => response("synthetic-account", 500)));
+  await f.call();
+  const rows = await attempts(f.t);
+  expect(rows).toEqual([expect.objectContaining({ outcome: "FAILURE", errorClass: "PROVIDER_UNAVAILABLE" })]);
+  expectNoSecrets(rows);
+});
+
+test("a stale grant records one SKIPPED attempt", async () => {
+  const f = await fixture();
+  const prepared = await f.t.query(makeFunctionReference<"query">("connectors:prepareGithubRefresh"), { subscriptionId: f.ids.subscriptionId });
+  await f.t.run(ctx => ctx.db.patch(f.ids.secretId, { ciphertext: "rotated-synthetic-ciphertext" }));
+  expect(await f.t.mutation(makeFunctionReference<"mutation">("connectors:completeGithubRefresh"), {
+    grant: prepared.grant, outcome: { kind: "failure" } })).toBe(false);
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ outcome: "SKIPPED", errorClass: "STALE_GRANT" })]);
+});
+
+test("a throw in one refresh records it and the loop still reaches the next subscription", async () => {
+  const f = await fixture();
+  const devinSubscriptionId = await f.t.run(async ctx => {
+    const productId = await ctx.db.insert("products", { name: "Devin", slug: "devin", domain: "devin.ai", description: "Synthetic" });
+    const propId = await ctx.db.insert("props", { userId: f.ids.userId, productId, status: "ACTIVE", visibility: "PUBLIC", headline: "Devin", note: "" });
+    const secretId = await ctx.db.insert("connectorSecrets", { userId: f.ids.userId, provider: "DEVIN", ciphertext: "not-decryptable", iv: "AAAAAAAAAAAAAAAA", createdAt: "2026-09-22T00:00:00.000Z" });
+    const connectorId = await ctx.db.insert("connectorAccounts", { userId: f.ids.userId, provider: "DEVIN", status: "CONNECTED", accountLabel: "Devin organization synthetic", attributionScope: "ORGANIZATION", secretRef: secretId, connectedAt: "2026-09-22T00:00:00.000Z" });
+    return ctx.db.insert("metricSubscriptions", { userId: f.ids.userId, propId, connectorId, metricKey: "devin.sessions", attributionScope: "ORGANIZATION", refreshCadence: "DAILY", approvedAt: "2026-09-22T00:00:00.000Z" });
+  });
+  // The first digest is the GitHub item's authority hash, outside any per-item try today.
+  const digest = vi.spyOn(crypto.subtle, "digest").mockRejectedValueOnce(new Error("Synthetic unexpected failure"));
+  await f.call();
+  digest.mockRestore();
+  const rows = await attempts(f.t);
+  expect(rows.map(row => [row.subscriptionId, row.outcome, row.errorClass])).toEqual([
+    [f.ids.subscriptionId, "FAILURE", "UNEXPECTED"],
+    [devinSubscriptionId, "FAILURE", "PROVIDER_UNAVAILABLE"],
+  ]);
+  expect(JSON.stringify(rows)).not.toContain("Synthetic unexpected failure");
+});
+
+test("a Devin response without a sessions count records MISSING_METRIC and keeps the old message private to lastError", async () => {
+  const fetcher = vi.fn(async (url: string | URL | Request) => String(url).includes("api.devin.ai")
+    ? new Response(JSON.stringify({ searches_count: 3 }), { status: 200, headers: { "Content-Type": "application/json" } })
+    : response());
+  const f = await fixture(fetcher as unknown as Parameters<typeof fixture>[0]);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("synthetic-refresh-only"));
+  const key = await crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt"]);
+  const iv = new Uint8Array(12).fill(1);
+  const secret = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key,
+    new TextEncoder().encode(JSON.stringify({ token: "synthetic-devin-token", organizationId: "synthetic-org" }))));
+  const base64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+  const devinSubscriptionId = await f.t.run(async ctx => {
+    const productId = await ctx.db.insert("products", { name: "Devin", slug: "devin", domain: "devin.ai", description: "Synthetic" });
+    const propId = await ctx.db.insert("props", { userId: f.ids.userId, productId, status: "ACTIVE", visibility: "PUBLIC", headline: "Devin", note: "" });
+    const secretId = await ctx.db.insert("connectorSecrets", { userId: f.ids.userId, provider: "DEVIN", ciphertext: base64(secret), iv: base64(iv), createdAt: "2026-09-22T00:00:00.000Z" });
+    const connectorId = await ctx.db.insert("connectorAccounts", { userId: f.ids.userId, provider: "DEVIN", status: "CONNECTED", accountLabel: "Devin organization synthetic-org", attributionScope: "ORGANIZATION", secretRef: secretId, connectedAt: "2026-09-22T00:00:00.000Z" });
+    return ctx.db.insert("metricSubscriptions", { userId: f.ids.userId, propId, connectorId, metricKey: "devin.sessions", attributionScope: "ORGANIZATION", refreshCadence: "DAILY", approvedAt: "2026-09-22T00:00:00.000Z" });
+  });
+  await f.call();
+  const rows = await attempts(f.t);
+  expect(rows.map(row => [row.subscriptionId, row.outcome, row.errorClass ?? null])).toEqual([
+    [f.ids.subscriptionId, "SUCCESS", null],
+    [devinSubscriptionId, "FAILURE", "MISSING_METRIC"],
+  ]);
+  expectNoSecrets(rows);
+  expect((await f.t.run(ctx => ctx.db.get(devinSubscriptionId)))?.lastError).toBe("Devin usage response did not include a sessions count.");
+});
+
+test("a grant whose subscription timestamps became malformed records INVALID_RESPONSE, not a stale grant", async () => {
+  const f = await fixture();
+  const prepared = await f.t.query(makeFunctionReference<"query">("connectors:prepareGithubRefresh"), { subscriptionId: f.ids.subscriptionId });
+  await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { lastAttemptedAt: "not-a-timestamp" }));
+  expect(await f.t.mutation(makeFunctionReference<"mutation">("connectors:completeGithubRefresh"), {
+    grant: prepared.grant, outcome: { kind: "failure" } })).toBe(false);
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ outcome: "FAILURE", errorClass: "INVALID_RESPONSE" })]);
+});
+
+test("a skipped attempt names the connector's provider, not the metric key's", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { metricKey: "devin.sessions" }));
+  await f.call();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE", provider: "GITHUB" })]);
+});
+
+// Adds an encrypted Devin subscription for the owner; `usage` is what the stubbed Devin API returns.
+async function addDevin(f: Awaited<ReturnType<typeof fixture>>, options: { secret?: boolean } = {}) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("synthetic-refresh-only"));
+  const key = await crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt"]);
+  const iv = new Uint8Array(12).fill(2);
+  const secret = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key,
+    new TextEncoder().encode(JSON.stringify({ token: "synthetic-devin-token", organizationId: "synthetic-org" }))));
+  const base64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+  return f.t.run(async ctx => {
+    const productId = await ctx.db.insert("products", { name: "Devin", slug: "devin", domain: "devin.ai", description: "Synthetic" });
+    const propId = await ctx.db.insert("props", { userId: f.ids.userId, productId, status: "ACTIVE", visibility: "PUBLIC", headline: "Devin", note: "" });
+    const secretId = options.secret === false ? undefined : await ctx.db.insert("connectorSecrets", { userId: f.ids.userId, provider: "DEVIN", ciphertext: base64(secret), iv: base64(iv), createdAt: "2026-09-22T00:00:00.000Z" });
+    const connectorId = await ctx.db.insert("connectorAccounts", { userId: f.ids.userId, provider: "DEVIN", status: "CONNECTED", accountLabel: "Devin organization synthetic-org", attributionScope: "ORGANIZATION", ...(secretId ? { secretRef: secretId } : {}), connectedAt: "2026-09-22T00:00:00.000Z" });
+    const subscriptionId = await ctx.db.insert("metricSubscriptions", { userId: f.ids.userId, propId, connectorId, metricKey: "devin.sessions", attributionScope: "ORGANIZATION", refreshCadence: "DAILY", approvedAt: "2026-09-22T00:00:00.000Z" });
+    return { subscriptionId, connectorId, propId };
+  });
+}
+const devinFetch = (usage: unknown) => vi.fn(async (url: string | URL | Request) => String(url).includes("api.devin.ai")
+  ? new Response(JSON.stringify(usage), { status: 200, headers: { "Content-Type": "application/json" } })
+  : response()) as unknown as Parameters<typeof fixture>[0];
+
+for (const [label, usage, errorClass] of [
+  ["no usage counts", {}, "MISSING_METRIC"],
+  ["an invalid count", { sessions_count: -1 }, "INVALID_RESPONSE"],
+] as const) test(`a Devin response with ${label} records ${errorClass}`, async () => {
+  const f = await fixture(devinFetch(usage));
+  const devin = await addDevin(f);
+  await f.call();
+  const rows = (await attempts(f.t)).filter(row => row.subscriptionId === devin.subscriptionId);
+  expect(rows).toEqual([expect.objectContaining({ provider: "DEVIN", outcome: "FAILURE", errorClass })]);
+  expectNoSecrets(rows);
+});
+
+test("a Devin connector without a saved secret records one SKIPPED attempt", async () => {
+  const f = await fixture();
+  const devin = await addDevin(f, { secret: false });
+  await f.call();
+  expect((await attempts(f.t)).filter(row => row.subscriptionId === devin.subscriptionId))
+    .toEqual([expect.objectContaining({ provider: "DEVIN", outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
+});
+
+test("a subscription whose connector is gone records one SKIPPED attempt named from its metric", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.delete(f.ids.connectorId));
+  await f.call();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "GITHUB", outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
+});
+
+test("a Devin failure for a relationship made private records SKIPPED and leaves its private activity alone", async () => {
+  const f = await fixture(vi.fn(async (url: string | URL | Request) => String(url).includes("api.devin.ai")
+    ? new Response("unavailable", { status: 503 }) : response()) as unknown as Parameters<typeof fixture>[0]);
+  const devin = await addDevin(f);
+  const activity = { kind: "headlineMetrics" as const, attributionScope: "ORGANIZATION" as const, capturedAt: "2026-09-22T10:00:00.000Z",
+    freshness: "FRESH" as const, provenanceLabel: "Devin organization metrics", primary: { label: "Sessions", value: 2 }, supporting: [] };
+  await f.t.run(ctx => ctx.db.patch(devin.propId, { visibility: "PRIVATE", activity }));
+  await f.call();
+  expect((await attempts(f.t)).filter(row => row.subscriptionId === devin.subscriptionId))
+    .toEqual([expect.objectContaining({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
+  expect((await f.t.run(ctx => ctx.db.get(devin.propId)))?.activity).toEqual(activity);
+  expect((await f.t.run(ctx => ctx.db.get(devin.connectorId)))?.status).toBe("CONNECTED");
+});
+
+test("an unsupported metric with no connector records an UNKNOWN provider instead of guessing", async () => {
+  const f = await fixture();
+  await f.t.run(async ctx => {
+    await ctx.db.patch(f.ids.subscriptionId, { metricKey: "unknown.metric" });
+    await ctx.db.delete(f.ids.connectorId);
+  });
+  await f.call();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "UNKNOWN", outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" })]);
+});
+
+test("a scheduled run over malformed stored timestamps records INVALID_RESPONSE, like its completion path", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { lastSuccessfulAt: "not-a-timestamp" }));
+  await f.call();
+  expect(f.fetcher).not.toHaveBeenCalled();
+  expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "GITHUB", outcome: "FAILURE", errorClass: "INVALID_RESPONSE" })]);
+});
+
+for (const category of ["DECRYPTION", "HTTP", "GRAPHQL", "PARSER", "TRANSPORT"] as const) {
+  test(`scheduled ${category} failures log only fixed diagnostic metadata`, async () => {
+    const sentinel = "PRIVATE-TOKEN-PAYLOAD-SENTINEL";
+    const fetcher = vi.fn(async () => {
+      if (category === "TRANSPORT") throw new Error(sentinel, { cause: sentinel });
+      if (category === "HTTP") return new Response(sentinel, { status: 401 });
+      return new Response(category === "GRAPHQL"
+        ? JSON.stringify({ errors: [{ message: sentinel }] })
+        : JSON.stringify({ private: sentinel }), { headers: { "Content-Type": "application/json" } });
+    });
+    const f = await fixture(fetcher, sentinel);
+    if (category === "DECRYPTION") vi.stubEnv("CONNECTOR_ENCRYPTION_KEY", "synthetic-wrong-key");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const before = await f.state();
+      await f.call();
+      expect(warn.mock.calls).toEqual([["GitHub refresh failed", {
+        category, ...(category === "HTTP" ? { httpStatus: 401 } : {}),
+      }]]);
+      expect(JSON.stringify(warn.mock.calls)).not.toContain(sentinel);
+      const after = await f.state();
+      expect(after.published?.profile.cards[0].activity).toMatchObject({
+        capturedAt: before.published!.profile.cards[0].activity!.capturedAt, freshness: "STALE",
+      });
+      const rows = await f.t.run(ctx => ctx.db.query("refreshAttempts").collect());
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ outcome: "FAILURE", errorClass: "PROVIDER_UNAVAILABLE" });
+      expect(JSON.stringify(rows)).not.toContain(sentinel);
+      if (category === "DECRYPTION") expect(fetcher).not.toHaveBeenCalled();
+    } finally { warn.mockRestore(); }
+  });
+}
+
+test("successful refresh publishes the same calendar without a diagnostic warning", async () => {
+  const f = await fixture();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  try {
+    await f.call();
+    expect(warn).not.toHaveBeenCalled();
+    const after = await f.state();
+    expect(after.published?.profile.cards[0].activity).toMatchObject({ total: 7, freshness: "FRESH", attributionScope: "PERSONAL" });
+    const rows = await f.t.run(ctx => ctx.db.query("refreshAttempts").collect());
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ outcome: "SUCCESS", capturedAt: after.published!.profile.cards[0].activity!.capturedAt });
+  } finally { warn.mockRestore(); }
 });

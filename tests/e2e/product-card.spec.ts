@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import AxeBuilder from "@axe-core/playwright";
 import { buildSync } from "esbuild";
 import { expect, test } from "@playwright/test";
 import { normalizeProductBrand } from "../../src/domain/product-brand";
@@ -96,6 +97,40 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
     });
   })).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+const LOOM_LINK = "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002";
+const linkCard = { ...card, headline: "Building an enrichment table.", activity: undefined, usageLink: { url: LOOM_LINK, label: "SEE_HOW_I_USE_IT" as const } };
+const linkCompiled = buildSync({
+  stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement("div", { className: "card-grid" },
+      createElement(ProductCard, { card: ${JSON.stringify(linkCard)}, index: 0 })));`, resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"production"' },
+});
+
+for (const width of [1280, 390]) test(`the owner's work-sample link sits on the card's back and loads nothing from its site at ${width}px`, async ({ page }, testInfo) => {
+  const linkHostRequests: string[] = [];
+  page.on("request", request => {
+    if (new URL(request.url()).hostname.endsWith("loom.com")) linkHostRequests.push(request.url());
+  });
+  await page.setViewportSize({ width, height: 900 });
+  await page.setContent('<!doctype html><html lang="en"><head><title>Work-sample link fixture</title></head><body><main><h1>Work-sample link fixture</h1><div id="root"></div></main></body></html>');
+  await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
+  await page.addScriptTag({ content: linkCompiled.outputFiles[0].text });
+  const first = page.locator(".product-card").first();
+  await expect(first.locator(".card-front .usage-link")).toHaveCount(0);
+  await first.getByRole("button", { name: "Details", exact: true }).click();
+  const link = first.getByRole("link", { name: "See how I use it, on loom.com (opens in a new tab)", exact: true });
+  await expect(link).toBeVisible();
+  await expect(link).toHaveAttribute("href", LOOM_LINK);
+  await expect(link).toHaveAttribute("target", "_blank");
+  await expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(page.locator("iframe")).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  expect(linkHostRequests).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath(`2026-09-26-usage-link-back-${width}.png`), fullPage: true, animations: "disabled" });
 });
 
 for (const width of [320, 390, 1280]) test(`grouped private records fit and switch without saving or merging same-domain products at ${width}px`, async ({ page }, testInfo) => {

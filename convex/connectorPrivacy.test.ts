@@ -111,3 +111,61 @@ for (const succeeds of [true, false]) test(`refresh targets only its approved re
   expect(cards[1]).toEqual(sibling);
   expect(cards[0].activity).toEqual(succeeds ? activity(5) : { ...activity(3), freshness: "STALE" });
 });
+
+// R08: the Devin refresh paths each record exactly one ledger row.
+async function devinFixture() {
+  const t = convexTest(schema, modules);
+  const ids = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const productId = await ctx.db.insert("products", { name: "Devin", slug: "devin", domain: "devin.ai", description: "Synthetic" });
+    const propId = await ctx.db.insert("props", { userId, productId, status: "ACTIVE", visibility: "PUBLIC", headline: "Devin", note: "" });
+    const connectorId = await ctx.db.insert("connectorAccounts", { userId, provider: "DEVIN", status: "CONNECTED", accountLabel: "Devin organization synthetic", attributionScope: "ORGANIZATION", connectedAt: "2026-09-18" });
+    const subscriptionId = await ctx.db.insert("metricSubscriptions", { userId, propId, connectorId, metricKey: "devin.sessions", attributionScope: "ORGANIZATION", refreshCadence: "DAILY", approvedAt: "2026-09-18T00:00:00.000Z" });
+    return { userId, propId, connectorId, subscriptionId };
+  });
+  const attempts = () => t.run(ctx => ctx.db.query("refreshAttempts").collect());
+  return { t, ...ids, attempts };
+}
+const devinActivity = (scope: "ORGANIZATION" | "PERSONAL") => ({ kind: "headlineMetrics" as const, attributionScope: scope,
+  capturedAt: "2026-09-18T12:00:00.000Z", freshness: "FRESH" as const, provenanceLabel: "Devin organization metrics",
+  primary: { label: "Sessions", value: 4 }, supporting: [] });
+const apply = makeFunctionReference<"mutation">("connectors:applyRefresh");
+const markFailed = makeFunctionReference<"mutation">("connectors:markRefreshFailed");
+
+test("a Devin refresh records one SUCCESS attempt with its capture time", async () => {
+  const f = await devinFixture();
+  await f.t.mutation(apply, { subscriptionId: f.subscriptionId, activity: devinActivity("ORGANIZATION"), value: 4 });
+  expect(await f.attempts()).toEqual([expect.objectContaining({ subscriptionId: f.subscriptionId, provider: "DEVIN",
+    outcome: "SUCCESS", capturedAt: "2026-09-18T12:00:00.000Z" })]);
+});
+
+test("an ineligible Devin refresh records one SKIPPED attempt", async () => {
+  const f = await devinFixture();
+  await f.t.run(ctx => ctx.db.patch(f.connectorId, { status: "REVOKED" }));
+  await f.t.mutation(apply, { subscriptionId: f.subscriptionId, activity: devinActivity("ORGANIZATION"), value: 4 });
+  await f.t.mutation(markFailed, { subscriptionId: f.subscriptionId, message: "Devin API error: 500" });
+  expect(await f.attempts()).toEqual([
+    expect.objectContaining({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" }),
+    expect.objectContaining({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" }),
+  ]);
+});
+
+test("a rejected Devin scope rolls back and its failure records one attempt with a fixed class", async () => {
+  const f = await devinFixture();
+  await expect(f.t.mutation(apply, { subscriptionId: f.subscriptionId, activity: devinActivity("PERSONAL"), value: 4 }))
+    .rejects.toThrow("Refresh exceeds the approved metric or scope.");
+  expect(await f.attempts()).toEqual([]);
+  await f.t.mutation(markFailed, { subscriptionId: f.subscriptionId, message: "Refresh exceeds the approved metric or scope.", errorClass: "SCOPE_EXCEEDED" });
+  const rows = await f.attempts();
+  expect(rows).toEqual([expect.objectContaining({ outcome: "FAILURE", errorClass: "SCOPE_EXCEEDED" })]);
+  expect(JSON.stringify(rows)).not.toContain("Refresh exceeds");
+  expect((await f.t.run(ctx => ctx.db.get(f.subscriptionId)))?.lastError).toBe("Refresh exceeds the approved metric or scope.");
+});
+
+test("a Devin failure without a class records UNEXPECTED and never the provider message", async () => {
+  const f = await devinFixture();
+  await f.t.mutation(markFailed, { subscriptionId: f.subscriptionId, message: "Devin API error: 503" });
+  const rows = await f.attempts();
+  expect(rows).toEqual([expect.objectContaining({ outcome: "FAILURE", errorClass: "UNEXPECTED" })]);
+  expect(JSON.stringify(rows)).not.toContain("Devin API error");
+});

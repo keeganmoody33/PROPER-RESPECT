@@ -1,8 +1,10 @@
 # PROPER-RESPECT - Documentation Index
 
-> Updated: 2026-09-25
+> Updated: 2026-09-28
 >
-> Current scope: [V2 product motion](docs/002-v2-product-motion.md) — multi-user on proper-respect.com, preserving private evidence, owner-selected relationships and explicit publication.
+> Current scope: [V2 product motion](docs/002-v2-product-motion.md) and the owner decisions in [the brief, Section 3](docs/remediation/CODEX-BRIEF.md). One link, `proper-respect.com/{handle}`, shows the tools a person uses, tests and used before, plus the usage behind them. The collection is private first: nothing publishes without owner preview and approval. Public sign-up stays closed until the Phase 2 gate.
+>
+> Later, not built: `@mentions` and "put on by" lineage, a count of props received, and member subdomains or custom domains (#13). ADRs about them are marked **Later** below.
 
 ## Core Documents
 
@@ -47,18 +49,18 @@ its proposed feature is implemented or a launch requirement.
 | 005 | `docs/adr/005-manual-product-database.md` | User-driven product creation |
 | 006 | `docs/adr/006-data-retention-forever.md` | Preserve user-owned product history |
 | 008 | `docs/adr/008-product-rebrand-handling.md` | Rebrands keep product history continuous |
-| 009 | `docs/adr/009-manual-put-on-by.md` | Manual lineage is valid and important |
+| 009 | `docs/adr/009-manual-put-on-by.md` | **Later.** Manual lineage is valid and important |
 | 012 | `docs/adr/012-account-deletion.md` | Account deletion preserves graph integrity without exposing user identity |
-| 013 | `docs/adr/013-floating-lineage.md` | Lineage can point to people/content not on the platform |
+| 013 | `docs/adr/013-floating-lineage.md` | **Later.** Lineage can point to people/content not on the platform |
 | 014 | `docs/adr/014-free-products.md` | Free/open-source/no-account products belong |
 | 015 | `docs/adr/015-shared-accounts.md` | Shared accounts can still be logged as user relationships |
 | 016 | `docs/adr/016-seasonal-usage.md` | Seasonal tools can be represented without false activity |
-| 018 | `docs/adr/018-viral-loop.md` | Viral loop comes from profiles and put-on-by credit |
+| 018 | `docs/adr/018-viral-loop.md` | **Later.** Viral loop comes from profiles and put-on-by credit |
 | 019 | `docs/adr/019-search-discovery.md` | Simple DB search first |
 | 020 | `docs/adr/020-cold-start.md` | Cold start begins with Keegan's real stack |
 | 021 | `docs/adr/021-domain-branding.md` | Name/domain is not blocking; PROPER-RESPECT is working name |
 | 022 | `docs/adr/022-risk-register.md` | MVP risks and constraints |
-| 023 | `docs/adr/023-put-on-by-ui.md` | Put-on-by field model |
+| 023 | `docs/adr/023-put-on-by-ui.md` | **Later.** Put-on-by field model |
 | 024 | `docs/adr/024-onboarding-flow.md` | Manual-first onboarding with imports |
 | 028 | `docs/adr/028-chrome-extension.md` | Claim-on-visit extension, not background tracking |
 | 032 | `docs/adr/032-moderation.md` | Public content needs report/moderation paths |

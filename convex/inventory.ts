@@ -1,3 +1,4 @@
+import { relationshipLinks } from "./relationshipLinks";
 import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { paginationOptsValidator, type PaginationOptions } from "convex/server";
 import { v } from "convex/values";
@@ -5,6 +6,7 @@ import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/s
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
+import { readPublishedProfile } from "./publicProfiles";
 import { statusValidator } from "./validators";
 import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
 import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
@@ -107,7 +109,7 @@ export const list = query({
       const product = await ctx.db.get(prop.productId);
       if (!product) throw new Error("Product unavailable.");
       const brand = await retainedProductBrand(ctx, product);
-      const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").take(25);
+      const links = await relationshipLinks(ctx, prop._id);
       const latestEvent = await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", prop._id)).order("desc").first();
       const associatedAccountEvidence = includeAccountEvidence === false ? [] : await associatedAccountEvidenceForProp(ctx, user._id, prop._id, product.slug);
       return { prop, product: { ...product, brand }, links, associatedAccountEvidence,
@@ -117,6 +119,52 @@ export const list = query({
       };
     }));
     return { ...result, page };
+  },
+});
+
+function locatorRow(prop: Doc<"props">, product: Doc<"products">) {
+  return { propId: prop._id, productId: product._id, name: product.name, domain: product.domain,
+    status: prop.status, confirmed: isRelationshipConfirmed(prop), goTo: prop.goTo ?? false,
+    headline: prop.headline };
+}
+
+export const locator = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    const user = await requireUser(ctx);
+    const result = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id))
+      .paginate(boundedPage(paginationOpts, 25));
+    const page = await Promise.all(result.page.map(async prop => {
+      const product = await ctx.db.get(prop.productId);
+      return product ? locatorRow(prop, product) : null;
+    }));
+    return { ...result, page: page.filter(row => row !== null) };
+  },
+});
+
+export const detail = query({
+  args: { propId: v.string() },
+  handler: async (ctx, { propId }) => {
+    const user = await requireUser(ctx);
+    const id = ctx.db.normalizeId("props", propId);
+    const prop = id ? await ctx.db.get(id) : null;
+    if (!prop || prop.userId !== user._id) return null;
+    const product = await ctx.db.get(prop.productId);
+    if (!product) return null;
+    const brand = await retainedProductBrand(ctx, product);
+    const links = await relationshipLinks(ctx, prop._id);
+    return { prop, product: { ...product, brand }, links, associatedAccountEvidence: [], previousStatuses: [] };
+  },
+});
+
+export const related = query({
+  args: { propId: v.id("props"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { propId, paginationOpts }) => {
+    const { user, prop } = await ownedProp(ctx, propId);
+    const product = await ctx.db.get(prop.productId);
+    const result = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", user._id).eq("productId", prop.productId))
+      .paginate(boundedPage(paginationOpts, 25));
+    return { ...result, page: product ? result.page.map(row => locatorRow(row, product)) : [] };
   },
 });
 
@@ -185,5 +233,108 @@ export const history = query({
   handler: async (ctx, { propId, paginationOpts }) => {
     await ownedProp(ctx, propId);
     return ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", propId)).order("desc").paginate(boundedPage(paginationOpts, 25));
+  },
+});
+
+// Self-service export (R15). Owner-only, and each record comes from an explicit
+// allowlist so nothing secret is copied by accident: no retained original text,
+// storage references, upload tokens, connector credentials or raw requests.
+// Relationships and evidence are paged so a large history stays within
+// Convex's per-function read limits; the client assembles the pages.
+
+const EXPORT_HISTORY_LIMIT = 1000;
+const EXPORT_LINK_LIMIT = 100;
+
+export const exportProfile = query({
+  args: {},
+  handler: async ctx => {
+    const user = await requireUser(ctx);
+    const published = user.handle
+      ? await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique()
+      : null;
+    return {
+      handle: user.handle, displayName: user.displayName, bio: user.bio, avatarUrl: user.avatarUrl,
+      profileLinks: user.profileLinks, preferredLinkUrl: user.preferredLinkUrl,
+      onboardingStatus: user.onboardingStatus, createdAt: user.createdAt, updatedAt: user.updatedAt,
+      // The page as visitors see it: the public read drops old unsafe links, and a taken-down page shows nothing.
+      publicPage: published ? {
+        revision: published.revision, publishedAt: published.publishedAt, takenDown: Boolean(published.takenDownAt),
+        profile: published.takenDownAt ? null : await readPublishedProfile(ctx, published.handle),
+      } : null,
+    };
+  },
+});
+
+export const exportRelationships = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    const options = boundedPage(paginationOpts, 10);
+    const user = await requireUser(ctx);
+    const result = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).paginate(options);
+    const page = await Promise.all(result.page.map(async prop => {
+      const product = await ctx.db.get(prop.productId);
+      // One extra row shows whether anything was left out.
+      const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).take(EXPORT_LINK_LIMIT + 1);
+      const events = await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", prop._id)).take(EXPORT_HISTORY_LIMIT + 1);
+      return {
+        id: prop._id,
+        product: product ? { name: product.name, slug: product.slug, domain: product.domain } : null,
+        status: prop.status, visibility: prop.visibility, goTo: prop.goTo ?? false,
+        headline: prop.headline, note: prop.note, confirmedAt: prop.confirmedAt,
+        relationshipVersion: prop.relationshipVersion ?? 0, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
+        supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId,
+        activity: prop.activity, cost: prop.cost, costVisibility: prop.costVisibility,
+        links: links.slice(0, EXPORT_LINK_LIMIT).map(link => ({ type: link.type, url: link.url, label: link.label, isPrimary: link.isPrimary })),
+        linksComplete: links.length <= EXPORT_LINK_LIMIT,
+        history: events.slice(0, EXPORT_HISTORY_LIMIT).map(event => ({ version: event.version, recordedAt: event.recordedAt, basis: event.basis, before: event.before, after: event.after })),
+        historyComplete: events.length <= EXPORT_HISTORY_LIMIT,
+      };
+    }));
+    return { ...result, page };
+  },
+});
+
+// origin.artifactRef holds a storage id or content hash, which only locates files inside Proper Respect.
+function exportedProvenance(provenance: Doc<"rawEvidence">["captureProvenance"]) {
+  if (!provenance) return undefined;
+  const { issuer, accountId, recordId } = provenance.origin;
+  return { ...provenance, origin: { issuer, accountId, recordId } };
+}
+
+export const exportEvidence = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    // Reading a row reads its retained original too, so pages stay small to
+    // keep large mailbox captures within the per-function read limit.
+    const options = boundedPage(paginationOpts, 10);
+    const user = await requireUser(ctx);
+    const result = await ctx.db.query("rawEvidence").withIndex("by_user", q => q.eq("userId", user._id)).paginate(options);
+    const page = await Promise.all(result.page.map(async raw => {
+      const source = await ctx.db.get(raw.evidenceSourceId);
+      const identity = {
+        id: raw._id,
+        sourceType: source?.userId === user._id ? source.type : undefined,
+        sourceLabel: source?.userId === user._id ? source.label ?? source.type : undefined,
+        capturedAt: raw.capturedAt,
+      };
+      // A deleted original exports only that it existed and when it was deleted;
+      // its file details, links and extracted text go with it.
+      if (raw.deletedAt !== undefined) return { ...identity, deletedAt: raw.deletedAt };
+      return {
+        ...identity, sourceUrl: raw.sourceUrl, captureProvenance: exportedProvenance(raw.captureProvenance),
+        filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize,
+        detectedVendor: raw.detectedVendor, detectedUrl: raw.detectedUrl,
+        // Everything but the file's content hash.
+        retainedArtifact: raw.retainedArtifact ? {
+          kind: raw.retainedArtifact.kind, sourceFile: raw.retainedArtifact.sourceFile, byteLength: raw.retainedArtifact.byteLength,
+          sourceCapturedDate: raw.retainedArtifact.sourceCapturedDate, sourceCaptureBasis: raw.retainedArtifact.sourceCaptureBasis,
+          preparedAt: raw.retainedArtifact.preparedAt, adapterVersion: raw.retainedArtifact.adapterVersion,
+        } : undefined,
+        limitations: raw.limitations ?? [],
+        suggestedActivity: raw.suggestedActivity,
+        observations: raw.observations ?? [],
+      };
+    }));
+    return { ...result, page };
   },
 });

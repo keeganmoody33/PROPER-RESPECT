@@ -52,6 +52,24 @@ function renderCard(overrides: Partial<Card> = {}) {
   })));
 }
 
+test("a card's work-sample link sits on the back under the owner's label, and not on the front", () => {
+  const url = "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002";
+  const $ = renderCard({ usageLink: { url, label: "TUTORIAL" } });
+  const link = $(".card-back a.usage-link");
+  expect(link.attr("href")).toBe(url);
+  expect(link.attr("target")).toBe("_blank");
+  expect(link.attr("rel")).toBe("noopener noreferrer");
+  expect(link.text()).toBe("Tutorial ↗loom.com");
+  expect(link.attr("aria-label")).toBe("Tutorial, on loom.com (opens in a new tab)");
+  expect($(".card-front .usage-link")).toHaveLength(0);
+  expect($("iframe")).toHaveLength(0);
+});
+
+test("a stored work-sample link that isn't https never renders", () => {
+  const $ = renderCard({ usageLink: { url: "javascript:alert(1)", label: "DEMO" } });
+  expect($(".usage-link")).toHaveLength(0);
+});
+
 test.each([
   { name: "Wispr Flow", slug: "wisprflow", domain: "wisprflow.ai", path: "/product-assets/wisprflow/2026-09-21/app-icon.jpg" },
   { name: "Clay", slug: "clay", domain: "clay.com", path: "/product-assets/clay/2026-09-21/app-icon.png" },
@@ -73,9 +91,19 @@ test("an optional headline falls back to the saved owner explanation on the comp
 
 test("an owner-described product without a website needs neither an invented link nor telemetry", () => {
   const card = renderCard({ product: { ...baseCard.product, domain: "" }, primaryLink: undefined, activity: undefined });
-  expect(card("a")).toHaveLength(0);
+  // The only link left is the site's own explanation of evidence.
+  expect(card("a").not(".evidence-link")).toHaveLength(0);
   expect(card(".card-headline").text()).toBe(baseCard.headline);
   expect(card(".activity-placeholder")).toHaveLength(0);
+});
+
+test("the back of a card links to how evidence works; a brand preview doesn't", () => {
+  const link = renderCard()(".card-back a.evidence-link");
+  expect(link).toHaveLength(1);
+  expect(link.attr("href")).toBe("/about/methodology");
+  expect(link.text()).toBe("How evidence works");
+  const preview = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, displayMode: "brand-preview" })));
+  expect(preview("a.evidence-link")).toHaveLength(0);
 });
 
 test("a brand preview makes no owner relationship or activity claim", () => {
@@ -603,4 +631,13 @@ test("unknown product retains its initials fallback", () => {
   const $ = renderCard();
   expect($(".product-logo img")).toHaveLength(0);
   expect($(".product-logo").text()).toBe("EP");
+});
+
+test.each(["javascript:alert(1)", "data:text/html,x", "https://user:pass@example.com/"])("a %s primary link renders its label as plain text, never as a link", url => {
+  const card: Card = { ...baseCard, primaryLink: { type: "CANONICAL", url, label: "Visit Example Product" } };
+  const html = renderToStaticMarkup(createElement(ProductCard, { card, index: 0 }));
+  const $ = load(html);
+  expect(html).not.toContain(url);
+  expect($("a").filter((_, element) => $(element).text().includes("Visit Example Product"))).toHaveLength(0);
+  expect($.root().text()).toContain("Visit Example Product");
 });

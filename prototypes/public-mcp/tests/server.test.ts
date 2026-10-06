@@ -72,6 +72,16 @@ test("exact visible projection and explicit brand overlay exclude raw/private fi
   assert(publicToolResultSchema.safeParse(result).success);
 });
 
+test("a card's work-sample link reaches agents exactly as visitors see it", async () => {
+  const url = "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002";
+  const withLink = { ...fixture(), cards: fixture().cards.map((card, index) => index === 0 ? { ...card, usageLink: { url, label: "PROOF_OF_USE" as const } } : card) };
+  const result = await createPublicReader({ ...options, readPublished: async () => withLink })("keegan");
+  assert.equal(result.kind, "profile");
+  if (result.kind !== "profile") assert.fail();
+  assert.deepEqual(result.profile.cards[0].usageLink, { label: "Proof of use", url });
+  assert(publicToolResultSchema.safeParse(result).success);
+});
+
 test("invalid reference avoids read; missing and unpublished are indistinguishable; empty remains published", async () => {
   let reads = 0;
   const read = createPublicReader({ ...options, readPublished: async () => { reads++; return null; } });

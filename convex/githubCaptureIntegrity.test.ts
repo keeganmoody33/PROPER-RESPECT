@@ -233,6 +233,14 @@ test("Devin still uses its existing organization snapshot path", async () => {
   expect(after.connectors[0].provider).toBe("DEVIN"); expect(after.props[0].activity).toEqual(devin.activity);
 });
 
+test("an optional snapshot value stays required for a GitHub capture", async () => {
+  const { t, rows } = await fixture();
+  const before = await rows();
+  const { value, ...withoutValue } = args; void value;
+  await expect(t.mutation(save, withoutValue)).rejects.toThrow("Invalid GitHub snapshot metric or identity.");
+  expect(await rows()).toEqual(before);
+});
+
 test("capture preserves selected evidence, existing publication and revoked refresh consent", async () => {
   const { t, ids, rows } = await fixture(1, "PUBLIC");
   await t.run(async ctx => {

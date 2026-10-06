@@ -1,10 +1,22 @@
 import { z } from "zod";
 
 export const PROFILE_LINK_LIMIT = 8;
-export const profileLinkUrlSchema = z.string().trim().max(2048).url().refine(value => {
-  const url = new URL(value);
-  return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password;
-}, "Use an http or https link without embedded credentials.");
+
+/**
+ * Only http and https links without embedded credentials are published or
+ * rendered; javascript:, data:, user:pass@ and the rest never are.
+ */
+export function isHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+// Zod still runs this refine after a failed url check, so it must not throw.
+export const profileLinkUrlSchema = z.string().trim().max(2048).url()
+  .refine(isHttpUrl, "Use an http or https link without embedded credentials.");
 export const profileLinksSchema = z.array(z.object({
   label: z.string().trim().min(1).max(60),
   url: profileLinkUrlSchema,

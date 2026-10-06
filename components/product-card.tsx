@@ -11,6 +11,8 @@ import type {
 } from "@/src/domain/public-profile";
 import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
 import { compactNumber } from "@/src/domain/format-activity-number";
+import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
+import { isHttpUrl } from "@/src/domain/profile-links";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
@@ -405,6 +407,11 @@ export function ProductCard({
   const linkDisclosure = card.primaryLink?.type === "AFFILIATE" ? "Affiliate link"
     : card.primaryLink?.type === "REFERRAL" ? "Referral link" : undefined;
   const linkRel = linkDisclosure ? "noopener noreferrer sponsored" : "noopener noreferrer";
+  // Only an http or https destination becomes a link; any other keeps its label as plain text.
+  const webLink = card.primaryLink && isHttpUrl(card.primaryLink.url) ? card.primaryLink : undefined;
+  // The owner's work-sample link, checked again here so a stored non-https
+  // value never becomes a link.
+  const usageLink = !brandPreview && card.usageLink && usageLinkSchema.safeParse(card.usageLink).success ? card.usageLink : undefined;
   const cardStatus = brandPreview ? "BRAND PREVIEW" : relationshipConfirmed ? card.status : "PRIVATE DISCOVERY";
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
   const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : "Relationship & evidence";
@@ -470,12 +477,12 @@ export function ProductCard({
             <h2 className={verifiedAssets ? "card-product-name" : undefined}>{card.product.name}</h2>
             {verifiedAssets && <ProductLogo verifiedAssets={verifiedAssets} mark={card.product.name} surface={appearance.surface} />}
           </div>
-          {card.primaryLink && <div className="card-destination"><a
+          {webLink && <div className="card-destination"><a
             className="card-visit"
-            href={card.primaryLink.url}
+            href={webLink.url}
             target="_blank"
             rel={linkRel}
-            aria-label={`${card.primaryLink.label}${linkDisclosure ? ` · ${linkDisclosure}` : ""} (opens in a new tab)`}
+            aria-label={`${webLink.label}${linkDisclosure ? ` · ${linkDisclosure}` : ""} (opens in a new tab)`}
           >
             ↗
           </a>{linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}</div>}
@@ -549,6 +556,16 @@ export function ProductCard({
             <ActivityView activity={card.activity} />
           </>}
           {ownerUsage && <PrivateUsageCardDetails usage={ownerUsage} />}
+          {usageLink && <a
+            className="usage-link"
+            href={usageLink.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${usageLinkLabelText(usageLink.label)}, on ${usageLinkHost(usageLink.url)} (opens in a new tab)`}
+          >
+            <span>{usageLinkLabelText(usageLink.label)} ↗</span>
+            <span className="usage-link-host">{usageLinkHost(usageLink.url)}</span>
+          </a>}
           {brandPreview && brand && <details className="card-brand-provenance" open>
             <summary>Brand provenance</summary>
             <ProductBrandDetails snapshot={brand} />
@@ -568,15 +585,18 @@ export function ProductCard({
               </dl>
             </section>
           </details>}
-          {card.primaryLink && <a
+          {webLink ? <a
             className="outbound-link"
-            href={card.primaryLink.url}
+            href={webLink.url}
             rel={linkRel}
             target="_blank"
           >
-            {card.primaryLink.label} ↗
+            {webLink.label} ↗
             {linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}
-          </a>}
+          </a> : card.primaryLink && <span className="outbound-link">{card.primaryLink.label}</span>}
+          {/* The card also renders without a Next.js router (standalone bundles), so a plain link. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          {!brandPreview && <a className="evidence-link" href="/about/methodology">How evidence works</a>}
         </div>
       </section>
     </article>

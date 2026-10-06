@@ -1,9 +1,11 @@
 # Deployment runbook
 
-Updated: 2026-09-23. Production uses separate accepted backend and frontend
-sources. Main contains changes still held from production. Use the
-[release reconciliation](verification/2026-09-23-release-documentation-reconciliation.md)
-for exact identities and the selective-release evidence before preparing a release.
+Updated: 2026-09-28. Releases ship `main` at a pushed `v*` tag through
+`.github/workflows/release.yml`: the Convex backend first, then the Vercel
+frontend, each after the owner approves it in its GitHub environment. The first
+release is [v0.2.0](releases/v0.2.0.md); later ones follow
+[the template](releases/TEMPLATE.md). The earlier selective-release procedure
+below is historical.
 
 ## Current public origin
 
@@ -31,11 +33,21 @@ URIs, Convex auth issuers, or `MAILBOX_APPLICATION_ORIGIN`.
 
 ## Deployment controls
 
-`vercel.json` sets `git.deploymentEnabled` to `false`. Git pushes do not create
-preview or production deployments. Its build command still runs
-`npm run deploy:check && npx convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL`.
-A manual Vercel deployment with that command also synchronizes Convex. Do not
-use it for a frontend-only release or remove the Git guard to obtain a PR check.
+`vercel.json` sets `git.deploymentEnabled` to `false`, so Git pushes create no
+preview or production deployment. Its build command is
+`npm run deploy:check && npm run build`: a Vercel build is frontend-only and
+never deploys Convex. The backend deploys only from the release workflow's
+`backend` job, with `CONVEX_DEPLOY_KEY` from the `production-backend` GitHub
+environment. The release's `verify` job stops unless both
+`production-backend` and `production-frontend` exist with the repository owner as
+their only required reviewer, and every action it uses is pinned to a commit.
+Each secret is passed only to the steps that run its CLI, and the first of
+those checks the secret before the CLI starts. That check can't tell where the
+secret came from,
+so keep the secrets in their environments and delete any repository or
+organization secret with the same name. The frontend job runs the Vercel CLI
+pinned in `release-tools/`. Don't remove the Git guard to obtain a PR check;
+previews wait for R30.
 
 PROPER-RESPECT has three configuration boundaries:
 
@@ -61,7 +73,12 @@ use a `NEXT_PUBLIC_` prefix.
 | `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | Vercel | No | `/onboarding` |
 | `CLERK_FRONTEND_API_URL` | Convex production | No | Clerk issuer used by `convex/auth.config.ts` |
 | `CONNECTOR_ENCRYPTION_KEY` | Convex production | Yes | Encrypts stored connector credentials |
-| `CONVEX_DEPLOY_KEY` | Vercel build or CI only | Yes | Authorizes non-interactive Convex deploys |
+| `CONVEX_DEPLOY_KEY` | GitHub environment `production-backend` only | Yes | Release workflow's backend deploy; needs `deployment:deploy` and `deployment:env:write`. Before v0.2.0, delete the old key from every Vercel environment ([setup item 6](releases/v0.2.0.md#one-time-setup)); after its backend deploy, revoke it in Convex ([step 7](releases/v0.2.0.md#7-revoke-the-old-deploy-key)) |
+| `VERCEL_TOKEN` | GitHub environment `production-frontend` (secret) | Yes | Release workflow's frontend deploy |
+| `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | GitHub environment `production-frontend` (variables) | No | Identify the Vercel team and project for the release workflow |
+| `PUBLIC_CONVEX_URL` | GitHub repository variable | No | Production Convex URL; the release refuses a deploy key for any other deployment, and the receipt witness (R11) reads it |
+| `PUBLIC_HANDLE` | GitHub repository variable | No | Profile path the release smoke test requests (`lecturesfrom`) |
+| `DEPLOYED_SHA` | Convex production, set by the release workflow | No | Commit recorded on refresh ledger rows (R08) |
 | `CONTEXT_DEV_API_KEY` | Convex runtime; ignored local env for operator verification | Yes | Fetches product brand presentation; supplies no owner evidence |
 
 `CLERK_JWT_ISSUER_DOMAIN` remains a compatibility alias for
@@ -171,9 +188,9 @@ Copy the Vercel variables from `.env.example`, replacing placeholders with the
 production Convex URL and matching Clerk live keys. Apply them to Production
 and to any Preview environment that is intended to exercise authentication.
 
-If Vercel deploys Convex during the build, add a production or preview
-`CONVEX_DEPLOY_KEY` with the appropriate scope. Never prefix it with
-`NEXT_PUBLIC_`.
+The Vercel build no longer deploys Convex, so it needs no `CONVEX_DEPLOY_KEY`.
+The release workflow holds that key in its `production-backend` environment.
+Never prefix it with `NEXT_PUBLIC_`.
 
 Run the local check before deploying:
 
@@ -194,7 +211,19 @@ npm run deploy:check:strict
 The check reports variable names and validation errors only; it never prints
 credential values.
 
-## Prepare a selective release
+## Release a tagged version
+
+Follow [the release template](releases/TEMPLATE.md), or
+[v0.2.0](releases/v0.2.0.md) for the first release. In short: push a `v*` tag on
+`main`, approve `backend`, run any listed migration, approve `frontend`, then
+verify. The workflow refuses a tag that is not on `main`, and the frontend job
+fails unless `proper-respect.com` is an alias of the new deployment and the
+smoke-test routes return 200.
+
+## Historical: prepare a selective release
+
+Used before R10 (September 2026). Kept for the record; don't use it for new
+releases.
 
 1. Record the accepted backend and frontend from the release reconciliation.
    Compare the proposed source with each baseline. Exclude the held runtime
@@ -251,7 +280,12 @@ After an explicitly approved application/backend release:
 
 ## Rollback
 
-Updated: 2026-09-21 UTC.
+Updated: 2026-09-28 UTC.
+
+- Use Vercel **Instant Rollback** for the frontend. On the Hobby plan it can only
+  return to the previous production deployment. Afterwards, Vercel stops giving
+  the production domain to new deployments until one is promoted, so the next
+  release starts with `vercel promote` ([template](releases/TEMPLATE.md)).
 
 - Roll back the frontend first to an approved, known-good Vercel deployment,
   retaining the secured Convex backend and additive schema. Restoring a frontend
@@ -321,6 +355,14 @@ Prerequisites for an operator-authorized development run:
   provision privately, never commit its output. Keep old versions available
   while their envelopes exist. Gmail keys are separate from the legacy
   `CONNECTOR_ENCRYPTION_KEY`.
+- Configure `MAILBOX_GOOGLE_TEST_EMAILS` in Convex (R16): the sign-in emails
+  allowed to add or reconnect a Gmail account, separated by commas. Matching
+  ignores case. **A missing or empty value allows nobody**, so set it in every
+  deployment that should offer Gmail, including development. Keep it to the
+  owner and the invited testers, the same accounts listed as Google test users.
+  Others don't see **Add Gmail account**, and `mailboxGoogle.start` refuses
+  them before any authorization begins. Gmail accounts that are already
+  connected keep working. To cut one off, disconnect it.
 - Enable the Gmail API and configure consent/test-user access for the
   requested `openid`, `email`, and `gmail.readonly` scopes. Public release
   depends on Google's applicable restricted-scope verification requirements.

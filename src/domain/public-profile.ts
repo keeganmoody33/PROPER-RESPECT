@@ -1,6 +1,7 @@
 import { profileLinksSchema, profileLinkUrlSchema } from "./profile-links";
 import { z } from "zod";
 import { costSchema, type Cost, type CostVisibility } from "./cost";
+import { usageLinkSchema, type UsageLink } from "./usage-links";
 import { productBrandSnapshotSchema } from "./product-brand";
 
 export const handleSchema = z
@@ -159,6 +160,9 @@ export const publicProfileSchema = z.object({
         url: z.url(),
         label: z.string().min(1),
       }).optional(),
+      // The owner's work-sample link, shown on the back of the card under the
+      // label they picked. Only the link is kept.
+      usageLink: usageLinkSchema.optional(),
     }),
   ),
 });
@@ -197,6 +201,7 @@ export type CuratedProp = {
   links: Array<NonNullable<PublicProfile["cards"][number]["primaryLink"]> & {
     isPrimary: boolean;
   }>;
+  usageLink?: UsageLink;
 };
 
 export function projectPublicProfile(input: {
@@ -223,6 +228,7 @@ export function projectPublicProfile(input: {
           url: primaryLink.url,
           label: primaryLink.label,
         } : undefined,
+        usageLink: prop.usageLink,
       },
     ];
   });

@@ -4,7 +4,6 @@ import { ProfileName, ProfileLinks } from "@/components/profile-identity";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
-import { ZodError } from "zod";
 import { ProductCard } from "@/components/product-card";
 import { getPublicProfile } from "@/src/data/get-public-profile";
 import { publicPageMetadata } from "@/src/server/public-site";
@@ -30,13 +29,9 @@ export async function generateMetadata({
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { handle: rawHandle } = await params;
 
-  let profile;
-  try {
-    profile = await getPublicProfile(rawHandle);
-  } catch (error) {
-    if (error instanceof ZodError) notFound();
-    throw error;
-  }
+  // An invalid handle or an unpublished profile is absent (404). A malformed
+  // payload or an unavailable backend throws to ./error.tsx instead.
+  const profile = await getPublicProfile(rawHandle);
 
   if (!profile) notFound();
   if (profile.handle !== rawHandle) permanentRedirect(`/${profile.handle}`);
@@ -80,6 +75,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <div>
           <span>@{profile.handle}</span>
         </div>
+        <a href={`mailto:33@lecturesfrom.com?subject=${encodeURIComponent(`Report proper-respect.com/${profile.handle}`)}`}>
+          Report this page
+        </a>
         <Link href="/app/collection">Open your private collection →</Link>
       </footer>
     </main>

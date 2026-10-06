@@ -11,6 +11,7 @@ import {
   claimVerdictValidator,
   activityModuleValidator,
   attributionScopeValidator,
+  refreshErrorClassValidator,
   publicProfileValidator,
   profileLinkValidator,
   statusValidator,
@@ -47,6 +48,19 @@ export default defineSchema({
     .index("by_seed_key", ["seedKey"])
     .index("by_auth_subject", ["authSubject"])
     .index("by_handle", ["handle"]),
+
+  rateLimits: defineTable({
+    userId: v.id("users"),
+    operation: v.union(
+      v.literal("claimHandle"),
+      v.literal("addManualProduct"),
+      v.literal("beginUpload"),
+      v.literal("publishSelected"),
+      v.literal("connectGithub"),
+    ),
+    windowStart: v.number(),
+    count: v.number(),
+  }).index("by_user_operation", ["userId", "operation"]),
 
   products: defineTable({
     seedKey: v.optional(v.string()),
@@ -109,7 +123,8 @@ export default defineSchema({
     isPrimary: v.boolean(),
   })
     .index("by_seed_key", ["seedKey"])
-    .index("by_prop", ["propId"]),
+    .index("by_prop", ["propId"])
+    .index("by_prop_primary", ["propId", "isPrimary"]),
 
   sites: defineTable({
     seedKey: v.optional(v.string()),
@@ -346,6 +361,22 @@ export default defineSchema({
     .index("by_connector", ["connectorId"])
     .index("by_prop_metric", ["propId", "metricKey"]),
 
+  // Append-only record of every scheduled refresh attempt (R08). It holds a
+  // fixed error class, never provider text, tokens or response bodies.
+  refreshAttempts: defineTable({
+    subscriptionId: v.id("metricSubscriptions"),
+    userId: v.id("users"),
+    propId: v.id("props"),
+    // UNKNOWN when the connector is missing or unsupported and the metric key
+    // is neither github.contributions nor devin.sessions.
+    provider: v.union(v.literal("GITHUB"), v.literal("DEVIN"), v.literal("UNKNOWN")),
+    attemptedAt: v.string(),
+    outcome: v.union(v.literal("SUCCESS"), v.literal("FAILURE"), v.literal("SKIPPED")),
+    capturedAt: v.optional(v.string()),
+    errorClass: v.optional(refreshErrorClassValidator),
+    sourceVersion: v.string(),
+  }).index("by_subscription_attemptedAt", ["subscriptionId", "attemptedAt"]),
+
   artifacts: defineTable({
     userId: v.id("users"),
     propId: v.id("props"),
@@ -374,5 +405,9 @@ export default defineSchema({
     // Private relationship identity; never part of the public card projection.
     // Null preserves a legacy card whose relationship cannot be resolved safely.
     cardPropIds: v.optional(v.array(v.union(v.id("props"), v.null()))),
+    // Operator takedown (R06). Set, the profile and its aliases read as absent
+    // and publishing is refused until an operator restores it.
+    takenDownAt: v.optional(v.string()),
+    takedownReason: v.optional(v.string()),
   }).index("by_handle", ["handle"]),
 });

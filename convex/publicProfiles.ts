@@ -1,8 +1,10 @@
-import { query, type QueryCtx } from "./_generated/server";
+import { internalMutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1 } from "../src/domain/public-profile";
+import { isHttpUrl } from "../src/domain/profile-links";
+import { PUBLISHED_URL_MAX } from "../src/domain/published-text-limits";
 
 const cardValidator = publicProfileValidator.fields.cards.element;
 const publicProfileV1Validator = v.object({
@@ -22,6 +24,7 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
     .unique();
 
   if (!published || (alias && alias.publicationId !== published._id)) return null;
+  if (published.takenDownAt) return null;
   // Only presentation is refreshed. The owner's published evidence and
   // relationship projection stays byte-for-byte unchanged in storage.
   // Read only the products in this profile, once per slug. Avoid scanning the
@@ -32,7 +35,9 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
       return [slug, product ? { domain: product.domain, brand: await retainedProductBrand(ctx, product) } : null] as const;
     }),
   ));
-  const cards = published.profile.cards.map(card => {
+  // Links from before the http(s) rule are dropped on read; storage is unchanged.
+  const cards = published.profile.cards.map(stored => {
+    const card = stored.primaryLink && !isHttpUrl(stored.primaryLink.url) ? { ...stored, primaryLink: undefined } : stored;
     if (card.product.brand?.provider === "context.dev" && productBrandEligibility(card.product) === "PRODUCT_IDENTITY_REQUIRED") {
       const product = { ...card.product };
       delete product.brand;
@@ -42,7 +47,15 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
     return retained?.brand && retained.domain === card.product.domain
       ? { ...card, product: { ...card.product, brand: retained.brand } } : card;
   });
-  return { ...published.profile, cards };
+  const { avatarUrl, profileLinks, preferredLinkUrl, ...profile } = published.profile;
+  const links = profileLinks?.filter(link => isHttpUrl(link.url));
+  return {
+    ...profile,
+    ...(avatarUrl !== undefined && isHttpUrl(avatarUrl) && avatarUrl.length <= PUBLISHED_URL_MAX ? { avatarUrl } : {}),
+    ...(links !== undefined ? { profileLinks: links } : {}),
+    ...(preferredLinkUrl !== undefined && links?.some(link => link.url === preferredLinkUrl) ? { preferredLinkUrl } : {}),
+    cards,
+  };
 }
 
 /** Compatibility endpoint for deployed readers that dereference primaryLink. */
@@ -60,4 +73,51 @@ export const getByHandleV2 = query({
   args: { handle: v.string() },
   returns: v.union(publicProfileValidator, v.null()),
   handler: (ctx, { handle }) => readPublishedProfile(ctx, handle),
+});
+
+const TAKEDOWN_REASON_MAX = 500;
+
+/** The publication a reported URL shows: its own handle, or an alias's target. */
+async function reportedPublication(ctx: MutationCtx, handle: string) {
+  const direct = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", handle)).unique();
+  if (direct) return direct;
+  const alias = await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).unique();
+  const target = alias ? await ctx.db.get(alias.publicationId) : null;
+  if (!target || target.handle !== alias?.targetHandle) throw new Error("No published profile has that handle.");
+  return target;
+}
+
+/**
+ * Operator takedown, run from the Convex CLI (docs/runbooks/takedown.md).
+ * Storage keeps the snapshot so a restore returns it unchanged.
+ */
+export const takeDownHandle = internalMutation({
+  args: { handle: v.string(), reason: v.string(), dryRun: v.boolean() },
+  handler: async (ctx, args) => {
+    const reason = args.reason.trim();
+    if (!reason) throw new Error("Record why the profile is being taken down.");
+    if (reason.length > TAKEDOWN_REASON_MAX) throw new Error(`Keep the reason within ${TAKEDOWN_REASON_MAX} characters.`);
+    const publication = await reportedPublication(ctx, args.handle);
+    const summary = { handle: publication.handle, revision: publication.revision, cardCount: publication.profile.cards.length };
+    if (publication.takenDownAt) {
+      return { status: "already-taken-down" as const, ...summary,
+        takenDownAt: publication.takenDownAt, takedownReason: publication.takedownReason };
+    }
+    if (args.dryRun) return { status: "ready" as const, ...summary };
+    await ctx.db.patch(publication._id, { takenDownAt: new Date().toISOString(), takedownReason: reason });
+    return { status: "taken-down" as const, ...summary };
+  },
+});
+
+export const restoreHandle = internalMutation({
+  args: { handle: v.string(), dryRun: v.boolean() },
+  handler: async (ctx, args) => {
+    const publication = await reportedPublication(ctx, args.handle);
+    const summary = { handle: publication.handle, revision: publication.revision, cardCount: publication.profile.cards.length };
+    if (!publication.takenDownAt) return { status: "not-taken-down" as const, ...summary };
+    const record = { takenDownAt: publication.takenDownAt, takedownReason: publication.takedownReason };
+    if (args.dryRun) return { status: "ready" as const, ...summary, ...record };
+    await ctx.db.patch(publication._id, { takenDownAt: undefined, takedownReason: undefined });
+    return { status: "restored" as const, ...summary, ...record };
+  },
 });

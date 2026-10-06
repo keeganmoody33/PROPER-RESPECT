@@ -1,5 +1,17 @@
 import { expect, test } from "@playwright/test";
 
+for (const width of [1280, 390]) test(`homepage titles match the approved brand wording at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 844 });
+  const response = await page.goto("/");
+  expect(response?.status()).toBe(200);
+  const title = "Proper Respect: Your tools. Your track record.";
+  await expect.soft(page).toHaveTitle(title);
+  await expect.soft(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
+  await expect.soft(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", title);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example");
+  await expect(page.locator('link[rel="alternate"][type="text/markdown"]')).toHaveAttribute("href", "https://public.example/index.md");
+});
+
 test("share-image remains a profile path, not a reserved image endpoint", async ({ request }) => {
   const response = await request.get("/share-image");
   expect(response.status()).toBe(404);

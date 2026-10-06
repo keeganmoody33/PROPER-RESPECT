@@ -118,3 +118,34 @@ it("omits unrendered labels and units from an empty time series", () => {
   expect(JSON.stringify(projected)).not.toMatch(/HIDDEN_EMPTY_/);
   expect(projected.cards[0].activity).toMatchObject({ kind: "timeSeries", points: [], emptyNote: "No observations supplied" });
 });
+
+it("carries a card's work-sample link as its visible label and URL, and drops a stored link that isn't https", () => {
+  const url = "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002";
+  const base = profile();
+  const withLink = { ...base, cards: [{ ...base.cards[0], usageLink: { url, label: "TUTORIAL" as const } }] };
+  expect(projectVisiblePublicProfile(withLink).cards[0].usageLink).toEqual({ label: "Tutorial", url });
+  const tampered = { ...base, cards: [{ ...base.cards[0], usageLink: { url: "javascript:alert(1)", label: "DEMO" as const } }] };
+  expect(projectVisiblePublicProfile(tampered).cards[0]).not.toHaveProperty("usageLink");
+  expect(projectVisiblePublicProfile(base).cards[0]).not.toHaveProperty("usageLink");
+});
+
+describe("link schemes", () => {
+  it.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/", "https://user:pass@example.com/"])("omits a %s primary link from the visitor projection", url => {
+    const source = profile(); source.cards[0].primaryLink = { type: "CANONICAL", label: "Visit example", url };
+    const result = projectVisiblePublicProfile(source);
+    expect(result.cards[0].primaryLink).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain(url);
+  });
+});
+
+describe("profile link schemes", () => {
+  it("drops non-http(s) profile links and never derives a name link from one", () => {
+    const source = profile();
+    source.profileLinks = [{ label: "Bad", url: "javascript:alert(1)" }, { label: "Website", url: "https://example.com/" }];
+    source.preferredLinkUrl = "javascript:alert(1)";
+    const result = projectVisiblePublicProfile(source);
+    expect(result.profileLinks).toEqual([{ label: "Website", url: "https://example.com/" }]);
+    expect(result.nameLink).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain("javascript:");
+  });
+});

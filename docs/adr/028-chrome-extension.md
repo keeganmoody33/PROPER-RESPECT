@@ -2,6 +2,8 @@
 
 > **Status correction — 2026-09-20:** Unimplemented future extension proposal; not part of current launch acceptance and not permission for device/browser collection. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
 
+> **Owner decision, 2026-09-25:** un-deferred. The owner approved building a browser extension as Z7 of the Zero-Entry Cards spec. It is still unimplemented and not part of current launch acceptance. Its permissions and what it captures get decided in that task's own review.
+
 ## Status
 Accepted - revised 2026-06-06
 

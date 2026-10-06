@@ -87,6 +87,8 @@ September 19 decision within Tasks 2/4. The owner supplied an outside discussion
 
 **Deferred:** new metering proxies, device agents, billing optimization, employer-context tables and automatic collection schedules. OpenTelemetry may inform a future AI-metric adapter; it does not replace the canonical evidence/relationship model. This decision changes no application behavior, records, source permissions or release gates.
 
+**Owner decision, 2026-09-25:** the browser extension is no longer deferred. It may be built as Z7 of the Zero-Entry Cards spec, through its own reviewed task (see [ADR 028](adr/028-chrome-extension.md)). Desktop collectors and other device agents stay deferred until the owner decides.
+
 ## Continuation inside the existing tasks
 
 The Gmail recognized-product gate is closed. Its four-page authorization is exhausted; further mailbox reads remain paused and maintenance remains off. Historical email discovery remains useful but is not a prerequisite to displaying direct product activity or owner-described relationships.

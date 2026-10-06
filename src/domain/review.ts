@@ -1,18 +1,58 @@
 import type { ActivityModule, CuratedProp } from "./public-profile";
 import type { Cost, CostVisibility } from "./cost";
 import { canonicalJson } from "./canonical-json";
+import { DEFAULT_USAGE_LINK_LABEL, usageLinkUrlSchema, type UsageLink, type UsageLinkLabel } from "./usage-links";
 
 export type ReviewCard = {
-  prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & { relationshipVersion?: number };
-  product: { domain: string };
+  prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & {
+    relationshipVersion?: number;
+    supportingUrl?: string;
+  };
+  product: { domain: string; slug?: string };
   links: CuratedProp["links"];
   isPublishedAtCurrentHandle?: boolean;
   publishedActivity?: ActivityModule;
+  publishedUsageLink?: UsageLink;
+  // An active daily GitHub refresh approved for this card (R09).
+  refreshApproved?: boolean;
 };
+
+export type RefreshConnector = { _id: string; provider: string; status: string; attributionScope: string };
 
 function reviewBasis(card: ReviewCard) {
   return canonicalJson({ version: card.prop.relationshipVersion ?? 0, activity: card.prop.activity,
-    isPublishedAtCurrentHandle: card.isPublishedAtCurrentHandle === true, publishedActivity: card.publishedActivity });
+    isPublishedAtCurrentHandle: card.isPublishedAtCurrentHandle === true, publishedActivity: card.publishedActivity,
+    publishedUsageLink: card.publishedUsageLink, refreshApproved: card.refreshApproved === true });
+}
+
+/** The saved work-sample link when it can go on the card. */
+export function reviewUsageLink(card: ReviewCard) {
+  const url = card.prop.supportingUrl;
+  return url && usageLinkUrlSchema.safeParse(url).success ? url : null;
+}
+
+function refreshesPublishedCalendar(card: ReviewCard) {
+  return card.isPublishedAtCurrentHandle === true && card.refreshApproved === true &&
+    card.publishedActivity?.kind === "contributionCalendar";
+}
+
+/**
+ * The activity a publish sends. A refresh updates only the public card of a
+ * privately saved relationship, so while it stays on, the newer public calendar
+ * is kept rather than the older saved one (R09).
+ */
+export function reviewActivity(card: ReviewCard, edit: Pick<ReviewEdit, "autoRefresh">) {
+  return edit.autoRefresh && refreshesPublishedCalendar(card) ? card.publishedActivity : card.prop.activity;
+}
+
+/** The personal GitHub connection a daily refresh would use, when this card may offer one. */
+export function githubRefreshConnector<T extends RefreshConnector>(card: ReviewCard, connectors: readonly T[], edit: ReviewEdit) {
+  if (card.product.slug !== "github" || !edit.publish || !edit.approveActivity) return undefined;
+  const activity = reviewActivity(card, edit);
+  if (activity?.kind !== "contributionCalendar" || activity.attributionScope !== "PERSONAL") return undefined;
+  // The same connector states the scheduled refresh accepts (convex/connectors.ts).
+  return connectors.find(connector => connector.provider === "GITHUB" && connector.attributionScope === "PERSONAL" &&
+    (connector.status === "CONNECTED" || connector.status === "ERROR"));
 }
 
 export function isCurrentReview(card: ReviewCard, edit: ReviewEdit) {
@@ -53,6 +93,10 @@ export function setReviewCostVisibility<T extends ReviewCard & { prop: { _id: st
 // Opening review must not promote a proposed relationship or change the owner's link.
 export function defaultReview(card: ReviewCard) {
   const primary = card.links.find(link => link.isPrimary);
+  // The link goes public only by choice: kept when this card already shows
+  // this same link, off otherwise.
+  const keepsUsageLink = card.isPublishedAtCurrentHandle === true && card.publishedUsageLink !== undefined &&
+    card.publishedUsageLink.url === card.prop.supportingUrl;
   return {
     basis: reviewBasis(card),
     publish: card.isPublishedAtCurrentHandle === true,
@@ -63,9 +107,11 @@ export function defaultReview(card: ReviewCard) {
     linkUrl: primary?.url ?? (card.product.domain ? `https://${card.product.domain}` : ""),
     linkType: primary?.type ?? "CANONICAL" as const,
     linkLabel: primary?.label ?? "Open product",
-    approveActivity: card.isPublishedAtCurrentHandle === true && Boolean(card.publishedActivity) &&
-      canonicalJson(card.prop.activity) === canonicalJson(card.publishedActivity),
-    autoRefresh: false,
+    approveActivity: refreshesPublishedCalendar(card) || (card.isPublishedAtCurrentHandle === true && Boolean(card.publishedActivity) &&
+      canonicalJson(card.prop.activity) === canonicalJson(card.publishedActivity)),
+    includeUsageLink: keepsUsageLink,
+    usageLinkLabel: (keepsUsageLink ? card.publishedUsageLink!.label : DEFAULT_USAGE_LINK_LABEL) as UsageLinkLabel,
+    autoRefresh: refreshesPublishedCalendar(card),
     costAmount: card.prop.cost?.amount.toString() ?? "",
     costCurrency: card.prop.cost?.currency ?? "USD",
     costCadence: card.prop.cost?.cadence ?? "MONTHLY" as Cost["cadence"],

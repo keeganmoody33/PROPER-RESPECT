@@ -1,6 +1,8 @@
 import type { ActivityModule, PublicProfile } from "./public-profile";
 import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
+import { usageLinkLabelText, usageLinkSchema } from "./usage-links";
+import { isHttpUrl } from "./profile-links";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;
@@ -44,6 +46,8 @@ export type VisiblePublicProfile = Readonly<{
       period?: VisiblePeriod;
     }>;
     primaryLink?: Readonly<{ type: "CANONICAL" | "AFFILIATE" | "REFERRAL" | "INVITE"; label: string; url: string; disclosure?: string }>;
+    // The work-sample link on the back of the card, with its label as visitors read it.
+    usageLink?: Readonly<{ label: string; url: string }>;
   }>[];
   emptyNote?: string;
 }>;
@@ -98,10 +102,11 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
 }
 
 export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePublicProfile {
-  const nameLink = profile.profileLinks?.find(link => link.url === profile.preferredLinkUrl)?.url;
+  const profileLinks = (profile.profileLinks ?? []).filter(link => isHttpUrl(link.url));
+  const nameLink = profileLinks.find(link => link.url === profile.preferredLinkUrl)?.url;
   return {
     handle: profile.handle, displayName: profile.displayName, bio: profile.bio,
-    profileLinks: (profile.profileLinks ?? []).map(link => ({ label: link.label, url: link.url })),
+    profileLinks: profileLinks.map(link => ({ label: link.label, url: link.url })),
     ...(nameLink ? { nameLink } : {}),
     cards: profile.cards.map(card => ({
       product: { name: card.product.name, description: card.product.description },
@@ -115,11 +120,13 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
         basis: card.cost.basis, cadence: card.cost.cadence, asOf: card.cost.asOf,
         ...(card.cost.period ? { period: { start: card.cost.period.start, end: card.cost.period.end } } : {}),
       } } : {}),
-      ...(card.primaryLink ? { primaryLink: {
+      ...(card.primaryLink && isHttpUrl(card.primaryLink.url) ? { primaryLink: {
         type: card.primaryLink.type, label: card.primaryLink.label, url: card.primaryLink.url,
         ...(card.primaryLink.type === "AFFILIATE" ? { disclosure: "Affiliate link" }
           : card.primaryLink.type === "REFERRAL" ? { disclosure: "Referral link" } : {}),
       } } : {}),
+      ...(card.usageLink && usageLinkSchema.safeParse(card.usageLink).success
+        ? { usageLink: { label: usageLinkLabelText(card.usageLink.label), url: card.usageLink.url } } : {}),
     })),
     ...(profile.cards.length === 0 ? { emptyNote: "No published products yet. Draft and private records stay off this page." } : {}),
   };

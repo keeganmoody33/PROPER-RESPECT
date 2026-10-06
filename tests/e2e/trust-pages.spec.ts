@@ -6,6 +6,8 @@ const pages = [
   ["origins", "Giving credit its context"],
   ["contact", "Contact Proper Respect"],
   ["privacy", "How your data is handled"],
+  ["terms", "Terms of use"],
+  ["methodology", "How evidence works"],
 ];
 
 for (const [slug, title] of pages) test(`${slug} has matching public HTML and Markdown`, async ({ page, request }, testInfo) => {
@@ -49,7 +51,8 @@ test("nested trust pages preserve claimable root profiles", async ({ page, reque
   expect((await request.get("/about/missing.md")).status()).toBe(404);
   const sitemap = await (await request.get("/sitemap.xml")).text();
   for (const [slug] of pages) expect(sitemap).toContain(`<loc>https://public.example/about/${slug}</loc>`);
-  expect(sitemap.match(/<lastmod>2026-09-22<\/lastmod>/g)).toHaveLength(3);
+  expect(sitemap.match(/<lastmod>2026-09-22<\/lastmod>/g)).toHaveLength(2);
+  expect(sitemap.match(/<lastmod>2026-09-28<\/lastmod>/g)).toHaveLength(3);
   expect(sitemap).not.toContain(".md</loc>");
 });
 

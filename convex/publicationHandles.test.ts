@@ -56,6 +56,19 @@ test("an unpublished owner can change to an available handle", async () => {
   expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle: "available" });
 });
 
+test.each(["icon", "apple-icon", "evidence-fixture", "agents", "auth", "index"].flatMap(handle => [handle, `  ${handle.toUpperCase()}  `]))("claimHandle rejects reserved handle %s without changing the stored user", async handle => {
+  const { t, owner, userId } = await fixture();
+  const before = await t.run(ctx => ctx.db.get(userId));
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Changed name", bio: "Changed bio" })).rejects.toThrow("This handle is reserved.");
+  expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
+});
+
+test.each(["about", "app", "collection", "contact", "origins", "privacy", "pending-victim123"])("an unpublished owner can still claim %s", async handle => {
+  const { t, owner, userId } = await fixture();
+  expect(await owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Owner", bio: "Approved bio" })).toEqual({ handle });
+  expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Owner", bio: "Approved bio" });
+});
+
 test.each(["both", "revision", "hash"])("publication rejects missing %s preview proof before writing", async missing => {
   const { t, owner, approval } = await fixture();
   const args = { ...approval } as Record<string, unknown>;
@@ -171,4 +184,21 @@ test.each(["collection", "app"])("existing %s owners can edit their private iden
   expect(await owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Private updated name", bio: "Private updated bio" })).toEqual({ handle });
   expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Private updated name" });
   expect(await t.query(api.publicProfiles.getByHandleV2, { handle })).toEqual(publishedBefore);
+});
+
+test.each([
+  ["displayName", 80, true], ["displayName", 81, false],
+  ["bio", 500, true], ["bio", 501, false],
+] as const)("claimHandle with a %s of %i characters saves: %s", async (field, length, saves) => {
+  const { t, owner, userId } = await fixture();
+  const before = await t.run(ctx => ctx.db.get(userId));
+  const args = { handle: "owner", displayName: "Owner", bio: "", [field]: `  ${"x".repeat(length)}  ` };
+  if (saves) {
+    await owner.mutation(api.onboarding.claimHandle, args);
+    expect((await t.run(ctx => ctx.db.get(userId)))?.[field]).toBe("x".repeat(length));
+  } else {
+    await expect(owner.mutation(api.onboarding.claimHandle, args))
+      .rejects.toThrow(field === "bio" ? "Use a bio of 500 characters or fewer." : "Use a display name of 80 characters or fewer.");
+    expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
+  }
 });
