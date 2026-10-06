@@ -106,7 +106,7 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   await result.getByRole("button", { name: "Save measurement choices privately", exact: true }).click();
   await expect.poll(async () => (await state()).measurementCaptures[0].reviewedMeasurementIds.length).toBe(3);
   const relationship = page.getByRole("region", { name: "Fixture Tool", exact: true });
-  await relationship.getByLabel("How it fits", { exact: true }).selectOption("ACTIVE");
+  await relationship.getByRole("combobox", { name: "How it fits", exact: true }).selectOption("ACTIVE");
   await relationship.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
   await page.getByRole("link", { name: "Set up your public identity", exact: true }).click();
   const identity = page.locator("#collection-profile");

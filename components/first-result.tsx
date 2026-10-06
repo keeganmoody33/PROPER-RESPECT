@@ -22,14 +22,15 @@ export function SourcePicker({ selected }: { selected: FirstResultSource | null 
   </div>;
 }
 
-export function FirstResultPanel({ source, busy, onConnectGithub }: {
-  source: FirstResultSource | null; busy: boolean; onConnectGithub: () => Promise<void>;
+export function FirstResultPanel({ source, busy, onConnectGithub, hasSavedCards = false }: {
+  source: FirstResultSource | null; busy: boolean; onConnectGithub: () => Promise<void>; hasSavedCards?: boolean;
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (source) heading.current?.focus(); }, [source]);
+  const title = source === "github" ? "Connect GitHub activity" : source === "claude-code" ? "Import Claude Code usage" : source === "codex" ? "Import Codex usage" : source === "metric-packet" ? "Import another product’s measurements" : source === "manual" ? "Start with one tool" : hasSavedCards ? "Add another source" : "See your first private result";
   return <section className={`onboarding-panel ${styles.panel}`} aria-labelledby="first-result-title">
     <p className="onboarding-kicker">PRIVATE FIRST</p>
-    <h2 ref={heading} tabIndex={-1} id="first-result-title">{source === "github" ? "Connect GitHub activity" : source === "claude-code" ? "Import Claude Code usage" : source === "codex" ? "Import Codex usage" : source === "metric-packet" ? "Import another product’s measurements" : source === "manual" ? "Start with one tool" : "See your first private result"}</h2>
+    <h2 ref={heading} tabIndex={-1} id="first-result-title">{title}</h2>
     {source ? <button type="button" className="text-link" onClick={() => selectFirstResultSource(null)}>Change source</button> : <>
       <p>Choose one source. See what it reports, then decide what belongs in your collection. No mailbox or public profile required.</p>
       <SourcePicker selected={null} />

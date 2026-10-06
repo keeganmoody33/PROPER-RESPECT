@@ -465,7 +465,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
         <p>We ask what the evidence cannot answer. Signup, payment, and observed use are different claims—not proof of continuous use.</p>
         <p>Gmail discovery uses separately authorized read-only access when this environment is configured. Signing in with Google does not grant mailbox access. Microsoft mailbox connection is not available yet.</p>
         <p>Sources bring discoveries and supporting context into your private collection. Your relationship and go-to choices remain yours.</p>
-        {!source && state.cards.length > 0 && <FirstResultPanel source={null} busy={busy} onConnectGithub={connectGithub} />}
+        {!source && state.cards.length > 0 && <FirstResultPanel source={null} hasSavedCards busy={busy} onConnectGithub={connectGithub} />}
         <div className="connector-grid">
           <MailboxManagement available={state.mailboxAvailable === true} />
           <div className="connector-card">
