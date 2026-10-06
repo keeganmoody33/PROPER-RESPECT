@@ -1,0 +1,10 @@
+{
+  "name": "PROPER-RESPECT public fixture",
+  "install": "npm ci --engine-strict",
+  "terminals": [
+    {
+      "name": "public fixture",
+      "command": "node .cursor/start-fixture.mjs"
+    }
+  ]
+}
