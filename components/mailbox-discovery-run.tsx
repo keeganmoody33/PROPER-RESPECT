@@ -1,5 +1,7 @@
 "use client";
 
+import { MAILBOX_TESTERS_ONLY } from "@/src/domain/mailbox-testers";
+
 export type DiscoveryRun = {
   id: string;
   status: "RUNNING" | "PAUSED" | "FAILED" | "COMPLETE" | "LIMIT_REACHED" | "CANCELLED";
@@ -44,9 +46,11 @@ export function MailboxConnectionNotice({ loading, gmailCount, connectedCount }:
   return <p role="status">{gmailCount === 0 ? "No Gmail accounts are connected in this application." : "None of your Gmail accounts currently has an active connection."} Signing in with Google does not grant mailbox access. Use Add Gmail account or reconnect an existing account to authorize private discovery here.</p>;
 }
 
-export function MailboxDiscoveryRun({ run, connected, busy, onStart, onControl }: {
+export function MailboxDiscoveryRun({ run, connected, busy, onStart, onControl, canReconnect = true }: {
   run?: DiscoveryRun | null; connected: boolean; busy: boolean;
   onStart: () => void; onControl: (action: DiscoveryRunAction) => void;
+  /** False when the caller isn't a listed Gmail tester (R16), so reconnecting isn't offered. */
+  canReconnect?: boolean;
 }) {
   const ownsSearch = discoveryRunOwnsSearch(run);
   const canResume = run?.status === "PAUSED" || (run?.status === "FAILED" && ["TEMPORARY", "LEASE_EXPIRED"].includes(run.failure ?? ""));
@@ -63,7 +67,8 @@ export function MailboxDiscoveryRun({ run, connected, busy, onStart, onControl }
       <p>{statusText[run.status]}</p>
       <p>{run.messagesRead} headers examined across {run.pagesRead} successful pages; {run.retainedRecords} new private records retained.</p>
       <p>Current search: {run.phase === "KNOWN_PRODUCTS" ? "catalog products" : "earlier mail"}.</p>
-      {run.status === "FAILED" && run.failure && <p role="alert">{failureText[run.failure]}</p>}
+      {run.status === "FAILED" && run.failure && <p role="alert">{run.failure === "REAUTHORIZE" && !canReconnect
+        ? `Google access expired or was revoked. ${MAILBOX_TESTERS_ONLY} Existing evidence stays private.` : failureText[run.failure]}</p>}
       <p>Updated {new Date(run.updatedAt).toLocaleString()}.</p>
     </div>}
     <div className="action-row">

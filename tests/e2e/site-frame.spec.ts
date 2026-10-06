@@ -9,8 +9,10 @@ for (const width of [1440, 460, 390, 320]) test(`Origins and branded footer rema
   await expect(footer.getByRole("link", { name: "Proper Respect home" })).toBeVisible();
   await expect(footer.locator("img")).toHaveAttribute("src", /PR-mark-black/);
   await expect(footer.getByRole("heading")).toHaveText(["Product", "Company", "Resources"]);
-  await expect(footer.getByRole("link", { name: /Help|Terms|Social/ })).toHaveCount(0);
-  await expect(footer.locator(".site-footer-placeholder")).toHaveCount(3);
+  await expect(footer.getByRole("link", { name: "Terms", exact: true })).toHaveAttribute("href", "/about/terms");
+  await expect(footer.getByRole("link", { name: "How evidence works", exact: true })).toHaveAttribute("href", "/about/methodology");
+  await expect(footer.getByRole("link", { name: /Help|Social/ })).toHaveCount(0);
+  await expect(footer.locator(".site-footer-placeholder")).toHaveCount(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await navigation.getByRole("link", { name: "Origins", exact: true }).click();
   await expect(page).toHaveURL(/\/about\/origins$/);

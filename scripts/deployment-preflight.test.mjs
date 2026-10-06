@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 const validEnvironment = {
@@ -25,11 +25,204 @@ test("deployment preflight requires an explicit HTTPS public origin", () => {
   }
 });
 
-test("GitHub consolidation cannot automatically deploy Vercel or Convex", () => {
+test("the Vercel build is frontend-only and no Git push deploys anything", () => {
   const configuration = JSON.parse(readFileSync("vercel.json", "utf8"));
   assert.equal(configuration.git?.deploymentEnabled, false);
   assert.match(configuration.buildCommand, /npm run deploy:check/);
-  assert.match(configuration.buildCommand, /convex deploy/);
+  assert.match(configuration.buildCommand, /npm run build/);
+  // The backend deploys only from the tagged release workflow (R10).
+  assert.doesNotMatch(configuration.buildCommand, /convex\s+deploy/);
+});
+
+// The release workflow is read as text: these pin its safety checks (R10).
+const releaseWorkflow = () => readFileSync(".github/workflows/release.yml", "utf8");
+
+// Reads a shell pattern assigned as name='...' in the workflow.
+function workflowPattern(text, name) {
+  const match = text.match(new RegExp(`\\b${name}='([^']+)'`));
+  assert.ok(match, `${name} is not set in release.yml`);
+  return match[1];
+}
+
+test("the release verifies both deploy environments require a reviewer before deploying", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  assert.match(verify, /actions: read/);
+  assert.match(verify, /environments\/\$name/);
+  assert.match(verify, /required_reviewers/);
+  assert.match(verify, /for name in production-backend production-frontend/);
+});
+
+test("the release checks the smoke-test handle before anything deploys", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  assert.match(verify, /PUBLIC_HANDLE: \$\{\{ vars\.PUBLIC_HANDLE \}\}/);
+  assert.match(verify, /\[\[ "\$PUBLIC_HANDLE" =~/);
+});
+
+test("the release pins every action to a commit SHA", () => {
+  const uses = releaseWorkflow().split("\n").filter(line => /^\s*(- )?uses:/.test(line));
+  assert.ok(uses.length > 0);
+  for (const line of uses) assert.match(line, /@[0-9a-f]{40} # v\d/);
+});
+
+test("release Convex commands never download an unlocked CLI", () => {
+  for (const file of [".github/workflows/release.yml", "docs/releases/v0.2.0.md"]) {
+    const text = readFileSync(file, "utf8");
+    assert.match(text, /npx --no-install convex /, file);
+    assert.doesNotMatch(text, /npx (?!--no-install )convex/, file);
+  }
+  assert.match(readFileSync("docs/releases/v0.2.0.md", "utf8"), /git checkout v0\.2\.0\nnpm ci\n/);
+});
+
+test("release secrets reach only the steps that run the CLI they authenticate", () => {
+  const workflow = releaseWorkflow();
+  const steps = job => {
+    const start = workflow.indexOf(`\n  ${job}:`);
+    const body = workflow.slice(start, job === "frontend" ? undefined : workflow.indexOf("\n  frontend:"));
+    return body.split("\n      - ").slice(1);
+  };
+  const holders = (job, secret) => steps(job).filter(step => step.includes(`secrets.${secret}`));
+  const convex = holders("backend", "CONVEX_DEPLOY_KEY");
+  assert.equal(convex.length, 2);
+  for (const step of convex) assert.match(step, /npx --no-install convex /);
+  // The key check runs inside the deploy step, before the CLI.
+  assert.ok(convex[0].indexOf('"prod:${CONVEX_PRODUCTION_DEPLOYMENT}|"') < convex[0].indexOf("npx --no-install convex deploy"));
+  const vercel = holders("frontend", "VERCEL_TOKEN");
+  assert.equal(vercel.length, 2);
+  // The deploy runs the pinned CLI; the domain check reads Vercel's API directly and sends the token nowhere else.
+  assert.match(vercel[0], /release-tools\/node_modules\/\.bin\/vercel deploy/);
+  assert.ok(vercel[0].indexOf('-z "$VERCEL_TOKEN"') < vercel[0].indexOf("vercel deploy"));
+  assert.deepEqual([...vercel[1].matchAll(/https:\/\/[a-z][^\s"'?]*/g)].map(m => m[0]), ["https://api.vercel.com/v13/deployments/${host}"]);
+});
+
+test("the production-domain check reads the deployment's aliases and says why it fails", () => {
+  // v0.2.0: `vercel inspect` exited non-zero under bash -e before its output was printed,
+  // so a deployment that did hold proper-respect.com failed the release with no message.
+  const workflow = releaseWorkflow();
+  const start = workflow.indexOf("- name: Require the production domain on this deployment");
+  const step = workflow.slice(start, workflow.indexOf("\n      - name:", start + 1));
+  assert.ok(start > 0);
+  assert.doesNotMatch(step, /vercel inspect/);
+  assert.match(step, /https:\/\/api\.vercel\.com\/v13\/deployments\/\$\{?host\}?\?teamId=\$\{?VERCEL_ORG_ID\}?/);
+  assert.match(step, /\.alias/);
+  assert.match(step, /"proper-respect\.com"/);
+  // Every failure path prints a reason before it exits.
+  for (const exit of step.split("exit 1").slice(0, -1)) assert.match(exit.slice(-400), /echo "/);
+});
+
+test("the release requires the repository owner as the only reviewer", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  assert.match(verify, /--arg owner "\$GITHUB_REPOSITORY_OWNER"/);
+  assert.match(verify, /\.reviewer\.login == \$owner/);
+});
+
+test("the frontend smoke test uses the handle verify checked", () => {
+  const workflow = releaseWorkflow();
+  const frontend = workflow.slice(workflow.indexOf("\n  frontend:"));
+  assert.doesNotMatch(frontend, /vars\.PUBLIC_HANDLE/);
+  assert.match(frontend, /needs\.verify\.outputs\.public_handle/);
+});
+
+test("the backend deploys only with a key for the deployment in PUBLIC_CONVEX_URL", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  const backend = workflow.slice(workflow.indexOf("\n  backend:"), workflow.indexOf("\n  frontend:"));
+  // K02 sets PUBLIC_CONVEX_URL; the release derives the deployment name from it.
+  assert.match(verify, /PUBLIC_CONVEX_URL: \$\{\{ vars\.PUBLIC_CONVEX_URL \}\}/);
+  assert.doesNotMatch(workflow, /CONVEX_PRODUCTION_DEPLOYMENT: \$\{\{ vars/);
+  assert.match(backend, /needs\.verify\.outputs\.convex_deployment/);
+  assert.match(backend, /"prod:\$\{CONVEX_PRODUCTION_DEPLOYMENT\}\|"\?\*\)/);
+  const pattern = new RegExp(workflowPattern(verify, "convex_url_pattern"));
+  const deployment = url => url.match(pattern)?.[1] ?? null;
+  assert.equal(deployment("https://striped-chicken-693.convex.cloud"), "striped-chicken-693");
+  for (const bad of ["", "http://striped-chicken-693.convex.cloud", "https://striped-chicken-693.convex.site",
+    "https://evil.com/striped-chicken-693.convex.cloud", "https://striped-chicken-693.convex.cloud/", "https://a.b.convex.cloud"]) {
+    assert.equal(deployment(bad), null, bad);
+  }
+});
+
+test("the release accepts only the pinned production Convex deployment", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  // verify has no environment, so vars can fall back to an org variable naming
+  // another deployment; the deployment itself is pinned here.
+  assert.match(verify, /expected_deployment='striped-chicken-693'/);
+  assert.match(verify, /\[ "\$\{BASH_REMATCH\[1\]\}" != "\$expected_deployment" \]/);
+});
+
+test("the owner can approve their own release: prevent_self_review is refused", () => {
+  const workflow = releaseWorkflow();
+  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
+  assert.match(verify, /\.prevent_self_review != true/);
+});
+
+test("the frontend is built against the same Convex deployment the backend deployed", () => {
+  const frontend = releaseWorkflow().slice(releaseWorkflow().indexOf("\n  frontend:"));
+  assert.match(frontend, /CONVEX_URL: https:\/\/\$\{\{ needs\.verify\.outputs\.convex_deployment \}\}\.convex\.cloud/);
+  assert.match(frontend, /--build-env NEXT_PUBLIC_CONVEX_URL="\$CONVEX_URL"/);
+  assert.match(frontend, /--env NEXT_PUBLIC_CONVEX_URL="\$CONVEX_URL"/);
+});
+
+test("the frontend reads the Vercel IDs as K02's environment variables", () => {
+  const workflow = releaseWorkflow();
+  const frontend = workflow.slice(workflow.indexOf("\n  frontend:"));
+  assert.match(frontend, /VERCEL_ORG_ID: \$\{\{ vars\.VERCEL_ORG_ID \}\}/);
+  assert.match(frontend, /VERCEL_PROJECT_ID: \$\{\{ vars\.VERCEL_PROJECT_ID \}\}/);
+  assert.doesNotMatch(frontend, /secrets\.VERCEL_(ORG|PROJECT)_ID/);
+});
+
+test("the frontend refuses Vercel IDs other than the proper-respect project's", () => {
+  const frontend = releaseWorkflow().slice(releaseWorkflow().indexOf("\n  frontend:"));
+  // A missing environment variable falls back to a repository or org one, so
+  // non-empty isn't enough: the IDs must be exactly K02's.
+  assert.match(frontend, /expected_org='team_MfB5K2Npy5oy5SFJ2g9nbL5W'/);
+  assert.match(frontend, /expected_project='prj_yxsUnnPW0ka8mkFr7l66eUSzJgT8'/);
+  assert.match(frontend, /\[ "\$VERCEL_ORG_ID" != "\$expected_org" \]/);
+  assert.match(frontend, /\[ "\$VERCEL_PROJECT_ID" != "\$expected_project" \]/);
+});
+
+test("the deployment URL pattern accepts only a valid vercel.app hostname", () => {
+  const pattern = new RegExp(workflowPattern(releaseWorkflow(), "url_pattern"));
+  assert.ok(pattern.test("https://proper-respect-abc123-team.vercel.app"));
+  for (const bad of ["https://-foo.vercel.app", "https://foo-.vercel.app", "https://evil.com/.vercel.app",
+    "https://foo.vercel.app/", "http://foo.vercel.app", "https://Foo.vercel.app", "https://.vercel.app"]) {
+    assert.equal(pattern.test(bad), false, bad);
+  }
+});
+
+test("the release docs never run an unpinned Vercel CLI", () => {
+  for (const file of ["docs/releases/TEMPLATE.md", "docs/releases/v0.2.0.md", "docs/DEPLOYMENT.md"]) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /npx[^\n`]*vercel/, file);
+  }
+});
+
+test("the release runs a pinned Vercel CLI, never one fetched at deploy time", () => {
+  const workflow = releaseWorkflow();
+  assert.doesNotMatch(workflow, /npx[^\n]*vercel/);
+  assert.match(workflow, /npm ci --ignore-scripts --prefix release-tools/);
+  const manifest = JSON.parse(readFileSync("release-tools/package.json", "utf8"));
+  const pinned = manifest.dependencies?.vercel;
+  assert.match(pinned ?? "", /^\d+\.\d+\.\d+$/);
+  const lock = JSON.parse(readFileSync("release-tools/package-lock.json", "utf8"));
+  assert.equal(lock.packages?.["node_modules/vercel"]?.version, pinned);
+});
+
+test("every runtime and CI job uses the same Node major (R13)", () => {
+  // Vercel runs Node 24.x; CI, local development and Convex "use node" actions match it.
+  assert.equal(readFileSync(".nvmrc", "utf8").trim(), "24");
+  assert.equal(JSON.parse(readFileSync("package.json", "utf8")).engines?.node, "24.x");
+  assert.equal(JSON.parse(readFileSync("convex.json", "utf8")).node?.nodeVersion, "24");
+  const workflows = readdirSync(".github/workflows").filter(name => /\.ya?ml$/.test(name));
+  assert.ok(workflows.length > 0);
+  for (const name of workflows) {
+    const text = readFileSync(`.github/workflows/${name}`, "utf8");
+    assert.doesNotMatch(text, /node-version:/, `${name} pins a Node version itself`);
+    const setups = text.match(/uses: actions\/setup-node@/g)?.length ?? 0;
+    const pinned = text.match(/node-version-file: \.nvmrc/g)?.length ?? 0;
+    assert.equal(pinned, setups, `${name} must read .nvmrc in every setup-node step`);
+  }
 });
 
 function runPreflight(environment) {

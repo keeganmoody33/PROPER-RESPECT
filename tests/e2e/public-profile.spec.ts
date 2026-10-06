@@ -39,6 +39,13 @@ test("visitor sees the approved public reference projection", async ({
   expect(accessibility.violations).toEqual([]);
 });
 
+test("a public profile links to a report address for that page", async ({ page }) => {
+  await page.goto("/keegan");
+  await expect(page.getByRole("link", { name: "Report this page" })).toHaveAttribute(
+    "href", "mailto:33@lecturesfrom.com?subject=Report%20proper-respect.com%2Fkeegan",
+  );
+});
+
 test("unknown handles receive a privacy-safe not-found state", async ({
   page,
 }) => {

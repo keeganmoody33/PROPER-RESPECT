@@ -422,3 +422,255 @@ test("publishing a work-sample link needs the saved https link and a listed labe
   await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a, { usageLinkUrl: LOOM_LINK })] }))
     .rejects.toThrow("Save the link privately before publishing it.");
 });
+
+test.each([
+  ["display name", 80, true], ["display name", 81, false],
+  ["bio", 500, true], ["bio", 501, false],
+] as const)("a stored %s of %i characters can be shared: %s", async (field, length, allowed) => {
+  const { t, owner, userId, published } = await fixture(1);
+  const text = "x".repeat(length);
+  await t.run(ctx => ctx.db.patch(userId, field === "bio" ? { bio: text } : { displayName: text }));
+  if (allowed) {
+    await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+    expect((await published()).profile[field === "bio" ? "bio" : "displayName"]).toBe(text);
+    return;
+  }
+  const message = field === "bio"
+    ? "Shorten your bio to 500 characters or fewer before sharing."
+    : "Shorten your display name to 80 characters or fewer before sharing.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [] })).rejects.toThrow(message);
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: 0, expectedPreviewHash: "never-approved" }))
+    .rejects.toThrow(message);
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
+});
+
+test.each([
+  ["label", 200, true], ["label", 201, false],
+  ["url", 2048, true], ["url", 2049, false],
+] as const)("a primary link %s of %i characters publishes: %s", async (field, length, allowed) => {
+  const { t, owner, propIds: [a], selection, published } = await fixture(1);
+  const base = "https://shared.example/";
+  const primaryLink = {
+    type: "CANONICAL" as const,
+    url: field === "url" ? `${base}${"a".repeat(length - base.length)}` : "https://shared.example",
+    label: field === "label" ? "L".repeat(length) : "Visit",
+  };
+  const selections = [await selection(a, { primaryLink })];
+  if (allowed) {
+    await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
+    expect((await published()).profile.cards[0].primaryLink).toMatchObject({ url: primaryLink.url, label: primaryLink.label });
+    return;
+  }
+  const message = field === "label" ? "Use a link label of 200 characters or fewer." : "Use a link of 2,048 characters or fewer.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections })).rejects.toThrow(message);
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections, expectedPublicationRevision: 0, expectedPreviewHash: "never-approved" }))
+    .rejects.toThrow(message);
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
+});
+
+test.each([[2048, true], [2049, false]] as const)("a stored %i-character avatar link is shared: %s", async (length, shared) => {
+  const { t, owner, userId, published } = await fixture(1);
+  const avatarUrl = `https://img.example/${"a".repeat(length - "https://img.example/".length)}`;
+  await t.run(ctx => ctx.db.patch(userId, { avatarUrl }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  expect(preview.profile.avatarUrl).toBe(shared ? avatarUrl : undefined);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+  expect((await published()).profile.avatarUrl).toBe(shared ? avatarUrl : undefined);
+});
+
+test("a 160-character product name still publishes with its default link label", async () => {
+  const { t, owner, published } = await fixture(0);
+  const name = "P".repeat(160);
+  const propId = await owner.mutation(api.onboarding.addManualProduct, { name, website: "https://long-name.example" });
+  const link = await t.run(ctx => ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", propId)).unique());
+  if (!link) throw new Error("Test link missing");
+  expect(link.label).toBe(`Open ${name}`);
+  await t.run(ctx => ctx.db.patch(propId, { visibility: "PRIVATE", status: "ACTIVE", relationshipVersion: 1, confirmedAt: capturedAt }));
+  const selections: Selection[] = [{
+    propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "", note: "",
+    primaryLink: { type: link.type, url: link.url, label: link.label }, autoRefresh: false,
+  }];
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
+  expect((await published()).profile.cards[0]).toMatchObject({ product: { name }, primaryLink: { label: `Open ${name}` } });
+});
+
+test.each(["label", "url"] as const)("an unchanged public card with an over-limit link %s blocks sharing until it is updated or removed", async field => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture(2);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  // A card published before the caps existed.
+  await t.run(async ctx => {
+    const row = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    const cards = row.profile.cards.map((card, index) => index !== 0 || !card.primaryLink ? card : {
+      ...card, primaryLink: { ...card.primaryLink, ...(field === "label" ? { label: "L".repeat(201) } : { url: `https://shared.example/${"a".repeat(2049)}` }) },
+    });
+    await ctx.db.patch(row._id, { profile: { ...row.profile, cards } });
+  });
+  const before = await published();
+  const message = "The shared Shared Tool card has a link over the length limit. Include it in this change to update or remove it.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(b, { publish: false })] })).rejects.toThrow(message);
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: before.revision, expectedPreviewHash: "never-approved" })).rejects.toThrow(message);
+  expect(await published()).toEqual(before);
+  // Including the card, with a link inside the limits, repairs it.
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards.map(card => card.primaryLink)).toEqual([
+    expect.objectContaining({ label: "Visit" }), expect.objectContaining({ label: "Visit" }),
+  ]);
+});
+
+test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "https://user:pass@example.com/"])("a primary link to %s is refused before any write", async url => {
+  const { t, owner, propIds: [a], selection } = await fixture(1);
+  const selections = [await selection(a, { primaryLink: { type: "CANONICAL", url, label: "Visit" } })];
+  await expect(owner.query(api.onboarding.previewPublication, { selections })).rejects.toThrow("Use an http or https link without embedded credentials.");
+  await expect(owner.mutation(api.onboarding.publishSelected, { selections, expectedPublicationRevision: 0, expectedPreviewHash: "never-approved" }))
+    .rejects.toThrow("Use an http or https link without embedded credentials.");
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
+});
+
+test.each(["javascript:alert(1)", "data:image/png;base64,AAAA"])("a stored %s avatar link is left off the shared profile", async avatarUrl => {
+  const { t, owner, userId, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(userId, { avatarUrl }));
+  expect((await owner.query(api.onboarding.previewPublication, { selections: [] })).profile.avatarUrl).toBeUndefined();
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+  expect((await published()).profile.avatarUrl).toBeUndefined();
+});
+
+test("an unchanged public card with a non-web link blocks sharing until it is updated or removed", async () => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture(2);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  // A card published before the http(s) rule.
+  await t.run(async ctx => {
+    const row = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    const cards = row.profile.cards.map((card, index) => index !== 0 || !card.primaryLink ? card
+      : { ...card, primaryLink: { ...card.primaryLink, url: "javascript:alert(1)" } });
+    await ctx.db.patch(row._id, { profile: { ...row.profile, cards } });
+  });
+  const before = await published();
+  const message = "The shared Shared Tool card links somewhere other than a plain http or https address. Include it in this change to update or remove it.";
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(b, { publish: false })] })).rejects.toThrow(message);
+  expect(await published()).toEqual(before);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards.map(card => card.primaryLink?.url)).toEqual(["https://shared.example", "https://shared.example"]);
+});
+
+test("stored profile links that aren't plain http(s) are left off the shared profile", async () => {
+  const { t, owner, userId, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(userId, {
+    profileLinks: [{ label: "Bad", url: "javascript:alert(1)" }, { label: "Website", url: "https://owner.example/" }],
+    preferredLinkUrl: "javascript:alert(1)",
+  }));
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  expect(preview.profile.profileLinks).toEqual([{ label: "Website", url: "https://owner.example/" }]);
+  expect(preview.profile.preferredLinkUrl).toBeUndefined();
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [] }));
+  expect(JSON.stringify((await published()).profile)).not.toContain("javascript:");
+});
+
+// R09: owner opt-in for the daily GitHub refresh.
+const calendar = (total: number, capturedAt: string) => ({ kind: "contributionCalendar" as const, total, days: [],
+  attributionScope: "PERSONAL" as const, capturedAt, freshness: "FRESH" as const, provenanceLabel: "Synthetic GitHub calendar" });
+async function githubFixture(connector: { status?: "CONNECTED" | "ERROR" | "REVOKED" | "NEEDS_REAUTH"; provider?: "GITHUB" | "DEVIN"; scope?: "PERSONAL" | "ORGANIZATION"; productSlug?: string } = {}) {
+  const t = convexTest(schema, modules);
+  const ids = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const productId = await ctx.db.insert("products", connector.productSlug
+      ? { name: "Other tool", slug: connector.productSlug, domain: "other.example", description: "Synthetic" }
+      : { name: "GitHub", slug: "github", domain: "github.com", description: "Synthetic" });
+    const propId = await ctx.db.insert("props", { userId, productId, visibility: "PRIVATE", status: "ACTIVE", relationshipVersion: 1,
+      confirmedAt: capturedAt, headline: "Daily commits", note: "Owner context", activity: calendar(3, "2026-09-20T10:00:00.000Z") });
+    const connectorId = await ctx.db.insert("connectorAccounts", { userId, provider: connector.provider ?? "GITHUB", status: connector.status ?? "CONNECTED",
+      accountLabel: "github.com/synthetic", attributionScope: connector.scope ?? "PERSONAL", connectedAt: capturedAt });
+    return { userId, propId, connectorId };
+  });
+  const owner = t.withIdentity({ subject: "owner" });
+  const selection = (overrides: Partial<Selection> = {}): Selection => ({
+    propId: ids.propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "Daily commits", note: "Owner context",
+    primaryLink: { type: "CANONICAL", url: "https://github.com", label: "Open GitHub" }, activity: calendar(3, "2026-09-20T10:00:00.000Z"),
+    autoRefresh: true, connectorId: ids.connectorId, metricKey: "github.contributions", ...overrides,
+  });
+  const publish = async (overrides: Partial<Selection> = {}) =>
+    owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [selection(overrides)] }));
+  const subscriptions = () => t.run(ctx => ctx.db.query("metricSubscriptions").collect());
+  const publishedCard = () => t.run(async ctx => (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())?.profile.cards[0]);
+  const refreshApproved = async () => (await owner.query(api.onboarding.getState, { includeClaims: false }))?.cards[0].refreshApproved;
+  return { t, owner, ...ids, selection, publish, subscriptions, publishedCard, refreshApproved };
+}
+
+test("a checked GitHub publish creates one active subscription that getState reports as approved", async () => {
+  const f = await githubFixture();
+  expect(await f.refreshApproved()).toBe(false);
+  await f.publish();
+  const subscriptions = await f.subscriptions();
+  expect(subscriptions).toEqual([expect.objectContaining({ propId: f.propId, connectorId: f.connectorId,
+    metricKey: "github.contributions", attributionScope: "PERSONAL" })]);
+  expect(subscriptions[0].revokedAt).toBeUndefined();
+  expect(await f.refreshApproved()).toBe(true);
+});
+
+test("republishing a refreshed, privately saved card with the box checked keeps its subscription and newest calendar", async () => {
+  const f = await githubFixture({ status: "ERROR" });
+  await f.publish();
+  const [subscription] = await f.subscriptions();
+  // What completeGithubRefresh writes for a versioned relationship: the public card only.
+  const refreshed = calendar(9, "2026-09-27T10:00:00.000Z");
+  await f.t.run(async ctx => {
+    const published = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    await ctx.db.patch(published._id, { revision: published.revision + 1, profile: { ...published.profile,
+      cards: published.profile.cards.map(card => ({ ...card, activity: refreshed })) } });
+  });
+  await f.publish({ activity: refreshed });
+  const after = await f.subscriptions();
+  expect(after.map(item => item._id)).toEqual([subscription._id]);
+  expect(after[0].revokedAt).toBeUndefined();
+  expect((await f.publishedCard())?.activity).toEqual(refreshed);
+  expect((await f.t.run(ctx => ctx.db.get(f.propId)))?.activity).toEqual(calendar(3, "2026-09-20T10:00:00.000Z"));
+});
+
+test("the published calendar can only be carried forward while the refresh stays checked", async () => {
+  const f = await githubFixture();
+  await f.publish();
+  const refreshed = calendar(9, "2026-09-27T10:00:00.000Z");
+  await f.t.run(async ctx => {
+    const published = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    await ctx.db.patch(published._id, { profile: { ...published.profile, cards: published.profile.cards.map(card => ({ ...card, activity: refreshed })) } });
+  });
+  await expect(f.publish({ activity: refreshed, autoRefresh: false })).rejects.toThrow("Publish only the supporting activity already saved on this relationship.");
+  // An activity that was never published is never accepted, even with refresh on.
+  await expect(f.publish({ activity: calendar(99, "2026-09-28T10:00:00.000Z") })).rejects.toThrow("Publish only the supporting activity already saved on this relationship.");
+});
+
+test("an unchecked republish revokes the refresh", async () => {
+  const f = await githubFixture();
+  await f.publish();
+  await f.publish({ autoRefresh: false, connectorId: undefined, metricKey: undefined });
+  expect(await f.subscriptions()).toEqual([expect.objectContaining({ revokedAt: expect.any(String) })]);
+  expect(await f.refreshApproved()).toBe(false);
+});
+
+for (const [label, connector, overrides] of [
+  ["an unsupported metric", {}, { metricKey: "unknown.metric" }],
+  ["a Devin connector for the GitHub metric", { provider: "DEVIN" as const }, {}],
+  ["a GitHub connector that needs reauthorization", { status: "NEEDS_REAUTH" as const }, {}],
+  ["an organization-scoped GitHub connector", { scope: "ORGANIZATION" as const }, {}],
+  ["a relationship whose product is not GitHub", { productSlug: "other-tool" }, {}],
+  ["a checked refresh without its connector", {}, { connectorId: undefined }],
+  ["a checked refresh without its metric", {}, { metricKey: undefined }],
+] as const) test(`refresh is refused for ${label}`, async () => {
+  const f = await githubFixture(connector);
+  await expect(f.owner.query(api.onboarding.previewPublication, { selections: [f.selection(overrides)] })).rejects.toThrow("refresh");
+  expect(await f.subscriptions()).toEqual([]);
+});
+
+test("a stale republish with the refresh on cannot roll back a newer public calendar", async () => {
+  const f = await githubFixture();
+  await f.publish();
+  const refreshed = calendar(9, "2026-09-27T10:00:00.000Z");
+  await f.t.run(async ctx => {
+    const published = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    await ctx.db.patch(published._id, { revision: published.revision + 1, profile: { ...published.profile,
+      cards: published.profile.cards.map(card => ({ ...card, activity: refreshed })) } });
+  });
+  // An older review tab still holds the saved calendar and the checked box.
+  await expect(f.publish()).rejects.toThrow("This card's public GitHub calendar refreshed since you reviewed it.");
+  expect((await f.publishedCard())?.activity).toEqual(refreshed);
+  expect((await f.subscriptions()).map(item => item.revokedAt)).toEqual([undefined]);
+});

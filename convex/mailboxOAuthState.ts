@@ -17,9 +17,18 @@ export const store = internalMutation({
       providerAccountId = account.providerAccountId;
     } else if (args.expectedGeneration !== undefined) throw new Error("Reconnect requires a mailbox.");
     // A single pending consent per owner/provider avoids parallel callbacks
-    // competing to install different versions of the same credentials.
+    // competing to install different versions of the same credentials. A
+    // callback already exchanging its code for another account, or for a new
+    // one, is kept so it can finish, or revoke its fresh tokens if that
+    // account was disconnected meanwhile.
+    const now = Date.now();
     const pending = await ctx.db.query("mailboxOAuthStates").withIndex("by_owner", q => q.eq("ownerId", owner._id)).collect();
-    for (const state of pending) await ctx.db.delete(state._id);
+    for (const state of pending) {
+      // A reconnect still replaces its own account's older state; everything else already exchanging stays.
+      const inFlight = state.status === "EXCHANGING" && state.expiresAt > now &&
+        (providerAccountId === undefined || state.providerAccountId !== providerAccountId);
+      if (!inFlight) await ctx.db.delete(state._id);
+    }
     return await ctx.db.insert("mailboxOAuthStates", {
       ownerId: owner._id, provider: "GOOGLE", stateHash: args.stateHash, verifier: args.verifier,
       accountId: args.accountId, providerAccountId, expectedGeneration: args.expectedGeneration ?? 0,
@@ -40,6 +49,15 @@ export const consume = internalMutation({
     }
     await ctx.db.patch(state._id, { status: "EXCHANGING", verifier: undefined });
     return state;
+  },
+});
+
+/** A callback that failed after consuming its state gives it up, so it isn't kept as an exchange in flight. */
+export const release = internalMutation({
+  args: { stateId: v.id("mailboxOAuthStates") },
+  handler: async (ctx, args) => {
+    const state = await ctx.db.get(args.stateId);
+    if (state?.status === "EXCHANGING") await ctx.db.delete(state._id);
   },
 });
 

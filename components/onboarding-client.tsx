@@ -11,13 +11,14 @@ import {
   useAuth,
   useClerk,
 } from "@clerk/nextjs";
-import { useAction, useConvex, useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useAction, useConvex, useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionArgs } from "convex/server";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
-import { defaultReview, explicitPublicationCards, isCurrentReview, reviewUsageLink, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
+import { defaultReview, explicitPublicationCards, githubRefreshConnector, isCurrentReview, reviewActivity, reviewUsageLink, setReviewCostVisibility, type ReviewEdit } from "@/src/domain/review";
+import { buildExport, collectPages, downloadJson, exportFilename } from "@/src/client/export-data";
 import { USAGE_LINK_LABELS, usageLinkLabelText } from "@/src/domain/usage-links";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
 import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/domain/product-destination";
@@ -27,11 +28,13 @@ import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
 import { ProductBrandControls } from "./product-brand-controls";
-import { PrivateInventory } from "./private-inventory";
+import { OwnerCollection } from "./owner-collection";
+import { openRelationship } from "@/src/client/relationship-location";
 import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
+import { CopyProfileLink } from "./copy-profile-link";
 
-type ManualProductInput = { name: string; website?: string; description?: string; operationId: string };
+type ManualProductInput = { name: string; website?: string; description?: string; status?: "ACTIVE" | "TESTING" | "ARCHIVED"; operationId: string };
 
 function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
   const convex = useConvex();
@@ -63,24 +66,30 @@ function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
   </div>;
 }
 
-export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) => Promise<unknown> }) {
+export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProductInput) => Promise<unknown>; onAdded?: (propId: string, status?: ManualProductInput["status"]) => void }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
   const retry = useRef<{ body: string; id: string } | null>(null);
   async function submit(form: HTMLFormElement) {
     const data = new FormData(form);
+    const choice = String(data.get("relationship") ?? "");
+    if (!["ACTIVE", "TESTING", "ARCHIVED", "LATER"].includes(choice)) return;
     const values = {
       name: String(data.get("name") ?? "").trim(),
       website: String(data.get("website") ?? "").trim() || undefined,
       description: String(data.get("description") ?? "").trim() || undefined,
+      ...(choice === "LATER" ? {} : { status: choice as ManualProductInput["status"] }),
     };
     const body = JSON.stringify(values);
     if (retry.current?.body !== body) retry.current = { body, id: crypto.randomUUID() };
     setBusy(true);
     setNotice(null);
     try {
-      await onAdd({ ...values, operationId: retry.current.id });
-      setNotice({ kind: "saved", text: "Saved privately. Review the card to choose how you use this tool and add your explanation. Existing products keep their saved choices and notes." });
+      const propId = await onAdd({ ...values, operationId: retry.current.id });
+      if (typeof propId === "string") onAdded?.(propId, values.status);
+      setNotice({ kind: "saved", text: choice === "LATER"
+        ? "Saved privately. Review the card when you're ready to choose how you use this tool. Existing products keep their saved choices and notes."
+        : "Saved privately. New tools keep your chosen relationship. Existing products keep their saved choices and notes. Your public profile has not changed." });
       retry.current = null;
       form.reset();
     } catch (error) {
@@ -88,13 +97,22 @@ export function AddProductForm({ onAdd }: { onAdd: (input: ManualProductInput) =
     } finally { setBusy(false); }
   }
   return <div id="add-product" className="collection-add">
-    <h2>Add a product</h2>
-    <p>No integration or activity measurement is required. Add something you use, are testing, or remember using; you will choose the relationship in private review.</p>
+    <h2>Add a tool</h2>
+    <p>Name a tool and choose how you use it. You can keep it as a draft to decide later. Everything is saved privately.</p>
     <form onSubmit={event => { event.preventDefault(); void submit(event.currentTarget); }} className="form-grid">
       <label>Product name<input name="name" maxLength={120} required autoComplete="off" disabled={busy} /></label>
-      <label>Website (optional)<input name="website" inputMode="url" placeholder="product.com" autoComplete="url" disabled={busy} /></label>
-      <label className="full">What you want to remember (optional)<textarea name="description" rows={2} maxLength={4000} disabled={busy} /></label>
-      <div className="action-row full"><button className="secondary-action" disabled={busy}>{busy ? "Adding…" : "Add for private review"}</button></div>
+      <label>How do you use it?<select name="relationship" aria-label="How do you use it?" defaultValue="" required disabled={busy}>
+        <option value="" disabled>Choose a relationship</option>
+        <option value="ACTIVE">Currently use</option>
+        <option value="TESTING">Testing now</option>
+        <option value="ARCHIVED">Past use</option>
+        <option value="LATER">Decide later</option>
+      </select></label>
+      <details className="full"><summary>Website or a note (optional)</summary><div className="form-grid">
+        <label>Website (optional)<input name="website" inputMode="url" placeholder="product.com" autoComplete="url" disabled={busy} /></label>
+        <label className="full">What you want to remember (optional)<textarea name="description" rows={2} maxLength={4000} disabled={busy} /></label>
+      </div></details>
+      <div className="action-row full"><button className="secondary-action" disabled={busy}>{busy ? "Adding…" : "Save tool privately"}</button></div>
     </form>
     <p role="status">{notice?.text}</p>
     {notice?.kind === "saved" && <a href="#private-collection-title">Review your collection</a>}
@@ -118,7 +136,7 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
   </section>;
 }
 
-function Builder() {
+function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const convex = useConvex();
   const { user: clerkUser } = useUser();
   const { getToken, sessionClaims } = useAuth();
@@ -131,7 +149,9 @@ function Builder() {
   const publishSelected = useMutation(api.onboarding.publishSelected);
   const revokeConnector = useMutation(api.connectors.revokeConnector);
   const connectDevin = useAction(api.connectors.connectDevin);
-  const state = useQuery(api.onboarding.getState, { includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
+  const shell = useQuery(api.onboarding.getState, { includeCards: false, includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
+  const sharing = usePaginatedQuery(api.onboarding.sharingCards, {}, { initialNumItems: 25 });
+  const state = useMemo(() => shell && sharing.status !== "LoadingFirstPage" ? { ...shell, cards: sharing.results } : undefined, [shell, sharing.results, sharing.status]);
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -140,6 +160,7 @@ function Builder() {
   >({});
   const [preview, setPreview] = useState<{
     profile: PublicProfile; revision: number; previewHash: string; selections: FunctionArgs<typeof api.onboarding.publishSelected>["selections"]; basis: string;
+    removeAllCards?: boolean;
   } | null>(null);
   const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, cards: state?.cards, user: state?.user }), [reviewEdits, state?.cards, state?.user]);
 
@@ -279,6 +300,8 @@ function Builder() {
         state.cards.flatMap(card => card.product ? [{ ...card, product: card.product }] : []),
         reviewEdits, Boolean(state.privateInventoryAvailable),
       ).map(({ card, edit }) => {
+        // Refresh is sent only while the card can still offer it (R09).
+        const refreshConnector = edit.autoRefresh ? githubRefreshConnector(card, state.connectors, edit) : undefined;
         return {
           propId: card.prop._id,
           ...(state.privateInventoryAvailable ? { expectedRelationshipVersion: card.prop.relationshipVersion ?? 0 } : {}),
@@ -308,11 +331,12 @@ function Builder() {
           costVisibility: edit.costVisibility,
           activity:
             edit.publish && edit.approveActivity
-              ? card.prop.activity
+              ? reviewActivity(card, { autoRefresh: Boolean(refreshConnector) })
               : undefined,
           usageLinkUrl: edit.publish && edit.includeUsageLink && reviewUsageLink(card) ? card.prop.supportingUrl : undefined,
           usageLinkLabel: edit.publish && edit.includeUsageLink && reviewUsageLink(card) ? edit.usageLinkLabel : undefined,
-          autoRefresh: false,
+          autoRefresh: Boolean(refreshConnector),
+          ...(refreshConnector ? { connectorId: refreshConnector._id, metricKey: "github.contributions" } : {}),
         };
       });
   }
@@ -326,13 +350,37 @@ function Builder() {
     });
   }
 
+  // Unpublish all (R15): the server removes every card, including older ones it
+  // can't match to a relationship, after the same preview and approval.
+  async function previewUnpublishAll() {
+    if (!state) return;
+    await run("Preview ready: no product cards would stay public. Your handle, name, bio and profile links stay public. Approve it to publish.", async () => {
+      const result = await convex.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
+      setPreview({ ...result, selections: [], basis: previewBasis, removeAllCards: true });
+    });
+  }
+
+  // Download my data (R15): every page of the owner-only export queries.
+  async function downloadMyData() {
+    await run("Your data was downloaded. Original files, retained original text and credentials are not included.", async () => {
+      const exportedAt = new Date().toISOString();
+      const [profile, relationships, evidence] = await Promise.all([
+        convex.query(api.inventory.exportProfile, {}),
+        collectPages(cursor => convex.query(api.inventory.exportRelationships, { paginationOpts: { numItems: 10, cursor } })),
+        collectPages(cursor => convex.query(api.inventory.exportEvidence, { paginationOpts: { numItems: 10, cursor } })),
+      ]);
+      downloadJson(exportFilename(profile.handle, exportedAt), buildExport({ profile, relationships, evidence, exportedAt }));
+    });
+  }
+
   async function publish() {
     if (!preview || preview.basis !== previewBasis) {
       setMessage("Preview your current saved collection and sharing choices before publishing.");
       return;
     }
     await run("Your approved preview is now shared. Other private information remains private.", async () => {
-      await publishSelected({ selections: preview.selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+      await publishSelected({ selections: preview.selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+        ...(preview.removeAllCards ? { removeAllCards: true } : {}) });
       setPreview(null);
       setReviewEdits({});
     });
@@ -387,7 +435,7 @@ function Builder() {
 
       <nav className="collection-navigation" aria-label="Your collection workspace">
         <a href="#private-collection-title">Collection</a>
-        <a href="#add-product">Add a product</a>
+        <a href="#add-product">Add a tool</a>
         <a href="#collection-sources">Sources</a>
         <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Profile and links</a>
         <a href="#collection-sharing">Sharing</a>
@@ -396,12 +444,12 @@ function Builder() {
       {state.cards.length === 0 && state.privateInventoryAvailable && <section className="onboarding-panel" aria-labelledby="first-tool-title">
         <p className="onboarding-kicker">YOUR FIRST CARD</p>
         <h2 id="first-tool-title">Start with one tool</h2>
-        <p>Add a tool you use or are trying. Then choose your relationship and write what it helps you do. Your card stays private; you can connect a source or share it later.</p>
+        <p>Add a tool you use or are trying and choose your relationship. Notes and sources are optional. Your card stays private until you choose to share it.</p>
         <a className="primary-action" href="#add-product">Add your first tool</a>
       </section>}
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
-      {state.privateInventoryAvailable ? <PrivateInventory brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
-      <AddProductForm onAdd={addManualProduct} />
+      {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
+      <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />
 
       <section className="onboarding-panel" id="collection-sources" aria-labelledby="collection-sources-title">
         <p className="onboarding-kicker">SOURCES / PRIVATE DISCOVERY</p>
@@ -410,7 +458,7 @@ function Builder() {
         <p>Gmail discovery uses separately authorized read-only access when this environment is configured. Signing in with Google does not grant mailbox access. Microsoft mailbox connection is not available yet.</p>
         <p>Sources bring discoveries and supporting context into your private collection. Your relationship and go-to choices remain yours.</p>
         <div className="connector-grid">
-          <MailboxManagement />
+          <MailboxManagement available={state.mailboxAvailable === true} />
           <div className="connector-card">
             <strong>GitHub</strong>
             <p>Authorized account contributions. Account creation is separate from first use. A capture is a snapshot; no continuous coverage is implied.</p>
@@ -697,6 +745,17 @@ function Builder() {
                       {card.prop.activity.attributionScope.toLowerCase()} activity
                     </label>
                   )}
+                  {githubRefreshConnector(savedCard, state.connectors, edit) && <>
+                    <label className="review-toggle">
+                      <input
+                        type="checkbox"
+                        checked={edit.autoRefresh}
+                        onChange={(event) => updateReview(card.prop._id, edit, { autoRefresh: event.target.checked })}
+                      />
+                      Refresh daily from GitHub
+                    </label>
+                    <p>Updates this card&apos;s public GitHub contribution calendar once a day. To stop, uncheck this and publish again, or disconnect GitHub.</p>
+                  </>}
                   {reviewUsageLink(savedCard) && <>
                     <label className="review-toggle">
                       <input
@@ -723,6 +782,10 @@ function Builder() {
             }}</AccountEvidence>;
           })}
         </div>
+        {sharing.status !== "Exhausted" && <div className="action-row">
+          <p>Showing {state.cards.length} relationships for sharing. More remain to load; existing public cards stay unchanged.</p>
+          <button type="button" className="secondary-action" disabled={sharing.status !== "CanLoadMore"} onClick={() => sharing.loadMore(25)}>Load more sharing choices</button>
+        </div>}
         <div className="action-row">
           <button
             className="primary-action"
@@ -734,17 +797,33 @@ function Builder() {
           </button>
           <span className="sharing-selection-count">{Object.keys(reviewEdits).length} card choice{Object.keys(reviewEdits).length === 1 ? "" : "s"} to review</span>
           {state.hasPublicationAtCurrentHandle === true && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
+          {state.hasPublicationAtCurrentHandle === true && publicOrigin && <CopyProfileLink key={state.user.handle} url={new URL(`/${encodeURIComponent(state.user.handle)}`, publicOrigin).href} />}
         </div>
         {publicIdentityClaimed === false && <p>Ready to preview a public page? <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Set up your public identity</a> with a handle and display name. Social links are optional.</p>}
         {publicIdentityClaimed === null && <p>Public identity status is unavailable. Reload before previewing sharing.</p>}
         {state.hasPublicationAtCurrentHandle === false && <p>{publicIdentityClaimed === true ? `Nothing is published at /${state.user.handle} yet.` : "Nothing is published yet."}</p>}
-        {preview && <SharingPreview key={preview.basis} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
+        {state.hasPublicationAtCurrentHandle === true && <section className="unpublish-all" aria-labelledby="unpublish-all-title">
+          <h3 id="unpublish-all-title">Remove every card</h3>
+          <p>Unpublish all cards removes every product card from your public page after you preview and approve it. Your handle, display name, bio and profile links stay public. To take down the whole page,{" "}
+            {/* A plain link: this component is also bundled without the Next router (tests/e2e/components.config.ts). */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/about/contact">ask through the contact page</a>.</p>
+          <button type="button" className="secondary-action" onClick={() => void previewUnpublishAll()} disabled={busy}>Unpublish all cards</button>
+        </section>}
+        {/* A different preview (a new hash) starts unapproved. */}
+        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
+      </section>
+      <section className="onboarding-panel" id="collection-data" aria-labelledby="collection-data-title">
+        <p className="onboarding-kicker">YOUR DATA</p>
+        <h2 id="collection-data-title">Download your data</h2>
+        <p>A JSON file with your profile, relationships, links, relationship history, and evidence details and observations. Original files, retained original text, and connector credentials are not included; the file lists everything else it leaves out. To remove an original, open the relationship in your private collection.</p>
+        <button type="button" className="secondary-action" onClick={() => void downloadMyData()} disabled={busy}>Download my data</button>
       </section>
     </main>
   );
 }
 
-export function OnboardingClient() {
+export function OnboardingClient({ publicOrigin }: { publicOrigin?: string }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   return (
     <Show
@@ -763,7 +842,7 @@ export function OnboardingClient() {
         </main>
       }
     >
-      {isAuthenticated ? <Builder /> : (
+      {isAuthenticated ? <Builder publicOrigin={publicOrigin} /> : (
         <main className="system-message">
           <p role="status">{isLoading
             ? "Verifying your session…"

@@ -2,7 +2,7 @@
 /// <reference types="vite/client" />
 import { convexTest, type TestConvex } from "convex-test";
 import { makeFunctionReference, type FunctionReturnType } from "convex/server";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import schema from "./schema";
 import type { api } from "./_generated/api";
 
@@ -28,7 +28,7 @@ async function fixture() {
     const propId = await ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: "A discovery", note: "Unreviewed suggestion" });
     await ctx.db.insert("draftImports", { userId, resultPropId: propId, status: "PENDING", suggestedProductSlug: "wisprflow", suggestedProductName: "Wispr Flow", suggestedDomain: "wisprflow.ai", suggestedDescription: "Dictation", suggestedUrl: "https://wisprflow.ai", rawEvidenceIds: [] });
     await ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-16", profile: { handle: "owner", displayName: "Owner", bio: "", cards: [] } });
-    return { userId, propId };
+    return { userId, productId, propId };
   });
   return { t, ...ids, owner: t.withIdentity({ subject: "owner" }), other: t.withIdentity({ subject: "other" }) };
 }
@@ -110,11 +110,15 @@ test("private edits to a published card stay private when another publication om
   expect(await t.run(ctx => ctx.db.get(propId))).toMatchObject({ note: "Private note", status: "ARCHIVED", relationshipVersion: 2 });
 });
 
-test("the latest primary link stays available after more than 25 publications", async () => {
+test("the latest primary link stays available after more than 25 publications", async ({ onTestFinished }) => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  onTestFinished(() => { vi.useRealTimers(); });
   const { owner, propId } = await fixture();
   const publish = makeFunctionReference<"mutation">("onboarding:publishSelected");
   await owner.mutation(save, { propId, expectedVersion: 0, operationId: "first", status: "ACTIVE", goTo: false, headline: "", note: "" });
   for (let revision = 1; revision <= 26; revision++) {
+    // Keep all 26 revisions while respecting R18's 20-publications/hour limit.
+    vi.setSystemTime(new Date(Date.UTC(2026, 8, 29, 12 + Math.floor((revision - 1) / 20))));
     await owner.mutation(publish, await reviewedPublication(owner, { selections: [{
       propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "", note: "",
       primaryLink: { type: "CANONICAL", url: `https://wisprflow.ai/?revision=${revision}`, label: `Published link ${revision}` }, autoRefresh: false,
@@ -125,6 +129,19 @@ test("the latest primary link stays available after more than 25 publications", 
   expect(card.links).toHaveLength(25);
   expect(card.links[0]).toMatchObject({ url: "https://wisprflow.ai/?revision=26", label: "Published link 26", isPrimary: true });
   expect(card.links.find(link => link.isPrimary)?.url).toBe("https://wisprflow.ai/?revision=26");
+  const sharing: FunctionReturnType<typeof api.onboarding.sharingCards> = await owner.query(makeFunctionReference<"query">("onboarding:sharingCards"), firstPage);
+  expect(sharing.page[0].links.find(link => link.isPrimary)?.url).toBe("https://wisprflow.ai/?revision=26");
+  await owner.mutation(publish, await reviewedPublication(owner, { selections: [{
+    propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "", note: "",
+    primaryLink: { type: "CANONICAL", url: "https://wisprflow.ai/?revision=1", label: "Published link 1" }, autoRefresh: false,
+  }] }));
+  const rereadSharing: FunctionReturnType<typeof api.onboarding.sharingCards> = await owner.query(makeFunctionReference<"query">("onboarding:sharingCards"), firstPage);
+  const rereadInventory: FunctionReturnType<typeof api.inventory.list> = await owner.query(list, firstPage);
+  const exact: FunctionReturnType<typeof api.inventory.detail> = await owner.query(makeFunctionReference<"query">("inventory:detail"), { propId });
+  for (const links of [rereadSharing.page[0].links, rereadInventory.page[0].links, exact!.links]) {
+    expect(links.length).toBeLessThanOrEqual(25);
+    expect(links.find(link => link.isPrimary)?.url).toBe("https://wisprflow.ai/?revision=1");
+  }
 });
 
 test("clearing optional context removes current fields and preserves their earlier values in history", async () => {
@@ -195,4 +212,73 @@ test("inventory reads stay bounded with long histories and many proofs, while al
     cursor = result.continueCursor;
   }
   expect(versions).toEqual(Array.from({ length: 105 }, (_, index) => 105 - index));
+});
+
+const locator = makeFunctionReference<"query">("inventory:locator");
+const detail = makeFunctionReference<"query">("inventory:detail");
+const related = makeFunctionReference<"query">("inventory:related");
+
+test("the lightweight owner locator reaches later pages and keeps duplicate relationships distinct", async () => {
+  const { t, owner, other, propId, userId } = await fixture();
+  const later = await t.run(async ctx => {
+    for (let i = 0; i < 30; i++) {
+      const productId = await ctx.db.insert("products", { name: `Tool ${i}`, slug: `tool-${i}`, domain: `tool-${i}.example`, description: "" });
+      await ctx.db.insert("props", { userId, productId, status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "Private note excluded from locator" });
+    }
+    const original = (await ctx.db.get(propId))!;
+    return ctx.db.insert("props", { userId, productId: original.productId, status: "ARCHIVED", visibility: "PRIVATE", headline: "Later relationship", note: "Private history" });
+  });
+  let cursor: string | null = null;
+  const records = [];
+  do {
+    const result: FunctionReturnType<typeof api.inventory.locator> = await owner.query(locator, { paginationOpts: { numItems: 100, cursor } });
+    expect(result.page.length).toBeLessThanOrEqual(25);
+    records.push(...result.page);
+    cursor = result.isDone ? null : result.continueCursor;
+  } while (cursor);
+  expect(records).toHaveLength(32);
+  expect(records.filter(record => record.name === "Wispr Flow").map(record => record.propId)).toEqual([propId, later]);
+  expect(records.every(record => !("note" in record) && !("activity" in record) && !("evidence" in record))).toBe(true);
+  expect((await owner.query(detail, { propId: later })).prop.note).toBe("Private history");
+  expect((await other.query(locator, firstPage)).page).toEqual([]);
+  expect(await other.query(detail, { propId: later })).toBeNull();
+  expect(await owner.query(detail, { propId: "not-a-valid-id" })).toBeNull();
+  await expect(t.query(locator, firstPage)).rejects.toThrow();
+  await expect(other.query(related, { propId, ...firstPage })).rejects.toThrow("unavailable");
+  expect((await owner.query(related, { propId, ...firstPage })).page.map((record: { propId: string }) => record.propId)).toEqual([propId, later]);
+});
+
+test("direct relationship reload preserves exact duplicate decisions and the public snapshot", async () => {
+  const { t, owner, propId, userId } = await fixture();
+  const sibling = await t.run(async ctx => {
+    const original = (await ctx.db.get(propId))!;
+    return ctx.db.insert("props", { userId, productId: original.productId, status: "ARCHIVED", visibility: "PRIVATE", headline: "Sibling", note: "Do not change" });
+  });
+  const publicBefore = await t.run(ctx => ctx.db.query("publishedProfiles").collect());
+  await owner.mutation(save, { propId, expectedVersion: 0, operationId: "focused-save", status: "ACTIVE", goTo: true, headline: "My everyday tool", note: "Why it matters" });
+  const fresh = t.withIdentity({ subject: "owner", tokenIdentifier: "another-session" });
+  expect((await fresh.query(detail, { propId })).prop).toMatchObject({ status: "ACTIVE", goTo: true, note: "Why it matters", relationshipVersion: 1 });
+  expect((await fresh.query(detail, { propId: sibling })).prop).toMatchObject({ status: "ARCHIVED", note: "Do not change" });
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual(publicBefore);
+});
+
+test("collection shell omits cards and sharing reads bounded pages without misbinding duplicates", async () => {
+  const { t, owner, other, userId, productId, propId } = await fixture();
+  await t.run(async ctx => {
+    for (let index = 0; index < 31; index++) await ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: `Record ${index}`, note: "" });
+  });
+  const shell = await owner.query(makeFunctionReference<"query">("onboarding:getState"), {
+    includeCards: false, includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false,
+  });
+  expect(shell.cards).toEqual([]);
+  const sharing = makeFunctionReference<"query">("onboarding:sharingCards");
+  const first = await owner.query(sharing, { paginationOpts: { numItems: 100, cursor: null } });
+  expect(first.page).toHaveLength(25);
+  expect(first.isDone).toBe(false);
+  expect(first.page[0].prop._id).toBe(propId);
+  const second = await owner.query(sharing, { paginationOpts: { numItems: 25, cursor: first.continueCursor } });
+  expect(second.page).toHaveLength(7);
+  expect(second.isDone).toBe(true);
+  expect(new Set([...first.page, ...second.page].map(card => card.prop._id)).size).toBe(32);
+  expect((await other.query(sharing, firstPage)).page).toEqual([]);
 });

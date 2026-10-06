@@ -1,22 +1,75 @@
 # Developing PROPER-RESPECT
 
-Updated: 2026-09-23. Start with [AGENTS.md](../AGENTS.md), the
-[Cursor handoff](CURSOR_HANDOFF.md), [deployment runbook](DEPLOYMENT.md), and
+Updated: 2026-10-06. Start with [AGENTS.md](../AGENTS.md), the
+[remediation brief](remediation/CODEX-BRIEF.md), the
+[Cursor handoff](CURSOR_HANDOFF.md), the
+[deployment runbook](DEPLOYMENT.md) and the
 [canonical Ref](https://plan.ref.tools/oUl8LCIQb32SAicK).
 
 ## Latest deployed state
 
-Production runs on `https://proper-respect.com` with separate accepted backend
-and frontend sources. The September 23 release includes the empty-collection
-first-tool flow and private-save confirmation. Existing-owner access was verified;
-fresh hosted signup, second-user isolation, and provider lifecycle acceptance
-remain open. The published example is `/keegan`; the owner's desired
-`/lecturesfrom` migration is pending.
+Checked 2026-10-06. Release `v0.2.5` deployed
+`c002560f209174728b9b138a529f814c94e33872`, including the PostHog integration
+in #143. [Release run 37410038514](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37410038514)
+completed its verification, production backend, and production frontend jobs.
+The frontend job also passed the production-domain check and live smoke test.
 
-Main includes PRs #25–64. Production still excludes #52, #58, #60, and #64.
-Do not deploy main as a shortcut to release those changes. Use the
-[dated release reconciliation](verification/2026-09-23-release-documentation-reconciliation.md) for exact
-source and deployment identities, retained evidence, and acceptance limits.
+An independent anonymous GET to
+[`/lecturesfrom`](https://proper-respect.com/lecturesfrom) returned HTTP 200
+on 2026-10-06 with Wispr Flow, NotebookLM, Devin Desktop, and GitHub cards.
+The GitHub card's retained activity was visibly stale. No signed-in save,
+provider read, fresh signup, or publication was performed during this check.
+
+For adding tools and sharing a profile, start with the
+[product walkthrough](../README.md#build-your-tool-profile). For the current
+Codex and Claude Code boundaries, read
+[usage measurement](usage-measurement.md). The native Codex launcher remains
+blocked, and the AI usage cards remain local previews.
+
+The dated state and invited-tester observations below are retained as historical
+evidence. They are not the current deployment or backlog. The remediation brief
+and linked issues remain the task records.
+
+### Historical deployment observation, September 27
+
+Checked 2026-09-27 from a cloud session. It could read git, GitHub and
+Vercel deployment metadata. It could not reach Convex, the live site, or
+the owner's local machine.
+
+| Layer | State | How it was established |
+| --- | --- | --- |
+| Current source | `main` at `7510f9e` (#98). R01 merged; K01 done. | git |
+| Release candidate | None. There is no `v*` tag, and the release pipeline (R10) isn't built yet. | git |
+| Production frontend | `dpl_5poDzGmiTmCdsGTjwdbMfrrsrEYt`, deployed from the CLI on 2026-09-25 at 15:13 EDT, with no commit SHA. All 446 uploaded source files match `archive/live-frontend-2026-09-25` at `e9df8cc`: `5aa32e6` plus the ARD trust manifest, built without `convex deploy`. | Vercel API; hash of every file |
+| Production backend | `striped-chicken-693`, last verified at `082e90c` on 2026-09-23 ([receipt](verification/2026-09-23-release-documentation-reconciliation.md)). **Unknown** whether anyone ran a Convex deploy after that. | receipt only |
+| On main, not deployed | 17 Convex files: #52's migration, #58, #60, #64, #81, #90, #91 and R01. `/lecturesfrom` depends on #52. | `git diff 082e90c main -- convex/` |
+| Runtime checks | Last run 2026-09-23. Clerk sign-up read `restricted` on 2026-09-26. None since. | receipts |
+
+Do not deploy main outside the release workflow. Releases push a `v*` tag and
+run `.github/workflows/release.yml` ([deployment runbook](DEPLOYMENT.md),
+[v0.2.0](releases/v0.2.0.md)); after R10, the brief's next steps are K02, then K03.
+
+### Historical invited-tester observations, September 27
+
+The [remediation brief](remediation/CODEX-BRIEF.md) and
+[#24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) were the
+backlog for these observations. This table recorded the mapping at that time.
+
+| Outcome | Status in source | Tasks |
+| --- | --- | --- |
+| Reach a useful private collection | Empty state and setup retry work. `/app/*` has no error boundary, and production likely replaces every validation message with "Server Error". | #104, #105; R05 covers the public page |
+| Review discoveries without retyping | The "use this observed date" shortcut never renders. | #102 |
+| Add or correct a product without an integration | Adding works. Renaming a product, fixing its website or removing a mistaken relationship doesn't exist. | None yet: owner decides |
+| Save status, go-to, explanation and history | Works (`inventory.save`, `relationshipEvents`). | None |
+| See decisions in a fresh session | Proven in `convex-test` and a fixture only. | R29; K07 step 4 |
+| Inspect supporting information and its limits | Mostly works. Uploaded originals can't be reopened. One-off captures read "Updated" forever. | None yet for reopening; #103; R12 |
+| Preview, publish selected cards, unpublish | Publish works. Unpublishing is hidden behind a republish. | R15 |
+| Data controls | No delete-original UI, no unpublish-all, no export. Gmail disconnect keeps Google's grant. | R15, R17 |
+| Owner isolation | Denial tests exist across most modules. Cross-owner delete and revoke aren't tested. | R15; K07 step 5 |
+| Same behavior for API, artifact (Wispr Flow) and manual products | Save, history and publish are shared. An artifact metric still needs a developer-run script. | K07 step 3; R21; R27 later |
+| Refresh keeps decisions; failure never becomes zero | Failures go stale, never zero. No user can turn refresh on. | R08, R09, R11, K04 |
+| Finished cards and brands | Unknown products show initials; Terms says "Coming soon". | R26, R07 |
+| A released build | Production is `e9df8cc`; main is undeployed. | R10, K02, K03 |
 
 ## Current product
 
@@ -60,8 +113,8 @@ operator receipts and originals remain private.
 
 The native `proper-respect.com` cutover is complete. Do not restart the former
 apex-to-`props.lecturesfrom.com` transition. Git-triggered deployments remain
-disabled, and the repository's Vercel build command still deploys Convex.
-Follow the deployment runbook for a separately reviewed selective release.
+disabled, and the Vercel build is frontend-only. The backend deploys only from
+the tagged release workflow, after the owner's approval.
 Additional provider reads, recurrence, data transfer, and publication retain
 their separate authorization boundaries.
 

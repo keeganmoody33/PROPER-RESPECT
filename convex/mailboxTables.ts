@@ -5,6 +5,7 @@ export const mailboxProviderValidator = v.union(v.literal("GOOGLE"), v.literal("
 export const mailboxCursorValidator = v.union(v.string(), v.null());
 export const mailboxScanModeValidator = v.union(v.literal("KNOWN_PRODUCTS"), v.literal("HISTORY"), v.literal("INCREMENTAL"));
 export const mailboxFailureValidator = v.union(v.literal("TEMPORARY"), v.literal("REAUTHORIZE"), v.literal("CURSOR_EXPIRED"));
+export const mailboxRevocationOutcomeValidator = v.union(v.literal("REVOKED"), v.literal("FAILED"), v.literal("NO_TOKEN"));
 export const mailboxCredentialValidator = v.object({
   algorithm: v.literal("AES-256-GCM"), keyVersion: v.string(),
   ciphertext: v.string(), iv: v.string(),
@@ -40,6 +41,12 @@ export const mailboxTables = {
     maintenanceEnabled: v.optional(v.boolean()),
     maintenanceApprovedAt: v.optional(v.string()),
     nextMaintenanceAt: v.optional(v.number()),
+    // Outcome of the last disconnect's provider revocation request. Never holds provider text or tokens.
+    lastRevocation: v.optional(v.object({ outcome: mailboxRevocationOutcomeValidator, at: v.string() })),
+    // Set while disconnectAndRevoke is asking the provider to revoke the grant; reconnects and scans wait until it
+    // clears or expires. The token fences cleanup to the revocation that set it.
+    // strandedGrant: a reconnect refused during this revocation got fresh tokens that couldn't be revoked.
+    revocationPending: v.optional(v.object({ token: v.string(), until: v.number(), strandedGrant: v.optional(v.boolean()) })),
     connectedAt: v.string(), updatedAt: v.string(), lastSyncedAt: v.optional(v.string()),
   }).index("by_owner", ["ownerId"])
     .index("by_maintenance_due", ["maintenanceEnabled", "nextMaintenanceAt"])

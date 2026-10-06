@@ -1,6 +1,6 @@
 # ADR-057: Accessibility — WCAG 2.1 AA Compliance
 
-> **Status correction — 2026-09-20:** Accessibility remains a target requiring real checks. Credibility-score examples are superseded; proposed shadcn/shortcuts are not installed features or evidence of compliance. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+> **Status correction — 2026-09-20:** Accessibility remains a target requiring real checks. Credibility-score examples are superseded, and on 2026-09-28 (R14) the screen-reader example below was changed to read evidence method labels instead; proposed shadcn/shortcuts are not installed features or evidence of compliance. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
 
 ## Status
 Accepted — 2026-06-05
@@ -43,11 +43,11 @@ props must be accessible to everyone, including users with disabilities. This is
 12 products. 3 active. 2 archived.
 
 Active products:
-Link. Linear. Active. 2.1 years. Credibility 114.
+Link. Linear. Active. 2.1 years. Evidence: connected account.
 Button. Give respect. Who put you on?
 Link. Visit Linear.
 
-Link. Cursor. Active. 8 months. Credibility 67.
+Link. Cursor. Active. 8 months. Evidence: owner statement.
 Button. Give respect. Who put you on?
 Link. Visit Cursor.
 

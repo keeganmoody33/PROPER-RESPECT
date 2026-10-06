@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultReview, explicitPublicationCards, explicitPublicationReview, isCurrentReview, setReviewCostVisibility, type ReviewCard } from "./review";
+import { defaultReview, explicitPublicationCards, explicitPublicationReview, githubRefreshConnector, isCurrentReview, reviewActivity, setReviewCostVisibility, type ReviewCard } from "./review";
 import type { ActivityModule } from "./public-profile";
 
 const draft = {
@@ -96,5 +96,47 @@ describe("publication consent follows the approved snapshot", () => {
     const saved: ReviewCard = { ...draft, prop: { ...draft.prop, visibility: "PRIVATE", relationshipVersion: 1 } };
     expect(explicitPublicationReview(saved, { ...defaultReview(saved), publish: true })?.publish).toBe(true);
     expect(explicitPublicationReview(draft, { ...defaultReview(draft), publish: true }, false)?.publish).toBe(true);
+  });
+});
+
+describe("daily GitHub refresh opt-in (R09)", () => {
+  const saved = activity(3);
+  const refreshed = { ...activity(9), capturedAt: "2026-09-27T12:00:00.000Z", freshness: "FRESH" as const };
+  const github: ReviewCard = { ...draft, product: { domain: "github.com", slug: "github" }, isPublishedAtCurrentHandle: true,
+    prop: { ...draft.prop, visibility: "PUBLIC" as const, relationshipVersion: 2, activity: saved }, publishedActivity: refreshed, refreshApproved: true };
+  const connector = { _id: "connector-1", provider: "GITHUB", status: "CONNECTED", attributionScope: "PERSONAL" };
+
+  it("starts from the approved refresh and keeps the refreshed public calendar", () => {
+    const edit = defaultReview(github);
+    expect(edit).toMatchObject({ publish: true, autoRefresh: true, approveActivity: true });
+    expect(reviewActivity(github, edit)).toEqual(refreshed);
+  });
+
+  it("stays off and publishes the saved calendar without an approved refresh", () => {
+    const card = { ...github, refreshApproved: false };
+    const edit = defaultReview(card);
+    expect(edit.autoRefresh).toBe(false);
+    expect(reviewActivity(card, edit)).toEqual(saved);
+  });
+
+  it("returns to the saved calendar once the owner unchecks the refresh", () => {
+    expect(reviewActivity(github, { ...defaultReview(github), autoRefresh: false })).toEqual(saved);
+  });
+
+  it.each(["CONNECTED", "ERROR"])("offers the refresh with a personal GitHub connection that is %s", status => {
+    expect(githubRefreshConnector(github, [{ ...connector, status }], defaultReview(github))?._id).toBe("connector-1");
+  });
+
+  it.each([
+    ["a revoked connection", { cards: github, connectors: [{ ...connector, status: "REVOKED" }], edit: {} }],
+    ["a connection needing reauthorization", { cards: github, connectors: [{ ...connector, status: "NEEDS_REAUTH" }], edit: {} }],
+    ["an organization connection", { cards: github, connectors: [{ ...connector, attributionScope: "ORGANIZATION" }], edit: {} }],
+    ["a Devin connection", { cards: github, connectors: [{ ...connector, provider: "DEVIN" }], edit: {} }],
+    ["another product", { cards: { ...github, product: { domain: "example.com", slug: "example" } }, connectors: [connector], edit: {} }],
+    ["an unpublished card", { cards: github, connectors: [connector], edit: { publish: false } }],
+    ["activity left off the card", { cards: github, connectors: [connector], edit: { approveActivity: false } }],
+    ["activity that is not a personal calendar", { cards: { ...github, refreshApproved: false, prop: { ...github.prop, activity: { ...saved, attributionScope: "ORGANIZATION" as const } } }, connectors: [connector], edit: { approveActivity: true } }],
+  ] as const)("hides the refresh for %s", (_label, { cards, connectors, edit }) => {
+    expect(githubRefreshConnector(cards, connectors, { ...defaultReview(cards), ...edit })).toBeUndefined();
   });
 });

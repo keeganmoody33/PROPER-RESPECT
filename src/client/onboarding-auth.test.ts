@@ -14,6 +14,7 @@ const auth = vi.hoisted(() => ({
   brandState: undefined as Record<string, unknown> | undefined,
   accountRows: [] as Array<Record<string, unknown>>,
   accountStatus: "Exhausted",
+  sharingStatus: "Exhausted",
 }));
 
 vi.mock("@clerk/nextjs", () => ({
@@ -40,10 +41,10 @@ vi.mock("convex/react", async (importOriginal) => ({
   useAction: () => vi.fn(),
   usePaginatedQuery: (reference: FunctionReference<"query">) => getFunctionName(reference) === "inventory:accountEvidencePage"
     ? { results: auth.accountRows, status: auth.accountStatus, loadMore: vi.fn() }
-    : { results: [], status: "Exhausted", loadMore: vi.fn() },
+    : { results: getFunctionName(reference) === "onboarding:sharingCards" ? auth.ownerState?.cards ?? [] : [], status: getFunctionName(reference) === "onboarding:sharingCards" ? auth.sharingStatus : "Exhausted", loadMore: vi.fn() },
 }));
 
-const render = () => renderToString(createElement(OnboardingClient));
+const render = () => renderToString(createElement(OnboardingClient, { publicOrigin: "https://canonical.example" }));
 
 beforeEach(() => {
   auth.clerkSignedIn = true;
@@ -53,6 +54,7 @@ beforeEach(() => {
   auth.brandState = undefined;
   auth.accountRows = [];
   auth.accountStatus = "Exhausted";
+  auth.sharingStatus = "Exhausted";
 });
 
 test("Clerk sign-in waits for Convex token acceptance before owner queries mount", () => {
@@ -114,9 +116,9 @@ test("private collection and simple owner-described product entry precede option
     cards: [], connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
   };
   const html = render();
-  expect(html).toContain("Add a product");
-  expect(html.indexOf("Add a product")).toBeLessThan(html.indexOf("Public identity"));
-  expect(html).toContain("No integration or activity measurement is required");
+  expect(html).toContain("Add a tool");
+  expect(html.indexOf("Add a tool")).toBeLessThan(html.indexOf("Public identity"));
+  expect(html).toContain("Name a tool and choose how you use it.");
   expect(html).not.toContain('name="slug"');
   expect(html).not.toMatch(/name="website"[^>]*required/);
   expect(html).toContain("Preview sharing");
@@ -206,8 +208,10 @@ test.each([
   }
   if (publication === true) {
     expect(html).toMatch(/<a href="\/current"[^>]*>Open current public page/);
+    expect(html).toContain("Copy profile link");
   } else {
     expect(html).not.toContain("Open current public page");
+    expect(html).not.toContain("Copy profile link");
   }
   if (publication === false) expect(html).toContain("Nothing is published at /current yet.");
   else expect(html).not.toContain("Nothing is published at /current yet.");
@@ -227,4 +231,17 @@ test("absent identity capability keeps sharing disabled without claiming a publi
   expect(html).not.toContain("Nothing is published at /current yet.");
   expect(html).not.toContain("Set up your public identity");
   expect(html).not.toContain("Open current public page");
+});
+
+
+test("the account shell cannot expose empty sharing controls before the first card page", () => {
+  auth.convex = { isLoading: false, isAuthenticated: true };
+  auth.ownerState = { user: { _id: "owner", handle: "owner" }, cards: [], connectors: [], privateInventoryAvailable: true, hasClaimedPublicIdentity: true };
+  auth.sharingStatus = "LoadingFirstPage";
+  const html = render();
+  expect(html).toContain("Loading your profile");
+  expect(html).not.toContain("Preview sharing");
+  expect(html).not.toContain("Start with one tool");
+  auth.sharingStatus = "Exhausted";
+  expect(render()).toContain("Start with one tool");
 });
