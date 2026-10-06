@@ -145,7 +145,17 @@ function render() {
       if (card.note !== card.headline) article.append(el("p", card.note));
       article.append(el("p", card.startedAt ? "Started " + card.startedAt : card.startDateNote ?? "Start date not supplied", "subtle"));
       if (card.activity) { const section = el("section"); section.append(el("h3", "Activity & evidence"), values(card.activity)); article.append(section); }
-      else article.append(el("p", "No activity evidence supplied."));
+      else if (!card.measurements?.length) article.append(el("p", "No activity evidence supplied."));
+      if (card.measurements?.length) {
+        const section = el("section");
+        section.setAttribute("aria-label", "Exact measurements");
+        section.append(
+          el("h3", "Exact measurements"),
+          el("p", "Owner-supplied measurements. Activity actor is unknown. Snapshots and overlapping views must not be added.", "subtle"),
+          values(card.measurements.map(row => ({ ...row, value: row.value ?? "Unknown" }))),
+        );
+        article.append(section);
+      }
       if (card.cost) { const section = el("section"); section.append(el("h3", "Shared cost"), values(card.cost)); article.append(section); }
       if (card.primaryLink) { const section = el("section"); section.append(el("h3", "Shared product link"), values(card.primaryLink)); article.append(section); }
       main.append(article);

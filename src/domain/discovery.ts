@@ -74,6 +74,19 @@ type CatalogEntry = ProductIdentity & {
 };
 
 const VENDOR_CATALOG: CatalogEntry[] = [
+  // Exact product identities already retained with publisher artwork in
+  // public/product-assets/2026-09-24-product-icons.json. Parent domains do not
+  // establish usage of these specific products.
+  {
+    slug: "claude-code", name: "Claude Code", domain: "claude.com",
+    description: "AI-assisted software development.", domains: [], aliases: ["claude code"],
+    canonicalUrl: "https://code.claude.com/docs/en/monitoring-usage",
+  },
+  {
+    slug: "codex", name: "Codex", domain: "openai.com",
+    description: "AI-assisted software development.", domains: [], aliases: ["codex"],
+    canonicalUrl: "https://developers.openai.com/codex/app-server/",
+  },
   // Official product identity verified at https://www.clay.com on 2026-09-18.
   {
     slug: "clay", name: "Clay", domain: "clay.com",

@@ -2,8 +2,9 @@ import { fileURLToPath } from "node:url";
 import { startLoopbackServer } from "../../src/transport";
 import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
 import { e2eReferenceProfile } from "@/src/data/e2e-reference-profile";
-import { parseProfileReference, projectPresentation } from "../../src/public-reader";
+import { createPublicReader, parseProfileReference, projectPresentation } from "../../src/public-reader";
 import { visiblePublicProfileSchema, type PublicProfileResult, type PublicReadError } from "../../src/contracts";
+import { measurementProfile } from "../measurement-fixture";
 
 const origin = new URL(process.env.PUBLIC_SITE_ORIGIN!);
 const counts = new Map<string, number>();
@@ -17,6 +18,13 @@ const readProfile = async (reference: string): Promise<PublicProfileResult | Pub
     return { kind: "error", code: "UNAVAILABLE", message: "This public profile is unavailable.", retryable: false };
   }
   if (handle === "slow" && count > 1) await new Promise(resolve => setTimeout(resolve, 900));
+  if (handle === "measurements") {
+    const source = measurementProfile();
+    source.handle = handle;
+    source.displayName = "Synthetic measurement profile";
+    delete source.cards[0].activity;
+    return createPublicReader({ origin, dataMode: "synthetic", readPublished: async () => source })(reference);
+  }
   const profile = visiblePublicProfileSchema.parse(projectVisiblePublicProfile(e2eReferenceProfile));
   profile.handle = handle;
   profile.displayName = handle === "hostile" ? '<img src=x onerror="window.injected=true"> Literal owner text' : "Synthetic public profile";

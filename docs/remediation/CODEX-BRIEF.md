@@ -97,11 +97,13 @@ the schema for them now:
 - The second user is an invited tester, not a stranger.
 - The 30-day unattended receipt comes from the owner's GitHub contribution
   calendar.
-- PRs #52, #58, #60 and #64 are merged to main but not deployed. They ship in
-  v0.2.0.
+- The September 25 held-release notes are historical. Release `v0.2.6`
+  deployed `8cab986` on October 6; see [development](../DEVELOPMENT.md).
 - Hosting stays on free tiers. Nothing may require a paid plan.
-- The local Codex and Claude usage readers (PRs #66 to #73) connect to the
-  hosted product only after the second user passes.
+- The October 6 owner direction advances the bounded R27 private import path
+  using the existing Codex and Claude readers. Genuine second-user acceptance
+  and separately authorized release remain required; no automatic acquisition
+  or new provider credentials are authorized by this implementation task.
 - Tagged releases may continue during the 30-day receipt window. Section 10
   says when a release restarts the count.
 
@@ -1216,13 +1218,43 @@ The table order is the priority order.
 - Add an optional "you get / I get" line per link. No payments; ADR-003 still
   holds.
 
-#### R27. Local usage import contract (G27)
+#### R27. Exact private measurement import (G27)
 
-- **Design first, in the PR:** the owner uploads the sanitized JSON from
-  `scripts/claude-native-report.mjs` or `scripts/usage-cost-report.mjs`
-  through the existing authenticated upload. The server parses it into
-  reviewable observations with provenance.
-- Nothing publishes without review.
+Owner-directed implementation scope, 2026-10-06: finish one private result
+before adding more provider integrations. Keep the existing relationship,
+source, retained original, review, and explicit publication boundaries.
+
+- Accept actual sanitized JSON contracts from the Claude selected-file CLI
+  (`--format sanitized`), Codex metadata captures, and a strict versioned
+  product-independent measurement packet. `usage-cost-report.mjs` emits
+  Markdown for local reading; it is not a sanitized JSON producer.
+- Validate before retaining or creating a relationship. Reject raw prompts,
+  credentials, transcripts, and private workspace content. Owner-supplied
+  aliases do not authenticate a producer or account.
+- Preserve exact scalar strings, unknown values, native units, source/account
+  scope, periods, coverage, and aggregation semantics. Reuse Claude's existing
+  cumulative/delta reconciliation and Codex's snapshot/daily parsing. Never
+  sum overlapping views or coerce exact values to JavaScript numbers.
+- Save privately, retain multiple accounts separately, and survive reload or
+  source disconnection. Replays must not create new evidence; deleting an
+  original must not allow replay to resurrect it.
+- Review exact measurements, then select a bounded public projection through
+  the existing version-bound publication preview. Raw originals and private
+  source identifiers never become public. Importing or reviewing alone never
+  publishes.
+- Reach the result through one selected source, retaining intent through sign-in.
+  Reuse the collection and editor; email discovery, a public handle, and three
+  connected email accounts are not prerequisites. Manual entry stays available.
+- Prove tokens, words, workspace rows, device duration, and an uncatalogued
+  product through the same contract. These fixtures prove the import path,
+  not native connectors for each product or genuine provider coverage.
+- Keep public agent reading as implemented. Private agent write access,
+  automated acquisition, affiliate/props expansion, and a universal cost or
+  savings comparison are outside this change.
+
+Live acceptance still needs an authorized genuine sanitized input and signed-in
+hosted persistence, reload, and publication checks after a separately approved
+release. Do not close broad acceptance issues based on fixtures.
 
 #### R28. Hardening pack (G34, G35, G36, G37, G40)
 

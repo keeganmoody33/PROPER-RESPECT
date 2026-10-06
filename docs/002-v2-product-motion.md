@@ -1,6 +1,6 @@
 # 002 — V2 product motion: multi-user on proper-respect.com
 
-Updated: 2026-09-28. Supersedes [V1 motion](002-v1-product-motion.md) as the active
+Updated: 2026-10-06. Supersedes [V1 motion](002-v1-product-motion.md) as the active
 scope. Reuses the existing evidence and publication decisions; this is not a
 new architecture program.
 
@@ -28,11 +28,11 @@ The brief's [Section 3](remediation/CODEX-BRIEF.md) holds the full decisions.
 
 ## Existing implementation and source
 
-Main includes PRs #25–64. Accepted production has separate backend and frontend
-sources, with #52, #58, #60, and #64 still held. The native `proper-respect.com`
-cutover and September 23 onboarding release are complete. See the
-[release reconciliation](verification/2026-09-23-release-documentation-reconciliation.md)
-for exact identities and the evidence limits.
+Release `v0.2.6` deployed main `8cab986` through the protected backend and
+frontend release workflow on October 6. See [development](DEVELOPMENT.md) for
+the exact release run. September 23 held-release notes describe historical
+state, not the current release. New measurement work still needs review and a
+separately authorized release.
 
 [Release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24)
 remains the acceptance and bug queue. Completed Tasks 1–4, private evidence, and
@@ -41,10 +41,9 @@ source checkpoints remain intact; no seed reruns or automatic owner transfer.
 ## Launch sequence and acceptance
 
 1. Preserve the accepted ownership, replay-safety, and public-projection fixes.
-   Release held changes only after their separate review and authorization.
+   Release new changes only after their separate review and authorization.
 2. Native path-based profiles run on `proper-respect.com`. The published owner
-   example remains `/keegan`; the desired `/lecturesfrom` canonical migration
-   is pending. The empty-collection first-tool flow is released, while a fresh
+   example is `/lecturesfrom`; the canonical migration is complete. The empty-collection first-tool flow is released, while a fresh
    hosted account's complete journey remains to be verified.
 3. A second test user signs in to an isolated private owner record, independently
    authorizes each source, sees source-specific progress/coverage/errors and

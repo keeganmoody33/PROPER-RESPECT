@@ -4,6 +4,19 @@ Thanks for testing Proper Respect. This page covers what stays private, what
 becomes public and when, how to remove your data, and how to report a problem.
 Button names below are the ones you'll see on the site.
 
+## Get one private result
+
+Choose one source at the start of your collection. The choice survives sign-in.
+GitHub requires its own account connection. Claude Code and Codex accept the
+specific sanitized JSON exports described in [usage measurement](usage-measurement.md);
+other metrics need a strict prepared packet. Click **Import privately** to open
+that tool's exact reported values. A malformed file must leave no blank tool.
+You can instead use **Add a tool** and **Save tool privately**.
+
+You do not need a public handle or a mailbox connection for this step. Review
+measurements with **Save measurement choices privately**, then confirm how you
+use the tool. Those are private decisions; sharing remains a later choice.
+
 ## What stays private
 
 Everything you add starts private. Your collection lives at
@@ -43,7 +56,8 @@ change something later, it stays private until you preview and approve again.
 GitHub contribution calendar updates once a day without a new preview. Only
 the calendar changes: its numbers, its capture date, or an "out of date" mark
 if a refresh fails. To stop it, untick the box and publish again, or
-disconnect GitHub.
+disconnect GitHub. The separate [account-consent fix](https://github.com/keeganmoody33/PROPER-RESPECT/pull/150)
+requires a fresh approval after reconnect once released.
 
 ## Removing your data
 

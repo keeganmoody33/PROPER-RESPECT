@@ -109,7 +109,7 @@ for (const width of [1280, 390]) for (const [choice, status] of [
   await add.getByLabel("Product name", { exact: true }).fill("Field Notes");
   await expect(add.getByLabel("How do you use it?", { exact: true })).toHaveValue("");
   await add.getByRole("button", { name: "Save tool privately" }).click();
-  await expect(page.getByRole("heading", { name: "Start with one tool" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "See your first private result" })).toBeVisible();
   await add.getByLabel("How do you use it?", { exact: true }).selectOption(choice);
   await add.getByRole("button", { name: "Save tool privately" }).click();
   await expect(page.getByRole("link", { name: "Review your collection" })).toBeVisible();
@@ -171,10 +171,10 @@ for (const width of [1280, 390]) test(`first private manual card reaches exact p
   await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
     ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
   await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
-  await expect(page.getByRole("heading", { name: "Start with one tool" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "See your first private result" })).toBeVisible();
   await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
   await page.screenshot({ path: testInfo.outputPath(`fresh-user-empty-${width}.png`), fullPage: false });
-  await page.getByRole("link", { name: "Add your first tool", exact: true }).click();
+  await page.getByRole("link", { name: "Add your first tool manually", exact: true }).click();
   const add = page.locator("#add-product");
   await add.getByLabel("Product name", { exact: true }).fill("Field Notes");
   await expect(add.getByLabel("How do you use it?", { exact: true })).toHaveValue("");
@@ -198,7 +198,7 @@ for (const width of [1280, 390]) test(`first private manual card reaches exact p
   await expect(page.getByRole("button", { name: "Publish this preview" })).toHaveCount(0);
   const beforeReload = await page.evaluate(() => localStorage.getItem("proper-respect-fresh-user-fixture"));
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Start with one tool" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "See your first private result" })).toHaveCount(0);
   await expect(inventory.getByLabel("What it helps you do (optional)")).toHaveValue("My research log");
   await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
   expect(await page.evaluate(() => localStorage.getItem("proper-respect-fresh-user-fixture"))).toBe(beforeReload);
@@ -234,7 +234,7 @@ for (const identityState of ["claimed", "unclaimed-after-upload", "unknown"] as 
   await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
     ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
   await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
-  await expect(page.getByRole("heading", { name: "Start with one tool" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "See your first private result" })).toBeVisible();
   await page.evaluate(value => {
     const key = "proper-respect-fresh-user-fixture";
     const state = JSON.parse(localStorage.getItem(key)!);
@@ -280,7 +280,7 @@ for (const width of [1280, 390]) test(`unpublish all and download my data at ${w
   await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
     ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
   await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
-  await expect(page.getByRole("heading", { name: "Start with one tool" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "See your first private result" })).toBeVisible();
   await page.evaluate(() => {
     const key = "proper-respect-fresh-user-fixture";
     const state = JSON.parse(localStorage.getItem(key)!);
@@ -347,7 +347,7 @@ for (const width of [1280, 390]) test(`owner finds later duplicate records, save
   await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
     ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
   await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
-  await expect(page.getByRole("heading", { name: "Start with one tool" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "See your first private result" })).toBeVisible();
   await page.evaluate(() => {
     const key = "proper-respect-fresh-user-fixture";
     const state = JSON.parse(localStorage.getItem(key)!);

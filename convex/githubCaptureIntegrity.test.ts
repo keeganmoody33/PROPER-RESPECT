@@ -34,7 +34,7 @@ test("zero creates one unconfirmed private card and exact replay adds nothing", 
   const replay = await t.mutation(save, { ...args, accountLabel: "github.com/example" });
   const after = await rows();
   expect(first.propId).not.toBeNull();
-  expect(replay.duplicate).toBe(true);
+  expect(replay).toMatchObject({ propId: first.propId, rawEvidenceId: first.rawEvidenceId, duplicate: true, reviewRequired: false });
   expect(after.props).toEqual(before.props);
   expect(after.raw).toEqual(before.raw);
   expect(after.proofs).toEqual(before.proofs);
@@ -69,7 +69,7 @@ test("four records stay unassigned until explicit review and separate activity s
   const selected = await rows();
   expect(selected.props[2].activity).toMatchObject({ kind: "contributionCalendar", total: 2 });
   expect(selected.publications).toEqual([]);
-  await t.mutation(save, args);
+  expect(await t.mutation(save, args)).toMatchObject({ propId: choice.id, duplicate: true, reviewRequired: false });
   const replay = await rows();
   expect(replay.props).toEqual(selected.props); expect(replay.raw).toEqual(selected.raw); expect(replay.proofs).toEqual(selected.proofs); expect(replay.drafts).toEqual(selected.drafts);
 });
@@ -259,6 +259,62 @@ test("capture preserves selected evidence, existing publication and revoked refr
   expect(after.publications).toEqual(before.publications);
   expect(after.subscriptions).toEqual(before.subscriptions);
   expect(after.connectors[0].status).toBe("CONNECTED");
+});
+
+test.each(["DRAFT", "PRIVATE", "PUBLIC"] as const)("reconnecting the same capture reopens its %s relationship without changing decisions", async visibility => {
+  const { t, rows, owner, ids } = await fixture(1, visibility);
+  const first = await t.mutation(save, args);
+  await owner.mutation(saveRelationship, { propId: ids.props[0], operationId: "decide-before-reconnect", expectedVersion: 1,
+    status: "ARCHIVED", goTo: false, headline: "Owner decision", note: "Preserve this decision and its history" });
+  // Include a published snapshot so reconnect cannot silently republish the new private decision.
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: activity.capturedAt,
+    cardPropIds: [ids.props[0]], profile: { handle: "owner", displayName: "Owner", bio: "", cards: [{ product, status: "ACTIVE", headline: "Published decision", note: "Public note" }] } }));
+  const before = await rows();
+  const history = await t.run(ctx => ctx.db.query("relationshipEvents").collect());
+  expect(history).toHaveLength(1);
+  const replay = await t.mutation(save, args);
+  expect(replay).toMatchObject({ propId: first.propId, rawEvidenceId: first.rawEvidenceId, duplicate: true, reviewRequired: false });
+  const after = await rows();
+  for (const key of ["props", "raw", "proofs", "signals", "drafts", "publications", "subscriptions"] as const) expect(after[key]).toEqual(before[key]);
+  expect(await t.run(ctx => ctx.db.query("relationshipEvents").collect())).toEqual(history);
+});
+
+test.each(["unlinked", "deleted-relationship", "foreign-owner", "wrong-product", "changed-domain", "ambiguous"] as const)("replayed capture with %s links remains unassigned without creating evidence", async mode => {
+  const { t, rows, ids } = await fixture(1);
+  const first = await t.mutation(save, args);
+  await t.run(async ctx => {
+    const proof = (await ctx.db.query("proofs").first())!;
+    if (mode === "unlinked") await ctx.db.delete(proof._id);
+    if (mode === "deleted-relationship") await ctx.db.delete(ids.props[0]);
+    if (mode === "foreign-owner") await ctx.db.patch(ids.props[0], { userId: ids.otherId });
+    if (mode === "wrong-product") {
+      const productId = await ctx.db.insert("products", { name: "Other", slug: "other", domain: "other.example", description: "" });
+      await ctx.db.patch(ids.props[0], { productId });
+    }
+    if (mode === "changed-domain") await ctx.db.patch(ids.productId, { domain: "other.example" });
+    if (mode === "ambiguous") {
+      const propId = await ctx.db.insert("props", { userId: ids.userId, productId: ids.productId, status: "TESTING", visibility: "PRIVATE", headline: "Another record", note: "" });
+      await ctx.db.insert("proofs", { propId, rawEvidenceId: first.rawEvidenceId, type: "API_OAUTH" });
+    }
+  });
+  const before = await rows();
+  expect(await t.mutation(save, args)).toMatchObject({ propId: null, rawEvidenceId: first.rawEvidenceId, duplicate: true, reviewRequired: true });
+  const after = await rows();
+  for (const key of ["props", "raw", "proofs", "signals", "drafts", "publications", "subscriptions"] as const) expect(after[key]).toEqual(before[key]);
+});
+
+test.each([2, 32, 33])("replay bounds legacy duplicate proof lookup with %s rows", async count => {
+  const { t, rows, ids } = await fixture(1);
+  const first = await t.mutation(save, args);
+  await t.run(async ctx => {
+    for (let index = 1; index < count; index++) await ctx.db.insert("proofs", { propId: ids.props[0], rawEvidenceId: first.rawEvidenceId, type: "API_OAUTH" });
+  });
+  const before = await rows();
+  expect(await t.mutation(save, args)).toMatchObject({ propId: count <= 32 ? first.propId : null, duplicate: true, reviewRequired: count > 32 });
+  const after = await rows();
+  expect(after.proofs).toEqual(before.proofs);
+  expect(after.raw).toEqual(before.raw);
+  expect(after.props).toEqual(before.props);
 });
 
 test("replacing a connection keeps every earlier private capture and owner decision", async () => {

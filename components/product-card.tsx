@@ -1,5 +1,7 @@
 "use client";
 
+import { PublicMeasurements } from "./measurement-values";
+
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import {
   selectProductBrandLogo,
@@ -183,7 +185,7 @@ function ActivityPreview({ activity, unreviewed = false, expanded = false }: { a
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
       <p>
         {metric.value === undefined ? "No observations supplied" : <>
-          <strong>{compactNumber(metric.value)}</strong>{" "}
+          <strong>{expanded ? String(metric.value) : compactNumber(metric.value)}</strong>{" "}
           {metric.label}{metric.unit ? ` · ${metric.unit}` : ""}
           {activity.kind === "timeSeries" ? " · observation" : ""}
         </>}
@@ -490,9 +492,10 @@ export function ProductCard({
           {brandPreview ? card.product.description : card.headline || card.note || notePlaceholder}
         </p>
 
+        {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
         {!brandPreview && card.activity ? (
           <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />
-        ) : (brandPreview || (audience === "owner" && !ownerUsage)) ? (
+        ) : (brandPreview || (audience === "owner" && !ownerUsage && !card.measurements?.length)) ? (
           <p className="activity-placeholder">
             {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}
           </p>
@@ -553,6 +556,7 @@ export function ProductCard({
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
             <ActivityView activity={card.activity} />
           </>}
+          {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} /> : null}
           {ownerUsage && <PrivateUsageCardDetails usage={ownerUsage} />}
           {usageLink && <a
             className="usage-link"

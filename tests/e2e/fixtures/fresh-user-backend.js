@@ -2,6 +2,7 @@
 // Persists only test data across browser reloads; it does not prove hosted storage or auth.
 import { useState, useSyncExternalStore } from "react";
 import { getFunctionName } from "convex/server";
+import { parseMeasurementImport, reviewMeasurementImports, projectMeasurement } from "../../../src/domain/measurements";
 import { publicProfileSchema } from "../../../src/domain/public-profile";
 
 const key = "proper-respect-fresh-user-fixture";
@@ -56,6 +57,28 @@ const mutations = {
     retain({ ...state, history: [...(state.history ?? []), { _id: `event-${args.propId}-${version}`, propId: args.propId, recordedAt: new Date().toISOString(), before: { ...card.prop, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT" }, after: { status, goTo, headline, note, startedAt, supportingUrl } }], cards: state.cards.map(item => item === card ? { ...item, prop: { ...item.prop, status, goTo, headline, note, startedAt, supportingUrl, relationshipVersion: version, confirmedAt: "2026-09-22T12:00:00Z", visibility: "PRIVATE" } } : item) });
     return { version, duplicate: false };
   },
+  "retainedEvidence:importMeasurements": async args => {
+    record("importMeasurements", { expectedSource: args.expectedSource });
+    const parsed = parseMeasurementImport(args.text);
+    if (args.expectedSource && args.expectedSource !== parsed.adapter) throw new Error("This export does not match the selected source.");
+    const captures = state.measurementCaptures ?? [];
+    const existing = captures.find(capture => capture.digest === parsed.digest);
+    if (existing) return { propId: existing.propId, rawEvidenceId: existing.rawEvidenceId, duplicate: true };
+    const name = parsed.adapter === "claude-code" ? "Claude Code" : parsed.adapter === "codex" ? "Codex" : args.productName;
+    if (!name) throw new Error("Name the product for this packet.");
+    const slug = parsed.adapter === "metric-packet" ? name.toLowerCase().replaceAll(" ", "-") : parsed.adapter;
+    const prior = state.cards.find(card => card.product.slug === slug);
+    const product = prior?.product ?? { _id: `product-${slug}`, _creationTime: 1, name, slug, domain: parsed.adapter === "claude-code" ? "claude.com" : parsed.adapter === "codex" ? "openai.com" : "", description: "Synthetic imported product" };
+    const prop = prior?.prop ?? { _id: `measurement-${slug}`, _creationTime: 1, userId: state.user._id, productId: product._id, visibility: "DRAFT", status: "TESTING", headline: "", note: "" };
+    const capture = { propId: prop._id, rawEvidenceId: `evidence-${captures.length}`, digest: parsed.digest, capturedAt: parsed.capturedAt, source: parsed.source, adapter: parsed.adapter, measurements: reviewMeasurementImports([parsed]), reviewedMeasurementIds: [], reviewVersion: 0 };
+    retain({ ...state, cards: prior ? state.cards : [...state.cards, { product, prop, links: [], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false }], measurementCaptures: [...captures, capture] });
+    return { propId: prop._id, rawEvidenceId: capture.rawEvidenceId, duplicate: false };
+  },
+  "retainedEvidence:reviewMeasurements": async args => {
+    record("reviewMeasurements", args);
+    retain({ ...state, measurementCaptures: state.measurementCaptures.map(capture => capture.rawEvidenceId === args.rawEvidenceId ? { ...capture, reviewedMeasurementIds: args.measurementIds, reviewVersion: capture.reviewVersion + 1 } : capture) });
+    return null;
+  },
   "onboarding:claimHandle": async args => {
     record("claimHandle", args);
     retain({ ...state, hasClaimedPublicIdentity: true, user: { ...state.user, ...args, preferredLinkUrl: args.preferredLinkUrl ?? undefined } });
@@ -90,7 +113,8 @@ const client = {
     const cards = args.removeAllCards ? [] : args.selections.filter(selection => selection.publish).map(selection => {
       const saved = state.cards.find(card => card.prop._id === selection.propId);
       if (saved.prop.visibility !== "PRIVATE") throw new Error("Save privately before preview.");
-      return { product: saved.product, status: selection.status, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink, activity: selection.activity };
+      const measurements = (state.measurementCaptures ?? []).filter(capture => capture.propId === saved.prop._id && (selection.measurementEvidenceIds ?? []).includes(capture.rawEvidenceId)).flatMap(capture => capture.measurements.filter(row => capture.reviewedMeasurementIds.includes(row.id)).map(projectMeasurement));
+      return { ...(measurements.length ? { measurements } : {}), product: saved.product, status: selection.status, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink, activity: selection.activity };
     });
     const refreshAccounts = args.selections.filter(selection => selection.publish && selection.autoRefresh).map(selection => {
       const connector = state.connectors.find(connector => connector._id === selection.connectorId);
@@ -111,6 +135,7 @@ export function useQuery(ref, args) {
   switch (getFunctionName(ref)) {
     case "onboarding:getState": return current && args?.includeCards === false ? { ...current, cards: empty } : current;
     case "inventory:selectedActivity": return null;
+    case "retainedEvidence:measurements": return (current?.measurementCaptures ?? empty).filter(capture => capture.propId === args.propId);
     case "inventory:detail": return current?.cards.find(card => card.prop._id === args.propId) ?? null;
     case "mailboxes:listAccounts": return empty;
     case "productKnowledge:getForProduct": return { supported: false, sources: empty };
@@ -137,3 +162,13 @@ export function usePaginatedQuery(ref, args, options) {
   }
   return { results: rows.slice(0, count), status: count < rows.length ? "CanLoadMore" : "Exhausted", loadMore: amount => setCount(value => value + amount) };
 }
+
+// Browser fixture only. This callback stands in for the server's GitHub response;
+// it never calls GitHub, Clerk, or Convex and cannot prove live provider behavior.
+window.fixtureGithubConnect = () => {
+  const product = { _id: "github-product", _creationTime: 1, name: "GitHub", slug: "github", domain: "github.com", description: "Synthetic GitHub fixture" };
+  const activity = { kind: "contributionCalendar", total: 12345, days: [], attributionScope: "PERSONAL", capturedAt: "2026-10-06T10:00:00.000Z", freshness: "FRESH", provenanceLabel: "Synthetic GitHub snapshot", period: { start: "2026-01-01", end: "2026-10-06" } };
+  const prop = { _id: "github-result", _creationTime: 1, userId: state.user._id, productId: product._id, visibility: "DRAFT", status: "TESTING", headline: "", note: "", activity };
+  retain({ ...state, cards: [{ product, prop, links: [], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false }] });
+  return { connectorId: "fixture-connector", propId: prop._id };
+};

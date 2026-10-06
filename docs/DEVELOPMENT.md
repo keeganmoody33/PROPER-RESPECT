@@ -8,9 +8,10 @@ Updated: 2026-10-06. Start with [AGENTS.md](../AGENTS.md), the
 
 ## Latest deployed state
 
-Checked 2026-10-06. Release `v0.2.5` deployed
-`c002560f209174728b9b138a529f814c94e33872`, including the PostHog integration
-in #143. [Release run 37410038514](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37410038514)
+Checked 2026-10-06. Release `v0.2.6` deployed
+`8cab986ee3e5f638b320d4baacefff0302a45615`, including the collection editor
+in #149 and truthful footer categories in #148.
+[Release run 37439623114](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37439623114)
 completed its verification, production backend, and production frontend jobs.
 The frontend job also passed the production-domain check and live smoke test.
 
@@ -21,10 +22,11 @@ The GitHub card's retained activity was visibly stale. No signed-in save,
 provider read, fresh signup, or publication was performed during this check.
 
 For adding tools and sharing a profile, start with the
-[product walkthrough](../README.md#build-your-tool-profile). For the current
+[product walkthrough](../README.md#start-with-one-private-result). For the current
 Codex and Claude Code boundaries, read
 [usage measurement](usage-measurement.md). The native Codex launcher remains
-blocked, and the AI usage cards remain local previews.
+blocked. The release above predates R27 hosted measurement imports; do not infer
+that unmerged source changes are deployed.
 
 The dated state and invited-tester observations below are retained as historical
 evidence. They are not the current deployment or backlog. The remediation brief

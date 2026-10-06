@@ -213,7 +213,14 @@ async function retainGithubSnapshot(ctx: MutationCtx, user: Doc<"users">, args: 
     if (canonicalJson(original) !== canonicalJson(activity) || canonicalJson(existing.observations) !== canonicalJson(observations)) {
       throw new Error("GitHub capture identity conflict.");
     }
-    return { propId: null, rawEvidenceId: existing._id, duplicate: true, reviewRequired: false };
+    // Recover only a unique retained relationship. Legacy duplicate proof rows
+    // can name the same prop; an incomplete or ambiguous lookup stays unassigned.
+    const proofs = await ctx.db.query("proofs").withIndex("by_rawEvidenceId", q => q.eq("rawEvidenceId", existing._id)).take(33);
+    const linkedIds = new Set(proofs.map(proof => proof.propId));
+    const linked = proofs.length <= 32 && linkedIds.size === 1 ? await ctx.db.get(proofs[0].propId) : null;
+    const product = linked?.userId === user._id ? await ctx.db.get(linked.productId) : null;
+    const propId = linked && product?.slug === "github" && product.domain === "github.com" ? linked._id : null;
+    return { propId, rawEvidenceId: existing._id, duplicate: true, reviewRequired: propId === null };
   }
   let product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", "github")).unique();
   if (product && product.domain !== "github.com") throw new Error("GitHub product identity changed.");

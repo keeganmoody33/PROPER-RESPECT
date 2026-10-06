@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MEASUREMENT_LIMITS, publicMeasurementSchema } from "@/src/domain/measurements";
 import type { VisiblePublicProfile } from "@/src/domain/visible-public-profile";
 
 export const MCP_PORT = 8848;
@@ -34,6 +35,7 @@ export const visiblePublicProfileSchema = z.strictObject({
     status: z.enum(["ACTIVE", "TESTING", "ARCHIVED"]), ownerSelectedGoTo: z.boolean(),
     headline: z.string(), note: z.string(), startedAt: z.string().optional(), startDateNote: z.string().optional(),
     activity: activity.optional(),
+    measurements: z.array(publicMeasurementSchema).max(MEASUREMENT_LIMITS.publicRows).optional(),
     cost: z.strictObject({ displayAmount: z.string(), basis: z.enum(["RECEIPT", "ESTIMATE", "OWNER_REPORTED"]), cadence: z.enum(["MONTHLY", "ANNUAL", "ONE_TIME", "UNKNOWN"]), asOf: z.string(), period: period.optional() }).optional(),
     primaryLink: z.strictObject({ type: z.enum(["CANONICAL", "AFFILIATE", "REFERRAL", "INVITE"]), label: z.string(), url: z.string(), disclosure: z.string().optional() }).optional(),
     usageLink: z.strictObject({ label: z.string(), url: z.string() }).optional(),
