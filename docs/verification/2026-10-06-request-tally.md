@@ -56,3 +56,13 @@ Independent review identified that the storage contract says category counts onl
 ## Updated framework browser proof — 2026-10-06 UTC
 
 Node 24 installed Next 16.3.8 and the installed proxy waitUntil guide was read. All 13 site-frame browser cases pass with the semantic category explanation and final copy (`tally-next1638-browser.txt`). The four screenshots were recaptured. Fixture store reads/writes remained disabled; no genuine credentials or provider request was used.
+
+## Combined privacy integration — 2026-10-06 UTC
+
+Analytics main `06f1160553207cabe74fa2325949c2293573066e` was merged at `f883277e27b151370f06ac0f3f6ff4a752e2d6f2`. The only conflict was two sets of appended privacy regression cases. Both sets were retained; the shared source preserves the Searchable isolation disclosure and the new aggregate tally disclosure. All 55 focused trust/public-site/tally cases pass (`tally-privacy-merge-green.txt`). No contributor source or commit was overwritten.
+
+## Current integrated-tree checks — 2026-10-06 UTC
+
+On the combined analytics/tally tree with Node 24 and Next 16.3.8, `npm test` passes 1,826 Vitest tests with two existing retained-source skips and all 122 script tests. Lint, strict typecheck and a production build with the CI synthetic origins and an empty Clerk secret pass. All 24 site-frame/trust-page browser cases pass, covering HTML/Markdown correspondence, accessibility, actual themes, desktop/mobile widths and tally behavior. Raw outputs are `tally-integrated-{full-test,lint,typecheck,build,browser}.txt` in `/tmp/proper-respect-pickup-20261006/`.
+
+All four store URL/token aliases were explicitly empty in these commands; the fixture also disables store reads/writes. These checks establish synthetic integration behavior. Final immutable review, any later main integration, and strict hosted checks remain merge gates. Production store configuration, actual counters, deployment and vendor acceptance remain unverified.
