@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 import type { Id } from "../../convex/_generated/dataModel";
 import { InventoryRelationshipDetails, PrivateInventoryView, type InventoryData, type InventoryEvidence } from "../../components/private-inventory";
+import { ObservedStartDateAction } from "../../components/private-evidence-panel";
 
 const item: InventoryData["cards"][number] = {
   prop: { _id: "test-prop" as Id<"props">, _creationTime: 1, productId: "test-product" as Id<"products">, userId: "test-owner" as Id<"users">,
@@ -16,6 +17,20 @@ const testimony: InventoryEvidence[number] = {
   captureProvenance: undefined, artifact: undefined, suggestedActivity: undefined, originalText: undefined,
   limitations: [], observationCount: 0, ownerStatementQuestion: "Did you use this to dictate notes?", ownerStatement: "Yes, correct.",
 };
+
+test("relationship evidence receives an explicit draft-date action without saving", () => {
+  const save = vi.fn();
+  const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, {
+    item, evidence: [], onSave: save,
+    renderEvidence: (_item, controls) => controls && createElement(ObservedStartDateAction, {
+      observation: { kind: "FIRST_USE", scope: "PERSONAL", date: "2024-06-03", excerpt: "Used this tool on 2024-06-03", acquisition: "USER_SUPPLIED" },
+      verdict: "CORRECT", ...controls,
+    }),
+  })));
+  expect($("button").text()).toContain("Use this observed date as my start date");
+  expect($('input[name="startedAt"]').attr("value")).toBe("");
+  expect(save).not.toHaveBeenCalled();
+});
 
 test("a short retained answer stays with its original question and is not silently rewritten into an owner explanation", () => {
   const html = renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item, evidence: [testimony], onSave: vi.fn() }));
