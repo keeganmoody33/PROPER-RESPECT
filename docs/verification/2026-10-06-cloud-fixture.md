@@ -29,7 +29,9 @@ This is configuration/dev-tooling reconciliation; no application provider logic 
 
 - `.cursor/environment.json`: `7c349175d7d01594fef1e345b5570c5b5a8ab51d15577ff7739149845d48343a`
 - `.cursor/start-fixture.mjs`: `8b6f167a1ed325f77a90800753c524e6009c56abc99ab72202c1429661b01fd3`
-- `.github/workflows/verify.yml`: `1c9e0eb8f1a02c4cbf42b741dba004f019d4102a6ac68b3b3ca62e4c781b8e30`
+- `.github/workflows/verify.yml`: `8ac6b9a75cf5f82b3dfb766696eca084ec2697fafe599890d3ac902d9cec74cc`
 - `package.json`: `cd2b7e7d3a2f0ac79c63b5bfefd0a6d72d81f3c0c6403e32e75698718808f568`
 - `scripts/cursor-environment.test.mjs`: `d23f5d59a08042e7d89268288d629e5ad95ef56f9ae92b7e4d28fd88b3c9418d`
 - `tests/e2e/cursor-environment.config.ts`: `57596da83890f8a0420e1c76879efe8d8be53dec9198714380e7b1c980e18a44`
+
+Later integration: main `1dd933182193f4b38c16762b8890885adcf7aa49` adds the independently verified release CLI smoke. The fixture source is unchanged; the workflow source hash above includes both checks.
