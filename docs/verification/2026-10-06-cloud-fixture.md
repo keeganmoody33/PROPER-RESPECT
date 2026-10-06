@@ -1,7 +1,7 @@
 # Cloud-agent fixture reconciliation — 2026-10-06
 
 Source proposal: [PR #82](https://github.com/keeganmoody33/PROPER-RESPECT/pull/82), original head `a2c17716486b100eff0d93b53c5984c4b8d04d22`.
-Current base: `94c65df28ff6caf0367728c40c855e8e6303d493`.
+Starting base: `94c65df28ff6caf0367728c40c855e8e6303d493`.
 Ref: https://plan.ref.tools/oLGxQYBMTcFHrrvg.
 
 ## Disposition before editing
