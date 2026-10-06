@@ -84,8 +84,15 @@ describe("tally store", () => {
 });
 
 describe("proxy counting", () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
+  const loadProxy = async () => {
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
+    return (await import("../../proxy")).default;
+  };
+
   it("records a hit without blocking routing", async () => {
-    const { default: proxy } = await import("../../proxy");
+    const proxy = await loadProxy();
     const waitUntil = vi.fn();
     const response = await proxy(new NextRequest("https://request.example/about/origins", { headers: { "user-agent": "curl/8.7.1" } }), { waitUntil } as never);
     expect(waitUntil).toHaveBeenCalledTimes(1);
@@ -93,7 +100,7 @@ describe("proxy counting", () => {
   });
 
   it("does not count API calls", async () => {
-    const { default: proxy } = await import("../../proxy");
+    const proxy = await loadProxy();
     const waitUntil = vi.fn();
     await proxy(new NextRequest("https://request.example/api/tally"), { waitUntil } as never);
     expect(waitUntil).not.toHaveBeenCalled();
