@@ -1,4 +1,5 @@
 import { reviewedMeasurementsForPublication } from "./retainedEvidence";
+import { sameGithubRefreshBinding, validGithubRefreshBinding, type GithubRefreshBinding } from "./githubRefreshIdentity";
 import { relationshipLinks } from "./relationshipLinks";
 import { isHttpUrl, validateProfileLinks } from "../src/domain/profile-links";
 import { mailboxTesterAllowed } from "../src/domain/mailbox-testers";
@@ -613,7 +614,13 @@ const REFRESH_METRIC_PROVIDERS: Record<string, "GITHUB" | "DEVIN" | undefined> =
 async function hasActiveGithubRefresh(ctx: QueryCtx | MutationCtx, userId: Id<"users">, propId: Id<"props">) {
   const subscriptions = await ctx.db.query("metricSubscriptions")
     .withIndex("by_prop_metric", q => q.eq("propId", propId).eq("metricKey", "github.contributions")).collect();
-  return subscriptions.some(subscription => subscription.userId === userId && !subscription.revokedAt);
+  for (const subscription of subscriptions) {
+    if (subscription.userId !== userId || subscription.revokedAt !== undefined) continue;
+    const connector = await ctx.db.get(subscription.connectorId);
+    if (connector?.userId === userId && connector.provider === "GITHUB" &&
+        ["CONNECTED", "ERROR"].includes(connector.status) && sameGithubRefreshBinding(subscription.githubBinding, connector.githubBinding)) return true;
+  }
+  return false;
 }
 
 // Remove-all runs as one transaction, so its writes stay far inside Convex's
@@ -652,6 +659,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     if (published.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
   }
   const previousPropIds = published ? await resolvePublishedCardPropIds(ctx, published, user._id, allProps) : [];
+  const refreshAccounts: (GithubRefreshBinding & { connectorId: Id<"connectorAccounts">; accountLabel: string })[] = [];
   for (const selection of selections) {
     const prop = propsById.get(selection.propId);
     if (!prop) throw new Error("Cannot publish another user's product.");
@@ -700,6 +708,12 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
           !["CONNECTED", "ERROR"].includes(connector.status) ||
           selection.activity.kind !== "contributionCalendar" || selection.activity.attributionScope !== "PERSONAL")) {
         throw new Error("A daily GitHub refresh needs your personal GitHub connection and its personal contribution calendar.");
+      }
+      if (provider === "GITHUB") {
+        if (!validGithubRefreshBinding(connector.githubBinding)) {
+          throw new Error("Reconnect GitHub before approving a daily refresh, then open a fresh sharing preview.");
+        }
+        refreshAccounts.push({ connectorId: connector._id, accountLabel: connector.accountLabel, ...connector.githubBinding });
       }
       // A refresh changes only the public card, so an older review can hold an older
       // calendar. Keeping the refresh on must never roll that public calendar back.
@@ -775,8 +789,8 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   const displayProfile = publicProfileSchema.parse({ ...profile, cards: displayCards });
   const revision = published?.revision ?? 0;
   // The flag is part of what the owner approved, so a remove-all preview can't approve another publish.
-  const previewHash = await sha256(canonicalJson({ profile: displayProfile, revision, selections, userId: user._id, measurementApprovals: [...measurementProjection].map(([propId, projection]) => [propId, projection?.approvalDigest]), ...(removeAllCards ? { removeAllCards: true } : {}) }));
-  return { profile, displayProfile, previewHash, revision, published, propsById, productById,
+  const previewHash = await sha256(canonicalJson({ profile: displayProfile, revision, selections, refreshAccounts, userId: user._id, measurementApprovals: [...measurementProjection].map(([propId, projection]) => [propId, projection?.approvalDigest]), ...(removeAllCards ? { removeAllCards: true } : {}) }));
+  return { profile, displayProfile, previewHash, revision, published, propsById, productById, refreshAccounts,
     cardPropIds: cardsWithIdentity.map(entry => entry.propId) };
 }
 
@@ -784,7 +798,7 @@ export const previewPublication = query({
   args: { selections: v.array(selectionValidator), removeAllCards: v.optional(v.boolean()) },
   handler: async (ctx, { selections, removeAllCards }) => {
     const preview = await preparePublication(ctx, await requireUser(ctx), selections, removeAllCards === true);
-    return { profile: preview.displayProfile, revision: preview.revision, previewHash: preview.previewHash };
+    return { profile: preview.displayProfile, revision: preview.revision, previewHash: preview.previewHash, refreshAccounts: preview.refreshAccounts };
   },
 });
 
@@ -811,14 +825,17 @@ export const publishSelected = mutation({
     const brandProductIds = new Set<Id<"products">>();
     for (const selection of selections) {
       const prop = prepared.propsById.get(selection.propId)!;
+      const account = prepared.refreshAccounts.find(account => account.connectorId === selection.connectorId);
       const refresh = selection.publish && selection.autoRefresh && selection.connectorId && selection.metricKey && selection.activity
         ? { userId: user._id, propId: prop._id, connectorId: selection.connectorId,
           metricKey: selection.metricKey, attributionScope: selection.activity.attributionScope,
+          githubBinding: account ? { providerAccountId: account.providerAccountId, generation: account.generation } : undefined,
           refreshCadence: "DAILY" as const, approvedAt: now, revokedAt: undefined }
         : undefined;
       const subscriptions = await ctx.db.query("metricSubscriptions")
         .withIndex("by_prop_metric", q => q.eq("propId", prop._id)).collect();
-      const existingRefresh = refresh ? subscriptions.find(subscription => subscription.userId === user._id && subscription.metricKey === refresh.metricKey) : undefined;
+      const existingRefresh = refresh ? subscriptions.find(subscription => subscription.userId === user._id && subscription.metricKey === refresh.metricKey &&
+        (refresh.metricKey !== "github.contributions" || (subscription.revokedAt === undefined && sameGithubRefreshBinding(subscription.githubBinding, refresh.githubBinding)))) : undefined;
       // A new selection replaces this relationship's public refresh permission.
       // Omitted relationships keep their previously approved subscriptions.
       for (const subscription of subscriptions) {

@@ -22,7 +22,7 @@ The GitHub card's retained activity was visibly stale. No signed-in save,
 provider read, fresh signup, or publication was performed during this check.
 
 For adding tools and sharing a profile, start with the
-[product walkthrough](../README.md#build-your-tool-profile). For the current
+[product walkthrough](../README.md#start-with-one-private-result). For the current
 Codex and Claude Code boundaries, read
 [usage measurement](usage-measurement.md). The native Codex launcher remains
 blocked. The release above predates R27 hosted measurement imports; do not infer

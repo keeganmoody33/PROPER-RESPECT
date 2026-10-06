@@ -101,6 +101,10 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   await expect(first).toHaveCount(0);
   expect((await state()).cards).toHaveLength(1);
   expect((await state()).measurementCaptures).toHaveLength(1);
+  const firstChoice = result.getByRole("checkbox").first();
+  await result.getByText("Source limitations", { exact: true }).first().click();
+  await expect(firstChoice).not.toBeChecked();
+  await result.getByText("Source limitations", { exact: true }).first().click();
   for (const box of await result.getByRole("checkbox").all()) await box.check();
   await result.getByRole("button", { name: "Save measurement choices privately", exact: true }).click();
   await expect.poll(async () => (await state()).measurementCaptures[0].reviewedMeasurementIds.length).toBe(3);
@@ -170,4 +174,44 @@ test("GitHub response opens the returned relationship and its exact private coun
   await expect(result).toContainText("2026-01-01 to 2026-10-06");
   await expect(result.getByRole("button", { name: "Confirm and save privately", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
+});
+
+for (const width of [1280, 390]) test(`GitHub reconnect opens the same returned relationship at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 960 });
+  await page.addInitScript(() => localStorage.setItem("fixture-signed-in", "true"));
+  let connections = 0;
+  await page.route("**/*", async route => {
+    if (route.request().url().endsWith("/api/connect/github")) {
+      const result = connections++ === 0
+        ? await page.evaluate(() => (window as unknown as { fixtureGithubConnect: () => { connectorId: string; propId: string } }).fixtureGithubConnect())
+        : { connectorId: "fixture-connector", propId: "github-result", duplicate: true, reviewRequired: false };
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify(result) });
+    }
+    return route.request().url().startsWith("http://127.0.0.1:8883/") ? route.fulfill({ contentType: "text/html", body: fixtureHtml }) : route.abort();
+  });
+  await page.goto("http://127.0.0.1:8883/app/collection?source=github");
+  await page.getByRole("region", { name: "Connect GitHub activity", exact: true }).getByRole("button", { name: "Connect GitHub", exact: true }).click();
+  await expect(page).toHaveURL(/#relationship=github-result$/);
+  const before = await page.evaluate(() => localStorage.getItem("proper-respect-fresh-user-fixture"));
+  await page.goto("http://127.0.0.1:8883/app/collection?source=github");
+  await page.getByRole("region", { name: "Connect GitHub activity", exact: true }).getByRole("button", { name: "Connect GitHub", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/collection#relationship=github-result$/);
+  await expect(page.getByRole("region", { name: "GitHub", exact: true }).getByText("12345", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Connect GitHub activity", exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("proper-respect-fresh-user-fixture"))).toEqual(before);
+  expect(connections).toBe(2);
+});
+
+for (const duplicate of [false, true]) test(`GitHub success without a relationship exits Connect, duplicate=${duplicate}`, async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("fixture-signed-in", "true"));
+  await page.route("**/*", route => {
+    if (route.request().url().endsWith("/api/connect/github")) return route.fulfill({ contentType: "application/json", body: JSON.stringify({ connectorId: "fixture-connector", propId: null, duplicate, reviewRequired: true }) });
+    return route.request().url().startsWith("http://127.0.0.1:8883/") ? route.fulfill({ contentType: "text/html", body: fixtureHtml }) : route.abort();
+  });
+  await page.goto("http://127.0.0.1:8883/app/collection?source=github");
+  await page.getByRole("region", { name: "Connect GitHub activity", exact: true }).getByRole("button", { name: "Connect GitHub", exact: true }).click();
+  await expect(page).toHaveURL(/\/app\/collection#private-collection-title$/);
+  await expect(page.getByRole("region", { name: "Connect GitHub activity", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "GitHub evidence retained privately" })).toContainText("Review any new discovery");
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!).cards)).toHaveLength(0);
 });

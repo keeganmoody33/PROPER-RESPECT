@@ -57,10 +57,13 @@ This is a bounded first import path:
 - 256,000 bytes per file
 - 32 retained capture identities per relationship, including deletion tombstones
 - 750,000 active retained JSON bytes per relationship
+- 256 measurement reviews per relationship across all source groups
 - 512 rows per generic packet and 8,192 derived rows per source review
 - 24 reviewed/public rows per card and 8 selected source groups
 
-Reaching a limit leaves existing records intact. This is not yet unlimited
+Unchanged selections for the current source digest keep their review version
+and do not append history. Reaching a limit leaves existing records intact;
+reads and unchanged saves or retries still work. This is not yet unlimited
 historical synchronization or a general backup/restore format. The existing data
 export remains partial; it does not include all new measurement review history.
 

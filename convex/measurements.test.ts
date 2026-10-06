@@ -109,7 +109,7 @@ test("actual sanitized Claude native imports reconcile through the saved private
   expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
 });
 
-test("review version changes invalidate a preview even if projected values are identical", async () => {
+test("changing selections and restoring them invalidates a preview even if projected values are identical", async () => {
   const { owner, propId } = await fixture();
   const first = await owner.mutation(retain, { propId, text: input() });
   const entry = (await owner.query(read, { propId }))[0];
@@ -117,8 +117,83 @@ test("review version changes invalidate a preview even if projected values are i
   await owner.mutation(review, { ...base, expectedReviewVersion: 0 });
   const selections = [selection(propId, [first.rawEvidenceId])];
   const preview = await owner.query(api.onboarding.previewPublication, { selections });
-  await owner.mutation(review, { ...base, expectedReviewVersion: 1 });
+  await owner.mutation(review, { ...base, expectedReviewVersion: 1, measurementIds: [] });
+  await owner.mutation(review, { ...base, expectedReviewVersion: 2 });
   await expect(owner.mutation(api.onboarding.publishSelected, { selections, expectedPreviewHash: preview.previewHash, expectedPublicationRevision: preview.revision })).rejects.toThrow("preview changed");
+});
+
+test("unchanged current selections are idempotent without accepting stale or future versions", async () => {
+  const { t, owner, other, propId } = await fixture();
+  await owner.mutation(retain, { propId, text: input() });
+  await owner.mutation(retain, { propId, text: input("capture-2", "0") });
+  const entry = (await owner.query(read, { propId }))[0];
+  const args = { propId, rawEvidenceId: entry.rawEvidenceId, expectedDigest: entry.digest, measurementIds: entry.measurements.map((row: { id: string }) => row.id) };
+  expect(await owner.mutation(review, { ...args, expectedReviewVersion: 0 })).toEqual({ version: 1, duplicate: false });
+  const history = await t.run(ctx => ctx.db.query("measurementReviews").collect());
+  const selections = [selection(propId, [entry.rawEvidenceId])];
+  const preview = await owner.query(api.onboarding.previewPublication, { selections });
+  for (let save = 0; save < 3; save++) {
+    const current = (await owner.query(read, { propId }))[0];
+    expect(await owner.mutation(review, { ...args, expectedReviewVersion: current.reviewVersion, measurementIds: [...args.measurementIds].reverse() })).toEqual({ version: 1, duplicate: true });
+  }
+  expect(await t.run(ctx => ctx.db.query("measurementReviews").collect())).toEqual(history);
+  expect(await owner.query(api.onboarding.previewPublication, { selections })).toEqual(preview);
+  await expect(other.mutation(review, { ...args, expectedReviewVersion: 1 })).rejects.toThrow("unavailable");
+  await expect(owner.mutation(review, { ...args, expectedReviewVersion: 2 })).rejects.toThrow("review changed");
+  await owner.mutation(review, { ...args, expectedReviewVersion: 1, measurementIds: [] });
+  await owner.mutation(review, { ...args, expectedReviewVersion: 2 });
+  await expect(owner.mutation(review, { ...args, expectedReviewVersion: 0 })).rejects.toThrow("review changed");
+  expect(await owner.mutation(review, { ...args, expectedReviewVersion: 2 })).toEqual({ version: 3, duplicate: true });
+});
+
+test("256 reviews bound the whole relationship while reads, unchanged saves and retries preserve approvals", async () => {
+  const { t, owner, other, propId } = await fixture();
+  await owner.mutation(retain, { propId, text: input() });
+  await owner.mutation(retain, { propId, text: input("capture-1", "0", { source: { ...source, accountAlias: "second-account" } }) });
+  const entries = await owner.query(read, { propId });
+  const first = { propId, rawEvidenceId: entries[0].rawEvidenceId, expectedDigest: entries[0].digest, measurementIds: [entries[0].measurements[0].id] };
+  const second = { propId, rawEvidenceId: entries[1].rawEvidenceId, expectedDigest: entries[1].digest, measurementIds: [entries[1].measurements[0].id] };
+  for (let version = 1; version <= 255; version++) {
+    expect(await owner.mutation(review, { ...first, expectedReviewVersion: version - 1, measurementIds: version % 2 ? first.measurementIds : [] })).toEqual({ version, duplicate: false });
+  }
+  expect(await owner.mutation(review, { ...second, expectedReviewVersion: 0 })).toEqual({ version: 1, duplicate: false });
+  const history = await t.run(ctx => ctx.db.query("measurementReviews").collect());
+  expect(history).toHaveLength(256);
+  const privateBefore = await owner.query(read, { propId });
+  const selections = [selection(propId, entries.map((entry: { rawEvidenceId: Id<"rawEvidence"> }) => entry.rawEvidenceId))];
+  const preview = await owner.query(api.onboarding.previewPublication, { selections });
+  await expect(owner.mutation(review, { ...first, expectedReviewVersion: 255, measurementIds: [] })).rejects.toThrow("review history limit");
+  await expect(owner.mutation(review, { ...second, expectedReviewVersion: 1, measurementIds: [] })).rejects.toThrow("review history limit");
+  for (const expectedReviewVersion of [254, 255]) {
+    expect(await owner.mutation(review, { ...first, expectedReviewVersion })).toEqual({ version: 255, duplicate: true });
+  }
+  expect(await owner.mutation(review, { ...second, expectedReviewVersion: 1 })).toEqual({ version: 1, duplicate: true });
+  await expect(owner.mutation(review, { ...first, expectedReviewVersion: 256 })).rejects.toThrow("review changed");
+  await expect(other.mutation(review, { ...first, expectedReviewVersion: 255 })).rejects.toThrow("unavailable");
+  expect(await owner.query(read, { propId })).toEqual(privateBefore);
+  expect(await t.run(ctx => ctx.db.query("measurementReviews").collect())).toEqual(history);
+  expect(await owner.query(api.onboarding.previewPublication, { selections })).toEqual(preview);
+  await owner.mutation(api.onboarding.publishSelected, { selections, expectedPreviewHash: preview.previewHash, expectedPublicationRevision: preview.revision });
+  expect((await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" }))?.cards[0].measurements).toHaveLength(2);
+  const otherImport = await other.mutation(retain, { text: input(), productName: "Other owner's tool" });
+  const otherEntry = (await other.query(read, { propId: otherImport.propId }))[0];
+  expect(await other.mutation(review, { propId: otherImport.propId, rawEvidenceId: otherEntry.rawEvidenceId, expectedDigest: otherEntry.digest, expectedReviewVersion: 0, measurementIds: [otherEntry.measurements[0].id] })).toEqual({ version: 1, duplicate: false });
+});
+
+test("a changed source digest requires a fresh review even when the selection is still empty", async () => {
+  const { t, owner, propId } = await fixture();
+  const first = await owner.mutation(retain, { propId, text: input() });
+  await owner.mutation(retain, { propId, text: input("capture-2", "0") });
+  const entry = (await owner.query(read, { propId }))[0];
+  const args = { propId, rawEvidenceId: entry.rawEvidenceId, expectedDigest: entry.digest, expectedReviewVersion: 0, measurementIds: [] };
+  expect(await owner.mutation(review, args)).toEqual({ version: 1, duplicate: false });
+  await owner.mutation(api.onboarding.deleteEvidence, { evidenceId: first.rawEvidenceId });
+  const current = (await owner.query(read, { propId }))[0];
+  expect(current.digest).not.toBe(entry.digest);
+  await expect(owner.mutation(review, args)).rejects.toThrow("measurements changed");
+  await expect(owner.mutation(review, { ...args, expectedDigest: current.digest })).rejects.toThrow("review changed");
+  expect(await owner.mutation(review, { ...args, expectedDigest: current.digest, expectedReviewVersion: current.reviewVersion })).toEqual({ version: 2, duplicate: false });
+  expect(await t.run(ctx => ctx.db.query("measurementReviews").collect())).toHaveLength(2);
 });
 
 test.each(["9007199254740993123456789", "0.0000000000000000000000000000000000000000001", "0", null])("exact scalar %s survives DB, review, publication and public reload", async value => {

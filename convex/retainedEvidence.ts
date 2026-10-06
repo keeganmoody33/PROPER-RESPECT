@@ -160,14 +160,21 @@ export const reviewMeasurements = mutation({
   handler: async (ctx, args) => {
     const { user } = await ownedMeasurementProp(ctx, args.propId);
     if (!Number.isSafeInteger(args.expectedReviewVersion) || args.expectedReviewVersion < 0 || args.measurementIds.length > MEASUREMENT_LIMITS.publicRows || new Set(args.measurementIds).size !== args.measurementIds.length) throw new Error("Review at most 24 distinct measurement rows.");
-    const entry = measurementEntries(await measurementHistory(ctx, user._id, args.propId)).find(item => item.rawEvidenceId === args.rawEvidenceId);
+    const history = await measurementHistory(ctx, user._id, args.propId);
+    const entry = measurementEntries(history).find(item => item.rawEvidenceId === args.rawEvidenceId);
     if (!entry) throw new Error("Measurement unavailable.");
     if (entry.digest !== args.expectedDigest) throw new Error("These measurements changed. Open a fresh review.");
     const ids = [...args.measurementIds].sort();
     const allowed = new Set(entry.measurements.filter(row => row.status !== "conflict").map(row => row.id));
     if (ids.some(id => !allowed.has(id))) throw new Error("Review only available non-conflicting measurements.");
-    if (entry.reviewVersion === args.expectedReviewVersion + 1 && measurementDigest(entry.reviewedMeasurementIds) === measurementDigest(ids)) return { version: entry.reviewVersion, duplicate: true };
+    const currentReview = history.find(row => row._id === entry.rawEvidenceId)?.measurementReview;
+    const unchanged = currentReview?.digest === entry.digest && measurementDigest(currentReview.measurementIds) === measurementDigest(ids);
+    // Both a reactive save and its immediate retry keep the same approval.
+    // An invalidated review, including an empty selection, is never a no-op.
+    if (unchanged && (entry.reviewVersion === args.expectedReviewVersion || entry.reviewVersion === args.expectedReviewVersion + 1)) return { version: entry.reviewVersion, duplicate: true };
     if (entry.reviewVersion !== args.expectedReviewVersion) throw new Error("This measurement review changed. Reload before reviewing again.");
+    const reviews = await ctx.db.query("measurementReviews").withIndex("by_prop", q => q.eq("propId", args.propId)).take(MEASUREMENT_LIMITS.reviews);
+    if (reviews.length >= MEASUREMENT_LIMITS.reviews) throw new Error("This relationship has reached the bounded measurement review history limit. Existing reviews remain available.");
     const version = entry.reviewVersion + 1;
     await ctx.db.patch(entry.rawEvidenceId, { measurementReview: { digest: entry.digest, measurementIds: ids, version } });
     await ctx.db.insert("measurementReviews", { userId: user._id, propId: args.propId, rawEvidenceId: entry.rawEvidenceId, digest: entry.digest, measurementIds: ids, version, reviewedAt: new Date().toISOString() });

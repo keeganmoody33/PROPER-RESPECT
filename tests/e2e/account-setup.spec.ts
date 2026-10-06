@@ -411,3 +411,70 @@ for (const width of [1280, 390]) test(`owner finds later duplicate records, save
   expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toHaveLength(0);
   expect(errors).toEqual([]);
 });
+
+for (const width of [1280, 390]) for (const reconnect of ["replacement", "same-account"] as const) test(`GitHub ${reconnect} requires fresh visible consent at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.addInitScript(() => {
+    localStorage.setItem("proper-respect-fresh-user-fixture", JSON.stringify({
+      user: { _id: "synthetic-owner", handle: "synthetic-owner", displayName: "Synthetic owner", bio: "" },
+      hasClaimedPublicIdentity: true, hasPublicationAtCurrentHandle: false, privateInventoryAvailable: true,
+      drafts: [], evidence: [],
+      connectors: [{ _id: "github-connector", provider: "GITHUB", status: "CONNECTED", attributionScope: "PERSONAL", accountLabel: "github.com/account-b", connectedAt: "2026-10-01T09:00:00Z", lastSyncedAt: "2026-10-06T09:00:00Z" }],
+      cards: [{
+        product: { _id: "github-product", name: "GitHub", slug: "github", domain: "github.com", description: "Code" },
+        prop: { _id: "github-prop", productId: "github-product", userId: "synthetic-owner", visibility: "PRIVATE", status: "ACTIVE", headline: "My code", note: "", relationshipVersion: 1,
+          activity: { kind: "contributionCalendar", attributionScope: "PERSONAL", capturedAt: "2026-09-30T12:00:00Z", freshness: "STALE", provenanceLabel: "Saved activity from github.com/account-a", total: 17, days: [{ date: "2026-09-30", count: 17, level: 4 }] } },
+        links: [], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false,
+      }],
+    }));
+  });
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  const review = page.getByRole("group", { name: "GitHub review" });
+  await review.getByLabel("Share this saved card", { exact: true }).check();
+  await review.getByText("Information to include", { exact: true }).click();
+  await review.getByLabel("Publish personal activity", { exact: true }).check();
+  await review.getByLabel("Refresh daily from GitHub", { exact: true }).check();
+  await page.getByRole("button", { name: "Preview sharing", exact: true }).click();
+  const preview = page.getByRole("region", { name: "Your visitor’s view" });
+  await expect(preview).toContainText("Daily GitHub refresh will read activity from github.com/account-b");
+  await preview.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(preview.locator("article.product-card")).toContainText("Saved activity from github.com/account-a");
+  await expect(preview.locator("article.product-card")).not.toContainText("github.com/account-b");
+  await preview.getByRole("checkbox").check();
+  await expect(preview.getByRole("button", { name: "Publish this preview" })).toBeEnabled();
+
+  // Only the connector changes. Saved cards, identity and review choices stay the same.
+  await page.evaluate(mode => {
+    const key = "proper-respect-fresh-user-fixture";
+    const state = JSON.parse(localStorage.getItem(key)!);
+    const connector = state.connectors[0];
+    connector.accountLabel = mode === "replacement" ? "github.com/account-c" : "github.com/account-b";
+    connector.lastSyncedAt = "2026-10-06T10:00:00Z";
+    const newValue = JSON.stringify(state);
+    localStorage.setItem(key, newValue);
+    window.dispatchEvent(new StorageEvent("storage", { key, newValue }));
+  }, reconnect);
+  await expect(preview.getByRole("status")).toContainText("Preview again before publishing.");
+  await expect(preview.getByRole("checkbox")).toBeDisabled();
+  await expect(preview.getByRole("button", { name: "Publish this preview" })).toBeDisabled();
+  await preview.screenshot({ path: testInfo.outputPath(`github-consent-stale-${reconnect}-${width}.png`), animations: "disabled" });
+
+  await page.getByRole("button", { name: "Preview sharing", exact: true }).click();
+  await expect(preview.getByRole("status")).toHaveCount(0);
+  await expect(preview).toContainText(`Daily GitHub refresh will read activity from github.com/account-${reconnect === "replacement" ? "c" : "b"}`);
+  await expect(preview.getByRole("checkbox")).toBeEnabled();
+  await expect(preview.getByRole("checkbox")).not.toBeChecked();
+  await expect(preview.getByRole("button", { name: "Publish this preview" })).toBeDisabled();
+  await preview.getByRole("checkbox").check();
+  await expect(preview.getByRole("button", { name: "Publish this preview" })).toBeEnabled();
+  const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
+  expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toHaveLength(0);
+  expect(calls.filter((call: { name: string }) => call.name === "previewPublication")).toHaveLength(2);
+  expect(errors).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await preview.screenshot({ path: testInfo.outputPath(`github-consent-fresh-${reconnect}-${width}.png`), animations: "disabled" });
+});

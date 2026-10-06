@@ -13,7 +13,7 @@ const saveRelationship = makeFunctionReference<"mutation">("inventory:save");
 const page = { paginationOpts: { numItems: 10, cursor: null } };
 const product = { name: "GitHub", slug: "github", domain: "github.com", description: "Code" };
 const activity = { kind: "contributionCalendar" as const, attributionScope: "PERSONAL" as const, capturedAt: "2026-09-22T12:00:00.000Z", freshness: "FRESH" as const, provenanceLabel: "GitHub", total: 2, days: [{ date: "2026-09-20", count: 2, level: 1 }] };
-const args = { authSubject: "owner", provider: "GITHUB" as const, accountLabel: "github.com/Example", ciphertext: "synthetic", iv: "synthetic", product, activity, metricKey: "github.contributions", value: 2 };
+const args = { authSubject: "owner", provider: "GITHUB" as const, providerAccountId: "U_example", accountLabel: "github.com/Example", ciphertext: "synthetic", iv: "synthetic", product, activity, metricKey: "github.contributions", value: 2 };
 async function fixture(count = 0, visibility: "DRAFT" | "PRIVATE" | "PUBLIC" = "PRIVATE") {
   const t = convexTest(schema, modules);
   const ids = await t.run(async ctx => {
@@ -34,7 +34,7 @@ test("zero creates one unconfirmed private card and exact replay adds nothing", 
   const replay = await t.mutation(save, { ...args, accountLabel: "github.com/example" });
   const after = await rows();
   expect(first.propId).not.toBeNull();
-  expect(replay.duplicate).toBe(true);
+  expect(replay).toMatchObject({ propId: first.propId, rawEvidenceId: first.rawEvidenceId, duplicate: true, reviewRequired: false });
   expect(after.props).toEqual(before.props);
   expect(after.raw).toEqual(before.raw);
   expect(after.proofs).toEqual(before.proofs);
@@ -69,7 +69,7 @@ test("four records stay unassigned until explicit review and separate activity s
   const selected = await rows();
   expect(selected.props[2].activity).toMatchObject({ kind: "contributionCalendar", total: 2 });
   expect(selected.publications).toEqual([]);
-  await t.mutation(save, args);
+  expect(await t.mutation(save, args)).toMatchObject({ propId: choice.id, duplicate: true, reviewRequired: false });
   const replay = await rows();
   expect(replay.props).toEqual(selected.props); expect(replay.raw).toEqual(selected.raw); expect(replay.proofs).toEqual(selected.proofs); expect(replay.drafts).toEqual(selected.drafts);
 });
@@ -259,4 +259,83 @@ test("capture preserves selected evidence, existing publication and revoked refr
   expect(after.publications).toEqual(before.publications);
   expect(after.subscriptions).toEqual(before.subscriptions);
   expect(after.connectors[0].status).toBe("CONNECTED");
+});
+
+test.each(["DRAFT", "PRIVATE", "PUBLIC"] as const)("reconnecting the same capture reopens its %s relationship without changing decisions", async visibility => {
+  const { t, rows, owner, ids } = await fixture(1, visibility);
+  const first = await t.mutation(save, args);
+  await owner.mutation(saveRelationship, { propId: ids.props[0], operationId: "decide-before-reconnect", expectedVersion: 1,
+    status: "ARCHIVED", goTo: false, headline: "Owner decision", note: "Preserve this decision and its history" });
+  // Include a published snapshot so reconnect cannot silently republish the new private decision.
+  await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: activity.capturedAt,
+    cardPropIds: [ids.props[0]], profile: { handle: "owner", displayName: "Owner", bio: "", cards: [{ product, status: "ACTIVE", headline: "Published decision", note: "Public note" }] } }));
+  const before = await rows();
+  const history = await t.run(ctx => ctx.db.query("relationshipEvents").collect());
+  expect(history).toHaveLength(1);
+  const replay = await t.mutation(save, args);
+  expect(replay).toMatchObject({ propId: first.propId, rawEvidenceId: first.rawEvidenceId, duplicate: true, reviewRequired: false });
+  const after = await rows();
+  for (const key of ["props", "raw", "proofs", "signals", "drafts", "publications", "subscriptions"] as const) expect(after[key]).toEqual(before[key]);
+  expect(await t.run(ctx => ctx.db.query("relationshipEvents").collect())).toEqual(history);
+});
+
+test.each(["unlinked", "deleted-relationship", "foreign-owner", "wrong-product", "changed-domain", "ambiguous"] as const)("replayed capture with %s links remains unassigned without creating evidence", async mode => {
+  const { t, rows, ids } = await fixture(1);
+  const first = await t.mutation(save, args);
+  await t.run(async ctx => {
+    const proof = (await ctx.db.query("proofs").first())!;
+    if (mode === "unlinked") await ctx.db.delete(proof._id);
+    if (mode === "deleted-relationship") await ctx.db.delete(ids.props[0]);
+    if (mode === "foreign-owner") await ctx.db.patch(ids.props[0], { userId: ids.otherId });
+    if (mode === "wrong-product") {
+      const productId = await ctx.db.insert("products", { name: "Other", slug: "other", domain: "other.example", description: "" });
+      await ctx.db.patch(ids.props[0], { productId });
+    }
+    if (mode === "changed-domain") await ctx.db.patch(ids.productId, { domain: "other.example" });
+    if (mode === "ambiguous") {
+      const propId = await ctx.db.insert("props", { userId: ids.userId, productId: ids.productId, status: "TESTING", visibility: "PRIVATE", headline: "Another record", note: "" });
+      await ctx.db.insert("proofs", { propId, rawEvidenceId: first.rawEvidenceId, type: "API_OAUTH" });
+    }
+  });
+  const before = await rows();
+  expect(await t.mutation(save, args)).toMatchObject({ propId: null, rawEvidenceId: first.rawEvidenceId, duplicate: true, reviewRequired: true });
+  const after = await rows();
+  for (const key of ["props", "raw", "proofs", "signals", "drafts", "publications", "subscriptions"] as const) expect(after[key]).toEqual(before[key]);
+});
+
+test.each([2, 32, 33])("replay bounds legacy duplicate proof lookup with %s rows", async count => {
+  const { t, rows, ids } = await fixture(1);
+  const first = await t.mutation(save, args);
+  await t.run(async ctx => {
+    for (let index = 1; index < count; index++) await ctx.db.insert("proofs", { propId: ids.props[0], rawEvidenceId: first.rawEvidenceId, type: "API_OAUTH" });
+  });
+  const before = await rows();
+  expect(await t.mutation(save, args)).toMatchObject({ propId: count <= 32 ? first.propId : null, duplicate: true, reviewRequired: count > 32 });
+  const after = await rows();
+  expect(after.proofs).toEqual(before.proofs);
+  expect(after.raw).toEqual(before.raw);
+  expect(after.props).toEqual(before.props);
+});
+
+test("replacing a connection keeps every earlier private capture and owner decision", async () => {
+  const f = await fixture(1);
+  await f.t.mutation(save, args);
+  const before = await f.rows();
+  await f.t.mutation(save, { ...args, accountLabel: "github.com/Replacement", providerAccountId: "U_replacement",
+    activity: { ...activity, capturedAt: "2026-09-23T12:00:00.000Z" } });
+  const after = await f.rows();
+  expect(after.raw).toHaveLength(before.raw.length + 1);
+  expect(after.raw.find(raw => raw._id === before.raw[0]._id)).toEqual(before.raw[0]);
+  expect(after.props).toEqual(before.props);
+  expect(after.connectors[0].githubBinding).toEqual({ providerAccountId: "U_replacement", generation: 2 });
+});
+
+test("a legacy caller without immutable account identity cannot rotate credentials or retain a new capture", async () => {
+  const f = await fixture(1);
+  await f.t.mutation(save, args);
+  const before = await f.rows();
+  const { providerAccountId, ...legacy } = args;
+  void providerAccountId;
+  await expect(f.t.mutation(save, { ...legacy, ciphertext: "replacement" })).rejects.toThrow("Reconnect GitHub");
+  expect(await f.rows()).toEqual(before);
 });

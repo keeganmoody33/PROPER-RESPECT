@@ -5,7 +5,7 @@ import { parseExactJson } from "./exact-json.ts";
 import { normalizeNativeDecimal, parseClaudeNativeCapture, reviewClaudeNativeCaptures, type ClaudeNativeCapture } from "./claude-native-evidence.ts";
 import { parseCodexUsageCapturePortable, reviewCodexUsageCaptures, type CodexUsageCapture } from "./codex-usage.ts";
 
-export const MEASUREMENT_LIMITS = { bytes: 256_000, captures: 32, retainedBytes: 750_000, rows: 8192, publicRows: 24, publicSources: 8 } as const;
+export const MEASUREMENT_LIMITS = { bytes: 256_000, captures: 32, retainedBytes: 750_000, reviews: 256, rows: 8192, publicRows: 24, publicSources: 8 } as const;
 const identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/);
 const metricKey = z.string().regex(/^[a-z][a-z0-9_]{0,63}$/);
 const nano = z.string().regex(/^(0|[1-9][0-9]{0,19})$/).refine(value => BigInt(value) <= BigInt("18446744073709551615"));

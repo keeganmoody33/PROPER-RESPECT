@@ -26,7 +26,7 @@ function ReviewCapture({ capture, propId }: { capture: Capture; propId: Id<"prop
   return <div className="usage-measurement-source">
     <h4>{capture.adapter === "claude-code" ? "Claude Code import" : capture.adapter === "codex" ? "Codex import" : "Measurement packet"}</h4>
     <p>Private source: {capture.source.accountAlias ?? capture.source.sourceAlias}. {capture.source.workspaceAlias && `Workspace: ${capture.source.workspaceAlias}. `}{capture.source.deviceAlias && `Device: ${capture.source.deviceAlias}. `}Owner-supplied identity; not authenticated by the provider.</p>
-    <div className="usage-measurement-rows">{capture.measurements.map(row => <label className="usage-measurement-choice" key={row.id}>
+    <div className="usage-measurement-rows">{capture.measurements.map(row => <div className="usage-measurement-choice" key={row.id}>
       <input type="checkbox" aria-label={`Review ${measurementLabel(row.metric)} ${row.value ?? "unknown"}`} checked={selected.includes(row.id)}
         disabled={busy || row.status === "conflict" || (!selected.includes(row.id) && selected.length >= MEASUREMENT_LIMITS.publicRows)}
         onChange={event => setSelected(current => event.target.checked ? [...current, row.id] : current.filter(id => id !== row.id))} />
@@ -34,7 +34,7 @@ function ReviewCapture({ capture, propId }: { capture: Capture; propId: Id<"prop
         {Object.values(row.dimensions).some(value => value !== null) && <p>Private dimensions: {Object.entries(row.dimensions).filter(([, value]) => value !== null).map(([key, value]) => `${measurementLabel(key)}: ${value}`).join(" · ")}</p>}
         {row.reasons.length > 0 && <details><summary>Source limitations</summary><ul>{row.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul></details>}
       </div>
-    </label>)}</div>
+    </div>)}</div>
     <p>Saved review: {capture.reviewedMeasurementIds.length} measurements selected.</p>
     <p>Select up to {MEASUREMENT_LIMITS.publicRows} measurements to make available for a later sharing preview. Values are never added across snapshots.</p>
     <button className="secondary-action" type="button" disabled={busy} onClick={() => void save()}>{busy ? "Saving choices…" : "Save measurement choices privately"}</button>

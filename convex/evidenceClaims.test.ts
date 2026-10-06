@@ -76,7 +76,7 @@ test("a connected GitHub snapshot produces private review claims without setting
     handle: "owner", sourceType: "GITHUB", sourceKey: "github:another-account", signals: [],
   });
   await t.mutation(saveSnapshot, {
-    authSubject: "owner", provider: "GITHUB", accountLabel: "github.com/example", ciphertext: "test-only", iv: "test-only",
+    authSubject: "owner", provider: "GITHUB", providerAccountId: "U_example", accountLabel: "github.com/example", ciphertext: "test-only", iv: "test-only",
     product: { name: "GitHub", slug: "github", domain: "github.com", description: "Code" },
     activity: { kind: "contributionCalendar", attributionScope: "PERSONAL", capturedAt: "2026-09-16T00:00:00.000Z", freshness: "FRESH", provenanceLabel: "GitHub", total: 2, memberSince: "2020-01-01", days: [{ date: "2026-09-10", count: 2, level: 1 }] },
     metricKey: "github.contributions", value: 2,
@@ -101,7 +101,7 @@ test("a connected GitHub snapshot can be selected as supporting activity after a
     total: 2, memberSince: "2020-01-01", days: [{ date: "2026-09-10", count: 2, level: 1 }],
   };
   const first = await t.mutation(saveSnapshot, {
-    authSubject: "owner", provider: "GITHUB", accountLabel: "github.com/example",
+    authSubject: "owner", provider: "GITHUB", providerAccountId: "U_example", accountLabel: "github.com/example",
     ciphertext: "test-only", iv: "test-only", product, activity: firstActivity,
     metricKey: "github.contributions", value: 2,
   });
@@ -127,7 +127,7 @@ test("a connected GitHub snapshot can be selected as supporting activity after a
     days: [{ date: "2026-09-18", count: 9, level: 2 }],
   };
   await t.mutation(saveSnapshot, {
-    authSubject: "owner", provider: "GITHUB", accountLabel: "github.com/example",
+    authSubject: "owner", provider: "GITHUB", providerAccountId: "U_example", accountLabel: "github.com/example",
     ciphertext: "test-only", iv: "test-only", product, activity: refreshedActivity,
     metricKey: "github.contributions", value: 9,
   });
