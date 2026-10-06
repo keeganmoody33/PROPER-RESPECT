@@ -52,8 +52,8 @@ run `.github/workflows/release.yml` ([deployment runbook](DEPLOYMENT.md),
 ### Historical invited-tester observations, September 27
 
 The [remediation brief](remediation/CODEX-BRIEF.md) and
-[#24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) stay the
-backlog. This table only points into them.
+[#24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) were the
+backlog for these observations. This table recorded the mapping at that time.
 
 | Outcome | Status in source | Tasks |
 | --- | --- | --- |
