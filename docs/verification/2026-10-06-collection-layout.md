@@ -84,7 +84,7 @@ Current-source SHA-256 values:
 f72bb2cf1f8e291863e6282ace9214852284ee73ce9e2f662da769b4dc947e2e  components/private-inventory.tsx
 8011e12838bde1a83adedfa39b6700e0237a3d2ee814c940ee73a0a17035e294  components/private-inventory.module.css
 22600eff8a76be6bc463e6b6462bbce75da6e11a3a28e852bacfb04da873cf6d  src/client/private-inventory.test.ts
-e15344835149171dfc1c9da2a649c0184d1a2abf63ebe4cf2ecdbac2100e9f42  app/evidence-fixture/inventory/view.tsx
+7d60ca2807f1be8d10217a519ba4479df39d25ba81d00455f4f7da54ae118dad  app/evidence-fixture/inventory/view.tsx
 19d5d33d02f2c4ea44af6d45185c293ffa482ffc19e948d1ed44ec2622548640  tests/e2e/inventory.spec.ts
 11d9be4f439baab4d8eabda0fe3b46ac1cc467a0afab9ffa148338d8e441ca59  tests/e2e/account-setup.spec.ts
 ```
@@ -98,3 +98,9 @@ Merge, production release, and authenticated hosted acceptance remain separate g
 Main `06f1160553207cabe74fa2325949c2293573066e` was merged after the cloud-fixture, dependency and analytics deliveries. All six layout source/test files and all 14 visual assets are byte-identical to independently reviewed head `83fad37afe305e3a5ce3d4bc1393100bda07ae20`; only this dated receipt adds the new integration record. The delta against this main remains 21 files.
 
 The earlier local checks bind their recorded base. Fresh final-head review and strict hosted checks on this combined tree remain required before merge. No provider read, production release or publication occurred.
+
+## Final Copilot disposition — 2026-10-06 UTC
+
+Final merge preflight found an unresolved fixture accessibility comment at `fd5a8a64ee950613207497a7a8145b5401d2f459`: the comparison div has an accessible name but an implicit generic role. Disposition before editing: fix now by giving that synthetic comparison container the supported group role. Existing card comparison browser cases will verify the rendered fixture. Final source binding and hosted checks restart after this correction.
+
+The two existing actual-browser card comparison cases pass at 1280px and 390px after the supported group role correction, using both actual themes (`layout-group-role-browser.txt`). The five other source/test files and all 14 committed images remain byte-identical. The fixture hash above now identifies the corrected source.

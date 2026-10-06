@@ -113,7 +113,7 @@ export function InventoryFixture() {
   return <>
     <button type="button" onClick={() => setFocused(true)}>Open focused relationship</button>
     <button type="button" onClick={() => setComparison(true)}>Show card outside collection</button>
-    {comparison && <div aria-label="Card outside collection"><span aria-hidden="true" /><ProductCard audience="owner" index={0} relationshipConfirmed={false}
+    {comparison && <div role="group" aria-label="Card outside collection"><span aria-hidden="true" /><ProductCard audience="owner" index={0} relationshipConfirmed={false}
       card={{ product: initial.cards[0].product, status: initial.cards[0].prop.status, headline: initial.cards[0].prop.headline, note: initial.cards[0].prop.note,
         primaryLink: privateCardPrimaryLink({ product: initial.cards[0].product, links: [], associatedEvidence: [] }) }} /></div>}
     <button type="button" onClick={() => setData(groupedGitHub)}>Load grouped GitHub fixture</button>
