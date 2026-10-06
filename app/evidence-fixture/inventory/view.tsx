@@ -5,6 +5,7 @@ import type { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { InventoryRelationshipDetails, PrivateInventoryView, type InventoryData, type InventoryEvidence } from "@/components/private-inventory";
 import { AddProductForm, SharingPreview } from "@/components/onboarding-client";
+import { ObservedStartDateAction } from "@/components/private-evidence-panel";
 
 const initial: InventoryData = { hasMore: false, cards: [{
   prop: { _id: "synthetic-prop" as Id<"props">, _creationTime: 1, userId: "synthetic-owner" as Id<"users">,
@@ -51,9 +52,16 @@ export function InventoryFixture() {
   const [showPreview, setShowPreview] = useState(false);
   const [published, setPublished] = useState(false);
   const loseNextResponse = useRef(false);
+  const holdNextResponse = useRef(false);
+  const [heldSave, setHeldSave] = useState<(() => void) | null>(null);
   const operations = useRef(new Map<string, { request: string; data: InventoryData; result: FunctionReturnType<typeof api.inventory.save> }>());
   async function onSave(args: FunctionArgs<typeof api.inventory.save>) {
     setAttempts(current => [...current, args.operationId]);
+    if (holdNextResponse.current) {
+      holdNextResponse.current = false;
+      await new Promise<void>(resolve => setHeldSave(() => resolve));
+      setHeldSave(null);
+    }
     const request = JSON.stringify(args);
     const previous = operations.current.get(args.operationId);
     if (previous) {
@@ -82,6 +90,10 @@ export function InventoryFixture() {
   return <>
     <button type="button" onClick={() => setData(groupedGitHub)}>Load grouped GitHub fixture</button>
     <button type="button" onClick={() => { loseNextResponse.current = true; }}>Simulate one lost save response</button>
+    <button type="button" onClick={() => { holdNextResponse.current = true; }}>Hold next save response</button>
+    {heldSave && <button type="button" onClick={heldSave}>Finish held save</button>}
+    <button type="button" onClick={() => setData(current => ({ ...current, cards: current.cards.map(item => ({ ...item, prop: { ...item.prop, startedAt: "2025-01-02", relationshipVersion: (item.prop.relationshipVersion ?? 0) + 1 } })) }))}>Simulate a newer saved date</button>
+    <output aria-label="Synthetic saved start date">{data.cards[0]?.prop.startedAt ?? "Unknown"}</output>
     <output aria-label="Synthetic save operations">{attempts.join("\n")}</output>
     <output aria-label="Synthetic delete operations">{deletions.join("\n")}</output>
     <PrivateInventoryView data={data} onSave={onSave} onImport={async packet => {
@@ -92,6 +104,9 @@ export function InventoryFixture() {
         setDeletions(current => [...current, evidenceId]);
         setEvidence(current => current.filter(source => source.id !== evidenceId));
       }}
+      renderEvidence={(_current, controls) => <ObservedStartDateAction
+        observation={{ kind: "FIRST_USE", scope: "PERSONAL", acquisition: "USER_SUPPLIED", date: "2024-06-03", excerpt: "Synthetic observed first use: 2024-06-03" }}
+        verdict="CORRECT" {...controls} />}
       renderHistory={current => <p>Synthetic prior states: {current.previousStatuses.join(", ") || "none"}</p>} />} />
     <button type="button" onClick={() => { loseManualResponse.current = true; }}>Simulate one lost add response</button>
     <AddProductForm onAdd={async input => {
