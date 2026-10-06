@@ -28,6 +28,7 @@ test("consent, automatic backfill, replay, changed history and retained disconne
   await connectSample(page);
   await expect(page.getByTestId("input-total")).toHaveText("120");
   await expect(page.getByTestId("output-total")).toHaveText("30");
+  await expect(page.locator(".source-note h2")).toHaveText("One source. A limited view.");
   await expect(page.getByText("Account activity", { exact: true })).toBeVisible();
   await expect(page.getByText("Plan quota", { exact: true })).toBeVisible();
   await expect(page.getByText("Billed charges", { exact: true })).toBeVisible();

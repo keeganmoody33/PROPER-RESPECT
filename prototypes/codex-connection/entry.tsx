@@ -153,7 +153,7 @@ function App() {
         <aside className="context-column" aria-label="Source and coverage">
           <section className="source-note">
             <p className="eyebrow">Know what you&apos;re reading</p>
-            <h2>One source.<br />A limited view.</h2>
+            <h2>One source.<br /> A limited view.</h2>
             <p>Local history can show recorded token increases. It cannot establish your full account activity, remaining plan quota, or billed charges.</p>
             <dl className="source-lanes">
               <div><dt>Local history</dt><dd>Synthetic fixture</dd></div>

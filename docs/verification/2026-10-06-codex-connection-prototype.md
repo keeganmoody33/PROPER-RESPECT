@@ -20,6 +20,14 @@ GitHub publication, merge or deployment are part of this verification.
 
 ## Checks
 
+CI screenshot review at `29aa842d` found one responsive copy defect: hiding the
+source-note line break on mobile joined two sentences without a space. Fix now:
+retain literal whitespace around the break and assert the heading's text in
+both viewport projects. The actual mobile screenshot and a failing DOM-text
+check establish the regression before the markup change. The original eight
+browser tests passed on run `37493049696`; the updated assertion must pass on
+the corrected head before screenshots are delivered.
+
 Passed:
 
 - 40 focused tests across connection lifecycle, history reconciliation, Codex
