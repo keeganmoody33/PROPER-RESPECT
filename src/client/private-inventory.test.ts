@@ -18,6 +18,28 @@ const testimony: InventoryEvidence[number] = {
   limitations: [], observationCount: 0, ownerStatementQuestion: "Did you use this to dictate notes?", ownerStatement: "Yes, correct.",
 };
 
+test("relationship fields, independent evidence forms, private save, and optional metadata follow the same reading order", () => {
+  const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, {
+    focused: true, item, evidence: [testimony], onSave: vi.fn(),
+    renderEvidence: () => createElement("form", { "aria-label": "Synthetic evidence correction" }, createElement("button", { type: "submit" }, "Correct synthetic evidence")),
+  })));
+  const relationship = $('select[name="status"]').closest("form");
+  const formId = relationship.attr("id");
+  expect(formId).toBeTruthy();
+  expect($('input[name="supportingUrl"]').attr("form")).toBe(formId);
+  expect(relationship.find('input[name="supportingUrl"]')).toHaveLength(0);
+  expect($('form[aria-label="Synthetic evidence correction"]').parents("form")).toHaveLength(0);
+  const save = $('button[type="submit"][form]');
+  expect(save.attr("form")).toBe(formId);
+  const nodes = $("*").toArray();
+  const evidence = $('aside[aria-label="Evidence for Example product"]');
+  const extras = $('input[name="supportingUrl"]').closest("details");
+  expect(nodes.indexOf(relationship[0])).toBeLessThan(nodes.indexOf(evidence[0]));
+  expect(nodes.indexOf(evidence[0])).toBeLessThan(nodes.indexOf(save[0]));
+  expect(nodes.indexOf(save[0])).toBeLessThan(nodes.indexOf(extras[0]));
+  expect(extras.attr("open")).toBeUndefined();
+});
+
 test("relationship evidence receives an explicit draft-date action without saving", () => {
   const save = vi.fn();
   const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, {

@@ -371,6 +371,7 @@ for (const width of [1280, 390]) test(`owner finds later duplicate records, save
   await collection.getByRole("button", { name: "All", exact: true }).click();
   await collection.getByRole("searchbox", { name: "Find a tool" }).fill("Shared Tool");
   await expect(collection.getByText("2 matching relationships.", { exact: true })).toBeVisible();
+  await collection.screenshot({ path: testInfo.outputPath(`2026-10-06-collection-finder-${width}.png`) });
   await collection.getByRole("link", { name: /Shared Tool Currently use/ }).click();
   await expect(page).toHaveURL(/#relationship=record-32$/);
   const focused = page.getByRole("region", { name: "Shared Tool", exact: true });
