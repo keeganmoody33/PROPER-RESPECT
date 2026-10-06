@@ -75,6 +75,10 @@ The local analytics checks above bind the stable analytics source before this cl
 
 ## Subsequent base integration — 2026-10-06 UTC
 
-Main `9150c8ffdb32c2d433037815292883de83c199a2` was merged after the cloud-fixture and dependency deliveries. The 24-file analytics delta preserves all reviewed functional files and all four visual assets from `03cdd4c4633760be7b691e0f0af2ca49ec402687`. Only the workflow integration and this dated receipt changed. The workflow retains the credential-free release CLI smoke, cloud fixture browser invocation and isolated native analytics invocation; its current SHA-256 is `ffa65be632e0b3d475f4bc214637fc12878e444c20ce22a448490d160049cb41`.
+Main `9150c8ffdb32c2d433037815292883de83c199a2` was merged after the cloud-fixture and dependency deliveries. The 24-file analytics delta preserves all reviewed functional files and all four visual assets from `03cdd4c4633760be7b691e0f0af2ca49ec402687`. Only the workflow integration and this dated receipt changed. The workflow retains the credential-free release CLI smoke, cloud fixture browser invocation and isolated analytics browser invocation; its current SHA-256 is `ffa65be632e0b3d475f4bc214637fc12878e444c20ce22a448490d160049cb41`.
 
 The earlier local checks above bind their recorded source/base. Fresh exact-head review and strict hosted checks on this combined tree remain required before merge. No provider read, deployment, vendor dashboard receipt or publication occurred.
+
+## Final receipt review disposition — 2026-10-06 UTC
+
+Independent review identified that the new CI invocation selects the synthetic tracker without SEARCHABLE_TEST_SOURCE. Disposition: fix now; describe CI as the isolated analytics browser invocation, preserving the separate locally captured actual-SDK proof. This disposition was recorded before the wording correction.
