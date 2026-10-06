@@ -1,15 +1,10 @@
 {
-  "name": "PROPER-RESPECT",
-  "install": "npm ci",
-  "start": "bash .cursor/setup-convex.sh",
+  "name": "PROPER-RESPECT public fixture",
+  "install": "npm ci --engine-strict",
   "terminals": [
     {
-      "name": "convex",
-      "command": "CONVEX_AGENT_MODE=anonymous npx convex dev --typecheck disable --run seed:seedKeegan"
-    },
-    {
-      "name": "next",
-      "command": "npm run dev -- --hostname 127.0.0.1 --port 3000"
+      "name": "public fixture",
+      "command": "node .cursor/start-fixture.mjs"
     }
   ]
 }
