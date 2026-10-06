@@ -44,7 +44,7 @@ vi.mock("convex/react", async (importOriginal) => ({
     : { results: getFunctionName(reference) === "onboarding:sharingCards" ? auth.ownerState?.cards ?? [] : [], status: getFunctionName(reference) === "onboarding:sharingCards" ? auth.sharingStatus : "Exhausted", loadMore: vi.fn() },
 }));
 
-const render = () => renderToString(createElement(OnboardingClient));
+const render = () => renderToString(createElement(OnboardingClient, { publicOrigin: "https://canonical.example" }));
 
 beforeEach(() => {
   auth.clerkSignedIn = true;
@@ -116,9 +116,9 @@ test("private collection and simple owner-described product entry precede option
     cards: [], connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
   };
   const html = render();
-  expect(html).toContain("Add a product");
-  expect(html.indexOf("Add a product")).toBeLessThan(html.indexOf("Public identity"));
-  expect(html).toContain("No integration or activity measurement is required");
+  expect(html).toContain("Add a tool");
+  expect(html.indexOf("Add a tool")).toBeLessThan(html.indexOf("Public identity"));
+  expect(html).toContain("Name a tool and choose how you use it.");
   expect(html).not.toContain('name="slug"');
   expect(html).not.toMatch(/name="website"[^>]*required/);
   expect(html).toContain("Preview sharing");
@@ -208,8 +208,10 @@ test.each([
   }
   if (publication === true) {
     expect(html).toMatch(/<a href="\/current"[^>]*>Open current public page/);
+    expect(html).toContain("Copy profile link");
   } else {
     expect(html).not.toContain("Open current public page");
+    expect(html).not.toContain("Copy profile link");
   }
   if (publication === false) expect(html).toContain("Nothing is published at /current yet.");
   else expect(html).not.toContain("Nothing is published at /current yet.");

@@ -33,8 +33,12 @@ const mutations = {
     record("addManualProduct", args);
     if (state.cards.length) throw new Error("This fixture accepts one new product.");
     const product = { _id: "manual-product", _creationTime: 1, name: args.name, slug: "field-notes", domain: "field-notes.example", description: "A synthetic note-taking tool." };
-    const prop = { _id: "manual-prop", _creationTime: 1, userId: state.user._id, productId: product._id, status: "TESTING", visibility: "DRAFT", ownerEntered: true, headline: "", note: args.description ?? "" };
-    retain({ ...state, cards: [{ product, prop, links: [{ type: "CANONICAL", url: "https://field-notes.example", label: "Open Field Notes", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false }] });
+    const prop = { _id: "manual-prop", _creationTime: 1, userId: state.user._id, productId: product._id, status: args.status ?? "TESTING", visibility: args.status ? "PRIVATE" : "DRAFT", ownerEntered: true, headline: "", note: args.description ?? "",
+      ...(args.status ? { confirmedAt: "2026-10-06T12:00:00Z", relationshipVersion: 1, goTo: false } : {}) };
+    const history = args.status ? [{ _id: "initial-manual-event", propId: prop._id, version: 1, basis: "OWNER_ASSERTED", recordedAt: prop.confirmedAt,
+      before: { status: "TESTING", goTo: false, confirmed: false, headline: "", note: prop.note },
+      after: { status: args.status, goTo: false, confirmed: true, headline: "", note: prop.note } }] : [];
+    retain({ ...state, history, cards: [{ product, prop, links: [{ type: "CANONICAL", url: "https://field-notes.example", label: "Open Field Notes", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false }] });
     return prop._id;
   },
   "inventory:save": async args => {
