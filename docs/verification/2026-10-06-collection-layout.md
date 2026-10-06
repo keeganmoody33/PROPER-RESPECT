@@ -92,3 +92,9 @@ e15344835149171dfc1c9da2a649c0184d1a2abf63ebe4cf2ecdbac2100e9f42  app/evidence-f
 Fresh functional and changed-comment review returned internal PASS with no concrete findings. `docs_review` matched the six source hashes and inspected the full 21-file delivery and all 14 captures. It reviewed form associations, disabled controls, native validation reveal, record and version resets, preserved evidence disclosures, retry identity, finder navigation, and card focus. Changed comments, suppressions, and MUST KILL flags are zero. The report is retained at `/tmp/proper-respect-pickup-20261006/collection-layout-port-review.md`. This internal review does not replace the required outside review or authorize release.
 
 Merge, production release, and authenticated hosted acceptance remain separate gates. No deployment or publication was performed.
+
+## Subsequent main integration — 2026-10-06 UTC
+
+Main `06f1160553207cabe74fa2325949c2293573066e` was merged after the cloud-fixture, dependency and analytics deliveries. All six layout source/test files and all 14 visual assets are byte-identical to independently reviewed head `83fad37afe305e3a5ce3d4bc1393100bda07ae20`; only this dated receipt adds the new integration record. The delta against this main remains 21 files.
+
+The earlier local checks bind their recorded base. Fresh final-head review and strict hosted checks on this combined tree remain required before merge. No provider read, production release or publication occurred.
