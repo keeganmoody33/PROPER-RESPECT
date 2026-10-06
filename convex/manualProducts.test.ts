@@ -174,6 +174,80 @@ test("operation receipts are owner-bound, reject changed details, and make legac
   expect(await owner.mutation(add, legacy)).toBe(await owner.mutation(add, legacy));
 });
 
+test.each(["ACTIVE", "TESTING", "ARCHIVED"] as const)("adding with an explicit %s choice confirms one private relationship and initial owner history", async status => {
+  const { t, owner, other } = await fixture();
+  const before = await t.run(ctx => ctx.db.query("publishedProfiles").collect());
+  const input = { name: "My selected tool", description: " My private reason ", status, operationId: "selected" };
+  const propId = await owner.mutation(add, input);
+  expect(await owner.mutation(add, input)).toBe(propId);
+  await expect(other.query(api.inventory.history, { propId, paginationOpts: { numItems: 25, cursor: null } })).rejects.toThrow("Relationship unavailable");
+  await t.run(async ctx => {
+    const prop = (await ctx.db.get(propId))!;
+    expect(prop).toMatchObject({ status, visibility: "PRIVATE", confirmedAt: expect.any(String), relationshipVersion: 1, goTo: false, note: "My private reason" });
+    expect(prop.activity).toBeUndefined();
+    const events = await ctx.db.query("relationshipEvents").collect();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ userId: prop.userId, propId, version: 1, basis: "OWNER_ASSERTED", recordedAt: prop.confirmedAt,
+      before: { status: "TESTING", confirmed: false, goTo: false, headline: "", note: "My private reason" },
+      after: { status, confirmed: true, goTo: false, headline: "", note: "My private reason" },
+    });
+    expect(await ctx.db.query("draftImports").collect()).toMatchObject([{ status: "APPROVED", resultPropId: propId }]);
+    expect(await ctx.db.query("publishedProfiles").collect()).toEqual(before);
+  });
+});
+
+test("relationship choices are part of retry identity and legacy receipt bytes remain unchanged", async () => {
+  const { t, owner } = await fixture();
+  const legacy = { name: "Legacy bytes", description: " note ", operationId: "legacy-bytes" };
+  const legacyId = await owner.mutation(add, legacy);
+  await owner.mutation(add, legacy);
+  const input = { name: "Selected bytes", status: "ACTIVE" as const, operationId: "selected-bytes" };
+  await owner.mutation(add, input);
+  await expect(owner.mutation(add, { ...input, status: "TESTING" })).rejects.toThrow("different details");
+  await expect(owner.mutation(add, { ...input, status: undefined })).rejects.toThrow("different details");
+  await expect(owner.mutation(add, { ...legacy, status: "ACTIVE" })).rejects.toThrow("different details");
+  await t.run(async ctx => {
+    const prop = (await ctx.db.get(legacyId))!;
+    const receipt = await ctx.db.query("manualProductIntakes").withIndex("by_user_operation", q => q.eq("userId", prop.userId).eq("operationId", "legacy-bytes")).unique();
+    expect(receipt?.requestJson).toBe('{"version":1,"name":"Legacy bytes","website":null,"note":"note"}');
+    expect(await ctx.db.get(legacyId)).toMatchObject({ visibility: "DRAFT", status: "TESTING" });
+    expect((await ctx.db.get(legacyId))?.confirmedAt).toBeUndefined();
+  });
+});
+
+test("a later add cannot confirm an existing undecided draft or rewrite its explanation", async () => {
+  const { t, owner } = await fixture();
+  const propId = await owner.mutation(add, { name: "An undecided tool", description: "Keep this draft", operationId: "draft" });
+  const before = await t.run(ctx => ctx.db.get(propId));
+  expect(await owner.mutation(add, { name: "An undecided tool", description: "A new explanation", status: "ACTIVE", operationId: "second" })).toBe(propId);
+  expect(await t.run(ctx => ctx.db.get(propId))).toEqual(before);
+  expect(await t.run(ctx => ctx.db.query("relationshipEvents").collect())).toEqual([]);
+});
+
+test("new relationship status validation fails without writing a product or history", async () => {
+  const { t, owner } = await fixture();
+  await expect(owner.mutation(add, { name: "Invalid choice", status: "PUBLIC" as "ACTIVE" })).rejects.toThrow("Validator error");
+  await t.run(async ctx => {
+    expect(await ctx.db.query("props").collect()).toEqual([]);
+    expect(await ctx.db.query("products").collect()).toEqual([]);
+    expect(await ctx.db.query("relationshipEvents").collect()).toEqual([]);
+    expect(await ctx.db.query("manualProductIntakes").collect()).toEqual([]);
+  });
+});
+
+test("initial owner history continues through normal private save versioning", async () => {
+  const { t, owner } = await fixture();
+  const propId = await owner.mutation(add, { name: "A tested tool", status: "TESTING", operationId: "initial-choice" });
+  await expect(owner.mutation(save, { propId, expectedVersion: 1, operationId: "later-choice", status: "ACTIVE", goTo: true, headline: "Daily work", note: "Still private" })).resolves.toEqual({ version: 2, duplicate: false });
+  await t.run(async ctx => {
+    expect(await ctx.db.get(propId)).toMatchObject({ status: "ACTIVE", visibility: "PRIVATE", relationshipVersion: 2 });
+    expect(await ctx.db.query("relationshipEvents").collect()).toMatchObject([
+      { version: 1, before: { confirmed: false }, after: { status: "TESTING", confirmed: true } },
+      { version: 2, before: { status: "TESTING", confirmed: true }, after: { status: "ACTIVE", confirmed: true } },
+    ]);
+  });
+});
+
 test("adding the same product again preserves saved decisions, explanations, history, and public state", async () => {
   const { t, owner } = await fixture();
   const first = await owner.mutation(add, { name: "GitHub", operationId: "initial", description: "Original draft" });
@@ -185,7 +259,7 @@ test("adding the same product again preserves saved decisions, explanations, his
     prop: await ctx.db.get(first as Id<"props">), history: await ctx.db.query("relationshipEvents").collect(),
     public: await ctx.db.query("publishedProfiles").collect(),
   }));
-  expect(await owner.mutation(add, { name: "GitHub Inc", website: "github.com", operationId: "new-attempt", description: "Must not replace saved explanation" })).toBe(first);
+  expect(await owner.mutation(add, { name: "GitHub Inc", website: "github.com", operationId: "new-attempt", description: "Must not replace saved explanation", status: "ACTIVE" })).toBe(first);
   await t.run(async ctx => {
     expect(await ctx.db.query("props").collect()).toHaveLength(1);
     expect(await ctx.db.query("draftImports").collect()).toHaveLength(1);

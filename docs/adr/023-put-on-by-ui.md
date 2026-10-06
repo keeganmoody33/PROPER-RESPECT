@@ -1,6 +1,6 @@
 # ADR-023: The "Put On By" UI — Exact Specification
 
-> **Status correction — 2026-09-20:** Historical UI proposal is not a delivered lineage workflow. Credibility-score examples are superseded and must not be implemented; no universal activity or credibility ranking is permitted. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
+> **Status correction — 2026-09-20:** Historical UI proposal is not a delivered lineage workflow. Credibility-score examples are superseded and must not be implemented; no universal activity or credibility ranking is permitted. On 2026-09-28 (R14) the example card below was changed to show an evidence method label instead of a score. Put-on-by itself is **Later** (brief Section 3). See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
 
 ## Status
 Accepted — 2026-06-05
@@ -125,7 +125,7 @@ The "Put on by" field is the core social graph mechanism. It must be simple, fas
 ┌─────────────────────────────────────┐
 │ [Logo] Claude                         │
 │                                     │
-│ 🔥 Active · 6 mos · Cred: 67        │
+│ 🔥 Active · 6 mos · Owner statement │
 │                                     │
 │ "Jordan Crawford put me on this     │
 │  at SaaStr Annual 2024. Changed    │

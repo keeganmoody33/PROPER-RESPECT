@@ -49,6 +49,19 @@ export default defineSchema({
     .index("by_auth_subject", ["authSubject"])
     .index("by_handle", ["handle"]),
 
+  rateLimits: defineTable({
+    userId: v.id("users"),
+    operation: v.union(
+      v.literal("claimHandle"),
+      v.literal("addManualProduct"),
+      v.literal("beginUpload"),
+      v.literal("publishSelected"),
+      v.literal("connectGithub"),
+    ),
+    windowStart: v.number(),
+    count: v.number(),
+  }).index("by_user_operation", ["userId", "operation"]),
+
   products: defineTable({
     seedKey: v.optional(v.string()),
     name: v.string(),
@@ -110,7 +123,8 @@ export default defineSchema({
     isPrimary: v.boolean(),
   })
     .index("by_seed_key", ["seedKey"])
-    .index("by_prop", ["propId"]),
+    .index("by_prop", ["propId"])
+    .index("by_prop_primary", ["propId", "isPrimary"]),
 
   sites: defineTable({
     seedKey: v.optional(v.string()),

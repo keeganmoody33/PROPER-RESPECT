@@ -2,6 +2,9 @@
   "name": "proper-respect",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -24,6 +27,7 @@
     "cheerio": "1.2.0",
     "convex": "^1.42.3",
     "next": "^16.3.5",
+    "posthog-js": "^1.436.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "zod": "^4.4.3"

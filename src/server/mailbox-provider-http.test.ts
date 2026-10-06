@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { exchangeMailboxAuthorization, refreshMailboxAuthorization } from "./mailbox-provider-http";
+import { exchangeMailboxAuthorization, MailboxProviderError, refreshMailboxAuthorization, revokeMailboxGrant } from "./mailbox-provider-http";
 import { createMailboxOAuthConfig } from "./mailbox-oauth";
 
 const config = createMailboxOAuthConfig({ provider: "GOOGLE", clientId: "client", applicationOrigin: "https://props.example.test" });
@@ -92,5 +92,34 @@ describe("trusted mailbox provider transport", () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ ...grant, scope: "openid email" }));
     await expect(refreshMailboxAuthorization(config, { refreshToken: "old-refresh", clientSecret: "secret", expectedProviderAccountId: "opaque" }, fetcher)).rejects.toThrow("read-only scopes");
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it("revokes a Google grant with one form-encoded POST to the fixed revocation endpoint (R17)", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 200 }));
+    await revokeMailboxGrant("GOOGLE", "refresh-private", fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const [url, options] = fetcher.mock.calls[0];
+    expect(url).toBe("https://oauth2.googleapis.com/revoke");
+    expect(options).toMatchObject({ method: "POST", redirect: "error", cache: "no-store", credentials: "omit" });
+    expect(options?.signal).toBeInstanceOf(AbortSignal);
+    expect(options?.headers).toMatchObject({ "Content-Type": "application/x-www-form-urlencoded" });
+    expect(options?.body).toBe("token=refresh-private");
+  });
+
+  it.each([400, 401, 500, 302])("fails revocation HTTP %i with a status-only error (R17)", async (status) => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response("PRIVATE refresh-private", { status }));
+    const error = await revokeMailboxGrant("GOOGLE", "refresh-private", fetcher).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(MailboxProviderError);
+    expect((error as MailboxProviderError).status).toBe(status);
+    expect(String((error as Error).message)).toBe("Mailbox provider request failed.");
+  });
+
+  it("masks revocation network errors and rejects unusable tokens before any request (R17)", async () => {
+    const failed = vi.fn<typeof fetch>().mockRejectedValue(new Error("PRIVATE refresh-private"));
+    await expect(revokeMailboxGrant("GOOGLE", "refresh-private", failed)).rejects.toThrow(/^Mailbox provider request failed\.$/);
+    const unused = vi.fn<typeof fetch>();
+    await expect(revokeMailboxGrant("GOOGLE", "", unused)).rejects.toThrow("Invalid revocation token.");
+    await expect(revokeMailboxGrant("MICROSOFT", "refresh-private", unused)).rejects.toThrow("Mailbox provider revocation is unsupported.");
+    expect(unused).not.toHaveBeenCalled();
   });
 });

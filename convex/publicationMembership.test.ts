@@ -1,7 +1,8 @@
 // @vitest-environment edge-runtime
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
+import { resolvePublishedCardPropIds } from "./publication";
 import { api } from "./_generated/api";
 import schema from "./schema";
 import { defaultReview, explicitPublicationCards, setReviewCostVisibility } from "../src/domain/review";
@@ -106,4 +107,38 @@ test("keeping all costs private does not remove an unresolved legacy card throug
   expect(preview.profile.cards).toEqual(before!.profile.cards);
   expect(selections).toEqual([]);
   expect(await t.run(ctx => ctx.db.get(publicationId))).toEqual(before);
+});
+
+test.each(["explicit", "unique legacy", "ambiguous legacy"])("sharing pages preserve %s publication membership across page boundaries", async mapping => {
+  const { t, owner, userId, publicationId, propIds } = await fixture("original", 26);
+  await t.run(async ctx => {
+    if (mapping === "explicit") await ctx.db.patch(publicationId, { cardPropIds: propIds });
+    if (mapping === "ambiguous legacy") {
+      const original = (await ctx.db.get(propIds[0]))!;
+      await ctx.db.insert("props", { userId, productId: original.productId, visibility: "PRIVATE", status: "TESTING", headline: "Sibling beyond page one", note: "" });
+    }
+  });
+  const first = await owner.query(api.onboarding.sharingCards, { paginationOpts: { numItems: 25, cursor: null } });
+  const second = await owner.query(api.onboarding.sharingCards, { paginationOpts: { numItems: 25, cursor: first.continueCursor } });
+  expect(first.page[0].isPublishedAtCurrentHandle).toBe(mapping !== "ambiguous legacy");
+  expect(second.page[0]).toMatchObject({ prop: { _id: propIds[25] }, isPublishedAtCurrentHandle: true });
+  if (mapping === "ambiguous legacy") expect(second.page[1].isPublishedAtCurrentHandle).toBe(false);
+});
+
+
+test.each(["explicit", "legacy"])("page membership only reads relevant %s identities", async mapping => {
+  const { t, userId, publicationId, propIds } = await fixture("original", 26);
+  await t.run(async ctx => {
+    if (mapping === "explicit") await ctx.db.patch(publicationId, { cardPropIds: propIds });
+    const published = (await ctx.db.get(publicationId))!;
+    const prop = (await ctx.db.get(propIds[0]))!;
+    const get = vi.spyOn(ctx.db, "get");
+    const query = vi.spyOn(ctx.db, "query");
+    const resolved = await resolvePublishedCardPropIds(ctx, published, userId, undefined, [prop]);
+    expect(resolved[0]).toBe(prop._id);
+    expect(resolved.slice(1).every(id => id === null)).toBe(true);
+    expect(query.mock.calls.length).toBeLessThanOrEqual(2);
+    expect(get.mock.calls.every(([id]) => new Set<string>([userId, prop.productId, prop._id]).has(id as string))).toBe(true);
+    get.mockRestore(); query.mockRestore();
+  });
 });

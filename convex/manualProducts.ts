@@ -1,7 +1,7 @@
 import { v, type ObjectType } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import { requireUser } from "./authHelpers";
+import { consumeWriteLimit, requireUser } from "./authHelpers";
 import { registerProductSources } from "./productKnowledge";
 import { ensureProductBrand } from "./productBrands";
 import {
@@ -11,12 +11,15 @@ import {
   type DraftProposal,
 } from "../src/domain/discovery";
 import { sha256 } from "../src/domain/product-knowledge";
+import { relationshipEditSchema } from "../src/domain/inventory";
+import { statusValidator } from "./validators";
 
 export const addManualProductArgs = {
   name: v.string(),
   website: v.optional(v.string()),
   description: v.optional(v.string()),
   operationId: v.optional(v.string()),
+  status: v.optional(statusValidator),
   // Older callers may still send these fields. Identity is resolved here, never
   // selected by a caller's global slug or unverified logo.
   slug: v.optional(v.string()),
@@ -62,7 +65,10 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
   if (!name || name.length > 160) throw new Error("Enter a product name of 160 characters or fewer.");
   if (note.length > 4000) throw new Error("Keep your explanation to 4,000 characters or fewer.");
   const website = normalizeWebsite(args.website ?? args.url ?? args.domain);
-  const requestJson = JSON.stringify({ version: 1, name, website: website ?? null, note });
+  const edit = args.status === undefined ? undefined : relationshipEditSchema.parse({ status: args.status, goTo: false, headline: "", note });
+  const requestJson = edit
+    ? JSON.stringify({ version: 2, name, website: website ?? null, note, status: edit.status })
+    : JSON.stringify({ version: 1, name, website: website ?? null, note });
   const operationId = args.operationId === undefined ? `legacy:${await sha256(requestJson)}` : args.operationId.trim();
   if (!operationId || operationId.length > 128) throw new Error("Invalid add-product operation.");
   const previous = await ctx.db.query("manualProductIntakes")
@@ -74,6 +80,8 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
     return prop._id;
   }
 
+  // A committed receipt is a read-only replay, even when the allowance is used.
+  await consumeWriteLimit(ctx, user._id, "addManualProduct");
   const catalog = resolveCatalog(name, website);
   const domain = website ? extractDomain(website)! : "";
   const identityHash = await sha256(JSON.stringify([user._id, name.toLowerCase(), domain]));
@@ -98,16 +106,22 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
   let propId = existing?._id;
   if (!propId) {
     propId = await ctx.db.insert("props", {
-      userId: user._id, productId: product._id, status: "TESTING", visibility: "DRAFT",
-      // TESTING is the legacy pending-row placeholder, not a confirmed status.
+      userId: user._id, productId: product._id, status: edit?.status ?? "TESTING", visibility: edit ? "PRIVATE" : "DRAFT",
       headline: "", note, ownerEntered: true,
+      ...(edit ? { goTo: false, confirmedAt: now, relationshipVersion: 1 } : {}),
+    });
+    if (edit) await ctx.db.insert("relationshipEvents", {
+      userId: user._id, propId, operationId, requestJson, version: 1,
+      recordedAt: now, basis: "OWNER_ASSERTED",
+      before: { status: "TESTING", goTo: false, confirmed: false, headline: "", note },
+      after: { ...edit, confirmed: true },
     });
     const primaryUrl = catalog?.canonicalUrl ?? website;
     if (primaryUrl) await ctx.db.insert("links", {
       propId, type: "CANONICAL", url: primaryUrl, label: `Open ${product.name}`, isPrimary: true,
     });
     await ctx.db.insert("draftImports", {
-      userId: user._id, status: "PENDING", suggestedProductSlug: product.slug,
+      userId: user._id, status: edit ? "APPROVED" : "PENDING", suggestedProductSlug: product.slug,
       suggestedProductName: product.name, suggestedDomain: product.domain,
       suggestedDescription: product.description, suggestedUrl: primaryUrl ?? "",
       rawEvidenceIds: [], resultPropId: propId,

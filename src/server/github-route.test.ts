@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { ConvexError } from "convex/values";
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), clerkClient: vi.fn(), action: vi.fn(), setAuth: vi.fn(), oauth: vi.fn() }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth, clerkClient: mocks.clerkClient }));
 vi.mock("convex/browser", () => ({ ConvexHttpClient: class { action = mocks.action; setAuth = mocks.setAuth; } }));
@@ -98,4 +99,25 @@ test("missing Convex configuration stops before accessing GitHub credentials", a
   expect((await POST(request({ origin: "https://props.example.test" }))).status).toBe(503);
   expect(mocks.clerkClient).not.toHaveBeenCalled();
   expect(mocks.action).not.toHaveBeenCalled();
+});
+
+test.each([1, 27, 60])("returns the GitHub rate-limit retry message as JSON with HTTP 429 (%i minutes)", async minutes => {
+  const message = `Too many GitHub connection attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+  mocks.action.mockRejectedValueOnce(new ConvexError(message));
+  const response = await POST(request({ origin: "https://props.example.test" }));
+  expect(response.status).toBe(429);
+  expect(response.headers.get("retry-after")).toBe(String(minutes * 60));
+  expect(await response.json()).toEqual({ error: message });
+});
+
+test.each([
+  new Error("Provider failed with secret-token"),
+  new ConvexError("Private backend diagnostic: secret-token"),
+  new ConvexError({ secret: "secret-token" }),
+])("returns a generic JSON error for other backend failures", async error => {
+  mocks.action.mockRejectedValueOnce(error);
+  const response = await POST(request({ origin: "https://props.example.test" }));
+  expect(response.status).toBe(500);
+  expect(response.headers.has("retry-after")).toBe(false);
+  expect(await response.json()).toEqual({ error: "GitHub connection failed. Please try again." });
 });

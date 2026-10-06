@@ -111,7 +111,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
       {
         heading: "Disconnecting and deleting are different",
         paragraphs: [
-          "Disconnecting a mailbox removes its saved credentials and stops future reads through that connection. Existing private evidence, source history and relationship history are retained. Disconnecting locally does not revoke the grant in your Google account. You can separately revoke the app through your provider's account permissions.",
+          "Disconnecting a mailbox removes its saved credentials and stops future reads through that connection. Existing private evidence, source history and relationship history are retained. Disconnecting a Gmail account also asks Google to revoke this app's access. If that request fails, the local disconnect still completes, and you can revoke the app yourself in your Google Account permissions.",
           "Activity-connector disconnection removes the local saved secret and stops that connection's updates. Existing snapshots, relationships and published cards can remain. It does not establish that a linked provider account or its grant has been removed.",
           "Deleting an original evidence payload does not erase all information derived from it. Observations, excerpts, source identifiers, hashes, provenance, relationships and published records may remain. A complete self-service account deletion workflow and automatic evidence-expiry schedule are not implemented. Disconnecting or deleting an original does not fully erase your data.",
         ],
@@ -121,6 +121,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         paragraphs: [
           "Product presentation can use Context.dev and official product sources. Brand lookups send the product domain to the branding service. Product images and fonts can load from external hosts, so visiting a page can make requests to those hosts.",
           "Your appearance preference is saved in your browser's local storage. Authentication and hosting services also process requests and may use cookies and logs as part of their services.",
+          "Proper Respect uses PostHog for product analytics. On public pages it records page views, clicks, page performance, JavaScript errors and session replay, with every form field masked. On signed-in, sign-in, sign-up and onboarding pages it sends no replay, clicks or errors: only a page view reduced to the route name, such as /app, without card names, IDs or page text. Visitors are not identified to PostHog by account. Requests from bots and crawlers are labeled as bots rather than dropped, so human and automated visits can be counted separately. PostHog stores this data in the United States and uses cookies and local storage to recognize a returning browser.",
         ],
       },
       {

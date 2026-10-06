@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 const validEnvironment = {
@@ -90,8 +90,25 @@ test("release secrets reach only the steps that run the CLI they authenticate", 
   assert.ok(convex[0].indexOf('"prod:${CONVEX_PRODUCTION_DEPLOYMENT}|"') < convex[0].indexOf("npx --no-install convex deploy"));
   const vercel = holders("frontend", "VERCEL_TOKEN");
   assert.equal(vercel.length, 2);
-  for (const step of vercel) assert.match(step, /release-tools\/node_modules\/\.bin\/vercel /);
+  // The deploy runs the pinned CLI; the domain check reads Vercel's API directly and sends the token nowhere else.
+  assert.match(vercel[0], /release-tools\/node_modules\/\.bin\/vercel deploy/);
   assert.ok(vercel[0].indexOf('-z "$VERCEL_TOKEN"') < vercel[0].indexOf("vercel deploy"));
+  assert.deepEqual([...vercel[1].matchAll(/https:\/\/[a-z][^\s"'?]*/g)].map(m => m[0]), ["https://api.vercel.com/v13/deployments/${host}"]);
+});
+
+test("the production-domain check reads the deployment's aliases and says why it fails", () => {
+  // v0.2.0: `vercel inspect` exited non-zero under bash -e before its output was printed,
+  // so a deployment that did hold proper-respect.com failed the release with no message.
+  const workflow = releaseWorkflow();
+  const start = workflow.indexOf("- name: Require the production domain on this deployment");
+  const step = workflow.slice(start, workflow.indexOf("\n      - name:", start + 1));
+  assert.ok(start > 0);
+  assert.doesNotMatch(step, /vercel inspect/);
+  assert.match(step, /https:\/\/api\.vercel\.com\/v13\/deployments\/\$\{?host\}?\?teamId=\$\{?VERCEL_ORG_ID\}?/);
+  assert.match(step, /\.alias/);
+  assert.match(step, /"proper-respect\.com"/);
+  // Every failure path prints a reason before it exits.
+  for (const exit of step.split("exit 1").slice(0, -1)) assert.match(exit.slice(-400), /echo "/);
 });
 
 test("the release requires the repository owner as the only reviewer", () => {
@@ -190,6 +207,22 @@ test("the release runs a pinned Vercel CLI, never one fetched at deploy time", (
   assert.match(pinned ?? "", /^\d+\.\d+\.\d+$/);
   const lock = JSON.parse(readFileSync("release-tools/package-lock.json", "utf8"));
   assert.equal(lock.packages?.["node_modules/vercel"]?.version, pinned);
+});
+
+test("every runtime and CI job uses the same Node major (R13)", () => {
+  // Vercel runs Node 24.x; CI, local development and Convex "use node" actions match it.
+  assert.equal(readFileSync(".nvmrc", "utf8").trim(), "24");
+  assert.equal(JSON.parse(readFileSync("package.json", "utf8")).engines?.node, "24.x");
+  assert.equal(JSON.parse(readFileSync("convex.json", "utf8")).node?.nodeVersion, "24");
+  const workflows = readdirSync(".github/workflows").filter(name => /\.ya?ml$/.test(name));
+  assert.ok(workflows.length > 0);
+  for (const name of workflows) {
+    const text = readFileSync(`.github/workflows/${name}`, "utf8");
+    assert.doesNotMatch(text, /node-version:/, `${name} pins a Node version itself`);
+    const setups = text.match(/uses: actions\/setup-node@/g)?.length ?? 0;
+    const pinned = text.match(/node-version-file: \.nvmrc/g)?.length ?? 0;
+    assert.equal(pinned, setups, `${name} must read .nvmrc in every setup-node step`);
+  }
 });
 
 function runPreflight(environment) {
