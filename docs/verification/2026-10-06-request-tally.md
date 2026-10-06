@@ -66,3 +66,9 @@ Analytics main `06f1160553207cabe74fa2325949c2293573066e` was merged at `f883277
 On the combined analytics/tally tree with Node 24 and Next 16.3.8, `npm test` passes 1,826 Vitest tests with two existing retained-source skips and all 122 script tests. Lint, strict typecheck and a production build with the CI synthetic origins and an empty Clerk secret pass. All 24 site-frame/trust-page browser cases pass, covering HTML/Markdown correspondence, accessibility, actual themes, desktop/mobile widths and tally behavior. Raw outputs are `tally-integrated-{full-test,lint,typecheck,build,browser}.txt` in `/tmp/proper-respect-pickup-20261006/`.
 
 All four store URL/token aliases were explicitly empty in these commands; the fixture also disables store reads/writes. These checks establish synthetic integration behavior. Final immutable review, any later main integration, and strict hosted checks remain merge gates. Production store configuration, actual counters, deployment and vendor acceptance remain unverified.
+
+## Final layout-main integration — 2026-10-06 UTC
+
+Main `3dcd1ba2d160b519bee3b5745b92c74abaf7da27` adds the verified collection layout. It was merged without conflicts into the reviewed tally tree. All 16 executable/documentation/image files other than this dated receipt remain byte-identical to reviewed tally head `49cf4a0f873d3b0f86fd82c4af315c557b4d2a98`; the delta against final main remains 17 files. The independent review returned internal functional/comment/visual PASS, with every immutable blob and all four recaptured images inspected.
+
+The local full checks above identify the analytics/tally stage and precede the layout main update. Final immutable base binding and all three strict hosted jobs on this combined head remain required before merge. The source author's hosted KV setup remains unverified; no provider operation, deployment or publication occurred.
