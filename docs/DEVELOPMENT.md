@@ -8,7 +8,7 @@ Updated: 2026-10-06. Start with [AGENTS.md](../AGENTS.md), the
 
 ## Latest deployed state
 
-Checked 2026-10-06. `origin/main` is
+Checked 2026-10-06. Release `v0.2.5` deployed
 `c002560f209174728b9b138a529f814c94e33872`, including the PostHog integration
 in #143. [Release run 37410038514](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37410038514)
 completed its verification, production backend, and production frontend jobs.
