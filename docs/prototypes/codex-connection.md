@@ -24,8 +24,10 @@ contains synthetic fixtures. Refreshing the page clears the in-memory demo.
 6. Disconnect. The current page keeps retained history but cannot acquire more.
    Reconnecting requires new approval and replays the same observations safely.
 
-The grant expires after ten minutes. Each read lasts at most five seconds and
-cannot commit after expiry or disconnect. No recurring collection is installed.
+The grant expires after ten minutes. Each read has one five-second deadline,
+including validation. A delayed timer cannot permit a late commit. A retry gets
+a new read deadline within the original grant and never renews approval.
+No read can commit after expiry or disconnect. No recurring collection is installed.
 
 ## What this proves
 
@@ -83,6 +85,8 @@ proven replay boundaries. Content hashes alone cannot prove event identity.
 ## Deliberate limits
 
 - Seven-day half-open history window, with an inclusive start and exclusive end
+- UTC window endpoints and observation timestamps support at most millisecond
+  precision. Finer precision is rejected before normalization, never rounded.
 - Ten-minute approval, five-second read deadline, no automatic background timer
 - At most eight fixture files, 1,000 input lines and 256,000 source bytes per read
 - At most 1,000 retained sanitized observations and 256,000 returned JSON bytes

@@ -70,28 +70,39 @@ export class UsageConnection {
   async sync() {
     const session = this.session;
     if (session.kind !== "active" || session.request) return;
-    if (this.now() >= session.expiresAt) { this.notify(); return; }
+    const startedAt = this.now();
+    if (startedAt >= session.expiresAt) { this.notify(); return; }
+    const deadlineAt = Math.min(startedAt + 5000, session.expiresAt);
     const request = new AbortController(), generation = this.generation;
+    const checkDeadline = () => {
+      const now = this.now();
+      if (now >= deadlineAt) { request.abort(); throw new Error("acquisition-timeout"); }
+      return now;
+    };
     session.request = request;
     session.error = null;
     this.notify();
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       const deadline = new Promise<never>((_resolve, reject) => {
-        timeout = setTimeout(() => { request.abort(); reject(new Error("acquisition-timeout")); }, Math.min(5000, session.expiresAt - this.now()));
+        timeout = setTimeout(() => { request.abort(); reject(new Error("acquisition-timeout")); }, Math.max(0, deadlineAt - this.now()));
       });
       const value = await Promise.race([this.collect({ descriptor: { ...this.descriptor }, window: { ...this.window }, signal: request.signal }), deadline]);
-      if (generation !== this.generation || request.signal.aborted || this.now() >= session.expiresAt) return;
+      if (generation !== this.generation || request.signal.aborted) return;
+      checkDeadline();
       const text = JSON.stringify(value);
       if (typeof text !== "string" || new TextEncoder().encode(text).length > CONNECTION_LIMITS.bytes) throw new Error();
       const batch = historyBatchSchema.parse(value);
       if (canonicalJson(batch.descriptor) !== canonicalJson(this.descriptor)) throw new Error();
       if (batch.observations.some(row => Date.parse(row.at) < Date.parse(this.window.start) || Date.parse(row.at) >= Date.parse(this.window.end))) throw new Error();
       const merged = mergeConnectionObservations(this.observations, batch.observations);
+      if (generation !== this.generation || request.signal.aborted) return;
+      // Validation shares the acquisition budget; a delayed timer cannot allow a late commit.
+      const committedAt = checkDeadline();
       // Commit the entire validated batch at once. Failed reads cannot replace prior history.
       this.observations = merged.observations;
       this.replays += merged.replays;
-      this.lastSyncedAt = new Date(this.now()).toISOString();
+      this.lastSyncedAt = new Date(committedAt).toISOString();
     } catch {
       if (generation === this.generation) session.error = "Sync could not be verified. Retained history is unchanged. Retry within the approved window.";
     } finally {

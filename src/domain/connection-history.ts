@@ -8,12 +8,17 @@ export const connectionDescriptorSchema = z.strictObject({
   sample: z.literal("synthetic"), collectorVersion: alias,
 });
 export type ConnectionDescriptor = z.infer<typeof connectionDescriptorSchema>;
-export const historyWindowSchema = z.strictObject({ start: z.iso.datetime(), end: z.iso.datetime() })
+// Date stores milliseconds. Reject finer source precision before canonicalization
+// can merge distinct instants or move a requested window boundary.
+export const historyTimestampSchema = z.iso.datetime()
+  .refine(value => !/\.\d{4,}Z$/.test(value), "Timestamps support at most millisecond precision.")
+  .transform(value => new Date(value).toISOString());
+export const historyWindowSchema = z.strictObject({ start: historyTimestampSchema, end: historyTimestampSchema })
   .refine(value => Date.parse(value.end) > Date.parse(value.start) && Date.parse(value.end) - Date.parse(value.start) <= CONNECTION_LIMITS.windowMs);
 export type HistoryWindow = z.infer<typeof historyWindowSchema>;
 export const historyObservationSchema = z.strictObject({
   stream: alias, metric: alias, unit: alias,
-  at: z.iso.datetime().transform(value => new Date(value).toISOString()),
+  at: historyTimestampSchema,
   value: z.string().regex(/^(0|[1-9][0-9]{0,127})$/).nullable(),
 });
 export type HistoryObservation = z.infer<typeof historyObservationSchema>;
