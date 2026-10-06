@@ -113,3 +113,18 @@ catch discarded the narrower cause. The PR and issue contain no later runtime
 category. This consent fix is not claimed to repair #123. Further diagnosis needs
 authorized access to the sanitized category and status from a post-#142 natural
 refresh, without requesting new credentials or triggering a real provider read.
+
+## Independent review disposition: visible account consent
+
+Fix now, 2026-10-06: the first version returned and hashed account-specific
+consent metadata, but its preview UI did not display the account name. The UI
+now names the account that future daily refreshes will read, even when the saved
+snapshot still attributes its activity to an earlier account. Connector changes
+invalidate the visible approval. The optional field keeps older previews readable.
+
+The new account-B disclosure regression failed on `6e19d7d` and passes after
+`fe8a69c`. All 79 focused SSR/auth/publication tests, all 277 client tests,
+typecheck, focused ESLint and diff checks pass. Four synthetic desktop/mobile
+browser cases cover account replacement and same-account reconnect; their
+execution remains subject to the exact-head CI result. This consent-specific
+UI correction belongs in this PR so it can ship independently of R27.
