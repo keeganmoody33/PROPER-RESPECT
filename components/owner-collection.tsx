@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { openRelationship, relationshipFromHash, relationshipHref, subscribeRelationship } from "@/src/client/relationship-location";
 import { InventoryDetails, RetainedEvidenceIntake, SavedRelationshipPreview } from "./private-inventory";
+import { PrivateMeasurements } from "./measurement-review";
 import { DiscoveryReview } from "./discovery-review";
 import styles from "./private-inventory.module.css";
 
@@ -95,7 +96,8 @@ function SelectedRelationship({ propId, brandEnrichmentAvailable }: { propId: st
   if (item === null) return <div role="status"><p>This relationship is unavailable for this account.</p><a href="#private-collection-title">Back to my collection</a></div>;
   return <RelationshipFocus name={item.product.name} label={item.prop.confirmedAt || item.prop.visibility !== "DRAFT" ? "Saved tool" : "Needs your decision"}>
     <RelatedRelationships propId={item.prop._id} />
-    <SavedRelationshipPreview item={item} />
+    <PrivateMeasurements propId={item.prop._id} />
+    <SavedRelationshipPreview item={item} initiallyOpen={item.product.slug === "github"} />
     {item.prop.visibility === "DRAFT" && !item.prop.confirmedAt && <p>Not sure this belongs? <a href="#private-collection-title">Leave it as an undecided discovery</a>. Opening or leaving this record does not confirm use.</p>}
     <InventoryDetails item={item} onSave={save} brandEnrichmentAvailable={brandEnrichmentAvailable} focused />
   </RelationshipFocus>;

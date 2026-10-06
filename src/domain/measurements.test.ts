@@ -52,3 +52,18 @@ describe("exact product-independent sanitized measurements", () => {
     expect(projected.identityBasis).toBe("OWNER_SUPPLIED");
   });
 });
+
+test("synthetic native status and exact tiny source estimate remain explicit in public projection", () => {
+  const input = JSON.parse(native("0.00000000000000000000000000000000000001", "1000000000000000002", { metric: "sourceCostUsd", temporality: "delta" }));
+  input.sample = "synthetic";
+  const row = reviewMeasurementImports([parseMeasurementImport(JSON.stringify(input))])[0];
+  expect(projectMeasurement(row)).toMatchObject({ metric: "estimated_cost_usd", value: "0.00000000000000000000000000000000000001", sample: "synthetic", derivation: "SOURCE_REPORTED" });
+});
+
+test("portable Codex parsing rejects duplicate fields and unsafe numeric tokens before rounding", () => {
+  const fixture = readFileSync("tests/fixtures/codex-usage/account-snapshot.json", "utf8");
+  for (const token of ["9007199254740991.1", "1e-999", "9007199254740992", "1.0000000000000001"]) {
+    expect(() => parseMeasurementImport(fixture.replace('"lifetimeTokens": 1200', `"lifetimeTokens": ${token}`))).toThrow();
+  }
+  expect(() => parseMeasurementImport(fixture.replace('"lifetimeTokens": 1200', '"lifetimeTokens": 1200, "lifetimeTokens": 0'))).toThrow();
+});

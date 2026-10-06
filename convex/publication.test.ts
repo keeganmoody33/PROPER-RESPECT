@@ -578,7 +578,7 @@ async function githubFixture(connector: { status?: "CONNECTED" | "ERROR" | "REVO
     const propId = await ctx.db.insert("props", { userId, productId, visibility: "PRIVATE", status: "ACTIVE", relationshipVersion: 1,
       confirmedAt: capturedAt, headline: "Daily commits", note: "Owner context", activity: calendar(3, "2026-09-20T10:00:00.000Z") });
     const connectorId = await ctx.db.insert("connectorAccounts", { userId, provider: connector.provider ?? "GITHUB", status: connector.status ?? "CONNECTED",
-      accountLabel: "github.com/synthetic", attributionScope: connector.scope ?? "PERSONAL", connectedAt: capturedAt });
+      accountLabel: "github.com/synthetic", githubBinding: { providerAccountId: "U_synthetic", generation: 1 }, attributionScope: connector.scope ?? "PERSONAL", connectedAt: capturedAt });
     return { userId, propId, connectorId };
   });
   const owner = t.withIdentity({ subject: "owner" });
@@ -673,4 +673,46 @@ test("a stale republish with the refresh on cannot roll back a newer public cale
   await expect(f.publish()).rejects.toThrow("This card's public GitHub calendar refreshed since you reviewed it.");
   expect((await f.publishedCard())?.activity).toEqual(refreshed);
   expect((await f.subscriptions()).map(item => item.revokedAt)).toEqual([undefined]);
+});
+
+for (const changedAccount of [true, false]) test(`a preview cannot approve a ${changedAccount ? "replacement account" : "new credential generation"} without review`, async () => {
+  const f = await githubFixture();
+  const selections = [f.selection()];
+  const preview = await f.owner.query(api.onboarding.previewPublication, { selections });
+  expect(preview.refreshAccounts).toEqual([{ connectorId: f.connectorId, accountLabel: "github.com/synthetic",
+    providerAccountId: "U_synthetic", generation: 1 }]);
+  await f.t.run(ctx => ctx.db.patch(f.connectorId, {
+    accountLabel: changedAccount ? "github.com/replacement" : "github.com/synthetic",
+    githubBinding: { providerAccountId: changedAccount ? "U_replacement" : "U_synthetic", generation: 2 },
+  }));
+  await expect(f.owner.mutation(api.onboarding.publishSelected, { selections,
+    expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash })).rejects.toThrow("sharing preview changed");
+  expect(await f.subscriptions()).toEqual([]);
+  await f.publish();
+  expect((await f.subscriptions())[0].githubBinding).toEqual({ providerAccountId: changedAccount ? "U_replacement" : "U_synthetic", generation: 2 });
+});
+
+test("legacy GitHub connections require reconnect before granting refresh but can publish a fixed snapshot", async () => {
+  const f = await githubFixture();
+  await f.t.run(ctx => ctx.db.patch(f.connectorId, { githubBinding: undefined }));
+  await expect(f.publish()).rejects.toThrow("Reconnect GitHub");
+  await f.publish({ autoRefresh: false });
+  expect(await f.subscriptions()).toEqual([]);
+  expect((await f.publishedCard())?.activity?.kind).toBe("contributionCalendar");
+});
+
+test("replacement approval creates a new grant without rewriting the old grant's account or generation", async () => {
+  const f = await githubFixture();
+  await f.publish();
+  const [old] = await f.subscriptions();
+  await f.t.run(async ctx => {
+    await ctx.db.patch(f.connectorId, { githubBinding: { providerAccountId: "U_replacement", generation: 2 } });
+    await ctx.db.patch(old._id, { revokedAt: "2026-10-01T00:00:00.000Z" });
+  });
+  await f.publish();
+  const grants = await f.subscriptions();
+  expect(grants).toHaveLength(2);
+  expect(grants.find(grant => grant._id === old._id)).toMatchObject({ githubBinding: old.githubBinding, revokedAt: "2026-10-01T00:00:00.000Z" });
+  expect(grants.find(grant => grant._id !== old._id)).toMatchObject({ githubBinding: { providerAccountId: "U_replacement", generation: 2 } });
+  expect(await f.refreshApproved()).toBe(true);
 });

@@ -6,7 +6,7 @@ import { makeFunctionReference } from "convex/server";
 import schema from "./schema";
 const modules = import.meta.glob("./**/*.ts");
 const connect = makeFunctionReference<"action">("connectors:connectGithub");
-const source = () => ({ data: { viewer: { login: "synthetic-account", createdAt: "2020-01-01T00:00:00Z", contributionsCollection: { contributionCalendar: { totalContributions: 2, weeks: [{ contributionDays: [{ date: "2026-09-20", contributionCount: 2, contributionLevel: "FIRST_QUARTILE" }] }] } } } } });
+const source = () => ({ data: { viewer: { id: "U_synthetic", login: "synthetic-account", createdAt: "2020-01-01T00:00:00Z", contributionsCollection: { contributionCalendar: { totalContributions: 2, weeks: [{ contributionDays: [{ date: "2026-09-20", contributionCount: 2, contributionLevel: "FIRST_QUARTILE" }] }] } } } } });
 const response = (text: string, status = 200) => new Response(text, { status, headers: { "Content-Type": "application/json" } });
 beforeEach(() => { vi.stubEnv("CONNECTOR_ENCRYPTION_KEY", "synthetic-audit-only-not-a-credential"); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });

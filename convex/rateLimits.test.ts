@@ -30,7 +30,7 @@ afterEach(() => {
 
 async function fixture() {
   const fetcher = vi.fn(async () => Response.json({ data: { viewer: {
-    login: "synthetic-account", createdAt: "2020-01-01T00:00:00Z",
+    id: "U_synthetic", login: "synthetic-account", createdAt: "2020-01-01T00:00:00Z",
     contributionsCollection: { contributionCalendar: { totalContributions: 0, weeks: [] } },
   } } }));
   vi.stubGlobal("fetch", fetcher);

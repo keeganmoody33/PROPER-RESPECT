@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { productKnowledgeTables } from "./productKnowledgeTables";
 import { mailboxTables } from "./mailboxTables";
 import { productBrandTables } from "./productBrandTables";
+import { githubRefreshBindingValidator } from "./githubRefreshIdentity";
 import { inventoryTables } from "./inventoryTables";
 import {
   captureProvenanceValidator,
@@ -201,10 +202,22 @@ export default defineSchema({
     })),
     limitations: v.optional(v.array(v.string())),
     deletedAt: v.optional(v.string()),
+    measurementPropId: v.optional(v.id("props")),
+    measurementImport: v.optional(v.object({
+      adapter: v.union(v.literal("claude-code"), v.literal("codex"), v.literal("metric-packet")),
+      sourceKey: v.string(), captureId: v.string(), digest: v.string(),
+    })),
+    measurementReview: v.optional(v.object({ digest: v.string(), measurementIds: v.array(v.string()), version: v.number() })),
   })
+    .index("by_measurement_prop", ["measurementPropId"])
     .index("by_user", ["userId"])
     .index("by_dedup_key", ["dedupKey"])
     .index("by_storage", ["storageId"]),
+
+  measurementReviews: defineTable({
+    userId: v.id("users"), propId: v.id("props"), rawEvidenceId: v.id("rawEvidence"),
+    digest: v.string(), measurementIds: v.array(v.string()), version: v.number(), reviewedAt: v.string(),
+  }).index("by_prop", ["propId"]),
 
   claimReviews: defineTable({
     userId: v.id("users"),
@@ -274,6 +287,7 @@ export default defineSchema({
       v.literal("ERROR"),
     ),
     accountLabel: v.string(),
+    githubBinding: v.optional(githubRefreshBindingValidator),
     attributionScope: attributionScopeValidator,
     connectedAt: v.string(),
     lastSyncedAt: v.optional(v.string()),
@@ -348,6 +362,7 @@ export default defineSchema({
     userId: v.id("users"),
     propId: v.id("props"),
     connectorId: v.id("connectorAccounts"),
+    githubBinding: v.optional(githubRefreshBindingValidator),
     metricKey: v.string(),
     attributionScope: attributionScopeValidator,
     refreshCadence: v.literal("DAILY"),

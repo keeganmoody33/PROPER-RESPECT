@@ -37,6 +37,7 @@ const dimensionsSchema = z.strictObject({ model: identifier.nullable(), reasonin
 export const measurementSchema = z.strictObject({
   id: z.string().regex(/^[a-f0-9]{64}$/), ...measuredShape,
   capturedAt: z.iso.datetime(), status: z.enum(["measured", "baseline", "conflict"]),
+  sample: z.enum(["synthetic", "owner-supplied", "unknown"]), derivation: z.enum(["SOURCE_REPORTED", "CUMULATIVE_DIFFERENCE"]),
   overlapGroup: z.string().min(1).max(256).nullable(), dimensions: dimensionsSchema,
   reasons: z.array(z.string().max(300)).max(16),
 });
@@ -44,6 +45,7 @@ export type Measurement = z.infer<typeof measurementSchema>;
 export const publicMeasurementSchema = z.strictObject({
   ...measuredShape, capturedAt: z.iso.datetime(), status: z.enum(["measured", "baseline"]),
   identityBasis: z.literal("OWNER_SUPPLIED"), activityActor: z.literal("UNKNOWN"),
+  sample: z.enum(["synthetic", "owner-supplied", "unknown"]), derivation: z.enum(["SOURCE_REPORTED", "CUMULATIVE_DIFFERENCE"]),
 });
 export type PublicMeasurement = z.infer<typeof publicMeasurementSchema>;
 export type MeasurementSource = z.infer<typeof measurementSourceSchema>;
@@ -88,7 +90,7 @@ function codexRows(captures: CodexUsageCapture[]): Measurement[] {
   const rows: Measurement[] = [];
   for (const account of review.accounts) for (const snapshot of account.snapshots) {
     const { summary, dailyUsageBuckets, threadUsage } = snapshot.response;
-    const base = { capturedAt: snapshot.capture.capturedAt, period: { kind: "unknown" } as const, scope: "ACCOUNT" as const, coverage: "UNKNOWN" as const, temporality: "SNAPSHOT" as const, aggregation: "NON_ADDITIVE" as const, status: "measured" as const, overlapGroup: measurementDigest([account.ownerAlias, account.accountAlias]), dimensions: noDimensions, reasons: commonReasons };
+    const base = { capturedAt: snapshot.capture.capturedAt, period: { kind: "unknown" } as const, scope: "ACCOUNT" as const, coverage: "UNKNOWN" as const, temporality: "SNAPSHOT" as const, aggregation: "NON_ADDITIVE" as const, status: "measured" as const, sample: "unknown" as const, derivation: "SOURCE_REPORTED" as const, overlapGroup: measurementDigest([account.ownerAlias, account.accountAlias]), dimensions: noDimensions, reasons: commonReasons };
     const add = (key: string, metric: string, count: number | null, unit: string, extra: Partial<Measurement> = {}) => {
       rows.push(measurementSchema.parse({ ...base, id: measurementDigest([snapshot.metadataSha256, key]), metric, value: count === null ? null : String(count), unit, ...extra }));
     };
@@ -130,14 +132,14 @@ export function reviewMeasurementImports(imports: readonly MeasurementImport[]):
         id: measurementDigest(row), metric: metricNames[row.metric], value: row.quantity, unit: row.metric === "sourceCostUsd" ? "usd" : "tokens",
         period: { kind: "instant", startUnixNano: row.startUnixNano, endUnixNano: row.endUnixNano },
         scope: "UNKNOWN", coverage: "PARTIAL", temporality: row.temporality === "delta" ? "DELTA" : "CUMULATIVE", aggregation: "NON_ADDITIVE",
-        status: row.status, capturedAt, overlapGroup: row.familyDigest, dimensions: { ...noDimensions, model: row.model }, reasons: row.reasons,
+        status: row.status, sample: row.sample, derivation: row.temporality === "cumulative" && row.status === "measured" ? "CUMULATIVE_DIFFERENCE" : "SOURCE_REPORTED", capturedAt, overlapGroup: row.familyDigest, dimensions: { ...noDimensions, model: row.model }, reasons: row.reasons,
       });
     });
   } else if (first.adapter === "codex") {
     rows = codexRows(imports.flatMap(item => item.adapter === "codex" ? [item.capture] : []));
   } else {
     rows = imports.flatMap(item => item.adapter === "metric-packet" ? item.capture.measurements.map(row => measurementSchema.parse({
-      ...row, id: measurementDigest([item.digest, row.id]), capturedAt: item.capturedAt, status: "measured", dimensions: noDimensions, reasons: commonReasons,
+      ...row, id: measurementDigest([item.digest, row.id]), capturedAt: item.capturedAt, status: "measured", sample: "unknown", derivation: "SOURCE_REPORTED", dimensions: noDimensions, reasons: commonReasons,
     })) : []);
   }
   if (rows.length > MEASUREMENT_LIMITS.rows) throw new Error("Too many measurement rows.");
@@ -150,6 +152,6 @@ export function projectMeasurement(row: Measurement): PublicMeasurement {
   return publicMeasurementSchema.parse({
     metric: row.metric, value: row.value, unit: row.unit, period: row.period,
     scope: row.scope, coverage: row.coverage, temporality: row.temporality, aggregation: row.aggregation,
-    capturedAt: row.capturedAt, status: row.status, identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN",
+    capturedAt: row.capturedAt, status: row.status, sample: row.sample, derivation: row.derivation, identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN",
   });
 }

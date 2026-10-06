@@ -7,39 +7,42 @@ record what you are testing, and share the cards you choose at
 [Open your collection](https://proper-respect.com/app/collection) ·
 [See a published profile](https://proper-respect.com/lecturesfrom)
 
-## Build your tool profile
+## Start with one private result
 
-1. **Add a tool.** A product name is enough. You can add a new tool without
-   connecting an account, uploading evidence, or measuring its usage.
-2. **Choose how it fits.** Confirm whether you currently use it, are testing
-   it, or used it before. An explanation, website, and dates are optional.
-   Mark your go-to tools when you want to.
-3. **Choose what to share.** Select cards, inspect the visitor's preview, and
-   approve that exact preview before publishing.
-4. **Share your link.** Anyone with your published profile URL can view the
-   selected cards without signing in. Saving a private change does not update
-   the published version until you approve a new preview.
+1. **Choose one source.** Connect GitHub, import a supported sanitized Claude
+   Code or Codex capture, or name a tool manually. Your choice survives sign-in.
+2. **Inspect the result.** Imports open that tool's private record with exact
+   values, source scope, period, coverage, and unknowns. No mailbox connection
+   or public handle is required. Malformed files leave no blank relationship.
+3. **Choose how the tool fits.** Confirm current use, testing, or past use.
+   Context, dates, and go-to status are your decisions; usage does not decide them.
+4. **Share only if you want to.** Review individual measurements, choose the
+   saved cards and reviewed sources, inspect the visitor preview, and approve
+   that exact version. Private saving and importing never publish.
 
-Your collection also keeps discoveries, supporting evidence, and relationship
-history. Connections and uploads can help you build it; you decide what belongs
-on your profile.
+The native import path in this source is R27 work. Check
+[the deployed release](docs/DEVELOPMENT.md#latest-deployed-state) before assuming
+it is available on the live site.
 
-## Usage is optional
+## Measurements keep their native meaning
 
-A tool can be on your profile without a usage counter. Available measurements
+A tool can be in your collection without a counter. Available measurements
 depend on the source and its coverage.
 
 | Source | Available implementation |
 | --- | --- |
-| GitHub | Contribution snapshots, with an optional daily refresh. Cards show the measured period and freshness. |
-| Manual tools | Your confirmed relationship and optional context. No telemetry is required. |
-| Uploaded evidence | Retained supporting originals. Uploading does not automatically extract usage from every app. |
-| Codex and Claude Code | Local usage parsers, reports, and private card previews. These previews are not saved to the hosted collection or publishable. |
+| GitHub | Contribution snapshots and explicitly approved daily refresh bound to one account and connection generation. |
+| Claude Code | Hosted import of the existing sanitized native-metrics JSON contract. Exact integers, decimals, nanosecond periods, and cumulative reconciliation. No automatic collection. |
+| Codex | Hosted import of the existing metadata-capture contract, including nullable summary, daily buckets and thread views. Native acquisition remains blocked. Overlapping views are never added. |
+| Other products | Strict `proper-measurements-v1` sanitized packet for native units such as words, workspace rows or device duration. This is an import contract, not an automatic vendor/device connector. |
+| Manual tools | Your relationship and optional context. No telemetry required. |
+| Other uploads | Retained supporting originals. Generic file uploads do not automatically extract measurements. |
 
-[Codex and Claude Code measurement](docs/usage-measurement.md) records the
-supported sources, existing work, and remaining integration boundaries.
-Token counts, cost estimates, subscription payments, and billed charges are
-separate facts. Proper Respect has no universal token-spend connector today.
+[Usage measurement](docs/usage-measurement.md) documents the exact formats,
+limits, privacy boundaries and remaining live acceptance. Owner-supplied aliases
+do not authenticate an account or prove human activity. Synthetic Claude data
+keeps its synthetic label. Token counts, source cost estimates, API-equivalent
+examples, subscription payments and billed charges remain separate facts.
 
 ## Run the project locally
 

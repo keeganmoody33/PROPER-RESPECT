@@ -20,6 +20,7 @@ import { canRefreshMetric } from "../src/domain/onboarding";
 import { consumeWriteLimit, requireUser } from "./authHelpers";
 import type { Doc, Id } from "./_generated/dataModel";
 import { githubDateObservations } from "../src/domain/evidence-claims";
+import { sameGithubRefreshBinding, validGithubRefreshBinding } from "./githubRefreshIdentity";
 import { publishedCardIndicesForProp } from "./publication";
 
 function bytesToBase64(bytes: Uint8Array) {
@@ -265,6 +266,7 @@ export const saveConnectedSnapshot = internalMutation({
   args: {
     authSubject: v.string(),
     provider: providerValidator,
+    providerAccountId: v.optional(v.string()),
     accountLabel: v.string(),
     ciphertext: v.string(),
     iv: v.string(),
@@ -288,6 +290,10 @@ export const saveConnectedSnapshot = internalMutation({
       )
       .unique();
     if (!user) throw new Error("Complete account setup before connecting.");
+    if (args.provider === "GITHUB" && (!args.providerAccountId ||
+        !validGithubRefreshBinding({ providerAccountId: args.providerAccountId, generation: 1 }))) {
+      throw new Error("Reconnect GitHub to verify the account identity before saving.");
+    }
     const githubCapture = args.provider === "GITHUB" ? await retainGithubSnapshot(ctx, user, args) : null;
     const now = new Date().toISOString();
 
@@ -320,9 +326,23 @@ export const saveConnectedSnapshot = internalMutation({
         q.eq("userId", user._id).eq("provider", args.provider),
       )
       .unique();
+    // Connecting is a new credential generation, even for the same stable account.
+    // A private reconnect cannot renew or transfer public sharing permission.
+    const githubBinding = args.provider === "GITHUB" ? {
+      providerAccountId: args.providerAccountId!, generation: (connector?.githubBinding?.generation ?? 0) + 1,
+    } : undefined;
+    if (githubBinding && !validGithubRefreshBinding(githubBinding)) throw new Error("GitHub connection generation unavailable.");
+    if (connector && args.provider === "GITHUB") {
+      const subscriptions = await ctx.db.query("metricSubscriptions")
+        .withIndex("by_connector", q => q.eq("connectorId", connector!._id)).collect();
+      for (const subscription of subscriptions) {
+        if (subscription.revokedAt === undefined) await ctx.db.patch(subscription._id, { revokedAt: now });
+      }
+    }
     const connectorValue = {
       status: "CONNECTED" as const,
       accountLabel: args.accountLabel,
+      ...(githubBinding ? { githubBinding } : {}),
       attributionScope: args.activity.attributionScope,
       connectedAt: connector?.connectedAt ?? now,
       lastSyncedAt: now,
@@ -452,6 +472,7 @@ export const connectGithub = action({
     return await ctx.runMutation(internal.connectors.saveConnectedSnapshot, {
       authSubject: identity.subject,
       provider: "GITHUB",
+      providerAccountId: snapshot.providerAccountId,
       accountLabel: snapshot.accountLabel,
       ...encrypted,
       product: {
@@ -550,7 +571,8 @@ async function githubRefreshAuthority(ctx: QueryCtx | MutationCtx, subscriptionI
   if (siblings.length !== 1 || siblings[0]._id !== subscriptionId) return null;
   const connector = await ctx.db.get(subscription.connectorId);
   if (!connector || connector.userId !== subscription.userId || connector.provider !== "GITHUB" ||
-      !["CONNECTED", "ERROR"].includes(connector.status) || connector.attributionScope !== "PERSONAL" || !connector.secretRef) return null;
+      !["CONNECTED", "ERROR"].includes(connector.status) || connector.attributionScope !== "PERSONAL" || !connector.secretRef ||
+      !sameGithubRefreshBinding(subscription.githubBinding, connector.githubBinding)) return null;
   let account: string;
   try { account = githubAccount(connector.accountLabel); } catch { return null; }
   const secret = await ctx.db.get(connector.secretRef);
@@ -651,7 +673,7 @@ export const completeGithubRefresh = internalMutation({
   args: {
     grant: v.object({ subscriptionId: v.id("metricSubscriptions"), fingerprint: v.string() }),
     outcome: v.union(v.object({ kind: v.literal("failure") }), v.object({ kind: v.literal("success"),
-      accountLabel: v.string(), activity: activityModuleValidator, value: v.number() })),
+      providerAccountId: v.optional(v.string()), accountLabel: v.string(), activity: activityModuleValidator, value: v.number() })),
   },
   handler: async (ctx, { grant, outcome }) => {
     const authority = await githubRefreshAuthority(ctx, grant.subscriptionId);
@@ -680,7 +702,7 @@ export const completeGithubRefresh = internalMutation({
       const captured = canonicalTimestamp(activity.capturedAt);
       const priorSuccess = canonicalTimestamp(subscription.lastSuccessfulAt) ?? -1;
       const priorPublic = canonicalTimestamp(published.profile.cards[index].activity?.capturedAt);
-      if (account !== authority.account || captured === null || priorPublic === null || captured <= Math.max(priorSuccess, priorPublic) ||
+      if (outcome.providerAccountId !== connector.githubBinding?.providerAccountId || account !== authority.account || captured === null || priorPublic === null || captured <= Math.max(priorSuccess, priorPublic) ||
           captured > Date.now() + 60_000 || outcome.value !== activity.total || !Number.isSafeInteger(activity.total) ||
           activity.days.length > 400 || activity.days.some(day => !Number.isSafeInteger(day.count)) ||
           new Set(activity.days.map(day => day.date)).size !== activity.days.length) return await rejected();

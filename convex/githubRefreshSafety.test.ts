@@ -9,7 +9,7 @@ const modules = import.meta.glob("./**/*.ts");
 const refresh = makeFunctionReference<"action">("connectors:refreshApproved");
 const activity = (total: number) => ({ kind: "contributionCalendar" as const, total, days: [], attributionScope: "PERSONAL" as const,
   capturedAt: "2026-09-22T10:00:00.000Z", freshness: "FRESH" as const, provenanceLabel: "Synthetic" });
-const response = (login = "synthetic-account", status = 200) => new Response(JSON.stringify({ data: { viewer: { login,
+const response = (login = "synthetic-account", status = 200) => new Response(JSON.stringify({ data: { viewer: { id: `U_${login}`, login,
   createdAt: "2020-01-01T00:00:00Z", contributionsCollection: { contributionCalendar: { totalContributions: 7,
     weeks: [{ contributionDays: [{ date: "2026-09-23", contributionCount: 7, contributionLevel: "FIRST_QUARTILE" }] }] } } } } }),
   { status, headers: { "Content-Type": "application/json" } });
@@ -30,8 +30,8 @@ async function fixture(fetcher = vi.fn(async () => response()), plaintext = "syn
     const productId = await ctx.db.insert("products", { name: "GitHub", slug: "github", domain: "github.com", description: "Synthetic" });
     const propId = await ctx.db.insert("props", { userId, productId, status: "ACTIVE", visibility: "PUBLIC", headline: "Approved", note: "Owner context", activity: activity(3) });
     const secretId = await ctx.db.insert("connectorSecrets", { userId, provider: "GITHUB", ciphertext: base64(ciphertext), iv: base64(iv), createdAt: "2026-09-22T00:00:00.000Z" });
-    const connectorId = await ctx.db.insert("connectorAccounts", { userId, provider: "GITHUB", status: "CONNECTED", accountLabel: "github.com/synthetic-account", attributionScope: "PERSONAL", secretRef: secretId, connectedAt: "2026-09-22T00:00:00.000Z" });
-    const subscriptionId = await ctx.db.insert("metricSubscriptions", { userId, propId, connectorId, metricKey: "github.contributions", attributionScope: "PERSONAL", refreshCadence: "DAILY", approvedAt: "2026-09-22T00:00:00.000Z" });
+    const connectorId = await ctx.db.insert("connectorAccounts", { userId, provider: "GITHUB", status: "CONNECTED", accountLabel: "github.com/synthetic-account", githubBinding: { providerAccountId: "U_synthetic-account", generation: 1 }, attributionScope: "PERSONAL", secretRef: secretId, connectedAt: "2026-09-22T00:00:00.000Z" });
+    const subscriptionId = await ctx.db.insert("metricSubscriptions", { userId, propId, connectorId, githubBinding: { providerAccountId: "U_synthetic-account", generation: 1 }, metricKey: "github.contributions", attributionScope: "PERSONAL", refreshCadence: "DAILY", approvedAt: "2026-09-22T00:00:00.000Z" });
     const publishedId = await ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-22T10:00:00.000Z", cardPropIds: [propId], profile: { handle: "owner", displayName: "Owner", bio: "", cards: [{ product: { name: "GitHub", slug: "github", domain: "github.com", description: "Synthetic" }, status: "ACTIVE", headline: "Approved", note: "Owner context", activity: activity(3), primaryLink: { type: "CANONICAL", url: "https://github.com", label: "Open" } }] } });
     return { userId, otherId, productId, propId, secretId, connectorId, subscriptionId, publishedId };
   });
@@ -137,7 +137,7 @@ test("strictly newer same-day observation remains refreshable", async () => {
 
 const prepare = makeFunctionReference<"query">("connectors:prepareGithubRefresh");
 const complete = makeFunctionReference<"mutation">("connectors:completeGithubRefresh");
-const success = (capturedAt = "2026-09-23T12:00:00.000Z") => ({ kind: "success", accountLabel: "github.com/synthetic-account", activity: { ...activity(7), capturedAt }, value: 7 });
+const success = (capturedAt = "2026-09-23T12:00:00.000Z") => ({ kind: "success", providerAccountId: "U_synthetic-account", accountLabel: "github.com/synthetic-account", activity: { ...activity(7), capturedAt }, value: 7 });
 for (const status of ["REVOKED", "NEEDS_REAUTH"] as const) test(`ineligible ${status} prevents provider acquisition`, async () => {
   await positiveControl(); const f = await fixture();
   await f.t.run(ctx => ctx.db.patch(f.ids.connectorId, { status }));
@@ -268,7 +268,7 @@ for (const mode of ["withheld", "fixed", "removed"] as const) test(`GitHub ${mod
     const { _id, _creationTime, ...fields } = prop; void _id; void _creationTime;
     const propId = await ctx.db.insert("props", { ...fields, headline: "Omitted" });
     await ctx.db.insert("metricSubscriptions", { userId: f.ids.userId, propId, connectorId: f.ids.connectorId,
-      metricKey: "github.contributions", attributionScope: "PERSONAL", refreshCadence: "DAILY", approvedAt: "2026-09-22T00:00:00.000Z" });
+      githubBinding: { providerAccountId: "U_synthetic-account", generation: 1 }, metricKey: "github.contributions", attributionScope: "PERSONAL", refreshCadence: "DAILY", approvedAt: "2026-09-22T00:00:00.000Z" });
     const pub = (await ctx.db.get(f.ids.publishedId))!;
     await ctx.db.patch(f.ids.publishedId, { cardPropIds: [f.ids.propId, propId], profile: { ...pub.profile,
       cards: [...pub.profile.cards, { ...pub.profile.cards[0], headline: "Omitted" }] } });
@@ -281,7 +281,9 @@ for (const mode of ["withheld", "fixed", "removed"] as const) test(`GitHub ${mod
   const owner = f.t.withIdentity({ subject: "owner" });
   const preview = await owner.query(makeFunctionReference<"query">("onboarding:previewPublication"), { selections });
   await owner.mutation(makeFunctionReference<"mutation">("onboarding:publishSelected"), { selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
-  expect(await f.t.mutation(complete, { grant: old.grant, outcome: success() })).toBe(false);
+  for (const outcome of [success(), { kind: "failure" }]) {
+    expect(await f.t.mutation(complete, { grant: old.grant, outcome })).toBe(false);
+  }
   const before = await f.state();
   const firstBefore = before.published?.profile.cards.find((_, i) => before.published?.cardPropIds?.[i] === f.ids.propId);
   await f.call(); const after = await f.state();
@@ -542,4 +544,94 @@ test("successful refresh publishes the same calendar without a diagnostic warnin
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ outcome: "SUCCESS", capturedAt: after.published!.profile.cards[0].activity!.capturedAt });
   } finally { warn.mockRestore(); }
+});
+
+test("replacing account A with B before the next run cannot reuse A's public refresh consent", async () => {
+  const f = await fixture();
+  const before = await f.state();
+  f.fetcher.mockImplementation(async () => response("replacement-account"));
+  await f.t.withIdentity({ subject: "owner" }).action(makeFunctionReference<"action">("connectors:connectGithub"), {
+    token: "replacement-synthetic-token-never-sent",
+  });
+  f.fetcher.mockClear();
+  await f.call();
+  expect(f.fetcher).not.toHaveBeenCalled();
+  expect((await f.state()).published).toEqual(before.published);
+  expect((await f.state()).prop).toEqual(before.prop);
+  expect((await f.state()).signals.filter(signal => signal.visibility === "PUBLIC")).toEqual(before.signals);
+});
+
+test("legacy unbound consent cannot acquire credentials and is not reported as approved", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { githubBinding: undefined }));
+  await f.call();
+  expect(f.fetcher).not.toHaveBeenCalled();
+  const state = await f.t.withIdentity({ subject: "owner" }).query(makeFunctionReference<"query">("onboarding:getState"), { includeClaims: false });
+  expect(state.cards[0].refreshApproved).toBe(false);
+});
+
+for (const field of ["providerAccountId", "generation"] as const) test(`mismatched ${field} stops reads even if the login is unchanged`, async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.patch(f.ids.connectorId, { githubBinding: {
+    providerAccountId: field === "providerAccountId" ? "U_reassigned" : "U_synthetic-account",
+    generation: field === "generation" ? 2 : 1,
+  } }));
+  await f.call();
+  expect(f.fetcher).not.toHaveBeenCalled();
+  expect((await f.state()).signals).toHaveLength(0);
+});
+
+test("a response for a different immutable ID cannot publish under the approved login", async () => {
+  const f = await fixture();
+  const prepared = await f.t.query(prepare, { subscriptionId: f.ids.subscriptionId });
+  expect(await f.t.mutation(complete, { grant: prepared.grant, outcome: { ...success(), providerAccountId: "U_reassigned" } })).toBe(false);
+  expect((await f.state()).signals).toHaveLength(0);
+});
+
+for (const login of ["synthetic-account", "replacement-account"]) test(`reconnecting ${login} revokes prior generation and rejects in-flight success and failure`, async () => {
+  const f = await fixture();
+  const prepared = await f.t.query(prepare, { subscriptionId: f.ids.subscriptionId });
+  f.fetcher.mockImplementation(async () => response(login));
+  await f.t.withIdentity({ subject: "owner" }).action(makeFunctionReference<"action">("connectors:connectGithub"), { token: "synthetic-new-token" });
+  const afterConnect = await f.state();
+  expect(afterConnect.connector?.githubBinding).toEqual({ providerAccountId: `U_${login}`, generation: 2 });
+  expect((await f.t.run(ctx => ctx.db.get(f.ids.subscriptionId)))?.revokedAt).toEqual(expect.any(String));
+  for (const outcome of [success(), { kind: "failure" }]) {
+    expect(await f.t.mutation(complete, { grant: prepared.grant, outcome })).toBe(false);
+    expect(await f.state()).toEqual(afterConnect);
+  }
+});
+
+test("fresh replacement-account preview grants only the new generation and refreshes end to end", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-06T10:00:00.000Z"));
+  const f = await fixture();
+  const old = await f.t.query(prepare, { subscriptionId: f.ids.subscriptionId });
+  const owner = f.t.withIdentity({ subject: "owner" });
+  f.fetcher.mockImplementation(async () => response("replacement-account"));
+  await owner.action(makeFunctionReference<"action">("connectors:connectGithub"), { token: "synthetic-replacement-token" });
+  const selections = [{ propId: f.ids.propId, expectedRelationshipVersion: 0, publish: true, status: "ACTIVE",
+    headline: "Approved", note: "Owner context", autoRefresh: true, connectorId: f.ids.connectorId,
+    metricKey: "github.contributions", activity: activity(3) }];
+  const preview = await owner.query(makeFunctionReference<"query">("onboarding:previewPublication"), { selections });
+  expect(preview.refreshAccounts).toEqual([{ connectorId: f.ids.connectorId, accountLabel: "github.com/replacement-account",
+    providerAccountId: "U_replacement-account", generation: 2 }]);
+  await owner.mutation(makeFunctionReference<"mutation">("onboarding:publishSelected"), {
+    selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+  });
+  for (const outcome of [success(), { kind: "failure" }]) {
+    expect(await f.t.mutation(complete, { grant: old.grant, outcome })).toBe(false);
+  }
+  f.fetcher.mockClear();
+  vi.setSystemTime(new Date("2026-10-06T10:00:01.000Z"));
+  await f.call();
+  expect(f.fetcher).toHaveBeenCalledOnce();
+  const state = await f.state();
+  expect(state.published?.profile.cards[0].activity).toMatchObject({ total: 7, capturedAt: "2026-10-06T10:00:01.000Z" });
+  expect(state.signals.filter(signal => signal.visibility === "PUBLIC")).toHaveLength(1);
+  const subscriptions = await f.t.run(ctx => ctx.db.query("metricSubscriptions").collect());
+  expect(subscriptions).toHaveLength(2);
+  expect(subscriptions.find(subscription => subscription._id === f.ids.subscriptionId)).toMatchObject({
+    githubBinding: { providerAccountId: "U_synthetic-account", generation: 1 }, revokedAt: expect.any(String),
+  });
 });

@@ -243,8 +243,8 @@ export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focus
   </>;
 }
 
-function InventoryCard({ item, index }: { item: Item; index: number }) {
-  return <ProductCard audience="owner" index={index} relationshipConfirmed={isRelationshipConfirmed(item.prop)} goTo={item.prop.goTo} card={{
+function InventoryCard({ item, index, expandedActivity = false }: { item: Item; index: number; expandedActivity?: boolean }) {
+  return <ProductCard audience="owner" index={index} expandedActivity={expandedActivity} relationshipConfirmed={isRelationshipConfirmed(item.prop)} goTo={item.prop.goTo} card={{
     product: item.product, status: item.prop.status, headline: item.prop.headline, note: item.prop.note,
     startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
     primaryLink: privateCardPrimaryLink({
@@ -255,12 +255,12 @@ function InventoryCard({ item, index }: { item: Item; index: number }) {
   }} />;
 }
 
-export function SavedRelationshipPreview({ item }: { item: Item }) {
-  const [open, setOpen] = useState(false);
-  return <details className={styles.savedPreview} onToggle={event => setOpen(event.currentTarget.open)}>
+export function SavedRelationshipPreview({ item, initiallyOpen = false }: { item: Item; initiallyOpen?: boolean }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return <details open={open} className={styles.savedPreview} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>Preview saved card and usage</summary>
     {open && <AccountEvidence propId={item.prop._id} productSlug={item.product.slug}>{(evidence, progress) => <>
-      <InventoryCard item={{ ...item, associatedAccountEvidence: evidence }} index={0} />
+      <InventoryCard item={{ ...item, associatedAccountEvidence: evidence }} index={0} expandedActivity />
       {progress}
     </>}</AccountEvidence>}
   </details>;

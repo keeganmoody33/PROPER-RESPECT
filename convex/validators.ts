@@ -173,6 +173,24 @@ export const usageLinkLabelValidator = v.union(
 );
 export const usageLinkValidator = v.object({ url: v.string(), label: usageLinkLabelValidator });
 
+// Exact measurement projections deliberately do not use numeric ActivityModule values.
+export const measurementPeriodValidator = v.union(
+  v.object({ kind: v.literal("unknown") }),
+  v.object({ kind: v.literal("date"), start: v.string(), end: v.string(), timezone: v.union(v.string(), v.null()) }),
+  v.object({ kind: v.literal("instant"), startUnixNano: v.string(), endUnixNano: v.string() }),
+);
+export const publicMeasurementValidator = v.object({
+  metric: v.string(), value: v.union(v.string(), v.null()), unit: v.string(), period: measurementPeriodValidator,
+  scope: v.union(v.literal("ACCOUNT"), v.literal("WORKSPACE"), v.literal("DEVICE"), v.literal("THREAD"), v.literal("UNKNOWN")),
+  coverage: v.union(v.literal("COMPLETE"), v.literal("PARTIAL"), v.literal("UNKNOWN")),
+  temporality: v.union(v.literal("SNAPSHOT"), v.literal("DELTA"), v.literal("CUMULATIVE")),
+  aggregation: v.union(v.literal("SNAPSHOT"), v.literal("DISTINCT"), v.literal("NON_ADDITIVE")),
+  capturedAt: v.string(), status: v.union(v.literal("measured"), v.literal("baseline")),
+  identityBasis: v.literal("OWNER_SUPPLIED"), activityActor: v.literal("UNKNOWN"),
+  sample: v.union(v.literal("synthetic"), v.literal("owner-supplied"), v.literal("unknown")),
+  derivation: v.union(v.literal("SOURCE_REPORTED"), v.literal("CUMULATIVE_DIFFERENCE")),
+});
+
 export const publicProfileValidator = v.object({
   handle: v.string(),
   displayName: v.string(),
@@ -196,6 +214,7 @@ export const publicProfileValidator = v.object({
       note: v.string(),
       startedAt: v.optional(v.string()),
       activity: v.optional(activityModuleValidator),
+      measurements: v.optional(v.array(publicMeasurementValidator)),
       cost: v.optional(costValidator),
       primaryLink: v.optional(v.object({
         type: linkTypeValidator,

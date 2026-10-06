@@ -13,7 +13,7 @@ const saveRelationship = makeFunctionReference<"mutation">("inventory:save");
 const page = { paginationOpts: { numItems: 10, cursor: null } };
 const product = { name: "GitHub", slug: "github", domain: "github.com", description: "Code" };
 const activity = { kind: "contributionCalendar" as const, attributionScope: "PERSONAL" as const, capturedAt: "2026-09-22T12:00:00.000Z", freshness: "FRESH" as const, provenanceLabel: "GitHub", total: 2, days: [{ date: "2026-09-20", count: 2, level: 1 }] };
-const args = { authSubject: "owner", provider: "GITHUB" as const, accountLabel: "github.com/Example", ciphertext: "synthetic", iv: "synthetic", product, activity, metricKey: "github.contributions", value: 2 };
+const args = { authSubject: "owner", provider: "GITHUB" as const, providerAccountId: "U_example", accountLabel: "github.com/Example", ciphertext: "synthetic", iv: "synthetic", product, activity, metricKey: "github.contributions", value: 2 };
 async function fixture(count = 0, visibility: "DRAFT" | "PRIVATE" | "PUBLIC" = "PRIVATE") {
   const t = convexTest(schema, modules);
   const ids = await t.run(async ctx => {
@@ -259,4 +259,27 @@ test("capture preserves selected evidence, existing publication and revoked refr
   expect(after.publications).toEqual(before.publications);
   expect(after.subscriptions).toEqual(before.subscriptions);
   expect(after.connectors[0].status).toBe("CONNECTED");
+});
+
+test("replacing a connection keeps every earlier private capture and owner decision", async () => {
+  const f = await fixture(1);
+  await f.t.mutation(save, args);
+  const before = await f.rows();
+  await f.t.mutation(save, { ...args, accountLabel: "github.com/Replacement", providerAccountId: "U_replacement",
+    activity: { ...activity, capturedAt: "2026-09-23T12:00:00.000Z" } });
+  const after = await f.rows();
+  expect(after.raw).toHaveLength(before.raw.length + 1);
+  expect(after.raw.find(raw => raw._id === before.raw[0]._id)).toEqual(before.raw[0]);
+  expect(after.props).toEqual(before.props);
+  expect(after.connectors[0].githubBinding).toEqual({ providerAccountId: "U_replacement", generation: 2 });
+});
+
+test("a legacy caller without immutable account identity cannot rotate credentials or retain a new capture", async () => {
+  const f = await fixture(1);
+  await f.t.mutation(save, args);
+  const before = await f.rows();
+  const { providerAccountId, ...legacy } = args;
+  void providerAccountId;
+  await expect(f.t.mutation(save, { ...legacy, ciphertext: "replacement" })).rejects.toThrow("Reconnect GitHub");
+  expect(await f.rows()).toEqual(before);
 });
