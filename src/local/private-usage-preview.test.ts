@@ -17,6 +17,7 @@ test("generates the actual private card application with default-off pricing and
     expect(readFileSync(join(out, asset))).toEqual(readFileSync(join("public", asset)));
   }
   const js = readFileSync(join(out, "preview.js"), "utf8");
+  expect(readFileSync(join(out, "styles.css"), "utf8")).toContain("measurement-values");
   expect(js).toContain("0.009123456789");
   expect(js).not.toContain("0.002010000000");
   for (const text of ["synthetic-owner", "synthetic-account", "synthetic-device", "synthetic-session", "synthetic-process", "synthetic-capture-1", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]) expect(js).not.toContain(text);

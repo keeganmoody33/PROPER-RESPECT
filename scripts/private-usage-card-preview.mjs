@@ -59,10 +59,14 @@ try {
           h("p", { className: "private-usage-preview-note" }, "Product artwork is retained locally from publisher sources. Branding does not establish usage."));
       }
       createRoot(document.getElementById("root")).render(h(App));`, resolveDir: root },
-    bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+    bundle: true, write: false, outfile: "preview.js", platform: "browser", format: "iife", jsx: "automatic",
+    loader: { ".css": "local-css" },
     define: { "process.env.NODE_ENV": '"production"' },
   });
-  const css = await readFile(join(root, "app/globals.css"), "utf8");
+  const javascript = compiled.outputFiles.find(file => file.path.endsWith(".js"));
+  if (!javascript) throw new Error();
+  const componentStyles = compiled.outputFiles.find(file => file.path.endsWith(".css"))?.text ?? "";
+  const css = `${await readFile(join(root, "app/globals.css"), "utf8")}\n${componentStyles}`;
   const manifest = JSON.parse(await readFile(join(root, "public/product-assets/github-copilot/2026-09-19/source-manifest.json"), "utf8"));
   const assets = [...manifest.logos, ...manifest.typography.files, manifest.typography.license, { path: manifest.manifestPath }];
   const usageIcons = JSON.parse(await readFile(join(root, "public/product-assets/2026-09-24-product-icons.json"), "utf8"));
@@ -82,7 +86,7 @@ try {
     await mkdir(dirname(target), { recursive: true, mode: 0o700 });
     await copyFile(join(root, "public", asset.path.slice(1)), target, constants.COPYFILE_EXCL);
   }
-  await writeFile(join(output, "preview.js"), compiled.outputFiles[0].text, { flag: "wx", mode: 0o600 });
+  await writeFile(join(output, "preview.js"), javascript.text, { flag: "wx", mode: 0o600 });
   await writeFile(join(output, "styles.css"), css, { flag: "wx", mode: 0o600 });
   await writeFile(join(output, "index.html"), `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"><title>Private usage card preview</title><link rel="stylesheet" href="./styles.css"></head><body><div id="root"></div><script src="./preview.js"></script></body></html>`, { flag: "wx", mode: 0o600 });
   console.log(`Private preview generated at ${generatedAt}. Serve the output directory on loopback only; open index.html through that local server. No source identities were included.`);

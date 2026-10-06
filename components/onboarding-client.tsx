@@ -845,9 +845,9 @@ export function OnboardingClient({ publicOrigin }: { publicOrigin?: string }) {
         <h1>Start with one source</h1>
         <p>Bring in a usage snapshot or add a tool yourself. Your first result stays private. No mailbox or public profile required.</p>
         <SourcePicker selected={source} />
-        {source && <SignInButton mode="modal" forceRedirectUrl={firstResultReturnUrl(source)}>
-          <button className="primary-action">Continue with {label}</button>
-        </SignInButton>}
+        <SignInButton mode="modal" forceRedirectUrl={source ? firstResultReturnUrl(source) : "/app/collection"}>
+          <button className="primary-action">{source ? `Continue with ${label}` : "Sign in or create account"}</button>
+        </SignInButton>
         <p>Sign in to save your collection. Sharing is a separate choice.</p>
       </main>
     }>
