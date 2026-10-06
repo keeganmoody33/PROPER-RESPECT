@@ -15,6 +15,12 @@ function retain(next) {
   localStorage.setItem(key, JSON.stringify(next));
   listeners.forEach(listener => listener());
 }
+// Match the query update an account reconnect in another tab would deliver.
+window.addEventListener("storage", event => {
+  if (event.key !== key || !event.newValue) return;
+  state = JSON.parse(event.newValue);
+  listeners.forEach(listener => listener());
+});
 function record(name, args) {
   const calls = JSON.parse(localStorage.getItem(`${key}-calls`) ?? "[]");
   localStorage.setItem(`${key}-calls`, JSON.stringify([...calls, { name, args }]));
@@ -84,9 +90,13 @@ const client = {
     const cards = args.removeAllCards ? [] : args.selections.filter(selection => selection.publish).map(selection => {
       const saved = state.cards.find(card => card.prop._id === selection.propId);
       if (saved.prop.visibility !== "PRIVATE") throw new Error("Save privately before preview.");
-      return { product: saved.product, status: selection.status, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink };
+      return { product: saved.product, status: selection.status, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink, activity: selection.activity };
     });
-    return { profile: publicProfileSchema.parse({ ...state.user, cards }), revision: 0, previewHash: args.removeAllCards ? "synthetic-remove-all-preview" : "synthetic-preview" };
+    const refreshAccounts = args.selections.filter(selection => selection.publish && selection.autoRefresh).map(selection => {
+      const connector = state.connectors.find(connector => connector._id === selection.connectorId);
+      return { connectorId: connector._id, accountLabel: connector.accountLabel };
+    });
+    return { profile: publicProfileSchema.parse({ ...state.user, cards }), refreshAccounts, revision: 0, previewHash: args.removeAllCards ? "synthetic-remove-all-preview" : "synthetic-preview" };
   },
 };
 export const useConvex = () => client;

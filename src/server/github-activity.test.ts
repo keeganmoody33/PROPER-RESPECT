@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { GithubActivityError, githubFailureDiagnostic, fetchGithubActivity, GITHUB_REQUEST_TIMEOUT_MS, GITHUB_RESPONSE_BYTES, parseGithubActivity } from "./github-activity";
 const window = { from: "2025-09-22T12:00:00.000Z", to: "2026-09-22T12:00:00.000Z" };
-const source = () => ({ data: { viewer: { login: "Synthetic-Account", createdAt: "2020-01-01T00:00:00Z", contributionsCollection: { contributionCalendar: { totalContributions: 2, weeks: [{ contributionDays: [{ date: "2026-09-20", contributionCount: 2, contributionLevel: "FIRST_QUARTILE" }] }] } } } } });
+const source = () => ({ data: { viewer: { id: "U_synthetic", login: "Synthetic-Account", createdAt: "2020-01-01T00:00:00Z", contributionsCollection: { contributionCalendar: { totalContributions: 2, weeks: [{ contributionDays: [{ date: "2026-09-20", contributionCount: 2, contributionLevel: "FIRST_QUARTILE" }] }] } } } } });
 const text = () => JSON.stringify(source());
 const response = (body: BodyInit = text(), headers: HeadersInit = {}) => new Response(body, { headers: { "Content-Type": "application/json", ...headers } });
 const replaceCounts = (token: string) => text().replace('"totalContributions":2', `"totalContributions":${token}`).replace('"contributionCount":2', `"contributionCount":${token}`);
@@ -174,4 +174,18 @@ test("diagnostic projection rejects arbitrary categories, statuses, messages and
   expect(githubFailureDiagnostic(failure)).toEqual({ category: "TRANSPORT" });
   expect(githubFailureDiagnostic(new Error("PRIVATE-MESSAGE"))).toEqual({ category: "TRANSPORT" });
   expect(githubFailureDiagnostic(new GithubActivityError("HTTP", 999))).toEqual({ category: "HTTP" });
+});
+
+test("captures the immutable viewer ID independently of the mutable account login", async () => {
+  const fetcher = vi.fn(async (_url: string | URL | Request, options?: RequestInit) => {
+    expect(JSON.parse(String(options?.body)).query).toMatch(/viewer\s*\{\s*id\s+login/);
+    return response();
+  });
+  expect(await fetchGithubActivity("synthetic", fetcher)).toMatchObject({ providerAccountId: "U_synthetic", accountLabel: "github.com/Synthetic-Account" });
+});
+
+test.each([undefined, "", " ", "U\nother", 123, "x".repeat(257)])("rejects missing or malformed immutable account ID %j", id => {
+  const input = source();
+  Object.assign(input.data.viewer, { id });
+  expect(() => parseGithubActivity(JSON.stringify(input), window)).toThrow(error);
 });

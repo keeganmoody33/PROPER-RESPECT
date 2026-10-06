@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { productKnowledgeTables } from "./productKnowledgeTables";
 import { mailboxTables } from "./mailboxTables";
 import { productBrandTables } from "./productBrandTables";
+import { githubRefreshBindingValidator } from "./githubRefreshIdentity";
 import { inventoryTables } from "./inventoryTables";
 import {
   captureProvenanceValidator,
@@ -274,6 +275,7 @@ export default defineSchema({
       v.literal("ERROR"),
     ),
     accountLabel: v.string(),
+    githubBinding: v.optional(githubRefreshBindingValidator),
     attributionScope: attributionScopeValidator,
     connectedAt: v.string(),
     lastSyncedAt: v.optional(v.string()),
@@ -348,6 +350,7 @@ export default defineSchema({
     userId: v.id("users"),
     propId: v.id("props"),
     connectorId: v.id("connectorAccounts"),
+    githubBinding: v.optional(githubRefreshBindingValidator),
     metricKey: v.string(),
     attributionScope: attributionScopeValidator,
     refreshCadence: v.literal("DAILY"),

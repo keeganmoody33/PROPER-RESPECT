@@ -119,8 +119,9 @@ export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProduc
   </div>;
 }
 
-export function SharingPreview({ profile, current, busy, onPublish }: {
+export function SharingPreview({ profile, current, busy, onPublish, refreshAccounts = [] }: {
   profile: PublicProfile; current: boolean; busy: boolean; onPublish: () => void;
+  refreshAccounts?: { accountLabel: string }[];
 }) {
   const [approved, setApproved] = useState(false);
   return <section className="sharing-preview" aria-labelledby="sharing-preview-title">
@@ -131,6 +132,7 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
     <div className="card-grid">{profile.cards.map((card, index) => <ProductCard key={`${card.product.slug}-${index}`} card={card} index={index} goTo={card.goTo} />)}</div>
     {!profile.cards.length && <p>No products will be public.</p>}
     <footer className="profile-footer"><div><strong><ProfileName profile={profile} /></strong><span>@{profile.handle}</span></div><p>{profile.bio}</p><ProfileLinks profile={profile} /></footer>
+    {refreshAccounts.map((account, index) => <p key={index}>Daily GitHub refresh will read activity from {account.accountLabel} and update the approved metric on your public card. Reconnecting requires a fresh sharing preview and approval.</p>)}
     <label className="sharing-preview-confirmation"><input type="checkbox" checked={approved} disabled={!current || busy} onChange={event => setApproved(event.target.checked)} />I approve making exactly this preview visible to anyone with the public link.</label>
     <button type="button" className="primary-action" disabled={!current || busy || !approved} onClick={onPublish}>{busy ? "Publishing…" : "Publish this preview"}</button>
   </section>;
@@ -160,9 +162,9 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   >({});
   const [preview, setPreview] = useState<{
     profile: PublicProfile; revision: number; previewHash: string; selections: FunctionArgs<typeof api.onboarding.publishSelected>["selections"]; basis: string;
-    removeAllCards?: boolean;
+    removeAllCards?: boolean; refreshAccounts?: { accountLabel: string }[];
   } | null>(null);
-  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, cards: state?.cards, user: state?.user }), [reviewEdits, state?.cards, state?.user]);
+  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, cards: state?.cards, user: state?.user, connectors: state?.connectors }), [reviewEdits, state?.cards, state?.user, state?.connectors]);
 
   const [setupAttempt, setSetupAttempt] = useState(0);
   const [setupFailed, setSetupFailed] = useState(false);
@@ -811,7 +813,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
           <button type="button" className="secondary-action" onClick={() => void previewUnpublishAll()} disabled={busy}>Unpublish all cards</button>
         </section>}
         {/* A different preview (a new hash) starts unapproved. */}
-        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
+        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} refreshAccounts={preview.refreshAccounts} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
       </section>
       <section className="onboarding-panel" id="collection-data" aria-labelledby="collection-data-title">
         <p className="onboarding-kicker">YOUR DATA</p>
