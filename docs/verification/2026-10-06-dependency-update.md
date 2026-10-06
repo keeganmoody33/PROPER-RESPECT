@@ -2,6 +2,8 @@
 
 The dependency patch from [PR #147](https://github.com/keeganmoody33/PROPER-RESPECT/pull/147) is integrated with main `06e4215003e6df9f92aa79c4ca7b314761814bf3`. Original Dependabot commit `36d9a287a4da1ef208da078611a78d9c1def1fea` remains an ancestor; integration commit `bba40f4ac3930d088c7da55f60ffcd212f08455d` preserves main's new cursor-environment tests and browser job. Final independent review and current-head hosted CI remain pending. No deployment is asserted.
 
+Before push, Dependabot rebased its branch to signed commit `23c0692ae4f5b7e16365dacc3c33ea9fc3b33b78` on the same main. That refreshed proposal retained Next/source-map changes but omitted the original incidental Undici update. Merge `0f6f0c7fd01b5be9b5318fb04b4e3de95e102f75` preserves both bot ancestors and the already verified Undici 7.30.0; its complete tree is identical to validated commit `d37f978ea81fe2285472efd7f411fa764e14e85b`. No runtime source changed during this ancestry repair.
+
 ## Exact changes
 
 | Dependency | Previous | Retained |
