@@ -65,12 +65,14 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   await expect(first.locator(".card-back h2")).toBeFocused();
   await expect(first.locator(".card-brand-provenance")).toHaveCount(0);
   await expect(first.locator(".card-back")).not.toContainText("Context.dev");
+  await expect(first.locator(".activity-meta")).not.toContainText("Updated");
+  await expect(first.locator(".activity-meta")).toContainText("Snapshot recorded 2026-09-19");
   const content = first.locator(".card-back-content");
   await expect(content).toHaveCSS("overflow-y", "visible");
   expect((await first.boundingBox())!.height).toBeGreaterThan(frontHeight);
   expect(await content.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: testInfo.outputPath(`2026-09-19-card-details-${width}.png`), fullPage: true, animations: "disabled" });
+  await page.screenshot({ path: testInfo.outputPath(`${new Date().toISOString().slice(0, 10)}-card-details-${width}.png`), fullPage: true, animations: "disabled" });
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
   await expect(first).toHaveAttribute("data-side", "front");
