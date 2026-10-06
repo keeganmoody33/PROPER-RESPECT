@@ -97,11 +97,13 @@ the schema for them now:
 - The second user is an invited tester, not a stranger.
 - The 30-day unattended receipt comes from the owner's GitHub contribution
   calendar.
-- PRs #52, #58, #60 and #64 are merged to main but not deployed. They ship in
-  v0.2.0.
+- The September 25 held-release notes are historical. Release `v0.2.6`
+  deployed `8cab986` on October 6; see [development](../DEVELOPMENT.md).
 - Hosting stays on free tiers. Nothing may require a paid plan.
-- The local Codex and Claude usage readers (PRs #66 to #73) connect to the
-  hosted product only after the second user passes.
+- The October 6 owner direction advances the bounded R27 private import path
+  using the existing Codex and Claude readers. Genuine second-user acceptance
+  and separately authorized release remain required; no automatic acquisition
+  or new provider credentials are authorized by this implementation task.
 - Tagged releases may continue during the 30-day receipt window. Section 10
   says when a release restarts the count.
 
