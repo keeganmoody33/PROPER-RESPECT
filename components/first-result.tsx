@@ -40,7 +40,7 @@ export function FirstResultPanel({ source, busy, onConnectGithub, mode = "first"
       <p className={styles.hint}>You may need to add GitHub under your account’s Connected accounts first.</p>
     </>}
     {(source === "claude-code" || source === "codex" || source === "metric-packet") && <MeasurementImport key={source} source={source} />}
-    {source === "manual" && <><p>Name a tool and choose how you use it. Usage measurements can wait.</p><a className="primary-action" href="#add-product">Add your first tool</a></>}
+    {source === "manual" && <><p>Name a tool and choose how you use it. Usage measurements can wait.</p><a className="primary-action" href="#add-product" onClick={event => { event.preventDefault(); selectFirstResultSource(null); window.location.hash = "add-product"; }}>Add your first tool</a></>}
     {!source && <a className="text-link" href="#add-product">Add your first tool manually</a>}
   </section>;
 }

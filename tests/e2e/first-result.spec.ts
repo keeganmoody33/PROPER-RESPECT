@@ -215,3 +215,26 @@ for (const duplicate of [false, true]) test(`GitHub success without a relationsh
   await expect(page.getByRole("status").filter({ hasText: "GitHub evidence retained privately" })).toContainText("Review any new discovery");
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!).cards)).toHaveLength(0);
 });
+
+for (const width of [1280, 390]) test(`manual source hands off and finishes after a private save at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 960 });
+  await page.addInitScript(() => localStorage.setItem("fixture-signed-in", "true"));
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8883/")
+    ? route.fulfill({ contentType: "text/html", body: fixtureHtml }) : route.abort());
+  await page.goto("http://127.0.0.1:8883/app/collection?source=manual");
+  await page.getByRole("link", { name: "Add your first tool", exact: true }).click();
+  await expect(page).toHaveURL("http://127.0.0.1:8883/app/collection#add-product");
+  const add = page.locator("#add-product");
+  await add.getByLabel("Product name", { exact: true }).fill("Manual fixture");
+  await add.getByLabel("How do you use it?", { exact: true }).selectOption("ACTIVE");
+  await add.getByRole("button", { name: "Save tool privately", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Add another source", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start with one tool", exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Add another source", exact: true })).toBeVisible();
+  const state = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!));
+  expect(state.cards).toHaveLength(1);
+  expect(state.cards[0].prop.visibility).toBe("PRIVATE");
+  const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
+  expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toHaveLength(0);
+});

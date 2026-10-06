@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -57,6 +57,13 @@ export function MeasurementSharingChoices({ propId, selected, onChange, disabled
   propId: Id<"props">; selected: Id<"rawEvidence">[]; onChange: (ids: Id<"rawEvidence">[]) => void; disabled: boolean;
 }) {
   const captures = useQuery(api.retainedEvidence.measurements, { propId });
+  useEffect(() => {
+    // A new capture or deleted source can invalidate review while its sharing
+    // choice is held in the parent. Loading does not revoke that choice.
+    if (captures === undefined) return;
+    const available = selected.filter(id => captures.some(capture => capture.rawEvidenceId === id && capture.reviewedMeasurementIds.length > 0));
+    if (available.length !== selected.length) onChange(available);
+  }, [captures, selected, onChange]);
   const reviewed = captures?.filter(capture => capture.reviewedMeasurementIds.length > 0) ?? [];
   if (!reviewed.length) return null;
   return <fieldset disabled={disabled}>
