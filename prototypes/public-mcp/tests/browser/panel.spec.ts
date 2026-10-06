@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { exactMeasurements } from "../measurement-fixture";
 const panel = (page: Page) => page.frameLocator("#frame").frameLocator("iframe");
 async function load(page: Page, handle: string) {
   await page.locator("#reference").fill(handle);
@@ -50,6 +51,41 @@ test("all activity variants have accessible complete textual evidence", async ({
   await load(page, "hostile");
   await expect(view.getByRole("heading", { level: 1 })).toHaveText('<img src=x onerror="window.injected=true"> Literal owner text');
   await expect(view.locator("h1 img")).toHaveCount(0);
+});
+test("exact measurements preserve precision, unknowns and evidence caveats at desktop and mobile widths", async ({ page }, info) => {
+  await page.goto("/");
+  const view = panel(page);
+  await expect(view.getByRole("heading", { name: "Synthetic public profile" })).toBeVisible();
+  await load(page, "measurements");
+  await expect(view.getByRole("heading", { name: "Synthetic measurement profile" })).toBeVisible();
+  const evidence = view.getByRole("region", { name: "Exact measurements", exact: true });
+  const rows = evidence.locator(":scope > ul > li");
+  await expect(rows).toHaveCount(exactMeasurements.length);
+  await expect(rows.nth(0).getByText(exactMeasurements[0].value!, { exact: true })).toBeVisible();
+  await expect(rows.nth(1).getByText(exactMeasurements[1].value!, { exact: true })).toBeVisible();
+  await expect(rows.nth(2).getByText("0", { exact: true })).toBeVisible();
+  await expect(rows.nth(3).getByText("Unknown", { exact: true })).toBeVisible();
+  await expect(rows.nth(3).getByText("0", { exact: true })).toHaveCount(0);
+  await expect(evidence).toContainText("1791240000000000001");
+  await expect(evidence).toContainText("1791240000000000999");
+  await expect(evidence).toContainText("2026-10-05");
+  await expect(evidence).toContainText("baseline");
+  await expect(evidence).toContainText("PARTIAL");
+  await expect(evidence).toContainText("NON_ADDITIVE");
+  await expect(evidence).toContainText("CUMULATIVE_DIFFERENCE");
+  await expect(evidence).toContainText("OWNER_SUPPLIED");
+  await expect(evidence).toContainText("Activity actor is unknown");
+  await expect(evidence).toContainText("Snapshots and overlapping views must not be added");
+  await expect(view.getByText("No activity evidence supplied.", { exact: true })).toHaveCount(0);
+  await page.screenshot({ path: info.outputPath("measurements-desktop.png"), fullPage: true });
+  await view.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(page.locator("#status")).toHaveAttribute("data-completed-reads", "1");
+  await expect(rows.nth(0).getByText(exactMeasurements[0].value!, { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 850 });
+  const width = await view.locator("body").evaluate(element => ({ scroll: element.scrollWidth, viewport: element.clientWidth }));
+  expect(width.scroll).toBeLessThanOrEqual(width.viewport);
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: info.outputPath("measurements-mobile.png"), fullPage: true });
 });
 test("empty, unavailable, refresh error and stale response do not fabricate a profile", async ({ page }) => {
   await page.goto("/");

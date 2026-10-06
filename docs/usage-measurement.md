@@ -1,40 +1,100 @@
 # Codex and Claude Code usage measurement
 
-Checked: 2026-10-06. Repository baseline:
-`c002560f209174728b9b138a529f814c94e33872`.
+Updated: 2026-10-06. R27 implementation builds on release `v0.2.6` at
+`8cab986ee3e5f638b320d4baacefff0302a45615`. Source changes need review and a
+separately authorized release; this document does not claim live acceptance.
 
-Proper Respect already has local Codex and Claude Code parsers, reports, and
-private card previews. It has no hosted AI usage connection or public AI usage
-projection. Adding a tool to a profile does not require those measurements.
+## Hosted import contract
 
-## Existing implementation
+Choose one source at `/app/collection`, sign in, and import one sanitized JSON
+file. The chosen source survives sign-in. Successful import opens the exact
+private relationship and its usage result. A public handle and email discovery
+are optional. Manual tool entry remains available.
 
-The current private preview says:
+The existing local preview generator remains a local tool. R27 adds a separate
+reviewed measurement projection through the existing source, retained-original,
+relationship, and publication records. It does not attach legacy `privateUsage`
+or `privateNativeUsage` objects to public cards.
 
-> Local snapshot · not saved · not publishable. Genuine owner usage is not validated.
->
-> Not connected · automatic updates unavailable.
+Accepted inputs:
 
-Source: [private usage card](https://github.com/keeganmoody33/PROPER-RESPECT/blob/c002560f209174728b9b138a529f814c94e33872/components/private-usage-card-details.tsx#L65-L67).
+- Claude `claude-code-native-metrics-v1` from
+  `scripts/claude-native-report.mjs --format sanitized`, with the existing
+  explicit source mode and sanitizer arguments. Raw OTLP must be sanitized
+  locally first. The restricted sanitizer can reject a full exporter payload.
+- Codex version 1 metadata captures for `account/usage/read`, source version
+  `0.153.4`, using the existing [capture schema](../src/domain/codex-usage.ts).
+  Existing safe-integer limits still apply. No native acquisition was enabled.
+- `proper-measurements-v1`, the product-independent schema in
+  [measurements.ts](../src/domain/measurements.ts). It requires an opaque source
+  alias, native metric/unit, exact decimal string or null, scope, period,
+  coverage, temporality and aggregation for each row. It accepts uncatalogued
+  products without treating email or branding as usage.
 
-| Work | Source and contract |
-| --- | --- |
-| Codex account and thread parsing | [Codex parser](../src/domain/codex-usage.ts). Snapshots retain exact counts, coverage, and source estimates. They are not additive events. |
-| Native Codex capture | [Native adapter](../src/local/codex-native-adapter.ts). Startup remains blocked; no enabled native collector. |
-| Claude metrics import | [Selected-file CLI receipt](verification/2026-09-24-claude-selected-file-cli.md). Both `--synthetic` and `--owner-supplied` modes are implemented. |
-| Usage and cost report | [Report receipt](verification/2026-09-24-usage-cost-report.md) and [source contract](verification/2026-09-24-usage-cost-source-contract.md). Token observations, source estimates, and API-equivalent valuations stay separate. |
-| Exact private cards | [Private projection](../src/domain/private-usage-card.ts) and [local generator](../scripts/private-usage-card-preview.mjs). No application ingestion caller currently saves or publishes this projection. |
+`scripts/usage-cost-report.mjs` emits Markdown for local reading. Its output is
+not importable JSON. Do not parse that report as an ingestion contract. The
+older experimental `claude-code-sanitized-metrics-v1` report input is also not a
+hosted input in this bounded release.
 
-The selected-file receipt states:
+## Exactness and history
 
-> `owner-supplied` is a declaration,
-> not producer authentication, account ownership or proof of human activity.
+Exact scalars stay strings through authenticated persistence, private queries,
+review, preview and public reads. Unknown is null, not zero. Claude's existing
+reconciler owns delta/cumulative baselines, resets, gaps and stream conflicts;
+quarantined conflicts cannot be selected. Derived cumulative differences are
+labeled separately from source-reported snapshots. Synthetic source status
+survives projection. Codex daily buckets and thread views remain separate from
+account lifetime totals; no global total is calculated.
 
-Source: [selected-file receipt, lines 15–18](https://github.com/keeganmoody33/PROPER-RESPECT/blob/c002560f209174728b9b138a529f814c94e33872/docs/verification/2026-09-24-claude-selected-file-cli.md#L15-L18).
+Each source/account scope has a separate private group. Changed content under
+one capture identity is rejected. Reimporting the same capture is idempotent.
+A new capture or deleted original invalidates the source group's review.
+Deleted originals cannot be restored by replay. Disconnecting a provider keeps
+retained measurements and relationship history.
 
-This corrects the earlier synthetic-only implementation state. The committed
-receipt still records synthetic validation and no genuine-file acquisition.
-Historical research and receipts retain their original dates and claims.
+This is a bounded first import path:
+
+- 256,000 bytes per file
+- 32 retained capture identities per relationship, including deletion tombstones
+- 750,000 active retained JSON bytes per relationship
+- 512 rows per generic packet and 8,192 derived rows per source review
+- 24 reviewed/public rows per card and 8 selected source groups
+
+Reaching a limit leaves existing records intact. This is not yet unlimited
+historical synchronization or a general backup/restore format. The existing data
+export remains partial; it does not include all new measurement review history.
+
+## Privacy and publication
+
+Strict schemas reject unknown fields, prompts, transcripts, credentials and
+workspace content rather than storing arbitrary JSON. Use opaque aliases, not
+email addresses, filesystem paths or confidential workspace names. Imported
+aliases are owner-supplied, not provider-authenticated identity. The activity
+actor remains unknown.
+
+Import and review are private. Review rows, save relationship context, then
+select reviewed sources in the existing sharing flow. The public projection
+contains only approved measurement values and their units, scope, period,
+coverage and interpretation. Private source aliases, hashes, thread identifiers,
+model dimensions and raw originals do not copy to the public card. Both the
+review version and source digest bind the publication preview; a stale preview
+cannot authorize changed evidence. Existing public snapshots remain unchanged
+until explicit republishing or unpublishing.
+
+These records do not prove complete account history or verified billed charges.
+No automatic collector, private agent API, account-merging operation, native Clay
+connector or device-duration collector is included. Public agent reading stays
+read-only and uses the same approved visible projection.
+
+## Acceptance boundary
+
+Automated tests use synthetic inputs and authenticated Convex test contexts.
+They establish exact-value retention, isolation, replay safety, review and
+publication behavior. They do not establish genuine exporter coverage or a live
+signed-in service journey. After a separately authorized release, use an approved
+genuine sanitized file to check first result, reload, a fresh session, source
+revocation/history and deliberate public selection. Do not enter or upload live
+credentials for this acceptance path.
 
 ## Codex sources
 
@@ -100,14 +160,9 @@ subset. It rejects other metrics in the request, including ordinary Claude
 session metrics. A full exporter payload can therefore be incompatible.
 See the exact [adapter contract](verification/2026-09-24-claude-native-metrics-adapter.md).
 
-## Hosted connection boundaries
+## Acquisition boundaries
 
-No automatic AI usage collector is enabled by these parsers. PostHog measures
-Proper Respect application traffic; it supplies no Codex or Claude token source.
-The existing daily GitHub refresh is a different connection.
-
-Before an AI usage connection can appear on a profile, it needs a validated
-source, declared account/device/period coverage, private persistence, replay and
-revocation behavior, and an explicitly selected public projection. Actual billed
-charges need billing evidence separate from token observations or estimates.
-The current local preview must not be attached to a public card.
+No automatic AI usage collector is enabled by these parsers or imports. PostHog
+measures Proper Respect application traffic; it supplies no Codex or Claude token
+source. Daily GitHub refresh is a separate connection; [#150](https://github.com/keeganmoody33/PROPER-RESPECT/pull/150) handles account-bound consent. Actual
+billed charges need billing evidence separate from token observations or estimates.

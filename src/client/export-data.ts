@@ -24,6 +24,7 @@ export async function collectPages<T>(fetchPage: (cursor: string | null) => Prom
 export const EXPORT_EXCLUSIONS = [
   "Original files and retained original text (delete or view them in your private collection).",
   "Connector credentials, upload tokens and storage references.",
+  "Private imported exact measurement rows and measurement review history. Approved projections already in your public snapshot are included with that snapshot.",
   "Content hashes and deduplication keys, which only identify files and records inside Proper Respect.",
   "Not in this file yet: connected accounts, usage readings collected from connected accounts (the activity saved on each relationship is included), daily refresh settings and their run history, your verdicts on individual observations, supporting proofs and artifacts, earlier handles, and imports still in review. Ask through the contact page for a copy.",
 ] as const;

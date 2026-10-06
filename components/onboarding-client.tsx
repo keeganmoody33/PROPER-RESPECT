@@ -33,6 +33,9 @@ import { openRelationship } from "@/src/client/relationship-location";
 import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 import { CopyProfileLink } from "./copy-profile-link";
+import { MeasurementSharingChoices } from "./measurement-review";
+import { FirstResultPanel, SourcePicker, useFirstResultSource } from "./first-result";
+import { firstResultSources, firstResultReturnUrl, selectFirstResultSource } from "@/src/client/first-result-intent";
 
 type ManualProductInput = { name: string; website?: string; description?: string; status?: "ACTIVE" | "TESTING" | "ARCHIVED"; operationId: string };
 
@@ -137,6 +140,7 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
 }
 
 function Builder({ publicOrigin }: { publicOrigin?: string }) {
+  const source = useFirstResultSource();
   const convex = useConvex();
   const { user: clerkUser } = useUser();
   const { getToken, sessionClaims } = useAuth();
@@ -155,6 +159,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [measurementSelections, setMeasurementSelections] = useState<Record<string, Id<"rawEvidence">[]>>({});
   const [reviewEdits, setReviewEdits] = useState<
     Record<string, ReviewEdit>
   >({});
@@ -162,7 +167,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     profile: PublicProfile; revision: number; previewHash: string; selections: FunctionArgs<typeof api.onboarding.publishSelected>["selections"]; basis: string;
     removeAllCards?: boolean;
   } | null>(null);
-  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, cards: state?.cards, user: state?.user }), [reviewEdits, state?.cards, state?.user]);
+  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, measurementSelections, cards: state?.cards, user: state?.user }), [reviewEdits, measurementSelections, state?.cards, state?.user]);
 
   const [setupAttempt, setSetupAttempt] = useState(0);
   const [setupFailed, setSetupFailed] = useState(false);
@@ -267,9 +272,14 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
-      const result = (await response.json()) as { error?: string };
+      const result: unknown = await response.json();
+      const payload = result && typeof result === "object" ? result : {};
       if (!response.ok) {
-        throw new Error(result.error ?? "GitHub connection failed.");
+        throw new Error("error" in payload && typeof payload.error === "string" ? payload.error : "GitHub connection failed.");
+      }
+      if ("propId" in payload && typeof payload.propId === "string") {
+        selectFirstResultSource(null);
+        openRelationship(payload.propId);
       }
     });
   }
@@ -304,6 +314,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
         const refreshConnector = edit.autoRefresh ? githubRefreshConnector(card, state.connectors, edit) : undefined;
         return {
           propId: card.prop._id,
+          measurementEvidenceIds: edit.publish ? measurementSelections[card.prop._id] ?? [] : [],
           ...(state.privateInventoryAvailable ? { expectedRelationshipVersion: card.prop.relationshipVersion ?? 0 } : {}),
           publish: edit.publish,
           status: edit.status,
@@ -383,6 +394,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
         ...(preview.removeAllCards ? { removeAllCards: true } : {}) });
       setPreview(null);
       setReviewEdits({});
+      setMeasurementSelections({});
     });
   }
 
@@ -422,14 +434,13 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
       <div className="onboarding-intro">
         <div>
           <p className="onboarding-kicker">PROPER—RESPECT / YOUR COLLECTION</p>
-          <h1>Your tools. Your track record.</h1>
+          <h1>Your collection</h1>
         </div>
         <div>
           <UserButton appearance={{ elements: { avatarBox: { width: "3rem", height: "3rem" } } }} />
         </div>
         <p>
-          Technology moves fast. Keep a record of the tools you’ve tested and used,
-          how you’ve used them, and why your stack changed. Share the history and supporting evidence you choose.
+          Your tools, reported usage, and saved decisions. Everything starts private.
         </p>
       </div>
 
@@ -441,12 +452,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
         <a href="#collection-sharing">Sharing</a>
       </nav>
       {message && <p className="message" role="status">{message}</p>}
-      {state.cards.length === 0 && state.privateInventoryAvailable && <section className="onboarding-panel" aria-labelledby="first-tool-title">
-        <p className="onboarding-kicker">YOUR FIRST CARD</p>
-        <h2 id="first-tool-title">Start with one tool</h2>
-        <p>Add a tool you use or are trying and choose your relationship. Notes and sources are optional. Your card stays private until you choose to share it.</p>
-        <a className="primary-action" href="#add-product">Add your first tool</a>
-      </section>}
+      {state.privateInventoryAvailable && (source || state.cards.length === 0) && <FirstResultPanel source={source} busy={busy} onConnectGithub={connectGithub} />}
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />
@@ -457,6 +463,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
         <p>We ask what the evidence cannot answer. Signup, payment, and observed use are different claims—not proof of continuous use.</p>
         <p>Gmail discovery uses separately authorized read-only access when this environment is configured. Signing in with Google does not grant mailbox access. Microsoft mailbox connection is not available yet.</p>
         <p>Sources bring discoveries and supporting context into your private collection. Your relationship and go-to choices remain yours.</p>
+        {!source && state.cards.length > 0 && <FirstResultPanel mode="additional" source={null} busy={busy} onConnectGithub={connectGithub} />}
         <div className="connector-grid">
           <MailboxManagement available={state.mailboxAvailable === true} />
           <div className="connector-card">
@@ -574,6 +581,8 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                       primaryLink: privateDestination,
                     }} />
                   </details>
+                  <MeasurementSharingChoices propId={card.prop._id} selected={measurementSelections[card.prop._id] ?? []} disabled={busy || !edit.publish}
+                    onChange={ids => setMeasurementSelections(current => ({ ...current, [card.prop._id]: ids }))} />
                   <details><summary>Product and evidence records</summary>
                     {state.brandEnrichmentAvailable && <ProductBrandControls propId={card.prop._id} />}
                     <ProductKnowledgePanel propId={card.prop._id} />
@@ -825,30 +834,24 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
 
 export function OnboardingClient({ publicOrigin }: { publicOrigin?: string }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const source = useFirstResultSource();
+  const label = firstResultSources.find(option => option.id === source)?.label;
   return (
-    <Show
-      when="signed-in"
-      fallback={
-        <main className="system-message">
-          <p className="eyebrow">PROPER—RESPECT / YOUR COLLECTION</p>
-          <h1>Your tools. Your track record.</h1>
-          <p>
-            Sign in to keep your products, testing, go-to choices, and their history
-            in one private collection. Share only what you choose.
-          </p>
-          <SignInButton mode="modal">
-            <button className="primary-action">Sign in or create account</button>
-          </SignInButton>
-        </main>
-      }
-    >
-      {isAuthenticated ? <Builder publicOrigin={publicOrigin} /> : (
-        <main className="system-message">
-          <p role="status">{isLoading
-            ? "Verifying your session…"
-            : "Could not verify your session. Reload this page to retry."}</p>
-        </main>
-      )}
+    <Show when="signed-in" fallback={
+      <main className="onboarding-shell">
+        <p className="onboarding-kicker">PROPER—RESPECT / PRIVATE FIRST</p>
+        <h1>Start with one source</h1>
+        <p>Bring in a usage snapshot or add a tool yourself. Your first result stays private. No mailbox or public profile required.</p>
+        <SourcePicker selected={source} />
+        <SignInButton mode="modal" forceRedirectUrl={firstResultReturnUrl(source)} signUpForceRedirectUrl={firstResultReturnUrl(source)}>
+          <button className="primary-action">{source ? `Continue with ${label}` : "Sign in or create account"}</button>
+        </SignInButton>
+        <p>Sign in to save your collection. Sharing is a separate choice.</p>
+      </main>
+    }>
+      {isAuthenticated ? <Builder publicOrigin={publicOrigin} /> : <main className="system-message">
+        <p role="status">{isLoading ? "Verifying your session…" : "Could not verify your session. Reload this page to retry."}</p>
+      </main>}
     </Show>
   );
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./canonical-json.ts";
+import { ExactJsonNumber, parseExactJson, type ExactJson } from "./exact-json.ts";
 
 export const CODEX_USAGE_LIMITS = { bytes: 256_000, captures: 32, days: 3660, groups: 128 } as const;
 export const CODEX_USAGE_RUNTIME_ERROR = "Codex metadata preview requires JSON.parse source context (Node.js 22+).";
@@ -87,6 +88,22 @@ export function parseCodexUsageCapture(text: string): CodexUsageCapture {
   } catch { throw invalid(); }
 }
 
+/** Hosted runtimes need not implement JSON.parse reviver source context. */
+export function parseCodexUsageCapturePortable(text: string): CodexUsageCapture {
+  const materialize = (value: ExactJson): unknown => {
+    if (value instanceof ExactJsonNumber) {
+      const count = Number(value.lexeme);
+      if (!exactCountToken(value.lexeme, count)) throw invalid();
+      return count;
+    }
+    if (Array.isArray(value)) return value.map(materialize);
+    if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, materialize(item)]));
+    return value;
+  };
+  try { return captureSchema.parse(materialize(parseExactJson(text))); }
+  catch { throw invalid(); }
+}
+
 const compare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 function digest(capture: CodexUsageCapture) {
   return [...sha256(new TextEncoder().encode(canonicalJson(capture)))].map(byte => byte.toString(16).padStart(2, "0")).join("");
@@ -100,7 +117,7 @@ export function reviewCodexUsageCaptures(inputs: readonly CodexUsageCapture[]): 
   for (const input of inputs) {
     // Revalidate callers as well as the JSON entrypoint before any retention.
     let capture: CodexUsageCapture;
-    try { capture = parseCodexUsageCapture(JSON.stringify(input)); } catch { throw invalid(); }
+    try { capture = parseCodexUsageCapturePortable(JSON.stringify(input)); } catch { throw invalid(); }
     const { ownerAlias, accountAlias } = capture.scope;
     const partitionKey = JSON.stringify([ownerAlias, accountAlias]);
     let identities = partitions.get(partitionKey);

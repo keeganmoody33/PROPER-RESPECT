@@ -1259,3 +1259,21 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .site-tally-panel { grid-template-columns: minmax(0, 1fr); }
   .site-tally-panel li button { grid-template-columns: minmax(0, 1fr) 48px 64px; }
 }
+
+/* Exact measurement cards share the existing global ProductCard stylesheet. */
+.usage-measurement-measurement { min-width: 0; padding: .85rem 0; overflow-wrap: anywhere; }
+.usage-measurement-label { display: block; font-size: .9rem; font-weight: 650; }
+.usage-measurement-value { display: inline-block; max-width: 100%; margin: .4rem .5rem .25rem 0; font-size: clamp(1.1rem, 2.5vw, 1.7rem); font-variant-numeric: tabular-nums; line-height: 1.25; }
+.usage-measurement-unit { font-size: .8rem; }
+.usage-measurement-measurement p, .usage-measurement-public p { margin: .3rem 0; font-size: .78rem; line-height: 1.45; }
+.usage-measurement-capture, .usage-measurement-disclosure { font-size: .75rem; }
+.usage-measurement-public { border-top: 1px solid currentColor; margin: 1rem 0; }
+.usage-measurement-panel { padding: 1.25rem 0; min-width: 0; }
+.usage-measurement-sources { display: grid; gap: 1rem; }
+.usage-measurement-source { border: 1px solid var(--border, #999); border-radius: .5rem; padding: 1rem; min-width: 0; }
+.usage-measurement-source h4 { margin: 0 0 .6rem; overflow-wrap: anywhere; }
+.usage-measurement-source > p { overflow-wrap: anywhere; }
+.usage-measurement-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: .7rem; margin: 1rem 0; }
+.usage-measurement-choice { display: flex; align-items: flex-start; gap: .6rem; padding: .5rem; border: 1px solid var(--border, #999); border-radius: .4rem; min-width: 0; }
+.usage-measurement-choice input { width: auto; margin-top: 1rem; flex: 0 0 auto; }
+.usage-measurement-choice .usage-measurement-measurement { padding-top: .25rem; }

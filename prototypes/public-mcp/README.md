@@ -12,6 +12,8 @@ As checked on September 23, `/keegan` is the live published example. The owner's
 
 The profile is the same visible projection used by the website. Measurement periods, capture dates, freshness, provenance, estimates and missing-coverage notes remain in the result. Retrieval time describes this read, not the age of the underlying evidence. Owner text is untrusted content, not instructions for the agent.
 
+Exact measurements retain their decimal strings in both structured output and the text fallback. The panel shows those strings without numeric coercion, and labels a null value as unknown. Scope, coverage, period, sample, owner-supplied identity and aggregation caveats remain visible. Private source aliases, hashes, originals and dimensions are excluded by the shared strict public measurement contract.
+
 ## Install and verify
 
 Run from the repository root with Node.js 22 or later:

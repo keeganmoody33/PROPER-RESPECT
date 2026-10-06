@@ -12,7 +12,8 @@ import type { PublicProfile } from "@/src/domain/public-profile";
 import { createPublicReader, parseProfileReference, projectPresentation, readPublicGuide } from "../src/public-reader.js";
 import { assertLocalEnvironment, acceptedHeaders, startLoopbackServer } from "../src/transport.js";
 import { toToolResult } from "../src/server.js";
-import { publicToolResultSchema, PROFILE_RESOURCE_URI, HOST_ORIGIN, MAX_REQUEST_BYTES, MAX_RESULT_BYTES } from "../src/contracts.js";
+import { publicToolResultSchema, visiblePublicProfileSchema, PROFILE_RESOURCE_URI, HOST_ORIGIN, MAX_REQUEST_BYTES, MAX_RESULT_BYTES } from "../src/contracts.js";
+import { exactMeasurements, measurementProfile } from "./measurement-fixture.js";
 
 const origin = new URL("https://proper-respect.com");
 process.env.PUBLIC_SITE_ORIGIN = origin.origin;
@@ -80,6 +81,55 @@ test("a card's work-sample link reaches agents exactly as visitors see it", asyn
   if (result.kind !== "profile") assert.fail();
   assert.deepEqual(result.profile.cards[0].usageLink, { label: "Proof of use", url });
   assert(publicToolResultSchema.safeParse(result).success);
+});
+
+test("exact public measurements survive the reader and both MCP result representations", async () => {
+  for (const dataMode of ["synthetic", "published"] as const) {
+    const source = measurementProfile();
+    const raw = {
+      ...source, sourceAlias: "DO_NOT_EXPOSE_SOURCE",
+      cards: source.cards.map(card => ({ ...card, rawEvidenceId: "DO_NOT_EXPOSE_EVIDENCE", accountAlias: "DO_NOT_EXPOSE_ACCOUNT" })),
+    };
+    const result = await createPublicReader({ ...options, dataMode, readPublished: async () => raw })("keegan");
+    assert.equal(result.kind, "profile", JSON.stringify(result));
+    if (result.kind !== "profile") assert.fail();
+    assert.deepEqual(result.profile, projectVisiblePublicProfile(source));
+    assert.deepEqual(result.profile.cards[0].measurements, exactMeasurements);
+    assert.equal(result.profile.cards[0].measurements?.[2].value, "0");
+    assert.equal(result.profile.cards[0].measurements?.[3].value, null);
+    assert(!("measurements" in result.profile.cards[1]));
+    const response = toToolResult(result);
+    assert.notEqual(response.isError, true);
+    assert.deepEqual(response.structuredContent, result);
+    const content = response.content[0];
+    assert.equal(content.type, "text");
+    if (content.type !== "text") assert.fail();
+    assert.deepEqual(JSON.parse(content.text), result);
+    assert(!content.text.includes("DO_NOT_EXPOSE"));
+    assert(publicToolResultSchema.safeParse(result).success);
+  }
+});
+
+test("the measurement-aware MCP contract still rejects private and unsupported fields", () => {
+  const profile = projectVisiblePublicProfile(measurementProfile());
+  assert(visiblePublicProfileSchema.safeParse(profile).success);
+  for (const field of ["source", "sourceAlias", "ownerAlias", "accountAlias", "workspaceAlias", "deviceAlias", "dimensions", "overlapGroup", "id", "digest", "rawEvidenceId", "reasons"]) {
+    const cards = profile.cards.map((card, index) => index === 0 ? {
+      ...card, measurements: exactMeasurements.map((row, rowIndex) => rowIndex === 0 ? { ...row, [field]: "DO_NOT_EXPOSE" } : row),
+    } : card);
+    assert.equal(visiblePublicProfileSchema.safeParse({ ...profile, cards }).success, false, field);
+  }
+  assert.equal(visiblePublicProfileSchema.safeParse({ ...profile, privateCollection: [] }).success, false);
+  assert.equal(visiblePublicProfileSchema.safeParse({ ...profile, cards: profile.cards.map(card => ({ ...card, privateNote: "DO_NOT_EXPOSE" })) }).success, false);
+  assert.equal(visiblePublicProfileSchema.safeParse({ ...profile, cards: profile.cards.map(card => ({ ...card, measurements: Array.from({ length: 25 }, () => exactMeasurements[0]) })) }).success, false);
+});
+
+test("malformed exact measurements fail closed instead of becoming rounded or known values", () => {
+  const profile = projectVisiblePublicProfile(measurementProfile());
+  for (const invalid of [{ value: 9007199254740992 }, { value: "1e20" }, { value: "-1" }, { activityActor: "HUMAN" }, { status: "conflict" }]) {
+    const cards = profile.cards.map((card, index) => index === 0 ? { ...card, measurements: [{ ...exactMeasurements[0], ...invalid }] } : card);
+    assert.equal(visiblePublicProfileSchema.safeParse({ ...profile, cards }).success, false, JSON.stringify(invalid));
+  }
 });
 
 test("invalid reference avoids read; missing and unpublished are indistinguishable; empty remains published", async () => {
@@ -171,7 +221,7 @@ test("real SDK client initializes, discovers, calls and reads resource on actual
   const directory = await mkdtemp(path.join(os.tmpdir(), "proper-mcp-test-"));
   const widgetPath = path.join(directory, "widget.html");
   await writeFile(widgetPath, "<!doctype html><html><body>Protocol fixture resource</body></html>");
-  const http = await startLoopbackServer({ widgetPath, readProfile: createPublicReader({ ...options, readPublished: async handle => handle === "keegan" ? fixture() : null }) }, { port: 0, env: { PROPER_RESPECT_LOCAL_MCP: "1" } });
+  const http = await startLoopbackServer({ widgetPath, readProfile: createPublicReader({ ...options, readPublished: async handle => handle === "keegan" ? measurementProfile() : null }) }, { port: 0, env: { PROPER_RESPECT_LOCAL_MCP: "1" } });
   const address = http.address();
   assert(address && typeof address !== "string");
   assert.equal(address.address, "127.0.0.1");
@@ -186,7 +236,7 @@ test("real SDK client initializes, discovers, calls and reads resource on actual
     const profile = await client.callTool({ name: "get_public_profile", arguments: { profileReference: "keegan" } });
     const parsed = publicToolResultSchema.parse(profile.structuredContent);
     assert.equal(parsed.kind, "profile");
-    if (parsed.kind === "profile") assert.deepEqual(parsed.profile, projectVisiblePublicProfile(fixture()));
+    if (parsed.kind === "profile") assert.deepEqual(parsed.profile, projectVisiblePublicProfile(measurementProfile()));
     const invalid = await client.callTool({ name: "get_public_profile", arguments: { profileReference: "keegan", token: "private" } });
     assert.equal(invalid.isError, true);
     const unavailable = await client.callTool({ name: "get_public_profile", arguments: { profileReference: "missing" } });
