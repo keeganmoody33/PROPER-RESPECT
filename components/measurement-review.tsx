@@ -7,7 +7,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { MEASUREMENT_LIMITS } from "@/src/domain/measurements";
 import { MeasurementValue, measurementLabel } from "./measurement-values";
-import styles from "./measurement-values.module.css";
 
 type Capture = FunctionReturnType<typeof api.retainedEvidence.measurements>[number];
 
@@ -24,10 +23,10 @@ function ReviewCapture({ capture, propId }: { capture: Capture; propId: Id<"prop
     } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Choices were not saved. Reload the source and try again."); }
     finally { setBusy(false); }
   }
-  return <div className={styles.source}>
+  return <div className="usage-measurement-source">
     <h4>{capture.adapter === "claude-code" ? "Claude Code import" : capture.adapter === "codex" ? "Codex import" : "Measurement packet"}</h4>
     <p>Private source: {capture.source.accountAlias ?? capture.source.sourceAlias}. {capture.source.workspaceAlias && `Workspace: ${capture.source.workspaceAlias}. `}{capture.source.deviceAlias && `Device: ${capture.source.deviceAlias}. `}Owner-supplied identity; not authenticated by the provider.</p>
-    <div className={styles.rows}>{capture.measurements.map(row => <label className={styles.choice} key={row.id}>
+    <div className="usage-measurement-rows">{capture.measurements.map(row => <label className="usage-measurement-choice" key={row.id}>
       <input type="checkbox" aria-label={`Review ${measurementLabel(row.metric)} ${row.value ?? "unknown"}`} checked={selected.includes(row.id)}
         disabled={busy || row.status === "conflict" || (!selected.includes(row.id) && selected.length >= MEASUREMENT_LIMITS.publicRows)}
         onChange={event => setSelected(current => event.target.checked ? [...current, row.id] : current.filter(id => id !== row.id))} />
@@ -47,10 +46,10 @@ export function PrivateMeasurements({ propId }: { propId: Id<"props"> }) {
   const captures = useQuery(api.retainedEvidence.measurements, { propId });
   if (captures === undefined) return <p role="status">Loading private measurements…</p>;
   if (!captures.length) return null;
-  return <section className={styles.panel} aria-labelledby="private-measurements-title">
+  return <section className="usage-measurement-panel" aria-labelledby="private-measurements-title">
     <h3 id="private-measurements-title">Your private usage result</h3>
     <p>Exact reported values, including unknowns. These measurements do not confirm how you use a tool or make anything public.</p>
-    <div className={styles.sources}>{captures.map(capture => <ReviewCapture key={`${capture.rawEvidenceId}:${capture.digest}:${capture.reviewVersion}`} capture={capture} propId={propId} />)}</div>
+    <div className="usage-measurement-sources">{captures.map(capture => <ReviewCapture key={`${capture.rawEvidenceId}:${capture.digest}:${capture.reviewVersion}`} capture={capture} propId={propId} />)}</div>
   </section>;
 }
 
