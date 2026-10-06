@@ -80,7 +80,7 @@ export function RequestTally() {
           <span>proper-respect.com has served {fmt(total)} page requests{dateSuffix}</span>
           <span>{pct(data.presumedHuman)} presumed human · {pct(data.automated)} automated · {pct(data.unidentified)} unidentified</span>
         </div>
-        <p><strong>{capitalize(TALLY_LABELS[selected])}.</strong> {capitalize(TALLY_DEFINITIONS[selected])}<br /><span className="site-tally-muted">Spec id: {selected}</span></p>
+        <p><strong>{capitalize(TALLY_LABELS[selected])}.</strong> {capitalize(TALLY_DEFINITIONS[selected])}</p>
         <p className="site-tally-muted">Eligible page requests are classified by declared user agent. Identity is not verified, so automation claiming to be a browser counts as presumed human. Assets, API calls and prefetches are excluded; failed writes can drop requests. The tally stores category totals and a start timestamp, without IP addresses, account identifiers, paths or raw user agents.</p>
       </div>
     </div> : null}

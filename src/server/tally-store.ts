@@ -4,7 +4,7 @@ import { toSnapshot, type TallyCategory, type TallySnapshot } from "@/src/server
  * Running totals for the footer tally in Upstash Redis, over its REST API.
  * Production writes `pr:tally:v1`; every other environment writes
  * `pr:preview:tally:v1`. The synthetic public fixture disables the store.
- * The store holds category counts only: no IPs, paths or user agents.
+ * The store holds category counts and a start timestamp: no IPs, paths or user agents.
  */
 type Env = Record<string, string | undefined>;
 

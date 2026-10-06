@@ -80,9 +80,9 @@ for (const width of [1440, 320]) test(`Footer tally opens its breakdown inline a
   await unidentified.click();
   await expect(unidentified).toHaveAttribute("aria-pressed", "true");
   await expect(count).toHaveAccessibleName("Unidentified requests 5 Close");
-  await expect(panel.getByText("Spec id: undeclared")).toBeVisible();
+  await expect(panel.locator(".site-tally-detail p").first()).toHaveText(/Unidentified\. Sent no identification at all\./);
   await panel.getByRole("button", { name: /Link preview/ }).focus();
-  await expect(panel.getByText("Spec id: link_preview")).toBeVisible();
+  await expect(panel.locator(".site-tally-detail p").first()).toHaveText(/Link preview\. Identifies itself as a link-preview client/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

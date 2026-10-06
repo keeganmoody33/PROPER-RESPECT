@@ -44,3 +44,15 @@ The AI-assistant and link-preview definitions now state only the User-Agent clai
 Valid-date year regressions first produced two intended browser failures (`tally-red-year.txt`). After the date/copy/comment corrections, all 13 site-frame browser cases passed (`tally-final-browser.txt`), recapturing the four theme/focus images with the final copy. The earlier full-check result above is a recorded initial implementation stage; latest integrated-tree checks will be recorded separately.
 
 The delegated privacy implementation stayed within `src/server/trust-pages.ts`, `src/server/trust-pages.test.ts` and `docs/DEVELOPMENT.md`. Two new HTML/Markdown regressions failed with eight existing passes before implementation; all ten then passed with a fake canonical origin and intercepted fetch (`tally-privacy-handoff.md` and its raw logs). The source records the aggregate Upstash fields, coverage, exclusions, inference and missing-write limits; production service configuration remains author-reported and unverified. The new section is separate from Searchable's services paragraph so both disclosures can survive the forthcoming main merge.
+
+## Product-copy disposition — before editing
+
+The visible Spec id exposes an internal taxonomy identifier without helping interpret the metric. Disposition: remove it and retain the visible category name and definition. Browser regressions will assert that semantic explanation instead; raw category keys remain unchanged in the store and API.
+
+## Storage-comment disposition — before editing
+
+Independent review identified that the storage contract says category counts only while the writer also stores a start timestamp. Disposition: fix now to name both stored fields. The earlier full-check proof predates the shared privacy date change; current public-site date expectations are supplied by the pending analytics main integration. Final integrated-tree checks remain required.
+
+## Updated framework browser proof — 2026-10-06 UTC
+
+Node 24 installed Next 16.3.8 and the installed proxy waitUntil guide was read. All 13 site-frame browser cases pass with the semantic category explanation and final copy (`tally-next1638-browser.txt`). The four screenshots were recaptured. Fixture store reads/writes remained disabled; no genuine credentials or provider request was used.
