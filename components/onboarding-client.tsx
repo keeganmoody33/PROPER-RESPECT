@@ -32,8 +32,9 @@ import { OwnerCollection } from "./owner-collection";
 import { openRelationship } from "@/src/client/relationship-location";
 import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
+import { CopyProfileLink } from "./copy-profile-link";
 
-type ManualProductInput = { name: string; website?: string; description?: string; operationId: string };
+type ManualProductInput = { name: string; website?: string; description?: string; status?: "ACTIVE" | "TESTING" | "ARCHIVED"; operationId: string };
 
 function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
   const convex = useConvex();
@@ -65,16 +66,19 @@ function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
   </div>;
 }
 
-export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProductInput) => Promise<unknown>; onAdded?: (propId: string) => void }) {
+export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProductInput) => Promise<unknown>; onAdded?: (propId: string, status?: ManualProductInput["status"]) => void }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: "saved" | "error"; text: string } | null>(null);
   const retry = useRef<{ body: string; id: string } | null>(null);
   async function submit(form: HTMLFormElement) {
     const data = new FormData(form);
+    const choice = String(data.get("relationship") ?? "");
+    if (!["ACTIVE", "TESTING", "ARCHIVED", "LATER"].includes(choice)) return;
     const values = {
       name: String(data.get("name") ?? "").trim(),
       website: String(data.get("website") ?? "").trim() || undefined,
       description: String(data.get("description") ?? "").trim() || undefined,
+      ...(choice === "LATER" ? {} : { status: choice as ManualProductInput["status"] }),
     };
     const body = JSON.stringify(values);
     if (retry.current?.body !== body) retry.current = { body, id: crypto.randomUUID() };
@@ -82,8 +86,10 @@ export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProduc
     setNotice(null);
     try {
       const propId = await onAdd({ ...values, operationId: retry.current.id });
-      if (typeof propId === "string") onAdded?.(propId);
-      setNotice({ kind: "saved", text: "Saved privately. Review the card to choose how you use this tool and add your explanation. Existing products keep their saved choices and notes." });
+      if (typeof propId === "string") onAdded?.(propId, values.status);
+      setNotice({ kind: "saved", text: choice === "LATER"
+        ? "Saved privately. Review the card when you're ready to choose how you use this tool. Existing products keep their saved choices and notes."
+        : "Saved privately. New tools keep your chosen relationship. Existing products keep their saved choices and notes. Your public profile has not changed." });
       retry.current = null;
       form.reset();
     } catch (error) {
@@ -91,13 +97,22 @@ export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProduc
     } finally { setBusy(false); }
   }
   return <div id="add-product" className="collection-add">
-    <h2>Add a product</h2>
-    <p>No integration or activity measurement is required. Add something you use, are testing, or remember using; you will choose the relationship in private review.</p>
+    <h2>Add a tool</h2>
+    <p>Name a tool and choose how you use it. You can keep it as a draft to decide later. Everything is saved privately.</p>
     <form onSubmit={event => { event.preventDefault(); void submit(event.currentTarget); }} className="form-grid">
       <label>Product name<input name="name" maxLength={120} required autoComplete="off" disabled={busy} /></label>
-      <label>Website (optional)<input name="website" inputMode="url" placeholder="product.com" autoComplete="url" disabled={busy} /></label>
-      <label className="full">What you want to remember (optional)<textarea name="description" rows={2} maxLength={4000} disabled={busy} /></label>
-      <div className="action-row full"><button className="secondary-action" disabled={busy}>{busy ? "Adding…" : "Add for private review"}</button></div>
+      <label>How do you use it?<select name="relationship" aria-label="How do you use it?" defaultValue="" required disabled={busy}>
+        <option value="" disabled>Choose a relationship</option>
+        <option value="ACTIVE">Currently use</option>
+        <option value="TESTING">Testing now</option>
+        <option value="ARCHIVED">Past use</option>
+        <option value="LATER">Decide later</option>
+      </select></label>
+      <details className="full"><summary>Website or a note (optional)</summary><div className="form-grid">
+        <label>Website (optional)<input name="website" inputMode="url" placeholder="product.com" autoComplete="url" disabled={busy} /></label>
+        <label className="full">What you want to remember (optional)<textarea name="description" rows={2} maxLength={4000} disabled={busy} /></label>
+      </div></details>
+      <div className="action-row full"><button className="secondary-action" disabled={busy}>{busy ? "Adding…" : "Save tool privately"}</button></div>
     </form>
     <p role="status">{notice?.text}</p>
     {notice?.kind === "saved" && <a href="#private-collection-title">Review your collection</a>}
@@ -121,7 +136,7 @@ export function SharingPreview({ profile, current, busy, onPublish }: {
   </section>;
 }
 
-function Builder() {
+function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const convex = useConvex();
   const { user: clerkUser } = useUser();
   const { getToken, sessionClaims } = useAuth();
@@ -420,7 +435,7 @@ function Builder() {
 
       <nav className="collection-navigation" aria-label="Your collection workspace">
         <a href="#private-collection-title">Collection</a>
-        <a href="#add-product">Add a product</a>
+        <a href="#add-product">Add a tool</a>
         <a href="#collection-sources">Sources</a>
         <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Profile and links</a>
         <a href="#collection-sharing">Sharing</a>
@@ -429,12 +444,12 @@ function Builder() {
       {state.cards.length === 0 && state.privateInventoryAvailable && <section className="onboarding-panel" aria-labelledby="first-tool-title">
         <p className="onboarding-kicker">YOUR FIRST CARD</p>
         <h2 id="first-tool-title">Start with one tool</h2>
-        <p>Add a tool you use or are trying. Then choose your relationship and write what it helps you do. Your card stays private; you can connect a source or share it later.</p>
+        <p>Add a tool you use or are trying and choose your relationship. Notes and sources are optional. Your card stays private until you choose to share it.</p>
         <a className="primary-action" href="#add-product">Add your first tool</a>
       </section>}
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
-      <AddProductForm onAdd={addManualProduct} onAdded={openRelationship} />
+      <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />
 
       <section className="onboarding-panel" id="collection-sources" aria-labelledby="collection-sources-title">
         <p className="onboarding-kicker">SOURCES / PRIVATE DISCOVERY</p>
@@ -782,6 +797,7 @@ function Builder() {
           </button>
           <span className="sharing-selection-count">{Object.keys(reviewEdits).length} card choice{Object.keys(reviewEdits).length === 1 ? "" : "s"} to review</span>
           {state.hasPublicationAtCurrentHandle === true && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
+          {state.hasPublicationAtCurrentHandle === true && publicOrigin && <CopyProfileLink key={state.user.handle} url={new URL(`/${encodeURIComponent(state.user.handle)}`, publicOrigin).href} />}
         </div>
         {publicIdentityClaimed === false && <p>Ready to preview a public page? <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Set up your public identity</a> with a handle and display name. Social links are optional.</p>}
         {publicIdentityClaimed === null && <p>Public identity status is unavailable. Reload before previewing sharing.</p>}
@@ -807,7 +823,7 @@ function Builder() {
   );
 }
 
-export function OnboardingClient() {
+export function OnboardingClient({ publicOrigin }: { publicOrigin?: string }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   return (
     <Show
@@ -826,7 +842,7 @@ export function OnboardingClient() {
         </main>
       }
     >
-      {isAuthenticated ? <Builder /> : (
+      {isAuthenticated ? <Builder publicOrigin={publicOrigin} /> : (
         <main className="system-message">
           <p role="status">{isLoading
             ? "Verifying your session…"
