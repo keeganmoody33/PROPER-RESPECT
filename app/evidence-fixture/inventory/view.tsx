@@ -6,6 +6,10 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { InventoryRelationshipDetails, PrivateInventoryView, type InventoryData, type InventoryEvidence } from "@/components/private-inventory";
 import { AddProductForm, SharingPreview } from "@/components/onboarding-client";
 import { ObservedStartDateAction } from "@/components/private-evidence-panel";
+import { RelationshipFocus } from "@/components/owner-collection";
+import { ProductCard } from "@/components/product-card";
+import { privateCardPrimaryLink } from "@/src/domain/product-destination";
+import styles from "@/components/private-inventory.module.css";
 
 const initial: InventoryData = { hasMore: false, cards: [{
   prop: { _id: "synthetic-prop" as Id<"props">, _creationTime: 1, userId: "synthetic-owner" as Id<"users">,
@@ -54,6 +58,9 @@ export function InventoryFixture() {
   const loseNextResponse = useRef(false);
   const holdNextResponse = useRef(false);
   const [heldSave, setHeldSave] = useState<(() => void) | null>(null);
+  const [focused, setFocused] = useState(false);
+  const [comparison, setComparison] = useState(false);
+  const [correctionNotice, setCorrectionNotice] = useState("");
   const operations = useRef(new Map<string, { request: string; data: InventoryData; result: FunctionReturnType<typeof api.inventory.save> }>());
   async function onSave(args: FunctionArgs<typeof api.inventory.save>) {
     setAttempts(current => [...current, args.operationId]);
@@ -87,7 +94,28 @@ export function InventoryFixture() {
     setData(next);
     return result;
   }
+  const renderDetails = (item: InventoryData["cards"][number]) => <InventoryRelationshipDetails focused={focused} item={item} evidence={evidence} onSave={onSave}
+    onDeleteEvidence={async evidenceId => {
+      setDeletions(current => [...current, evidenceId]);
+      setEvidence(current => current.filter(source => source.id !== evidenceId));
+    }}
+    renderEvidence={(_current, controls) => <>
+      <form aria-label="Synthetic evidence correction" onSubmit={event => { event.preventDefault(); setCorrectionNotice("Synthetic evidence corrected. No relationship saved."); }}>
+        <fieldset disabled={controls.disabled}>
+          <label className="review-field">Corrected observation text<textarea required defaultValue="Synthetic observed first use: 2024-06-03" /></label>
+          <button className="secondary-action" type="submit">Correct synthetic evidence</button>
+        </fieldset>
+      </form>
+      {correctionNotice && <p role="status">{correctionNotice}</p>}
+      <ObservedStartDateAction observation={{ kind: "FIRST_USE", scope: "PERSONAL", acquisition: "USER_SUPPLIED", date: "2024-06-03", excerpt: "Synthetic observed first use: 2024-06-03" }} verdict="CORRECT" {...controls} />
+    </>}
+    renderHistory={current => <p>Synthetic prior states: {current.previousStatuses.join(", ") || "none"}</p>} />;
   return <>
+    <button type="button" onClick={() => setFocused(true)}>Open focused relationship</button>
+    <button type="button" onClick={() => setComparison(true)}>Show card outside collection</button>
+    {comparison && <div role="group" aria-label="Card outside collection"><span aria-hidden="true" /><ProductCard audience="owner" index={0} relationshipConfirmed={false}
+      card={{ product: initial.cards[0].product, status: initial.cards[0].prop.status, headline: initial.cards[0].prop.headline, note: initial.cards[0].prop.note,
+        primaryLink: privateCardPrimaryLink({ product: initial.cards[0].product, links: [], associatedEvidence: [] }) }} /></div>}
     <button type="button" onClick={() => setData(groupedGitHub)}>Load grouped GitHub fixture</button>
     <button type="button" onClick={() => { loseNextResponse.current = true; }}>Simulate one lost save response</button>
     <button type="button" onClick={() => { holdNextResponse.current = true; }}>Hold next save response</button>
@@ -96,18 +124,12 @@ export function InventoryFixture() {
     <output aria-label="Synthetic saved start date">{data.cards[0]?.prop.startedAt ?? "Unknown"}</output>
     <output aria-label="Synthetic save operations">{attempts.join("\n")}</output>
     <output aria-label="Synthetic delete operations">{deletions.join("\n")}</output>
-    <PrivateInventoryView data={data} onSave={onSave} onImport={async packet => {
+    {focused ? <section className={styles.inventory}><RelationshipFocus name={data.cards[0].product.name} label="Synthetic relationship">
+      {renderDetails(data.cards[0])}
+    </RelationshipFocus></section> : <PrivateInventoryView data={data} onSave={onSave} onImport={async packet => {
       if (!packet || typeof packet !== "object" || !("fixture" in packet) || packet.fixture !== "SYNTHETIC_INVENTORY_EVIDENCE") throw new Error("Only the synthetic inventory fixture file is accepted.");
       setEvidence([syntheticEvidence]);
-    }} renderDetails={item => <InventoryRelationshipDetails item={item} evidence={evidence} onSave={onSave}
-      onDeleteEvidence={async evidenceId => {
-        setDeletions(current => [...current, evidenceId]);
-        setEvidence(current => current.filter(source => source.id !== evidenceId));
-      }}
-      renderEvidence={(_current, controls) => <ObservedStartDateAction
-        observation={{ kind: "FIRST_USE", scope: "PERSONAL", acquisition: "USER_SUPPLIED", date: "2024-06-03", excerpt: "Synthetic observed first use: 2024-06-03" }}
-        verdict="CORRECT" {...controls} />}
-      renderHistory={current => <p>Synthetic prior states: {current.previousStatuses.join(", ") || "none"}</p>} />} />
+    }} renderDetails={renderDetails} />}
     <button type="button" onClick={() => { loseManualResponse.current = true; }}>Simulate one lost add response</button>
     <AddProductForm onAdd={async input => {
       setManualAttempts(current => [...current, input.operationId]);

@@ -1,6 +1,127 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
+for (const width of [1280, 390]) for (const theme of ["light", "dark"]) test(`focused relationship keeps evidence independent and save explicit at ${width}px in ${theme}`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("banner").getByRole("combobox", { name: "Appearance", exact: true }).selectOption(theme);
+  await page.getByRole("button", { name: "Open focused relationship", exact: true }).click();
+  const focused = page.getByRole("region", { name: "Example Tool", exact: true });
+  await expect(focused.getByRole("heading", { name: "Example Tool", exact: true })).toBeFocused();
+  const extras = focused.getByText("Work sample and supporting snapshot (optional)", { exact: true });
+  await expect(extras.locator("..")).toHaveJSProperty("open", false);
+  await focused.getByText("Inspect extracted claims and correct evidence", { exact: true }).click();
+  await focused.getByRole("textbox", { name: "Corrected observation text", exact: true }).fill("Synthetic correction remains separate from relationship decisions.");
+  await focused.getByRole("button", { name: "Correct synthetic evidence", exact: true }).click();
+  await expect(focused.getByText("Synthetic evidence corrected. No relationship saved.", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Synthetic save operations")).toHaveText("");
+  const date = focused.getByLabel("Started using (optional)", { exact: true });
+  await expect(date).toHaveValue("");
+  await focused.getByRole("button", { name: "Use this observed date as my start date", exact: true }).click();
+  await expect(date).toHaveValue("2024-06-03");
+  await expect(focused.getByText("Unsaved", { exact: true })).toBeVisible();
+  const evidence = focused.getByRole("complementary", { name: "Evidence for Example Tool", exact: true });
+  const save = focused.getByRole("button", { name: "Confirm and save privately", exact: true });
+  const boxes = await Promise.all([date.boundingBox(), evidence.boundingBox(), save.boundingBox(), extras.boundingBox()]);
+  if (width < 760) {
+    expect(boxes[1]!.y).toBeGreaterThan(boxes[0]!.y + boxes[0]!.height);
+    expect(boxes[2]!.y).toBeGreaterThanOrEqual(boxes[1]!.y + boxes[1]!.height);
+    expect(boxes[2]!.width).toBeCloseTo(boxes[0]!.width, 0);
+  } else {
+    expect(boxes[1]!.x).toBeGreaterThan(boxes[0]!.x + boxes[0]!.width);
+  }
+  expect(boxes[3]!.y).toBeGreaterThan(boxes[2]!.y + boxes[2]!.height);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await focused.screenshot({ path: testInfo.outputPath(`2026-10-06-focused-${width}-${theme}.png`) });
+});
+
+for (const width of [1280, 390]) test(`optional form-associated context locks and survives private retries at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByText("Bring in retained evidence", { exact: true }).click();
+  await page.getByLabel("Prepared evidence files").setInputFiles({ name: "synthetic-layout-2026-10-06.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ fixture: "SYNTHETIC_INVENTORY_EVIDENCE" })) });
+  await page.getByRole("button", { name: "Retain privately", exact: true }).click();
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await page.getByLabel("How it fits").selectOption("ACTIVE");
+  const extras = page.getByText("Work sample and supporting snapshot (optional)", { exact: true });
+  await extras.click();
+  const link = page.getByLabel("Work sample or workflow link (optional)", { exact: true });
+  const snapshot = page.getByRole("combobox", { name: "Supporting snapshot", exact: true });
+  await link.fill("https://example.com/synthetic-workflow");
+  await snapshot.selectOption("synthetic-raw-evidence");
+  await page.getByText("Inspect extracted claims and correct evidence", { exact: true }).click();
+  await page.getByRole("button", { name: "Hold next save response", exact: true }).click();
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(link).toBeDisabled();
+  await expect(snapshot).toBeDisabled();
+  await expect(page.getByRole("textbox", { name: "Corrected observation text", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Finish held save", exact: true }).click();
+  await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  await extras.click();
+  await expect(link).toHaveValue("https://example.com/synthetic-workflow");
+  await expect(snapshot).toHaveValue("synthetic-raw-evidence");
+  await snapshot.selectOption("__remove__");
+  await page.getByRole("button", { name: "Simulate one lost save response", exact: true }).click();
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(page.getByText("Synthetic lost save response. Retry unchanged decisions.", { exact: true })).toBeVisible();
+  await expect(link).toHaveValue("https://example.com/synthetic-workflow");
+  await expect(snapshot).toHaveValue("__remove__");
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(page.getByText("Saved supporting snapshot", { exact: true })).toHaveCount(0);
+  await extras.click();
+  await expect(link).toHaveValue("https://example.com/synthetic-workflow");
+  await expect(snapshot).toHaveValue("");
+  const operations = (await page.getByLabel("Synthetic save operations").textContent())!.trim().split(/\s+/);
+  expect(operations).toHaveLength(3);
+  expect(operations[2]).toBe(operations[1]);
+  await link.fill("not-a-url");
+  await extras.click();
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(link).toBeVisible();
+  await expect(link).toBeFocused();
+  expect((await page.getByLabel("Synthetic save operations").textContent())!.trim().split(/\s+/)).toHaveLength(3);
+  await link.fill("https://example.com/synthetic-workflow");
+  await extras.click();
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  await extras.click();
+  await expect(link).toHaveValue("https://example.com/synthetic-workflow");
+  await page.getByRole("button", { name: "Open synthetic sharing preview", exact: true }).click();
+  await expect(page.getByLabel("Synthetic publication status")).toHaveText("Nothing published");
+});
+
+for (const width of [1280, 390]) test(`collection cards preserve normal and keyboard-focused appearance in both themes at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("button", { name: "Show card outside collection", exact: true }).click();
+  const outside = page.locator('[aria-label="Card outside collection"]').getByRole("article", { name: "Example Tool card", exact: true });
+  const inside = page.getByRole("region", { name: "Example Tool in your collection", exact: true }).getByRole("article", { name: "Example Tool card", exact: true });
+  const appearance = async (card: typeof inside) => card.evaluate(element => [element, ...element.querySelectorAll("*")].map(node => {
+    const style = getComputedStyle(node);
+    return [style.backgroundColor, style.color, style.fontFamily, style.fontSize, style.borderColor, style.outlineColor, style.outlineWidth, style.outlineStyle, style.outlineOffset];
+  }));
+  for (const theme of ["light", "dark"]) {
+    await page.getByRole("banner").getByRole("combobox", { name: "Appearance", exact: true }).selectOption(theme);
+    await page.getByRole("button", { name: "Show card outside collection", exact: true }).focus();
+    await page.mouse.move(0, 0);
+    expect(await appearance(inside)).toEqual(await appearance(outside));
+    await inside.screenshot({ path: testInfo.outputPath(`2026-10-06-card-normal-${width}-${theme}.png`) });
+    const details = inside.getByRole("button", { name: "Details", exact: true });
+    await details.focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    await expect(details).toBeFocused();
+    const focusedAppearance = await appearance(inside);
+    await inside.screenshot({ path: testInfo.outputPath(`2026-10-06-card-focused-${width}-${theme}.png`) });
+    await outside.getByRole("button", { name: "Details", exact: true }).focus();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
+    await expect(outside.getByRole("button", { name: "Details", exact: true })).toBeFocused();
+    expect(await appearance(outside)).toEqual(focusedAppearance);
+  }
+});
+
 for (const width of [1280, 390]) test(`observed date remains an editable private draft at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto("/evidence-fixture/inventory");
@@ -115,14 +236,17 @@ test("synthetic file import, invalid JSON, and removing a supporting snapshot pr
   await expect(page.getByText("Retained evidence is ready for private review.", { exact: false })).toBeVisible();
   await page.getByText("Review this discovery", { exact: true }).click();
   await page.getByLabel("How it fits").selectOption("ACTIVE");
+  await page.getByText("Work sample and supporting snapshot (optional)", { exact: true }).click();
   await page.getByRole("combobox", { name: "Supporting snapshot", exact: true }).selectOption("synthetic-raw-evidence");
   await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
   await expect(page.getByText("Saved supporting snapshot", { exact: true })).toBeVisible();
   await page.getByText("Retained snapshot original", { exact: true }).click();
   await expect(page.getByText("SYNTHETIC RETAINED ORIGINAL: seven example contributions.", { exact: true })).toBeVisible();
+  await page.getByText("Work sample and supporting snapshot (optional)", { exact: true }).click();
   await page.getByRole("combobox", { name: "Supporting snapshot", exact: true }).selectOption({ label: "Remove saved supporting snapshot" });
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
   await expect(page.getByText("Saved supporting snapshot", { exact: true })).toHaveCount(0);
+  await page.getByText("Work sample and supporting snapshot (optional)", { exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Supporting snapshot", exact: true })).toHaveValue("");
   await expect(page.getByText("Supporting snapshot available for review; it has not replaced your saved card.", { exact: true })).toBeVisible();
   await expect(page.getByText("SYNTHETIC RETAINED ORIGINAL: seven example contributions.", { exact: true })).toBeVisible();
