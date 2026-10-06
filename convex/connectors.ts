@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { fetchGithubActivity } from "../src/server/github-activity";
+import { fetchGithubActivity, githubFailureDiagnostic } from "../src/server/github-activity";
 import { ensureProductBrand } from "./productBrands";
 import {
   action,
@@ -17,7 +17,7 @@ import { activityModuleSchema, type ActivityModule } from "../src/domain/public-
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { canRefreshMetric } from "../src/domain/onboarding";
-import { requireUser } from "./authHelpers";
+import { consumeWriteLimit, requireUser } from "./authHelpers";
 import type { Doc, Id } from "./_generated/dataModel";
 import { githubDateObservations } from "../src/domain/evidence-claims";
 import { publishedCardIndicesForProp } from "./publication";
@@ -427,6 +427,14 @@ export const saveConnectedSnapshot = internalMutation({
   },
 });
 
+export const consumeGithubConnectLimit = internalMutation({
+  args: {},
+  handler: async ctx => {
+    const user = await requireUser(ctx);
+    await consumeWriteLimit(ctx, user._id, "connectGithub");
+  },
+});
+
 export const connectGithub = action({
   args: { token: v.string() },
   handler: async (
@@ -438,6 +446,7 @@ export const connectGithub = action({
   }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Authentication required.");
+    await ctx.runMutation(internal.connectors.consumeGithubConnectLimit, {});
     const snapshot = await fetchGithubActivity(token);
     const encrypted = await encryptSecret(token);
     return await ctx.runMutation(internal.connectors.saveConnectedSnapshot, {
@@ -874,10 +883,20 @@ export const refreshApproved = internalAction({
             continue;
           }
           let outcome: { kind: "failure" } | ({ kind: "success" } & Awaited<ReturnType<typeof fetchGithubActivity>>);
+          let token: string | undefined;
           try {
-            const token = await decryptSecret(prepared.credential.ciphertext, prepared.credential.iv);
-            outcome = { kind: "success", ...await fetchGithubActivity(token) };
+            token = await decryptSecret(prepared.credential.ciphertext, prepared.credential.iv);
           } catch {
+            console.warn("GitHub refresh failed", { category: "DECRYPTION" });
+          }
+          if (token !== undefined) {
+            try {
+              outcome = { kind: "success", ...await fetchGithubActivity(token) };
+            } catch (error) {
+              console.warn("GitHub refresh failed", githubFailureDiagnostic(error));
+              outcome = { kind: "failure" };
+            }
+          } else {
             outcome = { kind: "failure" };
           }
           await ctx.runMutation(internal.connectors.completeGithubRefresh, { grant: prepared.grant, outcome });

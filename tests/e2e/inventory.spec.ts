@@ -43,7 +43,7 @@ for (const width of [1280, 390]) test(`private collection interaction and revers
 
 test("synthetic file import, invalid JSON, and removing a supporting snapshot preserve the retained source", async ({ page }) => {
   await page.goto("/evidence-fixture/inventory");
-  await expect(page.getByRole("heading", { name: "Supporting context", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Evidence and limitations", exact: true })).toHaveCount(0);
   await page.getByText("Bring in retained evidence", { exact: true }).click();
   await page.getByLabel("Prepared evidence files").setInputFiles({ name: "invalid-synthetic-2026-09-18.json", mimeType: "application/json", buffer: Buffer.from("{not valid JSON}") });
   await page.getByRole("button", { name: "Retain privately", exact: true }).click();
@@ -86,12 +86,15 @@ test("retrying a lost save response reuses the same operation identity", async (
 test("owner-described product entry needs no website or telemetry and retries without inventing owner decisions", async ({ page }) => {
   await page.goto("/evidence-fixture/inventory");
   await page.getByLabel("Product name", { exact: true }).fill("An occasional tool");
+  await expect(page.getByLabel("How do you use it?", { exact: true })).toHaveValue("");
+  await page.getByLabel("How do you use it?", { exact: true }).selectOption("LATER");
+  await page.getByText("Website or a note (optional)", { exact: true }).click();
   await page.getByLabel("What you want to remember (optional)", { exact: true }).fill("I want to decide how this fits after adding it.");
   await page.getByRole("button", { name: "Simulate one lost add response", exact: true }).click();
-  await page.getByRole("button", { name: "Add for private review", exact: true }).click();
+  await page.getByRole("button", { name: "Save tool privately", exact: true }).click();
   await expect(page.getByText("Synthetic lost add response. Retry unchanged product.", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Product name", { exact: true })).toHaveValue("An occasional tool");
-  await page.getByRole("button", { name: "Add for private review", exact: true }).click();
+  await page.getByRole("button", { name: "Save tool privately", exact: true }).click();
   await expect(page.getByText("Saved privately. Review the card", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "Review your collection", exact: true })).toHaveAttribute("href", "#private-collection-title");
   const operations = (await page.getByLabel("Synthetic add operations").textContent())!.trim().split(/\s+/);

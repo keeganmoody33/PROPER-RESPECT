@@ -1,12 +1,14 @@
+import { relationshipLinks } from "./relationshipLinks";
 import { isHttpUrl, validateProfileLinks } from "../src/domain/profile-links";
 import { mailboxTesterAllowed } from "../src/domain/mailbox-testers";
 import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { addManualProductArgs, addManualProductHandler } from "./manualProducts";
 import { ensureProductBrand, retainedProductBrand } from "./productBrands";
 import { v, type Infer } from "convex/values";
+import { paginationOptsValidator, type PaginationOptions } from "convex/server";
 import { mutation, query, internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requireIdentity, requireUser } from "./authHelpers";
+import { consumeWriteLimit, requireIdentity, requireUser } from "./authHelpers";
 import { claimableHandleSchema } from "../src/domain/onboarding";
 import { projectPublicProfile, publicProfileSchema } from "../src/domain/public-profile";
 import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evidence-upload";
@@ -95,6 +97,7 @@ export const claimHandle = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const handle = claimableHandleSchema.parse(args.handle);
+    await consumeWriteLimit(ctx, user._id, "claimHandle");
     const displayName = args.displayName.trim(), bio = args.bio.trim();
     if (displayName.length > DISPLAY_NAME_MAX) throw new Error("Use a display name of 80 characters or fewer.");
     if (bio.length > BIO_MAX) throw new Error("Use a bio of 500 characters or fewer.");
@@ -146,9 +149,10 @@ export const claimHandle = mutation({
   },
 });
 
-export const getState = query({
-  args: { includeClaims: v.optional(v.boolean()), includeLegacyCollections: v.optional(v.boolean()), includeAccountEvidence: v.optional(v.boolean()) },
-  handler: async (ctx, args) => {
+async function getStateHandler(ctx: QueryCtx, args: {
+  includeCards?: boolean; includeClaims?: boolean; includeLegacyCollections?: boolean; includeAccountEvidence?: boolean;
+  paginationOpts?: PaginationOptions;
+}) {
     const identity = await requireIdentity(ctx);
     const user = await ctx.db
       .query("users")
@@ -157,11 +161,12 @@ export const getState = query({
       )
       .unique();
     if (!user) return null;
+    const propQuery = ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id));
+    const propPage = args.paginationOpts
+      ? await propQuery.paginate({ ...args.paginationOpts, numItems: Math.min(args.paginationOpts.numItems, 25), maximumRowsRead: 25 })
+      : null;
     const [props, drafts, connectors, evidence, published, site] = await Promise.all([
-      ctx.db
-        .query("props")
-        .withIndex("by_user", (q) => q.eq("userId", user._id))
-        .collect(),
+      args.includeCards === false ? [] : propPage ? propPage.page : propQuery.collect(),
       args.includeLegacyCollections === false ? [] : ctx.db
         .query("draftImports")
         .filter((q) => q.eq(q.field("userId"), user._id))
@@ -183,17 +188,14 @@ export const getState = query({
         .withIndex("by_owner", q => q.eq("ownerId", user._id))
         .unique(),
     ]);
-    const publishedPropIds = published
-      ? await resolvePublishedCardPropIds(ctx, published, user._id, props)
+    const publishedPropIds = published && props.length > 0
+      ? await resolvePublishedCardPropIds(ctx, published, user._id, propPage ? undefined : props, propPage ? props : undefined)
       : [];
 
     const cards = await Promise.all(
       props.map(async (prop) => {
         const product = await ctx.db.get(prop.productId);
-        const links = await ctx.db
-          .query("links")
-          .withIndex("by_prop", (q) => q.eq("propId", prop._id))
-          .collect();
+        const links = await relationshipLinks(ctx, prop._id);
         const proofs = args.includeClaims === false ? [] : await ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", prop._id)).take(100);
         const claims = [];
         for (const evidenceId of new Set(proofs.flatMap(proof => proof.rawEvidenceId ? [proof.rawEvidenceId] : []))) {
@@ -234,6 +236,8 @@ export const getState = query({
     return {
       user,
       cards,
+      isDone: propPage?.isDone ?? true,
+      continueCursor: propPage?.continueCursor ?? "",
       hasPublicationAtCurrentHandle: published !== null,
       hasClaimedPublicIdentity: site?.handle === user.handle,
       brandEnrichmentAvailable: true,
@@ -267,6 +271,19 @@ export const getState = query({
         deletedAt: item.deletedAt,
       })),
     };
+}
+
+export const getState = query({
+  args: { includeCards: v.optional(v.boolean()), includeClaims: v.optional(v.boolean()), includeLegacyCollections: v.optional(v.boolean()), includeAccountEvidence: v.optional(v.boolean()) },
+  handler: getStateHandler,
+});
+
+export const sharingCards = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    if (!Number.isSafeInteger(args.paginationOpts.numItems) || args.paginationOpts.numItems < 1) throw new Error("Invalid page size.");
+    const state = await getStateHandler(ctx, { ...args, includeClaims: false, includeLegacyCollections: false, includeAccountEvidence: false });
+    return { page: state?.cards ?? [], isDone: state?.isDone ?? true, continueCursor: state?.continueCursor ?? "" };
   },
 });
 
@@ -303,6 +320,7 @@ export const beginUpload = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const identity = await requireIdentity(ctx);
+    await consumeWriteLimit(ctx, user._id, "beginUpload");
     const { mimeType } = classifyEvidenceUpload(args);
     if ((args.vendor?.length ?? 0) > 200) throw new Error("Invalid product name.");
     const site = process.env.CONVEX_SITE_URL;
@@ -767,6 +785,7 @@ export const publishSelected = mutation({
   args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.number(), expectedPreviewHash: v.string(), removeAllCards: v.optional(v.boolean()) },
   handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash, removeAllCards }) => {
     const user = await requireUser(ctx);
+    await consumeWriteLimit(ctx, user._id, "publishSelected");
     const prepared = await preparePublication(ctx, user, selections, removeAllCards === true);
     // A republish replaces the snapshot, so it must never lift an operator takedown.
     if (prepared.published?.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
