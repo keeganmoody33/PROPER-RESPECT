@@ -634,4 +634,14 @@ test("fresh replacement-account preview grants only the new generation and refre
   expect(subscriptions.find(subscription => subscription._id === f.ids.subscriptionId)).toMatchObject({
     githubBinding: { providerAccountId: "U_synthetic-account", generation: 1 }, revokedAt: expect.any(String),
   });
+  const originalRevocation = subscriptions.find(subscription => subscription._id === f.ids.subscriptionId)!.revokedAt;
+  const currentGrant = subscriptions.find(subscription => subscription._id !== f.ids.subscriptionId)!;
+  vi.setSystemTime(new Date("2026-10-06T11:00:00.000Z"));
+  await owner.mutation(makeFunctionReference<"mutation">("connectors:revokeConnector"), { connectorId: f.ids.connectorId });
+  expect((await f.t.run(ctx => ctx.db.get(f.ids.subscriptionId)))?.revokedAt).toBe(originalRevocation);
+  expect((await f.t.run(ctx => ctx.db.get(currentGrant._id)))?.revokedAt).toBe("2026-10-06T11:00:00.000Z");
+  vi.setSystemTime(new Date("2026-10-06T12:00:00.000Z"));
+  await owner.mutation(makeFunctionReference<"mutation">("connectors:revokeConnector"), { connectorId: f.ids.connectorId });
+  expect((await f.t.run(ctx => ctx.db.get(f.ids.subscriptionId)))?.revokedAt).toBe(originalRevocation);
+  expect((await f.t.run(ctx => ctx.db.get(currentGrant._id)))?.revokedAt).toBe("2026-10-06T11:00:00.000Z");
 });

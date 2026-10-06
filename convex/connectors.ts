@@ -543,7 +543,7 @@ export const revokeConnector = mutation({
       .collect();
     const now = new Date().toISOString();
     for (const subscription of subscriptions) {
-      await ctx.db.patch(subscription._id, { revokedAt: now });
+      if (subscription.revokedAt === undefined) await ctx.db.patch(subscription._id, { revokedAt: now });
     }
     if (connector.secretRef) {
       await ctx.db.delete(connector.secretRef);

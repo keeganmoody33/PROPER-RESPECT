@@ -128,3 +128,18 @@ typecheck, focused ESLint and diff checks pass. Four synthetic desktop/mobile
 browser cases cover account replacement and same-account reconnect; their
 execution remains subject to the exact-head CI result. This consent-specific
 UI correction belongs in this PR so it can ship independently of R27.
+
+## Copilot review disposition, current UI head
+
+- Fix now: the original account grant's `revokedAt` must survive a later explicit
+  connector disconnect. `revokeConnector` currently rewrites all linked grants.
+  Add a reconnect, fresh approval, disconnect, repeated-disconnect regression;
+  change the mutation to revoke only still-active grants.
+- Superseded: the PR description's old "No UI change" sentence was corrected
+  before the review posted. The current description names the visible consent
+  change and its browser verification. No production action is implied.
+
+The disconnect regression reproduced the historical timestamp changing from
+10:00 to 11:00 UTC. After limiting writes to active grants, 134 targeted refresh,
+privacy and publication tests pass, including a repeated disconnect. Typecheck,
+focused ESLint and diff checks pass; exact-head CI and re-review follow the push.
