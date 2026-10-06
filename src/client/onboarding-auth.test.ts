@@ -241,7 +241,7 @@ test("the account shell cannot expose empty sharing controls before the first ca
   const html = render();
   expect(html).toContain("Loading your profile");
   expect(html).not.toContain("Preview sharing");
-  expect(html).not.toContain("Start with one tool");
+  expect(html).not.toContain("See your first private result");
   auth.sharingStatus = "Exhausted";
-  expect(render()).toContain("Start with one tool");
+  expect(render()).toContain("See your first private result");
 });

@@ -1,6 +1,6 @@
 # Second-user acceptance record
 
-Updated: 2026-09-29. Written for R21. Run it together with the tester (K07),
+Updated: 2026-10-06. Written for R21; extended for the R27 first-result path. Run it together with the tester (K07),
 after the release that contains R12 to R21 (K06). The eight steps are the
 Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
 
@@ -40,17 +40,16 @@ Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
 ### 2. Empty private collection
 
 - [ ] At `/app/collection`, the tester sees an empty private collection.
-- [ ] The first-tool prompt ("Start with one tool") is shown.
+- [ ] The source picker is shown. No mailbox or public handle is required.
+- [ ] A source selected before sign-in is still selected afterward.
 
 | Result | Evidence | Notes |
 |---|---|---|
 | Pass / Fail | | |
 
-### 3. Handle and three kinds of product
+### 3. Private result and three kinds of product
 
-- [ ] The tester claims a handle under **Choose what to share → Public
-  identity**, then **Save public identity**.
-- [ ] One manual product added under **Add a product**, with **Add for private review**.
+- [ ] One manual product added under **Add a tool**, with **Save tool privately**.
 - [ ] One GitHub card, with **Connect GitHub** (only if the tester has GitHub
   linked under Connected accounts). If not, mark this check "skipped" and say
   why.
@@ -62,6 +61,13 @@ Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
 | Pass / Fail | | |
 
 ### 4. Private save persists
+
+- [ ] Import one authorized genuine sanitized measurement file. The exact private
+  result opens without asking for a public identity or mailbox.
+- [ ] Its native value, unit, scope, period and coverage match the source. Unknown
+  remains distinct from zero; synthetic or unverified origin is labeled honestly.
+- [ ] A malformed import leaves the previous result unchanged and no blank card.
+- [ ] Reimporting the same file does not duplicate its measurements.
 
 - [ ] The tester saves each product with **Confirm and save privately** (the
   button reads **Save privately** on later edits).
@@ -87,6 +93,11 @@ automated ownership tests, for example `convex/ownerAuth.test.ts`.
 | Pass / Fail | | |
 
 ### 6. Preview and publish exactly one card
+
+- [ ] Only now, if sharing is desired, claim a handle under **Choose what to share
+  → Public identity**, then **Save public identity**.
+- [ ] Review selected measurements privately, then explicitly include that source
+  in the sharing preview. No raw original or private account alias appears.
 
 - [ ] The tester ticks **Share this saved card** on one saved card, previews it ("Your visitor's view"),
   ticks the approval box and clicks **Publish this preview**.

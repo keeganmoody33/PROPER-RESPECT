@@ -1,3 +1,4 @@
+import { publicMeasurementSchema, type PublicMeasurement } from "./measurements";
 import { profileLinksSchema, profileLinkUrlSchema } from "./profile-links";
 import { z } from "zod";
 import { costSchema, type Cost, type CostVisibility } from "./cost";
@@ -154,6 +155,7 @@ export const publicProfileSchema = z.object({
       note: z.string(),
       startedAt: z.iso.date().optional(),
       activity: activityModuleSchema.optional(),
+      measurements: z.array(publicMeasurementSchema).max(24).optional(),
       cost: costSchema.optional(),
       primaryLink: z.object({
         type: linkTypeSchema,
@@ -195,6 +197,7 @@ export type CuratedProp = {
   note: string;
   startedAt?: string;
   activity?: ActivityModule;
+  measurements?: PublicMeasurement[];
   cost?: Cost;
   costVisibility?: CostVisibility;
   product: PublicProfile["cards"][number]["product"];
@@ -222,6 +225,7 @@ export function projectPublicProfile(input: {
         note: prop.note,
         startedAt: prop.startedAt,
         activity: prop.activity,
+        measurements: prop.measurements,
         cost: prop.costVisibility === "PUBLIC" ? prop.cost : undefined,
         primaryLink: primaryLink ? {
           type: primaryLink.type,

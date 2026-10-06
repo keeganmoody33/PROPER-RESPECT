@@ -1,0 +1,13 @@
+.panel { scroll-margin-top: 2rem; }
+.sources { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .75rem; margin: 1.5rem 0; }
+.source { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; padding: 1.25rem; text-align: left; min-height: 8rem; border: 1px solid var(--border, #999); border-radius: .65rem; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.source strong { font-size: 1.1rem; }
+.source span { font-size: .9rem; line-height: 1.5; }
+.source[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 2px; }
+.source:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.importForm { display: grid; gap: 1rem; max-width: 48rem; margin-top: 1.25rem; }
+.importForm label { display: grid; gap: .5rem; min-width: 0; }
+.importForm input { max-width: 100%; min-width: 0; }
+.importForm button { justify-self: start; }
+.hint { font-size: .88rem; line-height: 1.5; }
+@media (max-width: 600px) { .source { min-height: 0; } .importForm button { width: 100%; } }

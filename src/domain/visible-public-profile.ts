@@ -1,3 +1,4 @@
+import { publicMeasurementSchema, type PublicMeasurement } from "./measurements";
 import type { ActivityModule, PublicProfile } from "./public-profile";
 import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
@@ -38,6 +39,7 @@ export type VisiblePublicProfile = Readonly<{
     startedAt?: string;
     startDateNote?: string;
     activity?: VisibleActivity;
+    measurements?: readonly PublicMeasurement[];
     cost?: Readonly<{
       displayAmount: string;
       basis: NonNullable<PublicProfile["cards"][number]["cost"]>["basis"];
@@ -115,6 +117,7 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
       note: card.note || "Relationship note not supplied.",
       ...(card.startedAt ? { startedAt: card.startedAt } : { startDateNote: "Start date not supplied" }),
       ...(card.activity ? { activity: visibleActivity(card.activity) } : {}),
+      ...(card.measurements?.length ? { measurements: card.measurements.map(row => publicMeasurementSchema.parse(row)) } : {}),
       ...(card.cost ? { cost: {
         displayAmount: new Intl.NumberFormat("en", { style: "currency", currency: card.cost.currency }).format(card.cost.amount),
         basis: card.cost.basis, cadence: card.cost.cadence, asOf: card.cost.asOf,
