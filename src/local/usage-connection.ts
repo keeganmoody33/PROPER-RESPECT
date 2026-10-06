@@ -23,6 +23,7 @@ export class UsageConnection {
   private readonly window: HistoryWindow;
   private readonly collect: HistoryCollector;
   private readonly now: () => number;
+  private readonly monotonicNow: () => number;
   private session: Session = { kind: "disconnected" };
   private generation = 0;
   private observations: HistoryObservation[] = [];
@@ -30,11 +31,12 @@ export class UsageConnection {
   private lastSyncedAt: string | null = null;
   private readonly listeners = new Set<() => void>();
 
-  constructor(input: { descriptor: ConnectionDescriptor; window: HistoryWindow; collect: HistoryCollector; now?: () => number }) {
+  constructor(input: { descriptor: ConnectionDescriptor; window: HistoryWindow; collect: HistoryCollector; now?: () => number; monotonicNow?: () => number }) {
     this.descriptor = connectionDescriptorSchema.parse(input.descriptor);
     this.window = historyWindowSchema.parse(input.window);
     this.collect = input.collect;
     this.now = input.now ?? Date.now;
+    this.monotonicNow = input.monotonicNow ?? (() => performance.now());
   }
 
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
@@ -72,11 +74,12 @@ export class UsageConnection {
     if (session.kind !== "active" || session.request) return;
     const startedAt = this.now();
     if (startedAt >= session.expiresAt) { this.notify(); return; }
-    const deadlineAt = Math.min(startedAt + 5000, session.expiresAt);
+    // Clock adjustments cannot extend the elapsed budget or its initial approval cap.
+    const deadlineAt = this.monotonicNow() + Math.min(5000, session.expiresAt - startedAt);
     const request = new AbortController(), generation = this.generation;
     const checkDeadline = () => {
       const now = this.now();
-      if (now >= deadlineAt) { request.abort(); throw new Error("acquisition-timeout"); }
+      if (this.monotonicNow() >= deadlineAt || now >= session.expiresAt) { request.abort(); throw new Error("acquisition-timeout"); }
       return now;
     };
     session.request = request;
@@ -85,7 +88,16 @@ export class UsageConnection {
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       const deadline = new Promise<never>((_resolve, reject) => {
-        timeout = setTimeout(() => { request.abort(); reject(new Error("acquisition-timeout")); }, Math.max(0, deadlineAt - this.now()));
+        const scheduleTimeout = () => {
+          timeout = setTimeout(() => {
+            try {
+              // Timer resolution can cause an early wake. Keep the original deadline.
+              checkDeadline();
+              scheduleTimeout();
+            } catch (error) { reject(error); }
+          }, Math.ceil(Math.max(0, deadlineAt - this.monotonicNow())));
+        };
+        scheduleTimeout();
       });
       const value = await Promise.race([this.collect({ descriptor: { ...this.descriptor }, window: { ...this.window }, signal: request.signal }), deadline]);
       if (generation !== this.generation || request.signal.aborted) return;

@@ -24,10 +24,14 @@ contains synthetic fixtures. Refreshing the page clears the in-memory demo.
 6. Disconnect. The current page keeps retained history but cannot acquire more.
    Reconnecting requires new approval and replays the same observations safely.
 
-The grant expires after ten minutes. Each read has one five-second deadline,
-including validation. A delayed timer cannot permit a late commit. A retry gets
-a new read deadline within the original grant and never renews approval.
-No read can commit after expiry or disconnect. No recurring collection is installed.
+The grant expires after ten minutes on the wall clock. Each read has one
+monotonic elapsed-time budget, capped at five seconds or the grant time remaining
+when the read starts, whichever is shorter. Validation consumes the same budget.
+A delayed timer or backward wall-clock adjustment cannot extend it. After
+acquisition and just before commit, the connection checks both the elapsed-time
+budget and absolute grant expiry. A retry gets a new read budget within the
+original grant and never renews approval. No read can commit after expiry or
+disconnect. No recurring collection is installed.
 
 ## What this proves
 
@@ -42,6 +46,11 @@ never used to label historical activity.
 synthetic Codex event format into allowlisted counters.
 `src/domain/connection-history.ts` owns exact cumulative reconciliation.
 The UI owns only presentation and explicit button actions.
+
+The connection uses an injectable monotonic clock, `performance.now` by default,
+for elapsed read time. Wall time supplies absolute grant expiry and the last
+successful sync timestamp. Synchronous work cannot be preempted; the connection
+rejects an over-budget result when control returns, before retaining it.
 
 A collector returns sanitized cumulative observations with opaque stream aliases,
 UTC instants, native metric/unit and exact decimal integer strings or null. It
@@ -87,7 +96,8 @@ proven replay boundaries. Content hashes alone cannot prove event identity.
 - Seven-day half-open history window, with an inclusive start and exclusive end
 - UTC window endpoints and observation timestamps support at most millisecond
   precision. Finer precision is rejected before normalization, never rounded.
-- Ten-minute approval, five-second read deadline, no automatic background timer
+- Ten-minute wall-clock approval, at most five elapsed seconds per read,
+  no automatic background timer
 - At most eight fixture files, 1,000 input lines and 256,000 source bytes per read
 - At most 1,000 retained sanitized observations and 256,000 returned JSON bytes
 - Only synthetic, unauthenticated, account-unknown local history is accepted
@@ -128,7 +138,8 @@ concurrent calls, exact arithmetic, unknown counters, conflicts, source changes,
 expiry, stuck reads, disconnect during acquisition, retry and retained history.
 Browser tests exercise the generated artifact at desktop and mobile widths,
 including cancellation, replay, new fixture usage, failures and disconnect.
-See the dated verification receipt for actual check results and limitations.
+See the [capture-boundary verification receipt](../verification/2026-10-06-codex-capture-boundaries.md)
+for historical local and hosted results and the current-head check link.
 
 ## Architecture check against a second provider
 
