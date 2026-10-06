@@ -17,13 +17,14 @@ The environment installs the locked graph with engine-strict and starts one Node
 ## Verification
 
 - Actual entry-point unit: one pass with fake poisoned inherited deployment/auth/analytics values and a synthetic `.env.local`. The captured child is isolated, configuration bytes remain unchanged, and no `.convex` path appears. Raw output `/tmp/proper-respect-pickup-20261006/cloud-fixture-unit-final.txt`.
+- Legacy RED reproduction: executed the exact original shell script in a disposable synthetic project with stand-ins for npx, curl, setsid and sleep. Its inherited deployment key reached both Convex command kinds and it changed the synthetic configuration file. The isolation assertion fails for the intended reason. No real CLI or provider ran. Output `/tmp/proper-respect-pickup-20261006/cloud-fixture-legacy-red.txt`. This reproduction was performed after the new wrapper implementation; it is not a claim that this test ran first.
 - Real Next fixture startup and seven existing public-profile browser checks pass, including canonical redirect, projected card/evidence, axe, unknown handle, legacy roots, and signed-out noindex collection. It starts through the new wrapper despite fake poisoned auth/backend values. Output `/tmp/proper-respect-pickup-20261006/cloud-fixture-browser-verified.txt`.
 - Real wrapper rejects a separately held synthetic port with EADDRINUSE and exit1; it does not accept or reuse that server. Output `/tmp/proper-respect-pickup-20261006/cloud-fixture-port-collision.txt`.
 - Lint/typecheck/diff check: pass. Next dev's generated import-path changes in `next-env.d.ts` were restored to their starting content.
 - Initial browser configuration attempts exposed Playwright's multiple-config webServer concatenation, relative command cwd, and CJS config import-meta incompatibility. The final config follows the existing single-object base spread and explicit root cwd. Raw attempts remain in `/tmp/proper-respect-pickup-20261006/cloud-fixture-browser{,-final,-complete}.txt`; no server was reused or gate skipped.
 - The required Ubuntu verify job runs the same wrapper browser scenario after installing Chromium. Its fresh hosted result must pass before merge; local Darwin source checks are separate from Linux execution.
 
-This is configuration/dev-tooling reconciliation; no application provider logic changed and the configuration RED exemption applies. Synthetic data proves the bounded preview only. No provider/account request, seed, production environment change, deploy or publication occurred.
+This is developer-startup reconciliation; no application provider logic changed. Synthetic data proves the bounded preview only. No provider/account request, seed, production environment change, deploy or publication occurred.
 
 ## Source hashes
 
