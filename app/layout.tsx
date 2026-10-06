@@ -30,9 +30,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
-        <SearchableAnalytics />
       </head>
       <body className={`${archivo.variable} ${mono.variable}`}>
+        <SearchableAnalytics />
         <ThemeProvider><AppProviders><SiteHeader /><div id="page-content" tabIndex={-1}>{children}</div><SiteFooter /></AppProviders></ThemeProvider>
       </body>
     </html>

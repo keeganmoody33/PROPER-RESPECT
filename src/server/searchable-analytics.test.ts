@@ -1,6 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { load } from "cheerio";
+
+const route = vi.hoisted(() => ({ pathname: "/" }));
+vi.mock("next/navigation", () => ({ usePathname: () => route.pathname }));
 import { afterEach, expect, it, vi } from "vitest";
 import { SearchableAnalytics } from "@/components/searchable-analytics";
 
@@ -11,15 +14,18 @@ it.each([undefined, "development", "preview"])("does not track %s traffic", envi
   expect(renderToStaticMarkup(createElement(SearchableAnalytics))).toBe("");
 });
 
-it("renders the production tracker with the site's identity and cookies disabled", () => {
+it("isolates production analytics from the parent document", () => {
   vi.stubEnv("VERCEL_ENV", "production");
+  route.pathname = "/keegan";
   const $ = load(renderToStaticMarkup(createElement(SearchableAnalytics)));
-  const tracker = $("script[src]");
-  expect(tracker).toHaveLength(1);
-  expect(tracker.attr("src")).toBe("https://tracker.searchableanalytics.com/s.js");
-  expect(tracker.attr("data-domain")).toBe("proper-respect.com");
-  expect(tracker.attr("data-site-token")).toBe("pst_8cd07ae0c6361d5c9e6e4087");
-  expect(tracker.attr("data-cookie")).toBe("false");
-  expect(tracker.attr("defer")).toBeDefined();
-  expect($("script").first().text()).toContain("window.sa=window.sa||");
+  expect($("script")).toHaveLength(0);
+  expect($("iframe").attr("sandbox")).toBe("allow-scripts");
+  expect($("iframe").attr("referrerpolicy")).toBe("no-referrer");
+  expect($("iframe").attr("src")).toBe("/api/analytics/searchable?path=%2Fkeegan");
+});
+
+it.each(["/app", "/app/collection/private-fixture", "/sign-in", "/sign-up", "/onboarding", "/api/unknown", "/_next", "/about/missing"])("loads no tracker for %s", pathname => {
+  vi.stubEnv("VERCEL_ENV", "production");
+  route.pathname = pathname;
+  expect(renderToStaticMarkup(createElement(SearchableAnalytics))).toBe("");
 });

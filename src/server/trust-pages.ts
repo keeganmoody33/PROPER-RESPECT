@@ -78,9 +78,9 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     title: "How your data is handled",
     description: "Current account, evidence, connection and publication behavior in Proper Respect, including retention and deletion limits.",
     eyebrow: "Privacy / Current practices",
-    updatedAt: "2026-09-30",
+    updatedAt: "2026-10-06",
     introduction: [
-      "This page describes how Proper Respect handles accounts, evidence and publication as of September 30, 2026.",
+      "This page describes how Proper Respect handles accounts, evidence and publication as of October 6, 2026.",
       "Proper Respect is created by lecturesfrom, a business in the United States, and operated by Keegan Moody. Contact 33@lecturesfrom.com with questions about your data.",
     ],
     sections: [
@@ -121,7 +121,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         paragraphs: [
           "Product presentation can use Context.dev and official product sources. Brand lookups send the product domain to the branding service. Product images and fonts can load from external hosts, so visiting a page can make requests to those hosts.",
           "Your appearance preference is saved in your browser's local storage. Authentication and hosting services also process requests and may use cookies and logs as part of their services.",
-          "Searchable Analytics measures visits and referral traffic, including referrals from AI services, on our production website. Its tracker receives page URLs, page titles, referrers and interaction events, and uses browser storage for visitor and session identifiers. We configure the tracker with cookies disabled.",
+          "Searchable Analytics counts visits to public pages on our production website in an isolated browser frame. It receives public paths without query strings or fragments, plus browser and device signals. The frame receives no page content, page title or referrer from the parent page. Signed-in, sign-in, sign-up and onboarding routes are excluded. Cookies and interaction plugins are disabled, and the frame cannot access parent-page cookies or browser storage. Its temporary visitor and session identifiers reset after a full page load or a visit to an excluded route. This browser integration does not measure referrals from AI services.",
           "Proper Respect uses PostHog for product analytics. On public pages it records page views, clicks, page performance, JavaScript errors and session replay, with every form field masked. On signed-in, sign-in, sign-up and onboarding pages it sends no replay, clicks or errors: only a page view reduced to the route name, such as /app, without card names, IDs or page text. Visitors are not identified to PostHog by account. Requests from bots and crawlers are labeled as bots rather than dropped, so human and automated visits can be counted separately. PostHog stores this data in the United States and uses cookies and local storage to recognize a returning browser.",
         ],
       },

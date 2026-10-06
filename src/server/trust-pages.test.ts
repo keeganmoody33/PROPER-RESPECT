@@ -45,3 +45,14 @@ it("discloses PostHog analytics, replay limits and private-route handling on the
   expect(markdown).toMatch(/signed-in|sign-in/i);
   expect(markdown).toMatch(/bot/i);
 });
+
+it("distinguishes isolated Searchable public visits from PostHog without promising AI referral measurement", () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
+  const markdown = trustMarkdown("privacy");
+  expect(markdown).toContain("isolated browser frame");
+  expect(markdown).toContain("without query strings or fragments");
+  expect(markdown).toContain("Signed-in, sign-in, sign-up and onboarding routes are excluded");
+  expect(markdown).toContain("does not measure referrals from AI services");
+  expect(markdown).toContain("PostHog");
+  expect(trustDocuments.privacy.updatedAt).toBe("2026-10-06");
+});
