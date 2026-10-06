@@ -42,8 +42,29 @@ jobs:
           node -e 'if (process.platform !== "darwin") process.exit(1); process.stdout.write(JSON.stringify({platform: process.platform, architecture: process.arch, node: process.version}) + "\n")' > test-results/codex-macos/host.json
           sw_vers > test-results/codex-macos/os.txt
           cc --version > test-results/codex-macos/compiler.txt
+      - name: Compile the public native reader with API-visible diagnostics
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, subprocess, tempfile
+          source = "native/codex-rollout-reader.c"
+          def annotation(message, line=1):
+              message = re.sub(r"/[\w./+-]+", "[local-path]", message)
+              message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::error file={source},line={line},title=Native compiler::{message}")
+          with tempfile.TemporaryDirectory(prefix="proper-native-compile-") as scratch:
+              try:
+                  result = subprocess.run(["cc", "-std=c11", "-O2", "-Wall", "-Wextra", "-Werror", "-fstack-protector-strong", "-D_FORTIFY_SOURCE=2", source, "-o", str(pathlib.Path(scratch) / "reader")], capture_output=True, text=True, timeout=30)
+              except Exception:
+                  annotation("The native compiler could not finish the fixed public-source build.")
+                  raise SystemExit(1)
+              if result.returncode:
+                  for message in (result.stdout + result.stderr).splitlines()[:100]:
+                      position = re.match(re.escape(source) + r":(\d+):", message)
+                      annotation(message[:1000], int(position.group(1)) if position else 1)
+                  raise SystemExit(1)
+          PY
       - name: Run native acquisition and durable sync against synthetic sources
-        run: npx vitest run src/local/codex-rollout-native.test.ts src/local/codex-rollout-history.test.ts tests/support/codex-history-cli.test.ts src/domain/collector-contract.test.ts src/local/collector-private-store.test.ts src/local/collector-companion.test.ts src/local/collector-service.test.ts src/local/collector-fixture-http.test.ts src/local/cursor-report-adapter.test.ts tests/support/collector-fixture-cli.test.ts --maxWorkers=2 --reporter=default --reporter=junit --outputFile.junit=test-results/codex-macos/junit.xml
+        run: npx vitest run src/local/codex-rollout-native.test.ts src/local/codex-rollout-history.test.ts tests/support/codex-history-cli.test.ts src/domain/collector-contract.test.ts src/local/collector-private-store.test.ts src/local/collector-companion.test.ts src/local/collector-service.test.ts src/local/collector-fixture-http.test.ts src/local/cursor-report-adapter.test.ts tests/support/collector-fixture-cli.test.ts --maxWorkers=2 --reporter=default --reporter=github-actions --reporter=junit --outputFile.junit=test-results/codex-macos/junit.xml
       - name: Retain macOS acquisition evidence
         if: always()
         uses: actions/upload-artifact@v4
