@@ -43,7 +43,10 @@ function History({ propId }: { propId: Id<"props"> }) {
   </div>;
 }
 
-function RelationshipEditor({ item, evidence, onSave }: { item: Item; evidence: InventoryEvidence; onSave: (input: SaveInput) => Promise<SaveResult> }) {
+function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChange, dateNotice }: {
+  item: Item; evidence: InventoryEvidence; onSave: (input: SaveInput) => Promise<SaveResult>;
+  startedAt: string; onStartDateChange: (value: string) => void; dateNotice: string;
+}) {
   const confirmed = isRelationshipConfirmed(item.prop);
   const [status, setStatus] = useState(item.prop.status as string);
   const [selectedRelationship, setSelectedRelationship] = useState(confirmed);
@@ -92,7 +95,8 @@ function RelationshipEditor({ item, evidence, onSave }: { item: Item; evidence: 
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
       <label>Work sample or workflow link (optional)<input name="supportingUrl" type="url" defaultValue={item.prop.supportingUrl ?? ""} placeholder="https://…" /></label>
       <p className={styles.hint}>Stays private unless you choose, when you review sharing, to show it on the back of your public card with a label like “See how I use it”.</p>
-      <label>Started using (optional)<input name="startedAt" type="date" defaultValue={item.prop.startedAt ?? ""} /></label>
+      <label>Started using (optional)<input name="startedAt" type="date" value={startedAt} onChange={event => onStartDateChange(event.target.value)} /></label>
+      {dateNotice && <p role="status">{dateNotice}</p>}
       <p className={styles.hint}>Leave the date blank when you do not know. Signup dates and capture dates are not first use.</p>
       {(item.prop.activity || item.prop.activityEvidenceId || evidence.some(source => source.suggestedActivity)) && <label>Supporting snapshot
         <select name="activityEvidenceId" defaultValue={evidence.some(source => source.id === item.prop.activityEvidenceId && source.suggestedActivity) ? item.prop.activityEvidenceId : ""}>
@@ -136,26 +140,48 @@ export function DeleteOriginal({ sourceLabel, onDelete, onDeleted }: {
   </div>;
 }
 
-export function InventoryRelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, onDeleteEvidence, renderEvidence, renderHistory, focused = false }: {
+type RelationshipDetailsProps = {
   focused?: boolean;
   item: Item; evidence: InventoryEvidence; selectedEvidence?: InventoryEvidence[number] | null;
   hasMoreEvidence?: boolean; loadingMoreEvidence?: boolean; onLoadMoreEvidence?: () => void;
   onSave: (input: SaveInput) => Promise<SaveResult>;
   onDeleteEvidence?: (evidenceId: InventoryEvidence[number]["id"]) => Promise<unknown>;
-  renderEvidence?: (item: Item) => ReactNode; renderHistory?: (item: Item) => ReactNode;
-}) {
+  renderEvidence?: (item: Item, controls: { onUseStartDate: (date: string) => void; disabled: boolean }) => ReactNode;
+  renderHistory?: (item: Item) => ReactNode;
+};
+
+export function InventoryRelationshipDetails(props: RelationshipDetailsProps) {
+  return <RelationshipDetails key={props.item.prop._id} {...props} />;
+}
+
+function RelationshipDetails({ item, evidence, selectedEvidence, hasMoreEvidence = false, loadingMoreEvidence = false, onLoadMoreEvidence, onSave, onDeleteEvidence, renderEvidence, renderHistory, focused = false }: RelationshipDetailsProps) {
   const [saveNotice, setSaveNotice] = useState("");
   const [deleteNotice, setDeleteNotice] = useState("");
+  const [saving, setSaving] = useState(false);
+  const version = item.prop.relationshipVersion ?? 0;
+  const [dateDraft, setDateDraft] = useState<{ value: string; version: number; notice: string }>();
+  const currentDraft = dateDraft?.version === version ? dateDraft : undefined;
+  function useStartDate(date: string) {
+    if (saving) return;
+    setDateDraft({ value: date, version, notice: "Observed date copied to your draft. Edit or clear it, then save privately to confirm." });
+    setSaveNotice("");
+  }
   async function save(input: SaveInput) {
     setSaveNotice("");
-    const result = await onSave(input);
-    setSaveNotice("Saved privately. Your public profile has not changed.");
-    return result;
+    setSaving(true);
+    try {
+      const result = await onSave(input);
+      setSaveNotice("Saved privately. Your public profile has not changed.");
+      setDateDraft(current => current && { ...current, notice: "" });
+      return result;
+    } finally { setSaving(false); }
   }
   const sources = [...new Map([...(selectedEvidence ? [selectedEvidence] : []), ...evidence].map(source => [source.id, source])).values()];
   return <div className={focused ? styles.relationshipColumns : undefined}>
     <div>
-      <RelationshipEditor key={`${item.prop._id}:${item.prop.relationshipVersion ?? 0}`} item={item} evidence={sources} onSave={save} />
+      <RelationshipEditor key={`${item.prop._id}:${version}`} item={item} evidence={sources} onSave={save}
+        startedAt={currentDraft?.value ?? item.prop.startedAt ?? ""} dateNotice={currentDraft?.notice ?? ""}
+        onStartDateChange={value => setDateDraft({ value, version, notice: "" })} />
       {saveNotice && <p role="status">{saveNotice}</p>}
     </div>
     <div>
@@ -180,7 +206,7 @@ export function InventoryRelationshipDetails({ item, evidence, selectedEvidence,
           onDeleted={() => setDeleteNotice(`Deleted the original from ${source.sourceLabel}. Your saved relationship and any published card are unchanged.`)} />}
       </div>)}
       {hasMoreEvidence && <button type="button" className="secondary-action" disabled={loadingMoreEvidence} onClick={onLoadMoreEvidence}>{loadingMoreEvidence ? "Loading retained sources…" : "Load more retained sources"}</button>}
-      {renderEvidence && <details className={styles.claims}><summary>Inspect extracted claims and correct evidence</summary>{renderEvidence(item)}</details>}
+      {renderEvidence && <details className={styles.claims}><summary>Inspect extracted claims and correct evidence</summary>{renderEvidence(item, { onUseStartDate: useStartDate, disabled: saving })}</details>}
     </div>
     <div className={styles.savedDecisions}>
       <h3>Saved decisions</h3>
@@ -197,7 +223,7 @@ export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focus
   return <><InventoryRelationshipDetails focused={focused} item={item} evidence={evidence.results} selectedEvidence={selectedEvidence}
     hasMoreEvidence={evidence.status !== "Exhausted"} loadingMoreEvidence={evidence.status === "LoadingMore"} onLoadMoreEvidence={() => evidence.loadMore(10)} onSave={onSave}
     onDeleteEvidence={evidenceId => deleteEvidence({ evidenceId })}
-    renderEvidence={current => <PrivateEvidencePanel propId={current.prop._id} productName={current.product.name} productSlug={current.product.slug} />}
+    renderEvidence={(current, controls) => <PrivateEvidencePanel propId={current.prop._id} productName={current.product.name} productSlug={current.product.slug} {...controls} />}
     renderHistory={current => <History propId={current.prop._id} />} />
     {brandEnrichmentAvailable && <details className={styles.brand}><summary>Product appearance</summary><p>Retained logos, fonts, and brand styling describe the product. They do not establish your relationship with it.</p><ProductBrandControls propId={item.prop._id} /></details>}
   </>;
