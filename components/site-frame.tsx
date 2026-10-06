@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ThemeSelector } from "@/components/theme-selector";
+import { RequestTally } from "@/components/request-tally";
 
 export function SiteHeader() {
   return <><a className="site-skip" href="#page-content">Skip to content</a><header className="site-header">
@@ -49,6 +50,7 @@ export function SiteFooter() {
       <span>Private by default. Shared by choice.</span>
       <ThemeSelector />
     </div>
+    <RequestTally />
   </footer>;
 }
 
