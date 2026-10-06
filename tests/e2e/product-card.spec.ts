@@ -72,7 +72,7 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   expect((await first.boundingBox())!.height).toBeGreaterThan(frontHeight);
   expect(await content.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: testInfo.outputPath(`2026-09-28-card-details-${width}.png`), fullPage: true, animations: "disabled" });
+  await page.screenshot({ path: testInfo.outputPath(`${new Date().toISOString().slice(0, 10)}-card-details-${width}.png`), fullPage: true, animations: "disabled" });
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
   await expect(first).toHaveAttribute("data-side", "front");
