@@ -1,7 +1,14 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { load } from "cheerio/slim";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { TrustArticle } from "@/components/trust-article";
 import { trustDocuments, trustMarkdown, trustMarkdownResponse, trustMetadata } from "./trust-pages";
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
 
 it.each(["origins", "contact", "privacy", "terms", "methodology"] as const)("keeps %s previews out of indexing without overriding inherited HTML robots", async slug => {
   vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
@@ -44,6 +51,37 @@ it("discloses PostHog analytics, replay limits and private-route handling on the
   expect(markdown).toMatch(/session replay/i);
   expect(markdown).toMatch(/signed-in|sign-in/i);
   expect(markdown).toMatch(/bot/i);
+});
+
+it.each(["HTML", "Markdown"] as const)("discloses the same aggregate tally scope and limits in %s privacy", representation => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
+  vi.stubEnv("VERCEL_ENV", "preview");
+  const fetch = vi.fn(() => { throw new Error("Privacy rendering must not make a network request"); });
+  vi.stubGlobal("fetch", fetch);
+  const heading = "Aggregate request tally";
+  const markdown = trustMarkdown("privacy");
+  const html = load(renderToStaticMarkup(createElement(TrustArticle, { document: trustDocuments.privacy })));
+  const text = representation === "HTML"
+    ? html("section").filter((_, section) => html(section).find("h2").text() === heading).text()
+    : markdown.split(`## ${heading}\n\n`)[1]?.split("\n\n## ")[0] ?? "";
+
+  expect(text).toContain("Upstash Redis");
+  expect(text).toContain("stores only aggregate category totals and a start timestamp");
+  expect(text).toContain("are not sent to this store by the tally.");
+  expect(text).toContain("claims can be false");
+  expect(text).toMatch(/private, sign-in, sign-up and onboarding/);
+  expect(text).toMatch(/IP addresses, account identifiers, request paths or raw User-Agent strings/);
+  expect(text).toMatch(/inferred.*User-Agent/);
+  expect(text).toMatch(/separately as unidentified/);
+  expect(text).toMatch(/requests, not unique people or use of a listed product/);
+  expect(text).toMatch(/static assets, API requests, prefetches, prerenders and client-side data fetches/);
+  expect(text).toMatch(/dropped.*unavailable/);
+  expect(html("time").attr("datetime")).toBe("2026-10-06");
+  expect(markdown).toContain("Updated 2026-10-06");
+  expect(html.text()).toContain("PostHog");
+  expect(markdown).toContain("PostHog");
+  expect(trustMetadata("privacy").description).toContain("aggregate request tally");
+  expect(fetch).not.toHaveBeenCalled();
 });
 
 it("distinguishes isolated Searchable public visits from PostHog without promising AI referral measurement", () => {

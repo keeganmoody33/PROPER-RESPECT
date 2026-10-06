@@ -98,6 +98,39 @@ possible relationships; product APIs/exports supply actual activity when exposed
 Generic uploads retain originals but do not authenticate images or extract
 Screen Time automatically.
 
+## Optional request tally
+
+Updated: 2026-10-06. The footer's aggregate tally uses Upstash Redis through its
+REST API. Supply a URL and its matching token together in the server environment,
+using either `KV_REST_API_URL` / `KV_REST_API_TOKEN` or the
+`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` aliases. The KV names take
+precedence when present. Keep the token server-side; none of these names uses a
+`NEXT_PUBLIC_` prefix.
+
+If the URL or token is absent, the store is disabled, `/api/tally` returns 503 and
+the footer tally stays hidden. `VERCEL_ENV=production` uses the
+`pr:tally:v1` category hash and `pr:tally:v1:since` timestamp; every other value,
+including preview, development and unset, uses `pr:preview:tally:v1` and
+`pr:preview:tally:v1:since`. The existing `PROPER_RESPECT_E2E_REFERENCE=1` fixture
+disables both store reads and writes even when credentials are inherited.
+
+Eligible page requests include private collection, sign-in, sign-up and
+onboarding pages. The store receives only aggregate categories and the start
+timestamp, without visitor IP addresses, account identifiers, request paths or
+raw User-Agent strings. Classification is an inference from client claims;
+missing identification has a separate unidentified total. Counts represent
+requests, not unique people or product usage. Static assets, API requests,
+prefetches, prerenders and client-side data fetches are excluded. Counting is
+best effort: failed or interrupted writes can be dropped, and cached totals can
+be delayed. The [shared privacy page](../src/server/trust-pages.ts) describes the
+same boundaries in HTML and Markdown.
+
+The author of [PR #148](https://github.com/keeganmoody33/PROPER-RESPECT/pull/148)
+reported that KV was configured in Vercel. That report is unverified: this pass
+has not inspected hosted settings or values, read a production tally, or sent
+requests to the configured store. Source integration does not establish a
+configured or accepted production tally.
+
 ## Work and verification
 
 Use pstack-codex as the primary workflow for scoped implementation, focused tests,

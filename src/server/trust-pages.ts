@@ -76,7 +76,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
   },
   privacy: {
     title: "How your data is handled",
-    description: "Current account, evidence, connection and publication behavior in Proper Respect, including retention and deletion limits.",
+    description: "Current account, evidence, connection, publication and aggregate request tally behavior in Proper Respect, including retention and deletion limits.",
     eyebrow: "Privacy / Current practices",
     updatedAt: "2026-10-06",
     introduction: [
@@ -89,6 +89,14 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         paragraphs: [
           "Clerk handles sign-in. Convex stores application records and uploaded evidence. Account records include an authentication identifier, your handle, display name, profile information and saved links. Your collection can contain product relationships, notes, dates, costs and supporting evidence.",
           "Private collection access is tied to your signed-in identity. Evidence records can include source URLs, original uploads, message metadata, observations, excerpts and capture history. These records are stored by the service; they are not kept only on your device.",
+        ],
+      },
+      {
+        heading: "Aggregate request tally",
+        paragraphs: [
+          "When enabled, the footer tally counts eligible page requests on public pages and on private, sign-in, sign-up and onboarding pages. It stores only aggregate category totals and a start timestamp in Upstash Redis. Visitor IP addresses, account identifiers, request paths or raw User-Agent strings are not sent to this store by the tally.",
+          "Categories are inferred from what a client claims in its User-Agent header, and those claims can be false. Requests with missing identification are counted separately as unidentified. Totals measure requests, not unique people or use of a listed product. An AI-assistant or link-preview category does not establish that a person requested a page, shared a link or endorsed a product.",
+          "The tally excludes static assets, API requests, prefetches, prerenders and client-side data fetches. Hits can be dropped when the store or request background processing is unavailable. Displayed totals can be delayed or incomplete; they are not a complete traffic record.",
         ],
       },
       {

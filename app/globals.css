@@ -1224,3 +1224,38 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .site-theme .theme-selector { gap: 0; }
   .site-theme .theme-selector > span { position: absolute; clip-path: inset(50%); height: 1px; width: 1px; overflow: hidden; }
 }
+
+.site-tally { border-top: 1px solid var(--line); margin-top: 1.2rem; font-family: var(--homepage-mono), monospace; font-size: .7rem; font-weight: 500; color: var(--secondary); }
+.site-tally-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.site-tally-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1.25rem; min-height: 44px; }
+.site-tally-label { letter-spacing: .08em; text-transform: uppercase; }
+.site-tally-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.site-tally-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.site-tally button { all: unset; box-sizing: border-box; cursor: pointer; }
+.site-tally button:hover { color: var(--respect-red); }
+.site-tally button:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 4px; }
+.site-tally-switch button { min-height: 32px; padding: 0 6px; display: flex; align-items: center; color: var(--secondary); }
+.site-tally-switch button[aria-pressed="true"] { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.site-tally-count { min-height: 32px; display: flex; align-items: center; gap: .75rem; color: var(--ink); }
+.site-tally-count strong { font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.site-tally-count span { text-decoration: underline; text-underline-offset: 3px; }
+.site-tally-count:disabled { cursor: default; }
+.site-tally-panel { border-top: 1px solid var(--line); padding: 1.1rem 0 .5rem; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 1.1rem 2.5rem; line-height: 1.5; color: var(--ink); }
+.site-tally-panel ul { list-style: none; margin: 0; padding: 0; }
+.site-tally-panel li button { width: 100%; min-height: 28px; display: grid; grid-template-columns: minmax(0, 1fr) 120px 64px; align-items: center; gap: .75rem; padding: 3px 6px; color: var(--secondary); }
+.site-tally-panel li button[data-active="true"] { color: var(--ink); }
+.site-tally-panel li button[aria-pressed="true"] { background: var(--example-panel); font-weight: 700; }
+.site-tally-bar { height: 2px; background: var(--example-panel); position: relative; }
+.site-tally-bar span { position: absolute; inset: 0 auto 0 0; background: var(--control-line); }
+.site-tally-panel li button[data-active="true"] .site-tally-bar span { background: var(--ink); }
+.site-tally-n { text-align: right; font-variant-numeric: tabular-nums; }
+.site-tally-detail { display: flex; flex-direction: column; gap: .9rem; }
+.site-tally-detail p { margin: 0; }
+.site-tally-summary { display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid var(--line); padding-bottom: .5rem; }
+.site-tally-summary span:first-child { font-family: var(--homepage-sans), sans-serif; font-weight: 600; font-size: 13px; }
+.site-tally-summary span:last-child, .site-tally-muted { color: var(--secondary); }
+@media (max-width: 720px) {
+  .site-tally-switch button, .site-tally-count, .site-tally-panel li button { min-height: 44px; }
+  .site-tally-panel { grid-template-columns: minmax(0, 1fr); }
+  .site-tally-panel li button { grid-template-columns: minmax(0, 1fr) 48px 64px; }
+}

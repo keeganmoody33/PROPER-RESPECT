@@ -1,0 +1,74 @@
+# Request-tally reconciliation — 2026-10-06 UTC
+
+Source: PR #148, latest Claude commit `b0ac3586d7d108c33d508352e5eaadeeb7bb4716`, preserved in the reconciliation branch. Starting main: `06e4215003e6df9f92aa79c4ca7b314761814bf3`.
+Ref: https://plan.ref.tools/oLGxQYBMTcFHrrvg.
+
+## Findings and dispositions before functional changes
+
+Independent reviewer identified the following concrete findings before the regression edits. This durable receipt was written after the regression edits and before functional fixes.
+
+- Proxy unit tests inherit Redis credentials and call the real store: **fix now**. Fake inherited credentials and intercepted fetch reproduce a production-prefix HINCRBY; real provider requests remain zero. Isolate the proxy unit fixture and disable store reads/writes in the existing synthetic public fixture.
+- Missing user-agent identification is included in automated totals and labeled Not humans: **fix now**. Preserve the undeclared raw category, return a separate unidentified aggregate, and expose it separately from presumed human and automated requests.
+- Missing/invalid since timestamp is displayed as since launch: **fix now**. Omit the date when no valid start date is supplied.
+- Historical Copilot endpoint exclusion, command-error, interactive browser coverage and repository-style comments: **superseded by b0ac source fixes**, subject to fresh exact-head review. They do not establish approval of a new head.
+
+The installed Next 16.3.5 proxy guide was read before these changes; it documents proxy routing and NextFetchEvent.waitUntil. Source review and intercepted tests do not establish a configured or accepted production store.
+
+## RED
+
+Regression tests run before functional implementation. Raw logs are retained in `/tmp/proper-respect-pickup-20261006/tally-red-unit.txt` and `tally-red-browser.txt`. The unit run produced three intended failures and 31 passes. The browser run produced four intended failures: two unidentified controls and two missing/invalid dates.
+
+## Execution boundary
+
+No production credentials or provider state were inspected. Synthetic tests use fake credentials and intercepted fetch. No deployment, hosted tally configuration, production request collection or public-profile publication is performed by this receipt.
+
+## GREEN — 2026-10-06 UTC
+
+- All 34 tally unit tests pass; synthetic fixture reads/writes and the credential-canary proxy test make no provider request.
+- Nine site-frame browser cases pass, including separate unidentified controls and omitted unknown dates.
+- Four additional keyboard/theme cases pass at 1440px and 320px using the actual Appearance selector. All four dated screenshots were individually inspected. There is no horizontal overflow and the focused control has a 3px outline.
+- Full tests (1,758 Vitest passes with two existing skips), 122 script tests, lint, typecheck and the production build with CI synthetic configuration pass. The full Vitest count is bound by `tally-full-test.txt`; two existing retained-real-source cases remain skipped.
+- Raw outputs: `/tmp/proper-respect-pickup-20261006/tally-green-unit.txt`, `tally-green-browser.txt`, `tally-theme-browser.txt`, and `tally-full-{test,lint,typecheck,build}.txt`.
+
+The AI-assistant and link-preview definitions now state only the User-Agent claim, without asserting that a person requested a page or shared a link. Source review, final commit binding and strict current-head/current-base hosted checks still precede merge.
+
+## Further review dispositions — before the following edits
+
+- Privacy/service coverage: **fix before delivery**. Disclose aggregate Upstash fields, private/sign-in/onboarding coverage, User-Agent inference and request-versus-person/usage limits in the shared trust source and development configuration guidance. The author's claim that KV is connected is unverified; no dashboard receipt is implied. This source change will follow the analytics integration to preserve that privacy disclosure too.
+- Start date year: **fix now**. Include the year in valid dates so retained running totals do not imply only the present year.
+- Six changed narration comments named in the independent report: **remove now** before final changed-comment review; preserve the accurate exported/storage contracts.
+- Original b0 auth and payload review: **not a bug with evidence**. No auth bypass, account identifier or private path is transmitted by the tally commands; only aggregate categories and the start timestamp are stored. Classification remains an inference from User-Agent claims.
+
+## Follow-up GREEN — 2026-10-06 UTC
+
+Valid-date year regressions first produced two intended browser failures (`tally-red-year.txt`). After the date/copy/comment corrections, all 13 site-frame browser cases passed (`tally-final-browser.txt`), recapturing the four theme/focus images with the final copy. The earlier full-check result above is a recorded initial implementation stage; latest integrated-tree checks will be recorded separately.
+
+The delegated privacy implementation stayed within `src/server/trust-pages.ts`, `src/server/trust-pages.test.ts` and `docs/DEVELOPMENT.md`. Two new HTML/Markdown regressions failed with eight existing passes before implementation; all ten then passed with a fake canonical origin and intercepted fetch (`tally-privacy-handoff.md` and its raw logs). The source records the aggregate Upstash fields, coverage, exclusions, inference and missing-write limits; production service configuration remains author-reported and unverified. The new section is separate from Searchable's services paragraph so both disclosures can survive the forthcoming main merge.
+
+## Product-copy disposition — before editing
+
+The visible Spec id exposes an internal taxonomy identifier without helping interpret the metric. Disposition: remove it and retain the visible category name and definition. Browser regressions will assert that semantic explanation instead; raw category keys remain unchanged in the store and API.
+
+## Storage-comment disposition — before editing
+
+Independent review identified that the storage contract says category counts only while the writer also stores a start timestamp. Disposition: fix now to name both stored fields. The earlier full-check proof predates the shared privacy date change; current public-site date expectations are supplied by the pending analytics main integration. Final integrated-tree checks remain required.
+
+## Updated framework browser proof — 2026-10-06 UTC
+
+Node 24 installed Next 16.3.8 and the installed proxy waitUntil guide was read. All 13 site-frame browser cases pass with the semantic category explanation and final copy (`tally-next1638-browser.txt`). The four screenshots were recaptured. Fixture store reads/writes remained disabled; no genuine credentials or provider request was used.
+
+## Combined privacy integration — 2026-10-06 UTC
+
+Analytics main `06f1160553207cabe74fa2325949c2293573066e` was merged at `f883277e27b151370f06ac0f3f6ff4a752e2d6f2`. The only conflict was two sets of appended privacy regression cases. Both sets were retained; the shared source preserves the Searchable isolation disclosure and the new aggregate tally disclosure. All 55 focused trust/public-site/tally cases pass (`tally-privacy-merge-green.txt`). No contributor source or commit was overwritten.
+
+## Current integrated-tree checks — 2026-10-06 UTC
+
+On the combined analytics/tally tree with Node 24 and Next 16.3.8, `npm test` passes 1,826 Vitest tests with two existing retained-source skips and all 122 script tests. Lint, strict typecheck and a production build with the CI synthetic origins and an empty Clerk secret pass. All 24 site-frame/trust-page browser cases pass, covering HTML/Markdown correspondence, accessibility, actual themes, desktop/mobile widths and tally behavior. Raw outputs are `tally-integrated-{full-test,lint,typecheck,build,browser}.txt` in `/tmp/proper-respect-pickup-20261006/`.
+
+All four store URL/token aliases were explicitly empty in these commands; the fixture also disables store reads/writes. These checks establish synthetic integration behavior. Final immutable review, any later main integration, and strict hosted checks remain merge gates. Production store configuration, actual counters, deployment and vendor acceptance remain unverified.
+
+## Final layout-main integration — 2026-10-06 UTC
+
+Main `3dcd1ba2d160b519bee3b5745b92c74abaf7da27` adds the verified collection layout. It was merged without conflicts into the reviewed tally tree. All 16 executable/documentation/image files other than this dated receipt remain byte-identical to reviewed tally head `49cf4a0f873d3b0f86fd82c4af315c557b4d2a98`; the delta against final main remains 17 files. The independent review returned internal functional/comment/visual PASS, with every immutable blob and all four recaptured images inspected.
+
+The local full checks above identify the analytics/tally stage and precede the layout main update. Final immutable base binding and all three strict hosted jobs on this combined head remain required before merge. The source author's hosted KV setup remains unverified; no provider operation, deployment or publication occurred.
