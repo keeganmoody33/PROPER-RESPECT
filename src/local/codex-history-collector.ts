@@ -1,11 +1,9 @@
 import { ExactJsonNumber, parseExactJson, type ExactJson } from "../domain/exact-json.ts";
-import { z } from "zod";
-import { historyBatchSchema, type HistoryBatch, type HistoryObservation } from "../domain/connection-history.ts";
+import { historyBatchSchema, historyTimestampSchema, historyWindowSchema, type HistoryBatch, type HistoryObservation } from "../domain/connection-history.ts";
 import type { CollectionRequest } from "./usage-connection.ts";
 
 export type CodexFixtureFile = { sessionAlias: string; lines: readonly string[] };
 const metrics = ["input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens"] as const;
-const timestampSchema = z.iso.datetime();
 function object(value: ExactJson | undefined): Record<string, ExactJson> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof ExactJsonNumber) ? value : null;
 }
@@ -19,6 +17,8 @@ function counter(value: ExactJson | undefined): string | null {
 export function collectCodexHistoryFixture(request: CollectionRequest, files: readonly CodexFixtureFile[]): HistoryBatch {
   if (request.descriptor.provider !== "codex" || request.descriptor.collectorVersion !== "codex-fixture-v1") throw new Error("unsupported-source");
   if (files.length > 8) throw new Error("fixture-limit");
+  const window = historyWindowSchema.parse(request.window);
+  const start = Date.parse(window.start), end = Date.parse(window.end);
   let bytes = 0, lines = 0;
   const observations: HistoryObservation[] = [];
   for (const file of files) for (const line of file.lines) {
@@ -33,16 +33,16 @@ export function collectCodexHistoryFixture(request: CollectionRequest, files: re
     if (record.type === "response_item") continue;
     const payload = object(record.payload);
     if (!payload || payload.type !== "token_count") throw new Error("unsupported-event");
-    const time = Date.parse(timestampSchema.parse(record.timestamp));
+    const at = historyTimestampSchema.parse(record.timestamp), time = Date.parse(at);
     // Bounds are applied before projection. No pre-window baseline is retained.
-    if (time < Date.parse(request.window.start) || time >= Date.parse(request.window.end)) continue;
+    if (time < start || time >= end) continue;
     const info = object(payload.info), counts = object(info?.total_token_usage);
     if (!counts) throw new Error("unsupported-usage");
     const values = Object.fromEntries(metrics.map(metric => [metric, counter(counts[metric])]));
     for (const [subset, total] of [["cached_input_tokens", "input_tokens"], ["reasoning_output_tokens", "output_tokens"]]) {
       if (values[subset] !== null && values[total] !== null && BigInt(values[subset]) > BigInt(values[total])) throw new Error("invalid-subset");
     }
-    for (const metric of metrics) observations.push({ stream: file.sessionAlias, at: new Date(time).toISOString(), metric, unit: "tokens", value: values[metric] });
+    for (const metric of metrics) observations.push({ stream: file.sessionAlias, at, metric, unit: "tokens", value: values[metric] });
   }
   // Only the allowlist above survives; raw records, prompts, paths and credentials do not.
   return historyBatchSchema.parse({ descriptor: request.descriptor, observations });

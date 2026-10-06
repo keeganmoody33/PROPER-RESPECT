@@ -5,8 +5,8 @@ import { codexFixtureDescriptor, codexFixtureFiles, codexFixtureWindow } from ".
 
 const initial = () => collectCodexHistoryFixture({ descriptor: codexFixtureDescriptor, window: codexFixtureWindow, signal: new AbortController().signal }, codexFixtureFiles());
 const total = (connection: UsageConnection) => connection.getSnapshot().history.totals.find(row => row.metric === "total_tokens")?.value;
-function setup(collect = vi.fn(async () => initial()), now = () => Date.parse("2026-10-06T15:00:00Z")) {
-  const connection = new UsageConnection({ descriptor: codexFixtureDescriptor, window: codexFixtureWindow, collect, now });
+function setup(collect = vi.fn<(request: CollectionRequest) => Promise<ReturnType<typeof initial>>>(async () => initial()), now = () => Date.parse("2026-10-06T15:00:00Z"), monotonicNow = now) {
+  const connection = new UsageConnection({ descriptor: codexFixtureDescriptor, window: codexFixtureWindow, collect, now, monotonicNow });
   return { connection, collect };
 }
 async function connect(connection: UsageConnection) { connection.requestConnection(); await connection.approve(); }
@@ -90,6 +90,222 @@ describe("bounded usage connection", () => {
         collect: request => { signal = request.signal; return new Promise(() => {}); } });
       connection.requestConnection(); const pending = connection.approve();
       await vi.advanceTimersByTimeAsync(5000); await pending;
+      expect(signal?.aborted).toBe(true);
+      expect(connection.getSnapshot().phase).toBe("error");
+      expect(connection.getSnapshot().history.observations).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+  it.each([5000, 5100])("rejects a read at %i ms even when the timeout callback has not run", async elapsed => {
+    let now = Date.parse("2026-10-06T15:00:00Z");
+    let signal: AbortSignal | undefined;
+    const { connection, collect } = setup(undefined, () => now);
+    await connect(connection);
+    const retained = connection.getSnapshot();
+    collect.mockImplementationOnce(async request => {
+      signal = request.signal;
+      now += elapsed;
+      return initial();
+    });
+    await connection.sync();
+    const after = connection.getSnapshot();
+    expect(signal?.aborted).toBe(true);
+    expect(after.phase).toBe("error");
+    expect(after.history).toEqual(retained.history);
+    expect(after.lastSyncedAt).toBe(retained.lastSyncedAt);
+    expect(after.expiresAt).toBe(retained.expiresAt);
+    await connection.sync();
+    expect(connection.getSnapshot().phase).toBe("connected");
+    expect(connection.getSnapshot().expiresAt).toBe(retained.expiresAt);
+  });
+  it("accepts a read just before its absolute deadline", async () => {
+    let now = Date.parse("2026-10-06T15:00:00Z");
+    const { connection } = setup(vi.fn(async () => { now += 4999; return initial(); }), () => now);
+    await connect(connection);
+    expect(connection.getSnapshot().phase).toBe("connected");
+    expect(total(connection)).toBe("150");
+  });
+  it.each(["serialization", "schema-validation"])("charges %s time to the same acquisition deadline", async stage => {
+    let now = Date.parse("2026-10-06T15:00:00Z");
+    let signal: AbortSignal | undefined;
+    const { connection, collect } = setup(undefined, () => now);
+    await connect(connection);
+    const retained = connection.getSnapshot();
+    const incoming = initial(), first = incoming.observations[0];
+    let reads = 0;
+    incoming.observations[0] = { ...first, get value() {
+      if (++reads === (stage === "serialization" ? 1 : 2)) now += 5000;
+      return first.value;
+    } };
+    collect.mockImplementationOnce(async request => { signal = request.signal; return incoming; });
+    await connection.sync();
+    expect(reads).toBeGreaterThanOrEqual(stage === "serialization" ? 1 : 2);
+    const after = connection.getSnapshot();
+    expect(signal?.aborted).toBe(true);
+    expect(after.phase).toBe("error");
+    expect(after.history).toEqual(retained.history);
+    expect(after.lastSyncedAt).toBe(retained.lastSyncedAt);
+  });
+  it("uses the original approval expiry when less than five seconds remain", async () => {
+    let now = Date.parse("2026-10-06T15:00:00Z");
+    let signal: AbortSignal | undefined;
+    const { connection, collect } = setup(undefined, () => now);
+    await connect(connection);
+    const retained = connection.getSnapshot();
+    now += 599_999;
+    collect.mockImplementationOnce(async request => { signal = request.signal; now += 1; return initial(); });
+    await connection.sync();
+    const after = connection.getSnapshot();
+    expect(signal?.aborted).toBe(true);
+    expect(after.phase).toBe("expired");
+    expect(after.expiresAt).toBe(retained.expiresAt);
+    expect(after.history).toEqual(retained.history);
+    expect(after.lastSyncedAt).toBe(retained.lastSyncedAt);
+  });
+  it("rejects submillisecond retained observations atomically", async () => {
+    const { connection, collect } = setup();
+    await connect(connection);
+    const retained = connection.getSnapshot();
+    const incoming = initial();
+    incoming.observations[0].at = "2026-10-02T09:00:00.0001Z";
+    collect.mockResolvedValueOnce(incoming);
+    await connection.sync();
+    const after = connection.getSnapshot();
+    expect(after.phase).toBe("error");
+    expect(after.history).toEqual(retained.history);
+    expect(after.lastSyncedAt).toBe(retained.lastSyncedAt);
+  });
+  it.each([5000, 5100])("rejects a %i ms read despite wall-clock rollback and retries without renewing approval", async duration => {
+    let wall = Date.parse("2026-10-06T15:00:00Z"), elapsed = 100;
+    let signal: AbortSignal | undefined;
+    const { connection, collect } = setup(undefined, () => wall, () => elapsed);
+    await connect(connection);
+    const retained = connection.getSnapshot();
+    collect.mockImplementationOnce(async request => {
+      signal = request.signal;
+      wall -= 60_000;
+      elapsed += duration;
+      return initial();
+    });
+    await connection.sync();
+    const after = connection.getSnapshot();
+    expect(signal?.aborted).toBe(true);
+    expect(after.phase).toBe("error");
+    expect(after.history).toEqual(retained.history);
+    expect(after.lastSyncedAt).toBe(retained.lastSyncedAt);
+    expect(after.expiresAt).toBe(retained.expiresAt);
+    collect.mockImplementationOnce(async () => { elapsed += 4999; return initial(); });
+    await connection.sync();
+    expect(connection.getSnapshot().phase).toBe("connected");
+    expect(connection.getSnapshot().expiresAt).toBe(retained.expiresAt);
+    expect(connection.getSnapshot().lastSyncedAt).toBe(new Date(wall).toISOString());
+  });
+  it.each(["serialization", "schema-validation"])("rejects a rollback during %s when the combined elapsed budget reaches five seconds", async stage => {
+    let wall = Date.parse("2026-10-06T15:00:00Z"), elapsed = 100;
+    let signal: AbortSignal | undefined;
+    const { connection, collect } = setup(undefined, () => wall, () => elapsed);
+    await connect(connection);
+    const retained = connection.getSnapshot();
+    const incoming = initial(), first = incoming.observations[0];
+    let reads = 0;
+    incoming.observations[0] = { ...first, get value() {
+      if (++reads === (stage === "serialization" ? 1 : 2)) { wall -= 60_000; elapsed += 2000; }
+      return first.value;
+    } };
+    collect.mockImplementationOnce(async request => { signal = request.signal; elapsed += 3000; return incoming; });
+    await connection.sync();
+    expect(signal?.aborted).toBe(true);
+    const after = connection.getSnapshot();
+    expect(after.phase).toBe("error");
+    expect(after.history).toEqual(retained.history);
+    expect(after.lastSyncedAt).toBe(retained.lastSyncedAt);
+  });
+  it("caps the monotonic read budget by the approval time remaining before a rollback", async () => {
+    let wall = Date.parse("2026-10-06T15:00:00Z"), elapsed = 100;
+    let signal: AbortSignal | undefined;
+    const { connection, collect } = setup(undefined, () => wall, () => elapsed);
+    await connect(connection);
+    const retained = connection.getSnapshot();
+    wall += 599_999;
+    collect.mockImplementationOnce(async request => { signal = request.signal; wall -= 60_000; elapsed += 1; return initial(); });
+    await connection.sync();
+    const after = connection.getSnapshot();
+    expect(signal?.aborted).toBe(true);
+    expect(after.phase).toBe("error");
+    expect(after.history).toEqual(retained.history);
+    expect(after.lastSyncedAt).toBe(retained.lastSyncedAt);
+    expect(after.expiresAt).toBe(retained.expiresAt);
+  });
+  it.each(["acquisition", "validation"])("still enforces wall-clock approval expiry during %s", async stage => {
+    let wall = Date.parse("2026-10-06T15:00:00Z"), elapsed = 100;
+    let signal: AbortSignal | undefined;
+    const { connection, collect } = setup(undefined, () => wall, () => elapsed);
+    await connect(connection);
+    const retained = connection.getSnapshot(), incoming = initial(), first = incoming.observations[0];
+    incoming.observations[0] = { ...first, get value() {
+      if (stage === "validation") wall += 600_000;
+      return first.value;
+    } };
+    collect.mockImplementationOnce(async request => {
+      signal = request.signal;
+      elapsed += 1;
+      if (stage === "acquisition") wall += 600_000;
+      return incoming;
+    });
+    await connection.sync();
+    const after = connection.getSnapshot();
+    expect(signal?.aborted).toBe(true);
+    expect(after.phase).toBe("expired");
+    expect(after.history).toEqual(retained.history);
+    expect(after.lastSyncedAt).toBe(retained.lastSyncedAt);
+    expect(after.expiresAt).toBe(retained.expiresAt);
+  });
+  it("uses elapsed time for read duration and wall time for successful-sync display", async () => {
+    let wall = Date.parse("2026-10-06T15:00:00Z"), elapsed = 100;
+    const collect = vi.fn(async () => { wall += 60_000; elapsed += 4999; return initial(); });
+    const { connection } = setup(collect, () => wall, () => elapsed);
+    await connect(connection);
+    expect(connection.getSnapshot().phase).toBe("connected");
+    expect(connection.getSnapshot().lastSyncedAt).toBe(new Date(wall).toISOString());
+    expect(total(connection)).toBe("150");
+  });
+  it("does not round a fractional remaining timeout down and reject an on-time result", async () => {
+    vi.useFakeTimers();
+    try {
+      let elapsed = 100.25;
+      let signal: AbortSignal | undefined;
+      let finish: (value: unknown) => void = () => {};
+      const connection = new UsageConnection({ descriptor: codexFixtureDescriptor, window: codexFixtureWindow,
+        monotonicNow: () => elapsed,
+        collect: request => { signal = request.signal; return new Promise(resolve => { finish = resolve; }); } });
+      connection.subscribe(() => { if (connection.getSnapshot().phase === "syncing") elapsed = 100.35; });
+      connection.requestConnection();
+      const pending = connection.approve();
+      await vi.advanceTimersByTimeAsync(4999);
+      elapsed = 100.25 + 4999.2;
+      finish(initial());
+      await pending;
+      expect(signal?.aborted).toBe(false);
+      expect(connection.getSnapshot().phase).toBe("connected");
+      expect(total(connection)).toBe("150");
+    } finally { vi.useRealTimers(); }
+  });
+  it("rearms an early timer wake and aborts at the actual monotonic deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      let elapsed = 0;
+      let signal: AbortSignal | undefined;
+      const connection = new UsageConnection({ descriptor: codexFixtureDescriptor, window: codexFixtureWindow,
+        monotonicNow: () => elapsed,
+        collect: request => { signal = request.signal; return new Promise(() => {}); } });
+      connection.requestConnection();
+      const pending = connection.approve();
+      elapsed = 4999.5;
+      await vi.advanceTimersByTimeAsync(5000);
+      const earlyAbort = signal?.aborted;
+      elapsed = 5000;
+      await vi.advanceTimersByTimeAsync(1);
+      await pending;
+      expect(earlyAbort).toBe(false);
       expect(signal?.aborted).toBe(true);
       expect(connection.getSnapshot().phase).toBe("error");
       expect(connection.getSnapshot().history.observations).toBe(0);

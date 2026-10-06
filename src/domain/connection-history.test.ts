@@ -1,5 +1,8 @@
 import { expect, it } from "vitest";
-import { mergeConnectionObservations, reconcileConnectionHistory, type HistoryObservation } from "./connection-history.ts";
+import {
+  historyBatchSchema, historyObservationSchema, historyWindowSchema,
+  mergeConnectionObservations, reconcileConnectionHistory, type HistoryObservation,
+} from "./connection-history.ts";
 const row = (at: number, value: string | null, stream = "one"): HistoryObservation => ({ stream, metric: "total_tokens", unit: "tokens", at: `2026-10-02T0${at}:00:00.000Z`, value });
 it("uses an independent baseline for each stream and preserves exact large integers", () => {
   const result = reconcileConnectionHistory([row(1, "900719925474099300000"), row(2, "900719925474099300150"), row(1, "500", "two"), row(2, "550", "two")]);
@@ -29,4 +32,54 @@ it("leaves retained observations intact when a merged batch reaches the bound", 
   const original = [row(1, "0")];
   expect(() => mergeConnectionObservations(original, Array.from({ length: 1000 }, (_, index) => ({ ...row(2, "1"), stream: `session-${index}` })))).toThrow("history-limit");
   expect(original).toEqual([row(1, "0")]);
+});
+
+it.each(["start", "end"] as const)("rejects submillisecond precision at the window %s before normalization", edge => {
+  const window = { start: "2026-10-02T00:00:00.000Z", end: "2026-10-03T00:00:00.000Z" };
+  window[edge] = window[edge].replace(".000Z", ".0005Z");
+  expect(historyWindowSchema.safeParse(window).success).toBe(false);
+});
+
+it.each([".0001Z", ".0002Z", ".0000Z", ".123456Z"])("rejects retained batch timestamp precision %s before distinct instants can collapse", fraction => {
+  const batch = {
+    descriptor: {
+      provider: "codex", sourceKind: "local-history", authMode: "none", ownerAlias: "owner", sourceAlias: "source",
+      deviceAlias: "device", accountAlias: null, sample: "synthetic", collectorVersion: "codex-fixture-v1",
+    },
+    observations: [{ ...row(1, "100"), at: `2026-10-02T01:00:00${fraction}` }],
+  };
+  expect(historyBatchSchema.safeParse(batch).success).toBe(false);
+});
+
+it.each([
+  ["2026-10-02T01:00:00Z", "2026-10-02T01:00:00.000Z"],
+  ["2026-10-02T01:00:00.1Z", "2026-10-02T01:00:00.100Z"],
+  ["2026-10-02T01:00:00.12Z", "2026-10-02T01:00:00.120Z"],
+  ["2026-10-02T01:00:00.123Z", "2026-10-02T01:00:00.123Z"],
+  ["2024-02-29T01:00:00Z", "2024-02-29T01:00:00.000Z"],
+])("canonicalizes supported timestamp %s without rounding", (at, canonical) => {
+  expect(historyObservationSchema.parse({ ...row(1, "100"), at }).at).toBe(canonical);
+});
+
+it("keeps equivalent supported timestamp spellings replay-safe", () => {
+  for (const spellings of [["Z", ".0Z", ".00Z", ".000Z"], [".1Z", ".10Z", ".100Z"]]) {
+    const observations = spellings.map(fraction => historyObservationSchema.parse({ ...row(1, "100"), at: `2026-10-02T01:00:00${fraction}` }));
+    const result = reconcileConnectionHistory(observations);
+    expect(result.observations).toBe(1);
+    expect(result.replays).toBe(spellings.length - 1);
+    expect(result.rows[0].status).toBe("baseline");
+  }
+});
+
+it.each([
+  ["2026-02-29T01:00:00Z", "2026-03-02T00:00:00Z"],
+  ["2026-04-31T01:00:00.123Z", "2026-05-02T00:00:00Z"],
+])("rejects invalid calendar timestamp %s", (at, end) => {
+  expect(historyObservationSchema.safeParse({ ...row(1, "100"), at }).success).toBe(false);
+  expect(historyWindowSchema.safeParse({ start: at, end }).success).toBe(false);
+});
+
+it("accepts second and millisecond precision at window boundaries", () => {
+  expect(historyWindowSchema.safeParse({ start: "2026-10-02T00:00:00Z", end: "2026-10-02T00:00:00.001Z" }).success).toBe(true);
+  expect(historyWindowSchema.safeParse({ start: "2026-10-02T00:00:00.999Z", end: "2026-10-02T00:00:01Z" }).success).toBe(true);
 });
