@@ -137,6 +137,13 @@ JUnit plus host information. A Linux pass does not establish Darwin filesystem
 behavior. The workflow is prepared evidence collection; it is not a recorded
 macOS pass until its exact commit run succeeds.
 
+The first API-visible macOS compiler receipt, run `37530478445` at commit
+`0b31766a872705d7ede1fdf2414b3846e93dc275`, failed before tests:
+`st_mtimespec` was hidden by the strict POSIX feature namespace. The reader now
+requests Darwin's extension namespace on Apple platforms and retains the POSIX
+namespace on Linux. A corrected macOS run must pass before this is considered
+Darwin acquisition evidence.
+
 Real Mac acceptance must additionally approve the device, selected source,
 history window and destination, then demonstrate genuine backfill, replay,
 updates after restart, disconnect, retained private results and deliberate

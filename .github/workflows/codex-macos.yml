@@ -42,6 +42,16 @@ jobs:
           node -e 'if (process.platform !== "darwin") process.exit(1); process.stdout.write(JSON.stringify({platform: process.platform, architecture: process.arch, node: process.version}) + "\n")' > test-results/codex-macos/host.json
           sw_vers > test-results/codex-macos/os.txt
           cc --version > test-results/codex-macos/compiler.txt
+          python3 - <<'PY'
+          import json, pathlib
+          evidence = pathlib.Path("test-results/codex-macos")
+          host = json.loads((evidence / "host.json").read_text())
+          os_info = "; ".join((evidence / "os.txt").read_text().splitlines())
+          compiler = (evidence / "compiler.txt").read_text().splitlines()[0]
+          message = f"platform={host['platform']}; architecture={host['architecture']}; node={host['node']}; {os_info}; compiler={compiler}"
+          message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print(f"::notice title=Native acquisition platform::{message}")
+          PY
       - name: Compile the public native reader with API-visible diagnostics
         run: |
           python3 - <<'PY'

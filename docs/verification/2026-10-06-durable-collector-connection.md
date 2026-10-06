@@ -75,6 +75,12 @@ Convex synchronization, seeding or provider read occurred.
    failed startup. The real CLI regression first timed out with that listener;
    startup now closes acquired resources, exits with status 1, preserves the
    invalid input and emits only its fixed diagnostic.
+6. Fixed now: the actual macOS compiler rejected `st_mtimespec` with strict POSIX
+   feature selection. A failed Darwin build identified the missing extension
+   fields. Apple builds now explicitly enable `_DARWIN_C_SOURCE`; Linux retains
+   its POSIX selection. The 66-test Linux native/accounting/CLI selection passed
+   after the change. The corrected Darwin workflow result remains a separate
+   platform acceptance check.
 
 Independent local review found these issues and reread the fixes. This is
 implementation review, not approval to merge our own PR.
