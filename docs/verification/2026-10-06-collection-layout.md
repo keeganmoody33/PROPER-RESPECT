@@ -44,6 +44,18 @@ Runtime: bundled Node `v24.19.0`. Raw command output remains in `/tmp/proper-res
 
 The browser cases cover correction forms without relationship save, date drafts, explicit private save, optional fields, save locks, lost-response retry identity, snapshot removal, retained originals, delete confirmation, sharing approval, duplicate records, focus navigation, and card styling. The theme checks use the actual Appearance control. The card checks compare all descendant computed colors, fonts, borders, and focus outlines with an equivalent card outside the collection. Axe and horizontal-overflow checks pass in the focused desktop and mobile cases.
 
+## Current-main integration
+
+The reviewed layout was committed as `2e7a6d579d15155df33360924ba44976c806011e`. Parent main `44836dcfb6c8afa22be5b60c43d5428b586b5a0c` was merged at `0f2cefede1b33b5ddc768a33a65932e12be13779`. That main update contains the release Vercel CLI check and snapshot-label reconciliation. The workflow's release-tool smoke step remains intact. All six reviewed source files and 14 captures remain byte-identical. The delivering diff against this main contains exactly 21 files.
+
+Checks repeated on that integrated tree:
+
+- `npm test` passed 1,725 Vitest tests, with two existing skips, and all 121 script tests. Proof: `layout-current-main-full-tests.txt`.
+- `npm run test:e2e -- tests/e2e/inventory.spec.ts tests/e2e/account-setup.spec.ts --workers=2` passed all 43 cases. Proof: `layout-current-main-e2e.txt`.
+- `npm run lint` and `npm run typecheck` passed. Proof: `layout-current-main-lint.txt` and `layout-current-main-typecheck.txt`.
+- `npm run build` passed with the same synthetic configuration. Proof: `layout-current-main-build.txt`.
+- `git diff --check` passed. The generated `next-env.d.ts` and prior observed-date receipt remain unchanged.
+
 ## Screenshot evidence
 
 All 14 captures were inspected. They use synthetic fixtures at 1280px or 390px. The focused editor captures show the copied unsaved date, independent correction form, evidence panel, private save, optional disclosure, and saved decisions. The native date control remains visible in dark mode.
