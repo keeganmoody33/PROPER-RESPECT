@@ -4,25 +4,22 @@ import { useEffect, useId, useState } from "react";
 import { TALLY_CATEGORIES, TALLY_DEFINITIONS, TALLY_LABELS, type TallyCategory, type TallySnapshot } from "@/src/server/request-tally";
 
 type Load = { state: "loading" } | { state: "error" } | { state: "ready"; data: TallySnapshot };
+type CountGroup = "presumed_human" | "automated" | "undeclared";
+const COUNT_LABELS: Record<CountGroup, string> = { presumed_human: "Presumed human", automated: "Automated", undeclared: "Unidentified" };
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function sinceLabel(iso: string | null): string {
-  if (!iso) return "since launch";
+  if (!iso) return "";
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "since launch";
-  return `since ${date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" })}`;
+  if (Number.isNaN(date.getTime())) return "";
+  return `since ${date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", timeZone: "America/New_York" })}`;
 }
 
-/**
- * Footer tally: page requests served to presumed humans vs automated clients,
- * counted on the server and read from /api/tally. The breakdown opens inline
- * below the row so it never covers the page. Hidden if the count is unavailable.
- */
 export function RequestTally() {
   const [load, setLoad] = useState<Load>({ state: "loading" });
-  const [human, setHuman] = useState(true);
+  const [group, setGroup] = useState<CountGroup>("presumed_human");
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<TallyCategory | null>(null);
   const panelId = useId();
@@ -38,29 +35,28 @@ export function RequestTally() {
 
   if (load.state === "error") return null;
   const data = load.state === "ready" ? load.data : null;
-  const total = data ? data.presumedHuman + data.automated : 0;
-  const value = data ? (human ? data.presumedHuman : data.automated) : null;
+  const total = data ? data.presumedHuman + data.automated + data.unidentified : 0;
+  const value = data ? (group === "presumed_human" ? data.presumedHuman : group === "undeclared" ? data.unidentified : data.automated) : null;
   const pct = (n: number) => (total > 0 ? `${Math.round((n / total) * 100)}%` : "0%");
   const since = sinceLabel(data?.since ?? null);
-  const line = value === null ? "" : `${fmt(value)} ${human ? "presumed human" : "automated"} requests ${since}, ${pct(value)} of all traffic`;
+  const dateSuffix = since ? ` ${since}` : "";
+  const line = value === null ? "" : `${fmt(value)} ${COUNT_LABELS[group].toLowerCase()} requests${dateSuffix}, ${pct(value)} of counted page requests`;
   const rows = data
     ? [...TALLY_CATEGORIES].sort((a, b) => (a === "presumed_human" ? -1 : b === "presumed_human" ? 1 : data.byCategory[b] - data.byCategory[a]))
     : [];
   const max = data ? Math.max(1, ...TALLY_CATEGORIES.map(c => data.byCategory[c])) : 1;
-  const selected: TallyCategory = picked ?? (human ? "presumed_human" : rows.find(c => c !== "presumed_human") ?? "undeclared");
+  const selected: TallyCategory = picked ?? (group === "automated" ? rows.find(c => c !== "presumed_human" && c !== "undeclared") ?? "unattributed_automation" : group);
 
   return <div className="site-tally">
     <span className="site-tally-live" aria-live="polite">{line}</span>
     <div className="site-tally-row">
-      <span><span className="site-tally-label">Requests served {since}</span></span>
+      <span><span className="site-tally-label">Requests served{dateSuffix}</span></span>
       <span className="site-tally-controls">
         <span role="group" aria-label="Count to show" className="site-tally-switch">
-          <button type="button" aria-pressed={human} onClick={() => { setHuman(true); setPicked(null); }}>Humans</button>
-          <span aria-hidden="true">/</span>
-          <button type="button" aria-pressed={!human} onClick={() => { setHuman(false); setPicked(null); }}>Not humans</button>
+          {(Object.keys(COUNT_LABELS) as CountGroup[]).map(key => <button key={key} type="button" aria-pressed={group === key} onClick={() => { setGroup(key); setPicked(null); }}>{COUNT_LABELS[key]}</button>)}
         </span>
         <button type="button" className="site-tally-count" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-controls={panelId} disabled={!data}>
-          <span className="site-tally-live">{human ? "Presumed human requests" : "Automated requests"}</span>
+          <span className="site-tally-live">{COUNT_LABELS[group]} requests</span>
           <strong>{value === null ? "Counting" : fmt(value)}</strong>{" "}
           <span>{open ? "Close" : "Breakdown"}</span>
         </button>
@@ -69,7 +65,7 @@ export function RequestTally() {
     {open && data ? <div id={panelId} className="site-tally-panel">
       <ul aria-label="Requests by type">
         {rows.map(c => {
-          const active = c === "presumed_human" ? human : !human;
+          const active = c === "presumed_human" || c === "undeclared" ? group === c : group === "automated";
           return <li key={c}>
             <button type="button" aria-pressed={c === selected} data-active={active} onClick={() => setPicked(c)} onFocus={() => setPicked(c)} onMouseEnter={() => setPicked(c)}>
               <span>{capitalize(TALLY_LABELS[c])}</span>
@@ -81,11 +77,11 @@ export function RequestTally() {
       </ul>
       <div className="site-tally-detail">
         <div className="site-tally-summary">
-          <span>proper-respect.com has served {fmt(total)} page requests {since}</span>
-          <span>{pct(data.presumedHuman)} presumed human · {pct(data.automated)} automated</span>
+          <span>proper-respect.com has served {fmt(total)} page requests{dateSuffix}</span>
+          <span>{pct(data.presumedHuman)} presumed human · {pct(data.automated)} automated · {pct(data.unidentified)} unidentified</span>
         </div>
         <p><strong>{capitalize(TALLY_LABELS[selected])}.</strong> {capitalize(TALLY_DEFINITIONS[selected])}<br /><span className="site-tally-muted">Spec id: {selected}</span></p>
-        <p className="site-tally-muted">Counted on the server for every page request and classified by user agent. Nothing is network verified yet, so a bot that claims to be a browser counts as human. Assets and API calls excluded. No IPs or personal data are stored.</p>
+        <p className="site-tally-muted">Eligible page requests are classified by declared user agent. Identity is not verified, so automation claiming to be a browser counts as presumed human. Assets, API calls and prefetches are excluded; failed writes can drop requests. The tally stores category totals and a start timestamp, without IP addresses, account identifiers, paths or raw user agents.</p>
       </div>
     </div> : null}
   </div>;

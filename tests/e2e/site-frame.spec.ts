@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
 
 for (const width of [1440, 460, 390, 320]) test(`Origins and branded footer remain usable at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
@@ -40,7 +41,8 @@ test("Origins nesting preserves existing public handle routes", async ({ page, r
 const TALLY = {
   since: "2026-10-06T12:00:00.000Z",
   presumedHuman: 1200,
-  automated: 340,
+  automated: 335,
+  unidentified: 5,
   byCategory: {
     presumed_human: 1200,
     search_engine_crawler: 120,
@@ -60,9 +62,10 @@ for (const width of [1440, 320]) test(`Footer tally opens its breakdown inline a
   await page.setViewportSize({ width, height: 900 });
   await page.goto("/");
   const tally = page.locator(".site-footer .site-tally");
-  await expect(tally.getByText("Requests served since Oct 6")).toBeVisible();
-  const humans = tally.getByRole("button", { name: "Humans", exact: true });
-  const bots = tally.getByRole("button", { name: "Not humans", exact: true });
+  await expect(tally.getByText("Requests served since Oct 6, 2026")).toBeVisible();
+  const humans = tally.getByRole("button", { name: "Presumed human", exact: true });
+  const bots = tally.getByRole("button", { name: "Automated", exact: true });
+  const unidentified = tally.getByRole("button", { name: "Unidentified", exact: true });
   await expect(humans).toHaveAttribute("aria-pressed", "true");
   const count = tally.locator(".site-tally-count");
   await expect(count).toHaveAccessibleName("Presumed human requests 1,200 Breakdown");
@@ -70,11 +73,43 @@ for (const width of [1440, 320]) test(`Footer tally opens its breakdown inline a
   await expect(count).toHaveAttribute("aria-expanded", "true");
   const panel = tally.locator(".site-tally-panel");
   await expect(panel.getByRole("list", { name: "Requests by type" }).getByRole("button")).toHaveCount(10);
-  await expect(panel.getByText("proper-respect.com has served 1,540 page requests since Oct 6")).toBeVisible();
+  await expect(panel.getByText("proper-respect.com has served 1,540 page requests since Oct 6, 2026")).toBeVisible();
   await bots.click();
   await expect(bots).toHaveAttribute("aria-pressed", "true");
-  await expect(count).toHaveAccessibleName("Automated requests 340 Close");
+  await expect(count).toHaveAccessibleName("Automated requests 335 Close");
+  await unidentified.click();
+  await expect(unidentified).toHaveAttribute("aria-pressed", "true");
+  await expect(count).toHaveAccessibleName("Unidentified requests 5 Close");
+  await expect(panel.getByText("Spec id: undeclared")).toBeVisible();
   await panel.getByRole("button", { name: /Link preview/ }).focus();
   await expect(panel.getByText("Spec id: link_preview")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+for (const since of [null, "invalid-date"]) test(`Footer tally does not invent a start date for ${since}`, async ({ page }) => {
+  await page.route("**/api/tally", route => route.fulfill({ json: { ...TALLY, since } }));
+  await page.goto("/");
+  const tally = page.locator(".site-footer .site-tally");
+  await expect(tally.getByText("Requests served", { exact: true })).toBeVisible();
+  await expect(tally.getByText(/since launch/)).toHaveCount(0);
+});
+
+for (const width of [1440, 320]) for (const theme of ["light", "dark"]) test(`Footer tally keyboard focus and theme at ${width}px ${theme}`, async ({ page }) => {
+  await page.route("**/api/tally", route => route.fulfill({ json: TALLY }));
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Appearance" }).first().selectOption(theme);
+  const tally = page.locator(".site-footer .site-tally");
+  const count = tally.locator(".site-tally-count");
+  await count.click();
+  const unidentified = tally.getByRole("button", { name: "Unidentified", exact: true });
+  await unidentified.focus();
+  await page.keyboard.press("Enter");
+  await expect(count).toHaveAccessibleName("Unidentified requests 5 Close");
+  expect(await unidentified.evaluate(button => getComputedStyle(button).outlineWidth)).toBe("3px");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const date = new Date().toISOString().slice(0, 10);
+  const directory = `docs/verification/${date}-request-tally-assets`;
+  await mkdir(directory, { recursive: true });
+  await tally.screenshot({ path: `${directory}/footer-${width}-${theme}.png` });
 });

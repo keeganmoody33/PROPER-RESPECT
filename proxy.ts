@@ -8,7 +8,6 @@ const clerkRoute = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   ? clerkMiddleware((_auth, request) => homepageRepresentation(request))
   : null;
 
-/** Counts the page request for the footer tally (without delaying it), then routes as before. */
 export default function proxy(request: NextRequest, event: NextFetchEvent) {
   if (typeof event?.waitUntil === "function" && isCountablePageRequest(request.method, request.nextUrl.pathname, request.headers)) {
     event.waitUntil(recordHit(classifyUserAgent(request.headers.get("user-agent"))));

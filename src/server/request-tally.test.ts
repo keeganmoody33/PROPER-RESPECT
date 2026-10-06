@@ -52,7 +52,8 @@ describe("toSnapshot", () => {
   it("sums automated categories and ignores junk", () => {
     const snap = toSnapshot({ presumed_human: "10", ai_training_crawler: 3, undeclared: "2", junk: 99, monitoring: "x" }, null);
     expect(snap.presumedHuman).toBe(10);
-    expect(snap.automated).toBe(5);
+    expect(snap.automated).toBe(3);
+    expect(snap.unidentified).toBe(2);
     expect(snap.byCategory.monitoring).toBe(0);
   });
 });
@@ -97,13 +98,24 @@ describe("tally store", () => {
   it("returns null without configuration", async () => {
     expect(await readTally({})).toBeNull();
   });
+
+  it("never reads or writes a provider in the synthetic public fixture", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify([{ result: [] }, { result: null }])));
+    vi.stubGlobal("fetch", fetchMock);
+    const fixtureEnv = { ...env, PROPER_RESPECT_E2E_REFERENCE: "1" };
+    await recordHit("presumed_human", fixtureEnv);
+    expect(await readTally(fixtureEnv)).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("proxy counting", () => {
-  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
+  afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); });
   const loadProxy = async () => {
     vi.resetModules();
     vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "");
+    vi.stubEnv("PROPER_RESPECT_E2E_REFERENCE", "1");
+    for (const key of ["KV_REST_API_URL", "KV_REST_API_TOKEN", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"]) vi.stubEnv(key, "");
     return (await import("../../proxy")).default;
   };
 
@@ -120,5 +132,19 @@ describe("proxy counting", () => {
     const waitUntil = vi.fn();
     await proxy(new NextRequest("https://request.example/api/tally"), { waitUntil } as never);
     expect(waitUntil).not.toHaveBeenCalled();
+  });
+
+  it("isolates the proxy unit fixture from inherited store credentials", async () => {
+    vi.stubEnv("KV_REST_API_URL", "https://synthetic-kv.example");
+    vi.stubEnv("KV_REST_API_TOKEN", "synthetic-canary");
+    vi.stubEnv("VERCEL_ENV", "production");
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify([{ result: 1 }, { result: 1 }])));
+    vi.stubGlobal("fetch", fetchMock);
+    const proxy = await loadProxy();
+    const pending: Promise<unknown>[] = [];
+    await proxy(new NextRequest("https://request.example/about/origins"), { waitUntil: (promise: Promise<unknown>) => pending.push(promise) } as never);
+    await Promise.all(pending);
+    expect(pending).toHaveLength(1);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

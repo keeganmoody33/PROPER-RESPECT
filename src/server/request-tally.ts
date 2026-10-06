@@ -1,6 +1,6 @@
 /**
- * Request tally: classify each page request as presumed human or as one kind
- * of automated client, from its User-Agent alone.
+ * Request tally: classify identified page requests from User-Agent claims,
+ * retaining unidentified requests separately.
  *
  * Pure functions only (no I/O) so they can be unit tested. Storage lives in
  * src/server/tally-store.ts. Category ids follow the bot-tally taxonomy.
@@ -35,7 +35,7 @@ export const TALLY_LABELS: Record<TallyCategory, string> = {
   link_preview: "link preview",
   monitoring: "monitoring",
   unattributed_automation: "unattributed automation",
-  undeclared: "undeclared",
+  undeclared: "unidentified",
 };
 
 export const TALLY_DEFINITIONS: Record<TallyCategory, string> = {
@@ -43,15 +43,14 @@ export const TALLY_DEFINITIONS: Record<TallyCategory, string> = {
   search_engine_crawler: "Google, Bing and others mapping the web for search.",
   ai_training_crawler: "collects pages to train AI models.",
   ai_search_indexer: "indexes pages so an AI answer engine can cite them.",
-  ai_assistant_fetch: "an AI fetched this page because a person asked it about you.",
+  ai_assistant_fetch: "identifies itself as an AI assistant fetch client. this does not establish a person's request or endorsement.",
   seo_crawler: "link and ranking audit tools.",
-  link_preview: "someone shared a link and an app fetched the preview card.",
+  link_preview: "identifies itself as a link-preview client. this does not establish that a person shared the link.",
   monitoring: "uptime and performance checks.",
   unattributed_automation: "scripts and headless browsers with no declared purpose.",
   undeclared: "sent no identification at all.",
 };
 
-// Checked in order; the first match wins. Patterns match the lowercased UA.
 const RULES: Array<[Exclude<TallyCategory, "presumed_human" | "undeclared">, RegExp]> = [
   ["ai_assistant_fetch", /chatgpt-user|claude-user|perplexity-user|mistralai-user|meta-externalfetcher|gemini-deep-research|google-agent/],
   ["ai_search_indexer", /oai-searchbot|claude-searchbot|perplexitybot|youbot|duckassistbot|amzn-searchbot|phindbot/],
@@ -90,7 +89,6 @@ export function classifyUserAgent(userAgent: string | null | undefined): TallyCa
   return "presumed_human";
 }
 
-// Framework, auth and machine-discovery endpoints the proxy also sees. None of them is a page.
 const NON_PAGE_PREFIXES = ["/api/", "/trpc", "/_next/", "/_vercel/", "/__clerk", "/.well-known/"];
 const NON_PAGE_FILES = new Set(["/robots.txt", "/sitemap.xml", "/llms.txt", "/favicon.ico", "/icon", "/apple-icon", "/share-image.png"]);
 
@@ -114,6 +112,7 @@ export type TallySnapshot = {
   since: string | null;
   presumedHuman: number;
   automated: number;
+  unidentified: number;
   byCategory: Record<TallyCategory, number>;
 };
 
@@ -124,6 +123,6 @@ export function toSnapshot(raw: Record<string, unknown> | null | undefined, sinc
     const value = Number(raw?.[category] ?? 0);
     byCategory[category] = Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
   }
-  const automated = TALLY_CATEGORIES.filter(c => c !== "presumed_human").reduce((sum, c) => sum + byCategory[c], 0);
-  return { since, presumedHuman: byCategory.presumed_human, automated, byCategory };
+  const automated = TALLY_CATEGORIES.filter(c => c !== "presumed_human" && c !== "undeclared").reduce((sum, c) => sum + byCategory[c], 0);
+  return { since, presumedHuman: byCategory.presumed_human, automated, unidentified: byCategory.undeclared, byCategory };
 }

@@ -3,12 +3,13 @@ import { toSnapshot, type TallyCategory, type TallySnapshot } from "@/src/server
 /**
  * Running totals for the footer tally in Upstash Redis, over its REST API.
  * Production writes `pr:tally:v1`; every other environment writes
- * `pr:preview:tally:v1`, so test traffic never touches the public count.
+ * `pr:preview:tally:v1`. The synthetic public fixture disables the store.
  * The store holds category counts only: no IPs, paths or user agents.
  */
 type Env = Record<string, string | undefined>;
 
 function config(env: Env = process.env) {
+  if (env.PROPER_RESPECT_E2E_REFERENCE === "1") return null;
   const url = (env.KV_REST_API_URL ?? env.UPSTASH_REDIS_REST_URL)?.trim();
   const token = (env.KV_REST_API_TOKEN ?? env.UPSTASH_REDIS_REST_TOKEN)?.trim();
   if (!url || !token) return null;
@@ -37,7 +38,7 @@ export async function recordHit(category: TallyCategory, env?: Env): Promise<voi
   try {
     await pipeline([["HINCRBY", "$counts", category, 1], ["SETNX", "$since", new Date().toISOString()]], env);
   } catch {
-    // A dropped hit is acceptable; a failed page is not.
+    return;
   }
 }
 

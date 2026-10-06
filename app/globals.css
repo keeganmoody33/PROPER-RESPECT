@@ -1225,13 +1225,12 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .site-theme .theme-selector > span { position: absolute; clip-path: inset(50%); height: 1px; width: 1px; overflow: hidden; }
 }
 
-/* Footer request tally: one slim row; the breakdown opens inline below it. */
 .site-tally { border-top: 1px solid var(--line); margin-top: 1.2rem; font-family: var(--homepage-mono), monospace; font-size: .7rem; font-weight: 500; color: var(--secondary); }
 .site-tally-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .site-tally-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1.25rem; min-height: 44px; }
 .site-tally-label { letter-spacing: .08em; text-transform: uppercase; }
 .site-tally-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
-.site-tally-switch { display: flex; align-items: center; gap: 2px; }
+.site-tally-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
 .site-tally button { all: unset; box-sizing: border-box; cursor: pointer; }
 .site-tally button:hover { color: var(--respect-red); }
 .site-tally button:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 4px; }
