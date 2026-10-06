@@ -64,6 +64,7 @@ jobs:
       - run: npx playwright test --config playwright.usage-preview.config.ts
       - run: npx playwright test tests/e2e/public-metadata.spec.ts tests/e2e/homepage.spec.ts tests/e2e/public-profile.spec.ts tests/e2e/product-icons.spec.ts tests/e2e/discovery.spec.ts tests/e2e/webmcp-contract.spec.ts tests/e2e/trust-pages.spec.ts tests/e2e/site-frame.spec.ts tests/e2e/site-identity.spec.ts tests/e2e/inventory.spec.ts tests/e2e/security-headers.spec.ts
       - run: npx playwright test --config tests/e2e/trust-preview.config.ts
+      - run: npx playwright test --config tests/e2e/searchable-analytics.config.ts
       - name: Verify production homepage representation negotiation
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ""

@@ -83,3 +83,14 @@ it.each(["HTML", "Markdown"] as const)("discloses the same aggregate tally scope
   expect(trustMetadata("privacy").description).toContain("aggregate request tally");
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it("distinguishes isolated Searchable public visits from PostHog without promising AI referral measurement", () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
+  const markdown = trustMarkdown("privacy");
+  expect(markdown).toContain("isolated browser frame");
+  expect(markdown).toContain("without query strings or fragments");
+  expect(markdown).toContain("Signed-in, sign-in, sign-up and onboarding routes are excluded");
+  expect(markdown).toContain("does not measure referrals from AI services");
+  expect(markdown).toContain("PostHog");
+  expect(trustDocuments.privacy.updatedAt).toBe("2026-10-06");
+});
