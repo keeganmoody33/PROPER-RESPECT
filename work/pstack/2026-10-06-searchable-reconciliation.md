@@ -47,3 +47,6 @@ Three native feasibility scenarios and raw intercepted events are preserved at `
 ## Reserved-root correction verification — 2026-10-06 UTC
 
 GREEN after the independent finding: full 1,775 Vitest tests passed / 2 retained-real-source tests skipped, plus 121 Node script tests passed. Actual SDK browser suite: 3/3 passed, including direct navigation of excluded frame paths (HTTP 404, empty body and zero tracker requests) plus desktop/mobile native lifecycle. Direct Chromium empty-404 navigation errors are accepted only after the independent HTTP assertions; no implementation or verification gate was weakened. The same two durable native-batch JSON files were refreshed with these final source captures.
+
+- Independent internal functional and changed-comment review PASS at the corrected 24-file manifest; finding resolved. Functional commit c74deaf.
+- Refreshed main1dd933 cleanly without analytics source changes, preserving release CLI verification and analytics browser invocation in the overlapping workflow. Parent will check/merge the final exact head under strict current-base CI.

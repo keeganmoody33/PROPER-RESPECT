@@ -64,3 +64,11 @@ The new direct-navigation browser case observed Chromium's `net::ERR_HTTP_RESPON
 ## Reserved-root correction verification — 2026-10-06 UTC
 
 GREEN after the independent finding: full 1,775 Vitest tests passed / 2 retained-real-source tests skipped, plus 121 Node script tests passed. Actual SDK browser suite: 3/3 passed, including direct navigation of excluded frame paths (HTTP 404, empty body and zero tracker requests) plus desktop/mobile native lifecycle. Direct Chromium empty-404 navigation errors are accepted only after the independent HTTP assertions; no implementation or verification gate was weakened. The same two durable native-batch JSON files were refreshed with these final source captures.
+
+## Final base integration — 2026-10-06 UTC
+
+Independent internal review passed the complete 24-file manifest `e3d0b61babf7050adb3e9f49f2911048c703a05d94fcd716d71f7bec19fc19bf`; report `/tmp/proper-respect-pickup-20261006/searchable-port-review.md`. Functional correction committed as `c74deaf` before refreshing the base.
+
+Main `1dd933182193f4b38c16762b8890885adcf7aa49` merged cleanly into the branch. Analytics functional source remained unchanged; the only overlapping file was `.github/workflows/verify.yml`, auto-merged to retain both the credential-free pinned release CLI check (`npm ci --ignore-scripts --prefix release-tools`, `node scripts/check-release-cli.mjs`) and the isolated analytics browser invocation. Final workflow SHA-256 `62f32683e00f0a93e94c348b907197b08f963fa1b775691ab407424713127065`. Current main's collection/release-CLI changes remain intact.
+
+The local analytics checks above bind the stable analytics source before this clean base refresh; current-head hosted strict checks are still required and are not inferred from previous-head results. No backend/provider read, deployment, protection bypass or publication occurred.
