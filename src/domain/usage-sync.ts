@@ -14,7 +14,7 @@ export const numericEvidenceSchema = z.discriminatedUnion("kind", [
 ]);
 export type NumericEvidence = z.infer<typeof numericEvidenceSchema>;
 export const grantScopeSchema = z.strictObject({
-  sourceKey: digestSchema, deviceDigest: digestSchema, context: z.enum(["personal", "work"]),
+  sourceKey: digestSchema, deviceDigest: digestSchema, context: z.enum(["personal", "work", "unclassified"]),
   accountIdentity: z.literal("unverified"), provider: z.literal("codex"),
   start: historyTimestampSchema, end: historyTimestampSchema, expiresAt: historyTimestampSchema,
   retainOnDisconnect: z.boolean(), destination: z.literal("https://utmost-mongoose-374.convex.cloud"),

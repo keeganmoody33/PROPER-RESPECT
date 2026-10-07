@@ -82,6 +82,14 @@ test("a prepared source cannot change its device identity", async () => {
     codeDigest: digest("3".repeat(64)) })).rejects.toThrow("separate source");
 });
 
+test("mixed history remains unclassified and cannot reuse a personal source", async () => {
+  const f = await fixture();
+  const mixed = { ...scope, context: "unclassified", sourceKey: "9".repeat(64) };
+  const grantId = await f.owner.mutation(approveUsage, { scopeJson: JSON.stringify(mixed), codeDigest: digest("4".repeat(64)) });
+  expect((await f.owner.query(listUsage, {})).find(row => row.grantId === grantId)?.scope.context).toBe("unclassified");
+  await expect(f.owner.mutation(approveUsage, { scopeJson: JSON.stringify({ ...mixed, sourceKey: scope.sourceKey }), codeDigest: digest("5".repeat(64)) })).rejects.toThrow("separate source");
+});
+
 test("expiry reached while verifying a proof prevents evidence and receipt writes", async () => {
   const f = await fixture();
   const verify = crypto.subtle.verify.bind(crypto.subtle);

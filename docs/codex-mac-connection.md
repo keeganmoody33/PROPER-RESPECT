@@ -1,5 +1,12 @@
 # Codex Mac connection
 
+Local Mac verification on 2026-10-07 supersedes the acquisition constraints below:
+see the [real Mac receipt](verification/2026-10-07-real-mac-connection.md).
+The companion now streams bounded pages, discards content locally, splits dense
+usage windows, and reports excluded malformed files. Mixed roots can remain
+explicitly unclassified. Real local acquisition passed; development receiver
+deployment and end-to-end lifecycle acceptance remain pending.
+
 This branch implements the development connection. It has not passed the approved
 real-Mac acceptance gate. The Linux-hosted synthetic demo exercises the actual
 connection panel, native reader, numeric collector, backend mutations, disk queue,

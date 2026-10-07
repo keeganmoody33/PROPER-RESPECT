@@ -10,7 +10,7 @@ export function UsageConnectionsPanel({ grants, approve, disconnect, erase, evid
   grants: FunctionReturnType<ConnectionsAPI["list"]> | undefined;
   approve: Call<"approve">; disconnect: Call<"disconnect">; erase: Call<"erase">; evidence: Call<"evidence">;
 }) {
-  const [source, setSource] = useState(""), [device, setDevice] = useState(""), [context, setContext] = useState("personal");
+  const [source, setSource] = useState(""), [device, setDevice] = useState(""), [context, setContext] = useState("unclassified");
   const [start, setStart] = useState(""), [expires, setExpires] = useState(""), [retain, setRetain] = useState(true);
   const [code, setCode] = useState<string | null>(null), [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false), [insight, setInsight] = useState<ReturnType<typeof privateUsageTotals> | null>(null);
@@ -36,7 +36,7 @@ export function UsageConnectionsPanel({ grants, approve, disconnect, erase, evid
   return <div className="connection-panel">
     <p>Codex local token history · Private · Development</p>
     <h1>Connect your Codex history</h1>
-    <p>Prepare the helper on your approved Mac. Copy its source identity and device digest below. Keep personal and work history in separate sources.</p>
+    <p>Prepare the helper on your approved Mac. Copy its source identity and device digest below. Keep personal and work history in separate sources. Choose unclassified for mixed history whose context has not been established.</p>
     <form onSubmit={async event => {
       event.preventDefault(); if (busy) return; setBusy(true); setMessage(""); setCode(null);
       try {
@@ -52,7 +52,7 @@ export function UsageConnectionsPanel({ grants, approve, disconnect, erase, evid
     }}>
       <label>Source identity<input required value={source} onChange={event => setSource(event.target.value)} pattern="[a-f0-9]{64}" /></label>
       <label>Device digest<input required value={device} onChange={event => setDevice(event.target.value)} pattern="[a-f0-9]{64}" /></label>
-      <label>Account context<select value={context} onChange={event => setContext(event.target.value)}><option value="personal">Personal</option><option value="work">Work, separately authorized</option></select></label>
+      <label>Account context<select value={context} onChange={event => setContext(event.target.value)}><option value="unclassified">Unclassified mixed history</option><option value="personal">Personal</option><option value="work">Work, separately authorized</option></select></label>
       <label>History starts, UTC<input required type="date" value={start} onChange={event => setStart(event.target.value)} /></label>
       <label>Access expires, UTC, within 31 days<input required type="date" value={expires} onChange={event => setExpires(event.target.value)} /></label>
       <label><input type="checkbox" checked={retain} onChange={event => setRetain(event.target.checked)} />Retain imported history after disconnect, while I remain authorized to keep it</label>

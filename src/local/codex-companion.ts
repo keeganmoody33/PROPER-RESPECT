@@ -6,8 +6,8 @@ import { z } from "zod";
 import { digest, digestSchema, grantScopeSchema, secretSchema, usagePacketSchema, packetId, numericEvidenceSchema,
   type GrantScope, type UsagePacket } from "../domain/usage-sync.ts";
 import { canonicalJson } from "../domain/canonical-json.ts";
-import { collectCodexRolloutHistory } from "./codex-history-collector.ts";
-import { readNativeCodexPage } from "./codex-native-reader.ts";
+import { collectCodexHistoryWindows } from "./codex-history-windows.ts";
+import { readNativeCodexUsagePage } from "./codex-stream-reader.ts";
 import { devicePrivateKeySchema, deviceDigest, devicePublicKey } from "../domain/device-proof.ts";
 import { createDeviceKey } from "./device-signature.ts";
 
@@ -15,6 +15,7 @@ export const stateSchema = z.strictObject({ version: z.literal(1), privateKey: d
   directory: z.string().startsWith("/").max(4096), grantId: z.string().nullable(), scope: grantScopeSchema.nullable(),
   sequence: z.number().int().nonnegative(), pending: z.array(usagePacketSchema).max(400),
   acknowledgedReviews: z.array(z.strictObject({ position: digestSchema, review: digestSchema })).max(4096).default([]),
+  lastScan: z.strictObject({ scannedFiles: z.number().int().nonnegative(), skippedFiles: z.number().int().nonnegative() }).optional(),
 });
 export type CompanionState = z.infer<typeof stateSchema>;
 export type SyncTransport = {
@@ -54,7 +55,7 @@ export async function loadCompanionState(path: string): Promise<CompanionState> 
 
 export async function syncCompanion(input: { state: CompanionState; save: (state: CompanionState) => Promise<void>;
   transport: SyncTransport; signal: AbortSignal; now?: () => number;
-  read?: typeof readNativeCodexPage }): Promise<CompanionState> {
+  read?: typeof readNativeCodexUsagePage }): Promise<CompanionState> {
   let state = stateSchema.parse(input.state);
   const now = input.now ?? Date.now;
   const check = async () => {
@@ -84,37 +85,43 @@ export async function syncCompanion(input: { state: CompanionState; save: (state
   if (!scope) throw new Error("Approval required.");
   const end = Math.min(Date.parse(scope.end), now());
   let fileOffset: number | null = 0;
+  let scannedFiles = 0, skippedFiles = 0;
   while (fileOffset !== null) {
     await check();
     const remaining = Math.min(5000, Date.parse(scope.expiresAt) - now());
     if (remaining <= 0) throw new Error("Approval expired.");
     const signal = AbortSignal.any([input.signal, AbortSignal.timeout(Math.ceil(remaining))]);
-    const directory = await (input.read ?? readNativeCodexPage)({ directory: state.directory, signal, offset: fileOffset });
+    const directory = await (input.read ?? readNativeCodexUsagePage)({ directory: state.directory, signal, offset: fileOffset });
+    scannedFiles += directory.scannedFiles; skippedFiles += directory.ignoredEntries;
     await check();
     for (let start = Date.parse(scope.start); start < end; start += 7 * 86400_000) {
-      const packets: UsagePacket[] = [];
-      const window = { start: new Date(start).toISOString(), end: new Date(Math.min(end, start + 7 * 86400_000)).toISOString() };
-      const history = collectCodexRolloutHistory({ window, signal: input.signal }, directory.files);
-      const rows = [...history.responses.rows.map(row => ({ ...row, kind: "response" })), ...history.legacy.rows.map(row => ({ ...row, kind: "legacy" }))]
-        .map(row => numericEvidenceSchema.parse(row));
-      // The final window grows with time. Its numeric rows, rather than the scan
-      // time, determine whether anything changed. Cache only after every ACK.
-      const position = digest(canonicalJson([state.grantId, fileOffset, window.start]));
-      const review = digest(canonicalJson(rows));
-      if (state.acknowledgedReviews.some(item => item.position === position && item.review === review)) continue;
-      for (let offset = 0; offset < Math.max(1, rows.length); offset += 200) packets.push(usagePacketSchema.parse({
-        version: "proper-respect-codex-sync-v1", sourceKey: state.sourceKey, sequence: state.sequence + packets.length + 1,
-        ...window, coverage: "partial", rows: rows.slice(offset, offset + 200),
-      }));
-      await check();
-      const pending = stateSchema.parse({ ...state, pending: packets });
-      await input.save(pending); state = pending;
-      await flush();
-      const acknowledgedReviews = [...state.acknowledgedReviews.filter(item => item.position !== position), { position, review }].slice(-4096);
-      const acknowledged = { ...state, acknowledgedReviews };
-      await input.save(acknowledged); state = acknowledged;
+      const requestedWindow = { start: new Date(start).toISOString(), end: new Date(Math.min(end, start + 7 * 86400_000)).toISOString() };
+      for (const history of collectCodexHistoryWindows({ window: requestedWindow, signal: input.signal }, directory.files)) {
+        const packets: UsagePacket[] = [];
+        const window = history.window;
+        const rows = [...history.responses.rows.map(row => ({ ...row, kind: "response" })), ...history.legacy.rows.map(row => ({ ...row, kind: "legacy" }))]
+          .map(row => numericEvidenceSchema.parse(row));
+        // The final window grows with time. Its numeric rows, rather than the scan
+        // time, determine whether anything changed. Cache only after every ACK.
+        const position = digest(canonicalJson([state.grantId, fileOffset, window.start]));
+        const review = digest(canonicalJson(rows));
+        if (state.acknowledgedReviews.some(item => item.position === position && item.review === review)) continue;
+        for (let offset = 0; offset < Math.max(1, rows.length); offset += 200) packets.push(usagePacketSchema.parse({
+          version: "proper-respect-codex-sync-v1", sourceKey: state.sourceKey, sequence: state.sequence + packets.length + 1,
+          ...window, coverage: "partial", rows: rows.slice(offset, offset + 200),
+        }));
+        await check();
+        const pending = stateSchema.parse({ ...state, pending: packets });
+        await input.save(pending); state = pending;
+        await flush();
+        const acknowledgedReviews = [...state.acknowledgedReviews.filter(item => item.position !== position), { position, review }].slice(-4096);
+        const acknowledged = { ...state, acknowledgedReviews };
+        await input.save(acknowledged); state = acknowledged;
+      }
     }
     fileOffset = directory.nextOffset;
   }
+  state = { ...state, lastScan: { scannedFiles, skippedFiles } };
+  await input.save(state);
   return state;
 }

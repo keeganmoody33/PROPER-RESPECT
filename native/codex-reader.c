@@ -20,15 +20,22 @@
 #include <errno.h>
 
 #define MAX_FILES 64
+#ifdef PR_STREAM_READER
+#define MAX_BYTES (512 * 1024 * 1024)
+#define MAX_FILE (512 * 1024 * 1024)
+#else
 #define MAX_BYTES (32 * 1024 * 1024)
 #define MAX_FILE (4 * 1024 * 1024)
 static unsigned char *contents[MAX_FILES];
 static uint32_t sizes[MAX_FILES];
-static unsigned files, entries, lines;
+static unsigned lines;
+#endif
+static unsigned files, entries;
 static unsigned seen, skip;
 static int pageFull;
 static size_t bytes;
 static int flags = O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC;
+static void word(uint32_t n);
 #ifdef PR_READER_TEST_HOOKS
 static void mutate(int parent, const char *name) {
   if (getenv("PR_TEST_MUTATE")) {
@@ -58,6 +65,20 @@ static void file(int parent, const char *name, struct stat expected) {
   int fd = openat(parent, name, flags);
   struct stat before, after, current;
   if (fd < 0 || fstat(fd, &before) || !S_ISREG(before.st_mode) || !same(expected,before)) fail();
+#ifdef PR_STREAM_READER
+  /* Bytes stay in a local pipe. The caller releases no projection until exit 0,
+   * after file and ancestor checks, and discards content while streaming. */
+  word((uint32_t)before.st_size);
+  unsigned char buf[65536];
+  size_t used = 0;
+  for (;;) {
+    ssize_t n = read(fd, buf, sizeof(buf));
+    if (n < 0) fail();
+    if (!n) break;
+    used += (size_t)n;
+    if (used > (size_t)before.st_size || fwrite(buf, 1, (size_t)n, stdout) != (size_t)n) fail();
+  }
+#else
   unsigned char *buf = malloc((size_t)before.st_size + 1);
   if (!buf) fail();
   size_t used = 0;
@@ -68,12 +89,16 @@ static void file(int parent, const char *name, struct stat expected) {
     used += (size_t)n;
     if (used > (size_t)before.st_size) fail();
   }
+#endif
 #ifdef PR_READER_TEST_HOOKS
   mutate(parent,name);
 #endif
   if (fstat(fd,&after) || fstatat(parent,name,&current,AT_SYMLINK_NOFOLLOW)
       || !same(before,after) || !same(before,current) || used != (size_t)before.st_size) fail();
   if (close(fd)) fail();
+#ifdef PR_STREAM_READER
+  files++;
+#else
   if (used && buf[used-1] != '\n') fail();
   size_t start = 0;
   for (size_t i = 0; i < used; i++) if (buf[i] == '\n') {
@@ -81,6 +106,7 @@ static void file(int parent, const char *name, struct stat expected) {
     start = i+1;
   }
   contents[files] = buf; sizes[files++] = (uint32_t)used;
+#endif
 }
 static void visit(int fd, unsigned depth) {
   struct stat before, after;
@@ -145,9 +171,15 @@ int main(int argc, char **argv) {
     if (fstat(chain[i],&opened) || fstatat(chain[i-1],names[i-1],&current,AT_SYMLINK_NOFOLLOW)
         || !S_ISDIR(current.st_mode) || !identity(opened,current)) fail();
   }
+#ifdef PR_STREAM_READER
+  word(UINT32_MAX);
+  word(files);
+  word(seen > skip + files ? skip + files : 0);
+#else
   word(files);
   word(seen > skip + files ? skip + files : 0);
   for (unsigned i=0;i<files;i++) { word(sizes[i]); if (fwrite(contents[i],1,sizes[i],stdout) != sizes[i]) fail(); free(contents[i]); }
+#endif
   if (fflush(stdout)) fail();
   for (int i=count-1;i>=0;i--) close(chain[i]);
   free(path);

@@ -57,7 +57,7 @@ try {
         send: packet => client.mutation(makeFunctionReference("usageConnections:ingest"), { grantId: state.grantId, packetJson: JSON.stringify(packet), ...signDeviceMessage(state.privateKey, { operation: "ingest", grantId: state.grantId, packetId: packetId(packet) }) }),
       });
       const save = next => saveCompanionState(statePath, next);
-      const onSynced = state => process.stdout.write(`Private sync acknowledged through packet ${state.sequence}. Coverage remains partial.\n`);
+      const onSynced = state => process.stdout.write(`Private sync acknowledged through packet ${state.sequence}. Coverage remains partial. Scanned ${state.lastScan?.scannedFiles ?? "unknown"} files; excluded ${state.lastScan?.skippedFiles ?? "unknown"} invalid files.\n`);
       if (command === "watch") await watchCompanion({ load: () => loadCompanionState(statePath), save, transport, signal: controller.signal, onSynced,
         onPaused: () => process.stdout.write("Sync paused. Queued numeric history remains on disk; retrying within approval.\n") });
       else onSynced(await syncCompanion({ state, save, transport: transport(state), signal: controller.signal }));

@@ -2,7 +2,7 @@ import { defineTable } from "convex/server";
 import { v } from "convex/values";
 export const usageConnectionTables = {
   usageSources: defineTable({ userId: v.id("users"), sourceKey: v.string(), deviceDigest: v.string(), retainOnDisconnect: v.boolean(),
-    currentGrantId: v.optional(v.id("usageGrants")), context: v.union(v.literal("personal"), v.literal("work")), erasing: v.optional(v.boolean()) })
+    currentGrantId: v.optional(v.id("usageGrants")), context: v.union(v.literal("personal"), v.literal("work"), v.literal("unclassified")), erasing: v.optional(v.boolean()) })
     .index("by_owner_source", ["userId", "sourceKey"]),
   usageGrants: defineTable({ userId: v.id("users"), sourceId: v.id("usageSources"), scopeJson: v.string(),
     codeDigest: v.string(), deviceDigest: v.string(), publicKeyJson: v.optional(v.string()), pairExpiresAt: v.number(), expiresAt: v.number(),
