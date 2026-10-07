@@ -13,8 +13,10 @@ bundle into `codex/real-mac-sync-20261007`. The original checkout at
 - Only destination: `dev:utmost-mongoose-374`.
 - Development Clerk public/secret keys match the same development instance.
   The backend issuer matches, and the `convex` JWT template exists.
-- Live query returned `Could not find public function for 'usageConnections:list'.`
-  No deployment, push, or merge is authorized or performed.
+- Before deployment, the live query returned `Could not find public function for 'usageConnections:list'.`
+  The owner approved receiver-only development deployment on 2026-10-07.
+  The deployed query now exists and rejects unauthenticated access.
+  No Git push or merge is authorized or performed.
 - The owner authorizes all local usage history. Historical account attribution
   remains unverified; mixed history must not be relabeled personal or work.
 
@@ -27,8 +29,8 @@ bundle into `codex/real-mac-sync-20261007`. The original checkout at
 2. Fix now: the grant requires a personal/work label for an entire root, but the
    authorized roots contain mixed contexts. Add an explicit unclassified context;
    preserve isolation from existing personal/work sources and never infer labels.
-3. Held for owner approval: the development receiver is absent. Prepare and verify
-   the concrete candidate before requesting a development-only deployment.
+3. Fixed after owner approval: the development receiver was absent. Deploy only
+   the reviewed receiver while preserving existing backend behavior and tables.
 4. Fix now: the first real scan exceeded the collector's per-window result bound.
    Dense windows now split in time while retaining complete lineage/baselines.
 
@@ -72,27 +74,45 @@ bundle into `codex/real-mac-sync-20261007`. The original checkout at
   `usageConnections` and its four tables are absent. Existing backend content
   must be preserved when preparing the authorized receiver deployment.
 
-## Prepared receiver-only deployment, not executed
+## Approved receiver-only deployment
 
-The private package preserves all 55 deployed module hashes and all 32 existing
-table definitions/indexes. It adds `usageConnections.js`, five required dependency
-chunks, and only `usageSources`, `usageGrants`, `usageEvidence`, `usageReceipts`.
-The generated schema was loaded locally and compared against every existing
-validator and index. Existing authentication and application modules are retained.
-There is no source-data upload or credential in the prepared payload.
+Owner authorization on 2026-10-07: "can you do this for me? I approve".
+Receiver application code corresponds to local commit
+`0aee17a36d7a6ec73737e138c1d39fee2c239542`.
 
-Payload SHA-256:
-`81aaa20c0f373460fdf7b4c9335dc760cb463ff8aebdcbb32ba426a6fc6009c4`.
+The first package was rejected by `start_push` with `CanonicalizationConflict`
+because `schema.js` appeared both as the replacement schema and an unchanged
+module hash. That request did not activate a deployment. The corrected package
+omits the old schema module from unchanged hashes; all 32 existing table
+validators and indexes are retained exactly.
 
-This is a proposal for `dev:utmost-mongoose-374` only. Refresh and compare the live
-module/schema baseline before any approved deployment; changed state invalidates
-this package. No migration, seeding, provider read, recurring installation,
-frontend deployment, Git push, or merge is part of this package.
+The corrected package was deployed at `2026-10-07T10:51:37.794Z` only to
+`dev:utmost-mongoose-374`. Its SHA-256 is
+`3d9ab924833fc190a01453873e78b5023ebea7781a08efe0ab2e84eca33400d0`.
+Fresh module and schema comparisons passed immediately before deployment.
+
+Observed deployment evidence:
+
+```json
+{"existingModulesPreserved":54,"existingTablesPreserved":32,"tablesAfter":36,"moduleDiff":{"added":["usageConnections.js"],"removed":[]},"authDiff":{"added":[],"removed":[]},"cronDiff":{"added":[],"updated":[],"deleted":[]},"removedIndexes":0}
+```
+
+All 54 existing non-schema module hashes were compared after deployment and
+remained identical. The new schema adds only `usageSources`, `usageGrants`,
+`usageEvidence`, and `usageReceipts`. Every pre-existing table definition was
+compared against the server's deployment diff and remained identical.
+
+Application receiver code was uploaded under the explicit deployment approval.
+No prompts, code from Codex history, or stored credentials were uploaded as
+source data. Deployment authentication remained in memory and was sent only to
+the first-party authorization/deployment endpoints. No migration, seeding,
+recurring installation, frontend deployment, Git push, or merge was performed.
 
 ## Acceptance
 
 Real local acquisition and independent modern-response checks passed. Remote
-backfill, updates, restart, and revocation remain unproven. Development deployment
-requires owner approval; the owner's development browser sign-in is also pending.
+backfill, updates, restart, and revocation remain unproven. Development receiver
+deployment is confirmed; the in-app browser owner sign-in is pending. Both local
+source/device identities are prepared, with private keys retained only locally.
 Platform tests do not establish live acceptance. Detailed source evidence and
 configuration remain outside Git.
