@@ -126,8 +126,15 @@ changed-file lint passed.
 Fix now: the long signed-in run exposed `Authentication required` on
 `usageConnections:list`. The page gated only on Clerk state. Client regressions
 confirm it queried while Convex authentication was unresolved or lost. Gate the
-private component on the installed Convex client's confirmed authentication and
-refresh state as well as the Clerk owner. Keep backend ownership checks intact.
+private component on the installed Convex client's confirmed authentication as
+well as the Clerk owner. Keep backend ownership checks intact.
+
+The initial refresh-state gate was superseded: the installed SDK retains
+confirmed authentication while pausing the transport for token refresh.
+Unmounting at that point clears a long private usage read. A RED regression
+confirmed this; retain the same-owner view during transport refresh, while
+unresolved authentication, authentication loss, or Clerk sign-out still
+unmount private queries.
 Five authentication-state regressions passed after the RED run. Typecheck and
 changed-file lint passed. The real signed-in page reloaded successfully.
 

@@ -46,8 +46,8 @@ test("does not retain a query when the Clerk account signs out", () => {
   expect(state.query).not.toHaveBeenCalled();
 });
 
-test("unmounts private queries while a rejected token is being refreshed", () => {
+test("preserves the confirmed owner view while the transport refreshes its token", () => {
   state.convex.isRefreshing = true;
-  renderToStaticMarkup(createElement(UsageConnectionsClient));
-  expect(state.query).not.toHaveBeenCalled();
+  expect(renderToStaticMarkup(createElement(UsageConnectionsClient))).toContain("Private connections ready");
+  expect(state.query).toHaveBeenCalledOnce();
 });

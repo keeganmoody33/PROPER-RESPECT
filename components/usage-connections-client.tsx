@@ -9,7 +9,7 @@ export function UsageConnectionsClient() {
   const convexAuth = useConvexAuth();
   if (!auth.isLoaded) return <p role="status">Loading account…</p>;
   if (!auth.isSignedIn) return <p>Sign in to view and approve private connections.</p>;
-  if (convexAuth.isLoading || convexAuth.isRefreshing || !convexAuth.isAuthenticated) return <p role="status">Connecting private account…</p>;
+  if (convexAuth.isLoading || !convexAuth.isAuthenticated) return <p role="status">Connecting private account…</p>;
   return <Connections key={auth.userId} ownerSubject={auth.userId} />;
 }
 function Connections({ ownerSubject }: { ownerSubject: string }) {
