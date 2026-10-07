@@ -7,10 +7,16 @@ Git patch. Nothing was pushed or published.
 
 This implements supplied-report normalization and a Cursor-owned replacement
 proposal. Acquisition, shared pairing, durable sync, generic measurement import,
-and hosted integration belong to thread
-`01a1127a-5a46-7429-a813-19becb7c40d8`; none of those modules was edited.
+and hosted integration now belong to canonical thread
+`01a114e2-3095-74dd-a6b0-ac5e3728e0e3`; none of those modules was edited.
 This cloud task used visible parallel research, fixture/test, and review threads.
 No Cursor application or live account was connected.
+
+The [collector integration handoff](cursor-collector-integration.md) compares this
+adapter with PR #157 and documents a direct bridge into its existing review
+contract. Use that bridge and shared lifecycle for integration; keep this rich
+report private. The latest local commit and tested patch are reported in the
+task outcome.
 
 ## Use the adapter
 
@@ -168,8 +174,9 @@ characters. There is no unbounded acquisition loop or recurring collector.
 The normalized representation has fixed row fields and bounded values, but its
 JSON can be larger than the source text. The integration owner must enforce its
 own transport size limit without splitting a complete report into additive
-partial snapshots. The existing local-history transport contract does not
-accept this report schema.
+partial snapshots. The shared transport does not accept this rich report schema
+directly. The collector bridge emits a validated sanitized review through the
+existing shared schema, without another receiver or persistence implementation.
 
 Focused command, using the already installed Node 24 runtime:
 
@@ -206,16 +213,22 @@ release.
 
 ## Apply the delivery
 
-Within the same repository, cherry-pick the delivery commit reported in the task
-outcome. For another checkout at the named base, apply the delivered patch:
+Within the same repository, cherry-pick the local commits onto the integration
+owner's branch:
 
 ```sh
-git am /path/to/cursor-report-adapter.patch
+git cherry-pick 5729cbd e168e8d feat/cursor-report-adapter
 ```
 
-The original portable file was generated with `git format-patch -1 --stdout` for
-commit `5729cbd`; it contains only the Cursor directory and its documentation.
-The follow-up validation and lint-cleanup commit is local and is reported in the
-task outcome. No updated patch was generated or transferred under the clarified
-no-transfer restriction. Use both local commits for integration. No push or PR
-was authorized.
+If the first two commits are already integrated, select only the latest bridge
+commit reported in the task outcome. For another checkout at the named base or
+the pinned PR #157 head, apply the locally delivered patch:
+
+```sh
+git am /path/to/cursor-collector-integration.patch
+```
+
+The current local patch contains the initial adapter, validation cleanup, and
+collector bridge commits. The task outcome reports its path and checksum.
+Creating and testing this local artifact was authorized; uploading it, pushing a
+branch, and publishing a PR remain unapproved. No shared modules are included.
