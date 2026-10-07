@@ -169,3 +169,19 @@ No automatic AI usage collector is enabled by these parsers or imports. PostHog
 measures Proper Respect application traffic; it supplies no Codex or Claude token
 source. Daily GitHub refresh is a separate connection; [#150](https://github.com/keeganmoody33/PROPER-RESPECT/pull/150) handles account-bound consent. Actual
 billed charges need billing evidence separate from token observations or estimates.
+
+## Local Codex rollout collection
+
+The [local numeric history collector](codex-local-history.md) reads an explicitly
+selected bounded directory on Linux with Node.js 24. It supports genuine
+rollout formats, per-response identities, archive replay, inherited-response
+exclusion and conservative legacy cumulative differences. Official-format
+synthetic fixtures verify the implementation; no real-account acceptance is
+claimed. It emits a private JSON review and has no hosted pairing, installation
+or recurring collection. The browser connection prototype remains synthetic.
+# Codex development connection
+
+The [Mac connection guide](codex-mac-connection.md) describes the new approved-source
+helper, signed pairing, durable private sync, replay-safe backfill and disconnect.
+Its cloud fixture verification is preparation for the separately approved real
+Mac gate. Native account RPC and production deployment remain unaccepted.

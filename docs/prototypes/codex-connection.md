@@ -2,6 +2,11 @@
 
 Base: `51e5224f60fafb141029235fceeb41fa101d701e`, reviewed October 6, 2026.
 
+For the separate genuine-format, local-only CLI, see the
+[Codex numeric history collector](../codex-local-history.md). Its Linux reader
+and official-format fixture tests do not widen this browser demo's synthetic
+connection grant or establish a paired device.
+
 ## Try the fixture
 
 Run `npm ci`, then:

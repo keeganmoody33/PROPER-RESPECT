@@ -13,3 +13,10 @@ describe("bounded exact JSON", () => {
     expect(Object.keys(result)).toEqual(["__proto__"]);
   });
 });
+
+it("allows bounded long source strings only when explicitly requested", () => {
+  const text = JSON.stringify({ content: "x".repeat(9000), count: 1 });
+  expect(() => parseExactJson(text)).toThrow();
+  expect(() => parseExactJson(text, { maxStringLength: 256_000 })).not.toThrow();
+  expect(() => parseExactJson(text, { maxStringLength: 256_001 })).toThrow();
+});

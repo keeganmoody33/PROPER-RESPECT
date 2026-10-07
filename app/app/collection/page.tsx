@@ -25,5 +25,5 @@ export default function CollectionPage() {
     );
   }
 
-  return <OnboardingClient publicOrigin={publicSiteOrigin().origin} />;
+  return <>{process.env.NEXT_PUBLIC_CONVEX_URL === "https://utmost-mongoose-374.convex.cloud" && <Link className="text-link" href="/app/connections">Connect Codex history</Link>}<OnboardingClient publicOrigin={publicSiteOrigin().origin} /></>;
 }
