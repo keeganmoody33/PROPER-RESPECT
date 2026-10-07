@@ -50,8 +50,9 @@ bundle into `codex/real-mac-sync-20261007`. The original checkout at
   excluded. A separate Python parser matched every accepted modern response at
   the recorded snapshot cutoffs, with no missing or unexpected numeric records.
   Detailed counts, timestamps, and numeric originals remain outside Git.
-- No real-history packet has been sent to Convex. Local acquisition is not
-  receiver acceptance, and local usage totals do not represent bills or quotas.
+- Initial local acquisition sent no history packets. The subsequent approved
+  live tests below sent strict numeric packets only. Token counters do not
+  represent bills or quotas.
 
 ## Candidate checks
 
@@ -108,11 +109,61 @@ source data. Deployment authentication remained in memory and was sent only to
 the first-party authorization/deployment endpoints. No migration, seeding,
 recurring installation, frontend deployment, Git push, or merge was performed.
 
+## Live timeout finding
+
+Fix now: repeated main-source resumes failed with `TimeoutError` while durable
+packets remained queued. The development client imposed a 10-second timeout on
+every receiver request. A regression using a 13-second acknowledgement failed
+at 10 seconds; immediate companion cancellation still passed. Raise only the
+local request deadline to 60 seconds, retaining the caller abort signal, fixed
+development destination, device proof, receiver authority checks, and durable
+checkpoint rules. The backend receiver is unchanged.
+
+## Live receiver verification
+
+The owner completed development sign-in and paired both canonical local roots
+through the authenticated connection screen. Both sources remain unclassified;
+private device keys stay on the Mac. The temporary loopback pairing bridge
+closed after both pairings, without recording or displaying the one-use codes.
+
+Archive verification on 2026-10-07:
+
+```json
+{"scannedFiles":14,"skippedFiles":0,"localSequence":82,"remoteSequence":82,"pendingPackets":0}
+{"localUniqueRows":6352,"remoteRows":6352,"missing":0,"unexpected":0,"duplicates":0,"totalsMatch":true}
+{"revokedAccessRejected":true,"rejectionCode":"CODEX_ACCESS_UNAVAILABLE","directIngestRejectionCode":"CODEX_ACCESS_UNAVAILABLE","historyReadsAfterRevocation":0,"packetSendsAfterRevocation":0,"localSequence":82}
+```
+
+Every stored archive row was fetched through the actual signed-in owner's
+query, validated against the strict numeric schema, and compared with the local
+numeric projection. All displayed counters matched. A new helper process rescanned
+the archive without advancing either checkpoint. Browser reload preserved the
+connection states. Revocation rejected both device status and a direct empty
+numeric packet probe; retained private counters remained readable by the owner.
+
+Sessions restart recovery, before the full backfill:
+
+```json
+{"scenario":"real server accepted packet, response loss injected locally before saving checkpoint","remoteSequence":1,"localSequence":0,"pendingPackets":16,"numericRows":200}
+```
+
+The helper process exited after that injected acknowledgement loss. The ordinary
+CLI, launched as a new process with the same private state, resent the durable
+pending packet, verified its exact acknowledgement, and continued advancing.
+This was a local failure injection against the real development receiver.
+
+A separate collection page mismatch appeared after sign-in:
+
+> ArgumentValidationError: Object contains extra field `includeAccountEvidence` that is not in the validator.
+
+Disposition: deferred outside the receiver-only deployment. The imported
+collection frontend and preserved older backend have different interfaces.
+The connections page works independently and is the acceptance route for this
+task. No unrelated backend modules were replaced to hide that mismatch.
+
 ## Acceptance
 
-Real local acquisition and independent modern-response checks passed. Remote
-backfill, updates, restart, and revocation remain unproven. Development receiver
-deployment is confirmed; the in-app browser owner sign-in is pending. Both local
-source/device identities are prepared, with private keys retained only locally.
-Platform tests do not establish live acceptance. Detailed source evidence and
-configuration remain outside Git.
+Real archive backfill, unchanged restart, owner-only readback, retention, and
+revocation are proven. Sessions recovery from a lost acknowledgement is proven;
+the full sessions backfill and subsequent new-usage update are still running.
+Detailed numeric evidence, screenshots, keys, and configuration stay outside Git.
