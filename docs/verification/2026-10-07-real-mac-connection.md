@@ -226,6 +226,11 @@ is stopped and synchronization is on demand. Private state remains available
 for subsequent authorized foreground runs. No Git push, merge, production
 request, recurring installation, or profile publication occurred.
 
+The final real UI read completed after the authentication fix. All six response
+counters and all six legacy counters matched the verified numeric dataset.
+The private screenshot records the active sessions grant, revoked archive grant,
+and actual owner-visible counters.
+
 The unrelated collection route retains its documented frontend/backend mismatch.
 The real connection page is the verified development entry point. Numeric
 originals, screenshots, keys, and configuration remain outside Git.
