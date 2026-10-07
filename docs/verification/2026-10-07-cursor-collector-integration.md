@@ -114,6 +114,16 @@ Direct `gh` GraphQL and REST reads returned `Forbidden`; the already connected
 GitHub app successfully read PR metadata and opened the draft. Git push used
 the existing repository authentication without reading or changing credentials.
 
+Exact-head application CI at `ab7de74` passed all 1,988 Vitest tests (two
+existing skips), then failed the existing R13 Node-runtime consistency test:
+the new Cursor workflow used `node-version: "24"` instead of `.nvmrc`.
+Disposition: fix now in the Cursor workflow with `node-version-file: .nvmrc`
+and include `.nvmrc` in its path triggers. The existing deployment-preflight
+regression reproduces the failure before the fix. No shared test or workflow
+is changed. The Cursor fixture CI itself passed all 57 standalone tests.
+After the fix, all six Node-script test files from the repository's `npm test`
+command pass locally: 122 passed, zero failed, including the R13 regression.
+
 No account or credential access, private upload, permission change, backend
 configuration, merge, deployment or publication of measurements is authorized
 or performed. The previous full-suite filesystem blocker remains documented in

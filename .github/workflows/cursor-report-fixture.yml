@@ -10,6 +10,7 @@ on:
       - src/domain/connection-history.ts
       - package.json
       - package-lock.json
+      - .nvmrc
   push:
     branches: [main]
     paths:
@@ -21,6 +22,7 @@ on:
       - src/domain/connection-history.ts
       - package.json
       - package-lock.json
+      - .nvmrc
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,7 +40,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: "24"
+          node-version-file: .nvmrc
       # The standalone adapters use Node built-ins. When the collector contract
       # lands on this checkout, its real schema needs the locked dependencies.
       # Never fetch or import an unmerged branch to fill that gap.
