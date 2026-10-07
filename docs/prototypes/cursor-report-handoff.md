@@ -3,7 +3,8 @@
 Branch `feat/cursor-report-adapter` starts at current main
 `6cf026b11499854b53f8aaae01f9a133df7578dd`. The isolated worktree is
 `/workspace/PROPER-RESPECT-cursor`. Delivery is a local commit and a portable
-Git patch. Nothing was pushed or published.
+Git patch. The owner approved code publication on October 7; the isolated branch
+is now published as draft [PR #158](https://github.com/keeganmoody33/PROPER-RESPECT/pull/158).
 
 This implements supplied-report normalization and a Cursor-owned replacement
 proposal. Acquisition, shared pairing, durable sync, generic measurement import,
@@ -217,18 +218,19 @@ Within the same repository, cherry-pick the local commits onto the integration
 owner's branch:
 
 ```sh
-git cherry-pick 5729cbd e168e8d feat/cursor-report-adapter
+git cherry-pick 6cf026b11499854b53f8aaae01f9a133df7578dd..feat/cursor-report-adapter
 ```
 
-If the first two commits are already integrated, select only the latest bridge
-commit reported in the task outcome. For another checkout at the named base or
+If the first two commits are already integrated, cherry-pick
+`e168e8d..feat/cursor-report-adapter`. For another checkout at the named base or
 the pinned PR #157 head, apply the locally delivered patch:
 
 ```sh
 git am /path/to/cursor-collector-integration.patch
 ```
 
-The current local patch contains the initial adapter, validation cleanup, and
-collector bridge commits. The task outcome reports its path and checksum.
-Creating and testing this local artifact was authorized; uploading it, pushing a
-branch, and publishing a PR remain unapproved. No shared modules are included.
+The local patch contains the initial adapter, validation cleanup, collector
+bridge and Cursor fixture CI commits. The task outcome reports its path and checksum.
+The owner approved pushing this isolated code branch and opening the draft PR.
+No shared modules are included. Merge, deployment, private-report upload and
+publication of measurements remain outside this task's authorization.

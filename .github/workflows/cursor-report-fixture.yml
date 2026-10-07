@@ -1,0 +1,49 @@
+name: Cursor report fixtures
+on:
+  pull_request:
+    paths:
+      - .github/workflows/cursor-report-fixture.yml
+      - src/server/cursor-report/**
+      - src/domain/canonical-json.ts
+      - src/domain/exact-json.ts
+      - src/domain/collector-contract.ts
+      - src/domain/connection-history.ts
+      - package.json
+      - package-lock.json
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/cursor-report-fixture.yml
+      - src/server/cursor-report/**
+      - src/domain/canonical-json.ts
+      - src/domain/exact-json.ts
+      - src/domain/collector-contract.ts
+      - src/domain/connection-history.ts
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cursor-report-fixture-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fixtures:
+    name: Synthetic Cursor report tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+      # The standalone adapters use Node built-ins. When the collector contract
+      # lands on this checkout, its real schema needs the locked dependencies.
+      # Never fetch or import an unmerged branch to fill that gap.
+      - name: Install dependencies for the merged collector contract
+        if: ${{ hashFiles('src/domain/collector-contract.ts') != '' }}
+        run: npm ci --ignore-scripts
+      - name: Verify synthetic Cursor reports
+        run: node --experimental-strip-types --test src/server/cursor-report/*.test.mjs

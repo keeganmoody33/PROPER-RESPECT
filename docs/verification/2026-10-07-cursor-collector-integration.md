@@ -72,11 +72,49 @@ and had no skips. These `.test.mjs` files are invoked explicitly with Node, sinc
 the unchanged repository Vitest configuration selects `.test.ts` files.
 
 The final local commit and portable patch are reported in the task outcome.
-No upload or push occurs. A fully passing full suite still needs an authorized
+No upload or push occurred during local validation. A fully passing full suite still needs an authorized
 writable temporary directory outside Git ancestry; existing sandbox guards and
 the environment's read-only Git markers are preserved.
 
+## Approved draft publication
+
+Publication review disposition: fix the earlier "No upload or push occurs"
+sentence to describe local validation historically. The new approval and draft
+publication supersede that boundary for code only.
+The delivery command also needs a commit range: selecting only the branch tip
+would omit the bridge when a later CI commit becomes the tip. Disposition: fix
+now by selecting all Cursor commits since the named base, or since the already
+integrated cleanup commit.
+
+The owner explicitly approved pushing the tested code and opening a draft PR on
+October 7 at 09:36 UTC. [PR #158](https://github.com/keeganmoody33/PROPER-RESPECT/pull/158)
+opened at `e79164f09fe39e504b9e0a9079628b2e4806dd7a`, based directly on current
+main `6cf026b11499854b53f8aaae01f9a133df7578dd`. PR #157 remains a separate draft
+at `a6c670b6fc71b418d608c75d612c06112195a701`; none of its 55 changed files or
+shared modules is included here. Dependency injection keeps this PR compilable
+on main while the actual contract round-trip remains independently verified
+against the pinned PR head.
+
+Publication review identified that the default Vitest configuration does not
+run the adapter's Node `.test.mjs` files. Disposition: fix now with one
+Cursor-specific read-only workflow. It must not fetch unmerged PR code, change
+the shared verification workflow, use secrets, upload fixtures or deploy. When
+the shared contract becomes available on main it will also exercise the actual
+integration tests. Exact-head CI monitoring and implementation review continue.
+
+The new workflow uses Node 24 and the repository's pinned checkout/setup-node
+action revisions, with `contents: read` and checkout credential persistence
+disabled. Standalone fixture validation passed 57 tests; the actual shared
+collector suite explicitly skips while its contract is absent. A conditional
+locked install with scripts disabled enables those tests when the contract is
+present in the checked-out code. YAML structure and action/permission invariants
+were checked locally. No unmerged branch is fetched to supply that dependency.
+
+Direct `gh` GraphQL and REST reads returned `Forbidden`; the already connected
+GitHub app successfully read PR metadata and opened the draft. Git push used
+the existing repository authentication without reading or changing credentials.
+
 No account or credential access, private upload, permission change, backend
-configuration, publication, push, merge or deployment is authorized or performed.
-The previous full-suite filesystem blocker remains documented in the
-[adapter receipt](2026-10-06-cursor-report-adapter.md). Sandbox guards are unchanged.
+configuration, merge, deployment or publication of measurements is authorized
+or performed. The previous full-suite filesystem blocker remains documented in
+the [adapter receipt](2026-10-06-cursor-report-adapter.md). Sandbox guards are unchanged.
