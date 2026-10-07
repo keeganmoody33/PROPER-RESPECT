@@ -9,6 +9,7 @@ import { deviceDigest, devicePublicKey } from "../src/domain/device-proof.ts";
 import { signDeviceMessage } from "../src/local/device-signature.ts";
 import { acquireCompanionLock } from "../src/local/companion-lock.ts";
 import { createCodexDevelopmentClient } from "../src/local/codex-development-client.ts";
+import { watchCompanion } from "../src/local/codex-sync-loop.ts";
 
 const destination = "https://utmost-mongoose-374.convex.cloud";
 const [command, stateArgument, directoryArgument] = process.argv.slice(2);
@@ -44,33 +45,22 @@ try {
       const result = await client.mutation(makeFunctionReference("usageConnections:exchange"), { code: code.trim(), publicKeyJson: JSON.stringify(devicePublicKey(state.privateKey)), ...signDeviceMessage(state.privateKey, { operation: "pair", code: code.trim() }) });
       const scope = grantScopeSchema.parse(result.scope);
       if (scope.sourceKey !== state.sourceKey || scope.deviceDigest !== deviceDigest(devicePublicKey(state.privateKey)) || scope.destination !== destination) throw new Error();
-      state = { ...state, grantId: result.grantId, scope, sequence: result.sequence, pending: [] };
+      // Recover a lost pairing response without discarding a same-grant outbox.
+      state = result.grantId === state.grantId
+        ? { ...state, scope }
+        : { ...state, grantId: result.grantId, scope, sequence: result.sequence, pending: [], acknowledgedReviews: [] };
       await saveCompanionState(statePath, state);
       process.stdout.write("Paired. Run sync for the approved history, or watch for foreground recurrence.\n");
     } else {
-      const transport = {
+      const transport = state => ({
         status: () => client.query(makeFunctionReference("usageConnections:status"), { grantId: state.grantId, ...signDeviceMessage(state.privateKey, { operation: "status", grantId: state.grantId }) }),
         send: packet => client.mutation(makeFunctionReference("usageConnections:ingest"), { grantId: state.grantId, packetJson: JSON.stringify(packet), ...signDeviceMessage(state.privateKey, { operation: "ingest", grantId: state.grantId, packetId: packetId(packet) }) }),
-      };
-      do {
-        state = await loadCompanionState(statePath);
-        try {
-          state = await syncCompanion({ state, save: next => saveCompanionState(statePath, next), transport, signal: controller.signal });
-          process.stdout.write(`Private sync acknowledged through packet ${state.sequence}. Coverage remains partial.\n`);
-        } catch (error) {
-          if (command !== "watch" || controller.signal.aborted) throw error;
-          state = await loadCompanionState(statePath);
-          // A revoked/expired grant ends recurrence. Transient source failures retry
-          // from durable state, including acknowledgments saved before an interruption.
-          await transport.status();
-          process.stdout.write("Sync interrupted. Retrying within approval; previously accepted history is retained.\n");
-        }
-        if (command === "watch" && !controller.signal.aborted) await new Promise(resolve => {
-          const timer = setTimeout(done, 30_000);
-          function done() { clearTimeout(timer); controller.signal.removeEventListener("abort", done); resolve(); }
-          controller.signal.addEventListener("abort", done, { once: true });
-        });
-      } while (command === "watch" && !controller.signal.aborted);
+      });
+      const save = next => saveCompanionState(statePath, next);
+      const onSynced = state => process.stdout.write(`Private sync acknowledged through packet ${state.sequence}. Coverage remains partial.\n`);
+      if (command === "watch") await watchCompanion({ load: () => loadCompanionState(statePath), save, transport, signal: controller.signal, onSynced,
+        onPaused: () => process.stdout.write("Sync paused. Queued numeric history remains on disk; retrying within approval.\n") });
+      else onSynced(await syncCompanion({ state, save, transport: transport(state), signal: controller.signal }));
     }
   }
 } catch {

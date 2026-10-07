@@ -2,23 +2,15 @@ import { z } from "zod";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { canonicalJson } from "./canonical-json.ts";
 import { historyTimestampSchema } from "./connection-history.ts";
+import { CODEX_METRICS, codexResponseRowSchema, codexLegacyRowSchema } from "./collector-contract.ts";
 
 export const digestSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const secretSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export const digest = (value: string) => [...sha256(new TextEncoder().encode(value))].map(byte => byte.toString(16).padStart(2, "0")).join("");
-export const counterSchema = z.string().regex(/^(0|[1-9][0-9]{0,127})$/).nullable();
-const countsSchema = z.strictObject({
-  input_tokens: counterSchema, cached_input_tokens: counterSchema, output_tokens: counterSchema,
-  reasoning_output_tokens: counterSchema, total_tokens: counterSchema, cache_write_input_tokens: counterSchema,
-}).refine(counts => [[counts.cached_input_tokens, counts.input_tokens], [counts.reasoning_output_tokens, counts.output_tokens]]
-  .every(([subset, total]) => subset === null || total === null || BigInt(subset) <= BigInt(total)));
-export const metricSchema = z.enum(["input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens", "cache_write_input_tokens"]);
+export const metricSchema = z.enum(CODEX_METRICS);
 export const numericEvidenceSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("response"), thread: digestSchema, response: digestSchema, at: historyTimestampSchema,
-    counts: countsSchema, status: z.enum(["measured", "conflict"]) }),
-  z.strictObject({ kind: z.literal("legacy"), thread: digestSchema, stream: digestSchema, at: historyTimestampSchema,
-    metric: metricSchema, unit: z.literal("tokens"), value: counterSchema, delta: counterSchema,
-    status: z.enum(["baseline", "measured", "unknown", "conflict"]) }),
+  codexResponseRowSchema.safeExtend({ kind: z.literal("response") }),
+  codexLegacyRowSchema.safeExtend({ kind: z.literal("legacy"), thread: digestSchema }),
 ]);
 export type NumericEvidence = z.infer<typeof numericEvidenceSchema>;
 export const grantScopeSchema = z.strictObject({

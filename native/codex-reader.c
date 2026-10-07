@@ -1,9 +1,12 @@
 /* Descriptor-relative read-only acquisition. No authentication or network APIs.
  * Output is private binary framing consumed only by the local numeric parser.
  * Do not run this program against real history without scoped approval. */
+#ifdef __APPLE__
+#define _DARWIN_C_SOURCE 1
+#else
 #define _POSIX_C_SOURCE 200809L
 #define _DEFAULT_SOURCE
-#define _DARWIN_C_SOURCE
+#endif
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>

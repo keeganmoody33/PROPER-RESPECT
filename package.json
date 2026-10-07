@@ -14,6 +14,7 @@
     "test": "vitest run && node --test scripts/claude-review.test.mjs scripts/deployment-preflight.test.mjs scripts/replay-evidence.test.mjs scripts/remediation-autopilot.test.mjs scripts/receipt-check.test.mjs scripts/cursor-environment.test.mjs scripts/codex-development-preflight.test.mjs",
     "test:watch": "vitest",
     "codex:reader:build": "node scripts/build-codex-reader.mjs",
+    "codex:mac:check": "node scripts/codex-mac-check.mjs",
     "codex:development:check": "node scripts/codex-development-preflight.mjs",
     "codex:connection:demo": "PROPER_RESPECT_SYNC_DEMO=1 vitest run tests/support/codex-private-sync-demo.test.ts --maxWorkers=1",
     "evidence:replay": "node --experimental-strip-types scripts/replay-evidence.mjs",

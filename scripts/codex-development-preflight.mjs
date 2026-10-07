@@ -7,11 +7,16 @@ export function summarizeDevelopmentEnvironment(env) {
     const decoded = Buffer.from(publicKey.slice(8), "base64").toString("utf8").replace(/\$$/, "");
     if (/^[a-z0-9-]+\.clerk\.accounts\.dev$/.test(decoded)) clerkHost = decoded;
   }
+  const issuer = env.CLERK_FRONTEND_API_URL ?? env.CLERK_JWT_ISSUER_DOMAIN;
+  let issuerMatchesPublicApp = false;
+  try { issuerMatchesPublicApp = Boolean(clerkHost && issuer && new URL(issuer).origin === `https://${clerkHost}`); } catch {}
   return {
     targetMatches: env.CONVEX_DEPLOYMENT === deployment, urlMatches: env.NEXT_PUBLIC_CONVEX_URL === url,
     clerkPublicKeyPresent: Boolean(publicKey), clerkPublicKeyIsDevelopment: publicKey.startsWith("pk_test_"),
     clerkSecretPresent: Boolean(secretKey), clerkSecretIsDevelopment: secretKey.startsWith("sk_test_"),
     clerkSecretIsProduction: secretKey.startsWith("sk_live_"), clerkHost,
+    clerkIssuerPresentInSession: Boolean(issuer), clerkIssuerMatchesPublicApp: issuerMatchesPublicApp,
+    convexDeployKeyPresent: Boolean(env.CONVEX_DEPLOY_KEY),
     matchingClerkAppVerified: false,
   };
 }

@@ -1,4 +1,4 @@
-import { mkdtemp, chmod, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, realpath, chmod, mkdir, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { createCompanionState, loadCompanionState, saveCompanionState, syncCompanion, type CompanionState } from "./codex-companion.ts";
@@ -8,7 +8,7 @@ const roots: string[] = [];
 const at = Date.parse("2026-10-07T00:00:00.000Z");
 afterEach(async () => { await Promise.all(roots.splice(0).map(path => rm(path,{recursive:true,force:true}))); });
 async function fixture() {
-  const root = await mkdtemp("/tmp/pr-companion-"); roots.push(root); await chmod(root, 0o700);
+  const root = await realpath(await mkdtemp("/tmp/pr-companion-")); roots.push(root); await chmod(root, 0o700);
   const directory = join(root,"history"); await mkdir(directory);
   await writeFile(join(directory,"rollout-one.jsonl"), [
     JSON.stringify({type:"session_meta",payload:{id:"synthetic-thread"}}),
@@ -51,4 +51,20 @@ it("bad ACKs leave pending state and never advance the checkpoint",async()=>{
 it("expiry prevents acquisition without a guessed checkpoint",async()=>{
   const f=await fixture();await expect(syncCompanion({...f.input(),now:()=>Date.parse("2026-10-08T00:00:00.000Z")})).rejects.toThrow("expired");
   expect((await loadCompanionState(f.path)).sequence).toBe(0);
+});
+
+it("acknowledged unchanged scans create no new receipts after a state-file restart", async () => {
+  const f = await fixture();
+  await syncCompanion(f.input());
+  const sequence = (await loadCompanionState(f.path)).sequence;
+  await f.restart(); await syncCompanion(f.input());
+  expect((await loadCompanionState(f.path)).sequence).toBe(sequence);
+  expect(f.receipts.size).toBe(sequence);
+  const directory = f.input().state.directory;
+  await writeFile(join(directory, "rollout-new.jsonl"), [
+    JSON.stringify({ type: "session_meta", payload: { id: "new-thread" } }),
+    JSON.stringify({ type: "token_usage_record", timestamp: "2026-10-06T00:00:00.000Z", payload: { thread_id: "new-thread", response_id: "new-response", usage: { input_tokens: 15, output_tokens: 0, total_tokens: 15 } } }),
+  ].join("\n") + "\n");
+  await syncCompanion(f.input());
+  expect((await loadCompanionState(f.path)).sequence).toBe(sequence + 1);
 });

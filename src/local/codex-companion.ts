@@ -14,6 +14,7 @@ import { createDeviceKey } from "./device-signature.ts";
 export const stateSchema = z.strictObject({ version: z.literal(1), privateKey: devicePrivateKeySchema, sourceKey: digestSchema, sourceSalt: secretSchema,
   directory: z.string().startsWith("/").max(4096), grantId: z.string().nullable(), scope: grantScopeSchema.nullable(),
   sequence: z.number().int().nonnegative(), pending: z.array(usagePacketSchema).max(400),
+  acknowledgedReviews: z.array(z.strictObject({ position: digestSchema, review: digestSchema })).max(4096).default([]),
 });
 export type CompanionState = z.infer<typeof stateSchema>;
 export type SyncTransport = {
@@ -23,7 +24,7 @@ export type SyncTransport = {
 export function createCompanionState(directory: string): CompanionState {
   const sourceSalt = randomBytes(32).toString("hex");
   return stateSchema.parse({ version: 1, privateKey: createDeviceKey(), sourceKey: digest(`codex-source\0${sourceSalt}\0${directory}`), sourceSalt,
-    directory, grantId: null, scope: null, sequence: 0, pending: [] });
+    directory, grantId: null, scope: null, sequence: 0, pending: [], acknowledgedReviews: [] });
 }
 
 /** Explicit private state location. Atomic write + fsync before any network send. */
@@ -96,6 +97,11 @@ export async function syncCompanion(input: { state: CompanionState; save: (state
       const history = collectCodexRolloutHistory({ window, signal: input.signal }, directory.files);
       const rows = [...history.responses.rows.map(row => ({ ...row, kind: "response" })), ...history.legacy.rows.map(row => ({ ...row, kind: "legacy" }))]
         .map(row => numericEvidenceSchema.parse(row));
+      // The final window grows with time. Its numeric rows, rather than the scan
+      // time, determine whether anything changed. Cache only after every ACK.
+      const position = digest(canonicalJson([state.grantId, fileOffset, window.start]));
+      const review = digest(canonicalJson(rows));
+      if (state.acknowledgedReviews.some(item => item.position === position && item.review === review)) continue;
       for (let offset = 0; offset < Math.max(1, rows.length); offset += 200) packets.push(usagePacketSchema.parse({
         version: "proper-respect-codex-sync-v1", sourceKey: state.sourceKey, sequence: state.sequence + packets.length + 1,
         ...window, coverage: "partial", rows: rows.slice(offset, offset + 200),
@@ -104,6 +110,9 @@ export async function syncCompanion(input: { state: CompanionState; save: (state
       const pending = stateSchema.parse({ ...state, pending: packets });
       await input.save(pending); state = pending;
       await flush();
+      const acknowledgedReviews = [...state.acknowledgedReviews.filter(item => item.position !== position), { position, review }].slice(-4096);
+      const acknowledged = { ...state, acknowledgedReviews };
+      await input.save(acknowledged); state = acknowledged;
     }
     fileOffset = directory.nextOffset;
   }

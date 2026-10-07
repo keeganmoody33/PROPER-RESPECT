@@ -3,6 +3,8 @@
 import { convexTest } from "convex-test";
 import { makeFunctionReference, type FunctionArgs, type FunctionReturnType } from "convex/server";
 import { afterEach, expect, test, vi } from "vitest";
+import { ConvexError, convexToJson } from "convex/values";
+import { createCodexDevelopmentClient } from "../src/local/codex-development-client";
 import schema from "./schema";
 import { approveUsage, listUsage, usageEvidence, disconnectUsage, eraseUsage, type ConnectionsAPI } from "../src/client/usage-connection-api";
 import { digest, privateUsageTotals, type UsagePacket, type GrantScope } from "../src/domain/usage-sync";
@@ -20,7 +22,7 @@ const scope: GrantScope = { sourceKey: "c".repeat(64), deviceDigest: deviceDiges
 const packet = (sequence = 1, count = "9007199254740993"): UsagePacket => ({ version: "proper-respect-codex-sync-v1", sourceKey: scope.sourceKey,
   sequence, start: scope.start, end: "2026-10-08T00:00:00.000Z", coverage: "partial", rows: [{ kind: "response", thread: "d".repeat(64), response: "e".repeat(64),
     at: "2026-10-02T00:00:00.000Z", status: "measured", counts: { input_tokens: count, cached_input_tokens: "0", output_tokens: "0", reasoning_output_tokens: "0", total_tokens: count, cache_write_input_tokens: null } }] });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 async function fixture(retain = true) {
   vi.useFakeTimers(); vi.setSystemTime(new Date("2026-10-07T00:00:00.000Z"));
   vi.stubEnv("CONVEX_CLOUD_URL", scope.destination);
@@ -45,10 +47,59 @@ test("durable ACK, lost ACK replay and another packet retain exact non-additive 
   expect(privateUsageTotals(rows).responses.find(row => row.metric === "total_tokens")?.value).toBe("9007199254740993");
   expect(await f.t.query(status, { grantId: f.grantId, ...signDeviceMessage(key, { operation: "status", grantId: f.grantId }) })).toMatchObject({ sequence: 2 });
 });
-test("one-use pairing binds the device; wrong secret cannot read or ingest", async () => {
+test("pairing retries recover the same grant and bind the approved device", async () => {
   const f = await fixture();
-  await expect(f.t.mutation(exchange, pairArgs(code))).rejects.toThrow("Pairing unavailable");
+  expect(await f.t.mutation(exchange, pairArgs(code))).toMatchObject({ grantId: f.grantId, sequence: 0 });
+  const impostor = createDeviceKey();
+  await expect(f.t.mutation(exchange, { code, publicKeyJson: JSON.stringify(devicePublicKey(impostor)),
+    ...signDeviceMessage(impostor, { operation: "pair", code }) })).rejects.toThrow("Pairing unavailable");
   await expect(f.t.query(status, { grantId: f.grantId, ...signDeviceMessage(createDeviceKey(), { operation: "status", grantId: f.grantId }) })).rejects.toThrow("Device proof unavailable");
+});
+
+test("pairing recovery ends at the original deadline and cannot revive revocation", async () => {
+  const f = await fixture();
+  await f.owner.mutation(disconnectUsage, { grantId: f.grantId });
+  await expect(f.t.mutation(exchange, pairArgs(code))).rejects.toThrow("Pairing unavailable");
+  const fresh = await fixture();
+  vi.setSystemTime(new Date("2026-10-07T00:05:00.000Z"));
+  await expect(fresh.t.mutation(exchange, pairArgs(code))).rejects.toThrow("Pairing unavailable");
+});
+
+test.each([false, true])("disconnect through an older grant uses current retention consent (%s)", async retain => {
+  const f = await fixture(!retain); await f.send();
+  const nextCode = "2".repeat(64);
+  const next = await f.owner.mutation(approveUsage, { scopeJson: JSON.stringify({ ...scope, retainOnDisconnect: retain }), codeDigest: digest(nextCode) });
+  await f.t.mutation(exchange, pairArgs(nextCode));
+  expect(await f.owner.mutation(disconnectUsage, { grantId: f.grantId })).toEqual({ retained: retain });
+  await f.t.finishAllScheduledFunctions(vi.runAllTimers);
+  expect((await f.read()).page).toHaveLength(retain ? 1 : 0);
+  await expect(f.t.query(status, { grantId: next, ...signDeviceMessage(key, { operation: "status", grantId: next }) })).rejects.toThrow("Connection unavailable");
+});
+
+test("a prepared source cannot change its device identity", async () => {
+  const f = await fixture();
+  await expect(f.owner.mutation(approveUsage, { scopeJson: JSON.stringify({ ...scope, deviceDigest: deviceDigest(devicePublicKey(createDeviceKey())) }),
+    codeDigest: digest("3".repeat(64)) })).rejects.toThrow("separate source");
+});
+
+test("expiry reached while verifying a proof prevents evidence and receipt writes", async () => {
+  const f = await fixture();
+  const verify = crypto.subtle.verify.bind(crypto.subtle);
+  const spy = vi.spyOn(crypto.subtle, "verify").mockImplementation(async (...args) => {
+    const valid = await verify(...args); vi.setSystemTime(new Date(scope.expiresAt)); return valid;
+  });
+  try { await expect(f.send()).rejects.toThrow("Connection unavailable"); }
+  finally { spy.mockRestore(); }
+  expect((await f.read()).page).toHaveLength(0);
+  expect(await f.t.run(ctx => ctx.db.query("usageReceipts").collect())).toHaveLength(0);
+});
+
+test("shared legacy accounting guards reject invented baseline deltas", async () => {
+  const f = await fixture();
+  const invalid: UsagePacket = { ...packet(), rows: [{ kind: "legacy", thread: "d".repeat(64), stream: "e".repeat(64),
+    at: "2026-10-02T00:00:00.000Z", metric: "total_tokens", unit: "tokens", value: "10", delta: "10", status: "baseline" }] };
+  await expect(f.send(invalid)).rejects.toThrow();
+  expect((await f.read()).page).toHaveLength(0);
 });
 test("private owner isolation includes disconnect and deletion", async () => {
   const f = await fixture(); await f.send(); const [grant] = await f.owner.query(listUsage, {});
@@ -127,4 +178,34 @@ test("device proofs expire while the grant remains active; only a public key is 
   const stored=await f.t.run(ctx=>ctx.db.get(f.grantId));
   expect(JSON.parse(stored?.publicKeyJson ?? "null")).toEqual(devicePublicKey(key));
   expect(stored?.publicKeyJson).not.toContain(key.d);
+});
+
+test("the real Convex HTTP client encodes signed packets and preserves revocation errors", async () => {
+  const f = await fixture();
+  const requests: string[] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(String(input));
+    expect(url.origin).toBe(scope.destination); expect(init?.redirect).toBe("error");
+    const body = String(init?.body); requests.push(body);
+    const request = JSON.parse(body);
+    try {
+      const value = url.pathname === "/api/query"
+        ? await f.t.query(status, request.args[0])
+        : await f.t.mutation(ingest, request.args[0]);
+      return Response.json({ status: "success", value: convexToJson(value) });
+    } catch (error) {
+      if (!(error instanceof ConvexError)) throw error;
+      return Response.json({ status: "error", errorMessage: "Access stopped", errorData: convexToJson(error.data) }, { status: 560 });
+    }
+  });
+  const client = createCodexDevelopmentClient(new AbortController().signal);
+  const value = packet();
+  const args = { grantId: f.grantId, packetJson: JSON.stringify(value), ...signDeviceMessage(key, { operation: "ingest", grantId: f.grantId, packetId: packetId(value) }) };
+  const ack = await client.mutation(ingest, args);
+  expect((await client.mutation(ingest, args)).packetId).toBe(ack.packetId);
+  await f.owner.mutation(disconnectUsage, { grantId: f.grantId });
+  await expect(client.query(status, { grantId: f.grantId, ...signDeviceMessage(key, { operation: "status", grantId: f.grantId }) }))
+    .rejects.toMatchObject({ data: { code: "CODEX_ACCESS_UNAVAILABLE" } });
+  expect(requests.join("\n")).not.toContain(key.d);
+  expect((await f.read()).page).toHaveLength(1);
 });

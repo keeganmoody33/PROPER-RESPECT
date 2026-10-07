@@ -1,11 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtemp, chmod, rm } from "node:fs/promises";
+import { mkdtemp, realpath, chmod, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { loadCompanionState } from "../../src/local/codex-companion";
 it("actual CLI prepare and identity preserve the key, reveal no credentials, and never read an unpaired source",async()=>{
   execFileSync(process.execPath,["scripts/build-codex-reader.mjs"]);
-  const root=await mkdtemp("/tmp/pr-cli-");await chmod(root,0o700);const path=join(root,"state.json");
+  const root=await realpath(await mkdtemp("/tmp/pr-cli-"));await chmod(root,0o700);const path=join(root,"state.json");
   try {
     const args=["--experimental-strip-types","scripts/codex-companion.mjs"];
     const prepared=spawnSync(process.execPath,[...args,"prepare",path,"/SYNTHETIC_NONEXISTENT_SOURCE"],{encoding:"utf8"});

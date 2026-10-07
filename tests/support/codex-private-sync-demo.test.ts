@@ -4,7 +4,7 @@ import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
 import { build } from "esbuild";
 import { createServer } from "node:http";
-import { mkdtemp, chmod, mkdir, writeFile, readFile, rm } from "node:fs/promises";
+import { mkdtemp, realpath, chmod, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { chromium } from "@playwright/test";
@@ -17,11 +17,11 @@ import { deviceDigest, devicePublicKey } from "../../src/domain/device-proof";
 import { signDeviceMessage } from "../../src/local/device-signature";
 
 test("runnable shared UI, native acquisition, durable helper recovery and revocation", async () => {
-  const root = await mkdtemp("/tmp/pr-sync-demo-"); await chmod(root, 0o700);
+  const root = await realpath(await mkdtemp("/tmp/pr-sync-demo-")); await chmod(root, 0o700);
   const directory = join(root, "history"); await mkdir(directory);
   const statePath = join(root, "state.json"), file = join(directory, "rollout-fixture.jsonl");
   const counts = { input_tokens: 30, output_tokens: 10, cached_input_tokens: 0, reasoning_output_tokens: 0, total_tokens: 40 };
-  const response = (id: string) => JSON.stringify({ type: "token_usage_record", timestamp: "2026-10-02T00:00:00.000Z", payload: { thread_id: "thread-fixture", response_id: id, usage: counts } });
+  const response = (id: string, usage = counts) => JSON.stringify({ type: "token_usage_record", timestamp: "2026-10-02T00:00:00.000Z", payload: { thread_id: "thread-fixture", response_id: id, usage } });
   await writeFile(file, `${JSON.stringify({ type: "session_meta", payload: { id: "thread-fixture", cwd: "/SYNTHETIC_PRIVATE_PATH", instructions: "SYNTHETIC_PRIVATE_PROMPT" } })}\n${response("first")}\n`);
   await saveCompanionState(statePath, createCompanionState(directory));
   execFileSync(process.execPath, ["scripts/build-codex-reader.mjs"]);
@@ -53,6 +53,7 @@ test("runnable shared UI, native acquisition, durable helper recovery and revoca
         case "append": await writeFile(file, `${await readFile(file, "utf8")}${response("second")}\n`); result = {}; break;
         case "sync": {
           let loseAck = Boolean(args.loseAck);
+          if (loseAck) await writeFile(file, `${await readFile(file, "utf8")}${response("ack-recovery", { input_tokens: 0, output_tokens: 0, cached_input_tokens: 0, reasoning_output_tokens: 0, total_tokens: 0 })}\n`);
           await syncCompanion({ state, save: next => saveCompanionState(statePath, next), signal: new AbortController().signal, transport: {
             status: () => t.query(makeFunctionReference<"query">("usageConnections:status"), { grantId: state.grantId, ...signDeviceMessage(state.privateKey, { operation: "status", grantId: state.grantId ?? "" }) }),
             send: async packet => {
@@ -76,7 +77,7 @@ test("runnable shared UI, native acquisition, durable helper recovery and revoca
       return;
     }
     browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? "/usr/bin/chromium", args: ["--no-sandbox"] });
-    const artifacts = "docs/verification/2026-10-07-codex-mac-sync/screenshots"; await mkdir(artifacts, { recursive: true });
+    const artifacts = "docs/verification/2026-10-07-codex-receiver/screenshots"; await mkdir(artifacts, { recursive: true });
     for (const [name, width, height] of [["desktop", 1440, 1100], ["mobile", 390, 844]] as const) {
       const context = await browser.newContext({ viewport: { width, height } });
       const page = await context.newPage();

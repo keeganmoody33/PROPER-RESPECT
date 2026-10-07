@@ -38,7 +38,7 @@ It never infers that two Clerk keys belong to the same app. The actual session
 matched `dev:utmost-mongoose-374` and
 `https://utmost-mongoose-374.convex.cloud`. Its public key identifies
 `relevant-oriole-27.clerk.accounts.dev`. The secret value has neither a Clerk
-development nor production prefix. Its binding must be corrected or explained
+development nor production prefix; managed credentials can be opaque. Its binding must be corrected or explained
 before authentication is accepted. The managed status reports `unknown`, not
 `ready`, for all four runtime variables.
 
@@ -52,6 +52,8 @@ Required destination review includes the development Convex host, the named Cler
 development frontend, and `api.clerk.com` for read-only app verification. Backend
 JWT issuer configuration must match the development Clerk app and the `convex`
 JWT template. No backend configuration, deployment or credential lookup was done.
+Neither issuer variable nor a Convex deploy key is present in this session. This
+does not establish what is configured on the blocked development backend.
 
 ## Approve the real test before running these steps
 
@@ -67,7 +69,9 @@ credential stores or arbitrary files. No home discovery, auth RPC or Codex proce
 launch occurs. Local source records may contain prompts and code; the local parser
 discards them. Only the numeric allowlist, opaque identities and required time/
 status metadata enter packets. Device private keys stay on the Mac; public keys
-and signed proofs authorize requests. Pairing codes are short-lived and single-use.
+and signed proofs authorize requests. Pairing codes can activate only the approved
+device. That device can recover a lost pairing response within the original
+five-minute deadline; a new signature is required. Revocation prevents recovery.
 
 Installation, compiling the helper on the Mac, real acquisition, uploading numeric
 history, foreground recurrence, and any persistent installation require the user's
@@ -78,8 +82,7 @@ After approved installation, verify Node 24 and a C compiler, then build and run
 host fixture checks on Darwin:
 
 ```sh
-npm run codex:reader:build
-npx vitest run src/local/codex-native-reader.test.ts src/local/codex-native-races.test.ts src/local/companion-lock.test.ts src/local/codex-companion.test.ts --maxWorkers=2
+npm run codex:mac:check
 ```
 
 Use canonical Mac paths. `/tmp` is commonly a symlink on macOS; test fixtures
@@ -110,15 +113,22 @@ the approved origin, refuse redirects and have a ten-second abortable deadline.
 
 With separate recurrence approval, `watch` runs foreground sync every 30 seconds
 after the previous pass completes. It does not install a daemon or login item.
-Interrupted source reads retry while the server still authorizes the grant.
+Interrupted reads and receiver outages retry. During an outage no new source
+read begins; the pending numeric queue remains on disk until authority returns.
 Revocation and expiry stop the loop. Retries reload the durable queue.
 Stop it with Ctrl-C. The OS lock releases on process exit. Restarting the helper
 reloads pending numeric packets before new acquisition. Lost ACK retries use the
 same packet identity and a fresh signed proof. The server saves evidence and the
 receipt in one transaction before returning ACK. Private state writes use `0600`,
 atomic replacement and fsync.
+Acknowledged review digests suppress unchanged uploads after restart. They are
+saved only after all packets in a review have receipts. A crash before that save
+may replay accepted rows safely. Evicting the bounded digest cache is also safe.
 
-Disconnect in the app immediately revokes access for the source. Queued replays
+Disconnect in the app immediately revokes access for the source. The latest source
+retention approval governs disconnect, including requests through an older grant.
+The prepared source cannot change its device or personal/work association.
+Queued replays
 are rejected too. If retention was declined, server-side deletion continues in
 bounded jobs even if the browser closes. With retention approval, history remains
 private until erased or authorization changes. Erase imported history removes
@@ -159,8 +169,11 @@ The receipt must distinguish fixture results from that proof.
 [Architecture and ownership](../work/pstack/2026-10-07-codex-mac-private-sync.md)
 defines the shared consent, device proof, receipts, checkpoints and revocation.
 Cursor report accounting belongs to thread `01a112e0-7bfe-7548-9a95-40a8afdbf0f3`.
-It needs a separate versioned report body and completeness rules. No Cursor adapter
-was implemented here; no available tool could deliver a message to that thread.
+PR #157's adapter and complete-report fixture are integrated unchanged. The live
+Codex receiver reuses its Codex row schemas. An optional opaque legacy thread
+field permits modern/legacy exclusion across packets without changing Cursor
+contracts. No available tool could deliver a message to that thread. See the
+[reconciliation decisions](../work/pstack/2026-10-07-codex-receiver-reconciliation.md).
 
 The kickoff research was carried forward and source rechecked on October 7.
 All four inspected repositories declare MIT licenses; no implementation was copied.

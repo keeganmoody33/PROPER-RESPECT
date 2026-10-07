@@ -1,5 +1,10 @@
 # Collector development acceptance
 
+The October 7 [development Mac connection](codex-mac-connection.md) adds the
+authenticated Convex numeric receiver and multi-window durable companion.
+The requirements below document the earlier #157 complete-report fixture;
+live Clerk/Convex verification and approved real Mac acceptance remain pending.
+
 The October 6 implementation is a local development milestone. Its SQLite
 receiver, companion and browser tests use synthetic sources. It supplies no live
 Convex adapter or Clerk-authenticated collector connection. A real Mac connection
