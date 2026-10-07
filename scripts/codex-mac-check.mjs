@@ -14,7 +14,7 @@ if (build.status !== 0) process.exit(build.status ?? 1);
 const tests = [
   "convex/usageConnections.test.ts", "src/local/codex-native-reader.test.ts", "src/local/codex-native-races.test.ts",
   "src/local/codex-stream-reader.test.ts", "src/local/codex-development-client.test.ts",
-  "src/local/codex-history-windows.test.ts",
+  "src/local/codex-history-windows.test.ts", "src/client/usage-connections-auth.test.ts",
   "src/local/companion-lock.test.ts", "src/local/codex-companion.test.ts", "src/local/codex-sync-loop.test.ts",
   "tests/support/codex-companion-cli.test.ts", "src/local/codex-rollout-native.test.ts",
   "tests/support/codex-convex-backfill.test.ts",

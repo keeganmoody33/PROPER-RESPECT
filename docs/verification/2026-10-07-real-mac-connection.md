@@ -117,7 +117,19 @@ every receiver request. A regression using a 13-second acknowledgement failed
 at 10 seconds; immediate companion cancellation still passed. Raise only the
 local request deadline to 60 seconds, retaining the caller abort signal, fixed
 development destination, device proof, receiver authority checks, and durable
-checkpoint rules. The backend receiver is unchanged.
+checkpoint rules. The backend receiver is unchanged. The delayed acknowledgement and cancellation
+regressions, companion tests, and loop tests passed: 12 tests. Typecheck and
+changed-file lint passed.
+
+## Live authentication gate finding
+
+Fix now: the long signed-in run exposed `Authentication required` on
+`usageConnections:list`. The page gated only on Clerk state. Client regressions
+confirm it queried while Convex authentication was unresolved or lost. Gate the
+private component on the installed Convex client's confirmed authentication and
+refresh state as well as the Clerk owner. Keep backend ownership checks intact.
+Five authentication-state regressions passed after the RED run. Typecheck and
+changed-file lint passed. The real signed-in page reloaded successfully.
 
 ## Live receiver verification
 
@@ -161,9 +173,52 @@ collection frontend and preserved older backend have different interfaces.
 The connections page works independently and is the acceptance route for this
 task. No unrelated backend modules were replaced to hide that mismatch.
 
+## Completed sessions backfill and update
+
+The final main-source scan read 811 files and excluded one malformed file.
+At the completed backfill, local and receiver checkpoints both equaled 1303,
+with no pending packets. The earlier unexpected stops preserved the durable
+queue; recovery used actual receiver acknowledgements.
+
+The full owner-authenticated receiver readback contained 105246 numeric rows.
+Every one of the 104992 earlier local baseline rows was present, with zero
+unexpected omissions and zero duplicate variants. The 254 additional records
+were newer than the prior local snapshot.
+
+The ordinary foreground watch command then completed one actual update cycle:
+
+```json
+{"beforeSequence":1303,"afterSequence":1314,"pendingPackets":0,"lastScan":{"scannedFiles":811,"skippedFiles":1},"helperExitCode":0,"recurringAgentInstalled":false}
+```
+
+Update verification read the newest receiver rows through the development table
+reader in descending creation order, continuing into the established baseline.
+It identified 15 new main-source numeric records. A fresh descriptor-checked
+local acquisition over those event times independently matched all 15:
+
+```json
+{"scannedFiles":811,"skippedFiles":1,"newReceiverRows":15,"localRows":15,"unmatchedReceiverRows":0,"localRowsNotReceived":0}
+```
+
+The updated numeric totals are derived from the complete authenticated baseline
+plus those verified append-only records; they are not represented as a second
+complete receiver snapshot. The watch process stopped after its completed
+cycle. No recurring collection agent was installed.
+
 ## Acceptance
 
-Real archive backfill, unchanged restart, owner-only readback, retention, and
-revocation are proven. Sessions recovery from a lost acknowledgement is proven;
-the full sessions backfill and subsequent new-usage update are still running.
-Detailed numeric evidence, screenshots, keys, and configuration stay outside Git.
+Verified against real local history and `dev:utmost-mongoose-374`: backfill,
+new usage delivery, process restart, lost-acknowledgement recovery, owner-only
+readback, revocation, and retention. Across both canonical roots, the completed
+scans read 825 files, excluding one malformed file. Historical account identity
+remains unverified and coverage remains partial.
+
+The sessions grant remains active until `2026-10-08T00:00:00.000Z`. The archive
+grant is revoked; its imported history remains private and retained. The helper
+is stopped and synchronization is on demand. Private state remains available
+for subsequent authorized foreground runs. No Git push, merge, production
+request, recurring installation, or profile publication occurred.
+
+The unrelated collection route retains its documented frontend/backend mismatch.
+The real connection page is the verified development entry point. Numeric
+originals, screenshots, keys, and configuration remain outside Git.
