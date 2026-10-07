@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Private collector fixture · Proper Respect</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="wordmark" href="/" aria-label="Proper Respect home">proper<span>respect</span><span class="brand-dot" aria-hidden="true">.</span></a>
+      <span class="fixture-tag">Synthetic fixture</span>
+    </header>
+    <main>
+      <div class="intro">
+        <p class="eyebrow">Private tool history</p>
+        <h1>Start with a source.<br>Keep the record.</h1>
+        <p>Approve a source, see the history it supplies, and keep accepted results when you disconnect.</p>
+      </div>
+      <div class="fixture-notice" role="note">
+        <strong>This is a local synthetic fixture.</strong>
+        <span>No real Codex or Cursor account is connected. These sample results exercise private storage, pairing and sync.</span>
+      </div>
+      <section class="source-picker" aria-labelledby="source-heading">
+        <div>
+          <p class="eyebrow">Add a connection</p>
+          <h2 id="source-heading">Which source comes first?</h2>
+        </div>
+        <form id="connect-form">
+          <label>Source
+            <select id="provider" name="provider">
+              <option value="codex">Codex local history</option>
+              <option value="cursor">Cursor supplied report</option>
+            </select>
+          </label>
+          <label>Account context
+            <select id="context" name="context">
+              <option value="PERSONAL">Personal</option>
+              <option value="WORK">Work</option>
+            </select>
+          </label>
+          <button class="button primary" type="submit">Connect synthetic source <span aria-hidden="true">↗</span></button>
+        </form>
+      </section>
+      <p id="activity" role="status" aria-live="polite">Loading private fixture state.</p>
+      <div class="content-grid">
+        <section aria-labelledby="connections-heading">
+          <div class="section-title">
+            <h2 id="connections-heading">Your private connections</h2>
+            <span id="connection-count">0 sources</span>
+          </div>
+          <div id="connections"></div>
+          <div id="empty-state" class="empty-state">
+            <p class="empty-mark" aria-hidden="true">↗</p>
+            <h3>No source approved yet.</h3>
+            <p>Choose a source above. Its approval request explains what can be read and retained.</p>
+          </div>
+        </section>
+        <aside class="context-column">
+          <section class="source-note" aria-labelledby="scope-heading">
+            <p class="eyebrow">What the record means</p>
+            <h2 id="scope-heading">A useful view.<br>A stated limit.</h2>
+            <p>Available history is partial. A source's native quantities describe its own record, with missing values left unknown.</p>
+            <dl class="source-lanes">
+              <div><dt>Provider identity</dt><dd>Unverified</dd></div>
+              <div><dt>History coverage</dt><dd>Partial</dd></div>
+              <div><dt>Subscription payments</dt><dd>Not supplied</dd></div>
+              <div><dt>Actual charges</dt><dd>Not supplied</dd></div>
+              <div><dt>API-equivalent estimate</dt><dd>Not calculated</dd></div>
+            </dl>
+            <p class="small-copy">Codex response tokens and legacy cumulative increases remain separate. Cursor usage-cost estimates are source estimates, not bills.</p>
+          </section>
+          <section class="persistence-panel" aria-labelledby="persistence-heading">
+            <p class="eyebrow">Fixture verification</p>
+            <h2 id="persistence-heading">Retain the accepted record</h2>
+            <p id="storage-state">Waiting for receiver state.</p>
+            <p id="restart-state">A process restart has not been checked in this run.</p>
+            <button class="button secondary" id="restart" type="button" disabled>Reopen fixture stores</button>
+            <p class="small-copy">This control closes and reopens the local receiver and companion stores. A real Mac installation remains a separate acceptance step.</p>
+          </section>
+        </aside>
+      </div>
+      <footer>
+        <p>Private by default. Sharing controls below produce a local preview only. Nothing is published.</p>
+      </footer>
+    </main>
+    <dialog id="approval-dialog" aria-labelledby="approval-title" aria-describedby="approval-copy">
+      <p class="eyebrow">Review access</p>
+      <h2 id="approval-title">Approve this synthetic source?</h2>
+      <p id="approval-copy">The local fixture will read sample usage records and retain their approved numeric history privately.</p>
+      <dl class="approval-scope">
+        <div><dt>Owner</dt><dd>Synthetic fixture owner</dd></div>
+        <div><dt>Source</dt><dd id="approval-source"></dd></div>
+        <div><dt>Context</dt><dd id="approval-context"></dd></div>
+        <div><dt>Device</dt><dd>Local fixture companion</dd></div>
+        <div><dt>History</dt><dd id="approval-window"></dd></div>
+        <div><dt>Access</dt><dd id="approval-access"></dd></div>
+        <div><dt>Identity</dt><dd>Provider account unverified. Context is your association.</dd></div>
+        <div><dt>Storage</dt><dd>Private numeric results. Accepted history remains after disconnect.</dd></div>
+        <div><dt>Sharing</dt><dd>Nothing public. Preview fields require a separate selection.</dd></div>
+      </dl>
+      <p class="small-copy">Only the selected sample source is read. History is partial. No provider login, credentials or real usage files are accessed.</p>
+      <div class="dialog-actions">
+        <button class="button secondary" id="cancel-approval" type="button" autofocus>Cancel</button>
+        <button class="button primary" id="approve" type="button">Approve and backfill</button>
+      </div>
+    </dialog>
+  </body>
+</html>

@@ -1,5 +1,9 @@
 # Codex local history collector verification
 
+Imported handoff receipt for the earlier collector-only prototype. Current
+implementation and validation are recorded in
+[the durable connection receipt](2026-10-06-durable-collector-connection.md).
+
 Date: October 6, 2026. Branch: feat/codex-history-collector.
 Base: 6cf026b11499854b53f8aaae01f9a133df7578dd, independently matched to remote main.
 

@@ -1,0 +1,57 @@
+name: Durable collector fixture
+on:
+  pull_request:
+    paths:
+      - src/domain/collector-contract*
+      - src/domain/connection-history*
+      - src/domain/exact-json*
+      - src/local/collector-*
+      - src/local/codex-history-collector*
+      - src/local/codex-rollout-*
+      - src/local/cursor-report-adapter*
+      - native/codex-rollout-reader.c
+      - scripts/build-codex-rollout-reader.mjs
+      - scripts/codex-history-preview.mjs
+      - scripts/collector-fixture-server.mjs
+      - prototypes/collector-connection/**
+      - tests/collector-browser/**
+      - tests/support/codex-history-cli.test.ts
+      - tests/support/collector-fixture-cli.test.ts
+      - tests/fixtures/codex-rollouts/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/collector-fixture.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: collector-fixture-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic-connection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Verify actual SQLite, HTTP, native acquisition and process recovery
+        run: npx vitest run src/domain/collector-contract.test.ts src/local/collector-private-store.test.ts src/local/collector-companion.test.ts src/local/collector-service.test.ts src/local/collector-fixture-http.test.ts src/local/cursor-report-adapter.test.ts tests/support/collector-fixture-cli.test.ts --maxWorkers=2
+      - run: npx playwright install --with-deps chromium
+      - name: Verify synthetic approval and private results on desktop and mobile
+        run: npx playwright test --config tests/collector-browser/playwright.config.ts
+      - name: Retain synthetic browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: durable-collector-fixture-proof
+          path: |
+            tests/collector-browser/screenshots/
+            tests/collector-browser/artifacts/
+          if-no-files-found: error
+          retention-days: 14

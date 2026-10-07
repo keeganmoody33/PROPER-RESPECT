@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Local numeric review only. No implicit source, auth, output file, or network.
 
-const usage = "Usage: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/codex-history-preview.mjs --directory /absolute/selected/directory --start YYYY-MM-DDTHH:MM:SS.sssZ --end YYYY-MM-DDTHH:MM:SS.sssZ\nLinux and Node.js 24 required. Maximum window: 7 days. Reads bounded rollout-*.jsonl files only. Outputs a private numeric JSON review to stdout. No upload or account access.\n";
+const usage = "Usage: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/codex-history-preview.mjs --directory /absolute/selected/directory --start YYYY-MM-DDTHH:MM:SS.sssZ --end YYYY-MM-DDTHH:MM:SS.sssZ [--native-reader /absolute/reviewed/reader]\nNode.js 24 required. macOS requires the explicit native reader; Linux supports either reader. Maximum window: 7 days. Reads bounded rollout-*.jsonl files only. Outputs a private numeric JSON review to stdout. No upload or account access.\n";
 const args = process.argv.slice(2);
 if (args.length === 1 && args[0] === "--help") {
   process.stdout.write(usage);
@@ -13,13 +13,14 @@ if (args.length === 1 && args[0] === "--help") {
   process.once("SIGINT", cancel);
   process.once("SIGTERM", cancel);
   try {
-    if (args.length !== 6 || args[0] !== "--directory" || args[2] !== "--start" || args[4] !== "--end") throw new Error();
-    const { readCodexRolloutDirectory } = await import("../src/local/codex-rollout-files.ts");
+    if (![6, 8].includes(args.length) || args[0] !== "--directory" || args[2] !== "--start" || args[4] !== "--end" || args.length === 8 && args[6] !== "--native-reader") throw new Error();
     const { collectCodexRolloutHistory } = await import("../src/local/codex-history-collector.ts");
     const window = { start: args[3], end: args[5] };
     // Validate the requested window before touching the selected directory.
     collectCodexRolloutHistory({ window, signal: controller.signal }, []);
-    const scanned = await readCodexRolloutDirectory({ directory: args[1], signal: controller.signal });
+    const scanned = args.length === 8
+      ? await (await import("../src/local/codex-rollout-native.ts")).readCodexRolloutDirectoryNative({ directory: args[1], executablePath: args[7], signal: controller.signal })
+      : await (await import("../src/local/codex-rollout-files.ts")).readCodexRolloutDirectory({ directory: args[1], signal: controller.signal });
     const history = collectCodexRolloutHistory({ window, signal: controller.signal }, scanned.files);
     const text = JSON.stringify({ ...history, scan: { scannedFiles: scanned.scannedFiles, ignoredEntries: scanned.ignoredEntries } }, null, 2);
     // Synchronous parsing shares the read deadline; a delayed timer cannot let a
