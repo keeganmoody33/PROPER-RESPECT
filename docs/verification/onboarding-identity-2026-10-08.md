@@ -58,6 +58,14 @@ The final independent agent reviewed the implementation, tests, receipt and deci
 
 The in-app browser reproduced the editable published handle before the fix. After rebuilding, the same surface exposed the handle as read-only and saved a display-name edit with the draft receipt. Captures at 1280 × 900 and 390 × 900 are retained as `identity-desktop-2026-10-08.png` and `identity-mobile-2026-10-08.png` in the dated design artifact directory. The mobile document width was 390 px at a 390 px viewport.
 
+![Existing identity form at 1280 px with fictional Maya](assets/onboarding-identity-2026-10-08/desktop.png)
+
+![Existing identity form at 390 px with fictional Maya](assets/onboarding-identity-2026-10-08/mobile.png)
+
+## Delivery pass
+
+On October 8, after the owner asked for the last merge and was told this fix remained local, the owner asked to fix that delivery gap. The PR includes the same implementation plus the retained screenshots. The base was refreshed and remains `6cf026b11499854b53f8aaae01f9a133df7578dd`; no rebase was needed. Current-head CI and outside review are recorded in the PR. Production deployment is outside this pass.
+
 ## Recurrence
 
 The app confirmed creation of active heartbeat `proper-respect-onboarding-lab`, every four hours in the current chat. The next pass is a visual study of first-card-to-profile presentation. The initial create attempt was rejected for missing a destination; the corrected request explicitly used the current thread and succeeded. The separate delivery automation remains paused.
