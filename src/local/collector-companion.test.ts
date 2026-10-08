@@ -193,6 +193,31 @@ it("review regression: A to B to A to B reports advance the authoritative checkp
   } finally { companion.close(); service.close(); }
 });
 
+it("does not insert another receipt when a later acquisition matches the last committed review", async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "collector-unchanged-review-"))); directories.push(directory);
+  const service = new CollectorService({ databasePath: join(directory, "receiver.sqlite"), now: () => now });
+  const owner = { issuer: "https://synthetic-owner.invalid", subject: "synthetic-owner" };
+  const verifier = "synthetic-private-verifier-000000000000000000000000000000000000000000";
+  const request = await service.requestPairing({ descriptor: { kind: "cursor-complete-export", provider: "cursor", sourceId: "cursor-source", deviceId: "device", collectorVersion: "cursor-v1", context: "PERSONAL", account: { kind: "UNKNOWN" } }, window, verifier });
+  await service.approvePairing({ pairingId: request.pairingId, owner, expiresAt: initial().expiresAt, allowedMetrics: ["requests"] });
+  const claimed = await service.claimPairing({ pairingId: request.pairingId, verifier });
+  const companion = new CollectorCompanion({ databasePath: join(directory, "companion.sqlite"), now: () => now, transport: { getGrant: input => service.getGrant(input), stageChunk: input => service.stageChunk(input), deliveryStatus: input => service.deliveryStatus(input), commitReview: input => service.commitReview(input) } });
+  companion.connect(claimed);
+  const report = (value: string) => ({ format: "cursor-complete-report-v1", reportId: "one-report", source: { provider: "cursor", kind: "owner-supplied-report", accountAlias: null, sample: "unknown" }, window, complete: true, coverage: "partial", rows: [{ id: "one", at: "2026-10-02T00:00:00.000Z", metric: "requests", value, unit: "requests", kind: "NATIVE_QUANTITY" }] });
+  const collect = vi.fn(async () => report("1"));
+  try {
+    const first = await companion.sync({ connectionId: claimed.grant.connectionId, collect });
+    const second = await companion.sync({ connectionId: claimed.grant.connectionId, collect });
+    expect(second).toEqual(first);
+    expect(collect).toHaveBeenCalledTimes(2);
+    expect((await service.privateHistory({ owner, connectionId: claimed.grant.connectionId })).receiptCount).toBe(1);
+    const changed = await companion.sync({ connectionId: claimed.grant.connectionId, collect: async () => report("2") });
+    expect(changed.checkpoint).not.toBe(first.checkpoint);
+    expect((await service.privateHistory({ owner, connectionId: claimed.grant.connectionId })).receiptCount).toBe(2);
+    expect((await service.privateHistory({ owner, connectionId: claimed.grant.connectionId })).cursorViews[0].rows[0].value).toBe("2");
+  } finally { companion.close(); service.close(); }
+});
+
 it("review regression: an unaccepted stale outbox is discarded only after receiver status and replaced by a fresh acquisition", async () => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "collector-stale-outbox-"))); directories.push(directory);
   const service = new CollectorService({ databasePath: join(directory, "receiver.sqlite"), now: () => now });

@@ -88,10 +88,15 @@ it("runs the actual native fixture connection, updates and process reopen with p
   await post("/fixture/sync", claimed);
   const first = (await runtime.state()).connections[0];
   expect(first.metrics.modernTotalTokens).toBe("30"); expect(first.metrics.legacyObservedIncrease).toBe("20");
+  expect(first.receiptCount).toBe(1);
   await post("/fixture/sync", claimed);
   expect((await runtime.state()).connections[0].metrics.modernTotalTokens).toBe("30");
+  expect((await runtime.state()).connections[0].receiptCount).toBe(1);
+  await runtime.tick();
+  expect((await runtime.state()).connections[0].receiptCount).toBe(1);
   await post("/fixture/update", claimed);
   expect((await runtime.state()).connections[0].metrics.modernTotalTokens).toBe("70");
+  expect((await runtime.state()).connections[0].receiptCount).toBe(2);
   await post("/fixture/restart", {});
   await post("/fixture/sync", claimed);
   expect((await runtime.state()).persistence.restartVerified).toBe(true);

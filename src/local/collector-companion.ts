@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
 import { canonicalJson } from "../domain/canonical-json.ts";
-import { assembleReview, assertGrantActive, assertMatchingReceipt, buildReviewDelivery, collectorDigest, deliveryStatusSchema, grantSchema, manifestSchema, chunkSchema, type CollectorGrant, type CommitReceipt, type ReviewChunk, type ReviewManifest } from "../domain/collector-contract.ts";
+import { assembleReview, assertGrantActive, assertMatchingReceipt, buildReviewDelivery, collectorDigest, deliveryStatusSchema, grantSchema, manifestSchema, chunkSchema, receiptSchema, type CollectorGrant, type CommitReceipt, type ReviewChunk, type ReviewManifest } from "../domain/collector-contract.ts";
 import { openCollectorPrivateStore } from "./collector-private-store.ts";
 
 export type CollectorAuthentication = { connectionId: string; credential: string; signal?: AbortSignal };
@@ -16,6 +16,7 @@ const credentialSchema = z.string().min(16).max(512).regex(/^[A-Za-z0-9._~-]+$/)
 const sessionSchema = z.object({ connectionId: z.string(), grantJson: z.string(), credential: credentialSchema.nullable(), status: z.enum(["ACTIVE", "REVOKED"]), revision: z.number().int().positive(), checkpoint: z.string().nullable() });
 type Session = z.infer<typeof sessionSchema>;
 const outboxSchema = z.object({ manifestJson: z.string(), chunksJson: z.string() });
+const storedCommitSchema = z.object({ digest: z.string().regex(/^[a-f0-9]{64}$/), receiptJson: z.string() });
 const parse = (text: string): unknown => JSON.parse(text);
 
 /** Durable sanitized outbox. Receiver authority is required before every new local read. */
@@ -37,6 +38,9 @@ export class CollectorCompanion {
       );
       CREATE TABLE IF NOT EXISTS companion_outbox (
         connectionId TEXT PRIMARY KEY, manifestJson TEXT NOT NULL, chunksJson TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS companion_last_commit (
+        connectionId TEXT PRIMARY KEY, digest TEXT NOT NULL, receiptJson TEXT NOT NULL
       );`);
   }
 
@@ -90,6 +94,7 @@ export class CollectorCompanion {
           return;
         }
         this.database.prepare("DELETE FROM companion_outbox WHERE connectionId = ?").run(grant.connectionId);
+        this.database.prepare("DELETE FROM companion_last_commit WHERE connectionId = ?").run(grant.connectionId);
         this.database.prepare("UPDATE companion_sessions SET grantJson = ?, credential = ?, status = 'ACTIVE', revision = revision + 1, checkpoint = ? WHERE connectionId = ?").run(canonicalJson(grant), credential, grant.checkpoint, grant.connectionId);
       } else {
         this.database.prepare("INSERT INTO companion_sessions VALUES (?, ?, ?, 'ACTIVE', 1, ?)").run(grant.connectionId, canonicalJson(grant), credential, grant.checkpoint);
@@ -108,6 +113,18 @@ export class CollectorCompanion {
     return { manifest, chunks };
   }
   checkpoint({ connectionId }: { connectionId: string }): string | null { return this.session(connectionId).checkpoint; }
+  private lastCommit(connectionId: string): { digest: string; receipt: CommitReceipt } | null {
+    const row = this.database.prepare("SELECT digest, receiptJson FROM companion_last_commit WHERE connectionId = ?").get(connectionId);
+    if (!row) return null;
+    const stored = storedCommitSchema.parse(row);
+    const receipt = receiptSchema.parse(parse(stored.receiptJson));
+    if (receipt.connectionId !== connectionId || receipt.digest !== stored.digest) throw new Error("Stored commit identity changed.");
+    return { digest: stored.digest, receipt };
+  }
+  private rememberCommit(connectionId: string, receipt: CommitReceipt): void {
+    this.database.prepare("INSERT INTO companion_last_commit(connectionId, digest, receiptJson) VALUES(?, ?, ?) ON CONFLICT(connectionId) DO UPDATE SET digest = excluded.digest, receiptJson = excluded.receiptJson")
+      .run(connectionId, receipt.digest, canonicalJson(receipt));
+  }
 
   sync(input: { connectionId: string; collect: (grant: CollectorGrant, signal: AbortSignal) => Promise<unknown> }): Promise<CommitReceipt> {
     const existing = this.inFlight.get(input.connectionId);
@@ -169,6 +186,11 @@ export class CollectorCompanion {
           if (acquisition.signal.aborted || performance.now() - started >= 5000) throw new Error();
         } finally { clearTimeout(timer); signal.removeEventListener("abort", abort); }
         const acquired = delivery;
+        if (!acquired) throw new Error();
+        const remembered = this.lastCommit(connectionId);
+        if (remembered && remembered.digest === acquired.manifest.digest && remembered.receipt.checkpoint === grant.checkpoint) {
+          return remembered.receipt;
+        }
         delivery = this.transaction(() => {
           this.checkSession(connectionId, local.revision, signal);
           const pending = this.pending({ connectionId });
@@ -193,10 +215,12 @@ export class CollectorCompanion {
         if (pending && pending.manifest.batchId !== accepted.manifest.batchId) throw new Error("Pending review changed.");
         if (!pending) {
           if (this.session(connectionId).checkpoint !== receipt.checkpoint) throw new Error("Pending review changed.");
+          this.rememberCommit(connectionId, receipt);
           return;
         }
         this.database.prepare("UPDATE companion_sessions SET checkpoint = ?, grantJson = ? WHERE connectionId = ? AND revision = ? AND status = 'ACTIVE'").run(receipt.checkpoint, canonicalJson({ ...grant, checkpoint: receipt.checkpoint }), connectionId, local.revision);
         this.database.prepare("DELETE FROM companion_outbox WHERE connectionId = ?").run(connectionId);
+        this.rememberCommit(connectionId, receipt);
       });
       return receipt;
     } catch {
@@ -210,6 +234,7 @@ export class CollectorCompanion {
       this.session(connectionId);
       this.database.prepare("UPDATE companion_sessions SET status = 'REVOKED', credential = NULL, revision = revision + 1 WHERE connectionId = ?").run(connectionId);
       this.database.prepare("DELETE FROM companion_outbox WHERE connectionId = ?").run(connectionId);
+      this.database.prepare("DELETE FROM companion_last_commit WHERE connectionId = ?").run(connectionId);
     });
   }
   close(): void {
