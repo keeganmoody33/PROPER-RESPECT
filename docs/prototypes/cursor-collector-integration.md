@@ -101,5 +101,11 @@ CURSOR_COLLECTOR_CONTRACT_ROOT=/workspace/PROPER-RESPECT-cursor-contract \
   --test src/server/cursor-report/*.test.mjs
 ```
 
+Re-run with Node 24: **57 passed, 0 failed, 0 skipped** on this isolated branch
+without a contract root; **63 passed, 0 failed, 0 skipped** with the pinned PR
+#157 root at `a6c670b6fc71b418d608c75d612c06112195a701`, including 16 bridge
+tests. Those figures match the [handoff](cursor-report-handoff.md) and the
+[integration receipt](../verification/2026-10-07-cursor-collector-integration.md).
+
 No fixture result proves a live Cursor connection, provider ownership, authorized
 historical retention or acceptance on the owner's Mac.

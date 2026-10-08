@@ -29,6 +29,15 @@ the existing test cleanup. Source-pin binding and the actual schema callback are
 caller responsibilities, explicitly documented and tested; they are not claimed
 to authenticate an account or authorize a connection.
 
+Copilot review 5450117027 of [PR #158](https://github.com/keeganmoody33/PROPER-RESPECT/pull/158)
+at `b273257fb7860763b28385e740d99b0b68f78c2c` found that the adapter handoff still
+reported 47 tests for the current `src/server/cursor-report/*.test.mjs` glob.
+Disposition: fix now. Re-ran that Node 24 command: **57 passed, 0 failed, 0
+skipped** standalone; **63 passed, 0 failed, 0 skipped** with
+`CURSOR_COLLECTOR_CONTRACT_ROOT` at this receipt's pinned PR #157 head. Updated
+the handoff, collector integration instructions, and this receipt so all three
+use those counts. No test files changed.
+
 ## Validation
 
 The final Cursor directory was overlaid onto the unchanged pinned PR worktree.

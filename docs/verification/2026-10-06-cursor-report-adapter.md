@@ -73,9 +73,14 @@ alternative outside-root write, Git-marker removal, guard change, or repository
 file transfer followed that denial. A fully passing Vitest run needs an
 environment with an authorized writable temporary path outside Git ancestry.
 
-Final focused results are 47 passed and 0 failed. The exact delivery commit is
-reported in the task outcome. All inputs are original synthetic fixtures, including invalid
-boundary cases. Tests establish parsing and replacement behavior only.
+Final focused results at this receipt's head are 47 passed and 0 failed. That
+count is the pre-bridge decode/normalizer/checkpoint suite. Later commits add
+`collector-bridge.test.mjs`; the current glob is 57 standalone tests, or 63 with
+the pinned shared contract, as recorded in the
+[2026-10-07 integration receipt](2026-10-07-cursor-collector-integration.md).
+The exact delivery commit is reported in the task outcome. All inputs are
+original synthetic fixtures, including invalid boundary cases. Tests establish
+parsing and replacement behavior only.
 
 No live Cursor connection, account login, credential creation, persistent grant,
 backend configuration, production deployment, push, PR, upload, repository file

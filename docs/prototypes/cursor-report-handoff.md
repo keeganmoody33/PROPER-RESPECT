@@ -185,11 +185,19 @@ Focused command, using the already installed Node 24 runtime:
 node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test src/server/cursor-report/*.test.mjs
 ```
 
-Final result: **47 tests passed, 0 failed**. Tests cover exact counts/costs,
-missing fields, report scope, inclusive boundaries, duplicate preservation,
-pagination and search ambiguity, all three observed CSV layouts, malformed
-inputs, byte/row/page/window limits, and replacement/replay/freshness conflicts.
-The verification receipt records independent review dispositions.
+On this isolated branch the shared collector contract is absent, so the same
+glob is **57 tests passed, 0 failed, 0 skipped**. That includes ten projection
+unit tests in `collector-bridge.test.mjs`; the actual shared-contract group is
+present and explicitly skips. With `CURSOR_COLLECTOR_CONTRACT_ROOT` set to the
+pinned PR #157 checkout at `a6c670b6fc71b418d608c75d612c06112195a701`, the
+command is **63 tests passed, 0 failed, 0 skipped**, including 16 bridge tests.
+Tests cover exact counts/costs, missing fields, report scope, inclusive
+boundaries, duplicate preservation, pagination and search ambiguity, all three
+observed CSV layouts, malformed inputs, byte/row/page/window limits,
+replacement/replay/freshness conflicts, and collector projection. The
+[integration handoff](cursor-collector-integration.md) and [integration
+receipt](../verification/2026-10-07-cursor-collector-integration.md) record the
+same counts.
 
 The initial pass deferred dependency installation after interpreting the
 installation restriction broadly. The parent then clarified that pinned cloud
