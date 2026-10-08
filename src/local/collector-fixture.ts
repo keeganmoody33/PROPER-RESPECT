@@ -1,12 +1,13 @@
 import { randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { constants } from "node:fs";
-import { appendFile, copyFile, lstat, mkdir, readFile, writeFile } from "node:fs/promises";
+import { appendFile, chmod, copyFile, link, lstat, mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { z } from "zod";
 import { CODEX_METRICS, CURSOR_METRICS } from "../domain/collector-contract.ts";
 import { CollectorCompanion } from "./collector-companion.ts";
 import { CollectorService } from "./collector-service.ts";
+import { openCollectorPrivateStore } from "./collector-private-store.ts";
 import { createCollectorFixtureTransport, startCollectorFixtureHttp } from "./collector-fixture-http.ts";
 import { collectCodexRolloutHistory } from "./codex-history-collector.ts";
 import { readCodexRolloutDirectoryNative } from "./codex-rollout-native.ts";
@@ -44,28 +45,85 @@ async function ensureFixtureDirectory(path: string) {
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("Synthetic fixture directory is invalid.");
 }
 
-/** Completes missing Codex and Cursor artifacts independently so a partial first start can recover. */
-export async function ensureCollectorFixtureSources(input: { sourceDirectory: string; repository: string }) {
-  await mkdir(input.sourceDirectory, { recursive: true, mode: 0o700 });
-  const codexDirectory = join(input.sourceDirectory, "codex");
-  await ensureFixtureDirectory(codexDirectory);
-  for (const file of CODEX_SOURCE_FILES) {
-    let parent = codexDirectory;
-    for (const part of file.split("/").slice(0, -1)) {
-      parent = join(parent, part);
-      await ensureFixtureDirectory(parent);
+const bootstraps = new Map<string, Promise<void>>();
+const invalidFixture = () => new Error("Synthetic fixture content is incomplete or invalid.");
+
+async function publishFixtureFile(input: {
+  target: string; stageDirectory: string; kind: "codex" | "cursor"; expected: Buffer; source?: string;
+}) {
+  const { target, expected } = input;
+  let present: Buffer | null = null;
+  try {
+    if (!await isRegularFile(target)) {
+      await lstat(target); // Missing is recoverable; other file kinds are not.
+      throw invalidFixture();
     }
-    // Exclusive creation preserves updates even when another bootstrap wins.
-    try { await copyFile(join(input.repository, "tests/fixtures/codex-rollouts", file), join(codexDirectory, file), constants.COPYFILE_EXCL); }
-    catch (error) { if (!isNodeError(error, "EEXIST")) throw error; }
+    present = await readFile(target);
+  } catch (error) { if (!isNodeError(error, "ENOENT")) throw error; }
+  const interrupted = present !== null && present.length < expected.length && expected.subarray(0, present.length).equals(present);
+  if (present !== null && !interrupted) {
+    let text: string;
+    try { text = new TextDecoder("utf-8", { fatal: true }).decode(present); } catch { throw invalidFixture(); }
+    if (!text.endsWith("\n")) throw invalidFixture();
+    try {
+      if (input.kind === "cursor") parseCursorCompleteReportCsv({ csv: text, reportId: "fixture-report", source: cursorSource, window, complete: true });
+      else for (const line of text.trimEnd().split("\n")) {
+        const row: unknown = JSON.parse(line);
+        if (!row || typeof row !== "object" || Array.isArray(row)) throw invalidFixture();
+      }
+    } catch { throw invalidFixture(); }
+    return;
   }
-  const cursorPath = join(input.sourceDirectory, "cursor.csv");
-  if (!await isRegularFile(cursorPath)) {
-    try { await writeFile(cursorPath, cursorCsv, { flag: "wx", mode: 0o600 }); }
-    catch (error) { if (!isNodeError(error, "EEXIST")) throw error; }
+  // Only an empty file or an exact initial-template prefix reaches repair.
+  const staged = join(input.stageDirectory, `${input.kind}-${randomBytes(16).toString("hex")}`);
+  try {
+    if (input.source) { await copyFile(input.source, staged, constants.COPYFILE_EXCL); await chmod(staged, 0o600); }
+    else await writeFile(staged, expected, { flag: "wx", mode: 0o600 });
+    if (!(await readFile(staged)).equals(expected)) throw invalidFixture();
+    // The bootstrap transaction serializes repair; missing targets still publish exclusively.
+    if (present === null) await link(staged, target);
+    else await rename(staged, target);
+  } finally {
+    try { await unlink(staged); } catch (error) { if (!isNodeError(error, "ENOENT")) throw error; }
   }
-  const codexComplete = await Promise.all(CODEX_SOURCE_FILES.map(file => isRegularFile(join(codexDirectory, file))));
-  if (codexComplete.some(complete => !complete) || !await isRegularFile(cursorPath)) throw new Error("Synthetic fixture sources are incomplete.");
+}
+
+async function initializeCollectorFixtureSources(input: { sourceDirectory: string; repository: string }) {
+  await mkdir(input.sourceDirectory, { recursive: true, mode: 0o700 });
+  // Reuse the fixture's owned/private/non-link store boundary and crash-released SQLite lock.
+  const lock = openCollectorPrivateStore({ databasePath: join(input.sourceDirectory, "bootstrap.sqlite") });
+  try {
+    lock.exec("BEGIN IMMEDIATE");
+    try {
+      const stageDirectory = join(input.sourceDirectory, ".bootstrap-staging");
+      await ensureFixtureDirectory(stageDirectory);
+      for (const file of await readdir(stageDirectory)) {
+        if (!/^(codex|cursor)-[a-f0-9]{32}$/.test(file) || !await isRegularFile(join(stageDirectory, file))) throw invalidFixture();
+        await unlink(join(stageDirectory, file));
+      }
+      const codexDirectory = join(input.sourceDirectory, "codex");
+      await ensureFixtureDirectory(codexDirectory);
+      for (const file of CODEX_SOURCE_FILES) {
+        let parent = codexDirectory;
+        for (const part of file.split("/").slice(0, -1)) {
+          parent = join(parent, part);
+          await ensureFixtureDirectory(parent);
+        }
+        const source = join(input.repository, "tests/fixtures/codex-rollouts", file);
+        await publishFixtureFile({ target: join(codexDirectory, file), stageDirectory, kind: "codex", source, expected: await readFile(source) });
+      }
+      await publishFixtureFile({ target: join(input.sourceDirectory, "cursor.csv"), stageDirectory, kind: "cursor", expected: Buffer.from(cursorCsv) });
+      lock.exec("COMMIT");
+    } catch (error) { lock.exec("ROLLBACK"); throw error; }
+  } finally { lock.close(); }
+}
+
+/** Publish complete fixture files; a concurrent caller must wait for readiness. */
+export function ensureCollectorFixtureSources(input: { sourceDirectory: string; repository: string }): Promise<void> {
+  const previous = bootstraps.get(input.sourceDirectory) ?? Promise.resolve();
+  const operation = previous.catch(() => undefined).then(() => initializeCollectorFixtureSources(input));
+  bootstraps.set(input.sourceDirectory, operation);
+  return operation.finally(() => { if (bootstraps.get(input.sourceDirectory) === operation) bootstraps.delete(input.sourceDirectory); });
 }
 
 const sum = (values: (string | null)[]) => values.length === 0 || values.some(value => value === null) ? null : String(values.reduce((total, value) => total + BigInt(value ?? "0"), BigInt(0)));
