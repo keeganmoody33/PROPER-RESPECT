@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { appendFile, cp, lstat, mkdir, readFile, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { appendFile, copyFile, lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { z } from "zod";
 import { CODEX_METRICS, CURSOR_METRICS } from "../domain/collector-contract.ts";
@@ -17,7 +18,11 @@ const idSchema = z.strictObject({ connectionId: z.string().min(1).max(128) });
 const connectSchema = z.strictObject({ provider: z.enum(["codex", "cursor"]), context: z.enum(["PERSONAL", "WORK"]) });
 const cursorSource = { provider: "cursor", kind: "owner-supplied-report", accountAlias: null, sample: "unknown" } as const;
 const cursorCsv = "timestamp,model,requests,input_tokens,cached_input_tokens,output_tokens,total_tokens,usage_cost_usd\n2026-10-02T12:00:00.000Z,SYNTHETIC_PRIVATE_MODEL,2,80,20,20,100,0.0125\n";
-const CODEX_SOURCE_MARKER = "sessions/2026/10/02/rollout-fixture-modern.jsonl";
+const CODEX_SOURCE_FILES = [
+  "sessions/2026/10/02/rollout-fixture-modern.jsonl",
+  "sessions/2026/10/02/rollout-fixture-legacy.jsonl",
+  "archived_sessions/rollout-fixture-modern-copy.jsonl",
+];
 
 function isNodeError(error: unknown, code: string) {
   return error instanceof Error && "code" in error && error.code === code;
@@ -32,20 +37,35 @@ async function isRegularFile(path: string) {
   }
 }
 
+async function ensureFixtureDirectory(path: string) {
+  try { await mkdir(path, { mode: 0o700 }); }
+  catch (error) { if (!isNodeError(error, "EEXIST")) throw error; }
+  const stat = await lstat(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("Synthetic fixture directory is invalid.");
+}
+
 /** Completes missing Codex and Cursor artifacts independently so a partial first start can recover. */
 export async function ensureCollectorFixtureSources(input: { sourceDirectory: string; repository: string }) {
   await mkdir(input.sourceDirectory, { recursive: true, mode: 0o700 });
   const codexDirectory = join(input.sourceDirectory, "codex");
-  const codexMarker = join(codexDirectory, CODEX_SOURCE_MARKER);
-  if (!await isRegularFile(codexMarker)) {
-    await cp(join(input.repository, "tests/fixtures/codex-rollouts"), codexDirectory, { recursive: true, force: true });
+  await ensureFixtureDirectory(codexDirectory);
+  for (const file of CODEX_SOURCE_FILES) {
+    let parent = codexDirectory;
+    for (const part of file.split("/").slice(0, -1)) {
+      parent = join(parent, part);
+      await ensureFixtureDirectory(parent);
+    }
+    // Exclusive creation preserves updates even when another bootstrap wins.
+    try { await copyFile(join(input.repository, "tests/fixtures/codex-rollouts", file), join(codexDirectory, file), constants.COPYFILE_EXCL); }
+    catch (error) { if (!isNodeError(error, "EEXIST")) throw error; }
   }
   const cursorPath = join(input.sourceDirectory, "cursor.csv");
   if (!await isRegularFile(cursorPath)) {
     try { await writeFile(cursorPath, cursorCsv, { flag: "wx", mode: 0o600 }); }
     catch (error) { if (!isNodeError(error, "EEXIST")) throw error; }
   }
-  if (!await isRegularFile(codexMarker) || !await isRegularFile(cursorPath)) throw new Error("Synthetic fixture sources are incomplete.");
+  const codexComplete = await Promise.all(CODEX_SOURCE_FILES.map(file => isRegularFile(join(codexDirectory, file))));
+  if (codexComplete.some(complete => !complete) || !await isRegularFile(cursorPath)) throw new Error("Synthetic fixture sources are incomplete.");
 }
 
 const sum = (values: (string | null)[]) => values.length === 0 || values.some(value => value === null) ? null : String(values.reduce((total, value) => total + BigInt(value ?? "0"), BigInt(0)));

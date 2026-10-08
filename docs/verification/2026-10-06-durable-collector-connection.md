@@ -82,6 +82,18 @@ Convex synchronization, seeding or provider read occurred.
    after the change. The corrected Darwin workflow result remains a separate
    platform acceptance check.
 
+7. Fixed now (October 8 review of `c2cf3b5`): interrupted fixture bootstrap can
+   retain the modern marker while losing legacy/archive files. The focused RED
+   regression failed with `ENOENT` for the missing legacy file. Bootstrap now
+   completes missing fixture files without replacing existing synthetic updates
+   and validates all required files. Follow-up concurrent-start review reproduced
+   `EEXIST` from recursive copying. Exclusive per-file copies and validated,
+   individually created parent directories resolve it. All ten bootstrap,
+   loopback HTTP and process tests pass; 16 simultaneous starts preserve existing
+   updates, and invalid file targets or linked parents reject. All three
+   desktop/mobile fixture browser tests pass. This affects synthetic startup
+   only, not real acquisition.
+
 Independent local review found these issues and reread the fixes. This is
 implementation review, not approval to merge our own PR.
 
