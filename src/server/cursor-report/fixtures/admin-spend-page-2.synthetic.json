@@ -1,0 +1,19 @@
+{
+  "teamMemberSpend": [
+    {
+      "userId": "synthetic-member-3",
+      "name": "Synthetic Three",
+      "email": "three@synthetic.invalid",
+      "role": "member",
+      "spendCents": 0,
+      "overallSpendCents": 0,
+      "fastPremiumRequests": 0,
+      "hardLimitOverrideDollars": 0,
+      "monthlyLimitDollars": 0,
+      "effectivePerUserLimitDollars": 0
+    }
+  ],
+  "subscriptionCycleStart": 1790812800000,
+  "totalMembers": 3,
+  "totalPages": 2
+}
