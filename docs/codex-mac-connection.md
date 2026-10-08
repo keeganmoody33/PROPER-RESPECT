@@ -1,14 +1,22 @@
 # Codex Mac connection
 
-Local Mac verification on 2026-10-07 supersedes the acquisition constraints below:
+Updated 2026-10-08, America/New_York. The approved development receiver and real
+backfill, updates, restart, lost-ACK recovery and revocation passed on October 7:
 see the [real Mac receipt](verification/2026-10-07-real-mac-connection.md).
-The companion now streams bounded pages, discards content locally, splits dense
-usage windows, and reports excluded malformed files. Mixed roots can remain
-explicitly unclassified. Real local acquisition passed; development receiver
-deployment and end-to-end lifecycle acceptance remain pending.
+The main grant expired at `2026-10-08T00:00:00Z`; the archive is revoked, retained
+history remains private, and the foreground helper is stopped. Fresh acquisition
+requires renewed scope. Mixed roots remain explicitly unclassified.
 
-This branch implements the development connection. It has not passed the approved
-real-Mac acceptance gate. The Linux-hosted synthetic demo exercises the actual
+The October 8 local efficiency pass reconciles each validated numeric page once
+across its time windows. The browser can reuse calculated totals while the same
+owner's queried grant/checkpoint is unchanged. It bypasses that cache for revoked
+sources, and clears it on failed loads. First loads still page retained history;
+native acquisition still scans the selected tree. This pass changes no backend
+schema or functions. See the [efficiency receipt](verification/2026-10-08-connection-efficiency.md)
+for generated-fixture and retained-history proof; fresh real acquisition with
+the optimized collector has not been run.
+
+The local synthetic demo exercises the actual
 connection panel, native reader, numeric collector, backend mutations, disk queue,
 lost ACK recovery, private insight and revocation. Its backend is `convex-test`,
 not a live Convex deployment.
@@ -41,26 +49,12 @@ npm run codex:development:check
 ```
 
 This reports presence, target equality and key class without printing key values.
-It never infers that two Clerk keys belong to the same app. The actual session
-matched `dev:utmost-mongoose-374` and
-`https://utmost-mongoose-374.convex.cloud`. Its public key identifies
-`relevant-oriole-27.clerk.accounts.dev`. The secret value has neither a Clerk
-development nor production prefix; managed credentials can be opaque. Its binding must be corrected or explained
-before authentication is accepted. The managed status reports `unknown`, not
-`ready`, for all four runtime variables.
-
-The enforced executor snapshot allows package and git destinations but lacks
-the development Convex and Clerk hosts. The status API calls network enforcement
-`unknown`. GitHub release API access was denied, so production release state is
-unverified. Source main and the two merges were verified through git. Saved
-configuration publication does not establish usable runtime setup.
-
-Required destination review includes the development Convex host, the named Clerk
-development frontend, and `api.clerk.com` for read-only app verification. Backend
-JWT issuer configuration must match the development Clerk app and the `convex`
-JWT template. No backend configuration, deployment or credential lookup was done.
-Neither issuer variable nor a Convex deploy key is present in this session. This
-does not establish what is configured on the blocked development backend.
+It never infers that two Clerk keys belong to the same app. The October 7 Mac
+verification established matching development Clerk keys, issuer and `convex`
+JWT template, then authenticated the owner against `dev:utmost-mongoose-374`
+and `https://utmost-mongoose-374.convex.cloud`. That live proof supersedes the
+earlier cloud executor's unknown credential binding and blocked network state.
+Saved environment variables alone still do not establish authentication.
 
 ## Approve the real test before running these steps
 
@@ -116,7 +110,7 @@ Enter the app's one-use code in the helper within five minutes, then run sync.
 The exact destination is `https://utmost-mongoose-374.convex.cloud`.
 `identity` displays the existing source identity and public-key digest for
 re-pairing after expiry. It never displays the private key. HTTP requests stay on
-the approved origin, refuse redirects and have a ten-second abortable deadline.
+the approved origin, refuse redirects and have a 60-second abortable deadline.
 
 With separate recurrence approval, `watch` runs foreground sync every 30 seconds
 after the previous pass completes. It does not install a daemon or login item.
@@ -151,14 +145,17 @@ legacy accounting for the same thread. Historical account identity stays unverif
 Quota, API-equivalent estimates and actual charges remain unavailable from this
 source. Private ingestion does not publish profile facts.
 
-Native pages read at most 64 files/32 MiB, with a 4 MiB file limit, 256 KiB line
+Original raw-reader pages read at most 64 files/32 MiB, with a 4 MiB file limit, 256 KiB line
 limit and five-second native budget. Enumeration is bounded at 100,000 entries.
 Each collection window is at most seven days; a grant covers at most 366 days
 and expires within 31 days. UTC precision is currently limited to milliseconds
 by the attached collector. Unsupported precision, malformed files, live mutation,
 links and incomplete final lines fail closed. Previous accepted history remains.
-These constraints can leave history unavailable and must be evaluated against the
-approved Mac's actual source before claiming a working connection.
+These are the original raw-reader limits. The active streaming companion path
+instead reads at most 512 MiB/64 files per native page, with a five-second native
+deadline, a 64 MiB line bound, and a 32 MiB/100,000-line numeric projection bound.
+Malformed files remain whole-file coverage gaps. These bounds were checked against
+the approved Mac on October 7; see the real Mac receipt for exact dispositions.
 
 Each pass replays the tree, including archive movements. The scan-local page cursor
 does not establish complete history or become a durable usage checkpoint. Movement
