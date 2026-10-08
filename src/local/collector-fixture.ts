@@ -17,6 +17,36 @@ const idSchema = z.strictObject({ connectionId: z.string().min(1).max(128) });
 const connectSchema = z.strictObject({ provider: z.enum(["codex", "cursor"]), context: z.enum(["PERSONAL", "WORK"]) });
 const cursorSource = { provider: "cursor", kind: "owner-supplied-report", accountAlias: null, sample: "unknown" } as const;
 const cursorCsv = "timestamp,model,requests,input_tokens,cached_input_tokens,output_tokens,total_tokens,usage_cost_usd\n2026-10-02T12:00:00.000Z,SYNTHETIC_PRIVATE_MODEL,2,80,20,20,100,0.0125\n";
+const CODEX_SOURCE_MARKER = "sessions/2026/10/02/rollout-fixture-modern.jsonl";
+
+function isNodeError(error: unknown, code: string) {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+async function isRegularFile(path: string) {
+  try {
+    const stat = await lstat(path);
+    return stat.isFile() && !stat.isSymbolicLink();
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) return false;
+    throw error;
+  }
+}
+
+/** Completes missing Codex and Cursor artifacts independently so a partial first start can recover. */
+export async function ensureCollectorFixtureSources(input: { sourceDirectory: string; repository: string }) {
+  await mkdir(input.sourceDirectory, { recursive: true, mode: 0o700 });
+  const codexDirectory = join(input.sourceDirectory, "codex");
+  const codexMarker = join(codexDirectory, CODEX_SOURCE_MARKER);
+  if (!await isRegularFile(codexMarker)) {
+    await cp(join(input.repository, "tests/fixtures/codex-rollouts"), codexDirectory, { recursive: true, force: true });
+  }
+  const cursorPath = join(input.sourceDirectory, "cursor.csv");
+  if (!await isRegularFile(cursorPath)) {
+    try { await writeFile(cursorPath, cursorCsv, { flag: "wx", mode: 0o600 }); }
+    catch (error) { if (!isNodeError(error, "EEXIST")) throw error; }
+  }
+  if (!await isRegularFile(codexMarker) || !await isRegularFile(cursorPath)) throw new Error("Synthetic fixture sources are incomplete.");
+}
 
 const sum = (values: (string | null)[]) => values.length === 0 || values.some(value => value === null) ? null : String(values.reduce((total, value) => total + BigInt(value ?? "0"), BigInt(0)));
 function sumDecimals(values: (string | null)[]) {
@@ -37,10 +67,7 @@ export async function startCollectorFixture(input: { directory: string; reposito
   const privateDirectory = await lstat(input.directory);
   if (!privateDirectory.isDirectory() || privateDirectory.isSymbolicLink() || (privateDirectory.mode & 0o077) !== 0 || process.getuid && privateDirectory.uid !== process.getuid()) throw new Error("The fixture needs a private owned directory.");
   const source = join(input.directory, "synthetic-sources");
-  try { await mkdir(source, { mode: 0o700 });
-    await cp(join(input.repository, "tests/fixtures/codex-rollouts"), join(source, "codex"), { recursive: true, errorOnExist: true, force: false });
-    await writeFile(join(source, "cursor.csv"), cursorCsv, { flag: "wx", mode: 0o600 });
-  } catch (error) { if (!(error instanceof Error) || !("code" in error) || error.code !== "EEXIST") throw error; }
+  await ensureCollectorFixtureSources({ sourceDirectory: source, repository: input.repository });
   const reader = join(input.directory, "reader");
   try { await lstat(reader); } catch (error) {
     if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
