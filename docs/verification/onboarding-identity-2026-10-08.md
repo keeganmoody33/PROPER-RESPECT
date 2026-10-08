@@ -15,6 +15,7 @@ This changes the existing form, not the brand identity or backend handle policy.
 
 ## Review dispositions before implementation
 
+- Fix now, PR #160 comment 4219321706: use the committed screenshot paths in this receipt. The original filenames describe local artifacts but cannot be followed within the PR checkout.
 - Fix now: the initial inline candidate required the claimed-identity flag even when publication was positively known. Use publication-first precedence, as independently proposed by candidates B/C and the judge.
 - Fix now: replace the ambiguous saved-identity receipt with explicit draft language.
 - Deferred: extracting the entire form or introducing a two-function domain API. One existing caller and three simple derived states do not justify either new interface in this pass.
@@ -56,7 +57,7 @@ Dependencies were installed in the new worktree with `npm ci --ignore-scripts`. 
 
 The final independent agent reviewed the implementation, tests, receipt and decision trail against this run's transcript. Verdict: No flags. The no-comments pass found zero added or changed comments and zero deletion recommendations. It did not rerun output-producing commands. This was inherited-model independent review, not cross-provider validation.
 
-The in-app browser reproduced the editable published handle before the fix. After rebuilding, the same surface exposed the handle as read-only and saved a display-name edit with the draft receipt. Captures at 1280 × 900 and 390 × 900 are retained as `identity-desktop-2026-10-08.png` and `identity-mobile-2026-10-08.png` in the dated design artifact directory. The mobile document width was 390 px at a 390 px viewport.
+The in-app browser reproduced the editable published handle before the fix. After rebuilding, the same surface exposed the handle as read-only and saved a display-name edit with the draft receipt. Captures at 1280 × 900 and 390 × 900 are committed as `docs/verification/assets/onboarding-identity-2026-10-08/desktop.png` and `docs/verification/assets/onboarding-identity-2026-10-08/mobile.png`. The mobile document width was 390 px at a 390 px viewport.
 
 ![Existing identity form at 1280 px with fictional Maya](assets/onboarding-identity-2026-10-08/desktop.png)
 
