@@ -4,6 +4,7 @@ import { z } from "zod";
 import { UsageConnectionsPanel } from "../../components/usage-connections-panel";
 import { grantScopeSchema, numericEvidenceSchema } from "../../src/domain/usage-sync";
 import type { Id } from "../../convex/_generated/dataModel";
+import { createPrivateUsageLoader } from "../../src/client/private-usage-loader";
 import "./style.css";
 const id = <T extends "usageGrants" | "usageSources">() => z.custom<Id<T>>(value => typeof value === "string" && value.length > 0 && value.length <= 128);
 const grantsSchema = z.array(z.object({ ownerSubject: z.string(), grantId: id<"usageGrants">(), sourceId: id<"usageSources">(), scope: grantScopeSchema,
@@ -14,6 +15,10 @@ async function rpc(operation: string, args: unknown = {}): Promise<unknown> {
   return response.json();
 }
 function Demo() {
+  const [loadUsage] = useState(() => createPrivateUsageLoader({ ownerSubject: "fixture-owner",
+    list: async () => grantsSchema.parse(await rpc("list")),
+    evidence: async args => z.object({ page: z.array(numericEvidenceSchema), isDone: z.boolean(), continueCursor: z.string() }).parse(await rpc("evidence", args)),
+  }));
   const [grants, setGrants] = useState<z.infer<typeof grantsSchema>>([]), [code, setCode] = useState("");
   const [notice, setNotice] = useState(""), [identity, setIdentity] = useState<{ sourceKey: string; deviceDigest: string } | null>(null);
   const refresh = async () => setGrants(grantsSchema.parse(await rpc("list")));
@@ -30,7 +35,7 @@ function Demo() {
     <UsageConnectionsPanel grants={grants} approve={async args => { const result = id<"usageGrants">().parse(await rpc("approve", args)); await refresh(); return result; }}
       disconnect={async args => { const result = z.object({ retained: z.boolean() }).parse(await rpc("disconnect", args)); await refresh(); return result; }}
       erase={async args => z.object({ done: z.boolean() }).parse(await rpc("erase", args))}
-      evidence={async args => z.object({ page: z.array(numericEvidenceSchema), isDone: z.boolean(), continueCursor: z.string() }).parse(await rpc("evidence", args))} />
+      loadUsage={loadUsage} />
   </main>;
 }
 createRoot(document.getElementById("root") ?? document.body).render(<Demo />);

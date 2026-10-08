@@ -6,7 +6,7 @@ import { z } from "zod";
 import { digest, digestSchema, grantScopeSchema, secretSchema, usagePacketSchema, packetId, numericEvidenceSchema,
   type GrantScope, type UsagePacket } from "../domain/usage-sync.ts";
 import { canonicalJson } from "../domain/canonical-json.ts";
-import { collectCodexHistoryWindows } from "./codex-history-windows.ts";
+import { prepareCodexHistoryWindows } from "./codex-history-windows.ts";
 import { readNativeCodexUsagePage } from "./codex-stream-reader.ts";
 import { devicePrivateKeySchema, deviceDigest, devicePublicKey } from "../domain/device-proof.ts";
 import { createDeviceKey } from "./device-signature.ts";
@@ -94,9 +94,10 @@ export async function syncCompanion(input: { state: CompanionState; save: (state
     const directory = await (input.read ?? readNativeCodexUsagePage)({ directory: state.directory, signal, offset: fileOffset });
     scannedFiles += directory.scannedFiles; skippedFiles += directory.ignoredEntries;
     await check();
+    const collectWindows = prepareCodexHistoryWindows(directory.files, input.signal);
     for (let start = Date.parse(scope.start); start < end; start += 7 * 86400_000) {
       const requestedWindow = { start: new Date(start).toISOString(), end: new Date(Math.min(end, start + 7 * 86400_000)).toISOString() };
-      for (const history of collectCodexHistoryWindows({ window: requestedWindow, signal: input.signal }, directory.files)) {
+      for (const history of collectWindows(requestedWindow)) {
         const packets: UsagePacket[] = [];
         const window = history.window;
         const rows = [...history.responses.rows.map(row => ({ ...row, kind: "response" })), ...history.legacy.rows.map(row => ({ ...row, kind: "legacy" }))]

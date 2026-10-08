@@ -1,14 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import "./usage-connections.css";
-import { digest, grantScopeSchema, privateUsageTotals, type NumericEvidence } from "@/src/domain/usage-sync";
+import { digest, grantScopeSchema, privateUsageTotals } from "@/src/domain/usage-sync";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import type { ConnectionsAPI } from "@/src/client/usage-connection-api";
-type Call<K extends "approve" | "disconnect" | "erase" | "evidence"> = (args: FunctionArgs<ConnectionsAPI[K]>) => Promise<FunctionReturnType<ConnectionsAPI[K]>>;
-export function UsageConnectionsPanel({ grants, approve, disconnect, erase, evidence }: {
+import type { PrivateUsageLoader } from "@/src/client/private-usage-loader";
+type Call<K extends "approve" | "disconnect" | "erase"> = (args: FunctionArgs<ConnectionsAPI[K]>) => Promise<FunctionReturnType<ConnectionsAPI[K]>>;
+export function UsageConnectionsPanel({ grants, approve, disconnect, erase, loadUsage }: {
   grants: FunctionReturnType<ConnectionsAPI["list"]> | undefined;
-  approve: Call<"approve">; disconnect: Call<"disconnect">; erase: Call<"erase">; evidence: Call<"evidence">;
+  approve: Call<"approve">; disconnect: Call<"disconnect">; erase: Call<"erase">; loadUsage: PrivateUsageLoader;
 }) {
   const [source, setSource] = useState(""), [device, setDevice] = useState(""), [context, setContext] = useState("unclassified");
   const [start, setStart] = useState(""), [expires, setExpires] = useState(""), [retain, setRetain] = useState(true);
@@ -20,14 +21,7 @@ export function UsageConnectionsPanel({ grants, approve, disconnect, erase, evid
   const load = async (sourceId: Id<"usageSources">) => {
     setBusy(true); setMessage(""); setInsight(null);
     try {
-      const rows: NumericEvidence[] = []; let cursor: string | null = null;
-      for (;;) {
-        const page: FunctionReturnType<ConnectionsAPI["evidence"]> = await evidence({ sourceId, cursor });
-        rows.push(...page.page);
-        if (page.isDone) break;
-        cursor = page.continueCursor;
-      }
-      setInsight(privateUsageTotals(rows));
+      setInsight(await loadUsage(sourceId));
       const grant = grants?.find(grant => grant.sourceId === sourceId);
       if (grant) setInsightSource({ context: grant.scope.context, sourceKey: grant.scope.sourceKey, loadedAt: new Date().toISOString() });
     } catch { setMessage("Private history could not be loaded. Try again."); }

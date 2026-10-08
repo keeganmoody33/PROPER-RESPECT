@@ -98,7 +98,13 @@ export function collectCodexRolloutHistory(
   request: { window: { start: string; end: string }; signal: AbortSignal }, files: readonly CodexRolloutFile[],
 ): CodexRolloutHistory {
   const window = historyWindowSchema.parse(request.window);
-  const inWindow = (at: string) => at >= window.start && at < window.end;
+  return prepareCodexRolloutHistory(files, request.signal)(window);
+}
+
+/** Reconcile one validated page once. Only numeric projections and opaque
+ * identities survive into the window selector; raw lines are not retained. */
+export function prepareCodexRolloutHistory(files: readonly CodexRolloutFile[], signal: AbortSignal) {
+  if (signal.aborted) throw new Error("disconnected");
   if (files.length > 64) throw new Error("rollout-limit");
   const responseVariants = new Map<string, Map<string, ResponseRow>>();
   const snapshots: LegacySnapshot[] = [];
@@ -109,7 +115,7 @@ export function collectCodexRolloutHistory(
   for (const file of files) {
     let thread: string | null = null, rawThread: string | null = null, segment = "initial";
     for (const line of file.lines) {
-      if (request.signal.aborted) throw new Error("disconnected");
+      if (signal.aborted) throw new Error("disconnected");
       bytes += new TextEncoder().encode(line).length;
       if (bytes > 32 * 1024 * 1024 || ++lineCount > 100_000) throw new Error("rollout-limit");
       // Rollouts contain long prompts/tool output. Decode within the same byte,
@@ -175,14 +181,9 @@ export function collectCodexRolloutHistory(
     const conflict = variants.size > 1;
     // A conflicting date cannot make a disputed response disappear from its
     // requested window. Every in-window variant remains visibly quarantined.
-    for (const row of variants.values()) if (inWindow(row.at)) rows.push({ ...row, status: conflict ? "conflict" : "measured" });
+    for (const row of variants.values()) rows.push({ ...row, status: conflict ? "conflict" : "measured" });
   }
   rows.sort((a, b) => a.at.localeCompare(b.at) || a.thread.localeCompare(b.thread) || a.response.localeCompare(b.response) || canonicalJson(a.counts).localeCompare(canonicalJson(b.counts)));
-  const responseTotals = CODEX_ROLLOUT_METRICS.map(metric => ({ metric,
-    value: rows.length === 0 || rows.some(row => row.status === "conflict" || row.counts[metric] === null) ? null
-      : String(rows.reduce((sum, row) => sum + BigInt(row.counts[metric] ?? "0"), BigInt(0))),
-  }));
-
   const byStream = new Map<string, LegacySnapshot[]>();
   for (const row of snapshots) {
     if (modernThreads.has(row.thread) || excludedLegacy.has(row.thread)) continue;
@@ -224,19 +225,29 @@ export function collectCodexRolloutHistory(
     }
   }
   const legacy = reconcileConnectionHistory(observations);
-  const legacyRows = legacy.rows.filter(row => inWindow(row.at)).map(row => {
+  const legacyRows = legacy.rows.map(row => {
     const thread = streamThreads.get(row.stream);
     if (!thread) throw new Error("invalid-legacy-stream");
     return conflictStreams.has(row.stream) ? { ...row, thread, status: "conflict" as const, delta: null } : { ...row, thread };
   });
-  const legacyTotals = CODEX_ROLLOUT_METRICS.map(metric => {
-    const matching = legacyRows.filter(row => row.metric === metric);
-    return { metric, unit: "tokens", value: matching.some(row => row.status === "conflict") || !matching.some(row => row.delta !== null) ? null
-      : String(matching.reduce((sum, row) => sum + BigInt(row.delta ?? "0"), BigInt(0))) };
-  });
-  if (rows.length > 10_000 || legacyRows.length > 60_000) throw new Error("rollout-output-limit");
-  if (request.signal.aborted) throw new Error("disconnected");
-  return { format: "codex-local-history-v1", source: { provider: "codex", kind: "local-history", accountAlias: null, sample: "unknown" },
-    window, coverage: "partial", responses: { rows, totals: responseTotals, replays: responseReplays },
-    legacy: { rows: legacyRows, totals: legacyTotals, replays: legacy.replays }, diagnostics };
+  return (requestedWindow: CodexRolloutHistory["window"]): CodexRolloutHistory => {
+    if (signal.aborted) throw new Error("disconnected");
+    const window = historyWindowSchema.parse(requestedWindow);
+    const inWindow = (at: string) => at >= window.start && at < window.end;
+    const selected = rows.filter(row => inWindow(row.at)), selectedLegacy = legacyRows.filter(row => inWindow(row.at));
+    if (selected.length > 10_000 || selectedLegacy.length > 60_000) throw new Error("rollout-output-limit");
+    const responseTotals = CODEX_ROLLOUT_METRICS.map(metric => ({ metric,
+      value: selected.length === 0 || selected.some(row => row.status === "conflict" || row.counts[metric] === null) ? null
+        : String(selected.reduce((sum, row) => sum + BigInt(row.counts[metric] ?? "0"), BigInt(0))),
+    }));
+    const legacyTotals = CODEX_ROLLOUT_METRICS.map(metric => {
+      const matching = selectedLegacy.filter(row => row.metric === metric);
+      return { metric, unit: "tokens", value: matching.some(row => row.status === "conflict") || !matching.some(row => row.delta !== null) ? null
+        : String(matching.reduce((sum, row) => sum + BigInt(row.delta ?? "0"), BigInt(0))) };
+    });
+    if (signal.aborted) throw new Error("disconnected");
+    return { format: "codex-local-history-v1", source: { provider: "codex", kind: "local-history", accountAlias: null, sample: "unknown" },
+      window, coverage: "partial", responses: { rows: selected, totals: responseTotals, replays: responseReplays },
+      legacy: { rows: selectedLegacy, totals: legacyTotals, replays: legacy.replays }, diagnostics: { ...diagnostics } };
+  };
 }
