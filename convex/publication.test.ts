@@ -278,7 +278,9 @@ test.each(["withheld", "fixed", "removed"] as const)("a %s public snapshot revok
 test.each(["empty", "removal"] as const)("an invalid profile identity rejects an %s sharing change before preview or publication writes", async mode => {
   const { t, owner, userId, propIds: [a, b], selection } = await fixture();
   await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
-  await owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "   ", bio: "Private draft bio" });
+  // Older records may predate identity-save validation. Keep the publication
+  // boundary covered without using an invalid current save to build the fixture.
+  await t.run(ctx => ctx.db.patch(userId, { displayName: "", bio: "Private draft bio" }));
   const selections = mode === "empty" ? [] : [await selection(a, { publish: false })];
   const state = () => t.run(async ctx => ({
     user: await ctx.db.get(userId),

@@ -550,7 +550,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
           {handleState === "published" && <p className="identity-address">Published profile: <a href={publicProfileUrl} target="_blank" rel="noreferrer">{publicProfileUrl}</a></p>}
           <form onSubmit={event => { event.preventDefault(); void submitProfile(new FormData(event.currentTarget)); }} className="form-grid">
             <label>Handle<input key={`${handleState}:${state.user.handle}`} name="handle" defaultValue={handleState === "draft" && publicIdentityClaimed === false ? "" : state.user.handle} readOnly={handleState !== "draft"} aria-describedby="identity-handle-guidance" placeholder="your-handle" required /></label>
-            <label>Display name<input name="displayName" defaultValue={state.user.displayName ?? clerkUser?.fullName ?? ""} required /></label>
+            <label>Display name<input name="displayName" defaultValue={state.user.displayName ?? clerkUser?.fullName ?? ""} required pattern={".*\\S.*"} title="Enter a display name with at least one non-space character." /></label>
             <label className="full">Short footer bio (optional)<textarea name="bio" defaultValue={state.user.bio} rows={2} /></label>
             <ProfileLinksFields links={state.user.profileLinks} preferredLinkUrl={state.user.preferredLinkUrl} />
             <div className="action-row full"><button className="secondary-action" disabled={busy || handleState === "unknown"}>Save public identity</button></div>
