@@ -152,18 +152,22 @@ for (const width of [1280, 390]) test(`blank display name preserves the saved id
   await identity.locator("summary").click();
   await identity.getByLabel("Handle", { exact: true }).fill("synthetic-owner");
   const name = identity.getByLabel("Display name", { exact: true });
-  await name.fill("   ");
-  await identity.getByRole("button", { name: "Save public identity", exact: true }).click();
-  await expect.poll(() => name.evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(false);
-  await expect(name).toBeFocused();
+  for (const blank of ["   ", "\u2028\u2029"]) {
+    await name.fill(blank);
+    await identity.getByRole("button", { name: "Save public identity", exact: true }).click();
+    await expect.poll(() => name.evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(false);
+    await expect(name).toBeFocused();
+  }
   const calls = () => page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
   expect((await calls()).filter((call: { name: string }) => call.name === "claimHandle")).toEqual([]);
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
   await identity.screenshot({ path: testInfo.outputPath(`profile-name-invalid-${width}.png`) });
 
-  await name.fill("Corrected synthetic owner");
+  await name.fill("\u2028Corrected synthetic owner\u2029");
+  await expect.poll(() => name.evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(true);
   await name.press("Enter");
   await expect(page.getByRole("status").filter({ hasText: "Identity changes saved to your draft." })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!).user.displayName)).toBe("Corrected synthetic owner");
   await page.getByRole("button", { name: "Preview sharing", exact: true }).click();
   const preview = page.getByRole("region", { name: "Your visitor’s view", exact: true });
   await expect(preview).toContainText("Corrected synthetic owner");

@@ -81,7 +81,7 @@ const mutations = {
   },
   "onboarding:claimHandle": async args => {
     record("claimHandle", args);
-    retain({ ...state, hasClaimedPublicIdentity: true, user: { ...state.user, ...args, preferredLinkUrl: args.preferredLinkUrl ?? undefined } });
+    retain({ ...state, hasClaimedPublicIdentity: true, user: { ...state.user, ...args, displayName: args.displayName.trim(), preferredLinkUrl: args.preferredLinkUrl ?? undefined } });
     return args.handle;
   },
   "onboarding:publishSelected": async args => {
