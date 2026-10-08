@@ -5,10 +5,11 @@ rollout files. Its C implementation uses POSIX descriptor-relative operations
 on macOS and Linux. It never launches Codex, looks up a login, opens an auth
 store, installs a service or contacts a provider.
 
-The local results recorded below are Linux results. The macOS workflow must
-pass on the reviewed commit before claiming tested macOS support. Signed helper
-packaging, a filesystem picker and owner-approved real Mac acceptance remain
-unfinished.
+The local results recorded below are Linux results. GitHub Actions run
+`37531009381` succeeded at `a6c670b6fc71b418d608c75d612c06112195a701` on a
+macOS runner, including compilation and the synthetic native/durable test
+step. Signed helper packaging, a filesystem picker and owner-approved real Mac
+acceptance remain unfinished.
 
 ## Local development
 
@@ -134,15 +135,17 @@ headers without returning a result.
 
 `.github/workflows/codex-macos.yml` runs this suite on a macOS runner and retains
 JUnit plus host information. A Linux pass does not establish Darwin filesystem
-behavior. The workflow is prepared evidence collection; it is not a recorded
-macOS pass until its exact commit run succeeds.
+behavior.
 
 The first API-visible macOS compiler receipt, run `37530478445` at commit
 `0b31766a872705d7ede1fdf2414b3846e93dc275`, failed before tests:
 `st_mtimespec` was hidden by the strict POSIX feature namespace. The reader now
 requests Darwin's extension namespace on Apple platforms and retains the POSIX
-namespace on Linux. A corrected macOS run must pass before this is considered
-Darwin acquisition evidence.
+namespace on Linux. The corrected workflow, run
+[`37531009381`](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37531009381)
+at `a6c670b6fc71b418d608c75d612c06112195a701`, succeeded, including compilation
+and the synthetic native/durable test step. That run is Darwin CI evidence for
+this helper; it is not real-Mac acceptance.
 
 Real Mac acceptance must additionally approve the device, selected source,
 history window and destination, then demonstrate genuine backfill, replay,

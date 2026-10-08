@@ -174,6 +174,9 @@ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/codex-history-previe
 ```
 
 The native symlink, ancestor-rename, hardlink, partial-write, mutation and CLI
-tests passed on Linux. The prepared macOS workflow must pass on the reviewed
-commit before a Darwin claim. Packaging/signing and approved real Mac acceptance
-remain unfinished. See [native acquisition details](codex-macos-acquisition.md).
+tests passed on Linux. GitHub Actions run
+[`37531009381`](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37531009381)
+succeeded at `a6c670b6fc71b418d608c75d612c06112195a701`, including compilation
+and the synthetic native acquisition/durable-sync step on a macOS runner.
+Packaging/signing and approved real Mac acceptance remain unfinished. See
+[native acquisition details](codex-macos-acquisition.md).
