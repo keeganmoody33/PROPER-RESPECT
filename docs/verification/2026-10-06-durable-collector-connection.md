@@ -94,6 +94,22 @@ Convex synchronization, seeding or provider read occurred.
    desktop/mobile fixture browser tests pass. This affects synthetic startup
    only, not real acquisition.
 
+8. Fixed now (October 8 parent review of `a78351e`): a delayed direct copy
+   exposed a regular partial file to a competing initializer; an interrupted
+   copy left that partial file accepted on restart. Both regressions failed
+   before correction. Complete files are now staged and verified before atomic
+   publication, with the existing private SQLite boundary serializing repair and
+   releasing locks on process exit. Only empty/template-prefix originals are
+   repaired; valid changed files remain and corrupt files reject unchanged.
+   The final Codex and Cursor readiness tests both fail on `a78351e`. The updated
+   native/durable selection passes all 166 tests, including the actual HTTP and
+   process lifecycle, and the final bootstrap selection passes all 11 tests.
+   A killed child leaves its lock releasable and abandoned regular staging
+   recoverable. Sixteen concurrent starts preserve valid Codex/Cursor changes.
+   Fourteen invalid-file/linked-parent cases and five private root/database/stage
+   cases reject without changing external sentinels. Changed-file lint,
+   TypeScript and whitespace checks pass. All data in these checks is synthetic.
+
 Independent local review found these issues and reread the fixes. This is
 implementation review, not approval to merge our own PR.
 
