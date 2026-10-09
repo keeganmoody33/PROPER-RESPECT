@@ -3,7 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { collectCodexRolloutHistory } from "./codex-history-collector.ts";
-import { CollectorCompanion, type CollectorTransport } from "./collector-companion.ts";
+import { COLLECTOR_OUTBOX_QUARANTINE_AFTER, CollectorCompanion, type CollectorTransport } from "./collector-companion.ts";
+import { openCollectorPrivateStore } from "./collector-private-store.ts";
+import { COMPANION_SCHEMA_VERSION, RECEIVER_SCHEMA_VERSION } from "./collector-store-schema.ts";
 import { CollectorService } from "./collector-service.ts";
 import { buildReviewDelivery, CODEX_METRICS, grantSchema, type CommitReceipt, type ReviewManifest } from "../domain/collector-contract.ts";
 
@@ -252,6 +254,51 @@ it("review regression: an unaccepted stale outbox is discarded only after receiv
     expect(history.checkpoint).toBe(receipt.checkpoint);
     expect(companion.pending({ connectionId: claimed.grant.connectionId })).toBeNull();
   } finally { companion.close(); service.close(); }
+});
+
+it("enables WAL, pins a schema version, and refuses a newer companion store", async () => {
+  const test = fixture();
+  test.companion.close();
+  const database = openCollectorPrivateStore({ databasePath: test.databasePath });
+  expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
+  expect(database.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: COMPANION_SCHEMA_VERSION });
+  database.exec("PRAGMA user_version = 99");
+  database.close();
+  expect(() => new CollectorCompanion({ databasePath: test.databasePath, transport: test.transport, now: () => now })).toThrow("newer than this process");
+});
+
+it("pins a receiver schema version and refuses a newer receiver store", async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "collector-receiver-schema-"))); directories.push(directory);
+  const databasePath = join(directory, "receiver.sqlite");
+  const service = new CollectorService({ databasePath, now: () => now });
+  service.close();
+  const database = openCollectorPrivateStore({ databasePath });
+  expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
+  expect(database.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: RECEIVER_SCHEMA_VERSION });
+  database.exec("PRAGMA user_version = 99");
+  database.close();
+  expect(() => new CollectorService({ databasePath, now: () => now })).toThrow("newer than this process");
+});
+
+it("quarantines a poison outbox after repeated send failures so a later sync can acquire again", async () => {
+  const test = fixture(), collect = vi.fn(async () => review());
+  test.transport.commitReview = vi.fn(async () => { throw new Error("synthetic poison commit"); });
+  for (let attempt = 0; attempt < COLLECTOR_OUTBOX_QUARANTINE_AFTER; attempt++) {
+    await expect(test.companion.sync({ connectionId: "one", collect })).rejects.toThrow();
+    if (attempt < COLLECTOR_OUTBOX_QUARANTINE_AFTER - 1) expect(test.companion.pending({ connectionId: "one" })).not.toBeNull();
+  }
+  expect(test.companion.pending({ connectionId: "one" })).toBeNull();
+  expect(test.companion.quarantined({ connectionId: "one" })).not.toBeNull();
+  expect(collect).toHaveBeenCalledTimes(1);
+  test.transport.commitReview = vi.fn(async ({ manifest }: { manifest: ReviewManifest }) => ({
+    format: "collector-commit-receipt-v1", connectionId: "one", generation: 1, batchId: manifest.batchId,
+    digest: manifest.digest, checkpoint: manifest.nextCheckpoint, committedAt: new Date(now).toISOString(),
+  }));
+  const receipt = await test.companion.sync({ connectionId: "one", collect });
+  expect(collect).toHaveBeenCalledTimes(2);
+  expect(receipt.connectionId).toBe("one");
+  expect(test.companion.pending({ connectionId: "one" })).toBeNull();
+  test.companion.close();
 });
 
 it("review regression: accepted pending delivery with a lost acknowledgment survives a later writer without reacquiring or replacing its view", async () => {

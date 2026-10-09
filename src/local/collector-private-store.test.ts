@@ -15,11 +15,15 @@ async function privateRoot() { const root = await realpath(await mkdtemp(join(tm
 it("creates private SQLite storage and preserves committed data on reopen", async () => {
   const root = await privateRoot(), databasePath = join(root, "store", "private.sqlite");
   const database = openCollectorPrivateStore({ databasePath });
-  database.exec("CREATE TABLE retained(value TEXT); INSERT INTO retained VALUES('synthetic-evidence');"); database.close();
+  database.exec("CREATE TABLE retained(value TEXT); INSERT INTO retained VALUES('synthetic-evidence');");
+  expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
+  database.close();
   expect((await stat(join(root, "store"))).mode & 0o777).toBe(0o700);
   expect((await stat(databasePath)).mode & 0o777).toBe(0o600);
   const reopened = openCollectorPrivateStore({ databasePath });
-  expect(reopened.prepare("SELECT value FROM retained").get()?.value).toBe("synthetic-evidence"); reopened.close();
+  expect(reopened.prepare("SELECT value FROM retained").get()?.value).toBe("synthetic-evidence");
+  expect(reopened.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
+  reopened.close();
 });
 
 it("both stores reject hardlinked databases before changing the original", async () => {

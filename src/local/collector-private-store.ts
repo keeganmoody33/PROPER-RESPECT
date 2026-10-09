@@ -20,7 +20,11 @@ export function openCollectorPrivateStore({ databasePath }: { databasePath: stri
     const file = lstatSync(databasePath);
     if (!file.isFile() || file.isSymbolicLink() || file.nlink !== 1 || (file.mode & 0o077) !== 0 || process.getuid && file.uid !== process.getuid()) throw new Error();
     database = new DatabaseSync(databasePath, { enableForeignKeyConstraints: true });
-    database.exec("PRAGMA busy_timeout=5000; PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;");
+    database.exec("PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;");
+    const journal = database.prepare("PRAGMA journal_mode").get();
+    if (!journal || typeof journal !== "object" || !("journal_mode" in journal) || journal.journal_mode !== "wal") {
+      throw new Error();
+    }
     return database;
   } catch {
     database?.close();
