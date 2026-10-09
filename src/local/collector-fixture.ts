@@ -35,15 +35,48 @@ function isNodeError(error: unknown, code: string) {
 const bootstraps = new Map<string, Promise<void>>();
 const invalidFixture = () => new Error("Synthetic fixture content is incomplete or invalid.");
 
+// Node has no openat API. Linux descriptor paths keep each lookup attached to
+// the already-open parent so O_NOFOLLOW applies to every component, not only the leaf.
+function descriptorPath(handle: FileHandle, name: string): string {
+  return `/proc/self/fd/${handle.fd}/${name}`;
+}
+
 async function withHandle<T>(path: string, flags: number, operation: (handle: FileHandle) => Promise<T>): Promise<T> {
-  let handle: FileHandle | undefined;
+  if (!isAbsolute(path) || path.includes("\0") || path.length > 4096) throw invalidFixture();
+  const components = path.split("/").filter(component => component !== "");
+  if (components.length === 0 || components.some(component => component === "." || component === "..")) throw invalidFixture();
+  const ancestors: FileHandle[] = [];
+  let leaf: FileHandle | undefined;
   try {
-    handle = await open(path, flags);
-    return await operation(handle);
+    if (process.platform === "linux") {
+      let parent = await open("/", noFollowDirectory);
+      ancestors.push(parent);
+      for (const [index, component] of components.entries()) {
+        const child = await open(descriptorPath(parent, component), index === components.length - 1 ? flags : noFollowDirectory);
+        if (index === components.length - 1) leaf = child;
+        else {
+          ancestors.push(child);
+          parent = child;
+        }
+      }
+    } else {
+      let prefix = "";
+      for (const [index, component] of components.entries()) {
+        prefix += `/${component}`;
+        const seen = await lstat(prefix);
+        if (seen.isSymbolicLink() || index < components.length - 1 && !seen.isDirectory()) throw invalidFixture();
+      }
+      leaf = await open(path, flags);
+    }
+    if (!leaf) throw invalidFixture();
+    return await operation(leaf);
   } catch (error) {
     if (isNodeError(error, "ELOOP") || isNodeError(error, "EISDIR") || isNodeError(error, "ENOTDIR")) throw invalidFixture();
     throw error;
-  } finally { await handle?.close(); }
+  } finally {
+    await leaf?.close();
+    for (const handle of ancestors.reverse()) await handle.close().catch(() => undefined);
+  }
 }
 
 async function readNoFollowFile(path: string): Promise<Buffer | null> {

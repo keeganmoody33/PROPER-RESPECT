@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:fs";
-import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -11,6 +11,8 @@ const copyControl = vi.hoisted(() => ({
   each: null as null | ((source: string, destination: string) => Promise<void>),
   cursor: null as null | ((destination: string, data: unknown) => Promise<void>),
   opens: [] as { path: string; flags: number }[],
+  pathChmods: [] as string[],
+  handleChmods: [] as number[],
 }));
 vi.mock("node:fs/promises", async importOriginal => {
   const original = await importOriginal<typeof import("node:fs/promises")>();
@@ -25,14 +27,24 @@ vi.mock("node:fs/promises", async importOriginal => {
       copyControl.cursor = null; return next(String(args[0]), args[1]);
     }
     return original.writeFile(...args);
+  }, chmod: async (...args: Parameters<typeof original.chmod>) => {
+    copyControl.pathChmods.push(String(args[0]));
+    return original.chmod(...args);
   }, open: async (...args: Parameters<typeof original.open>) => {
     if (typeof args[1] === "number") copyControl.opens.push({ path: String(args[0]), flags: args[1] });
-    return original.open(...args);
+    const handle = await original.open(...args);
+    const chmodFd = handle.chmod.bind(handle);
+    handle.chmod = async mode => {
+      copyControl.handleChmods.push(Number(mode));
+      return chmodFd(mode);
+    };
+    return handle;
   } };
 });
 const cleanup: string[] = [];
 afterEach(async () => {
   copyControl.next = null; copyControl.each = null; copyControl.cursor = null; copyControl.opens = [];
+  copyControl.pathChmods = []; copyControl.handleChmods = [];
   for (const directory of cleanup.splice(0).reverse()) await rm(directory, { recursive: true, force: true });
 });
 
@@ -228,9 +240,16 @@ it("opens Codex source and published targets with O_NOFOLLOW and rejects a symli
   const { sourceDirectory, repository } = await workspace();
   copyControl.opens = [];
   await ensureCollectorFixtureSources({ sourceDirectory, repository });
-  const inspected = copyControl.opens.filter(call => call.path.includes("codex-rollouts") || call.path.includes(`${sourceDirectory}/codex`) || call.path.endsWith("/cursor.csv"));
+  const inspected = copyControl.opens.filter(call =>
+    call.path.includes("codex-rollouts") || call.path.includes(`${sourceDirectory}/codex`) || call.path.endsWith("/cursor.csv") || call.path.startsWith("/proc/self/fd/")
+  );
   expect(inspected.length).toBeGreaterThan(0);
   expect(inspected.every(call => (call.flags & constants.O_NOFOLLOW) !== 0)).toBe(true);
+  if (process.platform === "linux") {
+    expect(copyControl.opens.some(call =>
+      call.path.startsWith("/proc/self/fd/") && (call.flags & constants.O_DIRECTORY) !== 0 && (call.flags & constants.O_NOFOLLOW) !== 0
+    )).toBe(true);
+  }
 
   const spoofed = await workspace();
   const fakeRepository = await realpath(await mkdtemp(join(tmpdir(), "fake-repo-")));
@@ -272,9 +291,28 @@ it("re-chmods leftover complete 0644 fixture files to 0600", async () => {
   const cursor = join(sourceDirectory, "cursor.csv");
   await chmod(modern, 0o644);
   await chmod(cursor, 0o644);
+  copyControl.pathChmods = [];
+  copyControl.handleChmods = [];
   await ensureCollectorFixtureSources({ sourceDirectory, repository });
   expect((await stat(modern)).mode & 0o777).toBe(0o600);
   expect((await stat(cursor)).mode & 0o777).toBe(0o600);
+  expect(copyControl.pathChmods.some(path => path === modern || path === cursor)).toBe(false);
+  expect(copyControl.handleChmods).toContain(0o600);
+});
+
+it("refuses an intermediate Codex symlink and leaves the outside file mode unchanged", async () => {
+  const { sourceDirectory, repository } = await workspace();
+  await ensureCollectorFixtureSources({ sourceDirectory, repository });
+  const sessions = join(sourceDirectory, "codex/sessions");
+  const outsideRoot = await realpath(await mkdtemp(join(tmpdir(), "outside-sessions-")));
+  cleanup.push(outsideRoot);
+  const outsideSessions = join(outsideRoot, "sessions");
+  await rename(sessions, outsideSessions);
+  await symlink(outsideSessions, sessions);
+  const outsideFile = join(outsideSessions, "2026/10/02/rollout-fixture-modern.jsonl");
+  await chmod(outsideFile, 0o644);
+  await expect(ensureCollectorFixtureSources({ sourceDirectory, repository })).rejects.toThrow("incomplete or invalid");
+  expect((await stat(outsideFile)).mode & 0o777).toBe(0o644);
 });
 
 it("rejects an already-present Codex file that is arbitrary JSON rather than rollout records", async () => {
