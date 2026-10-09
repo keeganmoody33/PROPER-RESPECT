@@ -79,17 +79,18 @@ it("serves IPv6 loopback ::1 with the same Host, Origin and size checks and neve
   const http = await startCollectorFixtureHttp({ service: () => service, owner, ownerToken, state: async () => ({ loopback: "ipv6" }) });
   cleanup.push(async () => { service.close(); await http.close(); await rm(directory, { recursive: true, force: true }); });
   expect(http.boundHosts).toEqual(["127.0.0.1", "::1"]);
-  expect(http.ipv6Origin).toMatch(/^http:\/\/\[::1\]:\d+$/);
-  if (!http.ipv6Origin) throw new Error("IPv6 origin missing.");
-  expect(() => createCollectorFixtureTransport({ origin: http.ipv6Origin })).not.toThrow();
-  const accepted = await fetch(`${http.ipv6Origin}/fixture/state`, { headers: { authorization: `Bearer ${ownerToken}`, origin: http.ipv6Origin } });
+  const ipv6Origin = http.ipv6Origin;
+  expect(ipv6Origin).toMatch(/^http:\/\/\[::1\]:\d+$/);
+  if (!ipv6Origin) throw new Error("IPv6 origin missing.");
+  expect(() => createCollectorFixtureTransport({ origin: ipv6Origin })).not.toThrow();
+  const accepted = await fetch(`${ipv6Origin}/fixture/state`, { headers: { authorization: `Bearer ${ownerToken}`, origin: ipv6Origin } });
   expect(accepted.status).toBe(200);
   expect(await accepted.json()).toEqual({ loopback: "ipv6" });
-  const crossed = await fetch(`${http.ipv6Origin}/fixture/connect`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${ownerToken}`, origin: http.origin }, body: "{}" });
+  const crossed = await fetch(`${ipv6Origin}/fixture/connect`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${ownerToken}`, origin: http.origin }, body: "{}" });
   expect(crossed.status).toBe(400);
-  const port = Number(new URL(http.ipv6Origin).port);
+  const port = Number(new URL(ipv6Origin).port);
   const spoofed = await new Promise<number>(resolve => {
-    const req = httpRequest({ host: "::1", port, family: 6, method: "POST", path: "/fixture/connect", headers: { host: `192.168.0.1:${port}`, "content-type": "application/json", authorization: `Bearer ${ownerToken}`, origin: http.ipv6Origin } }, response => { resolve(response.statusCode ?? 0); response.resume(); });
+    const req = httpRequest({ host: "::1", port, family: 6, method: "POST", path: "/fixture/connect", headers: { host: `192.168.0.1:${port}`, "content-type": "application/json", authorization: `Bearer ${ownerToken}`, origin: ipv6Origin } }, response => { resolve(response.statusCode ?? 0); response.resume(); });
     req.end("{}");
   });
   expect(spoofed).toBe(400);
