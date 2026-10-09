@@ -5,8 +5,8 @@ import { requireUser } from "./authHelpers";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { digest, digestSchema, secretSchema, grantScopeSchema, usagePacketSchema, packetId, evidenceKey, numericEvidenceSchema } from "../src/domain/usage-sync";
 import { deviceDigest, devicePublicKeySchema, verifyDeviceProof, type DeviceProof, type DeviceMessage } from "../src/domain/device-proof";
-import type { QueryCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 const eraseRef = makeFunctionReference<"mutation">("usageConnections:eraseRevoked");
 function developmentOnly() {
   if (process.env.CONVEX_CLOUD_URL !== "https://utmost-mongoose-374.convex.cloud") throw new ConvexError({ code: "CODEX_ACCESS_UNAVAILABLE", message: "Development connection unavailable." });
@@ -128,21 +128,25 @@ export const erase = mutation({ args: { grantId: v.id("usageGrants") }, handler:
   const source = await ctx.db.get(grant.sourceId);
   if (!source || source.userId !== owner._id || source.currentGrantId) throw new Error("Disconnect current access before erasing history.");
   await ctx.db.patch(grant.sourceId, { erasing: true });
-  const rows = await ctx.db.query("usageEvidence").withIndex("by_source", q => q.eq("sourceId", grant.sourceId)).take(200);
-  for (const row of rows) await ctx.db.delete(row._id);
-  await ctx.scheduler.runAfter(0, eraseRef, { sourceId: grant.sourceId });
-  return { done: rows.length < 200 };
+  const done = await eraseSourceBatch(ctx, source);
+  if (!done) await ctx.scheduler.runAfter(0, eraseRef, { sourceId: source._id });
+  return { done };
 } });
+
+async function eraseSourceBatch(ctx: MutationCtx, source: Doc<"usageSources">) {
+  const rows = await ctx.db.query("usageEvidence").withIndex("by_source", q => q.eq("sourceId", source._id)).take(200);
+  for (const row of rows) await ctx.db.delete(row._id);
+  if (rows.length === 200) return false;
+  const receipts = await ctx.db.query("usageReceipts").withIndex("by_source", q => q.eq("sourceId", source._id)).take(200);
+  for (const receipt of receipts) await ctx.db.delete(receipt._id);
+  if (receipts.length === 200) return false;
+  await ctx.db.patch(source._id, { erasing: false });
+  return true;
+}
 
 export const eraseRevoked = internalMutation({ args: { sourceId: v.id("usageSources") }, handler: async (ctx, args) => {
   const source = await ctx.db.get(args.sourceId);
   if (!source?.erasing) return;
   if (source.currentGrantId) throw new Error("Cannot erase an active source.");
-  const rows = await ctx.db.query("usageEvidence").withIndex("by_source", q => q.eq("sourceId", source._id)).take(200);
-  for (const row of rows) await ctx.db.delete(row._id);
-  if (rows.length === 200) { await ctx.scheduler.runAfter(0, eraseRef, { sourceId: source._id }); return; }
-  const receipts = await ctx.db.query("usageReceipts").withIndex("by_source", q => q.eq("sourceId", source._id)).take(200);
-  for (const receipt of receipts) await ctx.db.delete(receipt._id);
-  if (receipts.length === 200) { await ctx.scheduler.runAfter(0, eraseRef, { sourceId: source._id }); return; }
-  await ctx.db.patch(source._id, { erasing: false });
+  if (!await eraseSourceBatch(ctx, source)) await ctx.scheduler.runAfter(0, eraseRef, { sourceId: source._id });
 } });
