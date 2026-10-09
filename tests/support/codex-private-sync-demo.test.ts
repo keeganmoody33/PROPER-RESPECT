@@ -17,6 +17,7 @@ import { deviceDigest, devicePublicKey } from "../../src/domain/device-proof";
 import { signDeviceMessage } from "../../src/local/device-signature";
 
 test("runnable shared UI, native acquisition, durable helper recovery and revocation", async () => {
+  const accessExpiresOn = new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10);
   const root = await realpath(await mkdtemp("/tmp/pr-sync-demo-")); await chmod(root, 0o700);
   const directory = join(root, "history"); await mkdir(directory);
   const statePath = join(root, "state.json"), file = join(directory, "rollout-fixture.jsonl");
@@ -82,10 +83,21 @@ test("runnable shared UI, native acquisition, durable helper recovery and revoca
       const context = await browser.newContext({ viewport: { width, height } });
       const page = await context.newPage();
       if (name === "mobile") { await page.goto("http://127.0.0.1:4179"); await page.getByRole("button", { name: "View private usage" }).click(); await page.getByRole("table").waitFor(); await page.screenshot({ path: `${artifacts}/${name}.png`, fullPage: true }); expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]); await context.close(); continue; }
+      // Keep the identity response pending until the first read observes the
+      // empty rendered element, reproducing a slow helper under CI load.
+      const { promise: identityGate, resolve: releaseIdentity } = Promise.withResolvers<void>();
+      await page.route("**/fixture/identity", async route => { await identityGate; await route.continue(); });
       await page.goto("http://127.0.0.1:4179");
+      expect(await page.getByTestId("fixture-source").innerText()).toBe("");
+      await expect.poll(async () => {
+        const value = await page.getByTestId("fixture-source").innerText();
+        releaseIdentity();
+        return value;
+      }).toMatch(/^[a-f0-9]{64}$/);
+      await expect.poll(() => page.getByTestId("fixture-device").innerText()).toMatch(/^[a-f0-9]{64}$/);
       await page.getByLabel("Source identity", { exact: true }).fill(await page.getByTestId("fixture-source").innerText());
       await page.getByLabel("Device digest", { exact: true }).fill(await page.getByTestId("fixture-device").innerText());
-      await page.getByLabel("History starts, UTC").fill("2026-10-01"); await page.getByLabel("Access expires", { exact: false }).fill("2026-10-15");
+      await page.getByLabel("History starts, UTC").fill("2026-10-01"); await page.getByLabel("Access expires", { exact: false }).fill(accessExpiresOn);
       await page.screenshot({ path: `${artifacts}/approval.png`, fullPage: true });
       await page.getByRole("button", { name: "Approve numeric history and pair" }).click();
       await page.locator(".pair-code").waitFor(); await page.getByLabel("Fixture pairing code").fill(await page.locator(".pair-code").innerText());
