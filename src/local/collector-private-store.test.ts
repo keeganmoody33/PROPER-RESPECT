@@ -17,11 +17,11 @@ it("creates private SQLite storage and preserves committed data on reopen", asyn
   const database = openCollectorPrivateStore({ databasePath });
   database.exec("CREATE TABLE retained(value TEXT); INSERT INTO retained VALUES('synthetic-evidence');");
   expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
-  database.close();
   expect((await stat(join(root, "store"))).mode & 0o777).toBe(0o700);
   expect((await stat(databasePath)).mode & 0o777).toBe(0o600);
   expect((await stat(`${databasePath}-wal`)).mode & 0o777).toBe(0o600);
   expect((await stat(`${databasePath}-shm`)).mode & 0o777).toBe(0o600);
+  database.close();
   const reopened = openCollectorPrivateStore({ databasePath });
   expect(reopened.prepare("SELECT value FROM retained").get()?.value).toBe("synthetic-evidence");
   expect(reopened.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
