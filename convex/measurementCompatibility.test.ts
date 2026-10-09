@@ -12,7 +12,7 @@ const capturedAt = "2026-10-09T00:00:00.000Z";
 const summed: PublicMeasurement = {
   metric: "total_tokens", value: "9007199254740993", unit: "tokens",
   period: { kind: "date", start: "2026-10-01", end: "2026-10-07", timezone: "UTC" },
-  scope: "UNKNOWN", coverage: "PARTIAL", temporality: "SNAPSHOT", aggregation: "NON_ADDITIVE",
+  scope: "UNKNOWN", coverage: "PARTIAL", temporality: "DELTA", aggregation: "NON_ADDITIVE",
   capturedAt, status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN",
   sample: "unknown", derivation: "SUMMED_RESPONSES",
 };

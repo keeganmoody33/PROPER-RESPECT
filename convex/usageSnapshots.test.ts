@@ -55,7 +55,7 @@ test("one retained Codex window saves privately, replays once, and never trusts 
   expect(await f.owner.action(save, args)).toEqual({ ...first, replayed: true });
   const entries = await f.owner.query(read, { propId: f.propId, measurementVersion: 2 });
   expect(entries).toHaveLength(1);
-  expect(entries[0].measurements.find((item: {metric: string}) => item.metric === "input_tokens")).toMatchObject({ value: "9007199254740993", derivation: "SUMMED_RESPONSES", coverage: "PARTIAL", aggregation: "NON_ADDITIVE" });
+  expect(entries[0].measurements.find((item: {metric: string}) => item.metric === "input_tokens")).toMatchObject({ value: "9007199254740993", derivation: "SUMMED_RESPONSES", coverage: "PARTIAL", temporality: "DELTA", aggregation: "NON_ADDITIVE" });
   expect(entries[0].measurements.find((item: {metric: string}) => item.metric === "cache_write_input_tokens").value).toBeNull();
   expect(entries[0].reviewedMeasurementIds).toEqual([]);
   expect(await f.owner.query(read, { propId: f.propId })).toEqual([]);

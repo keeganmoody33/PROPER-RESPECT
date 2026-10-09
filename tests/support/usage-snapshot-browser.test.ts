@@ -162,7 +162,7 @@ test.runIf(process.env.PROPER_RESPECT_SNAPSHOT_BROWSER === "1").each([1280, 390]
     await preview.getByRole("button", { name: "Publish this preview", exact: true }).click();
     await browserExpect(page.getByRole("status").filter({ hasText: "Your approved preview is now shared." })).toBeVisible();
     const published = await t.query(makeFunctionReference<"query">("publicProfiles:getByHandleV2"), { handle: "snapshot-owner", measurementVersion: 2 });
-    expect(published.cards[0].measurements).toMatchObject([{ value: "9007199254740995", derivation: "SUMMED_RESPONSES" }]);
+    expect(published.cards[0].measurements).toMatchObject([{ value: "9007199254740995", derivation: "SUMMED_RESPONSES", temporality: "DELTA" }]);
     expect(requests.filter(request => ["onboarding:previewPublication", "onboarding:publishSelected"].includes(request.name)).every(request => request.args.measurementVersion === 2)).toBe(true);
     expect(await page.evaluate(() => (window as unknown as { fixtureErrors: string[] }).fixtureErrors)).toEqual([]);
   } finally { await browser.close(); }

@@ -62,9 +62,23 @@ Node 24.19.0; matching installed dependencies, synthetic build values only. Evid
 
 The first broad run identified the auth mock omission and one unchanged mailbox test exceeding its existing five-second timeout under concurrent build/browser load. The mock was corrected. That mailbox test passed unchanged in isolation, then the complete suite passed with two workers. No timeout or gate was weakened. The final browser batches and schema/application code were unchanged during their runs. Original Oct7 screenshots and Next-generated development paths were restored after verification.
 
+## Copilot review follow-up
+
+The tree above was published with owner approval as draft [#164](https://github.com/keeganmoody33/PROPER-RESPECT/pull/164), head `119cd6d4feac69dadd28afb746fa73c6414b618a`, based on receiver draft #163. Initial hosted [application CI](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37866462549) and [macOS CI](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37866462541) passed. This includes hosted Chrome. The broad browser suite reported 95 passes and three retry passes in the existing canonical-link navigation check, also present on the receiver head.
+
+Dispositions were recorded before source changes:
+
+| Copilot finding at `119cd6d` | Disposition and proof |
+| --- | --- |
+| [Legacy replacement silently removes unseen sums](https://github.com/keeganmoody33/PROPER-RESPECT/pull/164#discussion_r4225607761) | Fixed. Check the stored published profile as well as the proposed result, with the explicit remove-all exception. RED proved both legacy preview and publish allowed replacement/removal and changed storage; GREEN covers rejection without a write, deliberate v2 replacement, and legacy remove-all. |
+| [Interval totals mislabeled as snapshots](https://github.com/keeganmoody33/PROPER-RESPECT/pull/164#discussion_r4225607788) | Fixed. Generate and validate `DELTA`; preserve exact quantities, partial coverage, unknowns, conflict handling, and non-additive overlap semantics. Three RED failures became GREEN, including public projection. |
+| [Private review implies source-reported totals](https://github.com/keeganmoody33/PROPER-RESPECT/pull/164#discussion_r4225607816) | Fixed. Use “Exact measurement values”; retain per-row derivation and unknown labels. Existing render and desktop/mobile backend journeys pass. |
+
+Combined follow-up verification: 125 focused publication/handle/snapshot tests passed; 40 domain/backend/render checks passed; both actual-backend desktop/mobile browser journeys passed with the published `DELTA` assertion. Strict typecheck and changed-file lint passed. The browser rerun explicitly selected installed Chromium after the initial invocation found no Playwright-managed browser. No assertion or gate was weakened. Fresh hosted CI and Copilot review remain required after publication of these fixes.
+
 ## Release and rollback boundary
 
-No new branch was pushed, PR opened, Copilot review requested, merge performed, schema synchronized, environment changed, deployment made, real provider account read, or public profile written for this slice. #123 recovery/receipts are untouched.
+Draft branches and review requests are now published. No merge, schema synchronization, environment change, deployment, real provider account read, or public profile write was performed. #123 recovery/receipts remain untouched.
 
 Current remote main remains `baff7e8d85827872ede63ada2297d92c03adf37d`. PR162 remains `1b8a44baad03ab4dcae2e9dc0017d3600cfb4c13`; PR157 remains `3268abadbfd13abd79ae2e0ffabda5b07ea82dcf`. This slice depends on the separately documented selective integration of PR157/158/161 plus PR162, not on an assumed merge of those PRs. Last verified production remains v0.2.7, `51e5224f60fafb141029235fceeb41fa101d701e`.
 
