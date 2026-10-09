@@ -43,7 +43,7 @@ function ReviewCapture({ capture, propId }: { capture: Capture; propId: Id<"prop
 }
 
 export function PrivateMeasurements({ propId }: { propId: Id<"props"> }) {
-  const captures = useQuery(api.retainedEvidence.measurements, { propId });
+  const captures = useQuery(api.retainedEvidence.measurements, { propId, measurementVersion: 2 });
   if (captures === undefined) return <p role="status">Loading private measurements…</p>;
   if (!captures.length) return null;
   return <section className="usage-measurement-panel" aria-labelledby="private-measurements-title">
@@ -57,7 +57,7 @@ export function MeasurementSharingChoices({ propId, selected, onChange, onReview
   propId: Id<"props">; selected: Id<"rawEvidence">[]; onChange: (ids: Id<"rawEvidence">[]) => void; disabled: boolean;
   onReviewBasisChange?: (basis: string) => void;
 }) {
-  const captures = useQuery(api.retainedEvidence.measurements, { propId });
+  const captures = useQuery(api.retainedEvidence.measurements, { propId, measurementVersion: 2 });
   // Bind the visible preview to the same source digest and review revision as
   // the server approval, even when a source stays selected with different rows.
   const reviewBasis = captures === undefined ? undefined : JSON.stringify(captures
@@ -73,12 +73,12 @@ export function MeasurementSharingChoices({ propId, selected, onChange, onReview
   }, [captures, selected, onChange, reviewBasis, onReviewBasisChange]);
   const reviewed = captures?.filter(capture => capture.reviewedMeasurementIds.length > 0) ?? [];
   if (!reviewed.length) return null;
-  return <fieldset disabled={disabled}>
+  return <fieldset disabled={disabled} style={{ minWidth: 0 }}>
     <legend>Reviewed usage measurements</legend>
     <p>Select the sources to include in this sharing preview. Private account labels and dimensions stay private.</p>
     {reviewed.map(capture => <label className="review-toggle" key={capture.rawEvidenceId}>
       <input type="checkbox" checked={selected.includes(capture.rawEvidenceId)} disabled={!selected.includes(capture.rawEvidenceId) && selected.length >= MEASUREMENT_LIMITS.publicSources} onChange={event => onChange(event.target.checked ? [...selected, capture.rawEvidenceId] : selected.filter(id => id !== capture.rawEvidenceId))} />
-      Include {capture.reviewedMeasurementIds.length} reviewed measurements from {capture.capturedAt.slice(0, 10)} · Private source: {capture.source.accountAlias ?? capture.source.workspaceAlias ?? capture.source.deviceAlias ?? capture.source.sourceAlias}
+      <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>Include {capture.reviewedMeasurementIds.length} reviewed measurements from {capture.capturedAt.slice(0, 10)} · Private source: {capture.source.accountAlias ?? capture.source.workspaceAlias ?? capture.source.deviceAlias ?? capture.source.sourceAlias}</span>
     </label>)}
   </fieldset>;
 }

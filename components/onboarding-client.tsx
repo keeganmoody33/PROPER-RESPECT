@@ -362,7 +362,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     if (!state) return;
     await run("Sharing preview is ready. Review it before deciding to publish.", async () => {
       const selections = publicationSelections();
-      const result = await convex.query(api.onboarding.previewPublication, { selections });
+      const result = await convex.query(api.onboarding.previewPublication, { selections, measurementVersion: 2 });
       setPreview({ ...result, selections, basis: previewBasis });
     });
   }
@@ -372,7 +372,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   async function previewUnpublishAll() {
     if (!state) return;
     await run("Preview ready: no product cards would stay public. Your handle, name, bio and profile links stay public. Approve it to publish.", async () => {
-      const result = await convex.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
+      const result = await convex.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true, measurementVersion: 2 });
       setPreview({ ...result, selections: [], basis: previewBasis, removeAllCards: true });
     });
   }
@@ -396,7 +396,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
       return;
     }
     await run("Your approved preview is now shared. Other private information remains private.", async () => {
-      await publishSelected({ selections: preview.selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+      await publishSelected({ selections: preview.selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash, measurementVersion: 2,
         ...(preview.removeAllCards ? { removeAllCards: true } : {}) });
       setPreview(null);
       setReviewEdits({});

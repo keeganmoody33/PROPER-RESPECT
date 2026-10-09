@@ -1,5 +1,6 @@
-import { v } from "convex/values";
-import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
+import { ConvexError, v } from "convex/values";
+import { action, internalMutation, internalQuery, mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
+import { makeFunctionReference } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { addManualProductHandler } from "./manualProducts";
 import { sha256 } from "../src/domain/product-knowledge";
@@ -7,6 +8,9 @@ import { MEASUREMENT_LIMITS, measurementDigest, parseMeasurementImport, projectM
 import { requireUser } from "./authHelpers";
 import { ingestSignalsForOwner } from "./discovery";
 import { verifyRetainedProductEvidence } from "../src/domain/retained-product-evidence";
+import { canonicalJson } from "../src/domain/canonical-json";
+import { digest, evidenceKey, numericEvidenceSchema } from "../src/domain/usage-sync";
+import { createUsageSnapshotAccumulator, usageSnapshotSchema, usageSnapshotWindowSchema, USAGE_SNAPSHOT_LIMITS, type UsageSnapshot } from "../src/domain/usage-snapshot";
 
 /** Authenticated upload of retained originals, never a live provider connection. */
 export const importPacket = mutation({
@@ -59,7 +63,7 @@ async function measurementHistory(ctx: QueryCtx | MutationCtx, userId: Id<"users
   if (rows.length > MEASUREMENT_LIMITS.captures || rows.some(row => row.userId !== userId)) throw new Error("Measurement history unavailable.");
   return rows;
 }
-function measurementEntries(rows: Doc<"rawEvidence">[]) {
+function importedMeasurementEntries(rows: Doc<"rawEvidence">[]) {
   const groups = new Map<string, Doc<"rawEvidence">[]>();
   for (const row of rows) {
     if (!row.measurementImport) continue;
@@ -86,6 +90,133 @@ function measurementEntries(rows: Doc<"rawEvidence">[]) {
       captureCount: active.length }];
   });
 }
+
+async function measurementEntries(ctx: QueryCtx | MutationCtx, rows: Doc<"rawEvidence">[], includeSnapshots = true) {
+  const entries = importedMeasurementEntries(rows);
+  if (!includeSnapshots) return entries;
+  const groups = new Map<string, Doc<"rawEvidence">[]>();
+  for (const row of rows) {
+    if (!row.usageSnapshot || !row.usageSourceId) continue;
+    const key = canonicalJson([row.usageSourceId, row.usageSnapshot.start, row.usageSnapshot.end]);
+    const history = groups.get(key) ?? [];
+    history.push(row); groups.set(key, history);
+  }
+  for (const history of groups.values()) {
+    const active = history.filter(row => !row.deletedAt && row.payload), head = active.at(-1);
+    if (!head?.usageSourceId) continue;
+    const source = await ctx.db.get(head.usageSourceId);
+    if (!source || source.userId !== head.userId) throw new Error("Source unavailable.");
+    if (source.erasing) continue;
+    const snapshot = usageSnapshotSchema.parse(JSON.parse(head.payload!));
+    if (measurementDigest(snapshot) !== head.usageSnapshot?.digest || snapshot.sourceKey !== source.sourceKey) throw new Error("Retained snapshot integrity conflict.");
+    const digest = measurementDigest(history.map(row => ({ id: row._id, digest: row.usageSnapshot?.digest, deletedAt: row.deletedAt })));
+    const review = head.measurementReview?.digest === digest ? head.measurementReview : undefined;
+    entries.push({ rawEvidenceId: head._id, digest, capturedAt: snapshot.capturedAt, adapter: "codex",
+      source: { namespace: "codex", identityBasis: "OWNER_SUPPLIED", sourceAlias: `connected-${snapshot.context}`, ownerAlias: null, accountAlias: null, workspaceAlias: null, deviceAlias: source.sourceKey },
+      measurements: snapshot.measurements, reviewedMeasurementIds: review?.measurementIds ?? [], reviewVersion: head.measurementReview?.version ?? 0, captureCount: active.length });
+  }
+  return entries;
+}
+
+type SnapshotSource = { sourceKey: string; context: "personal" | "work" | "unclassified"; checkpoint: string };
+type SnapshotResult = { propId: Id<"props">; rawEvidenceId: Id<"rawEvidence">; digest: string; replayed: boolean };
+const snapshotArgs = { sourceId: v.id("usageSources"), propId: v.optional(v.id("props")) };
+
+async function snapshotSource(ctx: QueryCtx | MutationCtx, args: {sourceId: Id<"usageSources">; propId?: Id<"props">}) {
+  const user = await requireUser(ctx), source = await ctx.db.get(args.sourceId);
+  if (!source || source.userId !== user._id || source.erasing || (!source.currentGrantId && !source.retainOnDisconnect)) throw new Error("Source unavailable. Reload after any connection or deletion change.");
+  const grant = source.currentGrantId ? await ctx.db.get(source.currentGrantId) : null;
+  if (source.currentGrantId && (!grant || grant.userId !== user._id || grant.sourceId !== source._id || grant.state === "revoked")) throw new Error("Source unavailable.");
+  if (args.propId) {
+    const { prop } = await ownedMeasurementProp(ctx, args.propId), product = await ctx.db.get(prop.productId);
+    if (product?.slug !== "codex") throw new Error("Attach this history to its matching Codex card.");
+  }
+  // Sequence protects compatibility with receivers that predate snapshotRevision;
+  // revision also changes when erasure ends at an otherwise identical source.
+  const checkpoint = measurementDigest([user._id, source._id, source.sourceKey, source.deviceDigest, source.context,
+    source.snapshotRevision ?? 0, source.retainOnDisconnect, source.currentGrantId ?? null, grant?.sequence ?? null, grant?.state ?? null]);
+  return { user, source, checkpoint };
+}
+
+export const usageSnapshotSource = internalQuery({ args: snapshotArgs, handler: async (ctx, args): Promise<SnapshotSource> => {
+  const { source, checkpoint } = await snapshotSource(ctx, args);
+  return { sourceKey: source.sourceKey, context: source.context, checkpoint };
+} });
+
+export const usageSnapshotPage = internalQuery({
+  args: { ...snapshotArgs, checkpoint: v.string(), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, args) => {
+    const current = await snapshotSource(ctx, args);
+    if (current.checkpoint !== args.checkpoint) throw new Error("History changed while saving. Load a fresh snapshot.");
+    return ctx.db.query("usageEvidence").withIndex("by_source_key_fingerprint", q => q.eq("sourceId", args.sourceId)).paginate({ numItems: USAGE_SNAPSHOT_LIMITS.pageSize, cursor: args.cursor });
+  },
+});
+
+export const commitUsageSnapshot = internalMutation({
+  args: { ...snapshotArgs, checkpoint: v.string(), snapshotJson: v.string() },
+  handler: async (ctx, args): Promise<SnapshotResult> => {
+    const { user, source, checkpoint } = await snapshotSource(ctx, args);
+    if (checkpoint !== args.checkpoint) throw new Error("History changed while saving. Load a fresh snapshot.");
+    if (new TextEncoder().encode(args.snapshotJson).length > MEASUREMENT_LIMITS.bytes) throw new Error("Snapshot too large.");
+    const snapshot = usageSnapshotSchema.parse(JSON.parse(args.snapshotJson));
+    if (snapshot.sourceKey !== source.sourceKey || snapshot.context !== source.context || !snapshot.responseCount) throw new Error("No matching modern response history in this window.");
+    const propId = args.propId ?? await addManualProductHandler(ctx, { name: "Codex", operationId: `usage-snapshot:${measurementDigest([user._id, source._id])}` });
+    await ownedMeasurementProp(ctx, propId);
+    const identity = measurementDigest([user._id, propId, source._id, snapshot.start, snapshot.end, snapshot.algorithmVersion, snapshot.evidenceDigest]);
+    const dedupKey = `usage-snapshot-v1:${identity}`;
+    const previous = await ctx.db.query("rawEvidence").withIndex("by_dedup_key", q => q.eq("dedupKey", dedupKey)).unique();
+    if (previous) {
+      if (previous.userId !== user._id || previous.measurementPropId !== propId || previous.usageSourceId !== source._id) throw new Error("Snapshot unavailable.");
+      if (previous.deletedAt) throw new Error("This original was removed and cannot be restored by replay.");
+      return { propId, rawEvidenceId: previous._id, digest: previous.usageSnapshot!.digest, replayed: true };
+    }
+    const history = await measurementHistory(ctx, user._id, propId);
+    const byteSize = new TextEncoder().encode(args.snapshotJson).length;
+    if (history.length >= MEASUREMENT_LIMITS.captures || history.reduce((sum, row) => sum + new TextEncoder().encode(row.payload ?? "").length, byteSize) > MEASUREMENT_LIMITS.retainedBytes) throw new Error("This relationship has reached the bounded measurement history limit. Existing originals remain available.");
+    const sourceKey = `codex-history:${source._id}`;
+    const evidenceSource = await ctx.db.query("evidenceSources").withIndex("by_user_type_sourceKey", q => q.eq("userId", user._id).eq("type", "FILE_UPLOAD").eq("sourceKey", sourceKey)).unique();
+    const evidenceSourceId = evidenceSource?._id ?? await ctx.db.insert("evidenceSources", { userId: user._id, type: "FILE_UPLOAD", sourceKey, provider: "CODEX_RETAINED_HISTORY", label: "Connected Codex numeric history · identity unverified", connectedAt: snapshot.capturedAt });
+    const snapshotDigest = measurementDigest(snapshot);
+    const rawEvidenceId = await ctx.db.insert("rawEvidence", { userId: user._id, evidenceSourceId, measurementPropId: propId, usageSourceId: source._id,
+      payload: args.snapshotJson, capturedAt: snapshot.capturedAt, dedupKey, contentHash: digest(args.snapshotJson), sourceRecordId: identity, mimeType: "application/json", byteSize,
+      usageSnapshot: { start: snapshot.start, end: snapshot.end, digest: snapshotDigest, evidenceDigest: snapshot.evidenceDigest, algorithmVersion: snapshot.algorithmVersion, checkpoint },
+      captureProvenance: { version: 1, route: "DIRECT_API", adapter: { id: "retained-codex-history", version: snapshot.algorithmVersion },
+        origin: { issuer: "RETAINED_DEVICE_NUMERIC_HISTORY", recordId: identity, artifactRef: `sha256:${digest(args.snapshotJson)}` },
+        collector: { kind: "SYSTEM" }, activityActor: { kind: "UNKNOWN" } },
+      limitations: ["Sum of distinct modern response counters from one retained device source; coverage is partial.", "Account identity and activity actor are unverified. Unknown counters are not zero. Windows and overlapping views must not be added.", "Deleting source history removes this private snapshot. Already published cards require a separate unpublish action."] });
+    await ctx.db.insert("proofs", { propId, type: "FILE_UPLOAD", rawEvidenceId, label: "Retained Codex history snapshot" });
+    return { propId, rawEvidenceId, digest: snapshotDigest, replayed: false };
+  },
+});
+
+export const saveUsageSnapshot = action({
+  args: { ...snapshotArgs, start: v.string(), end: v.string() },
+  handler: async (ctx, args): Promise<SnapshotResult> => {
+    const window = usageSnapshotWindowSchema.parse({ start: args.start, end: args.end });
+    const scope = { sourceId: args.sourceId, ...(args.propId ? { propId: args.propId } : {}) };
+    const source = await ctx.runQuery(makeFunctionReference<"query", typeof scope, SnapshotSource>("retainedEvidence:usageSnapshotSource"), scope);
+    const accumulator = createUsageSnapshotAccumulator(window), deadline = Date.now() + 180_000;
+    const scanLimit = () => new ConvexError({ code: "HISTORY_SCAN_LIMIT", message: "History scan limit reached. Existing snapshots remain unchanged." });
+    let cursor: string | null = null, done = false, pages = 0, scannedRows = 0, scannedBytes = 0;
+    while (!done) {
+      if (++pages > Math.ceil(USAGE_SNAPSHOT_LIMITS.rows / USAGE_SNAPSHOT_LIMITS.pageSize) + 1 || Date.now() > deadline) throw scanLimit();
+      const page: { page: Doc<"usageEvidence">[]; continueCursor: string; isDone: boolean } = await ctx.runQuery(makeFunctionReference<"query">("retainedEvidence:usageSnapshotPage"), { ...scope, checkpoint: source.checkpoint, cursor });
+      if (Date.now() > deadline) throw scanLimit();
+      for (const retained of page.page) {
+        scannedRows++; scannedBytes += new TextEncoder().encode(retained.rowJson).length;
+        if (scannedRows > USAGE_SNAPSHOT_LIMITS.rows || scannedBytes > USAGE_SNAPSHOT_LIMITS.bytes) throw scanLimit();
+        const row = numericEvidenceSchema.parse(JSON.parse(retained.rowJson));
+        if (evidenceKey(row) !== retained.key || digest(canonicalJson(row)) !== retained.fingerprint) throw new Error("Retained history integrity conflict.");
+        accumulator.add(row);
+      }
+      cursor = page.continueCursor; done = page.isDone;
+    }
+    const snapshot: UsageSnapshot = accumulator.finish({ sourceKey: source.sourceKey, context: source.context, capturedAt: new Date().toISOString() });
+    if (Date.now() > deadline) throw scanLimit();
+    if (!snapshot.responseCount) throw new ConvexError({ code: "NO_MODERN_RESPONSES", message: "No matching modern response history in this window." });
+    return ctx.runMutation(makeFunctionReference<"mutation", {sourceId: Id<"usageSources">; propId?: Id<"props">; checkpoint: string; snapshotJson: string}, SnapshotResult>("retainedEvidence:commitUsageSnapshot"), { ...scope, checkpoint: source.checkpoint, snapshotJson: canonicalJson(snapshot) });
+  },
+});
 
 export const importMeasurements = mutation({
   args: {
@@ -148,10 +279,10 @@ function canonicalMeasurementIdentity(userId: Id<"users">, propId: Id<"props">, 
 }
 
 export const measurements = query({
-  args: { propId: v.id("props") },
-  handler: async (ctx, { propId }) => {
+  args: { propId: v.id("props"), measurementVersion: v.optional(v.literal(2)) },
+  handler: async (ctx, { propId, measurementVersion }) => {
     const { user } = await ownedMeasurementProp(ctx, propId);
-    return measurementEntries(await measurementHistory(ctx, user._id, propId));
+    return measurementEntries(ctx, await measurementHistory(ctx, user._id, propId), measurementVersion === 2);
   },
 });
 
@@ -161,7 +292,7 @@ export const reviewMeasurements = mutation({
     const { user } = await ownedMeasurementProp(ctx, args.propId);
     if (!Number.isSafeInteger(args.expectedReviewVersion) || args.expectedReviewVersion < 0 || args.measurementIds.length > MEASUREMENT_LIMITS.publicRows || new Set(args.measurementIds).size !== args.measurementIds.length) throw new Error("Review at most 24 distinct measurement rows.");
     const history = await measurementHistory(ctx, user._id, args.propId);
-    const entry = measurementEntries(history).find(item => item.rawEvidenceId === args.rawEvidenceId);
+    const entry = (await measurementEntries(ctx, history)).find(item => item.rawEvidenceId === args.rawEvidenceId);
     if (!entry) throw new Error("Measurement unavailable.");
     if (entry.digest !== args.expectedDigest) throw new Error("These measurements changed. Open a fresh review.");
     const ids = [...args.measurementIds].sort();
@@ -187,7 +318,7 @@ export const reviewMeasurements = mutation({
 export async function reviewedMeasurementsForPublication(ctx: QueryCtx | MutationCtx, userId: Id<"users">, propId: Id<"props">, evidenceIds: Id<"rawEvidence">[]): Promise<{ measurements: PublicMeasurement[]; approvalDigest: string } | undefined> {
   if (!evidenceIds.length) return undefined;
   if (evidenceIds.length > MEASUREMENT_LIMITS.publicSources || new Set(evidenceIds).size !== evidenceIds.length) throw new Error("Choose at most eight distinct reviewed measurement sources.");
-  const entries = measurementEntries(await measurementHistory(ctx, userId, propId));
+  const entries = await measurementEntries(ctx, await measurementHistory(ctx, userId, propId));
   const approvals: { id: Id<"rawEvidence">; digest: string; reviewVersion: number }[] = [];
   const projected = evidenceIds.flatMap(id => {
     const entry = entries.find(item => item.rawEvidenceId === id);

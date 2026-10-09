@@ -5,8 +5,8 @@ import { requireUser } from "./authHelpers";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { digest, digestSchema, secretSchema, grantScopeSchema, usagePacketSchema, packetId, evidenceKey, numericEvidenceSchema } from "../src/domain/usage-sync";
 import { deviceDigest, devicePublicKeySchema, verifyDeviceProof, type DeviceProof, type DeviceMessage } from "../src/domain/device-proof";
-import type { QueryCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { QueryCtx, MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 const eraseRef = makeFunctionReference<"mutation">("usageConnections:eraseRevoked");
 function developmentOnly() {
   if (process.env.CONVEX_CLOUD_URL !== "https://utmost-mongoose-374.convex.cloud") throw new ConvexError({ code: "CODEX_ACCESS_UNAVAILABLE", message: "Development connection unavailable." });
@@ -42,7 +42,7 @@ export const approve = mutation({ args: { scopeJson: v.string(), codeDigest: v.s
   if (prior?.currentGrantId) await ctx.db.patch(prior.currentGrantId, { state: "revoked" });
   const grantId = await ctx.db.insert("usageGrants", { userId: owner._id, sourceId, scopeJson: canonicalJson(scope), codeDigest: args.codeDigest,
     deviceDigest: scope.deviceDigest, pairExpiresAt: Date.now() + 300_000, expiresAt: Date.parse(scope.expiresAt), state: "pending", sequence: 0 });
-  await ctx.db.patch(sourceId, { currentGrantId: grantId, retainOnDisconnect: scope.retainOnDisconnect });
+  await ctx.db.patch(sourceId, { currentGrantId: grantId, retainOnDisconnect: scope.retainOnDisconnect, snapshotRevision: (prior?.snapshotRevision ?? 0) + 1 });
   return grantId;
 } });
 
@@ -89,6 +89,8 @@ export const ingest = mutation({ args: { grantId: v.id("usageGrants"), issuedAt:
   const acceptedAt = new Date().toISOString();
   await ctx.db.insert("usageReceipts", { sourceId: grant.sourceId, grantId: grant._id, sequence: packet.sequence, packetId: id, acceptedAt });
   await ctx.db.patch(grant._id, { sequence: packet.sequence, lastSyncedAt: acceptedAt });
+  const source = await ctx.db.get(grant.sourceId);
+  await ctx.db.patch(grant.sourceId, { snapshotRevision: (source?.snapshotRevision ?? 0) + 1 });
   return { grantId: grant._id, sequence: packet.sequence, packetId: id, acceptedAt };
 } });
 
@@ -113,7 +115,7 @@ export const disconnect = mutation({ args: { grantId: v.id("usageGrants") }, han
   const source = await ctx.db.get(grant.sourceId);
   if (!source || source.userId !== owner._id) throw new Error("Connection unavailable.");
   if (source.currentGrantId) await ctx.db.patch(source.currentGrantId, { state: "revoked" });
-  await ctx.db.patch(source._id, { currentGrantId: undefined });
+  await ctx.db.patch(source._id, { currentGrantId: undefined, snapshotRevision: (source.snapshotRevision ?? 0) + 1 });
   if (!source.retainOnDisconnect) {
     await ctx.db.patch(grant.sourceId, { erasing: true });
     await ctx.scheduler.runAfter(0, eraseRef, { sourceId: grant.sourceId });
@@ -127,22 +129,32 @@ export const erase = mutation({ args: { grantId: v.id("usageGrants") }, handler:
   if (!grant || grant.userId !== owner._id || grant.state !== "revoked") throw new Error("Disconnect before erasing history.");
   const source = await ctx.db.get(grant.sourceId);
   if (!source || source.userId !== owner._id || source.currentGrantId) throw new Error("Disconnect current access before erasing history.");
-  await ctx.db.patch(grant.sourceId, { erasing: true });
-  const rows = await ctx.db.query("usageEvidence").withIndex("by_source", q => q.eq("sourceId", grant.sourceId)).take(200);
-  for (const row of rows) await ctx.db.delete(row._id);
-  await ctx.scheduler.runAfter(0, eraseRef, { sourceId: grant.sourceId });
-  return { done: rows.length < 200 };
+  if (!source.erasing) await ctx.db.patch(grant.sourceId, { erasing: true, snapshotRevision: (source.snapshotRevision ?? 0) + 1 });
+  const done = await eraseSourceBatch(ctx, source);
+  if (!done) await ctx.scheduler.runAfter(0, eraseRef, { sourceId: source._id });
+  return { done };
 } });
+
+async function eraseSourceBatch(ctx: MutationCtx, source: Doc<"usageSources">) {
+  const rows = await ctx.db.query("usageEvidence").withIndex("by_source", q => q.eq("sourceId", source._id)).take(200);
+  for (const row of rows) await ctx.db.delete(row._id);
+  if (rows.length === 200) return false;
+  const receipts = await ctx.db.query("usageReceipts").withIndex("by_source", q => q.eq("sourceId", source._id)).take(200);
+  for (const receipt of receipts) await ctx.db.delete(receipt._id);
+  if (receipts.length === 200) return false;
+  // Retained private projections are copies of this source's counters. Leave
+  // tombstones for replay protection, but remove their values and approvals.
+  // Deliberately published snapshots have a separate owner unpublish boundary.
+  const snapshots = await ctx.db.query("rawEvidence").withIndex("by_usage_source_deleted", q => q.eq("usageSourceId", source._id).eq("deletedAt", undefined)).take(200);
+  for (const snapshot of snapshots) await ctx.db.patch(snapshot._id, { payload: undefined, measurementReview: undefined, deletedAt: new Date().toISOString() });
+  if (snapshots.length === 200) return false;
+  await ctx.db.patch(source._id, { erasing: false });
+  return true;
+}
 
 export const eraseRevoked = internalMutation({ args: { sourceId: v.id("usageSources") }, handler: async (ctx, args) => {
   const source = await ctx.db.get(args.sourceId);
   if (!source?.erasing) return;
   if (source.currentGrantId) throw new Error("Cannot erase an active source.");
-  const rows = await ctx.db.query("usageEvidence").withIndex("by_source", q => q.eq("sourceId", source._id)).take(200);
-  for (const row of rows) await ctx.db.delete(row._id);
-  if (rows.length === 200) { await ctx.scheduler.runAfter(0, eraseRef, { sourceId: source._id }); return; }
-  const receipts = await ctx.db.query("usageReceipts").withIndex("by_source", q => q.eq("sourceId", source._id)).take(200);
-  for (const receipt of receipts) await ctx.db.delete(receipt._id);
-  if (receipts.length === 200) { await ctx.scheduler.runAfter(0, eraseRef, { sourceId: source._id }); return; }
-  await ctx.db.patch(source._id, { erasing: false });
+  if (!await eraseSourceBatch(ctx, source)) await ctx.scheduler.runAfter(0, eraseRef, { sourceId: source._id });
 } });

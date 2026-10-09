@@ -58,21 +58,35 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
   };
 }
 
+/** Deployed readers cannot interpret summed-response derivation. Keep the card
+ * and all understood measurements without rewriting the approved snapshot. */
+function legacyMeasurements(profile: NonNullable<Awaited<ReturnType<typeof readPublishedProfile>>>) {
+  return { ...profile, cards: profile.cards.map(card => {
+    if (!card.measurements?.some(row => row.derivation === "SUMMED_RESPONSES")) return card;
+    const visible: typeof card = { ...card, measurements: card.measurements.filter(row => row.derivation !== "SUMMED_RESPONSES") };
+    if (!visible.measurements?.length) delete visible.measurements;
+    return visible;
+  }) };
+}
+
 /** Compatibility endpoint for deployed readers that dereference primaryLink. */
 export const getByHandle = query({
   args: { handle: v.string() },
   returns: v.union(publicProfileV1Validator, v.null()),
   handler: async (ctx, { handle }) => {
     const profile = await readPublishedProfile(ctx, handle);
-    return profile === null ? null : projectPublicProfileV1(profile);
+    return profile === null ? null : projectPublicProfileV1(legacyMeasurements(profile));
   },
 });
 
 /** Current readers also render explicitly shared products without a website. */
 export const getByHandleV2 = query({
-  args: { handle: v.string() },
+  args: { handle: v.string(), measurementVersion: v.optional(v.literal(2)) },
   returns: v.union(publicProfileValidator, v.null()),
-  handler: (ctx, { handle }) => readPublishedProfile(ctx, handle),
+  handler: async (ctx, { handle, measurementVersion }) => {
+    const profile = await readPublishedProfile(ctx, handle);
+    return profile === null || measurementVersion === 2 ? profile : legacyMeasurements(profile);
+  },
 });
 
 const TAKEDOWN_REASON_MAX = 500;

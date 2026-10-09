@@ -13,6 +13,7 @@ vi.mock("convex/react", () => ({
   useConvexAuth: () => state.convex,
   useQuery: state.query,
   useMutation: () => vi.fn(),
+  useAction: () => vi.fn(),
   useConvex: () => ({ query: vi.fn() }),
 }));
 vi.mock("../../components/usage-connections-panel", () => ({ UsageConnectionsPanel: () => createElement("p", null, "Private connections ready") }));

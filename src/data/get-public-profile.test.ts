@@ -71,5 +71,5 @@ test("the current web reader requests v2 and renders the approved no-website pro
 
   expect(await getPublicProfile("owner")).toEqual(profile);
   expect(getFunctionName(fetchQuery.mock.calls[0][0])).toBe("publicProfiles:getByHandleV2");
-  expect(fetchQuery.mock.calls[0].slice(1)).toEqual([{ handle: "owner" }, { url: "https://test.convex.cloud" }]);
+  expect(fetchQuery.mock.calls[0].slice(1)).toEqual([{ handle: "owner", measurementVersion: 2 }, { url: "https://test.convex.cloud" }]);
 });
