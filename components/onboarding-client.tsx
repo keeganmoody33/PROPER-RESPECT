@@ -209,11 +209,12 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   }
 
   async function submitProfile(form: FormData) {
-    await run("Public identity saved. Your private collection has not been published.", async () => {
+    if (!state || handleState === "unknown") return;
+    await run("Identity changes saved to your draft. Review and approve a sharing preview to update your public page.", async () => {
       const urls = form.getAll("profileLinkUrl").map(String);
       const preferred = String(form.get("preferredProfileLink") ?? "");
       await claimHandle({
-        handle: String(form.get("handle")),
+        handle: handleState === "published" ? state.user.handle : String(form.get("handle")),
         displayName: String(form.get("displayName")),
         bio: String(form.get("bio")),
         profileLinks: form.getAll("profileLinkLabel").map((label, index) => ({ label: String(label), url: urls[index] })),
@@ -433,6 +434,10 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
 
   const publicIdentityClaimed = typeof state.hasClaimedPublicIdentity === "boolean"
     ? state.hasClaimedPublicIdentity : null;
+  const handleState = state.hasPublicationAtCurrentHandle === true ? "published"
+    : state.hasPublicationAtCurrentHandle === false && publicIdentityClaimed !== null ? "draft" : "unknown";
+  const publicProfilePath = `/${encodeURIComponent(state.user.handle)}`;
+  const publicProfileUrl = publicOrigin ? new URL(publicProfilePath, publicOrigin).href : publicProfilePath;
 
   return (
     <main className="onboarding-shell">
@@ -538,12 +543,17 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
         <details id="collection-profile" className="collection-identity">
           <summary>Public identity</summary>
           <p>A handle is needed only when you choose to share. It is not required to build your private collection.</p>
+          <p id="identity-handle-guidance">{handleState === "published"
+            ? "Changing a published handle requires an owner-verified migration. You can still edit your display name, bio and links here."
+            : handleState === "draft" ? "Your profile is not published. You can change this handle before publishing."
+              : "Public identity status is unavailable. Reload before saving."}</p>
+          {handleState === "published" && <p className="identity-address">Published profile: <a href={publicProfileUrl} target="_blank" rel="noreferrer">{publicProfileUrl}</a></p>}
           <form onSubmit={event => { event.preventDefault(); void submitProfile(new FormData(event.currentTarget)); }} className="form-grid">
-            <label>Handle<input name="handle" defaultValue={publicIdentityClaimed === false ? "" : state.user.handle} placeholder="your-handle" required /></label>
+            <label>Handle<input key={`${handleState}:${state.user.handle}`} name="handle" defaultValue={handleState === "draft" && publicIdentityClaimed === false ? "" : state.user.handle} readOnly={handleState !== "draft"} aria-describedby="identity-handle-guidance" placeholder="your-handle" required /></label>
             <label>Display name<input name="displayName" defaultValue={state.user.displayName ?? clerkUser?.fullName ?? ""} required /></label>
             <label className="full">Short footer bio (optional)<textarea name="bio" defaultValue={state.user.bio} rows={2} /></label>
             <ProfileLinksFields links={state.user.profileLinks} preferredLinkUrl={state.user.preferredLinkUrl} />
-            <div className="action-row full"><button className="secondary-action" disabled={busy}>Save public identity</button></div>
+            <div className="action-row full"><button className="secondary-action" disabled={busy || handleState === "unknown"}>Save public identity</button></div>
           </form>
         </details>
         <fieldset>

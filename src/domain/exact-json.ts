@@ -6,9 +6,11 @@ export class ExactJsonNumber {
 export type ExactJson = null | boolean | string | ExactJsonNumber | ExactJson[] | { [key: string]: ExactJson };
 
 /** Deliberately bounded decoder; duplicate decoded keys reject before assignment. */
-export function parseExactJson(text: string): ExactJson {
+export function parseExactJson(text: string, options: { maxStringLength?: number } = {}): ExactJson {
   const invalid = () => new Error("Invalid exact JSON.");
   try {
+    const maxStringLength = options.maxStringLength ?? 8192;
+    if (!Number.isSafeInteger(maxStringLength) || maxStringLength < 1 || maxStringLength > 256_000) throw invalid();
     if (typeof text !== "string" || text.length > 256_000 || new TextEncoder().encode(text).length > 256_000) throw invalid();
     let offset = 0, nodes = 0;
     const space = () => { while (/^[\x20\t\r\n]$/.test(text[offset] ?? "")) offset++; };
@@ -19,7 +21,7 @@ export function parseExactJson(text: string): ExactJson {
         if (ch === "\\") { offset++; continue; }
         if (ch === '"') {
           const value: string = JSON.parse(text.slice(start, offset));
-          if (value.length > 8192 || /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(value)) throw invalid();
+          if (value.length > maxStringLength || /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(value)) throw invalid();
           return value;
         }
       }

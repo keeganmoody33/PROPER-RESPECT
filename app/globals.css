@@ -909,6 +909,7 @@ main {
 .collection-add h2 { font: 900 2rem var(--homepage-sans), Arial, sans-serif; margin-bottom: .5rem; }
 .collection-add > p { max-width: 48rem; line-height: 1.5; }
 .collection-identity { margin-block: 1.5rem; }
+.collection-identity .identity-address { overflow-wrap: anywhere; }
 .collection-identity > summary { font-weight: 800; cursor: pointer; padding-block: .5rem; }
 .sharing-preview { border-block-start: 2px solid var(--ink); padding-block: 1.5rem; margin-top: 2rem; }
 .sharing-preview .card-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
