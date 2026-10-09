@@ -805,6 +805,8 @@ export const previewPublication = query({
   args: { selections: v.array(selectionValidator), removeAllCards: v.optional(v.boolean()), measurementVersion: v.optional(v.literal(2)) },
   handler: async (ctx, { selections, removeAllCards, measurementVersion }) => {
     const preview = await preparePublication(ctx, await requireUser(ctx), selections, removeAllCards === true);
+    // Legacy replacement must not discard stored measurements the caller cannot display.
+    if (removeAllCards !== true && preview.published) requireMeasurementReader(preview.published.profile, measurementVersion);
     // Hiding preserved rows here would approve data absent from the preview.
     requireMeasurementReader(preview.profile, measurementVersion);
     return { profile: preview.displayProfile, revision: preview.revision, previewHash: preview.previewHash, refreshAccounts: preview.refreshAccounts };
@@ -817,6 +819,7 @@ export const publishSelected = mutation({
     const user = await requireUser(ctx);
     await consumeWriteLimit(ctx, user._id, "publishSelected");
     const prepared = await preparePublication(ctx, user, selections, removeAllCards === true);
+    if (removeAllCards !== true && prepared.published) requireMeasurementReader(prepared.published.profile, measurementVersion);
     requireMeasurementReader(prepared.profile, measurementVersion);
     // A republish replaces the snapshot, so it must never lift an operator takedown.
     if (prepared.published?.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");

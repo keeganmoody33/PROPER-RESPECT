@@ -88,6 +88,28 @@ test("version two publication preserves the exact approved sums and still reject
   expect(await f.stored()).toEqual(after);
 });
 
+test.each([true, false])("legacy callers cannot replace or remove summed cards with publish=%s", async publish => {
+  const f = await fixture();
+  const selections = f.propIds.map(propId => ({
+    propId, publish, expectedRelationshipVersion: 1, status: "ACTIVE" as const,
+    headline: "Saved card", note: "", autoRefresh: false,
+  }));
+  const preview = await f.owner.query(api.onboarding.previewPublication, { selections, measurementVersion: 2 });
+  expect(preview.profile.cards.every(card => !card.measurements?.length)).toBe(true);
+  const before = await f.stored();
+  await expect.soft(f.owner.query(api.onboarding.previewPublication, { selections })).rejects.toThrow("Reload");
+  await expect.soft(f.owner.mutation(api.onboarding.publishSelected, {
+    selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+  })).rejects.toThrow("Reload");
+  expect(await f.stored()).toEqual(before);
+
+  // A modern caller can deliberately approve the same visible change.
+  await f.owner.mutation(api.onboarding.publishSelected, {
+    selections, measurementVersion: 2, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+  });
+  expect((await f.stored())?.profile).toEqual(preview.profile);
+});
+
 test("legacy remove-all remains available and subsequent ordinary publication needs no opt-in", async () => {
   const f = await fixture();
   const preview = await f.owner.query(api.onboarding.previewPublication, { selections: [], removeAllCards: true });
