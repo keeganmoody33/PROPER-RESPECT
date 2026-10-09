@@ -173,8 +173,10 @@ billed charges need billing evidence separate from token observations or estimat
 ## Local Codex rollout collection
 
 The [local numeric history collector](codex-local-history.md) reads an explicitly
-selected bounded directory on Linux with Node.js 24. It supports genuine
-rollout formats, per-response identities, archive replay, inherited-response
+selected bounded directory with Node.js 24. Linux supports the direct descriptor
+reader; macOS requires an explicitly compiled native reader, selected with
+`--native-reader` as described in the [acquisition guide](codex-macos-acquisition.md).
+It supports genuine rollout formats, per-response identities, archive replay, inherited-response
 exclusion and conservative legacy cumulative differences. Official-format
 synthetic fixtures verify the implementation; no real-account acceptance is
 claimed. It emits a private JSON review and has no hosted pairing, installation
