@@ -5,7 +5,8 @@
 //   write (the model that wrote a PR never clears it), and writes the files
 //   Claude reads.
 // - post: turns Claude's structured output into one review of the commit. The
-//   review's last line is a verdict the autopilot can check.
+//   review's last line is a structured receipt for owner inspection, never
+//   automatic merge clearance.
 // Claude itself only reads. The rules are in docs/remediation/CODEX-BRIEF.md,
 // Section 4, "Review policy".
 
@@ -133,7 +134,7 @@ export async function prepare({ github, repo, number, dir, hasToken }) {
     skip: "writer",
     sha,
     note: `Claude won't review #${number}: Claude wrote or helped write it (${evidence.join("; ")}). ` +
-      "The model that wrote a PR never clears it. Ask Codex instead: `@codex review`.",
+      "The model that wrote a PR never clears it. Ask the owner to appoint an independent reviewer other than Claude.",
   });
   const evidence = claudeEvidence(pull, commits);
   if (evidence.length) return writer(evidence);
@@ -141,8 +142,8 @@ export async function prepare({ github, repo, number, dir, hasToken }) {
     return {
       skip: "no-token",
       sha,
-      note: "Claude can't review yet: the `CLAUDE_CODE_OAUTH_TOKEN` secret is missing. Run `claude setup-token`, " +
-        "then add the token to the `reviewers` environment (docs/remediation/CODEX-BRIEF.md, Section 9).",
+      note: "Claude can't review yet: the `CLAUDE_CODE_OAUTH_TOKEN` secret is missing from the `reviewers` environment. " +
+        "Report this to the owner; creating or replacing credentials needs separate authorization (docs/remediation/CODEX-BRIEF.md, Section 9).",
     };
   }
   const files = await github.all(`/repos/{repo}/pulls/${number}/files`, 30);
@@ -310,11 +311,11 @@ export function reviewBody({ result, sha, runId, repo }) {
   const notes = result.notes.length
     ? ["<details><summary>Notes that don't block</summary>", "", ...result.notes.map(note => `- ${safe(note, { oneLine: true })}`), "", "</details>", ""]
     : [];
-  // Model output is advisory: marker text does not establish exact review
-  // provenance or protect the model from instructions in the PR's own text.
+  // Required review evidence still needs owner verification: marker text does
+  // not establish provenance or protect against instructions in PR text.
   const tail = [
     `<sub>Outside review by Claude in [run ${runId}](https://github.com/${repo}/actions/runs/${runId}). ` +
-      "Advisory: a clean Claude verdict does not authorize an autopilot merge. Claude only reads, and the model that wrote a PR never clears it.</sub>",
+      "Required independent review; the owner must verify exact-head evidence and passing CI before authorizing landing. A clean verdict does not authorize an automatic merge. Claude only reads, and the model that wrote a PR never clears it.</sub>",
     `<!-- claude-review verdict=${result.verdict} sha=${sha} run=${runId} -->`,
   ];
   const assemble = (shown, withNotes) => {

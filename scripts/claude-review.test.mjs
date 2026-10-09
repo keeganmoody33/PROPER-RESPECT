@@ -138,7 +138,7 @@ test("prepare refuses closed, fork, Claude-written and overlong PRs, and one wit
   assert.match(based.note, /targets `release\/v0\.2`, not main/);
   const writer = await run({ commits: [commitOf("fix: x\n\nCo-Authored-By: Claude <noreply@anthropic.com>")] });
   assert.deepEqual([writer.skip, writer.sha], ["writer", HEAD]);
-  assert.match(writer.note, /never clears it\. Ask Codex instead: `@codex review`/);
+  assert.match(writer.note, /never clears it\. Ask the owner to appoint an independent reviewer other than Claude\./);
   const long = await run({ commits: Array.from({ length: MAX_COMMITS }, () => commitOf("fix: x")) });
   assert.equal(long.skip, "too-long");
   // A push while the lists were read stops the review: the diff, the writer
@@ -218,7 +218,8 @@ test("the review names its commit and run, and its last line is the verdict", ()
   assert.match(body, /^### Claude review of `aaaaaaa`: 1 finding\n/);
   assert.match(body, /1\. \*\*P1\*\* \[`src\/domain\/onboarding\.ts:9`\]\(https:\/\/github\.com\/o\/r\/blob\/a{40}\/src\/domain\/onboarding\.ts#L9\): \\`index\\` stays claimable\. R01 reserves it\. Fix: Add it to RESERVED_HANDLES\./);
   assert.match(body, /<details><summary>Notes that don't block<\/summary>\n\n- Tests read well\./);
-  assert.match(body, /\[run 123\]\(https:\/\/github\.com\/o\/r\/actions\/runs\/123\)\. Advisory: a clean Claude verdict does not authorize an autopilot merge\./);
+  assert.match(body, /\[run 123\]\(https:\/\/github\.com\/o\/r\/actions\/runs\/123\)\. Required independent review; the owner must verify exact-head evidence and passing CI before authorizing landing\./);
+  assert.match(body, /A clean verdict does not authorize an automatic merge\./);
   assert.deepEqual(verdictMarker(body), { verdict: "findings", sha: HEAD, run: 123 });
   const none = reviewBody({ result: readVerdict("", "failure"), sha: HEAD, runId: RUN, repo: REPO });
   assert.match(none, /^### Claude review of `aaaaaaa`: no verdict\n\nClaude didn't finish \(failure\)\. This review clears nothing\./);
