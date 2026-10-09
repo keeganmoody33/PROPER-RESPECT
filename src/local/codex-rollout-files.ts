@@ -1,6 +1,7 @@
 import { constants, type BigIntStats } from "node:fs";
 import { lstat, open, opendir, type FileHandle } from "node:fs/promises";
 import { isAbsolute } from "node:path";
+import { readNativeCodexDirectory } from "./codex-native-reader.ts";
 
 const limits = {
   files: 64,
@@ -57,6 +58,7 @@ export async function readCodexRolloutDirectory({ directory, signal }: {
   directory: string;
   signal: AbortSignal;
 }): Promise<CodexRolloutDirectory> {
+  if (process.platform === "darwin") return readNativeCodexDirectory({ directory, signal });
   const handles: FileHandle[] = [];
   const ancestors: { parent: FileHandle; child: FileHandle; name: string }[] = [];
   try {

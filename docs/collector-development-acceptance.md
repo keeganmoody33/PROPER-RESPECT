@@ -1,5 +1,12 @@
 # Collector development acceptance
 
+The October 7 [development Mac connection](codex-mac-connection.md) adds the
+authenticated Convex numeric receiver and multi-window durable companion.
+The [October 7 receipt](verification/2026-10-07-real-mac-connection.md) records
+historical approved development acceptance. The requirements below originated
+with the earlier #157 complete-report fixture. They are not a claim that this
+combined integration has passed fresh live acceptance.
+
 The October 6 implementation is a local development milestone. Its SQLite
 receiver, companion and browser tests use synthetic sources. It supplies no live
 Convex adapter or Clerk-authenticated collector connection. A real Mac connection
@@ -69,9 +76,10 @@ to a public PR or screenshot.
 
 ## Remaining live acceptance
 
-After target verification, implement and test the authenticated Convex receiver
-against the same shared grant, numeric review, chunk and receipt rules. The
-SQLite receiver is a reference for local tests, not a hosted storage adapter.
+The authenticated Convex receiver and signed-device companion are implemented in
+the retained development connection. Before testing a new combined source head,
+verify its target, matching authentication, reviewed backend and approved scope.
+The SQLite receiver remains a reference for local tests, not the hosted adapter.
 
 On the approved Mac, name each selected source, device, personal/work context
 and history window. Review the local mixed-file access before collecting. A
@@ -86,8 +94,10 @@ and retained history after disconnect. Finally exercise the existing authenticat
 publication flow with explicit field selection and inspect the resulting public
 snapshot for excluded private fields.
 
-The current grant covers one window of at most seven days. Broad historical
-backfill and rolling updates need an explicit multi-window consent model. Other
+The complete-report fixture grant covers one window of at most seven days. The
+development companion separately supports grants spanning at most 366 days,
+processed as windows of at most seven days, with access expiring within 31 days.
+Use its explicit source, context, window and retention approval. Other
 remaining limits include ignored compressed Codex files, scan bounds, excluded
 legacy fork ranges, unverified historical identity, unverified Cursor dashboard
 CSV compatibility, signed Mac packaging, a filesystem picker, OS-managed

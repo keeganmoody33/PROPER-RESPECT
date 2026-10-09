@@ -178,5 +178,13 @@ tests passed on Linux. GitHub Actions run
 [`37531009381`](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37531009381)
 succeeded at `a6c670b6fc71b418d608c75d612c06112195a701`, including compilation
 and the synthetic native acquisition/durable-sync step on a macOS runner.
-Packaging/signing and approved real Mac acceptance remain unfinished. See
+This is synthetic platform evidence, not owner-device acceptance. Packaging and
+signing remain unfinished. See
 [native acquisition details](codex-macos-acquisition.md).
+
+The [development Mac connection](codex-mac-connection.md) adds a signed-device
+Convex receiver and bounded, durable numeric backfill. The complete-report
+SQLite fixture remains a reference for the shared Codex/Cursor contract. Neither
+fixture success nor this integration establishes fresh approved real Mac acceptance.
+The [October 7 receipt](verification/2026-10-07-real-mac-connection.md) records
+historical development acceptance at its stated source and scope.

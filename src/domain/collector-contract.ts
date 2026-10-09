@@ -34,7 +34,7 @@ const countsSchema = z.strictObject({ input_tokens: integer.nullable(), cached_i
   for (const [subset, total] of [["cached_input_tokens", "input_tokens"], ["reasoning_output_tokens", "output_tokens"]] as const) if (value[subset] !== null && value[total] !== null && BigInt(value[subset]) > BigInt(value[total])) ctx.addIssue({ code: "custom", message: "Invalid native subset." });
 });
 export const codexResponseRowSchema = z.strictObject({ thread: hash, response: hash, at: historyTimestampSchema, counts: countsSchema, status: z.enum(["measured", "conflict"]) });
-export const codexLegacyRowSchema = z.strictObject({ stream: hash, metric: z.enum(CODEX_METRICS), unit: z.literal("tokens"), at: historyTimestampSchema, value: integer.nullable(), delta: integer.nullable(), status: z.enum(["baseline", "measured", "unknown", "conflict"]) }).superRefine((row, ctx) => {
+export const codexLegacyRowSchema = z.strictObject({ thread: hash.optional(), stream: hash, metric: z.enum(CODEX_METRICS), unit: z.literal("tokens"), at: historyTimestampSchema, value: integer.nullable(), delta: integer.nullable(), status: z.enum(["baseline", "measured", "unknown", "conflict"]) }).superRefine((row, ctx) => {
   if (row.status !== "measured" && row.delta !== null || row.status === "unknown" && row.value !== null || row.status === "baseline" && row.value === null || row.status === "measured" && (row.delta === null || row.value === null || BigInt(row.delta) > BigInt(row.value))) ctx.addIssue({ code: "custom", message: "Invalid legacy accounting state." });
 });
 const codexTotal = z.strictObject({ metric: z.enum(CODEX_METRICS), value: integer.nullable() });

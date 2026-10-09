@@ -179,3 +179,9 @@ exclusion and conservative legacy cumulative differences. Official-format
 synthetic fixtures verify the implementation; no real-account acceptance is
 claimed. It emits a private JSON review and has no hosted pairing, installation
 or recurring collection. The browser connection prototype remains synthetic.
+# Codex development connection
+
+The [Mac connection guide](codex-mac-connection.md) describes the new approved-source
+helper, signed pairing, durable private sync, replay-safe backfill and disconnect.
+Its cloud fixture verification is preparation for the separately approved real
+Mac gate. Native account RPC and production deployment remain unaccepted.
