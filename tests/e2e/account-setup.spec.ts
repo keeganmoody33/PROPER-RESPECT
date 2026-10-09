@@ -98,6 +98,71 @@ test.beforeAll(async () => {
   journeyScript = `<style>${readFileSync("app/globals.css", "utf8")}\n${styles}</style><main id="root"></main><script>${javascript.replaceAll("</script", "<\\/script")}</script>`;
 });
 
+for (const width of [1280, 390]) for (const claimed of [true, false, undefined]) test(`published handle stays fixed while profile details save privately at ${width}px with claimed=${claimed}`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  await expect(page.getByRole("heading", { name: "See your first private result" })).toBeVisible();
+  await page.evaluate(claimed => {
+    const key = "proper-respect-fresh-user-fixture";
+    const state = JSON.parse(localStorage.getItem(key)!);
+    state.user.handle = "maya-ops";
+    state.user.displayName = "Maya Chen";
+    state.hasClaimedPublicIdentity = claimed;
+    state.hasPublicationAtCurrentHandle = true;
+    localStorage.setItem(key, JSON.stringify(state));
+  }, claimed);
+  await page.reload();
+  const identity = page.locator("#collection-profile");
+  await identity.locator("summary").click();
+  await expect(identity.getByLabel("Handle", { exact: true })).not.toBeEditable();
+  await expect(identity.getByLabel("Handle", { exact: true })).toHaveValue("maya-ops");
+  await expect(identity.getByRole("link", { name: "https://public.example/maya-ops", exact: true })).toHaveAttribute("href", "https://public.example/maya-ops");
+  await expect(identity).toContainText("Changing a published handle requires an owner-verified migration.");
+  await identity.getByLabel("Display name", { exact: true }).fill("Maya Chen · GTM");
+  await identity.getByLabel("Short footer bio (optional)").fill("I build sales workflows and keep the receipts.");
+  await identity.getByRole("button", { name: "Add a profile link" }).click();
+  await identity.getByLabel("Link 1 label").fill("Work");
+  await identity.getByLabel("Link 1 URL").fill("https://maya.example");
+  await identity.getByLabel("Use for my name").check();
+  await identity.getByLabel("Handle", { exact: true }).evaluate((input: HTMLInputElement) => { input.value = "forged-handle"; });
+  await identity.getByLabel("Display name", { exact: true }).press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Identity changes saved to your draft." })).toBeVisible();
+  const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
+  expect(calls.filter((call: { name: string }) => call.name === "claimHandle").map((call: { args: unknown }) => call.args)).toEqual([{
+    handle: "maya-ops", displayName: "Maya Chen · GTM", bio: "I build sales workflows and keep the receipts.", profileLinks: [{ label: "Work", url: "https://maya.example" }], preferredLinkUrl: "https://maya.example",
+  }]);
+  expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toEqual([]);
+  await page.reload();
+  await identity.locator("summary").click();
+  await expect(identity.getByLabel("Display name", { exact: true })).toHaveValue("Maya Chen · GTM");
+  await expect(identity.getByLabel("Handle", { exact: true })).not.toBeEditable();
+  await expect(identity.getByLabel("Link 1 URL")).toHaveValue("https://maya.example");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await identity.screenshot({ path: testInfo.outputPath(`2026-10-08-published-identity-${width}.png`), animations: "disabled" });
+});
+
+test("unknown publication state explains why identity saving is unavailable", async ({ page }) => {
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  await expect(page.getByRole("heading", { name: "See your first private result" })).toBeVisible();
+  await page.evaluate(() => {
+    const key = "proper-respect-fresh-user-fixture";
+    const state = JSON.parse(localStorage.getItem(key)!);
+    state.hasClaimedPublicIdentity = true;
+    delete state.hasPublicationAtCurrentHandle;
+    localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.reload();
+  const identity = page.locator("#collection-profile");
+  await identity.locator("summary").click();
+  await expect(identity).toContainText("Public identity status is unavailable. Reload before saving.");
+  await expect(identity.getByLabel("Handle", { exact: true })).not.toBeEditable();
+  await expect(identity.getByRole("button", { name: "Save public identity" })).toBeDisabled();
+});
+
 for (const width of [1280, 390]) for (const [choice, status] of [
   ["ACTIVE", "ACTIVE"], ["TESTING", "TESTING"], ["ARCHIVED", "ARCHIVED"], ["LATER", undefined],
 ] as const) test(`named tool saves ${choice} with no optional details at ${width}px`, async ({ page }, testInfo) => {
@@ -251,6 +316,7 @@ for (const identityState of ["claimed", "unclaimed-after-upload", "unknown"] as 
   const preview = page.getByRole("button", { name: "Preview sharing", exact: true });
   if (identityState === "claimed") {
     await expect(identity.getByLabel("Handle", { exact: true })).toHaveValue("pending-victim123");
+    await expect(identity.getByLabel("Handle", { exact: true })).toBeEditable();
     await expect(preview).toBeEnabled();
     await expect(page.getByRole("link", { name: "Set up your public identity" })).toHaveCount(0);
     await expect(page.getByText("Nothing is published at /pending-victim123 yet.", { exact: true })).toBeVisible();
@@ -260,6 +326,7 @@ for (const identityState of ["claimed", "unclaimed-after-upload", "unknown"] as 
     await expect(preview).toBeDisabled();
     if (identityState === "unclaimed-after-upload") {
       await expect(identity.getByLabel("Handle", { exact: true })).toHaveValue("");
+      await expect(identity.getByLabel("Handle", { exact: true })).toBeEditable();
       await expect(page.getByRole("link", { name: "Set up your public identity" })).toBeVisible();
       await expect(page.getByText("Nothing is published yet.", { exact: true })).toBeVisible();
     } else {
