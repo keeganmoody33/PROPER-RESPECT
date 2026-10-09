@@ -30,11 +30,18 @@ it("sums exact modern response quantities while keeping scope, period and disclo
   expect(result.measurements).toHaveLength(CODEX_METRICS.length);
   expect(result.responseCount).toBe(2);
   for (const row of result.measurements) {
-    expect(row).toMatchObject({ derivation: "SUMMED_RESPONSES", scope: "DEVICE", coverage: "PARTIAL", aggregation: "NON_ADDITIVE", sample: "unknown", status: "measured", period: { kind: "date", start: "2026-10-01", end: "2026-10-07", timezone: "UTC" } });
+    expect(row).toMatchObject({ derivation: "SUMMED_RESPONSES", temporality: "DELTA", scope: "DEVICE", coverage: "PARTIAL", aggregation: "NON_ADDITIVE", sample: "unknown", status: "measured", period: { kind: "date", start: "2026-10-01", end: "2026-10-07", timezone: "UTC" } });
     expect(row.reasons.join(" ")).toMatch(/unverified/i);
     expect(measurementSchema.safeParse(row).success).toBe(true);
-    expect(publicMeasurementSchema.safeParse(projectMeasurement(row)).success).toBe(true);
+    const projected = projectMeasurement(row);
+    expect(projected).toMatchObject({ value: row.value, period: row.period, capturedAt: metadata.capturedAt, temporality: "DELTA", aggregation: "NON_ADDITIVE" });
+    expect(publicMeasurementSchema.safeParse(projected).success).toBe(true);
   }
+});
+
+it.each(["SNAPSHOT", "CUMULATIVE"])("rejects non-interval %s temporality for summed response usage", temporality => {
+  const valid = snapshot([response()]);
+  expect(usageSnapshotSchema.safeParse({ ...valid, measurements: valid.measurements.map(row => ({ ...row, temporality })) }).success).toBe(false);
 });
 
 it("quarantines an inside-window response when its conflicting variant falls outside the window", () => {
@@ -54,6 +61,9 @@ it("preserves explicit conflict status and distinguishes unknown, measured zero 
   expect(snapshot([]).measurements.every(row => row.value === null)).toBe(true);
   expect(snapshot([]).responseCount).toBe(0);
   expect(snapshot([response(1, null)]).responseCount).toBe(1);
+  for (const rows of [[{ ...response(), status: "conflict" as const }], [response(1, null)], [response(1, "0")], []]) {
+    expect(snapshot(rows).measurements.every(row => row.temporality === "DELTA")).toBe(true);
+  }
 });
 
 it("deduplicates adjacent replay without making capture time or unrelated windows part of evidence identity", () => {

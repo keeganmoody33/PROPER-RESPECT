@@ -33,7 +33,7 @@ export const usageSnapshotSchema = z.strictObject({
     ctx.addIssue({ code: "custom", message: "Use distinct native quantities with a consistent conflict disposition." });
   for (const row of snapshot.measurements) {
     if (!(CODEX_METRICS as readonly string[]).includes(row.metric) || row.unit !== "tokens" || row.derivation !== "SUMMED_RESPONSES"
-      || row.scope !== "DEVICE" || row.coverage !== "PARTIAL" || row.temporality !== "SNAPSHOT" || row.aggregation !== "NON_ADDITIVE"
+      || row.scope !== "DEVICE" || row.coverage !== "PARTIAL" || row.temporality !== "DELTA" || row.aggregation !== "NON_ADDITIVE"
       || row.sample !== "unknown" || row.status === "baseline" || row.capturedAt !== snapshot.capturedAt
       || canonicalJson(row.period) !== canonicalJson(period(window.data)) || Object.values(row.dimensions).some(value => value !== null)
       || row.overlapGroup !== overlapGroup(snapshot.sourceKey) || row.id !== measurementId(snapshot.sourceKey, window.data, snapshot.evidenceDigest, row.metric)
@@ -117,7 +117,7 @@ export function createUsageSnapshotAccumulator(input: UsageSnapshotWindow) {
         const measurements: Measurement[] = CODEX_METRICS.map((metric, index) => ({
           id: measurementId(metadata.sourceKey, window, evidenceDigest, metric), metric,
           value: conflict || unknown[index] || responseCount === 0 ? null : String(totals[index]), unit: "tokens", period: period(window),
-          scope: "DEVICE", coverage: "PARTIAL", temporality: "SNAPSHOT", aggregation: "NON_ADDITIVE", sample: "unknown", derivation: "SUMMED_RESPONSES",
+          scope: "DEVICE", coverage: "PARTIAL", temporality: "DELTA", aggregation: "NON_ADDITIVE", sample: "unknown", derivation: "SUMMED_RESPONSES",
           status: conflict ? "conflict" : "measured", capturedAt: metadata.capturedAt, overlapGroup: overlapGroup(metadata.sourceKey),
           dimensions: { model: null, reasoningEffort: null, speed: null, threadAlias: null },
           reasons: [...reasons, ...(conflict ? ["Conflicting response variants block all selected totals."] : responseCount === 0 ? ["No modern response evidence falls within the selected window."] : unknown[index] ? ["At least one selected native response lacks this quantity."] : [])],
