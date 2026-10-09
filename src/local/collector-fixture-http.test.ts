@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { request as httpRequest } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import { mkdtemp, realpath, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -80,6 +80,7 @@ it("serves IPv6 loopback ::1 with the same Host, Origin and size checks and neve
   cleanup.push(async () => { service.close(); await http.close(); await rm(directory, { recursive: true, force: true }); });
   expect(http.boundHosts).toEqual(["127.0.0.1", "::1"]);
   expect(http.ipv6Origin).toMatch(/^http:\/\/\[::1\]:\d+$/);
+  if (!http.ipv6Origin) throw new Error("IPv6 origin missing.");
   expect(() => createCollectorFixtureTransport({ origin: http.ipv6Origin })).not.toThrow();
   const accepted = await fetch(`${http.ipv6Origin}/fixture/state`, { headers: { authorization: `Bearer ${ownerToken}`, origin: http.ipv6Origin } });
   expect(accepted.status).toBe(200);
@@ -92,6 +93,30 @@ it("serves IPv6 loopback ::1 with the same Host, Origin and size checks and neve
     req.end("{}");
   });
   expect(spoofed).toBe(400);
+});
+
+it("keeps IPv4 loopback up when ::1 is occupied or unavailable", async () => {
+  const blocker = createServer();
+  await new Promise<void>((resolve, reject) => {
+    blocker.once("error", reject);
+    blocker.listen({ port: 0, host: "::1", ipv6Only: true }, resolve);
+  });
+  const blocked = blocker.address();
+  if (!blocked || typeof blocked === "string") throw new Error("IPv6 blocker did not bind ::1.");
+  cleanup.push(async () => { await new Promise<void>((resolve, reject) => blocker.close(error => error ? reject(error) : resolve())); });
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "collector-ipv4-only-")));
+  const service = new CollectorService({ databasePath: join(directory, "receiver/private.sqlite") });
+  const ownerToken = randomBytes(32).toString("hex");
+  const http = await startCollectorFixtureHttp({
+    service: () => service, owner, ownerToken, port: blocked.port, state: async () => ({ loopback: "ipv4-only" }),
+  });
+  cleanup.push(async () => { service.close(); await http.close(); await rm(directory, { recursive: true, force: true }); });
+  expect(http.boundHosts).toEqual(["127.0.0.1"]);
+  expect(http.ipv6Origin).toBeUndefined();
+  expect(http.origin).toBe(`http://127.0.0.1:${blocked.port}`);
+  const accepted = await fetch(`${http.origin}/fixture/state`, { headers: { authorization: `Bearer ${ownerToken}`, origin: http.origin } });
+  expect(accepted.status).toBe(200);
+  expect(await accepted.json()).toEqual({ loopback: "ipv4-only" });
 });
 
 it("runs the actual native fixture connection, updates and process reopen with private retention for both adapters", async () => {

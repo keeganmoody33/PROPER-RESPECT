@@ -13,6 +13,15 @@ const commitSchema = authSchema.extend({ manifest: manifestSchema });
 const MAX_HTTP_BYTES = COLLECTOR_LIMITS.chunkBytes + 1024;
 const fixedError = "Local fixture request rejected.";
 const authorized = (actual: string | undefined, expected: string) => actual !== undefined && Buffer.byteLength(actual) === Buffer.byteLength(expected) && timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+const ipv6Unavailable = (error: unknown) => error instanceof Error && "code" in error && (error.code === "EADDRNOTAVAIL" || error.code === "EAFNOSUPPORT" || error.code === "EADDRINUSE");
+
+function listen(server: ReturnType<typeof createServer>, options: { port: number; host: string; ipv6Only?: boolean }) {
+  return new Promise<void>((resolve, reject) => {
+    const fail = (error: Error) => { server.off("error", fail); reject(error); };
+    server.once("error", fail);
+    server.listen(options, () => { server.off("error", fail); resolve(); });
+  });
+}
 
 async function readJson(request: IncomingMessage): Promise<unknown> {
   if (request.headers["content-type"] !== "application/json" || request.headers["content-encoding"] !== undefined) throw new Error(fixedError);
@@ -43,10 +52,10 @@ export async function startCollectorFixtureHttp(input: {
 }) {
   if (!/^[a-f0-9]{64}$/.test(input.ownerToken)) throw new Error(fixedError);
   let ipv4Origin = "";
-  let ipv6Origin = "";
+  let ipv6Origin: string | undefined;
   const originForHost = (host: string | undefined) => {
-    if (host === new URL(ipv4Origin).host) return ipv4Origin;
-    if (host === new URL(ipv6Origin).host) return ipv6Origin;
+    if (ipv4Origin && host === new URL(ipv4Origin).host) return ipv4Origin;
+    if (ipv6Origin && host === new URL(ipv6Origin).host) return ipv6Origin;
     return null;
   };
   const handler = async (request: IncomingMessage, response: ServerResponse) => {
@@ -94,14 +103,19 @@ export async function startCollectorFixtureHttp(input: {
     server.closeIdleConnections();
   });
   try {
-    await new Promise<void>((resolve, reject) => { ipv4.once("error", reject); ipv4.listen({ port: input.port ?? 0, host: "127.0.0.1" }, resolve); });
+    await listen(ipv4, { port: input.port ?? 0, host: "127.0.0.1" });
     const address = ipv4.address();
     if (!address || typeof address === "string") throw new Error(fixedError);
-    await new Promise<void>((resolve, reject) => { ipv6.once("error", reject); ipv6.listen({ port: address.port, host: "::1", ipv6Only: true }, resolve); });
-    const ipv6Address = ipv6.address();
-    if (!ipv6Address || typeof ipv6Address === "string" || ipv6Address.address !== "::1") throw new Error(fixedError);
     ipv4Origin = `http://127.0.0.1:${address.port}`;
-    ipv6Origin = `http://[::1]:${address.port}`;
+    try {
+      await listen(ipv6, { port: address.port, host: "::1", ipv6Only: true });
+      const ipv6Address = ipv6.address();
+      if (!ipv6Address || typeof ipv6Address === "string" || ipv6Address.address !== "::1") throw new Error(fixedError);
+      ipv6Origin = `http://[::1]:${address.port}`;
+    } catch (error) {
+      await closeServer(ipv6).catch(() => undefined);
+      if (!ipv6Unavailable(error)) throw error;
+    }
   } catch (error) {
     await closeServer(ipv4).catch(() => undefined);
     await closeServer(ipv6).catch(() => undefined);
@@ -110,8 +124,11 @@ export async function startCollectorFixtureHttp(input: {
   return {
     origin: ipv4Origin,
     ipv6Origin,
-    boundHosts: ["127.0.0.1", "::1"] as const,
-    close: async () => { await closeServer(ipv6); await closeServer(ipv4); },
+    boundHosts: ipv6Origin ? ["127.0.0.1", "::1"] as const : ["127.0.0.1"] as const,
+    close: async () => {
+      if (ipv6Origin) await closeServer(ipv6);
+      await closeServer(ipv4);
+    },
   };
 }
 
