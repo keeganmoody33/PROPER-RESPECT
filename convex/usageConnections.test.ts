@@ -157,6 +157,43 @@ test("non-retained disconnect deletes evidence and receipts without depending on
   expect((await f.read()).page).toHaveLength(0);
   expect(await f.t.run(ctx=>ctx.db.query("usageReceipts").collect())).toHaveLength(0);
 });
+
+test.each([[0, 0], [0, 200], [199, 201], [200, 199], [201, 201]])("erasure reports completion only after %i evidence rows and %i receipts are deleted", async (evidenceCount, receiptCount) => {
+  const f = await fixture();
+  const [grant] = await f.owner.query(listUsage, {});
+  await f.t.run(async ctx => {
+    for (let index = 0; index < evidenceCount; index++) await ctx.db.insert("usageEvidence", {
+      sourceId: grant.sourceId, key: digest(`evidence-${index}`), fingerprint: digest(`variant-${index}`), rowJson: JSON.stringify(packet().rows[0]),
+    });
+    for (let sequence = 1; sequence <= receiptCount; sequence++) await ctx.db.insert("usageReceipts", {
+      sourceId: grant.sourceId, grantId: f.grantId, sequence, packetId: digest(`packet-${sequence}`), acceptedAt: "2026-10-07T00:00:00.000Z",
+    });
+  });
+  await f.owner.mutation(disconnectUsage, { grantId: f.grantId });
+  let done = false;
+  for (let attempt = 0; attempt < 4 && !done; attempt++) {
+    ({ done } = await f.owner.mutation(eraseUsage, { grantId: f.grantId }));
+    const remaining = await f.t.run(async ctx => ({
+      evidence: await ctx.db.query("usageEvidence").withIndex("by_source", q => q.eq("sourceId", grant.sourceId)).collect(),
+      receipts: await ctx.db.query("usageReceipts").withIndex("by_source", q => q.eq("sourceId", grant.sourceId)).collect(),
+      source: await ctx.db.get(grant.sourceId),
+    }));
+    if (remaining.evidence.length || remaining.receipts.length) expect(done).toBe(false);
+    expect(remaining.source?.erasing).toBe(!done);
+    if (done) {
+      expect(remaining.evidence).toHaveLength(0);
+      expect(remaining.receipts).toHaveLength(0);
+    } else {
+      await expect(f.owner.mutation(approveUsage, { scopeJson: JSON.stringify(scope), codeDigest: digest("7".repeat(64)) })).rejects.toThrow("deletion is still running");
+    }
+  }
+  expect(done).toBe(true);
+  // Scheduled continuations remain harmless after a polling client finishes.
+  await f.t.finishAllScheduledFunctions(vi.runAllTimers);
+  expect(await f.owner.mutation(eraseUsage, { grantId: f.grantId })).toEqual({ done: true });
+  expect((await f.t.run(ctx => ctx.db.get(grant.sourceId)))?.erasing).toBe(false);
+});
+
 test("an expired pairing code cannot activate its pending grant", async () => {
   const f=await fixture();const nextCode="1".repeat(64);
   await f.owner.mutation(approveUsage,{scopeJson:JSON.stringify(scope),codeDigest:digest(nextCode)});
