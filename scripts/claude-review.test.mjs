@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -9,6 +10,7 @@ import { claudeEvidence, main, MAX_COMMITS, post, prepare, quotesCredential, rea
 const REPO = "o/r";
 const HEAD = "a".repeat(40);
 const RUN = "123";
+const MAIN = "d".repeat(40);
 
 const pullOf = (overrides = {}) => ({
   state: "open",
@@ -16,7 +18,7 @@ const pullOf = (overrides = {}) => ({
   body: "## Task\n\n- Remediation task: R01",
   user: { login: "keeganmoody33" },
   head: { ref: "remediate/R01-handles", sha: HEAD, repo: { full_name: REPO } },
-  base: { ref: "main" },
+  base: { ref: "main", sha: MAIN, repo: { full_name: REPO } },
   ...overrides,
 });
 const commitOf = (message, overrides = {}) => ({
@@ -38,6 +40,7 @@ function fakeGitHub({ pull = pullOf(), pullLater = null, commits = [commitOf("fi
     async request(path, { method = "GET", body } = {}) {
       calls.push({ method, path, body });
       if (method === "GET" && path === "/repos/{repo}/pulls/88") return (pullReads++ > 0 && pullLater) || pull;
+      if (method === "GET" && path === "/repos/{repo}/git/ref/heads/main") return { object: { sha: MAIN } };
       if (method === "POST" && path === "/repos/{repo}/pulls/88/reviews" && reviewStatus !== 200) {
         const error = new Error(`POST ${path} returned ${reviewStatus}`);
         error.status = reviewStatus;
@@ -106,67 +109,60 @@ test("Claude's account, address, footer and session link count too, even on anot
   assert.deepEqual(claudeEvidence(pullOf({ body: "Show Claude Code usage on cards." }), [commitOf("fix: retain Claude Code and Codex card logos")]), []);
 });
 
-test("prepare writes what Claude reads, and returns the reviewed commit", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
-  const fake = fakeGitHub({ files: [
-    fileOf("src/domain/onboarding.ts"),
-    { ...fileOf("public/logo.png"), patch: undefined },
-    { ...fileOf("public/old-logo.png"), status: "removed", patch: undefined },
-  ] });
-  const result = await prepare({ github: fake, repo: REPO, number: 88, dir, hasToken: true });
+// API tests use a deterministic data-only exporter fixture; separate local Git
+// tests prove full trees, deletions, filters, ancestry and resource boundaries.
+function contextFixture({ reviewDir }) {
+  const dir = join(reviewDir, "context");
+  mkdirSync(dir, { recursive: true });
+  const context = { headSha: HEAD, baseSha: MAIN, mainSha: MAIN, ancestorSha: MAIN,
+    baseRef: "main", headRef: pullOf().head.ref, repo: REPO, number: 88, commitShas: ["b".repeat(40)] };
+  const manifest = JSON.stringify(context);
+  const manifestDigest = createHash("sha256").update(manifest).digest("hex");
+  writeFileSync(join(dir, "trees.json"), manifest);
+  writeFileSync(join(dir, "diff.patch"), "raw local patch\n");
+  writeFileSync(join(dir, "pr.json"), JSON.stringify({ ...context, manifestDigest }));
+  return { ...context, manifestDigest };
+}
+function contextEnv() {
+  const reviewDir = mkdtempSync(join(tmpdir(), "claude-context-fixture-"));
+  const context = contextFixture({ reviewDir });
+  return { REVIEW_CONTEXT_DIR: join(reviewDir, "context"), MANIFEST_DIGEST: context.manifestDigest, GITHUB_SHA: MAIN };
+}
+const prepareOptions = github => ({ github, repo: REPO, number: 88, mainSha: MAIN,
+  dir: join(mkdtempSync(join(tmpdir(), "claude-prepare-fixture-")), "context"), hasToken: true, contextBuilder: contextFixture });
+
+test("prepare uses local pinned context and includes introduced commit metadata", async () => {
+  const options = prepareOptions(fakeGitHub());
+  const result = await prepare(options);
   assert.deepEqual([result.sha, result.skip], [HEAD, undefined]);
-  const pr = JSON.parse(readFileSync(join(dir, "pr.json"), "utf8"));
-  assert.deepEqual([pr.number, pr.headSha, pr.headRef, pr.baseRef], [88, HEAD, "remediate/R01-handles", "main"]);
-  const diff = readFileSync(join(dir, "diff.patch"), "utf8");
-  assert.match(diff, /=== src\/domain\/onboarding\.ts \(modified, \+1 -1\)\n@@ -1 \+1 @@/);
-  assert.match(diff, /=== public\/logo\.png .*\n\(GitHub sent no patch/);
-  // A removed file isn't under pr-head/, so Claude reads what it was in main's
-  // checkout, the working directory: the copy a merge would delete.
-  assert.match(diff, /=== public\/old-logo\.png \(removed, .*\n\(GitHub sent no patch[^\n]*working directory/);
-  assert.match(readFileSync(join(dir, "commits.txt"), "utf8"), /^commit b{40}\n\nfix: reserve handles \(R01\)/);
+  const pr = JSON.parse(readFileSync(join(options.dir, "pr.json"), "utf8"));
+  assert.deepEqual([pr.number, pr.headSha, pr.headRef, pr.baseRef], [88, HEAD, pullOf().head.ref, "main"]);
+  assert.equal(readFileSync(join(options.dir, "diff.patch"), "utf8"), "raw local patch\n");
+  assert.match(readFileSync(join(options.dir, "commits.txt"), "utf8"), /^commit b{40}\n\nfix: reserve handles/);
+  assert.ok(!options.github.calls.some(call => call.path.endsWith("/files")), "never silently accepts truncated API patches");
 });
 
-test("prepare refuses closed, fork, Claude-written and overlong PRs, and one without a token", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
-  const run = options => prepare({ github: fakeGitHub(options), repo: REPO, number: 88, dir, hasToken: true });
+test("prepare refuses closed, fork, Claude-written and overlong PRs, and missing credentials", async () => {
+  const run = options => prepare(prepareOptions(fakeGitHub(options)));
   assert.equal((await run({ pull: pullOf({ state: "closed" }) })).skip, "closed");
-  assert.equal((await run({ pull: pullOf({ head: { ref: "x", sha: HEAD, repo: { full_name: "someone/fork" } } }) })).skip, "fork");
-  assert.equal((await run({ pull: pullOf({ head: { ref: "x", sha: HEAD, repo: null } }) })).skip, "fork");
-  // Claude reads main as the base, so a PR into another branch isn't one it can judge.
-  const based = await run({ pull: pullOf({ base: { ref: "release/v0.2" } }) });
-  assert.deepEqual([based.skip, based.sha], ["base", HEAD]);
-  assert.match(based.note, /targets `release\/v0\.2`, not main/);
-  const writer = await run({ commits: [commitOf("fix: x\n\nCo-Authored-By: Claude <noreply@anthropic.com>")] });
-  assert.deepEqual([writer.skip, writer.sha], ["writer", HEAD]);
-  assert.match(writer.note, /never clears it\. Ask the owner to appoint an independent reviewer other than Claude\./);
-  const long = await run({ commits: Array.from({ length: MAX_COMMITS }, () => commitOf("fix: x")) });
-  assert.equal(long.skip, "too-long");
-  // A push while the lists were read stops the review: the diff, the writer
-  // check and the checked-out tree would describe different commits.
-  const moved = await run({ pullLater: pullOf({ head: { ref: "remediate/R01-handles", sha: "c".repeat(40), repo: { full_name: REPO } } }) });
-  assert.deepEqual([moved.skip, moved.sha], ["moved", HEAD]);
-  // So does closing it, or pointing it at another branch, while it's read.
-  const closedMeanwhile = await run({ pullLater: pullOf({ state: "closed" }) });
-  assert.deepEqual([closedMeanwhile.skip, closedMeanwhile.sha], ["moved", HEAD]);
-  assert.match(closedMeanwhile.note, /now closed/);
-  const retargeted = await run({ pullLater: pullOf({ base: { ref: "@keeganmoody33`x" } }) });
-  assert.deepEqual([retargeted.skip, retargeted.sha], ["moved", HEAD]);
-  assert.match(retargeted.note, /now into `@keeganmoody33x`/);
-  const rebased = await run({ pull: pullOf({ base: { ref: "main", sha: "1".repeat(40) } }), pullLater: pullOf({ base: { ref: "main", sha: "2".repeat(40) } }) });
-  assert.deepEqual([rebased.skip, rebased.sha], ["moved", HEAD]);
-  assert.match(rebased.note, /base 1111111 to 2222222/);
-  // A Claude footer added to the description between the two looks counts too.
-  const claimed = await run({ pullLater: pullOf({ body: "Generated with [Claude Code](https://claude.com/claude-code)" }) });
-  assert.deepEqual([claimed.skip, claimed.sha], ["writer", HEAD]);
-  // A title or description edited between the looks reaches Claude as edited.
-  const edited = await run({ pullLater: pullOf({ title: "fix: reserve every route (R01)", body: "Edited." }) });
-  assert.equal(edited.skip, undefined);
-  const summary = JSON.parse(readFileSync(join(dir, "pr.json"), "utf8"));
-  assert.deepEqual([summary.title, summary.body], ["fix: reserve every route (R01)", "Edited."]);
-  assert.match(moved.note, /changed while Claude was reading it \(aaaaaaa to ccccccc\)\. Ask again\./);
-  // The writer check runs before the token check, so the rule shows even
-  // before setup.
-  const noToken = await prepare({ github: fakeGitHub(), repo: REPO, number: 88, dir, hasToken: false });
+  for (const repo of [null, { full_name: "someone/fork" }]) {
+    assert.equal((await run({ pull: pullOf({ head: { ...pullOf().head, repo } }) })).skip, "fork");
+  }
+  assert.equal((await run({ pull: pullOf({ base: { ...pullOf().base, ref: "release/v0.2" } }) })).skip, "pins");
+  assert.equal((await run({ commits: [commitOf("fix: x\n\nCo-Authored-By: Claude <noreply@anthropic.com>")] })).skip, "writer");
+  assert.equal((await run({ commits: Array.from({ length: MAX_COMMITS }, () => commitOf("fix: x")) })).skip, "too-long");
+  for (const later of [
+    pullOf({ state: "closed" }),
+    pullOf({ head: { ...pullOf().head, sha: "c".repeat(40) } }),
+    pullOf({ base: { ...pullOf().base, ref: "other" } }),
+    pullOf({ base: { ...pullOf().base, sha: "c".repeat(40) } }),
+    pullOf({ body: "Generated with [Claude Code](https://claude.com/claude-code)" }),
+  ]) assert.equal((await run({ pullLater: later })).skip, "moved");
+  const options = prepareOptions(fakeGitHub({ pullLater: pullOf({ title: "Edited", body: "Updated" }) }));
+  assert.equal((await prepare(options)).skip, undefined);
+  const summary = JSON.parse(readFileSync(join(options.dir, "pr.json"), "utf8"));
+  assert.deepEqual([summary.title, summary.body], ["Edited", "Updated"]);
+  const noToken = await prepare({ ...prepareOptions(fakeGitHub()), hasToken: false });
   assert.equal(noToken.skip, "no-token");
   assert.match(noToken.note, /CLAUDE_CODE_OAUTH_TOKEN/);
 });
@@ -423,17 +419,24 @@ test("the workflow gives Claude reading tools only, and the job can comment", ()
   assert.match(claudeStep, /^ {8}env:\n {10}ACTIONS_STEP_DEBUG: 'false'$/m);
   assert.match(workflow, /^\s+pull-requests: write$/m);
   assert.match(workflow, /^\s+issues: write$/m);
-  // Both ways in are the owner's: a comment by the owner, or the owner's
-  // manual run. Each review spends the owner's Claude plan. A re-run keeps
+  // Only owner dispatch runs the pinned action without a hidden base-config
+  // refresh. Each review spends the owner's Claude plan. A re-run keeps
   // github.actor, so the one who starts this run must be the owner too.
   assert.match(workflow, /github\.triggering_actor == github\.repository_owner &&/);
   // This job holds the owner's Claude token, so every action it runs is
   // pinned to a commit: a moved tag can't swap in other code.
   const uses = [...workflow.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)];
-  assert.ok(uses.length >= 4, String(uses.length));
+  assert.equal(uses.length, 3);
+  assert.equal(uses.filter(([, ref]) => ref.startsWith("actions/checkout@")).length, 1);
+  assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /fetch-depth: 0/);
+  assert.doesNotMatch(workflow, /path: pr-head|mv pr-head|ref: \$\{\{ steps\.prepare/);
+  assert.match(workflow, /if: steps\.current\.outputs\.ready == 'true'/);
   for (const [, ref, comment] of uses) assert.match(`${ref}${comment}`, /@[0-9a-f]{40} # v\d+(\.\d+)*$/, ref);
-  assert.match(workflow, /github\.event_name == 'workflow_dispatch' && github\.actor == github\.repository_owner/);
-  assert.match(workflow, /github\.event\.comment\.user\.login == github\.repository_owner/);
+  assert.match(workflow, /github\.event_name == 'workflow_dispatch' &&/);
+  assert.match(workflow, /github\.actor == github\.repository_owner/);
+  assert.doesNotMatch(workflow, /^  (?:issue_comment|pull_request|pull_request_target):/m);
+  assert.doesNotMatch(workflow, /github\.event\.comment|github\.event\.issue/);
 });
 
 test("the job runs Claude Code and Bun from a lockfile, never from a live download", () => {
@@ -469,12 +472,13 @@ test("the job runs Claude Code and Bun from a lockfile, never from a live downlo
 test("main tells the owner why it skipped, and hands the commit to the next steps", async () => {
   const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
   const outputFile = join(dir, "output.txt");
-  const env = { GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", REVIEW_CONTEXT_DIR: join(dir, "context"), GITHUB_OUTPUT: outputFile, HAS_CLAUDE_TOKEN: "true" };
+  const env = { ...contextEnv(), GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", GITHUB_OUTPUT: outputFile, HAS_CLAUDE_TOKEN: "false" };
   const quiet = () => {};
   const fake = fakeGitHub();
   await main(["prepare"], env, quiet, fake);
-  assert.equal(readFileSync(outputFile, "utf8"), `sha=${HEAD}\nskip=\n`);
-  assert.equal(fake.calls.filter(call => call.method === "POST").length, 0);
+  assert.equal(readFileSync(outputFile, "utf8"), `sha=${HEAD}\nskip=no-token\nmanifest_digest=\n`);
+  assert.equal(fake.calls.filter(call => call.method === "POST").length, 1);
+  assert.match(fake.calls.at(-1).body.body, /reviewers.*environment/);
   const writer = fakeGitHub({ pull: pullOf({ head: { ref: "claude/x", sha: HEAD, repo: { full_name: REPO } } }) });
   await main(["prepare"], env, quiet, writer);
   const [note] = writer.calls.filter(call => call.method === "POST");
@@ -517,7 +521,7 @@ test("a finding named from main's checkout comes back relative, and a parenthesi
   const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
   const fake = fakeGitHub();
   const output = { verdict: "findings", summary: "", findings: [{ ...finding, file: `${workspace}/app/(group)/pa)ge.tsx` }], notes: [] };
-  await main(["post"], { GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, CLAUDE_CONCLUSION: "success",
+  await main(["post"], { ...contextEnv(), GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, CLAUDE_CONCLUSION: "success",
     GITHUB_WORKSPACE: workspace, EXECUTION_FILE: executionLog(dir, output) }, () => {}, fake);
   const body = fake.calls.at(-1).body.body;
   assert.equal(verdictMarker(body).verdict, "findings");
@@ -526,7 +530,7 @@ test("a finding named from main's checkout comes back relative, and a parenthesi
 
 test("post reads Claude's answer from the action's log file, however long it is", async () => {
   const dir = mkdtempSync(join(tmpdir(), "claude-review-"));
-  const env = { GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, CLAUDE_CONCLUSION: "success" };
+  const env = { ...contextEnv(), GITHUB_REPOSITORY: REPO, PR_NUMBER: "88", HEAD_SHA: HEAD, GITHUB_RUN_ID: RUN, CLAUDE_CONCLUSION: "success" };
   const verdictOf = async extra => {
     const fake = fakeGitHub();
     await main(["post"], { ...env, ...extra }, () => {}, fake);
@@ -551,3 +555,7 @@ test("post reads Claude's answer from the action's log file, however long it is"
   assert.match(workflow, /^\s+EXECUTION_FILE: \$\{\{ steps\.claude\.outputs\.execution_file \}\}$/m);
   assert.doesNotMatch(workflow, /outputs\.structured_output/);
 });
+
+// Keep the existing required Node script command covering the new safety boundary.
+import "../.github/claude-review/context.test.mjs";
+import "../.github/claude-review/runner.test.mjs";

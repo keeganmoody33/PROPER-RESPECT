@@ -245,13 +245,15 @@ work; it preserves the September 25 independence rule.
   approval, skipped reviewer, quota/authentication error, malformed answer
   or missing verdict never counts as a clean review. A writer's tests do
   not replace the outside review or real-account acceptance.
-- **Supported Claude route.** The owner comments `@claude review` on the PR
-  or runs `.github/workflows/claude-review.yml` from main with its number.
-  Claude has read-only tools; the trusted script posts its verdict for the
-  inspected commit. The runner refuses Claude writer evidence, including
-  Claude branches/accounts, co-author trailers and session footers. It also
-  currently refuses PRs whose base is not main. Do not remove these guards
-  or retarget a stacked PR merely to obtain an apparently clean review.
+- **Supported Claude route.** The owner runs `.github/workflows/claude-review.yml`
+  from main with the PR number. Stacked PRs require full `head_sha` and
+  `base_sha` inputs. The trusted runner exports pinned main/base/head/ancestor
+  context as data, including dependency changes and writer checks. Claude has
+  read-only tools; PR code and configuration never execute. Head/base/main or
+  writer changes invalidate a clean result. Unsafe or incomplete context stops
+  review. Comment triggers are disabled because the pinned upstream action
+  refreshes base configuration on PR comment events after the pin check.
+  Do not retarget a stacked PR or weaken guards to obtain a clean review.
 - **Owner-controlled landing.** A clean Claude result is required evidence,
   not automatic permission to merge. The owner verifies the run came from
   the trusted main workflow and the recorded PR/head/base match; then gives
@@ -1321,11 +1323,12 @@ before changing it. Required CI remains unchanged.
    usage require separate authority; selecting Claude as reviewer does not
    grant either. An authorized owner can provision an existing-plan token
    through Claude's supported setup route directly into the environment.
-3. Comment `@claude review` on an eligible Codex-written PR. Inspect the
-   actual review, exact commit and trusted run; workflow success alone can
-   mean the model was skipped. The current runner accepts only main-based
-   PRs. Keep stacked release diffs and dependencies explicit while that
-   constraint is unresolved.
+3. From Actions → Claude review → Run workflow, select main and enter the PR
+   number; for stacked PRs also enter the current full head/base SHAs. Inspect
+   the actual review, exact context and trusted run; workflow success alone
+   can mean the model was skipped. See
+   `docs/verification/2026-10-09-claude-owner-setup.md` for the owner-only
+   secret destination and safe bootstrap sequence for the existing runner.
 4. Fix concrete findings, run the required checks and obtain fresh review
    after every change. Follow Section 4's exact-head and owner-landing gate.
 
