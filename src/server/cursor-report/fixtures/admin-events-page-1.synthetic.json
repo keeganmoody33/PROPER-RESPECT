@@ -1,0 +1,50 @@
+{
+  "totalUsageEventsCount": 4,
+  "pagination": {
+    "numPages": 2,
+    "currentPage": 1,
+    "pageSize": 2,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  },
+  "usageEvents": [
+    {
+      "timestamp": "1790812800000",
+      "userEmail": "human@synthetic.invalid",
+      "conversationId": "synthetic-conversation-1",
+      "model": "synthetic-token-model",
+      "kind": "Usage-based",
+      "maxMode": true,
+      "requestsCosts": 0.1234567890123456789,
+      "isTokenBasedCall": true,
+      "isChargeable": true,
+      "isHeadless": false,
+      "tokenUsage": {
+        "inputTokens": 9007199254740993,
+        "outputTokens": 13,
+        "cacheWriteTokens": 10,
+        "cacheReadTokens": 20,
+        "totalCents": 0.01234567890123456789,
+        "discountPercentOff": 12.5
+      },
+      "chargedCents": 0.123456789012345678901,
+      "cursorTokenFee": 1.25e-7
+    },
+    {
+      "timestamp": "1790858096789",
+      "userEmail": "human@synthetic.invalid",
+      "model": "synthetic-request-model",
+      "kind": "Included in Business",
+      "maxMode": false,
+      "requestsCosts": 1.4,
+      "isTokenBasedCall": false,
+      "isChargeable": false,
+      "isHeadless": false,
+      "chargedCents": 0.5
+    }
+  ],
+  "period": {
+    "startDate": 1790812800000,
+    "endDate": 1790985599999
+  }
+}

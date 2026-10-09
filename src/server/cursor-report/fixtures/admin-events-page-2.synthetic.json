@@ -1,0 +1,50 @@
+{
+  "totalUsageEventsCount": 4,
+  "pagination": {
+    "numPages": 2,
+    "currentPage": 2,
+    "pageSize": 2,
+    "hasNextPage": false,
+    "hasPreviousPage": true
+  },
+  "usageEvents": [
+    {
+      "timestamp": "1790858096789",
+      "userEmail": "human@synthetic.invalid",
+      "model": "synthetic-request-model",
+      "kind": "Included in Business",
+      "maxMode": false,
+      "requestsCosts": 1.4,
+      "isTokenBasedCall": false,
+      "isChargeable": false,
+      "isHeadless": false,
+      "chargedCents": 0.5
+    },
+    {
+      "timestamp": "1790985599999",
+      "userEmail": "runner@synthetic.invalid",
+      "serviceAccountId": "synthetic-service-account",
+      "serviceAccountName": "Synthetic runner",
+      "cloudAgentId": "synthetic-cloud-run",
+      "automationId": "synthetic-automation",
+      "conversationId": "synthetic-conversation-2",
+      "model": "synthetic-token-model",
+      "kind": "Usage-based",
+      "maxMode": false,
+      "requestsCosts": 1e-7,
+      "isTokenBasedCall": true,
+      "isChargeable": true,
+      "isHeadless": true,
+      "tokenUsage": {
+        "cacheReadTokens": 5,
+        "totalCents": 1e-18
+      },
+      "chargedCents": 0.000000125,
+      "cursorTokenFee": 0.000000005
+    }
+  ],
+  "period": {
+    "startDate": 1790812800000,
+    "endDate": 1790985599999
+  }
+}
