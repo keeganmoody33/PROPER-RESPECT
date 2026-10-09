@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { decimal, instant } from "./decode.ts";
+import { csvDecimal, csvRecords, decimal, instant } from "./decode.ts";
 import { normalizeCursorAdminEvents } from "./normalizer.ts";
 
 const page = readFileSync(new URL("./fixtures/admin-events-page-1.synthetic.json", import.meta.url), "utf8");
@@ -33,4 +33,19 @@ test("offset conversion stays within the supported UTC range and is idempotent",
   for (const value of ["1970-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00"]) assert.throws(() => instant(value));
   const utc = instant("2026-10-01T01:00:00+01:00");
   assert.equal(instant(utc), utc);
+});
+
+test("CSV decimals reject scientific notation while JSON decimals still expand it", () => {
+  assert.equal(decimal("1e3"), "1000");
+  assert.equal(csvDecimal("1000"), "1000");
+  assert.equal(csvDecimal("0.125000"), "0.125");
+  for (const value of ["1e3", "1E3", "10e-1", "1.0e2"]) assert.throws(() => csvDecimal(value));
+});
+
+test("one shared CSV parser handles quoting and rejects NULs", () => {
+  assert.deepEqual(csvRecords('a,b\n"x,y",z\n'), [["a", "b"], ["x,y", "z"]]);
+  assert.throws(() => csvRecords("a,b\n\u0000,z\n"));
+  const adapter = readFileSync(new URL("../../local/cursor-report-adapter.ts", import.meta.url), "utf8");
+  assert.match(adapter, /from ["']\.\.\/server\/cursor-report\/decode\.ts["']/);
+  assert.doesNotMatch(adapter, /mode === "quoted"/);
 });

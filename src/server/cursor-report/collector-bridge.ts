@@ -48,7 +48,7 @@ export function projectCursorCollectorReport<T>(
 ): { review: T; sourceId: string; omitted: string[] } {
   const invalid = () => new Error("Cursor report cannot project into this approved collector view.");
   if (report.kind !== "events" || selection.suppliedFileComplete !== true ||
-      report.schema === "cursor-admin-events-2026-10-06" && report.coverage.completeness !== "complete") throw invalid();
+      (report.schema === "cursor-admin-events-2026-10-06" && report.coverage.completeness !== "complete")) throw invalid();
   const sourceId = cursorCollectorSourceId(report);
   if (selection.sourceId !== sourceId) throw invalid();
   const start = instant(selection.window.start), end = instant(selection.window.end);
@@ -80,8 +80,9 @@ export function projectCursorCollectorReport<T>(
   });
   return { review, sourceId, omitted: [
     "private-source-scope-and-filters", "billing-window", "provider-labels-and-identifiers",
-    "cache-write-tokens", "csv-input-category-interpretation", "request-billing-units",
-    "reported-costs-and-charges", "provider-coverage-details",
+    "cache-write-tokens",
+    ...(report.schema === "cursor-dashboard-csv-observed-2026-10-06" ? ["csv-input-category-interpretation"] : []),
+    "request-billing-units", "reported-costs-and-charges", "provider-coverage-details",
     ...(start !== report.window.start || Date.parse(end) - 1 !== Date.parse(report.window.end) ? ["outside-approved-window"] : []),
   ] };
 }

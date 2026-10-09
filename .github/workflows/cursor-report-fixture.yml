@@ -41,11 +41,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
-      # The standalone adapters use Node built-ins. When the collector contract
-      # lands on this checkout, its real schema needs the locked dependencies.
-      # Never fetch or import an unmerged branch to fill that gap.
+      # The shared collector contract is in-tree. Locked dependencies are required
+      # for its schema. Never fetch or import an unmerged branch to fill a gap.
       - name: Install dependencies for the merged collector contract
-        if: ${{ hashFiles('src/domain/collector-contract.ts') != '' }}
         run: npm ci --ignore-scripts
       - name: Verify synthetic Cursor reports
-        run: node --experimental-strip-types --test src/server/cursor-report/*.test.mjs
+        run: node --experimental-strip-types --test --test-reporter spec --test-reporter-destination stdout --test-reporter tap --test-reporter-destination "$RUNNER_TEMP/cursor-report.tap" src/server/cursor-report/*.test.mjs
+      - name: Fail if collector-bridge tests skip
+        run: node --experimental-strip-types src/server/cursor-report/assert-test-counts.ts "$RUNNER_TEMP/cursor-report.tap"
