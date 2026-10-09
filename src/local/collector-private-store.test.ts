@@ -20,6 +20,8 @@ it("creates private SQLite storage and preserves committed data on reopen", asyn
   database.close();
   expect((await stat(join(root, "store"))).mode & 0o777).toBe(0o700);
   expect((await stat(databasePath)).mode & 0o777).toBe(0o600);
+  expect((await stat(`${databasePath}-wal`)).mode & 0o777).toBe(0o600);
+  expect((await stat(`${databasePath}-shm`)).mode & 0o777).toBe(0o600);
   const reopened = openCollectorPrivateStore({ databasePath });
   expect(reopened.prepare("SELECT value FROM retained").get()?.value).toBe("synthetic-evidence");
   expect(reopened.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });

@@ -1,6 +1,21 @@
-import { closeSync, constants, lstatSync, mkdirSync, openSync, realpathSync } from "node:fs";
+import { closeSync, constants, fchmodSync, fstatSync, lstatSync, mkdirSync, openSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+
+function tightenPrivateSidecar(path: string) {
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
+    const file = fstatSync(descriptor);
+    if (!file.isFile() || file.nlink !== 1 || process.getuid && file.uid !== process.getuid()) throw new Error();
+    if ((file.mode & 0o777) !== 0o600) fchmodSync(descriptor, 0o600);
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return;
+    throw error;
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
 
 /** Trusted, private local storage. Permissions are not an encryption claim. */
 export function openCollectorPrivateStore({ databasePath }: { databasePath: string }): DatabaseSync {
@@ -25,6 +40,8 @@ export function openCollectorPrivateStore({ databasePath }: { databasePath: stri
     if (!journal || typeof journal !== "object" || !("journal_mode" in journal) || journal.journal_mode !== "wal") {
       throw new Error();
     }
+    tightenPrivateSidecar(`${databasePath}-wal`);
+    tightenPrivateSidecar(`${databasePath}-shm`);
     return database;
   } catch {
     database?.close();

@@ -261,6 +261,8 @@ it("enables WAL, pins a schema version, and refuses a newer companion store", as
   test.companion.close();
   const database = openCollectorPrivateStore({ databasePath: test.databasePath });
   expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
+  expect(statSync(`${test.databasePath}-wal`).mode & 0o777).toBe(0o600);
+  expect(statSync(`${test.databasePath}-shm`).mode & 0o777).toBe(0o600);
   expect(database.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: COMPANION_SCHEMA_VERSION });
   database.exec("PRAGMA user_version = 99");
   database.close();
@@ -274,6 +276,8 @@ it("pins a receiver schema version and refuses a newer receiver store", async ()
   service.close();
   const database = openCollectorPrivateStore({ databasePath });
   expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
+  expect(statSync(`${databasePath}-wal`).mode & 0o777).toBe(0o600);
+  expect(statSync(`${databasePath}-shm`).mode & 0o777).toBe(0o600);
   expect(database.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: RECEIVER_SCHEMA_VERSION });
   database.exec("PRAGMA user_version = 99");
   database.close();
