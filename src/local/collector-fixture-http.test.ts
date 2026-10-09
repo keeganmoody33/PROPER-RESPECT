@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { request as httpRequest } from "node:http";
 import { mkdtemp, realpath, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -56,7 +57,7 @@ it("restarts both SQLite stores and resumes a real HTTP commit after a lost ackn
 });
 
 it("rejects remote destinations and unauthenticated or cross-origin fixture changes without leaking credentials", async () => {
-  for (const origin of ["https://127.0.0.1:1234", "http://localhost:1234", "http://example.com:1234", "http://127.0.0.1:1234/extra", "http://u:p@127.0.0.1:1234"]) expect(() => createCollectorFixtureTransport({ origin })).toThrow();
+  for (const origin of ["https://127.0.0.1:1234", "http://localhost:1234", "http://example.com:1234", "http://127.0.0.1:1234/extra", "http://u:p@127.0.0.1:1234", "http://[2001:db8::1]:1234", "http://[::ffff:127.0.0.1]:1234"]) expect(() => createCollectorFixtureTransport({ origin })).toThrow();
   const directory = await realpath(await mkdtemp(join(tmpdir(), "collector-boundary-")));
   const service = new CollectorService({ databasePath: join(directory, "receiver/private.sqlite") });
   const ownerToken = randomBytes(32).toString("hex"); let changes = 0;
@@ -69,6 +70,28 @@ it("rejects remote destinations and unauthenticated or cross-origin fixture chan
   }
   const valid = await fetch(`${http.origin}/fixture/connect`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${ownerToken}`, origin: http.origin }, body: "{}" });
   expect(valid.status).toBe(200); expect(changes).toBe(1);
+});
+
+it("serves IPv6 loopback ::1 with the same Host, Origin and size checks and never binds non-loopback", async () => {
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "collector-ipv6-")));
+  const service = new CollectorService({ databasePath: join(directory, "receiver/private.sqlite") });
+  const ownerToken = randomBytes(32).toString("hex");
+  const http = await startCollectorFixtureHttp({ service: () => service, owner, ownerToken, state: async () => ({ loopback: "ipv6" }) });
+  cleanup.push(async () => { service.close(); await http.close(); await rm(directory, { recursive: true, force: true }); });
+  expect(http.boundHosts).toEqual(["127.0.0.1", "::1"]);
+  expect(http.ipv6Origin).toMatch(/^http:\/\/\[::1\]:\d+$/);
+  expect(() => createCollectorFixtureTransport({ origin: http.ipv6Origin })).not.toThrow();
+  const accepted = await fetch(`${http.ipv6Origin}/fixture/state`, { headers: { authorization: `Bearer ${ownerToken}`, origin: http.ipv6Origin } });
+  expect(accepted.status).toBe(200);
+  expect(await accepted.json()).toEqual({ loopback: "ipv6" });
+  const crossed = await fetch(`${http.ipv6Origin}/fixture/connect`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${ownerToken}`, origin: http.origin }, body: "{}" });
+  expect(crossed.status).toBe(400);
+  const port = Number(new URL(http.ipv6Origin).port);
+  const spoofed = await new Promise<number>(resolve => {
+    const req = httpRequest({ host: "::1", port, family: 6, method: "POST", path: "/fixture/connect", headers: { host: `192.168.0.1:${port}`, "content-type": "application/json", authorization: `Bearer ${ownerToken}`, origin: http.ipv6Origin } }, response => { resolve(response.statusCode ?? 0); response.resume(); });
+    req.end("{}");
+  });
+  expect(spoofed).toBe(400);
 });
 
 it("runs the actual native fixture connection, updates and process reopen with private retention for both adapters", async () => {
