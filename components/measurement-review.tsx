@@ -48,7 +48,7 @@ export function PrivateMeasurements({ propId }: { propId: Id<"props"> }) {
   if (!captures.length) return null;
   return <section className="usage-measurement-panel" aria-labelledby="private-measurements-title">
     <h3 id="private-measurements-title">Your private usage result</h3>
-    <p>Exact reported values, including unknowns. These measurements do not confirm how you use a tool or make anything public.</p>
+    <p>Exact measurement values, including unknowns. These measurements do not confirm how you use a tool or make anything public.</p>
     <div className="usage-measurement-sources">{captures.map(capture => <ReviewCapture key={`${capture.rawEvidenceId}:${capture.digest}:${capture.reviewVersion}`} capture={capture} propId={propId} />)}</div>
   </section>;
 }
