@@ -37,7 +37,7 @@ const dimensionsSchema = z.strictObject({ model: identifier.nullable(), reasonin
 export const measurementSchema = z.strictObject({
   id: z.string().regex(/^[a-f0-9]{64}$/), ...measuredShape,
   capturedAt: z.iso.datetime(), status: z.enum(["measured", "baseline", "conflict"]),
-  sample: z.enum(["synthetic", "owner-supplied", "unknown"]), derivation: z.enum(["SOURCE_REPORTED", "CUMULATIVE_DIFFERENCE"]),
+  sample: z.enum(["synthetic", "owner-supplied", "unknown"]), derivation: z.enum(["SOURCE_REPORTED", "CUMULATIVE_DIFFERENCE", "SUMMED_RESPONSES"]),
   overlapGroup: z.string().min(1).max(256).nullable(), dimensions: dimensionsSchema,
   reasons: z.array(z.string().max(300)).max(16),
 });
@@ -45,7 +45,7 @@ export type Measurement = z.infer<typeof measurementSchema>;
 export const publicMeasurementSchema = z.strictObject({
   ...measuredShape, capturedAt: z.iso.datetime(), status: z.enum(["measured", "baseline"]),
   identityBasis: z.literal("OWNER_SUPPLIED"), activityActor: z.literal("UNKNOWN"),
-  sample: z.enum(["synthetic", "owner-supplied", "unknown"]), derivation: z.enum(["SOURCE_REPORTED", "CUMULATIVE_DIFFERENCE"]),
+  sample: z.enum(["synthetic", "owner-supplied", "unknown"]), derivation: z.enum(["SOURCE_REPORTED", "CUMULATIVE_DIFFERENCE", "SUMMED_RESPONSES"]),
 });
 export type PublicMeasurement = z.infer<typeof publicMeasurementSchema>;
 export type MeasurementSource = z.infer<typeof measurementSourceSchema>;

@@ -188,7 +188,7 @@ export const publicMeasurementValidator = v.object({
   capturedAt: v.string(), status: v.union(v.literal("measured"), v.literal("baseline")),
   identityBasis: v.literal("OWNER_SUPPLIED"), activityActor: v.literal("UNKNOWN"),
   sample: v.union(v.literal("synthetic"), v.literal("owner-supplied"), v.literal("unknown")),
-  derivation: v.union(v.literal("SOURCE_REPORTED"), v.literal("CUMULATIVE_DIFFERENCE")),
+  derivation: v.union(v.literal("SOURCE_REPORTED"), v.literal("CUMULATIVE_DIFFERENCE"), v.literal("SUMMED_RESPONSES")),
 });
 
 export const publicProfileValidator = v.object({

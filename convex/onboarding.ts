@@ -795,20 +795,32 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     cardPropIds: cardsWithIdentity.map(entry => entry.propId) };
 }
 
+function requireMeasurementReader(profile: Awaited<ReturnType<typeof preparePublication>>["profile"], measurementVersion?: 2) {
+  if (measurementVersion !== 2 && profile.cards.some(card => card.measurements?.some(row => row.derivation === "SUMMED_RESPONSES"))) {
+    throw new Error("This profile includes summed usage measurements. Reload the current app before previewing or publishing.");
+  }
+}
+
 export const previewPublication = query({
-  args: { selections: v.array(selectionValidator), removeAllCards: v.optional(v.boolean()) },
-  handler: async (ctx, { selections, removeAllCards }) => {
+  args: { selections: v.array(selectionValidator), removeAllCards: v.optional(v.boolean()), measurementVersion: v.optional(v.literal(2)) },
+  handler: async (ctx, { selections, removeAllCards, measurementVersion }) => {
     const preview = await preparePublication(ctx, await requireUser(ctx), selections, removeAllCards === true);
+    // Legacy replacement must not discard stored measurements the caller cannot display.
+    if (removeAllCards !== true && preview.published) requireMeasurementReader(preview.published.profile, measurementVersion);
+    // Hiding preserved rows here would approve data absent from the preview.
+    requireMeasurementReader(preview.profile, measurementVersion);
     return { profile: preview.displayProfile, revision: preview.revision, previewHash: preview.previewHash, refreshAccounts: preview.refreshAccounts };
   },
 });
 
 export const publishSelected = mutation({
-  args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.number(), expectedPreviewHash: v.string(), removeAllCards: v.optional(v.boolean()) },
-  handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash, removeAllCards }) => {
+  args: { selections: v.array(selectionValidator), expectedPublicationRevision: v.number(), expectedPreviewHash: v.string(), removeAllCards: v.optional(v.boolean()), measurementVersion: v.optional(v.literal(2)) },
+  handler: async (ctx, { selections, expectedPublicationRevision, expectedPreviewHash, removeAllCards, measurementVersion }) => {
     const user = await requireUser(ctx);
     await consumeWriteLimit(ctx, user._id, "publishSelected");
     const prepared = await preparePublication(ctx, user, selections, removeAllCards === true);
+    if (removeAllCards !== true && prepared.published) requireMeasurementReader(prepared.published.profile, measurementVersion);
+    requireMeasurementReader(prepared.profile, measurementVersion);
     // A republish replaces the snapshot, so it must never lift an operator takedown.
     if (prepared.published?.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
     if (expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");

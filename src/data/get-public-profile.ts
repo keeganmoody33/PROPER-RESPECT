@@ -38,7 +38,7 @@ export async function getPublicProfile(
   const { NEXT_PUBLIC_CONVEX_URL } = getServerEnv();
   const result = await fetchQuery(
     api.publicProfiles.getByHandleV2,
-    { handle },
+    { handle, measurementVersion: 2 },
     { url: NEXT_PUBLIC_CONVEX_URL },
   );
   if (result === null) return null;
