@@ -2,6 +2,16 @@
 
 Updated: 2026-10-09.
 
+## Reviewer direction for every agent
+
+The October 9 owner decision applies to every agent and integration, including
+Cursor, and every PR: use independent Claude review and do not request Copilot
+review through comments, the reviewer API or automation. Missing Claude access
+blocks review; it does not authorize a fallback. Claude-written work requires
+an owner-appointed independent reviewer other than Claude, with Copilot still
+excluded. Read the current review policy in `docs/remediation/CODEX-BRIEF.md`
+before requesting review. CI and the writer's own inspection cannot clear a PR.
+
 ## Active remediation program
 
 Owner-approved 2026-09-25. When the owner asks you to continue remediation, or

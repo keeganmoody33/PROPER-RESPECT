@@ -224,8 +224,10 @@ Claude's text marker into the retired Copilot clearance path. Existing
 review findings remain relevant regardless of which reviewer found them.
 
 **Review policy.** The model that wrote or helped write a PR never clears it.
-The October 9 owner decision replaces Copilot with Claude for Codex-written
-work; it preserves the September 25 independence rule.
+The October 9 owner decision replaces Copilot with Claude for work Claude did
+not write or help write. Every agent and integration, including Cursor, follows
+this policy; it preserves the September 25 independence rule. Missing reviewer
+access never authorizes an `@copilot` comment or a reviewer API fallback.
 
 - **Claude is required.** Request independent Claude review of the complete
   final diff, including dependency context. Do not request Copilot review or

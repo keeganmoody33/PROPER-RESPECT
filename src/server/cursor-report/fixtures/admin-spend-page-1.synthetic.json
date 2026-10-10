@@ -1,0 +1,30 @@
+{
+  "teamMemberSpend": [
+    {
+      "userId": "synthetic-member-1",
+      "name": "Synthetic One",
+      "email": "one@synthetic.invalid",
+      "role": "member",
+      "spendCents": 1234.000000123456789,
+      "overallSpendCents": 2345.750000123456789,
+      "fastPremiumRequests": 2,
+      "hardLimitOverrideDollars": 0,
+      "monthlyLimitDollars": null,
+      "effectivePerUserLimitDollars": 50.5
+    },
+    {
+      "userId": "synthetic-member-2",
+      "name": "Synthetic Two",
+      "email": "two@synthetic.invalid",
+      "role": "owner",
+      "spendCents": 1e-18,
+      "overallSpendCents": 0.125,
+      "hardLimitOverrideDollars": 100,
+      "monthlyLimitDollars": 200,
+      "effectivePerUserLimitDollars": 100
+    }
+  ],
+  "subscriptionCycleStart": 1790812800000,
+  "totalMembers": 3,
+  "totalPages": 2
+}
