@@ -33,11 +33,13 @@ access is restored. The owner must inspect the actual model result, exact head
 and CI before separately authorizing landing. Only after the safe stacked
 runner is reviewed and landed can it review PR163/164 through their existing
 bases. Use Actions → Claude review → Run workflow, select main, and enter
-`pr`, `head_sha` and `base_sha`. Fetch fresh SHAs first; the following values
-are valid only while those exact pins remain current:
-
-- `pr=163`, `head_sha=96ab8cec36321bff49f91d28b04dde317ba56e81`, `base_sha=4e8fc6c1791264ad9803daba42652e1f77c2cfb7`
-- `pr=164`, `head_sha=b3c2dc0d43ef0036cb5840d2180340617d0b5c99`, `base_sha=96ab8cec36321bff49f91d28b04dde317ba56e81`
+`pr`, `head_sha` and `base_sha`. Fetch the current full head SHA and the current
+tip of the PR's base branch immediately before dispatch. PR163 uses
+`review/connection-dependencies-20261009`; PR164 uses
+`review/connection-integration-20261009`. Compare those values with the dated
+reconciliation receipt in each PR before proceeding. The October9 example
+SHAs have been superseded by the October10 main/dependency reconciliation;
+do not reuse them as dispatch inputs.
 
 The proposed runner is dispatch-only: the pinned upstream action refreshes
 base configuration on PR comment events after preparation, which would break
@@ -47,5 +49,6 @@ for the initial PR165 review; that is historical behavior, not the new route.
 A changed head, base, dependency or trusted main requires fresh review context
 and CI as applicable. No clean marker authorizes automatic merge. Human
 inspection and owner landing approval remain required. Product acceptance
-(real account/device/auth, deliberately shared data and #123 freshness) remains
-separate from this reviewer infrastructure work.
+(real account/device/auth and deliberately shared data) remains separate from
+this reviewer infrastructure work. The parent reports #123 verified and closed;
+its production account and recovery workflow are outside this task.

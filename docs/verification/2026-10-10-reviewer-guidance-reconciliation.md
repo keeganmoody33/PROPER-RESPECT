@@ -42,8 +42,9 @@ remains a separate owner action.
 
 Only current-main ancestry and the authorized reviewer guidance change in this
 reconciliation. The prior data-only stack-review implementation and paused
-zero-I/O autopilot remain unchanged. Run the existing reviewer/autopilot
-regressions, lint and current-head hosted CI; record exact receipts in PR165.
+zero-I/O autopilot remain unchanged. The existing reviewer/autopilot
+regressions pass (90 tests), as does full repository lint. Current-head hosted
+CI is recorded separately in PR165; older-head results are historical only.
 Documentation-only additions do not need implementation-mirroring tests.
 
 PR173 and PR174 stay on their authors' branches. Their CI is useful engineering
