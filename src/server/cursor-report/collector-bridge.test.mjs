@@ -14,15 +14,16 @@ import {
   normalizeCursorCsv,
 } from "./normalizer.ts";
 
-// Integration-owner checkouts contain this contract. This isolated branch uses a
-// pinned detached checkout when explicitly selected; an invalid selection fails.
+// The shared collector contract is in-tree after #157/#158. An explicit root may
+// still point at another checkout; a missing contract fails rather than skipping.
 const selectedContractRoot = process.env.CURSOR_COLLECTOR_CONTRACT_ROOT;
 const contractUrl = selectedContractRoot === undefined
   ? new URL("../../domain/collector-contract.ts", import.meta.url)
   : pathToFileURL(resolve(selectedContractRoot, "src/domain/collector-contract.ts"));
-const contract = selectedContractRoot !== undefined || existsSync(fileURLToPath(contractUrl))
-  ? await import(contractUrl.href)
-  : null;
+if (selectedContractRoot === undefined && !existsSync(fileURLToPath(contractUrl))) {
+  throw new Error("Shared collector contract is required in-tree; do not skip collector-bridge tests.");
+}
+const contract = await import(contractUrl.href);
 
 const fixture = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 const eventPages = [1, 2].map((page) => fixture(`admin-events-page-${page}.synthetic.json`));
@@ -241,8 +242,34 @@ test("the caller's validator receives the projection exactly once and controls a
   assert.equal(calls, 0);
 });
 
-const integrationSkip = contract ? false : "Shared collector contract is absent; set CURSOR_COLLECTOR_CONTRACT_ROOT to its pinned validation checkout.";
-describe("actual shared Cursor collector schema and delivery contract", { skip: integrationSkip }, () => {
+test("in-tree collector contract is loaded so the shared-contract group cannot skip", () => {
+  assert.equal(typeof contract.cursorCompleteReportSchema.parse, "function");
+});
+
+test("CSV unknown completeness still projects while incomplete Admin events do not", () => {
+  const csv = csvReport();
+  assert.equal(csv.coverage.completeness, "unknown");
+  assert.equal(csv.schema, "cursor-dashboard-csv-observed-2026-10-06");
+  assert.equal(project(csv).review.complete, true);
+  const partial = normalizeCursorAdminEvents([eventPages[0]], team);
+  assert.equal(partial.schema, "cursor-admin-events-2026-10-06");
+  assert.notEqual(partial.coverage.completeness, "complete");
+  assert.throws(() => project(partial));
+  assert.equal(project(adminReport()).review.complete, true);
+});
+
+test("omitted fields are source-appropriate and Admin projections do not list CSV-only losses", () => {
+  const adminOmitted = project(adminReport()).omitted;
+  assert.equal(adminOmitted.includes("csv-input-category-interpretation"), false);
+  for (const omission of ["cache-write-tokens", "request-billing-units", "reported-costs-and-charges"]) {
+    assert.ok(adminOmitted.includes(omission));
+  }
+  const csvOmitted = project(csvReport()).omitted;
+  assert.ok(csvOmitted.includes("csv-input-category-interpretation"));
+  assert.ok(csvOmitted.includes("reported-costs-and-charges"));
+});
+
+describe("actual shared Cursor collector schema and delivery contract", () => {
   const validatedProject = (report, overrides = {}) => project(report, overrides, (candidate) => contract.cursorCompleteReportSchema.parse(candidate));
   const grant = (projection, allowedMetrics = [...CURSOR_COLLECTOR_METRICS]) => ({
     connectionId: "synthetic-cursor-connection",

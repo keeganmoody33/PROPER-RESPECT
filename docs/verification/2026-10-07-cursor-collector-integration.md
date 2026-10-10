@@ -1,5 +1,12 @@
 # Cursor collector integration verification
 
+This receipt records pre-merge validation of PR #158 against a detached PR #157
+checkout. After #157 and #158 merged to main
+(`563e5fd0fc47fbc5163f5145a5ebec81d1003d85`), the contract is in-tree and the
+shared-contract group must run with `skip=0`; do not follow the skip-state or
+`a6c670b` pin below as current setup. Living guidance is in
+[cursor-collector-integration.md](../prototypes/cursor-collector-integration.md).
+
 Implementation branch: `feat/cursor-report-adapter`, initial head
 `e168e8d5a91ad31cf55374ce7ccbb483c1aeff32`, isolated worktree
 `/workspace/PROPER-RESPECT-cursor`. Published integration reference: PR #157
@@ -74,11 +81,14 @@ deterministic delivery replay and genuine multi-chunk assembly. Missing and
 tampered chunks reject. The tests use the existing receiver contract; no second
 receiver, persistence implementation or live connection is added.
 
-The isolated branch can run ten projection unit tests without the shared contract;
-the integration group then explicitly skips. An explicit invalid contract root
-fails module loading. Reported integration results above used the actual contract
-and had no skips. These `.test.mjs` files are invoked explicitly with Node, since
-the unchanged repository Vitest configuration selects `.test.ts` files.
+The isolated branch could run ten projection unit tests without the shared
+contract; the integration group then explicitly skipped. After the #157/#158
+merge that skip path is retired: a missing in-tree contract fails, and CI
+asserts the collector-bridge pass count. An explicit invalid contract root
+still fails module loading. Reported integration results above used the actual
+contract and had no skips. These `.test.mjs` files are invoked explicitly with
+Node, since the unchanged repository Vitest configuration selects `.test.ts`
+files.
 
 The final local commit and portable patch are reported in the task outcome.
 No upload or push occurred during local validation. A fully passing full suite still needs an authorized
@@ -114,9 +124,9 @@ integration tests. Exact-head CI monitoring and implementation review continue.
 The new workflow uses Node 24 and the repository's pinned checkout/setup-node
 action revisions, with `contents: read` and checkout credential persistence
 disabled. Standalone fixture validation passed 57 tests; the actual shared
-collector suite explicitly skips while its contract is absent. A conditional
-locked install with scripts disabled enables those tests when the contract is
-present in the checked-out code. YAML structure and action/permission invariants
+collector suite explicitly skipped while its contract was absent from that
+draft. After merge the contract is in-tree, those cases run, and fixture CI
+fails on skips. A locked install with scripts disabled enables the schema. YAML structure and action/permission invariants
 were checked locally. No unmerged branch is fetched to supply that dependency.
 
 Direct `gh` GraphQL and REST reads returned `Forbidden`; the already connected

@@ -1,11 +1,12 @@
 # Cursor integration with the existing collector
 
-Compared local `e168e8d5a91ad31cf55374ce7ccbb483c1aeff32` with
-[PR #157](https://github.com/keeganmoody33/PROPER-RESPECT/pull/157) at
-`a6c670b6fc71b418d608c75d612c06112195a701`. The canonical integration thread is
-`01a114e2-3095-74dd-a6b0-ac5e3728e0e3`. Its reported local `17f8a52` is not an
-object in this checkout; compatibility below is verified against the published
-PR head, not that unavailable local commit.
+The shared collector contract is in-tree at `src/domain/collector-contract.ts`
+after [PR #157](https://github.com/keeganmoody33/PROPER-RESPECT/pull/157) and
+[PR #158](https://github.com/keeganmoody33/PROPER-RESPECT/pull/158) merged to
+main (`563e5fd0fc47fbc5163f5145a5ebec81d1003d85`). Pre-merge comparison used
+local `e168e8d5a91ad31cf55374ce7ccbb483c1aeff32` against PR #157 at
+`a6c670b6fc71b418d608c75d612c06112195a701`; that pin is historical. The
+canonical integration thread is `01a114e2-3095-74dd-a6b0-ac5e3728e0e3`.
 
 | Decision | Implementation and reason |
 | --- | --- |
@@ -92,20 +93,22 @@ descriptor. Keep the private rich report and projection-loss explanation within
 the separately authorized retention policy. Transport grants, revocation and
 public sharing remain the existing integration owner's responsibility.
 
-The Node tests use the actual shared contract when present. For isolated
-verification against the pinned PR worktree:
+The Node tests load the in-tree shared contract. Missing that file fails the
+suite; the tests do not skip. Optional `CURSOR_COLLECTOR_CONTRACT_ROOT` still
+selects another checkout of `src/domain/collector-contract.ts`.
 
 ```sh
-CURSOR_COLLECTOR_CONTRACT_ROOT=/workspace/PROPER-RESPECT-cursor-contract \
-  node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types \
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types \
   --test src/server/cursor-report/*.test.mjs
 ```
 
-Re-run with Node 24: **57 passed, 0 failed, 0 skipped** on this isolated branch
-without a contract root; **63 passed, 0 failed, 0 skipped** with the pinned PR
-#157 root at `a6c670b6fc71b418d608c75d612c06112195a701`, including 16 bridge
-tests. Those figures match the [handoff](cursor-report-handoff.md) and the
-[integration receipt](../verification/2026-10-07-cursor-collector-integration.md).
+The merged tree runs the former skipped shared-contract cases. This follow-up
+glob is **69 passed, 0 failed, 0 skipped**, including 19 `collector-bridge`
+tests (the #158 land's 16 plus QA follow-ups). Fixture CI asserts that
+`collector-bridge.test.mjs` pass count and `skip=0`. Pre-merge **57 / 6 skip**
+and pinned-`a6c670b` **63 / 0 skip** figures are historical; see the
+[handoff](cursor-report-handoff.md) and the [integration
+receipt](../verification/2026-10-07-cursor-collector-integration.md).
 
 No fixture result proves a live Cursor connection, provider ownership, authorized
 historical retention or acceptance on the owner's Mac.
