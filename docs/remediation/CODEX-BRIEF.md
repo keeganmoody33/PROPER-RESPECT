@@ -14,8 +14,7 @@ what order, and what proves each fix.
 - **Told an owner task is done (for example "K03 is done"):** count it as done.
   Record it in Section 9's "Done owner tasks" line through a separate one-line
   `docs:` PR with no task ID, never inside a task PR.
-- **Started by an `@codex` comment on a pull request** (usually the autopilot's,
-  Section 4): do what the comment asks, on that pull request's branch. It asks
+- **Started by an owner-authorized `@codex` comment on a pull request**: do what the comment asks, on that pull request's branch. It asks
   you to fix failing checks, fix review comments, merge main in, or, on a
   remediation run pull request, do the next eligible task. Push to that
   branch; never open a new pull request.
@@ -79,9 +78,10 @@ when a test, a check or a live observation proves it, not when code exists.
   - Backend deploys first, and each step waits for an owner approval.
   - Pull requests get preview deployments once a synthetic backend exists
     (K10, then R30). Until then, no Git push deploys anything.
-  - Task pull requests merge without a human review when the autopilot's
-    conditions hold (Section 4, "Autopilot"). Owner decision, 2026-09-25
-    evening. Merging to main ships nothing: releases stay with the owner.
+  - The owner authorizes landing only after independent exact-head Claude
+    review and passing CI (Section 4). This 2026-10-09 decision supersedes
+    the 2026-09-25 automatic-merge policy. Merging to main ships nothing:
+    releases stay with the owner.
 
 **Later, only after real users exist.** Do not build these, and do not shape
 the schema for them now:
@@ -146,8 +146,8 @@ the schema for them now:
    - Activity never implies human use without a documented metric.
 7. **Build on a Devin-pushed branch, or stack a task on another unmerged task
    branch.**
-8. **Merge a PR yourself, or turn on auto-merge.** The autopilot merges
-   eligible task PRs; the owner merges the rest.
+8. **Merge a PR yourself, or turn on auto-merge.** The owner controls all
+   landing. The autopilot is paused, including automated review requests.
 9. **Weaken a gate.**
    - Change `release.yml`, `receipt.yml`, `uptime.yml`, the `git` settings in
      `vercel.json` or the preflight script only in the task that owns them.
@@ -157,7 +157,11 @@ the schema for them now:
      `scripts/remediation-autopilot.mjs` and its test) or the Claude review
      that checks your work (`.github/workflows/claude-review.yml`,
      `scripts/claude-review.mjs`, its test and `.github/claude-review/`). The
-     owner does. A PR that touches them, R13's included, waits for the owner.
+     owner does or explicitly authorizes the specific change. The October 9
+     reviewer transition authorizes pausing the autopilot and replacing its
+     Copilot guidance; it does not authorize merge, deployment, credentials
+     or branch-protection changes. A PR that touches these paths, R13's
+     included, waits for the owner and independent review.
    - Never remove a step from `verify.yml` or lower what it checks. Adding a
      spec, a step or a job, or raising a timeout, isn't weakening.
    - New workflows use the same `setup-node` setting as `verify.yml`.
@@ -204,140 +208,66 @@ the schema for them now:
 - `pstack-codex` stays the preferred workflow when it's available. This brief
   says what to do and what proves it.
 
-**Autopilot.** `.github/workflows/remediation-autopilot.yml` runs
-`scripts/remediation-autopilot.mjs` from main on the existing 30-minute
-schedule, only when `AUTOPILOT_ENABLED` is `true`. It acts only
-on open task PRs into main, from a branch of this repository, opened by the
-owner, Codex or the autopilot itself. A task PR carries a queued task ID
-(R01 to R30) at the end of its title, in the template's "Remediation task"
-line, or in a `remediate/<ID>-` branch name.
+**Autopilot paused.** Owner decision, 2026-10-09: use Claude for outside
+review and cut Copilot from this workflow. The prior automatic controller
+has no live dispatcher. Its command exits without reading credentials or
+making requests, even when `AUTOPILOT_ENABLED=true`. The workflow is a
+permissionless notice with no checkout or secret environment. Automatic task
+starts, fixes, review requests and merges are all paused; continue authorized
+implementation, tests and finding remediation directly. Old pure planning
+helpers are retained as historical logic, not current merge authority.
 
-- **Fixes.** It posts `@codex` comments with the owner's trigger token, since
-  Codex answers people, not bots. It asks Codex to fix failing GitHub Actions
-  checks, a conflict with main, or review findings on the latest commit,
-  listing them by link. It asks once per commit, for at most 3 rounds per PR.
-  A branch behind main gets its own update request, outside those rounds.
-  Only these findings count: top-level review comments and "changes
-  requested" reviews from Codex, Copilot, Vercel, Cursor or Devin review, or
-  from the owner and collaborators, a Copilot review of the commit whose
-  overview lists findings, including ones it found in unchanged code, and a
-  Claude review whose verdict line says findings, or the comment Claude posts
-  instead when GitHub refuses that review.
-- **Review.** Once the checks pass and 30 minutes have passed since the push,
-  it asks an outside model to review that commit. With the repository
-  variable `AUTOPILOT_CLAUDE_REVIEW` set to `true`, it asks Claude first: it
-  comments `@claude review` with the owner's token, which starts
-  `.github/workflows/claude-review.yml`, and waits up to 40 minutes for
-  Claude's verdict on that commit. Explicit Claude writer evidence skips
-  that request. Claude's findings block; a clean or missing verdict proceeds
-  to Copilot. Claude's clean verdict is advisory because its marker and run
-  reference do not prove which PR, head, base and emitted review belong
-  together. With the switch off it requests Copilot directly
-  with the owner's token, and leaves a comment that marks the ask. It never asks Codex to review a task,
-  because Codex wrote it (see "Review policy" below). A review is clean when
-  Copilot's latest review of the commit is finished, says plainly that it
-  found nothing (its overview's verdict, or the older "generated no comments"
-  line), and has no comments or other sign of findings. Any other Copilot
-  verdict or format, such as "Needs a closer look", never clears a PR:
-  findings it lists go to Codex as a fix request, and otherwise the PR goes
-  to the owner. Codex's automatic review, when Codex runs one, still counts
-  for its findings. It waits up to an hour for any review in progress.
-- **Outages.** When Codex answers "Something went wrong", when Copilot
-  answers a review request without reviewing (on a spent quota it says
-  "Copilot was unable to review this pull request"), or when a review never
-  comes, it asks again: at once the first time, then an hour after each
-  failure, up to 6 times per commit. So a few hours of downtime or an empty
-  quota delay a PR without parking it.
-- **Merge.** It squash-merges, pinned to the reviewed commit, one PR per run,
-  when all of these hold:
-  - the required checks passed and no check or commit status failed
-    (reviewer checks and Devin's status don't count as CI);
-  - no counted findings remain on the latest commit, or only review bots'
-    other than Codex and Claude after the 3 rounds;
-  - Copilot reviewed that commit cleanly;
-  - GitHub reports the PR as clean.
+`AUTOPILOT_ENABLED`, `AUTOPILOT_START_TASKS` and `AUTOPILOT_CLAUDE_REVIEW`
+cannot reactivate that controller. Restoring automation requires a separately
+reviewed change proving trusted PR/head/base/review provenance. Do not wire
+Claude's text marker into the retired Copilot clearance path. Existing
+review findings remain relevant regardless of which reviewer found them.
 
-  Right before merging it reads the PR again and merges only if that second
-  look still says merge, so a review that lands in between stops it. The
-  squash subject ends with the task ID, after the PR number:
-  `fix: reserve route-shadowed handles (#81) (R01)`.
-  Merges by the workflow token don't start other workflows, so `verify.yml`
-  doesn't rerun on main afterwards. Main requires branches to be up to date,
-  so the tested tree is the merged one.
-- **Owner holds.** It never merges a PR that changes a workflow file, the
-  autopilot, the Claude review script or its pinned CLI, `vercel.json`,
-  `convex.json`, `AGENTS.md` or this brief, since GitHub refuses workflow
-  changes from the workflow token anyway. It also
-  holds R07, whose wording the owner approves, and PRs with Devin commits.
-  It labels those `needs-owner-approval` or `needs-owner`, and so any PR
-  where:
-  - Codex answers a fix request without pushing;
-  - Codex keeps failing a fix request after the 6 retries;
-  - Copilot reviews the latest commit without a clean verdict or findings to
-    fix, or keeps failing after the 6 retries;
-  - a check or commit status from an app other than GitHub Actions fails;
-  - it names two different tasks, in its title, template line, branch name
-    or commit subjects (commit subjects without an ID are fine, since the
-    squash subject carries it);
-  - a list it reads (files, commits, comments or reviews) is too long to
-    read in full;
-  - GitHub refuses the merge twice at the same commit;
-  - anything waits more than 6 hours.
-- **Next task.** With the `AUTOPILOT_START_TASKS` variable set to `true`, it
-  starts a task whenever none is in flight. It opens a run PR on a fresh
-  branch and asks Codex, in a comment, for the next eligible task. It runs one
-  at a time, at most 6 a day, and pauses 12 hours after a run gets no task.
-- **Switches.** Unless `AUTOPILOT_ENABLED` is `true`, the job skips and
-  the script exits before reading credentials or making requests. Add `needs-owner` to a PR to pause the autopilot on it; remove it
-  to hand the PR back.
+**Review policy.** The model that wrote or helped write a PR never clears it.
+The October 9 owner decision replaces Copilot with Claude for work Claude did
+not write or help write. Every agent and integration, including Cursor, follows
+this policy; it preserves the September 25 independence rule. Missing reviewer
+access never authorizes an `@copilot` comment or a reviewer API fallback.
 
-**Review policy.** The model that wrote a PR never clears it. Owner decision,
-2026-09-25.
+- **Claude is required.** Request independent Claude review of the complete
+  final diff, including dependency context. Do not request Copilot review or
+  count a Copilot approval as clearance. Historical findings still need an
+  explicit disposition with evidence.
+- **The writer can block, never approve.** Codex cannot clear its own work.
+  Claude-written or co-authored work waits for the owner to name a different
+  independent reviewer; Claude cannot review that work as an exception.
+- **Exact-head evidence and fresh review.** Record the PR, full head SHA,
+  base SHA, trusted workflow run and review URL. Confirm the review covers
+  the actual final diff and dependencies. Any new code, dependency, rebase
+  or base change requires fresh CI and outside review. A clean old-head
+  verdict does not clear a new head. Dispose every earlier finding in the
+  PR thread with the fix, test or supported reason before landing.
+- **Passing CI is a separate gate.** All required checks must pass on the
+  final candidate, with branch protections honored. A status, routing bot's
+  approval, skipped reviewer, quota/authentication error, malformed answer
+  or missing verdict never counts as a clean review. A writer's tests do
+  not replace the outside review or real-account acceptance.
+- **Supported Claude route.** The owner runs `.github/workflows/claude-review.yml`
+  from main with the PR number. Stacked PRs require full `head_sha` and
+  `base_sha` inputs. The trusted runner exports pinned main/base/head/ancestor
+  context as data, including dependency changes and writer checks. Claude has
+  read-only tools; PR code and configuration never execute. Head/base/main or
+  writer changes invalidate a clean result. Unsafe or incomplete context stops
+  review. Comment triggers are disabled because the pinned upstream action
+  refreshes base configuration on PR comment events after the pin check.
+  Do not retarget a stacked PR or weaken guards to obtain a clean review.
+- **Owner-controlled landing.** A clean Claude result is required evidence,
+  not automatic permission to merge. The owner verifies the run came from
+  the trusted main workflow and the recorded PR/head/base match; then gives
+  explicit landing authorization. The Actions-bot identity, marker and run
+  link alone do not establish those bindings for automatic clearance.
+  Failed or unavailable review blocks landing; report the smallest blocker
+  without substituting the writer. This policy itself requires Claude review.
+- **Findings survive later reviews.** Claude findings in a native review or
+  its fallback issue comment block until explicitly addressed. A later clean
+  verdict is not disposition. Native dismissal or deleted comments can hide
+  historical records from the API; keep the disposition receipt in the PR.
 
-- **The writer can block, never approve.** Codex writes every task, so its
-  review findings block a task PR like anyone's, but a clean Codex review
-  doesn't clear it. The rule follows the writer: a PR that Claude writes
-  needs a reviewer other than Claude.
-- **An outside model clears it.** The current clearing reviewer is Copilot. GitHub doesn't name the models behind
-  Copilot's reviews, only "a carefully tuned mix of models"
-  ([GitHub](https://docs.github.com/en/copilot/responsible-use/code-review)),
-  so Copilot may share a model family with Codex. It's the outside reviewer
-  that's wired, not a perfect one.
-- **No clean outside review, no merge.** When the outside reviewer's verdict
-  isn't clean, or Copilot keeps failing, the PR waits for the owner instead
-  of merging on its writer's word.
-- **A status or an automatic approval isn't a review.** On PR #74, Devin
-  Review reports `success` with the description "Full review skipped: trial
-  expired and no credits remaining". On PR #80, Cursor's Approval Agent
-  approved because "no approval policy required human review". Reviewer
-  checks, statuses and routing bots' approvals never count as CI or as a
-  clean review.
-- **A new reviewer earns its place.** A reviewer clears task PRs only once
-  the autopilot reads its clean verdict as strictly as Copilot's, with tests.
-  One clearing reviewer is the goal, not a panel.
-- **Claude can supply an optional advisory first review.** Source safety
-  correction, 2026-09-26. Activation requires separate owner authority. `.github/workflows/claude-review.yml` runs Claude, read-only,
-  when the owner comments `@claude review` on a PR, or from Actions with the
-  PR number. It refuses a PR that Claude wrote or helped write: a `claude/`
-  branch; a PR or commit by the `claude` or `claude[bot]` account or from
-  Claude Code's address; a `Co-Authored-By: Claude` trailer; or Claude
-  Code's footer or session link in a commit or the description. Its settings
-  fence Claude's reads to main and the PR's files, and it can't edit,
-  search file contents, run commands or fetch pages. It posts one review of the commit, and the
-  review's last line is its verdict: clean only when Claude lists no P0 or
-  P1 finding, and no verdict when the run fails, its answer is malformed, or
-  it quotes what looks like a credential (then none of it is posted).
-- **Claude's clean verdict never authorizes an autopilot merge.**
-  Claude's findings go to Codex like any reviewer's. If GitHub refuses the
-  review and Claude posts an issue comment, that comment's findings also
-  block. A later clean verdict never disposes an earlier finding. Native
-  review dismissal or removal of the fallback comment removes that record
-  from the current API view; this is not a durable disposition ledger.
-  The optional `AUTOPILOT_CLAUDE_REVIEW` switch controls advisory requests
-  only. Automatic Claude clearance remains unavailable until trusted
-  PR/head/base/review provenance and independent validation are established.
-  Model instructions in PR-controlled text are not a security boundary.
-  Copilot's existing clearance behavior is unchanged.
 
 Why:
 
@@ -353,8 +283,8 @@ Why:
   approval, and no AI review counts for it. Its handbook also warns that
   "Three agents arguing with each other is noisy"
   ([How we review PRs](https://posthog.com/handbook/engineering/how-we-review)).
-  This repository takes an outside model instead of a human, so the queue can
-  run while the owner is away, and keeps one clearing reviewer.
+  This repository requires an outside model review and an owner landing
+  decision. One independent reviewer is the goal, not a panel.
 
 For you, that means: when an `@codex` comment asks for a fix, change only
 what it asks, stay in the task's scope, and push to the same branch. Treat
@@ -372,9 +302,9 @@ git log origin/main --format=%s | grep -oE '\(R[0-9]{2}\)' | tr -d '()' | sort -
 git ls-remote --heads origin 'remediate/*'
 ```
 
-If your environment can't reach GitHub, skip the in-progress check. The
-autopilot names the tasks to skip in its prompt, and it runs one task at a
-time.
+If your environment can't reach GitHub, report that the in-progress check is
+blocked before claiming a new task. Use the owner's current work map to
+continue already assigned work without creating duplicate branches.
 
 1. **Pick** the first task in Section 7 order that meets all of these:
    - Owner is Codex (C);
@@ -1375,90 +1305,38 @@ the results are recorded in `docs/acceptance/second-user.md`:
 verified 2026-09-26). Edit this line yourself, or tell Codex in the prompt and
 it opens a one-line `docs:` PR for it.
 
-**Autopilot setup, once:**
+**Reviewer transition, 2026-10-09:**
 
-1. Merge the PR that adds the autopilot.
-2. In Codex settings (chatgpt.com/codex/settings):
-   - under Code review, turn on Code review and Automatic reviews for this
-     repository. Codex's own reviews still count for their findings, but
-     never clear a task PR (Section 4, "Review policy");
-   - under Environments, create an environment for this repository if it
-     has none. Codex can't start a task without one. In it:
-     - under Preinstalled packages, set Node.js to 22, the version CI uses;
-     - add the `verify` job's four variables from Section 6 as environment
-       variables. Their values are synthetic:
-       - `NEXT_TELEMETRY_DISABLED` = `1`
-       - `NEXT_PUBLIC_CONVEX_URL` = `https://example.convex.cloud`
-       - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` =
-         `pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk`
-       - `PUBLIC_SITE_ORIGIN` = `https://public.example`
-     - add no secrets: no Convex deploy key, no `sk_live` Clerk key, no
-       Vercel token;
-     - use a manual setup script. The automatic one runs install commands like
-       `npm install`, which can rewrite the lockfile, and installs no browser
-       for the Playwright checks. Chromium serves the browser specs, and
-       Chrome serves the Native Chrome WebMCP job
-       (`tests/native-webmcp/config.ts` uses the `chrome` channel):
-       ```sh
-       npm ci
-       npm ci --prefix prototypes/public-mcp
-       npx playwright install --with-deps chromium chrome
-       ```
-     - leave agent internet access off. Setup scripts reach the internet
-       either way
-       ([Cloud environments](https://learn.chatgpt.com/docs/environments/cloud-environment)).
-       If a task fails for lack of it, allow Common dependencies with only
-       GET, HEAD and OPTIONS
-       ([Agent internet access](https://developers.openai.com/codex/cloud/internet-access)).
-3. Create a fine-grained GitHub token for this repository only, with just
-   Pull requests: Read and write and Issues: Read and write, expiring after
-   your trip. With it, the autopilot's `@codex` comments and Copilot review
-   requests post as you. It must be your token: the autopilot ignores one
-   that belongs to anyone else.
-4. In repository settings:
-   - Environments: create `autopilot`, limit its deployment branches to
-     `main`, and add the token there as the secret `CODEX_TRIGGER_TOKEN`. A
-     repository secret would be readable by workflows on any branch.
-   - Actions, General, Workflow permissions: turn on "Allow GitHub Actions to
-     create and approve pull requests". Run PRs need it.
-   - General: turn on "Automatically delete head branches".
-   - Moderation, Interaction limits: limit interactions to collaborators for
-     the trip. The repository is public, and outsiders' comments shouldn't
-     reach Codex. If Codex then stops reacting in step 6, lift the limit.
-5. Add the repository variable `AUTOPILOT_ENABLED` = `true`. Add
-   `AUTOPILOT_START_TASKS` = `true` to have it start tasks on its own.
-6. Test it: Actions, then "Remediation autopilot", then "Run workflow". With
-   `AUTOPILOT_START_TASKS` on, it opens a "Remediation run" PR. Codex should
-   react to its comment within a few minutes. If Codex never reacts, turn
-   `AUTOPILOT_START_TASKS` off and start each task yourself (Section 11).
-   The autopilot still reviews, fixes and merges.
-7. Keep Copilot code review within budget for the trip. Copilot is the only
-   reviewer that can clear a task PR, with Claude reviews on or off: the
-   autopilot asks it to review each task commit, billed to you. With the quota spent, each PR goes to you
-   after 6 retries, about 6 hours. Copilot's reviews of #60 to #76 failed on
-   quota; its review of #77 worked.
+The autopilot is paused. Do not enable it, create a trigger token for it,
+purchase reviewer usage or request more Copilot reviews. Repository text and
+code changes do not alter GitHub account settings, subscriptions, installed
+apps or branch protections. If external enforcement still names Copilot,
+report its exact rule or setting and obtain scoped owner authorization
+before changing it. Required CI remains unchanged.
 
-**Claude review setup, once:**
+**Claude review setup (owner-controlled):**
 
-1. On your computer, run `claude setup-token` and copy the token it prints.
-   Pro and Max plans can make one. Reviews then draw on that plan's usage.
-2. In repository settings, Environments: create `reviewers`, limit its
-   deployment branches to `main`, and add the token there as the secret
-   `CLAUDE_CODE_OAUTH_TOKEN`. A repository secret would be readable by
-   workflows on any branch.
-3. Test it: comment `@claude review` on an open Codex PR. A review titled
-   "Claude review of" its commit should appear within a few minutes. If the
-   secret is missing, the workflow says so on the PR instead.
-4. To make Claude the first outside reviewer of Codex's tasks, add the
-   repository variable `AUTOPILOT_CLAUDE_REVIEW` = `true` (Section 4,
-   "Review policy"). This requires separate activation approval. It requests
-   an advisory Claude review before Copilot; only Copilot can clear a task.
-   Claude's findings count with the switch on or off.
+1. Use the existing `.github/workflows/claude-review.yml` on main. The
+   `reviewers` environment must be limited to main and supply
+   `CLAUDE_CODE_OAUTH_TOKEN`. Confirm availability through the workflow;
+   never print or copy a credential into a PR, issue, chat or log.
+2. If the token is absent or rejected, stop the model request and report the
+   setting to the owner. Creating or replacing credentials and purchasing
+   usage require separate authority; selecting Claude as reviewer does not
+   grant either. An authorized owner can provision an existing-plan token
+   through Claude's supported setup route directly into the environment.
+3. From Actions → Claude review → Run workflow, select main and enter the PR
+   number; for stacked PRs also enter the current full head/base SHAs. Inspect
+   the actual review, exact context and trusted run; workflow success alone
+   can mean the model was skipped. See
+   `docs/verification/2026-10-09-claude-owner-setup.md` for the owner-only
+   secret destination and safe bootstrap sequence for the existing runner.
+4. Fix concrete findings, run the required checks and obtain fresh review
+   after every change. Follow Section 4's exact-head and owner-landing gate.
 
-Expect some PRs to wait for you: every one that touches a workflow or
-`vercel.json` (R04, R10, R11, R13, R20, R23, R28, R29, R30), and R07. The
-autopilot keeps going with other tasks meanwhile. Merge them from GitHub on
-your phone when you've looked.
+The October 9 release task does not authorize any merge, deployment, secret
+change, paid service, production write or #123 recovery action. Protected
+review-policy changes must be presented in their own reviewable PR.
 
 - **K01. Close public sign-up. Do this today.** Codex can't do this for you.
   Clerk's Backend API has no setting for sign-up mode or legal consent; its
@@ -1593,10 +1471,10 @@ your phone when you've looked.
 
 ## 11. Kickoff prompts
 
-Merge the PR that adds this brief before the first run. With
-`AUTOPILOT_START_TASKS` on, the autopilot sends the next-task prompt itself.
-Otherwise, send it from Codex on the web or in the ChatGPT app, then open the
-PR when Codex finishes. The autopilot takes it from there.
+The autopilot is paused. Send an authorized task from Codex on the web or
+in the ChatGPT app, then open a draft PR when Codex finishes. Obtain the
+required independent Claude review and passing checks before asking the
+owner to authorize landing.
 
 - **Next task:** "Read `docs/remediation/CODEX-BRIEF.md` and run the next
   eligible task."

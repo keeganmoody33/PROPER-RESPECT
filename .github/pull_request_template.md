@@ -20,6 +20,16 @@
   build, browser specs). Name any CI step you couldn't run locally.
 - Screenshots, desktop and mobile, for visible UI changes.
 
+## Independent review before landing
+
+- [ ] Record the final head/base SHAs, passing CI and independent Claude review
+  URL. If Claude wrote or helped write this change, obtain an owner-appointed
+  independent reviewer other than Claude. The writer never clears its own work.
+- [ ] Do not request Copilot review, including `@copilot` comments or API
+  requests. Missing Claude access blocks review without a reviewer fallback.
+- [ ] Obtain explicit owner landing approval after the exact candidate is
+  reviewed. CI success or a quota refusal is not independent clearance.
+
 ## Owner actions after merge
 
 - [ ] None, or list each one (release, setting, publication, approval).

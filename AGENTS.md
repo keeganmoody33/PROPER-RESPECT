@@ -1,6 +1,16 @@
 # Repository Guidelines
 
-Updated: 2026-09-27.
+Updated: 2026-10-09.
+
+## Reviewer direction for every agent
+
+The October 9 owner decision applies to every agent and integration, including
+Cursor, and every PR: use independent Claude review and do not request Copilot
+review through comments, the reviewer API or automation. Missing Claude access
+blocks review; it does not authorize a fallback. Claude-written work requires
+an owner-appointed independent reviewer other than Claude, with Copilot still
+excluded. Read the current review policy in `docs/remediation/CODEX-BRIEF.md`
+before requesting review. CI and the writer's own inspection cannot clear a PR.
 
 ## Active remediation program
 
@@ -21,11 +31,12 @@ replaces five rules in this file:
   #24.
 - "Start fixes with a RED regression": the brief exempts tasks that change
   only docs, configuration or workflow files.
-- Merge authorization: the remediation autopilot merges eligible task PRs
-  without a human review, pinned to the reviewed commit (owner decision,
-  2026-09-25). Codex never merges its own PRs, and its review never clears
-  them: only an outside reviewer can (the brief's Section 4, "Review
-  policy").
+- Merge authorization: Claude is the required independent outside reviewer
+  for Codex-written PRs (owner decision, 2026-10-09). Copilot no longer clears
+  PRs or receives review requests. The autopilot is paused; the owner alone
+  authorizes landing after clean exact-head Claude review and passing CI.
+  Every code, dependency or base change requires fresh checks and review.
+  Codex never clears or merges its own work (the brief's Section 4).
 
 Every other rule here still applies to remediation work.
 
@@ -37,11 +48,13 @@ branch and PR per task. That also applies:
 - **Claiming a task.** Before starting one, check that no open PR and no
   `remediate/<ID>-*` branch already names it. Either one means another writer
   holds the task.
-- **Review.** It never reviews or clears its own PRs. A reviewer other than
-  Claude (today Copilot) reviews them, and the owner merges while the
-  autopilot is off.
-- **Autopilot.** Its task PRs carry the `needs-owner` label, so a re-enabled
-  autopilot doesn't send them to Codex to fix.
+- **Review.** It never reviews or clears its own PRs. Claude-written work
+  waits for the owner to appoint an independent reviewer other than Claude;
+  the required Claude route cannot clear its own writer. Copilot is retired
+  from this review workflow. A failed or unavailable reviewer never waives
+  independent review.
+- **Autopilot.** All automatic starts, fixes, review requests and merges are
+  paused. Existing `needs-owner` labels stay in place.
 - **Authority.** The role adds no authority to deploy, change production
   configuration, run migrations, read providers, turn on recurring collection,
   change sign-up or publish. Owner (K) tasks stay with the owner.

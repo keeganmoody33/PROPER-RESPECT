@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { post as postClaudeReview } from "./claude-review.mjs";
 import {
-  CODEX_BOT, cleanReviewer, codexAsk, codexReviewStatus, createGitHub, decide, findingsOnHead, latestChecks, main, mergeMessage,
+  CODEX_BOT, cleanReviewer, codexAsk, codexReviewStatus, createGitHub, decide, findingsOnHead, gatherFacts, latestChecks, main, mergeMessage,
   mergeTitle, parseMarkers, protectedChanges, recentClosedPulls, shouldStartRun, startPrompt, taskIdOf, taskIdsOf,
 } from "./remediation-autopilot.mjs";
 
@@ -55,6 +57,69 @@ const fixMarkers = count => Array.from({ length: count }, (_, index) => ({
   kind: "fix", sha: `${index}`.repeat(40), key: null, createdAt: minutesAgo(300 - index), id: index,
 }));
 
+test("paused entry point ignores all switches without reading credentials or making requests", async () => {
+  const original = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (...args) => {
+    requests.push(args);
+    throw new Error("Paused autopilot attempted a request");
+  };
+  try {
+    for (const enabled of ["true", undefined, "", "false", "TRUE"]) {
+      const env = { GITHUB_REPOSITORY: "o/r", AUTOPILOT_ENABLED: enabled, AUTOPILOT_START_TASKS: "true", AUTOPILOT_CLAUDE_REVIEW: "true" };
+      for (const key of ["GH_TOKEN", "CODEX_TRIGGER_TOKEN"]) {
+        Object.defineProperty(env, key, { get() { throw new Error(`Paused autopilot read ${key}`); } });
+      }
+      const lines = [];
+      await main(env, line => lines.push(line));
+      assert.equal(lines.length, 1);
+      assert.match(lines[0], /paused/i);
+      assert.match(lines[0], /owner/i);
+    }
+    assert.deepEqual(requests, []);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("paused CLI cannot reactivate through environment switches or read credentials", () => {
+  const guard = `
+    const blocked = new Set(["GH_TOKEN", "CODEX_TRIGGER_TOKEN"]);
+    process.env = new Proxy(process.env, { get(target, key) {
+      if (blocked.has(key)) throw new Error("Paused CLI read " + key);
+      return Reflect.get(target, key);
+    } });
+    globalThis.fetch = async () => { throw new Error("Paused CLI attempted a request"); };
+  `;
+  const result = spawnSync(process.execPath, [
+    "--import", `data:text/javascript,${encodeURIComponent(guard)}`,
+    fileURLToPath(new URL("./remediation-autopilot.mjs", import.meta.url)),
+  ], {
+    env: { PATH: process.env.PATH, GITHUB_REPOSITORY: "o/r", AUTOPILOT_ENABLED: "true", AUTOPILOT_START_TASKS: "true", AUTOPILOT_CLAUDE_REVIEW: "true" },
+    encoding: "utf8",
+    timeout: 10_000,
+  });
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, /paused/i);
+  assert.match(result.stdout, /owner/i);
+});
+
+test("paused workflow has no credentials, checkout, permissions or live dispatcher", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
+  assert.match(workflow, /^permissions: \{\}$/m);
+  assert.doesNotMatch(workflow, /^\s+(?:-\s+)?(?:env|environment|uses|permissions):/m);
+  assert.doesNotMatch(workflow, /\$\{\{|\bsecrets\.|remediation-autopilot\.mjs/);
+  assert.doesNotMatch(workflow, /^\s+(?:schedule|workflow_run|pull_request|push):/m);
+  const commands = [...workflow.matchAll(/^\s+run: (.+)$/gm)].map(match => match[1]);
+  assert.equal(commands.length, 1);
+  assert.match(commands[0], /^echo "[A-Za-z0-9 .,;-]+"$/);
+  assert.match(commands[0], /Remediation autopilot paused\b.*owner/);
+});
+
+// The remaining cases preserve dormant planning and reader behavior. They
+// do not represent current review clearance or any runnable write dispatcher.
 test("task IDs come from the title, the template line or the branch", () => {
   assert.equal(taskIdOf({ title: "fix: caps (R02)", body: "", headRef: "x" }), "R02");
   assert.equal(taskIdOf({ title: "fix: caps", body: "## Task\n\n- Remediation task, if any: R02 (see", headRef: "x" }), "R02");
@@ -442,12 +507,8 @@ test("Copilot's changes-recommended verdict counts with or without an emoji", ()
   assert.equal(cleanReviewer({ ...base, reviews: [copilotReview("<!-- ccr-overview-v2 -->\n### No changes recommended\n")] }), "Copilot");
 });
 
-// A fake GitHub API for main(): one clean task PR, with review comments that
-// can change between the autopilot's two looks. With copilotClean, Copilot has
-// reviewed the head commit and found nothing.
-const CLAUDE_RUN = { path: ".github/workflows/claude-review.yml", head_branch: "main", event: "issue_comment", repository: { full_name: "o/r" } };
-
-function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = false, copilotClean = false, claudeClean = false, claudeRun = CLAUDE_RUN } = {}) {
+// A fake read-only GitHub API for the dormant reader normalization tests.
+function fakeGitHub({ issueComments = null, copilotClean = false, claudeClean = false } = {}) {
   const sha = "c".repeat(40);
   const ago = minutes => new Date(Date.now() - minutes * 60_000).toISOString();
   const reviews = copilotClean ? [{
@@ -465,7 +526,6 @@ function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = fal
     user: { login: "owner" }, labels: [], changed_files: 1, commits: 1, mergeable_state: "clean", requested_reviewers: [],
   };
   const calls = [];
-  let reviewCommentReads = 0;
   const routes = {
     "GET /user": () => ({ login: "owner" }),
     "GET /repos/o/r/pulls": () => [pull],
@@ -475,7 +535,7 @@ function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = fal
       id, name, app: { slug: "github-actions" }, status: "completed", conclusion: "success", started_at: ago(45) })) }),
     [`GET /repos/o/r/commits/${sha}/status`]: () => ({ state: "success", total_count: 0, statuses: [] }),
     "GET /repos/o/r/pulls/81/reviews": () => reviews,
-    "GET /repos/o/r/pulls/81/comments": () => (reviewCommentReads++ === 0 ? [] : laterComments),
+    "GET /repos/o/r/pulls/81/comments": () => [],
     "GET /repos/o/r/issues/81/comments": () => issueComments ?? [
       { id: 1, user: { login: "owner" }, body: `@codex review\n\n<!-- remediation-autopilot:review sha=${sha} -->`, created_at: ago(20), updated_at: ago(20) },
       { id: 2, user: { login: CODEX_BOT }, created_at: ago(18), updated_at: ago(10),
@@ -483,14 +543,7 @@ function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = fal
     ],
     "GET /repos/o/r/pulls/81/commits": () => [{ sha, commit: { message: "fix: reserve route-shadowed handles (R01)" }, author: { login: "owner" }, committer: { login: "owner" } }],
     [`GET /repos/o/r/commits/${sha}`]: () => ({ commit: { committer: { date: ago(50) } } }),
-    "PUT /repos/o/r/pulls/81/merge": () => (mergeFails ? { merged: false, message: "Base branch policy prohibits the merge" } : { merged: true, sha: "d".repeat(40) }),
-    "POST /repos/o/r/labels": () => ({ name: "needs-owner" }),
-    "POST /repos/o/r/issues/81/labels": () => [{ name: "needs-owner" }],
-    "POST /repos/o/r/issues/81/comments": () => ({ id: 9 }),
-    "PATCH /repos/o/r/issues/comments/9": () => ({ id: 9 }),
-    "POST /repos/o/r/pulls/81/requested_reviewers": () => pull,
-    "DELETE /repos/o/r/git/refs/heads/remediate/R01-handles": () => null,
-    "GET /repos/o/r/actions/runs/77": () => claudeRun,
+
   };
   const fetch = async (url, { method = "GET", body, headers = {} } = {}) => {
     const { pathname } = new URL(url);
@@ -503,91 +556,19 @@ function fakeGitHub({ laterComments = [], issueComments = null, mergeFails = fal
   return { fetch, calls, sha };
 }
 
-async function runMain(fake, env = {}) {
+// These helpers exercise only the retired reader/planner with a fake API.
+// The public entrypoint never invokes either one.
+async function readFacts(fake, claudeReview = false) {
   const original = globalThis.fetch;
-  const lines = [];
   globalThis.fetch = fake.fetch;
   try {
-    await main({ GITHUB_REPOSITORY: "o/r", GITHUB_REPOSITORY_OWNER: "owner", GH_TOKEN: "t", CODEX_TRIGGER_TOKEN: "t2", AUTOPILOT_ENABLED: "true", ...env }, line => lines.push(line));
+    return await gatherFacts(createGitHub("test-token", "o/r"), { number: 81 }, {
+      now: Date.now(), trustedAuthors: ["owner"], trustedMarkers: ["owner", "github-actions[bot]"], claudeReview,
+    });
   } finally {
     globalThis.fetch = original;
   }
-  return lines;
 }
-
-test("main merges a clean task PR once, pinned to its commit, and deletes the branch", async () => {
-  const fake = fakeGitHub({ copilotClean: true });
-  await runMain(fake);
-  const merges = fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge");
-  assert.equal(merges.length, 1);
-  assert.equal(merges[0].body.sha, fake.sha);
-  assert.equal(merges[0].body.commit_title, "fix: reserve route-shadowed handles (#81) (R01)");
-  assert.match(merges[0].body.commit_message, /reviewed cleanly by Copilot/);
-  assert.ok(fake.calls.some(call => call.key === "DELETE /repos/o/r/git/refs/heads/remediate/R01-handles"));
-});
-
-test("main never merges a Codex task on Codex's own review", async () => {
-  const fake = fakeGitHub();
-  await runMain(fake);
-  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
-});
-
-test("main doesn't merge when a finding lands between its two looks", async () => {
-  const late = [{ user: { login: "Copilot", type: "Bot" }, author_association: "NONE", in_reply_to_id: null,
-    original_commit_id: "c".repeat(40), html_url: "https://example/late" }];
-  const fake = fakeGitHub({ laterComments: late, copilotClean: true });
-  const lines = await runMain(fake);
-  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
-  assert.ok(lines.some(line => /not merging: a second look says request-fix/.test(line)), lines.join("\n"));
-});
-
-test("main asks Copilot, never Codex, to review a Codex task, and marks the ask", async () => {
-  const fake = fakeGitHub({ issueComments: [] });
-  await runMain(fake);
-  const posts = fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments");
-  assert.equal(posts.length, 1);
-  assert.doesNotMatch(posts[0].body.body, /@codex/);
-  assert.match(posts[0].body.body, new RegExp(`<!-- remediation-autopilot:review sha=${fake.sha} key=dispatch-pending -->$`));
-  assert.equal(posts[0].token, "Bearer t");
-  const finalized = fake.calls.find(call => call.key === "PATCH /repos/o/r/issues/comments/9");
-  assert.match(finalized.body.body, new RegExp(`<!-- remediation-autopilot:review sha=${fake.sha} -->$`));
-  assert.ok(fake.calls.indexOf(posts[0]) < fake.calls.findIndex(call => call.key.endsWith("requested_reviewers")));
-  const copilot = fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers");
-  assert.deepEqual([copilot.length, copilot[0]?.body, copilot[0]?.token], [1, { reviewers: ["copilot-pull-request-reviewer[bot]"] }, "Bearer t2"]);
-  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
-});
-
-test("without the trigger token, a Codex task's review goes to the owner with a note that names Copilot", async () => {
-  const fake = fakeGitHub({ issueComments: [] });
-  await runMain(fake, { CODEX_TRIGGER_TOKEN: undefined });
-  assert.deepEqual(fake.calls.find(call => call.key === "POST /repos/o/r/issues/81/labels")?.body, { labels: ["needs-owner"] });
-  const posts = fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments");
-  assert.equal(posts.length, 1);
-  assert.match(posts[0].body.body, /needs a Copilot review/);
-  assert.doesNotMatch(posts[0].body.body, /@codex/);
-  assert.equal(fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 0);
-});
-
-test("a merge that fails twice at the same commit is held for the owner", async () => {
-  const sha = "c".repeat(40);
-  const ago = minutes => new Date(Date.now() - minutes * 60_000).toISOString();
-  const clean = [
-    { id: 1, user: { login: "owner" }, body: `@codex review\n\n<!-- remediation-autopilot:review sha=${sha} -->`, created_at: ago(20), updated_at: ago(20) },
-    { id: 2, user: { login: CODEX_BOT }, created_at: ago(18), updated_at: ago(10),
-      body: `<!-- codex-pull-request-review-summary -->\n| 📝 **Code Review** | ✅ **Completed** | \`${sha.slice(0, 7)}\` | Manual request |` },
-  ];
-  const first = fakeGitHub({ mergeFails: true, issueComments: clean, copilotClean: true });
-  await assert.rejects(runMain(first), /hit errors/);
-  const firstNotes = first.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").map(call => call.body.body);
-  assert.equal(firstNotes.length, 1);
-  assert.match(firstNotes[0], /tries once more/);
-  assert.equal(first.calls.filter(call => call.key === "POST /repos/o/r/issues/81/labels").length, 0);
-  const noted = [...clean, { id: 3, user: { login: "github-actions[bot]" }, body: `x\n\n<!-- remediation-autopilot:note sha=${sha} key=merge-failed -->`, created_at: ago(5), updated_at: ago(5) }];
-  const second = fakeGitHub({ mergeFails: true, issueComments: noted, copilotClean: true });
-  await assert.rejects(runMain(second), /hit errors/);
-  assert.deepEqual(second.calls.find(call => call.key === "POST /repos/o/r/issues/81/labels")?.body, { labels: ["needs-owner"] });
-  assert.match(second.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").at(-1).body.body, /failed twice/);
-});
 
 test("quota retry handles the actual unfinished Copilot check but never bypasses running CI", () => {
   const quota = copilotReview("Copilot was unable to review", { submittedAt: minutesAgo(5) });
@@ -629,60 +610,6 @@ test("earlier Copilot finding bodies are not disposed by a fresh clean review", 
   assert.equal(decide(facts({ reviews: [{ ...old, state: "DISMISSED" }, copilotReview()] })).type, "merge");
 });
 
-// Simulate the two independent HTTP boundaries with durable server-side comments.
-function attemptFake({ reserveFails = false, reserveResponseLost = false, dispatchResponseLost = false, finalizeFails = false } = {}) {
-  const comments = [];
-  const fake = fakeGitHub({ issueComments: comments });
-  const original = fake.fetch;
-  let accepted = 0;
-  fake.fetch = async (url, options = {}) => {
-    const path = new URL(url).pathname;
-    const payload = options.body ? JSON.parse(options.body) : null;
-    if (options.method === "POST" && path.endsWith("/issues/81/comments")) {
-      if (reserveFails) throw new Error("reservation rejected");
-      const result = await original(url, options);
-      comments.push({ id: 9, user: { login: "github-actions[bot]" }, body: payload.body, created_at: new Date().toISOString() });
-      if (reserveResponseLost) throw new Error("reservation response lost");
-      return result;
-    }
-    if (options.method === "POST" && path.endsWith("/requested_reviewers")) {
-      accepted++;
-      const result = await original(url, options);
-      if (dispatchResponseLost) throw new Error("accepted request response lost");
-      return result;
-    }
-    if (options.method === "PATCH" && path.endsWith("/issues/comments/9")) {
-      if (finalizeFails) throw new Error("finalize failed");
-      comments[0].body = payload.body;
-      return { ok: true, status: 200, text: async () => JSON.stringify(comments[0]) };
-    }
-    return original(url, options);
-  };
-  return { fake, comments, accepted: () => accepted };
-}
-
-test("reservation failure never dispatches, including a lost successful response", async () => {
-  for (const mode of [{ reserveFails: true }, { reserveResponseLost: true }]) {
-    const state = attemptFake(mode);
-    for (let i = 0; i < 8; i++) await runMain(state.fake).catch(() => {});
-    assert.equal(state.accepted(), 0);
-  }
-});
-
-test("accepted dispatch with lost response or failed finalization is never blindly replayed", async () => {
-  for (const mode of [{ dispatchResponseLost: true }, { finalizeFails: true }]) {
-    const state = attemptFake(mode);
-    await runMain(state.fake).catch(() => {});
-    assert.equal(state.accepted(), 1);
-    for (let i = 0; i < 8; i++) {
-      // Expire the wait: ambiguity must hold, not become a retry.
-      for (const entry of state.comments) entry.created_at = new Date(Date.now() - 90 * 60_000).toISOString();
-      await runMain(state.fake).catch(() => {});
-    }
-    assert.equal(state.accepted(), 1);
-  }
-});
-
 test("pending attempts reconcile only with a subsequent review and consume retry budget", () => {
   const pending = { ...reviewAsk(90), key: "dispatch-pending" };
   assert.equal(decide(facts({ markers: [pending], reviews: [] })).type, "label-owner");
@@ -690,101 +617,6 @@ test("pending attempts reconcile only with a subsequent review and consume retry
   assert.equal(decide(facts({ markers: [pending], reviews: [copilotReview(undefined, { submittedAt: minutesAgo(5) })] })).type, "merge");
   const retries = Array.from({ length: 6 }, (_, i) => ({ ...reviewAsk(100 - i), key: "retry-dispatch-pending" }));
   assert.equal(decide(facts({ markers: [pending, ...retries], reviews: [copilotReview("Copilot was unable to review", { submittedAt: minutesAgo(5) })] })).type, "label-owner");
-});
-
-// HTTP responses here model GitHub's documented rate-limit error contract.
-function rejectedAttemptFake({ status = 429, headers = {}, message = "You have exceeded a secondary rate limit.", persistFailure = null, acceptAfter = Infinity } = {}) {
-  const comments = [];
-  const fake = fakeGitHub({ issueComments: comments });
-  const original = fake.fetch;
-  let attempts = 0, accepted = 0;
-  const json = data => ({ ok: true, status: 200, text: async () => JSON.stringify(data) });
-  fake.fetch = async (url, options = {}) => {
-    const path = new URL(url).pathname;
-    const payload = options.body ? JSON.parse(options.body) : null;
-    if (options.method === "POST" && path.endsWith("/issues/81/comments")) {
-      const entry = { id: 100 + comments.length, user: { login: "github-actions[bot]" }, body: payload.body, created_at: new Date(Date.now()).toISOString() };
-      comments.push(entry);
-      return json(entry);
-    }
-    if (options.method === "PATCH" && path.includes("/issues/comments/")) {
-      if (persistFailure === "before") throw new Error("outcome write rejected");
-      const entry = comments.find(comment => comment.id === Number(path.split("/").at(-1)));
-      entry.body = payload.body;
-      if (persistFailure === "after") throw new Error("outcome write response lost");
-      return json(entry);
-    }
-    if (options.method === "POST" && path.endsWith("/requested_reviewers")) {
-      attempts++;
-      if (attempts > acceptAfter) { accepted++; throw new Error("accepted dispatch response lost"); }
-      return { ok: false, status, headers: new Headers(headers), text: async () => JSON.stringify({ message }) };
-    }
-    return original(url, options);
-  };
-  return { fake, comments, counts: () => ({ attempts, accepted }) };
-}
-
-async function withClock(action) {
-  const real = Date.now;
-  let now = NOW;
-  Date.now = () => now;
-  try { await action(minutes => { now += minutes * 60_000; }); }
-  finally { Date.now = real; }
-}
-
-test("documented rate rejection is durable, observes cooldown, and can retry without replaying later ambiguity", async () => {
-  await withClock(async advance => {
-    const state = rejectedAttemptFake({ headers: { "retry-after": "120" }, acceptAfter: 1 });
-    await assert.rejects(() => runMain(state.fake));
-    assert.match(state.comments[0].body, /key=rate-rejected until=/);
-    await runMain(state.fake);
-    assert.equal(state.counts().attempts, 1);
-    advance(3);
-    await assert.rejects(() => runMain(state.fake));
-    assert.deepEqual(state.counts(), { attempts: 2, accepted: 1 });
-    for (let i = 0; i < 8; i++) { advance(90); await runMain(state.fake); }
-    assert.deepEqual(state.counts(), { attempts: 2, accepted: 1 });
-  });
-});
-
-test("primary rate-limit403 respects reset and repeated rejections consume the shared retry cap", async () => {
-  await withClock(async advance => {
-    const state = rejectedAttemptFake({ status: 403, headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(NOW / 1000 + 7200) }, message: "API rate limit exceeded" });
-    await assert.rejects(() => runMain(state.fake));
-    advance(90); await runMain(state.fake); assert.equal(state.counts().attempts, 1);
-    for (let i = 0; i < 9; i++) { advance(130); await runMain(state.fake).catch(() => {}); }
-    assert.deepEqual(state.counts(), { attempts: 7, accepted: 0 });
-    const markers = parseMarkers(state.comments.map(c => ({ login: c.user.login, body: c.body, createdAt: c.created_at, id: c.id })), ["github-actions[bot]"]);
-    assert.equal(markers.filter(m => m.kind === "review").length, 7);
-    assert.equal(markers.filter(m => m.key === "retry-rate-rejected").length, 6);
-  });
-});
-
-test("failed rejection persistence holds; persisted rejection with lost acknowledgement remains bounded", async () => {
-  for (const persistFailure of ["before", "after"]) await withClock(async advance => {
-    const state = rejectedAttemptFake({ persistFailure });
-    for (let i = 0; i < 9; i++) { await runMain(state.fake).catch(() => {}); advance(130); }
-    assert.deepEqual(state.counts(), { attempts: persistFailure === "before" ? 1 : 7, accepted: 0 });
-  });
-});
-
-test("unknown statuses, malformed rate evidence and timing never authorize dispatch replay", async () => {
-  const modes = [
-    { status: 503, headers: { "retry-after": "60" } },
-    { status: 429, message: "unclassified response" },
-    { status: 429, message: "Not a secondary rate limit" },
-    { status: 403, message: "Resource not accessible" },
-    { status: 422, message: "Validation Failed" },
-    { headers: { "retry-after": "later" } },
-    { headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": "invalid" } },
-  ];
-  for (const mode of modes) await withClock(async advance => {
-    const state = rejectedAttemptFake(mode);
-    await assert.rejects(() => runMain(state.fake));
-    assert.match(state.comments[0].body, /key=dispatch-pending/);
-    advance(130); await runMain(state.fake);
-    assert.deepEqual(state.counts(), { attempts: 1, accepted: 0 });
-  });
 });
 
 test("rate rejection markers fail closed without a valid deadline and back off exponentially", () => {
@@ -812,9 +644,8 @@ test("a rejected retry ignores only reviewer checks known stale before a termina
 });
 
 
-// Claude, the first outside reviewer once the owner switches it on with
-// AUTOPILOT_CLAUDE_REVIEW. Its reviews come from the Actions bot and end in a
-// verdict line (scripts/claude-review.mjs).
+// Historical advisory Claude planning behavior. The retired controller
+// cannot request reviewers or merge, regardless of these pure decisions.
 const claudeBody = (verdict, sha = HEAD) => `### Claude review of \`${sha.slice(0, 7)}\`: ${verdict}\n\n<!-- claude-review verdict=${verdict} sha=${sha} run=55 -->`;
 const claudeReviewOf = (verdict, extra = {}) => ({
   login: "github-actions[bot]", type: "Bot", association: "NONE", state: "COMMENTED", commitId: HEAD,
@@ -890,66 +721,18 @@ test("a Claude verdict posted as a comment still holds its findings, and never c
   // A clean verdict in a comment names no commit GitHub checked, so it clears nothing.
   const cleanComment = withClaude({ markers: [claudeAsk(10)], claudeReviews: [claudeVerdictOf("clean", { commitId: null, source: "comment" })] });
   assert.equal(cleanReviewer(cleanComment), null);
-  // End to end: main reads the Actions bot's comments as well as its reviews.
+  // The dormant reader normalizes fallback comments as well as reviews.
   const at = new Date(Date.now() - 30 * 60_000).toISOString();
   const comment = { id: 3, user: { login: "github-actions[bot]", type: "Bot" }, created_at: at, updated_at: at, html_url: "https://example/claude-comment",
     body: `### Claude review of \`${old.slice(0, 7)}\`: 1 finding\n\n<!-- claude-review verdict=findings sha=${old} run=76 -->` };
   const fake = fakeGitHub({ claudeClean: true, issueComments: [comment] });
-  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
-  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
-  assert.match(fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").at(-1).body.body, /^- https:\/\/example\/claude-comment$/m);
+  const normalized = await readFacts(fake, true);
+  assert.deepEqual(decide(normalized).urls, ["https://example/claude-comment"]);
   // Another account's look-alike comment isn't Claude's.
   const lookalike = fakeGitHub({ claudeClean: true, issueComments: [{ ...comment, user: { login: "someone-else[bot]", type: "Bot" } }] });
-  await runMain(lookalike, { AUTOPILOT_CLAUDE_REVIEW: "true" });
-  assert.equal(lookalike.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
-  assert.equal(lookalike.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 1);
+  const untrusted = await readFacts(lookalike, true);
+  assert.equal(findingsOnHead([], untrusted.reviews, untrusted.pr.headSha, untrusted.claudeReviews).total, 0);
 });
-
-test("main asks Claude with the owner's token, in a comment the review workflow accepts", async () => {
-  const fake = fakeGitHub({ issueComments: [] });
-  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
-  const posts = fake.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments");
-  assert.equal(posts.length, 1);
-  // .github/workflows/claude-review.yml starts only on an owner's comment that begins with "@claude review".
-  assert.match(posts[0].body.body, new RegExp(`^@claude review\\n\\n<!-- remediation-autopilot:claude sha=${fake.sha} -->$`));
-  assert.equal(posts[0].token, "Bearer t2");
-  assert.equal(fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 0);
-  const noToken = fakeGitHub({ issueComments: [] });
-  await runMain(noToken, { AUTOPILOT_CLAUDE_REVIEW: "true", CODEX_TRIGGER_TOKEN: undefined });
-  assert.deepEqual(noToken.calls.find(call => call.key === "POST /repos/o/r/issues/81/labels")?.body, { labels: ["needs-owner"] });
-  const note = noToken.calls.filter(call => call.key === "POST /repos/o/r/issues/81/comments").at(-1).body.body;
-  assert.match(note, /needs Claude's review/);
-  assert.doesNotMatch(note, /^@claude/);
-});
-
-test("main never merges on Claude's clean verdict regardless of the referenced run", async () => {
-  const fake = fakeGitHub({ claudeClean: true, issueComments: [] });
-  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
-  const merges = fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge");
-  assert.equal(merges.length, 0);
-  assert.equal(fake.calls.filter(call => call.key.includes("/actions/runs/")).length, 0);
-  // Any workflow on main posts as the same bot, so the run has to be this one.
-  for (const change of [{ path: ".github/workflows/other.yml" }, { head_branch: "remediate/R01-handles" }, { event: "pull_request" }, { repository: { full_name: "x/y" } }]) {
-    const forged = fakeGitHub({ claudeClean: true, issueComments: [], claudeRun: { ...CLAUDE_RUN, ...change } });
-    await runMain(forged, { AUTOPILOT_CLAUDE_REVIEW: "true" });
-    assert.equal(forged.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0, JSON.stringify(change));
-  }
-  // Switched off, the verdict clears nothing and its run isn't even looked up.
-  const off = fakeGitHub({ claudeClean: true, issueComments: [] });
-  await runMain(off);
-  assert.equal(off.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
-  assert.equal(off.calls.filter(call => call.key === "GET /repos/o/r/actions/runs/77").length, 0);
-});
-
-test("the autopilot workflow passes the Claude switch and pins its actions to commits", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
-  assert.match(workflow, /^\s+AUTOPILOT_CLAUDE_REVIEW: \$\{\{ vars\.AUTOPILOT_CLAUDE_REVIEW \}\}$/m);
-  // It holds the owner's trigger token, so a moved tag can't swap in other code.
-  const uses = [...workflow.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)];
-  assert.ok(uses.length >= 2, String(uses.length));
-  for (const [, ref, comment] of uses) assert.match(`${ref}${comment}`, /@[0-9a-f]{40} # v\d+(\.\d+)*$/, ref);
-});
-
 
 test("Claude's findings on the latest commit hold the merge even after the fix rounds", () => {
   // Other review bots' findings turn advisory after 3 rounds; Claude reports
@@ -961,33 +744,6 @@ test("Claude's findings on the latest commit hold the merge even after the fix r
   assert.equal(decide({ ...findings, claudeReview: false }).type, "label-owner");
 });
 
-test("the advisory integration needs no workflow run lookup permission", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
-  assert.doesNotMatch(workflow, /^\s+actions: read$/m);
-});
-
-test("disabled entry point does not read credentials or perform I/O", async () => {
-  for (const value of [undefined, "", "false", "TRUE"]) {
-    const env = { AUTOPILOT_ENABLED: value };
-    for (const key of ["GH_TOKEN", "CODEX_TRIGGER_TOKEN", "GITHUB_REPOSITORY"]) {
-      Object.defineProperty(env, key, { get() { throw new Error(`disabled read of ${key}`); } });
-    }
-    await main(env, () => {});
-    const fake = fakeGitHub({ copilotClean: true });
-    await runMain(fake, { AUTOPILOT_ENABLED: value, AUTOPILOT_CLAUDE_REVIEW: "true", AUTOPILOT_START_TASKS: "true" });
-    assert.deepEqual(fake.calls, []);
-  }
-});
-
-test("a Claude run reference cannot authorize merge of another PR or base", async () => {
-  const fake = fakeGitHub({ claudeClean: true, issueComments: [], claudeRun: {
-    ...CLAUDE_RUN, pull_requests: [{ number: 999, head: { sha: "e".repeat(40) } }], head_sha: "f".repeat(40),
-  } });
-  await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
-  assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
-  assert.equal(fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 1);
-});
-
 test("Claude clean alone stays advisory even when marked trusted", () => {
   const clean = withClaude({ claudeReviews: [claudeVerdictOf("clean")], reviews: [claudeReviewOf("clean")] });
   assert.equal(cleanReviewer(clean), null);
@@ -995,7 +751,7 @@ test("Claude clean alone stays advisory even when marked trusted", () => {
   assert.equal(cleanReviewer({ ...clean, reviews: [...clean.reviews, copilotReview()] }), "Copilot");
 });
 
-test("the controller does not request Claude on explicitly Claude-written work", async () => {
+test("the dormant reader preserves Claude writer evidence", async () => {
   for (const evidence of ["description", "branch", "commit"]) {
     const fake = fakeGitHub({ issueComments: [] });
     const fetch = fake.fetch;
@@ -1013,18 +769,11 @@ test("the controller does not request Claude on explicitly Claude-written work",
       }
       return { ...response, text: async () => JSON.stringify(data) };
     };
-    await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: "true" });
-    assert.equal(fake.calls.filter(call => call.body?.body?.startsWith("@claude review")).length, 0, evidence);
-    assert.equal(fake.calls.filter(call => call.key === "POST /repos/o/r/pulls/81/requested_reviewers").length, 1, evidence);
+    const normalized = await readFacts(fake, true);
+    assert.equal(normalized.claudeWritten, true, evidence);
+    assert.notEqual(decide(normalized).type, "request-claude", evidence);
   }
 });
-
-test("source landing adds no CI trigger and gates the existing job before credentials", () => {
-  const workflow = readFileSync(new URL("../.github/workflows/remediation-autopilot.yml", import.meta.url), "utf8");
-  assert.doesNotMatch(workflow, /^  workflow_run:/m);
-  assert.match(workflow, /if: github\.ref == 'refs\/heads\/main' && vars\.AUTOPILOT_ENABLED == 'true'/);
-});
-
 
 test("post422 fallback findings survive a new head and clean Copilot review", async () => {
   const comments = [];
@@ -1042,8 +791,8 @@ test("post422 fallback findings survive a new head and clean Copilot review", as
   assert.deepEqual(result, { verdict: "findings", where: "comment" });
   for (const flag of [undefined, "true"]) {
     const fake = fakeGitHub({ copilotClean: true, claudeClean: true, issueComments: comments });
-    await runMain(fake, { AUTOPILOT_CLAUDE_REVIEW: flag });
-    assert.equal(fake.calls.filter(call => call.key === "PUT /repos/o/r/pulls/81/merge").length, 0);
-    assert.ok(fake.calls.some(call => call.body?.body?.includes("https://example/fallback-23")));
+    const decision = decide(await readFacts(fake, flag === "true"));
+    assert.equal(decision.type, "request-fix");
+    assert.deepEqual(decision.urls, ["https://example/fallback-23"]);
   }
 });
