@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { constants } from "node:fs";
-import { appendFile, chmod, copyFile, link, lstat, mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
+import { appendFile, copyFile, lstat, mkdir, open, readFile, readdir, rename, rm, writeFile, type FileHandle } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { z } from "zod";
 import { CODEX_METRICS, CURSOR_METRICS } from "../domain/collector-contract.ts";
@@ -24,68 +24,161 @@ const CODEX_SOURCE_FILES = [
   "sessions/2026/10/02/rollout-fixture-legacy.jsonl",
   "archived_sessions/rollout-fixture-modern-copy.jsonl",
 ];
+const CODEX_RECORD_TYPES = new Set(["session_meta", "response_item", "token_usage_record", "event_msg", "compacted", "turn_context"]);
+const noFollowFile = constants.O_RDONLY | constants.O_NOFOLLOW;
+const noFollowDirectory = constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW;
 
 function isNodeError(error: unknown, code: string) {
   return error instanceof Error && "code" in error && error.code === code;
-}
-async function isRegularFile(path: string) {
-  try {
-    const stat = await lstat(path);
-    return stat.isFile() && !stat.isSymbolicLink();
-  } catch (error) {
-    if (isNodeError(error, "ENOENT")) return false;
-    throw error;
-  }
-}
-
-async function ensureFixtureDirectory(path: string) {
-  try { await mkdir(path, { mode: 0o700 }); }
-  catch (error) { if (!isNodeError(error, "EEXIST")) throw error; }
-  const stat = await lstat(path);
-  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("Synthetic fixture directory is invalid.");
 }
 
 const bootstraps = new Map<string, Promise<void>>();
 const invalidFixture = () => new Error("Synthetic fixture content is incomplete or invalid.");
 
-async function publishFixtureFile(input: {
-  target: string; stageDirectory: string; kind: "codex" | "cursor"; expected: Buffer; source?: string;
-}) {
-  const { target, expected } = input;
-  let present: Buffer | null = null;
+// Node has no openat API. Linux descriptor paths keep each lookup attached to
+// the already-open parent so O_NOFOLLOW applies to every component, not only the leaf.
+function descriptorPath(handle: FileHandle, name: string): string {
+  return `/proc/self/fd/${handle.fd}/${name}`;
+}
+
+async function withHandle<T>(path: string, flags: number, operation: (handle: FileHandle) => Promise<T>): Promise<T> {
+  if (!isAbsolute(path) || path.includes("\0") || path.length > 4096) throw invalidFixture();
+  const components = path.split("/").filter(component => component !== "");
+  if (components.length === 0 || components.some(component => component === "." || component === "..")) throw invalidFixture();
+  const ancestors: FileHandle[] = [];
+  let leaf: FileHandle | undefined;
   try {
-    if (!await isRegularFile(target)) {
-      await lstat(target); // Missing is recoverable; other file kinds are not.
-      throw invalidFixture();
-    }
-    present = await readFile(target);
-  } catch (error) { if (!isNodeError(error, "ENOENT")) throw error; }
-  const interrupted = present !== null && present.length < expected.length && expected.subarray(0, present.length).equals(present);
-  if (present !== null && !interrupted) {
-    let text: string;
-    try { text = new TextDecoder("utf-8", { fatal: true }).decode(present); } catch { throw invalidFixture(); }
-    if (!text.endsWith("\n")) throw invalidFixture();
-    try {
-      if (input.kind === "cursor") parseCursorCompleteReportCsv({ csv: text, reportId: "fixture-report", source: cursorSource, window, complete: true });
-      else for (const line of text.trimEnd().split("\n")) {
-        const row: unknown = JSON.parse(line);
-        if (!row || typeof row !== "object" || Array.isArray(row)) throw invalidFixture();
+    if (process.platform === "linux") {
+      let parent = await open("/", noFollowDirectory);
+      ancestors.push(parent);
+      for (const [index, component] of components.entries()) {
+        const child = await open(descriptorPath(parent, component), index === components.length - 1 ? flags : noFollowDirectory);
+        if (index === components.length - 1) leaf = child;
+        else {
+          ancestors.push(child);
+          parent = child;
+        }
       }
-    } catch { throw invalidFixture(); }
+    } else {
+      let prefix = "";
+      for (const [index, component] of components.entries()) {
+        prefix += `/${component}`;
+        const seen = await lstat(prefix);
+        if (seen.isSymbolicLink() || index < components.length - 1 && !seen.isDirectory()) throw invalidFixture();
+      }
+      leaf = await open(path, flags);
+    }
+    if (!leaf) throw invalidFixture();
+    return await operation(leaf);
+  } catch (error) {
+    if (isNodeError(error, "ELOOP") || isNodeError(error, "EISDIR") || isNodeError(error, "ENOTDIR")) throw invalidFixture();
+    throw error;
+  } finally {
+    await leaf?.close();
+    for (const handle of ancestors.reverse()) await handle.close().catch(() => undefined);
+  }
+}
+
+async function readNoFollowFile(path: string): Promise<Buffer | null> {
+  try {
+    return await withHandle(path, noFollowFile, async handle => {
+      const stat = await handle.stat();
+      if (!stat.isFile() || stat.nlink !== 1) throw invalidFixture();
+      return handle.readFile();
+    });
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) return null;
+    throw error;
+  }
+}
+
+async function tightenPrivateMode(path: string, flags: number, mode: number): Promise<void> {
+  await withHandle(path, flags, async handle => {
+    const stat = await handle.stat();
+    if ((stat.mode & 0o777) !== mode) await handle.chmod(mode);
+  });
+}
+
+async function ensureFixtureDirectory(path: string) {
+  try { await mkdir(path, { mode: 0o700 }); }
+  catch (error) { if (!isNodeError(error, "EEXIST")) throw error; }
+  await tightenPrivateMode(path, noFollowDirectory, 0o700);
+}
+
+function assertCompleteCodex(bytes: Buffer): void {
+  let text: string;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { throw invalidFixture(); }
+  if (!text.endsWith("\n")) throw invalidFixture();
+  const lines = text.trimEnd().split("\n");
+  if (lines.length === 0) throw invalidFixture();
+  const records: { type: string }[] = [];
+  for (const line of lines) {
+    let row: unknown;
+    try { row = JSON.parse(line); } catch { throw invalidFixture(); }
+    if (!row || typeof row !== "object" || Array.isArray(row) || !("type" in row) || typeof row.type !== "string" || !CODEX_RECORD_TYPES.has(row.type)) throw invalidFixture();
+    records.push({ type: row.type });
+  }
+  if (records[0]?.type !== "session_meta") throw invalidFixture();
+  try { collectCodexRolloutHistory({ window, signal: new AbortController().signal }, [{ lines }]); }
+  catch { throw invalidFixture(); }
+}
+
+function assertCompleteCursor(bytes: Buffer): void {
+  let text: string;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { throw invalidFixture(); }
+  if (!text.endsWith("\n")) throw invalidFixture();
+  try { parseCursorCompleteReportCsv({ csv: text, reportId: "fixture-report", source: cursorSource, window, complete: true }); }
+  catch { throw invalidFixture(); }
+}
+
+function inspectPresent(kind: "codex" | "cursor", present: Buffer | null, expected: Buffer): "keep" | "repair" {
+  if (present === null) return "repair";
+  if (present.length < expected.length && expected.subarray(0, present.length).equals(present)) return "repair";
+  if (kind === "cursor") assertCompleteCursor(present); else assertCompleteCodex(present);
+  return "keep";
+}
+
+async function writeStagedFile(input: { staged: string; expected: Buffer; source?: string }): Promise<void> {
+  if (input.source) {
+    await withHandle(input.source, noFollowFile, async handle => {
+      const stat = await handle.stat();
+      if (!stat.isFile() || stat.nlink !== 1) throw invalidFixture();
+    });
+    await copyFile(input.source, input.staged, constants.COPYFILE_EXCL);
+    await tightenPrivateMode(input.staged, noFollowFile, 0o600);
+  } else await writeFile(input.staged, input.expected, { flag: "wx", mode: 0o600 });
+  if (!(await readNoFollowFile(input.staged))?.equals(input.expected)) throw invalidFixture();
+}
+
+async function recoverInterruptedCodexTree(sourceDirectory: string): Promise<void> {
+  const live = join(sourceDirectory, "codex");
+  const leftovers = (await readdir(sourceDirectory)).filter(name => /^codex\.prev-[a-f0-9]{32}$/.test(name));
+  const livePresent = await (async () => {
+    try { await withHandle(live, noFollowDirectory, async () => undefined); return true; }
+    catch (error) { if (isNodeError(error, "ENOENT")) return false; throw error; }
+  })();
+  if (!livePresent && leftovers.length === 1) {
+    await rename(join(sourceDirectory, leftovers[0]!), live);
     return;
   }
-  // Only an empty file or an exact initial-template prefix reaches repair.
-  const staged = join(input.stageDirectory, `${input.kind}-${randomBytes(16).toString("hex")}`);
+  for (const name of leftovers) await rm(join(sourceDirectory, name), { recursive: true, force: true });
+}
+
+async function publishCodexTree(input: { staged: string; live: string; sourceDirectory: string }): Promise<void> {
   try {
-    if (input.source) { await copyFile(input.source, staged, constants.COPYFILE_EXCL); await chmod(staged, 0o600); }
-    else await writeFile(staged, expected, { flag: "wx", mode: 0o600 });
-    if (!(await readFile(staged)).equals(expected)) throw invalidFixture();
-    // The bootstrap transaction serializes repair; missing targets still publish exclusively.
-    if (present === null) await link(staged, target);
-    else await rename(staged, target);
-  } finally {
-    try { await unlink(staged); } catch (error) { if (!isNodeError(error, "ENOENT")) throw error; }
+    await withHandle(input.live, noFollowDirectory, async () => undefined);
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) { await rename(input.staged, input.live); return; }
+    throw error;
   }
+  const prev = join(input.sourceDirectory, `codex.prev-${randomBytes(16).toString("hex")}`);
+  await rename(input.live, prev);
+  try { await rename(input.staged, input.live); }
+  catch (error) {
+    try { await rename(prev, input.live); } catch { /* Leave prev for the next bootstrap recovery. */ }
+    throw error;
+  }
+  await rm(prev, { recursive: true, force: true });
 }
 
 async function initializeCollectorFixtureSources(input: { sourceDirectory: string; repository: string }) {
@@ -97,22 +190,69 @@ async function initializeCollectorFixtureSources(input: { sourceDirectory: strin
     try {
       const stageDirectory = join(input.sourceDirectory, ".bootstrap-staging");
       await ensureFixtureDirectory(stageDirectory);
+      await recoverInterruptedCodexTree(input.sourceDirectory);
+      try { await withHandle(join(input.sourceDirectory, "codex"), noFollowDirectory, async () => undefined); }
+      catch (error) { if (!isNodeError(error, "ENOENT")) throw error; }
       for (const file of await readdir(stageDirectory)) {
-        if (!/^(codex|cursor)-[a-f0-9]{32}$/.test(file) || !await isRegularFile(join(stageDirectory, file))) throw invalidFixture();
-        await unlink(join(stageDirectory, file));
-      }
-      const codexDirectory = join(input.sourceDirectory, "codex");
-      await ensureFixtureDirectory(codexDirectory);
-      for (const file of CODEX_SOURCE_FILES) {
-        let parent = codexDirectory;
-        for (const part of file.split("/").slice(0, -1)) {
-          parent = join(parent, part);
-          await ensureFixtureDirectory(parent);
+        if (/^(codex|cursor)-[a-f0-9]{32}$/.test(file)) {
+          const leftover = await readNoFollowFile(join(stageDirectory, file));
+          if (leftover === null) throw invalidFixture();
+          await rm(join(stageDirectory, file), { force: true });
+          continue;
         }
-        const source = join(input.repository, "tests/fixtures/codex-rollouts", file);
-        await publishFixtureFile({ target: join(codexDirectory, file), stageDirectory, kind: "codex", source, expected: await readFile(source) });
+        if (!/^tree-[a-f0-9]{32}$/.test(file)) throw invalidFixture();
+        await rm(join(stageDirectory, file), { recursive: true, force: true });
       }
-      await publishFixtureFile({ target: join(input.sourceDirectory, "cursor.csv"), stageDirectory, kind: "cursor", expected: Buffer.from(cursorCsv) });
+      const planned: { relative: string; kind: "codex" | "cursor"; expected: Buffer; source?: string; action: "keep" | "repair"; present: Buffer | null }[] = [];
+      for (const file of CODEX_SOURCE_FILES) {
+        const source = join(input.repository, "tests/fixtures/codex-rollouts", file);
+        const expected = await (async () => {
+          const bytes = await readNoFollowFile(source);
+          if (bytes === null) throw invalidFixture();
+          return bytes;
+        })();
+        const target = join(input.sourceDirectory, "codex", file);
+        const present = await readNoFollowFile(target);
+        planned.push({ relative: file, kind: "codex", expected, source, action: inspectPresent("codex", present, expected), present });
+      }
+      const cursorExpected = Buffer.from(cursorCsv);
+      const cursorPresent = await readNoFollowFile(join(input.sourceDirectory, "cursor.csv"));
+      planned.push({ relative: "cursor.csv", kind: "cursor", expected: cursorExpected, action: inspectPresent("cursor", cursorPresent, cursorExpected), present: cursorPresent });
+      if (planned.every(item => item.action === "keep")) {
+        for (const item of planned) {
+          const target = item.kind === "cursor" ? join(input.sourceDirectory, "cursor.csv") : join(input.sourceDirectory, "codex", item.relative);
+          await tightenPrivateMode(target, noFollowFile, 0o600);
+        }
+        await tightenPrivateMode(join(input.sourceDirectory, "codex"), noFollowDirectory, 0o700);
+        lock.exec("COMMIT");
+        return;
+      }
+      const stagedRoot = join(stageDirectory, `tree-${randomBytes(16).toString("hex")}`);
+      await ensureFixtureDirectory(stagedRoot);
+      const stagedCodex = join(stagedRoot, "codex");
+      await ensureFixtureDirectory(stagedCodex);
+      try {
+        for (const item of planned) {
+          const bytes = item.action === "keep" && item.present ? item.present : item.expected;
+          if (item.kind === "cursor") {
+            await writeStagedFile({ staged: join(stagedRoot, "cursor.csv"), expected: bytes });
+            continue;
+          }
+          let parent = stagedCodex;
+          for (const part of item.relative.split("/").slice(0, -1)) {
+            parent = join(parent, part);
+            await ensureFixtureDirectory(parent);
+          }
+          await writeStagedFile({ staged: join(stagedCodex, item.relative), expected: bytes, source: item.action === "repair" ? item.source : undefined });
+        }
+        await publishCodexTree({ staged: stagedCodex, live: join(input.sourceDirectory, "codex"), sourceDirectory: input.sourceDirectory });
+        const stagedCursor = join(stagedRoot, "cursor.csv");
+        const liveCursor = join(input.sourceDirectory, "cursor.csv");
+        await rename(stagedCursor, liveCursor);
+        await tightenPrivateMode(liveCursor, noFollowFile, 0o600);
+      } finally {
+        await rm(stagedRoot, { recursive: true, force: true });
+      }
       lock.exec("COMMIT");
     } catch (error) { lock.exec("ROLLBACK"); throw error; }
   } finally { lock.close(); }

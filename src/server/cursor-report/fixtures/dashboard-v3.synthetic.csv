@@ -1,3 +1,3 @@
 Date,Cloud Agent ID,Automation ID,Kind,Model,Max Mode,Input (w/ Cache Write),Input (w/o Cache Write),Cache Read,Output Tokens,Total Tokens,Cost
-2026-10-01T00:00:00.000Z,synthetic-cloud-run,synthetic-automation,Usage-based,synthetic-model,Yes,2,3,4,5,14,1e-18
+2026-10-01T00:00:00.000Z,synthetic-cloud-run,synthetic-automation,Usage-based,synthetic-model,Yes,2,3,4,5,14,0.000000000000000001
 2026-10-02T23:59:59.999Z,,,Included,synthetic-model,No,0,0,0,0,0,Included
