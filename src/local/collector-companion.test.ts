@@ -3,7 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { collectCodexRolloutHistory } from "./codex-history-collector.ts";
-import { CollectorCompanion, type CollectorTransport } from "./collector-companion.ts";
+import { COLLECTOR_OUTBOX_QUARANTINE_AFTER, CollectorCompanion, type CollectorTransport } from "./collector-companion.ts";
+import { openCollectorPrivateStore } from "./collector-private-store.ts";
+import { createCollectorFixtureTransport, startCollectorFixtureHttp } from "./collector-fixture-http.ts";
+import { COMPANION_SCHEMA_VERSION, RECEIVER_SCHEMA_VERSION } from "./collector-store-schema.ts";
 import { CollectorService } from "./collector-service.ts";
 import { buildReviewDelivery, CODEX_METRICS, grantSchema, type CommitReceipt, type ReviewManifest } from "../domain/collector-contract.ts";
 
@@ -218,7 +221,7 @@ it("does not insert another receipt when a later acquisition matches the last co
   } finally { companion.close(); service.close(); }
 });
 
-it("review regression: an unaccepted stale outbox is discarded only after receiver status and replaced by a fresh acquisition", async () => {
+it.each([0, COLLECTOR_OUTBOX_QUARANTINE_AFTER - 1])("an unaccepted stale outbox is replaced only after receiver status after %i transient failures", async transientFailures => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "collector-stale-outbox-"))); directories.push(directory);
   const service = new CollectorService({ databasePath: join(directory, "receiver.sqlite"), now: () => now });
   const owner = { issuer: "https://synthetic-owner.invalid", subject: "synthetic-owner" };
@@ -229,6 +232,7 @@ it("review regression: an unaccepted stale outbox is discarded only after receiv
   const report = (value: string) => ({ format: "cursor-complete-report-v1", reportId: "one-report", source: { provider: "cursor", kind: "owner-supplied-report", accountAlias: null, sample: "unknown" }, window, complete: true, coverage: "partial", rows: [{ id: "one", at: "2026-10-02T00:00:00.000Z", metric: "requests", value, unit: "requests", kind: "NATIVE_QUANTITY" }] });
   let interrupt = true;
   const transport: CollectorTransport = { getGrant: input => service.getGrant(input), stageChunk: async input => {
+    if (transientFailures > 0) { transientFailures--; throw new Error("synthetic transient stage failure"); }
     const result = await service.stageChunk(input);
     if (interrupt) {
       interrupt = false;
@@ -243,6 +247,10 @@ it("review regression: an unaccepted stale outbox is discarded only after receiv
   companion.connect(claimed);
   const collect = vi.fn().mockResolvedValueOnce(report("1")).mockResolvedValueOnce(report("3"));
   try {
+    const initialFailures = transientFailures;
+    for (let attempt = 0; attempt < initialFailures; attempt++) {
+      await expect(companion.sync({ connectionId: claimed.grant.connectionId, collect })).rejects.toThrow();
+    }
     await expect(companion.sync({ connectionId: claimed.grant.connectionId, collect })).rejects.toThrow();
     expect(companion.pending({ connectionId: claimed.grant.connectionId })).not.toBeNull();
     const receipt = await companion.sync({ connectionId: claimed.grant.connectionId, collect });
@@ -254,7 +262,71 @@ it("review regression: an unaccepted stale outbox is discarded only after receiv
   } finally { companion.close(); service.close(); }
 });
 
-it("review regression: accepted pending delivery with a lost acknowledgment survives a later writer without reacquiring or replacing its view", async () => {
+it("enables WAL, pins a schema version, and refuses a newer companion store", async () => {
+  const test = fixture();
+  test.companion.close();
+  const database = openCollectorPrivateStore({ databasePath: test.databasePath });
+  expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
+  expect(statSync(`${test.databasePath}-wal`).mode & 0o777).toBe(0o600);
+  expect(statSync(`${test.databasePath}-shm`).mode & 0o777).toBe(0o600);
+  expect(database.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: COMPANION_SCHEMA_VERSION });
+  database.exec("PRAGMA user_version = 99");
+  database.close();
+  expect(() => new CollectorCompanion({ databasePath: test.databasePath, transport: test.transport, now: () => now })).toThrow("newer than this process");
+});
+
+it("pins a receiver schema version and refuses a newer receiver store", async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "collector-receiver-schema-"))); directories.push(directory);
+  const databasePath = join(directory, "receiver.sqlite");
+  const service = new CollectorService({ databasePath, now: () => now });
+  service.close();
+  const database = openCollectorPrivateStore({ databasePath });
+  expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({ journal_mode: "wal" });
+  expect(statSync(`${databasePath}-wal`).mode & 0o777).toBe(0o600);
+  expect(statSync(`${databasePath}-shm`).mode & 0o777).toBe(0o600);
+  expect(database.prepare("PRAGMA user_version").get()).toMatchObject({ user_version: RECEIVER_SCHEMA_VERSION });
+  database.exec("PRAGMA user_version = 99");
+  database.close();
+  expect(() => new CollectorService({ databasePath, now: () => now })).toThrow("newer than this process");
+});
+
+it("pauses poison delivery after five sends until explicit disconnect and fresh pairing", async () => {
+  const test = fixture(), collect = vi.fn(async () => review());
+  test.transport.commitReview = vi.fn(async () => { throw new Error("synthetic poison commit"); });
+  test.transport.deliveryStatus = vi.fn(test.transport.deliveryStatus);
+  try {
+    for (let attempt = 0; attempt < COLLECTOR_OUTBOX_QUARANTINE_AFTER + 3; attempt++) {
+      await expect(test.companion.sync({ connectionId: "one", collect })).rejects.toThrow();
+      expect(test.companion.pending({ connectionId: "one" })).not.toBeNull();
+    }
+    expect(test.companion.quarantined({ connectionId: "one" })).not.toBeNull();
+    expect(collect).toHaveBeenCalledTimes(1);
+    expect(test.transport.commitReview).toHaveBeenCalledTimes(COLLECTOR_OUTBOX_QUARANTINE_AFTER);
+    expect(test.transport.deliveryStatus).toHaveBeenCalledTimes(3);
+    test.companion.close();
+    test.companion = new CollectorCompanion({ databasePath: test.databasePath, transport: test.transport, now: () => now });
+    await expect(test.companion.sync({ connectionId: "one", collect })).rejects.toThrow();
+    expect(test.transport.deliveryStatus).toHaveBeenCalledTimes(4);
+    expect(test.transport.commitReview).toHaveBeenCalledTimes(COLLECTOR_OUTBOX_QUARANTINE_AFTER);
+    expect(collect).toHaveBeenCalledTimes(1);
+    test.companion.disconnect({ connectionId: "one" });
+    await expect(test.companion.sync({ connectionId: "one", collect })).rejects.toThrow();
+    expect(() => test.companion.connect({ grant: initial(), credential: "synthetic-scoped-credential" })).toThrow("fresh generation");
+    const fresh = { ...initial(), generation: 2 };
+    test.companion.connect({ grant: fresh, credential: "synthetic-fresh-credential" });
+    test.transport.getGrant = async () => fresh;
+    test.transport.commitReview = vi.fn(async ({ manifest }: { manifest: ReviewManifest }) => ({
+      format: "collector-commit-receipt-v1", connectionId: "one", generation: 2, batchId: manifest.batchId,
+      digest: manifest.digest, checkpoint: manifest.nextCheckpoint, committedAt: new Date(now).toISOString(),
+    }));
+    const receipt = await test.companion.sync({ connectionId: "one", collect });
+    expect(receipt.generation).toBe(2);
+    expect(collect).toHaveBeenCalledTimes(2);
+    expect(test.companion.pending({ connectionId: "one" })).toBeNull();
+  } finally { test.companion.close(); }
+});
+
+it.each([0, COLLECTOR_OUTBOX_QUARANTINE_AFTER - 1])("accepted pending delivery survives a lost acknowledgment and later writer after %i transient failures", async transientFailures => {
   const directory = realpathSync(mkdtempSync(join(tmpdir(), "collector-accepted-outbox-"))); directories.push(directory);
   const service = new CollectorService({ databasePath: join(directory, "receiver.sqlite"), now: () => now });
   const owner = { issuer: "https://synthetic-owner.invalid", subject: "synthetic-owner" };
@@ -265,6 +337,7 @@ it("review regression: accepted pending delivery with a lost acknowledgment surv
   const report = (value: string) => ({ format: "cursor-complete-report-v1", reportId: "one-report", source: { provider: "cursor", kind: "owner-supplied-report", accountAlias: null, sample: "unknown" }, window, complete: true, coverage: "partial", rows: [{ id: "one", at: "2026-10-02T00:00:00.000Z", metric: "requests", value, unit: "requests", kind: "NATIVE_QUANTITY" }] });
   let interrupt = true;
   const transport: CollectorTransport = { getGrant: input => service.getGrant(input), stageChunk: input => service.stageChunk(input), deliveryStatus: input => service.deliveryStatus(input), commitReview: async input => {
+    if (transientFailures > 0) { transientFailures--; throw new Error("synthetic transient commit outage"); }
     const receipt = await service.commitReview(input);
     if (interrupt) {
       interrupt = false;
@@ -280,13 +353,109 @@ it("review regression: accepted pending delivery with a lost acknowledgment surv
   companion.connect(claimed);
   const collect = vi.fn().mockResolvedValueOnce(report("1")).mockResolvedValueOnce(report("3"));
   try {
+    const failuresBeforeCommit = transientFailures;
+    for (let attempt = 0; attempt < failuresBeforeCommit; attempt++) {
+      await expect(companion.sync({ connectionId: claimed.grant.connectionId, collect })).rejects.toThrow();
+    }
     await expect(companion.sync({ connectionId: claimed.grant.connectionId, collect })).rejects.toThrow();
+    expect(companion.pending({ connectionId: claimed.grant.connectionId })).not.toBeNull();
     await companion.sync({ connectionId: claimed.grant.connectionId, collect });
     expect(collect).toHaveBeenCalledTimes(1);
     expect(companion.pending({ connectionId: claimed.grant.connectionId })).toBeNull();
-    expect((await service.privateHistory({ owner, connectionId: claimed.grant.connectionId })).cursorViews[0].rows[0].value).toBe("2");
+    const recovered = await service.privateHistory({ owner, connectionId: claimed.grant.connectionId });
+    expect(recovered.cursorViews[0].rows[0].value).toBe("2");
+    expect(recovered.receiptCount).toBe(2);
     await companion.sync({ connectionId: claimed.grant.connectionId, collect });
     expect(collect).toHaveBeenCalledTimes(2);
     expect((await service.privateHistory({ owner, connectionId: claimed.grant.connectionId })).cursorViews[0].rows[0].value).toBe("3");
   } finally { companion.close(); service.close(); }
 });
+
+it("does not resend or reacquire while paused status is unavailable or READY", async () => {
+  const test = fixture(), collect = vi.fn(async () => review());
+  const status = test.transport.deliveryStatus;
+  test.transport.commitReview = vi.fn(async () => { throw new Error("synthetic send failure"); });
+  test.transport.deliveryStatus = vi.fn(async () => { throw new Error("synthetic status outage"); });
+  try {
+    for (let attempt = 0; attempt < COLLECTOR_OUTBOX_QUARANTINE_AFTER + 2; attempt++) {
+      await expect(test.companion.sync({ connectionId: "one", collect })).rejects.toThrow();
+      expect(test.companion.pending({ connectionId: "one" })).not.toBeNull();
+    }
+    expect(collect).toHaveBeenCalledTimes(1);
+    expect(test.transport.deliveryStatus).toHaveBeenCalledTimes(2);
+    test.transport.deliveryStatus = status;
+    await expect(test.companion.sync({ connectionId: "one", collect })).rejects.toThrow();
+    expect(collect).toHaveBeenCalledTimes(1);
+    expect(test.transport.commitReview).toHaveBeenCalledTimes(COLLECTOR_OUTBOX_QUARANTINE_AFTER);
+    expect(test.companion.pending({ connectionId: "one" })).not.toBeNull();
+  } finally { test.companion.close(); }
+});
+
+it("does not revive delivery after disconnect during a paused status lookup", async () => {
+  const test = fixture(), collect = vi.fn(async () => review());
+  test.transport.commitReview = vi.fn(async () => { throw new Error("synthetic send failure"); });
+  test.transport.deliveryStatus = vi.fn(async () => {
+    test.companion.disconnect({ connectionId: "one" });
+    return { kind: "READY", checkpoint: null };
+  });
+  try {
+    for (let attempt = 0; attempt <= COLLECTOR_OUTBOX_QUARANTINE_AFTER; attempt++) {
+      await expect(test.companion.sync({ connectionId: "one", collect })).rejects.toThrow();
+    }
+    expect(test.transport.deliveryStatus).toHaveBeenCalledTimes(1);
+    expect(test.companion.pending({ connectionId: "one" })).toBeNull();
+    await expect(test.companion.sync({ connectionId: "one", collect })).rejects.toThrow();
+    expect(collect).toHaveBeenCalledTimes(1);
+    expect(test.transport.commitReview).toHaveBeenCalledTimes(COLLECTOR_OUTBOX_QUARANTINE_AFTER);
+  } finally { test.companion.close(); }
+});
+
+it("recovers a real HTTP commit that finishes after timeout and READY without replacing a later writer", async () => {
+  const directory = realpathSync(mkdtempSync(join(tmpdir(), "collector-late-http-"))); directories.push(directory);
+  const service = new CollectorService({ databasePath: join(directory, "receiver.sqlite"), now: () => now });
+  const owner = { issuer: "https://synthetic-owner.invalid", subject: "synthetic-owner" };
+  const verifier = "synthetic-private-verifier-000000000000000000000000000000000000000000";
+  const request = await service.requestPairing({ descriptor: { kind: "cursor-complete-export", provider: "cursor", sourceId: "cursor-source", deviceId: "device", collectorVersion: "cursor-v1", context: "PERSONAL", account: { kind: "UNKNOWN" } }, window, verifier });
+  await service.approvePairing({ pairingId: request.pairingId, owner, expiresAt: initial().expiresAt, allowedMetrics: ["requests"] });
+  const claimed = await service.claimPairing({ pairingId: request.pairingId, verifier });
+  const authentication = { connectionId: claimed.grant.connectionId, credential: claimed.credential };
+  const report = (value: string) => ({ format: "cursor-complete-report-v1", reportId: "one-report", source: { provider: "cursor", kind: "owner-supplied-report", accountAlias: null, sample: "unknown" }, window, complete: true, coverage: "partial", rows: [{ id: "one", at: "2026-10-02T00:00:00.000Z", metric: "requests", value, unit: "requests", kind: "NATIVE_QUANTITY" }] });
+  const commit = service.commitReview.bind(service);
+  let release = () => {}, sends = 0, lateCommit: Promise<CommitReceipt> | undefined;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  service.commitReview = async input => {
+    sends++;
+    if (sends < COLLECTOR_OUTBOX_QUARANTINE_AFTER) throw new Error("synthetic transient commit outage");
+    if (sends === COLLECTOR_OUTBOX_QUARANTINE_AFTER) {
+      lateCommit = (async () => { await gate; return commit(input); })();
+      return lateCommit;
+    }
+    return commit(input);
+  };
+  const http = await startCollectorFixtureHttp({ service: () => service, owner, ownerToken: "a".repeat(64) });
+  const companion = new CollectorCompanion({ databasePath: join(directory, "companion.sqlite"), now: () => now, transport: createCollectorFixtureTransport({ origin: http.origin }) });
+  companion.connect(claimed);
+  const collect = vi.fn(async () => report("1"));
+  try {
+    for (let attempt = 0; attempt < COLLECTOR_OUTBOX_QUARANTINE_AFTER; attempt++) {
+      await expect(companion.sync({ connectionId: authentication.connectionId, collect })).rejects.toThrow();
+    }
+    expect(lateCommit).toBeDefined();
+    expect(companion.pending(authentication)).not.toBeNull();
+    expect(companion.quarantined(authentication)).not.toBeNull();
+    await expect(companion.sync({ connectionId: authentication.connectionId, collect })).rejects.toThrow();
+    expect(sends).toBe(COLLECTOR_OUTBOX_QUARANTINE_AFTER);
+    expect(collect).toHaveBeenCalledTimes(1);
+    release(); await lateCommit;
+    const grant = await service.getGrant(authentication), other = buildReviewDelivery({ grant, review: report("2") });
+    for (const chunk of other.chunks) await service.stageChunk({ ...authentication, chunk });
+    await commit({ ...authentication, manifest: other.manifest });
+    await companion.sync({ connectionId: authentication.connectionId, collect });
+    expect(collect).toHaveBeenCalledTimes(1);
+    expect(sends).toBe(COLLECTOR_OUTBOX_QUARANTINE_AFTER);
+    expect(companion.pending(authentication)).toBeNull();
+    const history = await service.privateHistory({ owner, connectionId: authentication.connectionId });
+    expect(history.cursorViews[0].rows[0].value).toBe("2");
+    expect(history.receiptCount).toBe(2);
+  } finally { release(); await lateCommit; companion.close(); await http.close(); service.close(); }
+}, 15_000);

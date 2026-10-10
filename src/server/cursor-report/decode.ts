@@ -32,6 +32,11 @@ export function decimal(value: string): string {
   const integer = whole.replace(/^0+(?=[0-9])/, ""), tail = fraction.replace(/0+$/, "");
   return tail ? `${integer}.${tail}` : integer;
 }
+/** CSV numeric fields keep their exact decimal spelling; scientific notation is not a float. */
+export function csvDecimal(value: string): string {
+  if (!/^(0|[1-9][0-9]*)(?:\.[0-9]+)?$/.test(value) || value.length > 160) throw invalid();
+  return decimal(value);
+}
 export function quantity(value: ExactJson | undefined, integer = false): string | null {
   if (value === undefined || value === null) return null;
   if (!(value instanceof ExactJsonNumber)) throw invalid();
@@ -64,14 +69,30 @@ export function checkBytes(inputs: readonly string[]) {
 }
 export function json(value: string) { return object(parseExactJson(value)); }
 
+export type CsvRecordLimits = {
+  bytes: number;
+  maxFields: number;
+  maxFieldCharacters: number;
+  maxRecords: number;
+};
+
+const defaultCsvLimits: CsvRecordLimits = {
+  bytes: CURSOR_REPORT_LIMITS.bytes,
+  maxFields: 16,
+  maxFieldCharacters: 8192,
+  maxRecords: CURSOR_REPORT_LIMITS.rows + 1,
+};
+
 /** Strict RFC 4180-style records, including escaped quotes and quoted newlines. */
-export function csvRecords(input: string): string[][] {
-  checkBytes([input]);
+export function csvRecords(input: string, limits: CsvRecordLimits = defaultCsvLimits): string[][] {
+  if (typeof input !== "string" || input.length > limits.bytes ||
+      new TextEncoder().encode(input).length > limits.bytes ||
+      /\u0000|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(input)) throw invalid();
   const value = input.startsWith("\uFEFF") ? input.slice(1) : input;
   const rows: string[][] = [], row: string[] = [];
   let cell = "", quoted = false, closed = false, started = false;
-  const field = () => { row.push(cell); cell = ""; closed = false; started = false; if (row.length > 16) throw invalid(); };
-  const record = () => { field(); rows.push(row.splice(0)); if (rows.length > CURSOR_REPORT_LIMITS.rows + 1) throw invalid(); };
+  const field = () => { row.push(cell); cell = ""; closed = false; started = false; if (row.length > limits.maxFields) throw invalid(); };
+  const record = () => { field(); rows.push(row.splice(0)); if (rows.length > limits.maxRecords) throw invalid(); };
   for (let offset = 0; offset < value.length; offset++) {
     const ch = value[offset];
     if (quoted) {
@@ -87,7 +108,7 @@ export function csvRecords(input: string): string[][] {
       if (ch === "\r" && value[++offset] !== "\n") throw invalid();
       record();
     } else { if (closed) throw invalid(); cell += ch; started = true; }
-    if (cell.length > 8192) throw invalid();
+    if (cell.length > limits.maxFieldCharacters) throw invalid();
   }
   if (quoted) throw invalid();
   if (started || closed || cell || row.length) record();

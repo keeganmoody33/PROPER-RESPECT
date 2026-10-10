@@ -3,6 +3,9 @@ import { z } from "zod";
 import { canonicalJson } from "../domain/canonical-json.ts";
 import { assembleReview, assertGrantActive, assertMatchingReceipt, buildReviewDelivery, collectorDigest, deliveryStatusSchema, grantSchema, manifestSchema, chunkSchema, receiptSchema, type CollectorGrant, type CommitReceipt, type ReviewChunk, type ReviewManifest } from "../domain/collector-contract.ts";
 import { openCollectorPrivateStore } from "./collector-private-store.ts";
+import { COMPANION_SCHEMA_VERSION, readStoreSchemaVersion, setStoreSchemaVersion } from "./collector-store-schema.ts";
+
+export const COLLECTOR_OUTBOX_QUARANTINE_AFTER = 5;
 
 export type CollectorAuthentication = { connectionId: string; credential: string; signal?: AbortSignal };
 export type CollectorTransport = {
@@ -31,17 +34,34 @@ export class CollectorCompanion {
     this.database = openCollectorPrivateStore({ databasePath });
     this.transport = transport;
     this.now = now;
-    this.database.exec(`PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 5000;
+    try { this.installSchema(); }
+    catch (error) { this.database.close(); throw error; }
+  }
+
+  private installSchema(): void {
+    const version = readStoreSchemaVersion(this.database, COMPANION_SCHEMA_VERSION);
+    this.database.exec(`
       CREATE TABLE IF NOT EXISTS companion_sessions (
         connectionId TEXT PRIMARY KEY, grantJson TEXT NOT NULL, credential TEXT, status TEXT NOT NULL,
         revision INTEGER NOT NULL, checkpoint TEXT
       );
       CREATE TABLE IF NOT EXISTS companion_outbox (
-        connectionId TEXT PRIMARY KEY, manifestJson TEXT NOT NULL, chunksJson TEXT NOT NULL
+        connectionId TEXT PRIMARY KEY, manifestJson TEXT NOT NULL, chunksJson TEXT NOT NULL, failures INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE IF NOT EXISTS companion_outbox_quarantine (
+        connectionId TEXT NOT NULL, quarantinedAt INTEGER NOT NULL, failures INTEGER NOT NULL,
+        manifestJson TEXT NOT NULL, chunksJson TEXT NOT NULL, PRIMARY KEY (connectionId, quarantinedAt)
       );
       CREATE TABLE IF NOT EXISTS companion_last_commit (
         connectionId TEXT PRIMARY KEY, digest TEXT NOT NULL, receiptJson TEXT NOT NULL
       );`);
+    const columns = this.database.prepare("PRAGMA table_info(companion_outbox)").all();
+    if (!columns.some(column => column !== null && typeof column === "object" && "name" in column && column.name === "failures")) {
+      this.database.exec("ALTER TABLE companion_outbox ADD COLUMN failures INTEGER NOT NULL DEFAULT 0");
+    }
+    if (version === COMPANION_SCHEMA_VERSION) return;
+    if (version === 0) { setStoreSchemaVersion(this.database, COMPANION_SCHEMA_VERSION); return; }
+    throw new Error("Collector companion schema cannot be migrated.");
   }
 
   private transaction<T>(operation: () => T): T {
@@ -102,6 +122,46 @@ export class CollectorCompanion {
     });
   }
 
+  private noteOutboxFailure({ connectionId, manifest, revision, signal }: {
+    connectionId: string; manifest: ReviewManifest; revision: number; signal: AbortSignal;
+  }): void {
+    try {
+      if (this.closed) return;
+      const failures = this.transaction(() => {
+        this.checkSession(connectionId, revision, signal);
+        const row = this.database.prepare("SELECT manifestJson, chunksJson, failures FROM companion_outbox WHERE connectionId = ?").get(connectionId);
+        if (!row || typeof row !== "object" || !("failures" in row)) return;
+        const stored = outboxSchema.parse(row);
+        if (manifestSchema.parse(parse(stored.manifestJson)).batchId !== manifest.batchId) return;
+        const failures = Number(row.failures) + 1;
+        if (!Number.isSafeInteger(failures) || failures < 1) return;
+        this.database.prepare("UPDATE companion_outbox SET failures = ? WHERE connectionId = ?").run(failures, connectionId);
+        return failures;
+      });
+      if (failures === undefined || failures < COLLECTOR_OUTBOX_QUARANTINE_AFTER) return;
+      // Keep the outbox identity: a timed-out receiver operation may still commit.
+      // The durable failure count pauses further sends even if this archive fails.
+      this.transaction(() => {
+        this.checkSession(connectionId, revision, signal);
+        const row = this.database.prepare("SELECT manifestJson, chunksJson FROM companion_outbox WHERE connectionId = ?").get(connectionId);
+        if (!row) return;
+        const stored = outboxSchema.parse(row);
+        if (manifestSchema.parse(parse(stored.manifestJson)).batchId !== manifest.batchId) return;
+        this.database.prepare("INSERT INTO companion_outbox_quarantine(connectionId, quarantinedAt, failures, manifestJson, chunksJson) VALUES (?, ?, ?, ?, ?)").run(connectionId, this.now(), failures, stored.manifestJson, stored.chunksJson);
+      });
+    } catch { /* Keep the original send failure; quarantine is best-effort. */ }
+  }
+
+  quarantined({ connectionId }: { connectionId: string }): Delivery | null {
+    this.session(connectionId);
+    const row = this.database.prepare("SELECT manifestJson, chunksJson FROM companion_outbox_quarantine WHERE connectionId = ? ORDER BY quarantinedAt DESC LIMIT 1").get(connectionId);
+    if (!row) return null;
+    const stored = outboxSchema.parse(row), manifest = manifestSchema.parse(parse(stored.manifestJson));
+    const chunks = z.array(chunkSchema).parse(parse(stored.chunksJson));
+    assembleReview({ manifest, chunks });
+    return { manifest, chunks };
+  }
+
   pending({ connectionId }: { connectionId: string }): Delivery | null {
     this.session(connectionId);
     const row = this.database.prepare("SELECT manifestJson, chunksJson FROM companion_outbox WHERE connectionId = ?").get(connectionId);
@@ -145,7 +205,9 @@ export class CollectorCompanion {
       this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
       let delivery = this.pending({ connectionId });
       let committed: CommitReceipt | null = null;
-      if (delivery && delivery.manifest.expectedCheckpoint !== grant.checkpoint) {
+      const failed = delivery ? this.database.prepare("SELECT failures FROM companion_outbox WHERE connectionId = ?").get(connectionId) : null;
+      const paused = failed !== null && z.object({ failures: z.number().int().nonnegative() }).parse(failed).failures >= COLLECTOR_OUTBOX_QUARANTINE_AFTER;
+      if (delivery && (paused || delivery.manifest.expectedCheckpoint !== grant.checkpoint)) {
         const pending = delivery;
         const status = deliveryStatusSchema.parse(await this.receive(requestSignal => this.transport.deliveryStatus({ ...authentication, manifest: pending.manifest, signal: requestSignal }), signal));
         this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
@@ -161,7 +223,12 @@ export class CollectorCompanion {
               this.database.prepare("DELETE FROM companion_outbox WHERE connectionId = ?").run(connectionId);
             });
             delivery = null;
-          } else if (status.checkpoint !== pending.manifest.expectedCheckpoint) throw new Error("Receiver status is inconsistent.");
+          } else {
+            if (status.checkpoint !== pending.manifest.expectedCheckpoint) throw new Error("Receiver status is inconsistent.");
+            // READY is a point-in-time absence, not cancellation of an earlier
+            // request. A paused batch needs a receipt, stale authority, or pairing.
+            if (paused) throw new Error("Collector delivery paused. Reconcile its status or pair with fresh access.");
+          }
           grant = grantSchema.parse(await this.receive(requestSignal => this.transport.getGrant({ ...authentication, signal: requestSignal }), signal));
           this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
           if (status.kind === "READY" && grant.checkpoint !== status.checkpoint) throw new Error("Receiver authority advanced during retry.");
@@ -195,34 +262,39 @@ export class CollectorCompanion {
           this.checkSession(connectionId, local.revision, signal);
           const pending = this.pending({ connectionId });
           if (pending) return pending;
-          this.database.prepare("INSERT INTO companion_outbox VALUES (?, ?, ?)").run(connectionId, canonicalJson(acquired.manifest), canonicalJson(acquired.chunks));
+          this.database.prepare("INSERT INTO companion_outbox(connectionId, manifestJson, chunksJson, failures) VALUES (?, ?, ?, 0)").run(connectionId, canonicalJson(acquired.manifest), canonicalJson(acquired.chunks));
           return acquired;
         });
       }
       if (delivery.manifest.generation !== grant.generation || delivery.manifest.descriptorDigest !== collectorDigest(grant.descriptor)) throw new Error();
-      for (const chunk of committed ? [] : delivery.chunks) {
-        this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
-        await this.receive(requestSignal => this.transport.stageChunk({ ...authentication, chunk, signal: requestSignal }), signal);
-      }
-      this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
-      const result = committed ?? await this.receive(requestSignal => this.transport.commitReview({ ...authentication, manifest: delivery.manifest, signal: requestSignal }), signal);
-      this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
-      const receipt = assertMatchingReceipt({ manifest: delivery.manifest, receipt: result });
-      const accepted = delivery;
-      this.transaction(() => {
-        this.checkSession(connectionId, local.revision, signal);
-        const pending = this.pending({ connectionId });
-        if (pending && pending.manifest.batchId !== accepted.manifest.batchId) throw new Error("Pending review changed.");
-        if (!pending) {
-          if (this.session(connectionId).checkpoint !== receipt.checkpoint) throw new Error("Pending review changed.");
-          this.rememberCommit(connectionId, receipt);
-          return;
+      try {
+        for (const chunk of committed ? [] : delivery.chunks) {
+          this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
+          await this.receive(requestSignal => this.transport.stageChunk({ ...authentication, chunk, signal: requestSignal }), signal);
         }
-        this.database.prepare("UPDATE companion_sessions SET checkpoint = ?, grantJson = ? WHERE connectionId = ? AND revision = ? AND status = 'ACTIVE'").run(receipt.checkpoint, canonicalJson({ ...grant, checkpoint: receipt.checkpoint }), connectionId, local.revision);
-        this.database.prepare("DELETE FROM companion_outbox WHERE connectionId = ?").run(connectionId);
-        this.rememberCommit(connectionId, receipt);
-      });
-      return receipt;
+        this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
+        const result = committed ?? await this.receive(requestSignal => this.transport.commitReview({ ...authentication, manifest: delivery.manifest, signal: requestSignal }), signal);
+        this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
+        const receipt = assertMatchingReceipt({ manifest: delivery.manifest, receipt: result });
+        const accepted = delivery;
+        this.transaction(() => {
+          this.checkSession(connectionId, local.revision, signal);
+          const pending = this.pending({ connectionId });
+          if (pending && pending.manifest.batchId !== accepted.manifest.batchId) throw new Error("Pending review changed.");
+          if (!pending) {
+            if (this.session(connectionId).checkpoint !== receipt.checkpoint) throw new Error("Pending review changed.");
+            this.rememberCommit(connectionId, receipt);
+            return;
+          }
+          this.database.prepare("UPDATE companion_sessions SET checkpoint = ?, grantJson = ? WHERE connectionId = ? AND revision = ? AND status = 'ACTIVE'").run(receipt.checkpoint, canonicalJson({ ...grant, checkpoint: receipt.checkpoint }), connectionId, local.revision);
+          this.database.prepare("DELETE FROM companion_outbox WHERE connectionId = ?").run(connectionId);
+          this.rememberCommit(connectionId, receipt);
+        });
+        return receipt;
+      } catch (error) {
+        this.noteOutboxFailure({ connectionId, manifest: delivery.manifest, revision: local.revision, signal });
+        throw error;
+      }
     } catch {
       throw new Error("Collector sync stopped. Check approved access and receiver availability.");
     }
