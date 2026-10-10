@@ -101,6 +101,7 @@ export const claimHandle = mutation({
     const handle = claimableHandleSchema.parse(args.handle);
     await consumeWriteLimit(ctx, user._id, "claimHandle");
     const displayName = args.displayName.trim(), bio = args.bio.trim();
+    if (!displayName) throw new Error("Enter a display name before saving your public identity.");
     if (displayName.length > DISPLAY_NAME_MAX) throw new Error("Use a display name of 80 characters or fewer.");
     if (bio.length > BIO_MAX) throw new Error("Use a bio of 500 characters or fewer.");
     if (await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).first()) {
