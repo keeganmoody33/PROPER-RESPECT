@@ -12,3 +12,4 @@ playwright-report
 .vercel
 *.log
 *.tsbuildinfo
+.local-bin/

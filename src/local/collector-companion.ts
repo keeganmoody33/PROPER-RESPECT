@@ -122,21 +122,32 @@ export class CollectorCompanion {
     });
   }
 
-  private noteOutboxFailure(connectionId: string): void {
+  private noteOutboxFailure({ connectionId, manifest, revision, signal }: {
+    connectionId: string; manifest: ReviewManifest; revision: number; signal: AbortSignal;
+  }): void {
     try {
       if (this.closed) return;
-      this.transaction(() => {
+      const failures = this.transaction(() => {
+        this.checkSession(connectionId, revision, signal);
         const row = this.database.prepare("SELECT manifestJson, chunksJson, failures FROM companion_outbox WHERE connectionId = ?").get(connectionId);
         if (!row || typeof row !== "object" || !("failures" in row)) return;
         const stored = outboxSchema.parse(row);
+        if (manifestSchema.parse(parse(stored.manifestJson)).batchId !== manifest.batchId) return;
         const failures = Number(row.failures) + 1;
-        if (!Number.isInteger(failures) || failures < 1) return;
-        if (failures < COLLECTOR_OUTBOX_QUARANTINE_AFTER) {
-          this.database.prepare("UPDATE companion_outbox SET failures = ? WHERE connectionId = ?").run(failures, connectionId);
-          return;
-        }
+        if (!Number.isSafeInteger(failures) || failures < 1) return;
+        this.database.prepare("UPDATE companion_outbox SET failures = ? WHERE connectionId = ?").run(failures, connectionId);
+        return failures;
+      });
+      if (failures === undefined || failures < COLLECTOR_OUTBOX_QUARANTINE_AFTER) return;
+      // Keep the outbox identity: a timed-out receiver operation may still commit.
+      // The durable failure count pauses further sends even if this archive fails.
+      this.transaction(() => {
+        this.checkSession(connectionId, revision, signal);
+        const row = this.database.prepare("SELECT manifestJson, chunksJson FROM companion_outbox WHERE connectionId = ?").get(connectionId);
+        if (!row) return;
+        const stored = outboxSchema.parse(row);
+        if (manifestSchema.parse(parse(stored.manifestJson)).batchId !== manifest.batchId) return;
         this.database.prepare("INSERT INTO companion_outbox_quarantine(connectionId, quarantinedAt, failures, manifestJson, chunksJson) VALUES (?, ?, ?, ?, ?)").run(connectionId, this.now(), failures, stored.manifestJson, stored.chunksJson);
-        this.database.prepare("DELETE FROM companion_outbox WHERE connectionId = ?").run(connectionId);
       });
     } catch { /* Keep the original send failure; quarantine is best-effort. */ }
   }
@@ -194,7 +205,9 @@ export class CollectorCompanion {
       this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
       let delivery = this.pending({ connectionId });
       let committed: CommitReceipt | null = null;
-      if (delivery && delivery.manifest.expectedCheckpoint !== grant.checkpoint) {
+      const failed = delivery ? this.database.prepare("SELECT failures FROM companion_outbox WHERE connectionId = ?").get(connectionId) : null;
+      const paused = failed !== null && z.object({ failures: z.number().int().nonnegative() }).parse(failed).failures >= COLLECTOR_OUTBOX_QUARANTINE_AFTER;
+      if (delivery && (paused || delivery.manifest.expectedCheckpoint !== grant.checkpoint)) {
         const pending = delivery;
         const status = deliveryStatusSchema.parse(await this.receive(requestSignal => this.transport.deliveryStatus({ ...authentication, manifest: pending.manifest, signal: requestSignal }), signal));
         this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
@@ -210,7 +223,12 @@ export class CollectorCompanion {
               this.database.prepare("DELETE FROM companion_outbox WHERE connectionId = ?").run(connectionId);
             });
             delivery = null;
-          } else if (status.checkpoint !== pending.manifest.expectedCheckpoint) throw new Error("Receiver status is inconsistent.");
+          } else {
+            if (status.checkpoint !== pending.manifest.expectedCheckpoint) throw new Error("Receiver status is inconsistent.");
+            // READY is a point-in-time absence, not cancellation of an earlier
+            // request. A paused batch needs a receipt, stale authority, or pairing.
+            if (paused) throw new Error("Collector delivery paused. Reconcile its status or pair with fresh access.");
+          }
           grant = grantSchema.parse(await this.receive(requestSignal => this.transport.getGrant({ ...authentication, signal: requestSignal }), signal));
           this.checkSession(connectionId, local.revision, signal); this.checkGrant(grant, original);
           if (status.kind === "READY" && grant.checkpoint !== status.checkpoint) throw new Error("Receiver authority advanced during retry.");
@@ -274,7 +292,7 @@ export class CollectorCompanion {
         });
         return receipt;
       } catch (error) {
-        this.noteOutboxFailure(connectionId);
+        this.noteOutboxFailure({ connectionId, manifest: delivery.manifest, revision: local.revision, signal });
         throw error;
       }
     } catch {

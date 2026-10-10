@@ -1,5 +1,11 @@
 # Durable private collector connections
 
+This document describes PR #157's complete-report fixture. The October 7
+[reconciliation](../../work/pstack/2026-10-07-codex-receiver-reconciliation.md)
+adds the authenticated Convex receiver for bounded Codex rows, sharing numeric
+validation while retaining partial directory pages. Live configuration and real
+Mac acceptance remain gated.
+
 User direction, October 6, 2026: reuse the supplied Codex collector, implement
 macOS acquisition and pairing/sync against fixtures, and keep live acceptance
 paused until the development deployment and matching Clerk instance are verified.

@@ -2,6 +2,22 @@ name: Codex macOS acquisition
 on:
   pull_request:
     paths:
+      - native/codex-reader.c
+      - native/companion-lock.c
+      - scripts/build-codex-reader.mjs
+      - scripts/codex-companion.mjs
+      - scripts/codex-mac-check.mjs
+      - src/local/codex-companion*
+      - src/local/codex-native-reader*
+      - src/local/codex-native-races*
+      - src/local/codex-sync-loop*
+      - src/local/companion-lock*
+      - src/domain/usage-sync.ts
+      - src/domain/device-proof.ts
+      - convex/usageConnectionTables.ts
+      - convex/usageConnections*
+      - tests/support/codex-companion-cli.test.ts
+      - tests/support/codex-convex-backfill.test.ts
       - native/codex-rollout-reader.c
       - scripts/build-codex-rollout-reader.mjs
       - src/local/codex-rollout-native.ts
@@ -75,6 +91,10 @@ jobs:
           PY
       - name: Run native acquisition and durable sync against synthetic sources
         run: npx vitest run src/local/codex-rollout-native.test.ts src/local/codex-rollout-history.test.ts tests/support/codex-history-cli.test.ts src/domain/collector-contract.test.ts src/local/collector-private-store.test.ts src/local/collector-companion.test.ts src/local/collector-service.test.ts src/local/collector-fixture-http.test.ts src/local/cursor-report-adapter.test.ts tests/support/collector-fixture-cli.test.ts --maxWorkers=2 --reporter=default --reporter=github-actions --reporter=junit --outputFile.junit=test-results/codex-macos/junit.xml
+      - name: Build the paged reader and OS lock
+        run: npm run codex:reader:build
+      - name: Run authenticated receiver and live companion synthetic checks
+        run: npx vitest run convex/usageConnections.test.ts src/local/codex-native-reader.test.ts src/local/codex-native-races.test.ts src/local/companion-lock.test.ts src/local/codex-companion.test.ts src/local/codex-sync-loop.test.ts tests/support/codex-companion-cli.test.ts tests/support/codex-convex-backfill.test.ts --maxWorkers=2 --reporter=default --reporter=github-actions --reporter=junit --outputFile.junit=test-results/codex-macos/receiver-junit.xml
       - name: Retain macOS acquisition evidence
         if: always()
         uses: actions/upload-artifact@v4

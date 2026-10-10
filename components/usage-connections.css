@@ -1,0 +1,17 @@
+.connection-panel { max-width: 900px; margin: 32px auto; color: #242823; line-height: 1.6; text-align: left; }
+.connection-panel h1 { font-size: clamp(28px, 5vw, 46px); line-height: 1.15; letter-spacing: -.035em; }
+.connection-panel form { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 28px; border: 1px solid #c7c9bc; border-radius: 12px; background: #f5f5ed; }
+.connection-panel label { display: flex; flex-direction: column; gap: 7px; font-size: 14px; font-weight: 600; }
+.connection-panel input, .connection-panel select { max-width: 100%; min-width: 0; padding: 10px; border: 1px solid #858a7b; border-radius: 4px; background: #fff; color: #242823; font: inherit; }
+.connection-panel label:has(input[type="checkbox"]), .connection-panel form p { grid-column: 1 / -1; }
+.connection-panel label:has(input[type="checkbox"]) { flex-direction: row; align-items: flex-start; }
+.connection-panel input[type="checkbox"] { margin-top: 5px; }
+.connection-panel button { border: 1px solid #333e31; background: #333e31; color: white; padding: 10px 16px; border-radius: 5px; font: inherit; cursor: pointer; margin: 4px 4px 4px 0; }
+.connection-panel button:disabled { opacity: .6; cursor: default; }
+.connection-panel button:focus-visible, .connection-panel input:focus-visible, .connection-panel select:focus-visible { outline: 3px solid #436fe3; outline-offset: 3px; }
+.connection-panel article { padding: 20px 0; border-top: 1px solid #c7c9bc; }
+.connection-panel .pair-code { display: block; overflow-wrap: anywhere; padding: 16px; background: #ecefe7; }
+.connection-panel table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.connection-panel th, .connection-panel td { padding: 8px; text-align: left; border-bottom: 1px solid #c7c9bc; overflow-wrap: anywhere; }
+.connection-panel caption { text-align: left; font-weight: 600; margin-bottom: 12px; }
+@media (max-width: 600px) { .connection-panel form { grid-template-columns: 1fr; padding: 16px; gap: 16px; } .connection-panel th, .connection-panel td { padding: 5px; font-size: 12px; } }

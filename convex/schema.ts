@@ -5,6 +5,7 @@ import { mailboxTables } from "./mailboxTables";
 import { productBrandTables } from "./productBrandTables";
 import { githubRefreshBindingValidator } from "./githubRefreshIdentity";
 import { inventoryTables } from "./inventoryTables";
+import { usageConnectionTables } from "./usageConnectionTables";
 import {
   captureProvenanceValidator,
   evidenceSourceTypeValidator,
@@ -22,6 +23,7 @@ import {
 } from "./validators";
 
 export default defineSchema({
+  ...usageConnectionTables,
   ...productKnowledgeTables,
   ...mailboxTables,
   ...productBrandTables,

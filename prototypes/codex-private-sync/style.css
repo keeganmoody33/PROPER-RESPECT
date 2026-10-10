@@ -1,0 +1,7 @@
+body { margin: 0; font-family: Arial, sans-serif; background: #fcfcf7; color: #242823; }
+main { max-width: 960px; margin: auto; padding: 24px; }
+.fixture-banner { padding: 16px; background: #f3e7b9; border: 1px solid #938347; }
+details { background: #ecefe7; padding: 16px; border-radius: 6px; }
+details code { overflow-wrap: anywhere; display: block; font-size: 12px; }
+details button, details input { margin: 8px 8px 0 0; padding: 8px; }
+@media (max-width: 600px) { main { padding: 12px; } }
