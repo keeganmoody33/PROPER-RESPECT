@@ -8,6 +8,7 @@ import {
 } from "../domain/collector-contract.ts";
 import { historyWindowSchema } from "../domain/connection-history.ts";
 import { openCollectorPrivateStore } from "./collector-private-store.ts";
+import { RECEIVER_SCHEMA_VERSION, readStoreSchemaVersion, setStoreSchemaVersion } from "./collector-store-schema.ts";
 
 /** Fixture caller authentication is supplied by its boundary, never the helper. */
 export const collectorOwnerSchema = z.strictObject({
@@ -41,6 +42,12 @@ export class CollectorService {
   constructor(input: { databasePath: string; now?: () => number }) {
     this.now = input.now ?? Date.now;
     this.database = openCollectorPrivateStore({ databasePath: input.databasePath });
+    try { this.seed = this.installSchema(); }
+    catch (error) { this.database.close(); throw error; }
+  }
+
+  private installSchema(): string {
+    const version = readStoreSchemaVersion(this.database, RECEIVER_SCHEMA_VERSION);
     this.database.exec(`
       CREATE TABLE IF NOT EXISTS service_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS pairings (
@@ -77,7 +84,9 @@ export class CollectorService {
         PRIMARY KEY(connection_id, review_digest)
       );
     `);
-    this.seed = this.transaction(() => {
+    if (version !== 0 && version !== RECEIVER_SCHEMA_VERSION) throw new Error("Collector receiver schema cannot be migrated.");
+    if (version === 0) setStoreSchemaVersion(this.database, RECEIVER_SCHEMA_VERSION);
+    return this.transaction(() => {
       const saved = this.database.prepare("SELECT value FROM service_meta WHERE key='credential-seed'").get();
       if (saved) return column(saved, "value");
       const seed = randomBytes(32).toString("hex");
