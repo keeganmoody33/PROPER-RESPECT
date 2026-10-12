@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { canonicalJson } from "../../domain/canonical-json.ts";
 import { type ExactJson } from "../../domain/exact-json.ts";
-import { bool, checkBytes, count, csvRecords, decimal, epoch, instant, invalid, json, object, quantity, text } from "./decode.ts";
+import { bool, checkBytes, count, csvDecimal, csvRecords, epoch, instant, invalid, json, object, quantity, text } from "./decode.ts";
 import {
   CURSOR_REPORT_LIMITS, type CursorBillingWindow, type CursorContext, type CursorCoverage,
   type CursorEvent, type CursorFilters, type CursorReport, type CursorTokens, type CursorWindow,
@@ -187,7 +187,7 @@ const csvHeaders = [
   ["Date", "Kind", "Model", "Max Mode", ...tokenHeaders, "Cost"],
   ["Date", "Cloud Agent ID", "Automation ID", "Kind", "Model", "Max Mode", ...tokenHeaders, "Cost"],
 ];
-function cellQuantity(cell: string): string | null { return cell.trim() === "" ? null : decimal(cell.trim()); }
+function cellQuantity(cell: string): string | null { return cell.trim() === "" ? null : csvDecimal(cell.trim()); }
 function cellTokens(cell: string): string | null {
   const value = cellQuantity(cell);
   if (value?.includes(".")) throw invalid();
@@ -197,7 +197,7 @@ function cost(cell: string): { value: string | null; label: string | null } {
   const value = cell.trim();
   if (!value) return { value: null, label: null };
   if (["Included", "Free", "-"].includes(value)) return { value: null, label: value };
-  return { value: decimal(value.startsWith("$") ? value.slice(1) : value), label: null };
+  return { value: csvDecimal(value.startsWith("$") ? value.slice(1) : value), label: null };
 }
 
 /** Observed dashboard exports, with explicit account/window provenance from the caller. */

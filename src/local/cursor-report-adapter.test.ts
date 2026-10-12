@@ -115,7 +115,7 @@ describe("complete supplied Cursor reports", () => {
     },
   );
 
-  it.each(["-0.1", ".1", "01.2", "1e-3", "Infinity", "1.", "0.1234567890123456789"])(
+  it.each(["-0.1", ".1", "01.2", "1e-3", "1e3", "Infinity", "1.", "0.1234567890123456789"])(
     "rejects unsupported source cost %s", cost => {
       expect(() => parseCursorCompleteReportCsv(supplied(
         `timestamp,usage_cost_usd\n2026-10-01T01:00:00Z,${cost}\n`,

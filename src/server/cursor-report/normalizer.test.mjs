@@ -446,6 +446,15 @@ test("CSV rejects malformed tokens, money and Max Mode rather than substituting 
   ]) assert.throws(() => reportCsv(text));
 });
 
+test("CSV numeric fields reject scientific notation instead of expanding it", () => {
+  assert.throws(() => reportCsv(csv[0].replace("41,3", "1e3,3")));
+  assert.throws(() => reportCsv(csv[0].replace("41,3", "1E3,3")));
+  assert.throws(() => reportCsv(csv[0].replace("$0.01234567890123456789", "$1e3")));
+  assert.throws(() => reportCsv(csv[0].replace("$0.01234567890123456789", "1e-2")));
+  const exact = reportCsv(csv[0].replace("41,3", "1000,3"));
+  assert.equal(exact.events[0].tokens.inputWithCacheWrite, "1000");
+});
+
 test("scope, aliases, capture times and windows must be explicit and supported", () => {
   assert.throws(() => reportEvents(eventPages, personal));
   assert.throws(() => reportSpend(spendPages, personal));

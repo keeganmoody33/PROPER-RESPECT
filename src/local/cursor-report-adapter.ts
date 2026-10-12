@@ -3,6 +3,7 @@ import {
   cursorCompleteReportSchema,
   type CursorCompleteReport,
 } from "../domain/collector-contract.ts";
+import { csvRecords as parseCsvRecords } from "../server/cursor-report/decode.ts";
 
 export const CURSOR_REPORT_LIMITS = Object.freeze({
   bytes: 256_000,
@@ -27,57 +28,16 @@ const invalid = () => new Error("Invalid complete Cursor CSV report.");
 
 /** Bounded RFC 4180 fields. Labels are decoded transiently, never sent downstream. */
 function csvRecords(input: string): string[][] {
-  if (input.length > CURSOR_REPORT_LIMITS.bytes ||
-      new TextEncoder().encode(input).length > CURSOR_REPORT_LIMITS.bytes ||
-      /\u0000|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(input)) throw invalid();
-  const text = input.startsWith("\uFEFF") ? input.slice(1) : input;
-  if (text.length === 0) throw invalid();
-  const records: string[][] = [];
-  let record: string[] = [], field = "";
-  let mode: "unquoted" | "quoted" | "closed" = "unquoted";
-  const append = (value: string) => {
-    field += value;
-    if (field.length > CURSOR_REPORT_LIMITS.fieldCharacters) throw invalid();
-  };
-  const finishField = () => {
-    record.push(field);
-    if (record.length > allowedColumns.size) throw invalid();
-    field = "";
-    mode = "unquoted";
-  };
-  const finishRecord = () => {
-    finishField();
-    records.push(record);
-    if (records.length > CURSOR_REPORT_LIMITS.sourceRows + 1) throw invalid();
-    record = [];
-  };
-  for (let offset = 0; offset < text.length; offset++) {
-    const character = text[offset];
-    if (mode === "quoted") {
-      if (character === '"') {
-        if (text[offset + 1] === '"') { append('"'); offset++; }
-        else mode = "closed";
-      } else append(character);
-      continue;
-    }
-    if (character === ",") { finishField(); continue; }
-    if (character === "\n" || character === "\r") {
-      if (character === "\r") {
-        if (text[offset + 1] !== "\n") throw invalid();
-        offset++;
-      }
-      finishRecord();
-      continue;
-    }
-    if (mode === "closed") throw invalid();
-    if (character === '"') {
-      if (field.length > 0) throw invalid();
-      mode = "quoted";
-    } else append(character);
+  try {
+    return parseCsvRecords(input, {
+      bytes: CURSOR_REPORT_LIMITS.bytes,
+      maxFields: allowedColumns.size,
+      maxFieldCharacters: CURSOR_REPORT_LIMITS.fieldCharacters,
+      maxRecords: CURSOR_REPORT_LIMITS.sourceRows + 1,
+    });
+  } catch {
+    throw invalid();
   }
-  if (mode === "quoted") throw invalid();
-  if (field.length > 0 || record.length > 0 || mode === "closed") finishRecord();
-  return records;
 }
 
 function exactQuantity(value: string | undefined): string | null {

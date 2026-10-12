@@ -185,19 +185,22 @@ Focused command, using the already installed Node 24 runtime:
 node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test src/server/cursor-report/*.test.mjs
 ```
 
-On this isolated branch the shared collector contract is absent, so the same
-glob is **57 tests passed, 0 failed, 0 skipped**. That includes ten projection
-unit tests in `collector-bridge.test.mjs`; the actual shared-contract group is
-present and explicitly skips. With `CURSOR_COLLECTOR_CONTRACT_ROOT` set to the
-pinned PR #157 checkout at `a6c670b6fc71b418d608c75d612c06112195a701`, the
-command is **63 tests passed, 0 failed, 0 skipped**, including 16 bridge tests.
-Tests cover exact counts/costs, missing fields, report scope, inclusive
-boundaries, duplicate preservation, pagination and search ambiguity, all three
-observed CSV layouts, malformed inputs, byte/row/page/window limits,
-replacement/replay/freshness conflicts, and collector projection. The
-[integration handoff](cursor-collector-integration.md) and [integration
-receipt](../verification/2026-10-07-cursor-collector-integration.md) record the
-same counts.
+After #157 and #158 merged to main (`563e5fd0fc47fbc5163f5145a5ebec81d1003d85`),
+the shared collector contract lives in-tree at `src/domain/collector-contract.ts`.
+The Cursor Node glob runs the shared-contract group; it must not skip. This
+follow-up glob is **69 passed, 0 failed, 0 skipped**, including 19
+`collector-bridge` tests. CI asserts the declared `collector-bridge.test.mjs`
+pass count and `skip=0` for that file and for the glob. Pre-merge
+isolated-branch counts (57 standalone / 63 with a pinned `a6c670b` contract
+checkout) are historical only. Tests cover exact
+counts/costs, missing fields, report scope, inclusive boundaries, duplicate
+preservation, pagination and search ambiguity, all three observed CSV layouts,
+malformed inputs, byte/row/page/window limits, replacement/replay/freshness
+conflicts, collector projection, CSV scientific-notation rejection, and
+source-appropriate omitted fields. The [integration
+handoff](cursor-collector-integration.md) records the in-tree contract. The
+[integration receipt](../verification/2026-10-07-cursor-collector-integration.md)
+is the pre-merge validation record.
 
 The initial pass deferred dependency installation after interpreting the
 installation restriction broadly. The parent then clarified that pinned cloud
