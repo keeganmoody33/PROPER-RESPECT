@@ -152,6 +152,26 @@ test.each(["javascript:alert(1)", "data:text/html,x", "https://user:pass@example
   expect(legacy?.cards.map(card => card.primaryLink.url)).toEqual([linked.primaryLink?.url]);
 });
 
+test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "https://user:pass@example.com/"])("a stored %s artifact link never leaves the public reader", async url => {
+  const t = convexTest(schema, modules);
+  const [linked] = e2eReferenceProfile.cards;
+  const good = { title: "Good artifact", url: "https://example.com/good" };
+  const profile: PublicProfile = {
+    handle: "owner", displayName: "Owner", bio: "",
+    cards: [{ ...linked, activity: {
+      kind: "artifactCollection", attributionScope: "PERSONAL", capturedAt: "2026-09-18T00:00:00.000Z", freshness: "FRESH",
+      provenanceLabel: "Synthetic artifacts", total: 2, artifacts: [{ title: "Bad artifact", url }, good],
+    } }],
+  };
+  const id = await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
+  const before = await t.run(ctx => ctx.db.get(id));
+  const current = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  const legacy = await t.query(api.publicProfiles.getByHandle, { handle: "owner" });
+  expect(JSON.stringify([current, legacy])).not.toContain(url);
+  for (const read of [current, legacy]) expect(read?.cards[0].activity).toMatchObject({ kind: "artifactCollection", total: 2, artifacts: [good] });
+  expect(await t.run(ctx => ctx.db.get(id))).toEqual(before);
+});
+
 test("stored profile links that aren't plain http(s) never leave the public reader", async () => {
   const t = convexTest(schema, modules);
   const profile: PublicProfile = {

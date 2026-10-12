@@ -301,11 +301,13 @@ function ActivityView({ activity }: { activity: ActivityModule }) {
         </div>
         {activity.artifacts.length > 0 ? (
           <ul className="artifact-list">
-            {activity.artifacts.map((artifact) => (
-              <li key={artifact.url}>
-                <a href={artifact.url} target="_blank" rel="noreferrer">
-                  {artifact.title} ↗
-                </a>
+            {activity.artifacts.map((artifact, index) => (
+              <li key={`${index}:${artifact.url}`}>
+                {isHttpUrl(artifact.url) ? (
+                  <a href={artifact.url} target="_blank" rel="noreferrer">
+                    {artifact.title} ↗
+                  </a>
+                ) : artifact.title}
               </li>
             ))}
           </ul>

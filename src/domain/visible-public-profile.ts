@@ -86,11 +86,14 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
       points: activity.points.map(point => ({ date: point.date, value: point.value })),
       ...(activity.points.length === 0 ? { emptyNote: "No observations supplied" } : {}),
     };
-    case "artifactCollection": return {
-      ...meta, kind: activity.kind, total: metric({ label: "artifacts", value: activity.total }),
-      artifacts: activity.artifacts.map(artifact => ({ title: artifact.title, url: artifact.url })),
-      ...(activity.artifacts.length === 0 ? { emptyNote: "No artifacts selected" } : {}),
-    };
+    case "artifactCollection": {
+      const artifacts = activity.artifacts.filter(artifact => isHttpUrl(artifact.url));
+      return {
+        ...meta, kind: activity.kind, total: metric({ label: "artifacts", value: activity.total }),
+        artifacts: artifacts.map(artifact => ({ title: artifact.title, url: artifact.url })),
+        ...(artifacts.length === 0 ? { emptyNote: "No artifacts selected" } : {}),
+      };
+    }
     case "reviewActivity": return {
       ...meta, kind: activity.kind, reviews: metric({ label: "reviews", value: activity.reviews }),
       bugsCaught: metric({ label: "bugs caught", value: activity.bugsCaught }),

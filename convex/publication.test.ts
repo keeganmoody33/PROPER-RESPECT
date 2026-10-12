@@ -552,6 +552,38 @@ test("an unchanged public card with a non-web link blocks sharing until it is up
   expect((await published()).profile.cards.map(card => card.primaryLink?.url)).toEqual(["https://shared.example", "https://shared.example"]);
 });
 
+const artifacts = (url: string) => ({
+  kind: "artifactCollection" as const, attributionScope: "PERSONAL" as const, capturedAt, freshness: "FRESH" as const,
+  provenanceLabel: "Synthetic artifacts", total: 2,
+  artifacts: [{ title: "Bad artifact", url }, { title: "Good artifact", url: "https://shared.example/good" }],
+});
+
+test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "https://user:pass@example.com/"])("a saved %s artifact link is left off a newly shared card", async url => {
+  const { t, owner, propIds: [a], selection, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(a, { activity: artifacts(url) }));
+  const args = { selections: [await selection(a, { activity: artifacts(url) })] };
+  const preview = await owner.query(api.onboarding.previewPublication, args);
+  expect(JSON.stringify(preview)).not.toContain(url);
+  expect(preview.profile.cards[0].activity).toMatchObject({ total: 2, artifacts: [{ title: "Good artifact", url: "https://shared.example/good" }] });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, args));
+  expect(JSON.stringify((await published()).profile)).not.toContain(url);
+});
+
+test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "https://user:pass@example.com/"])("an unchanged shared card's %s artifact link is left off the next publish", async url => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture(2);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  // A card published before artifact links were checked.
+  await t.run(async ctx => {
+    const row = (await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "owner")).unique())!;
+    const cards = row.profile.cards.map((card, index) => index !== 0 ? card : { ...card, activity: artifacts(url) });
+    await ctx.db.patch(row._id, { profile: { ...row.profile, cards } });
+  });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(b)] }));
+  const after = (await published()).profile;
+  expect(JSON.stringify(after)).not.toContain(url);
+  expect(after.cards[0].activity).toMatchObject({ total: 2, artifacts: [{ title: "Good artifact", url: "https://shared.example/good" }] });
+});
+
 test("stored profile links that aren't plain http(s) are left off the shared profile", async () => {
   const { t, owner, userId, published } = await fixture(1);
   await t.run(ctx => ctx.db.patch(userId, {

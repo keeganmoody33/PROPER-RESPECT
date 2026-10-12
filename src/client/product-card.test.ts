@@ -666,3 +666,15 @@ test.each(["javascript:alert(1)", "data:text/html,x", "https://user:pass@example
   expect($("a").filter((_, element) => $(element).text().includes("Visit Example Product"))).toHaveLength(0);
   expect($.root().text()).toContain("Visit Example Product");
 });
+
+test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "https://user:pass@example.com/"])("a %s artifact renders its title as plain text, never as a link", url => {
+  const $ = renderCard({ activity: {
+    kind: "artifactCollection", attributionScope: "PERSONAL", capturedAt: "2026-09-21T00:00:00.000Z", freshness: "FRESH",
+    provenanceLabel: "Synthetic artifacts", total: 2,
+    artifacts: [{ title: "Bad artifact", url }, { title: "Good artifact", url: "https://example.com/good" }],
+  } });
+  expect($("a").filter((_, element) => $(element).attr("href") === url)).toHaveLength(0);
+  expect($("a").filter((_, element) => $(element).text().includes("Bad artifact"))).toHaveLength(0);
+  expect($(".artifact-list").text()).toContain("Bad artifact");
+  expect($(".artifact-list a").filter((_, element) => $(element).attr("href") === "https://example.com/good")).toHaveLength(1);
+});

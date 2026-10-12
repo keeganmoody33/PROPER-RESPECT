@@ -2,7 +2,7 @@ import { internalMutation, query, type MutationCtx, type QueryCtx } from "./_gen
 import { v } from "convex/values";
 import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
-import { projectPublicProfileV1 } from "../src/domain/public-profile";
+import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
 import { isHttpUrl } from "../src/domain/profile-links";
 import { PUBLISHED_URL_MAX } from "../src/domain/published-text-limits";
 
@@ -35,9 +35,11 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
       return [slug, product ? { domain: product.domain, brand: await retainedProductBrand(ctx, product) } : null] as const;
     }),
   ));
-  // Links from before the http(s) rule are dropped on read; storage is unchanged.
+  // Links and artifact links from before the http(s) rule are dropped on read; storage is unchanged.
   const cards = published.profile.cards.map(stored => {
-    const card = stored.primaryLink && !isHttpUrl(stored.primaryLink.url) ? { ...stored, primaryLink: undefined } : stored;
+    const linked = stored.primaryLink && !isHttpUrl(stored.primaryLink.url) ? { ...stored, primaryLink: undefined } : stored;
+    const activity = withHttpArtifacts(linked.activity);
+    const card = activity === linked.activity ? linked : { ...linked, activity };
     if (card.product.brand?.provider === "context.dev" && productBrandEligibility(card.product) === "PRODUCT_IDENTITY_REQUIRED") {
       const product = { ...card.product };
       delete product.brand;

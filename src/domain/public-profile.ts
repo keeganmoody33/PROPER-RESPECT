@@ -1,5 +1,5 @@
 import { publicMeasurementSchema, type PublicMeasurement } from "./measurements";
-import { profileLinksSchema, profileLinkUrlSchema } from "./profile-links";
+import { isHttpUrl, profileLinksSchema, profileLinkUrlSchema } from "./profile-links";
 import { z } from "zod";
 import { costSchema, type Cost, type CostVisibility } from "./cost";
 import { usageLinkSchema, type UsageLink } from "./usage-links";
@@ -132,6 +132,16 @@ export const activityModuleSchema = z.discriminatedUnion("kind", [
 
 export type ActivityModule = z.infer<typeof activityModuleSchema>;
 
+/**
+ * Artifact links come from evidence the owner can't edit, so ones that aren't
+ * plain http(s) are dropped rather than refusing the publish (#107). The
+ * schema stays tolerant so stored profiles still read.
+ */
+export function withHttpArtifacts<T extends ActivityModule | undefined>(activity: T): T {
+  if (activity?.kind !== "artifactCollection" || activity.artifacts.every(artifact => isHttpUrl(artifact.url))) return activity;
+  return { ...activity, artifacts: activity.artifacts.filter(artifact => isHttpUrl(artifact.url)) } as T;
+}
+
 export const publicProfileSchema = z.object({
   handle: handleSchema,
   displayName: z.string().min(1),
@@ -224,7 +234,7 @@ export function projectPublicProfile(input: {
         headline: prop.headline,
         note: prop.note,
         startedAt: prop.startedAt,
-        activity: prop.activity,
+        activity: withHttpArtifacts(prop.activity),
         measurements: prop.measurements,
         cost: prop.costVisibility === "PUBLIC" ? prop.cost : undefined,
         primaryLink: primaryLink ? {
