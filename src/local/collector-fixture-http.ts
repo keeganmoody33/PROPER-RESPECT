@@ -13,6 +13,15 @@ const commitSchema = authSchema.extend({ manifest: manifestSchema });
 const MAX_HTTP_BYTES = COLLECTOR_LIMITS.chunkBytes + 1024;
 const fixedError = "Local fixture request rejected.";
 const authorized = (actual: string | undefined, expected: string) => actual !== undefined && Buffer.byteLength(actual) === Buffer.byteLength(expected) && timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+const ipv6Unavailable = (error: unknown) => error instanceof Error && "code" in error && (error.code === "EADDRNOTAVAIL" || error.code === "EAFNOSUPPORT" || error.code === "EADDRINUSE");
+
+function listen(server: ReturnType<typeof createServer>, options: { port: number; host: string; ipv6Only?: boolean }) {
+  return new Promise<void>((resolve, reject) => {
+    const fail = (error: Error) => { server.off("error", fail); reject(error); };
+    server.once("error", fail);
+    server.listen(options, () => { server.off("error", fail); resolve(); });
+  });
+}
 
 async function readJson(request: IncomingMessage): Promise<unknown> {
   if (request.headers["content-type"] !== "application/json" || request.headers["content-encoding"] !== undefined) throw new Error(fixedError);
@@ -42,10 +51,17 @@ export async function startCollectorFixtureHttp(input: {
   state?: () => Promise<unknown>;
 }) {
   if (!/^[a-f0-9]{64}$/.test(input.ownerToken)) throw new Error(fixedError);
-  let origin = "";
-  const server = createServer(async (request, response) => {
+  let ipv4Origin = "";
+  let ipv6Origin: string | undefined;
+  const originForHost = (host: string | undefined) => {
+    if (ipv4Origin && host === new URL(ipv4Origin).host) return ipv4Origin;
+    if (ipv6Origin && host === new URL(ipv6Origin).host) return ipv6Origin;
+    return null;
+  };
+  const handler = async (request: IncomingMessage, response: ServerResponse) => {
     try {
-      if (request.headers.host !== new URL(origin).host || request.headers.origin !== undefined && request.headers.origin !== origin || request.headers["sec-fetch-site"] === "cross-site") throw new Error(fixedError);
+      const origin = originForHost(request.headers.host);
+      if (!origin || request.headers.origin !== undefined && request.headers.origin !== origin || request.headers["sec-fetch-site"] === "cross-site") throw new Error(fixedError);
       const url = new URL(request.url ?? "/", origin);
       if (url.search || url.hash) throw new Error(fixedError);
       const path = url.pathname;
@@ -77,19 +93,50 @@ export async function startCollectorFixtureHttp(input: {
         default: throw new Error(fixedError);
       }
     } catch { if (!response.headersSent) sendJson(response, 400, { error: fixedError }); else response.destroy(); }
+  };
+  const ipv4 = createServer(handler);
+  const ipv6 = createServer(handler);
+  ipv4.requestTimeout = 10_000; ipv4.headersTimeout = 10_000; ipv4.keepAliveTimeout = 1000;
+  ipv6.requestTimeout = 10_000; ipv6.headersTimeout = 10_000; ipv6.keepAliveTimeout = 1000;
+  const closeServer = (server: ReturnType<typeof createServer>) => new Promise<void>((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+    server.closeIdleConnections();
   });
-  server.requestTimeout = 10_000; server.headersTimeout = 10_000; server.keepAliveTimeout = 1000;
-  await new Promise<void>((resolve, reject) => { server.once("error", reject); server.listen(input.port ?? 0, "127.0.0.1", resolve); });
-  const address = server.address();
-  if (!address || typeof address === "string") { server.close(); throw new Error(fixedError); }
-  origin = `http://127.0.0.1:${address.port}`;
-  return { origin, close: () => new Promise<void>((resolve, reject) => { server.close(error => error ? reject(error) : resolve()); server.closeIdleConnections(); }) };
+  try {
+    await listen(ipv4, { port: input.port ?? 0, host: "127.0.0.1" });
+    const address = ipv4.address();
+    if (!address || typeof address === "string") throw new Error(fixedError);
+    ipv4Origin = `http://127.0.0.1:${address.port}`;
+    try {
+      await listen(ipv6, { port: address.port, host: "::1", ipv6Only: true });
+      const ipv6Address = ipv6.address();
+      if (!ipv6Address || typeof ipv6Address === "string" || ipv6Address.address !== "::1") throw new Error(fixedError);
+      ipv6Origin = `http://[::1]:${address.port}`;
+    } catch (error) {
+      await closeServer(ipv6).catch(() => undefined);
+      if (!ipv6Unavailable(error)) throw error;
+    }
+  } catch (error) {
+    await closeServer(ipv4).catch(() => undefined);
+    await closeServer(ipv6).catch(() => undefined);
+    throw error instanceof Error && error.message === fixedError ? error : new Error(fixedError);
+  }
+  return {
+    origin: ipv4Origin,
+    ipv6Origin,
+    boundHosts: ipv6Origin ? ["127.0.0.1", "::1"] as const : ["127.0.0.1"] as const,
+    close: async () => {
+      if (ipv6Origin) await closeServer(ipv6);
+      await closeServer(ipv4);
+    },
+  };
 }
 
 /** This transport intentionally refuses remote hosts, HTTPS and redirects. */
 export function createCollectorFixtureTransport(input: { origin: string }): CollectorTransport {
   const url = new URL(input.origin);
-  if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || !url.port || url.username || url.password || url.pathname !== "/" || url.search || url.hash || input.origin !== url.origin) throw new Error("A loopback fixture origin is required.");
+  const loopbackHost = url.hostname === "127.0.0.1" || url.hostname === "::1" || url.hostname === "[::1]";
+  if (url.protocol !== "http:" || !loopbackHost || !url.port || url.username || url.password || url.pathname !== "/" || url.search || url.hash || input.origin !== url.origin) throw new Error("A loopback fixture origin is required.");
   const post = async (path: string, body: unknown, signal?: AbortSignal): Promise<unknown> => {
     const encoded = JSON.stringify(body);
     if (Buffer.byteLength(encoded) > MAX_HTTP_BYTES) throw new Error(fixedError);
