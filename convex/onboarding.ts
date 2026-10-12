@@ -12,7 +12,7 @@ import { mutation, query, internalMutation, internalQuery, type QueryCtx, type M
 import type { Doc, Id } from "./_generated/dataModel";
 import { consumeWriteLimit, requireIdentity, requireUser } from "./authHelpers";
 import { claimableHandleSchema } from "../src/domain/onboarding";
-import { projectPublicProfile, publicProfileSchema } from "../src/domain/public-profile";
+import { projectPublicProfile, publicProfileSchema, withHttpArtifacts } from "../src/domain/public-profile";
 import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evidence-upload";
 import { resolveProduct } from "../src/domain/discovery";
 import { costSchema } from "../src/domain/cost";
@@ -741,6 +741,11 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     return [{ card, propId: null }];
   });
   // Unchanged cards are copied as they are, so one saved before these rules is checked here too.
+  // Artifact links that aren't http(s) are evidence the owner can't edit, so they're left off instead.
+  for (const entry of preserved) {
+    const activity = withHttpArtifacts(entry.card.activity);
+    if (activity !== entry.card.activity) entry.card = { ...entry.card, activity };
+  }
   for (const { card } of preserved) {
     const link = card.primaryLink;
     if (link && !isHttpUrl(link.url)) {

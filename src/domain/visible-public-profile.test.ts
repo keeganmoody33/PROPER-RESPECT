@@ -136,6 +136,16 @@ describe("link schemes", () => {
     expect(result.cards[0].primaryLink).toBeUndefined();
     expect(JSON.stringify(result)).not.toContain(url);
   });
+
+  it.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "https://user:pass@example.com/"])("omits a %s artifact link from the visitor projection", url => {
+    const source = profile({ ...common, kind: "artifactCollection", total: 2, artifacts: [
+      { title: "Bad artifact", url }, { title: "Published article", url: "https://example.com/article" },
+    ] });
+    const result = projectVisiblePublicProfile(source);
+    expect(result.cards[0].activity).toMatchObject({ kind: "artifactCollection", total: { label: "artifacts", displayValue: "2" },
+      artifacts: [{ title: "Published article", url: "https://example.com/article" }] });
+    expect(JSON.stringify(result)).not.toContain(url);
+  });
 });
 
 describe("profile link schemes", () => {
