@@ -8,6 +8,7 @@
 //   node scripts/receipt-check.mjs
 
 import { pathToFileURL } from "node:url";
+import { isHttpsProtocol } from "../src/domain/http-url.mjs";
 
 const MAX_AGE_HOURS = 36;
 // The same rule as handleSchema in src/domain/public-profile.ts.
@@ -58,7 +59,7 @@ export async function checkReceipt({ env, now, query, print }) {
   } catch {
     url = null;
   }
-  if (url === null || url.protocol !== "https:" || !HANDLE_PATTERN.test(handle)) {
+  if (url === null || !isHttpsProtocol(url) || !HANDLE_PATTERN.test(handle)) {
     print(JSON.stringify(failure(context, "BAD_CONFIGURATION")));
     return 1;
   }

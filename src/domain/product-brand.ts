@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { allowsHttpsProtocol } from "./http-url.ts";
 
 /** Presentation context only. No owner, relationship, observation or usage fields. */
 export const CONTEXT_BRAND_ADAPTER_VERSION = "context-brand-v2-2026-09-18";
@@ -11,7 +12,7 @@ export const canonicalBrandDomainSchema = z.string().max(253).regex(/^(?:[a-z0-9
 function isSafeAssetUrl(value: string) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && !url.hash &&
+    return allowsHttpsProtocol(url) && !url.hash &&
       !url.port && canonicalBrandDomainSchema.safeParse(url.hostname).success &&
       !/(?:^|\.)(?:localhost|local|internal)$/.test(url.hostname) &&
       ![...url.searchParams.keys()].some((key) => /key|token|auth|secret|password|credential|signature|session|jwt|bearer|^code$|^sig$|^x-amz-/i.test(key));

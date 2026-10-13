@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { evidenceObservationSchema } from "./evidence-claims";
 import { canonicalJson } from "./canonical-json";
+import { isHttpsUrl } from "./http-url.ts";
 
 export const MAX_PRIVATE_PAYLOAD_BYTES = 64_000;
 export const MAX_PRIVATE_OBSERVATIONS = 24;
@@ -8,10 +9,7 @@ const sourceUrlSchema = z
   .string()
   .max(2048)
   .url()
-  .refine((value) => {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password;
-  }, "Source URL must use HTTPS without credentials.");
+  .refine(isHttpsUrl, "Source URL must use HTTPS without credentials.");
 const privateEvidenceSchema = z
   .strictObject({
     payload: z

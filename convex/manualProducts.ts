@@ -11,6 +11,7 @@ import {
   type DraftProposal,
 } from "../src/domain/discovery";
 import { sha256 } from "../src/domain/product-knowledge";
+import { allowsWebProtocol } from "../src/domain/http-url";
 import { relationshipEditSchema } from "../src/domain/inventory";
 import { statusValidator } from "./validators";
 
@@ -36,7 +37,7 @@ function normalizeWebsite(input: string | undefined): string | undefined {
   const candidate = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
   let url: URL;
   try { url = new URL(candidate); } catch { throw new Error("Use a public HTTP or HTTPS product website, or leave it blank."); }
-  if (!extractDomain(candidate) || !/^https?:$/.test(url.protocol) || url.username || url.password || url.port) {
+  if (!extractDomain(candidate) || !allowsWebProtocol(url) || url.port) {
     throw new Error("Use a public HTTP or HTTPS product website without credentials, or leave it blank.");
   }
   url.hash = "";
