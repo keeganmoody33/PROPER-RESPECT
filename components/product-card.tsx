@@ -16,6 +16,7 @@ import { compactNumber } from "@/src/domain/format-activity-number";
 import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
 import { isHttpUrl } from "@/src/domain/profile-links";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
+import { UsageChart, usageChartLog } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
@@ -268,7 +269,6 @@ function ActivityView({ activity }: { activity: ActivityModule }) {
 
   if (activity.kind === "timeSeries") {
     const latest = activity.points.at(-1);
-    const maximum = Math.max(...activity.points.map((point) => point.value), 1);
     return (
       <div className="activity-module">
         {latest ? <>
@@ -277,15 +277,15 @@ function ActivityView({ activity }: { activity: ActivityModule }) {
             <span>{activity.label}{activity.unit ? ` · ${activity.unit}` : ""}</span>
           </div>
           <p className="activity-caption">Observed {latest.date}</p>
-          <div className="activity-bars" aria-label={`${activity.label} trend`}>
-            {activity.points.map((point) => (
-              <span
-                key={point.date}
-                style={{ height: `${Math.max(0, (point.value / maximum) * 100)}%` }}
-                title={`${point.date}: ${point.value}${activity.unit ? ` ${activity.unit}` : ""}`}
-              />
-            ))}
-          </div>
+          <UsageChart
+            points={activity.points}
+            label={activity.label}
+            unit={activity.unit}
+            log={usageChartLog({
+              source: activity.attributionScope,
+              period: activity.period,
+            })}
+          />
         </> : <p className="activity-empty">No observations supplied</p>}
         <ActivityMeta activity={activity} />
       </div>
