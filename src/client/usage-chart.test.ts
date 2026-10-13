@@ -2,7 +2,7 @@ import { load } from "cheerio";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
-import ProfileLoading from "../../app/[handle]/loading";
+import { ProfileLoading } from "../../components/profile-loading";
 import { ProductCardSkeleton } from "../../components/product-card-skeleton";
 import { coverageDays, UsageChart, usageChartLog } from "../../components/usage-chart";
 
@@ -74,7 +74,7 @@ test("skeleton cards keep the existing status copy for assistive tech", () => {
   expect($.text()).not.toMatch(/score|rank|rating/i);
 });
 
-test("the public profile loading route uses skeleton cards and the shared collection label", () => {
+test("the public profile loading fallback uses skeleton cards and the shared collection label", () => {
   const $ = load(renderToStaticMarkup(createElement(ProfileLoading)));
 
   expect($("[role='status']").attr("aria-busy")).toBe("true");

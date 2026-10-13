@@ -1,6 +1,6 @@
-import { ProductCardSkeleton } from "@/components/product-card-skeleton";
+import { ProductCardSkeleton } from "./product-card-skeleton";
 
-export default function ProfileLoading() {
+export function ProfileLoading() {
   return (
     <main>
       <div className="profile-context"><p>SHARED PRODUCT COLLECTION</p></div>
