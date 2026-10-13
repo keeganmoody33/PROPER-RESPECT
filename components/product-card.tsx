@@ -389,6 +389,8 @@ export function ProductCard({
   expandedActivity = false,
   privateUsage,
   viewerSignedIn = false,
+  profileHandle,
+  onGiveProps,
 }: {
   card: Card;
   index: number;
@@ -399,6 +401,8 @@ export function ProductCard({
   expandedActivity?: boolean;
   privateUsage?: PrivateUsageCard;
   viewerSignedIn?: boolean;
+  profileHandle?: string;
+  onGiveProps?: (handle: string, productSlug: string) => Promise<void>;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -490,7 +494,9 @@ export function ProductCard({
           >
             ↗
           </a>{linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}
-          {viewerSignedIn && linkDisclosure && <button type="button" className="card-props-action">Give props</button>}</div>}
+          {viewerSignedIn && linkDisclosure && <button type="button" className="card-props-action" onClick={() => {
+            if (onGiveProps && profileHandle) void onGiveProps(profileHandle, card.product.slug);
+          }}>Give props</button>}</div>}
         </div>
 
         <p className="card-headline">
