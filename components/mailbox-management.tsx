@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { MailboxScanMode } from "@/src/server/mailbox-search";
 import { MailboxConnectionNotice, MailboxDiscoveryRun, discoveryRunOwnsSearch, type DiscoveryRunAction } from "./mailbox-discovery-run";
 
+import { RetainedAggregateChoice } from "./retained-aggregate-choice";
 import { RetainedMailboxRecheck } from "./retained-mailbox-recheck";
 
 type Account = FunctionReturnType<typeof api.mailboxes.listAccounts>[number];
@@ -114,6 +115,7 @@ export function MailboxManagement({ available }: { available: boolean }) {
   const { isAuthenticated } = useConvexAuth();
   const accounts = useQuery(api.mailboxes.listAccounts, isAuthenticated ? {} : "skip");
   const disconnect = useAction(api.mailboxGoogle.disconnectAndRevoke);
+  const setAggregate = useMutation(api.publicProfiles.setRetainedAggregateDisplay);
   const maintenance = useMutation(api.mailboxes.setMaintenance);
   const restart = useMutation(api.mailboxes.restartSearch);
   const startDiscoveryRun = useMutation(api.mailboxes.startDiscoveryRun);
@@ -209,6 +211,15 @@ export function MailboxManagement({ available }: { available: boolean }) {
           <input type="hidden" name="accountId" value={account.accountId}/><input type="hidden" name="expectedGeneration" value={account.generation}/>
           <button className="secondary-action" disabled={busy}>Reconnect this Gmail account</button>
         </form> : <p>{MAILBOX_TESTERS_ONLY}</p>}
+        <RetainedAggregateChoice
+          display={account.retainedAggregateDisplay}
+          distinction={account.accountDistinction}
+          disabled={busy}
+          onSave={choice => void operation(
+            () => setAggregate({ accountId: account.accountId, ...choice }),
+            "Saved this mailbox's retained aggregate. The public page shows the count and the label you recorded.",
+          )}
+        />
         <button className="secondary-action" disabled={busy || account.status === "DISCONNECTED"}
           onClick={() => void disconnectAccount(account)}>Disconnect and stop collection</button>
         <p>Disconnecting removes the saved credentials and stops future reads. Disconnecting also asks Google to revoke this app&apos;s access. If that request fails, you can still revoke it in your Google Account permissions. Existing private evidence and relationship history are retained.</p>

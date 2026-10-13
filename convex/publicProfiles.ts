@@ -199,13 +199,17 @@ export const setRetainedAggregateDisplay = mutation({
   args: {
     accountId: v.id("mailboxAccounts"),
     display: v.union(v.literal("public"), v.literal("private")),
+    distinction: v.optional(v.union(v.literal("personal"), v.literal("former-employer"))),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const account = await ctx.db.get(args.accountId);
     if (!account || account.ownerId !== user._id) throw new Error("Mailbox unavailable.");
-    await ctx.db.patch(args.accountId, { retainedAggregateDisplay: args.display });
+    await ctx.db.patch(args.accountId, {
+      retainedAggregateDisplay: args.display,
+      ...(args.distinction ? { accountDistinction: args.distinction } : {}),
+    });
     return null;
   },
 });
