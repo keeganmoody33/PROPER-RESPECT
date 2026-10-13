@@ -9,6 +9,7 @@ import { inventoryViews, inInventoryView, isRelationshipConfirmed, type Inventor
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
+import { ProductCardSkeleton } from "./product-card-skeleton";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { ProductBrandControls } from "./product-brand-controls";
 import { DiscoveryReview } from "./discovery-review";
@@ -233,7 +234,9 @@ export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focus
   const evidence = usePaginatedQuery(api.inventory.evidence, { propId: item.prop._id }, { initialNumItems: 10 });
   const selectedEvidence = useQuery(api.inventory.selectedActivity, { propId: item.prop._id });
   const deleteEvidence = useMutation(api.onboarding.deleteEvidence);
-  if (evidence.status === "LoadingFirstPage" || selectedEvidence === undefined) return <p role="status">Loading relationship and supporting context…</p>;
+  if (evidence.status === "LoadingFirstPage" || selectedEvidence === undefined) {
+    return <ProductCardSkeleton label="Loading relationship and supporting context…" log="EVIDENCE · LOADING" />;
+  }
   return <><InventoryRelationshipDetails focused={focused} item={item} evidence={evidence.results} selectedEvidence={selectedEvidence}
     hasMoreEvidence={evidence.status !== "Exhausted"} loadingMoreEvidence={evidence.status === "LoadingMore"} onLoadMoreEvidence={() => evidence.loadMore(10)} onSave={onSave}
     onDeleteEvidence={evidenceId => deleteEvidence({ evidenceId })}
@@ -333,7 +336,9 @@ export function PrivateInventory({ brandEnrichmentAvailable = false }: { brandEn
   const inventory = usePaginatedQuery(api.inventory.list, { includeAccountEvidence: false }, { initialNumItems: 25 });
   const save = useMutation(api.inventory.save);
   const importPacket = useMutation(api.retainedEvidence.importPacket);
-  if (inventory.status === "LoadingFirstPage") return <p role="status">Loading your private collection…</p>;
+  if (inventory.status === "LoadingFirstPage") {
+    return <ProductCardSkeleton label="Loading your private collection…" log="COLLECTION · LOADING" count={3} />;
+  }
   return <><DiscoveryReview /><PrivateInventoryView data={{ cards: inventory.results, hasMore: inventory.status !== "Exhausted", loadingMore: inventory.status === "LoadingMore" }}
     renderCard={(item, index) => <AccountEvidence key={item.prop._id} propId={item.prop._id} productSlug={item.product.slug}>{(evidence, progress) => <><InventoryCard item={{ ...item, associatedAccountEvidence: evidence }} index={index} />{progress}</>}</AccountEvidence>}
     onLoadMore={() => inventory.loadMore(25)} onSave={save} onImport={packet => importPacket({ packet })}
