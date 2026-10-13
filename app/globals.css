@@ -592,7 +592,7 @@ main {
 }
 
 .usage-chart-log {
-  color: var(--signal);
+  color: var(--secondary);
   font-family: var(--homepage-mono, "Courier New"), monospace;
   font-size: 0.68rem;
   font-weight: 700;
@@ -601,8 +601,13 @@ main {
   text-transform: uppercase;
 }
 
+:root[data-theme="dark"] .usage-chart-log,
+.product-card .usage-chart-log {
+  color: var(--signal);
+}
+
 .blueprint-dim {
-  color: color-mix(in srgb, currentColor 55%, transparent);
+  color: var(--secondary);
   font-family: var(--homepage-mono, "Courier New"), monospace;
   font-size: 0.62rem;
   letter-spacing: 0.04em;
@@ -681,7 +686,7 @@ main {
 }
 
 .product-card-skeleton-ghost::after {
-  color: color-mix(in srgb, currentColor 55%, transparent);
+  color: var(--secondary);
   content: attr(data-dim);
   font-family: var(--homepage-mono, "Courier New"), monospace;
   font-size: 0.58rem;

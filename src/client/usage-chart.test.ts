@@ -58,6 +58,31 @@ test("supplied points stay on the resolved chart and keep their titles", () => {
   expect($(".activity-bars > span").attr("style")).toMatch(/--bar-height:\s*100%/);
 });
 
+test("a loading chart does not inject placeholder metric values", () => {
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, {
+    loading: true,
+    log: "GITHUB · 30D · LOADING",
+  })));
+
+  expect($(".activity-hero")).toHaveLength(0);
+  expect($("[data-skeleton-bar]").text()).toBe("");
+  expect($("[data-skeleton-bar][title], [data-skeleton-bar][aria-label]")).toHaveLength(0);
+  expect($(".usage-chart").text()).not.toMatch(/(?:^|[\s·])(?:0|—|–)(?:$|[\s·])/);
+});
+
+test("skeleton cards do not inject placeholder metric values", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCardSkeleton, {
+    label: "Loading your private collection…",
+    log: "COLLECTION · LOADING",
+  })));
+
+  expect($(".activity-hero, .activity-bars")).toHaveLength(0);
+  expect($("[data-skeleton-bar][title], [data-skeleton-bar][aria-label]")).toHaveLength(0);
+  expect($("[data-skeleton-bar]").text()).toBe("");
+  const readable = `${$(".visually-hidden").text()} ${$(".usage-chart-log").text()}`;
+  expect(readable).not.toMatch(/(?:^|[\s·])(?:0|—|–)(?:$|[\s·])/);
+});
+
 test("skeleton cards keep the existing status copy for assistive tech", () => {
   const label = "Loading your private collection…";
   const $ = load(renderToStaticMarkup(createElement(ProductCardSkeleton, {

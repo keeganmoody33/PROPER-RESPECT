@@ -74,6 +74,9 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".product-card-skeleton .usage-chart-log")).toHaveText("COLLECTION · LOADING");
     await expect(page.locator(".product-card-skeleton-status")).not.toContainText(/score|rank|rating/i);
     await expect(page.locator("[data-skeleton-bar]").first()).toBeVisible();
+    await expect(page.locator(".product-card-skeleton .activity-hero")).toHaveCount(0);
+    await expect(page.locator(".product-card-skeleton [data-skeleton-bar][title]")).toHaveCount(0);
+    await expect(page.locator(".product-card-skeleton .usage-chart-log")).not.toHaveText(/^(?:0|—|–)$/);
 
     const card = page.locator(".product-card").first();
     await card.getByRole("button", { name: "Details", exact: true }).click();
