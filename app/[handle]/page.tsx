@@ -1,8 +1,6 @@
-import { Suspense } from "react";
 import { PublicProfileWebMcp } from "@/components/public-profile-webmcp";
 import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
 import { ProfileName, ProfileLinks } from "@/components/profile-identity";
-import { ProfileLoading } from "@/components/profile-loading";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
@@ -38,54 +36,53 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   if (!profile) notFound();
   if (profile.handle !== rawHandle) permanentRedirect(`/${profile.handle}`);
 
-  // No app/[handle]/loading.tsx: that route-level Suspense streams HTTP 200
-  // before notFound() can set 404. Keep the skeleton below the absence check.
+  // No app/[handle]/loading.tsx and no in-page Suspense here: either one
+  // around this await would stream HTTP 200 before notFound() can set 404.
+  // ProfileLoading is the inventory/collection/profile-loading fallback.
   return (
-    <Suspense fallback={<ProfileLoading />}>
-      <main>
-        <PublicProfileWebMcp profile={projectVisiblePublicProfile(profile)} />
-        <div className="profile-context"><p>@{profile.handle} / SHARED PRODUCT COLLECTION</p></div>
+    <main>
+      <PublicProfileWebMcp profile={projectVisiblePublicProfile(profile)} />
+      <div className="profile-context"><p>@{profile.handle} / SHARED PRODUCT COLLECTION</p></div>
 
-        <section className="stack" aria-labelledby="stack-heading">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">@{profile.handle} / TOOLS WITH A TRACK RECORD</p>
-              <h1 id="stack-heading" className={styles.name}><ProfileName profile={profile} /></h1>
-              {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
-              <ProfileLinks profile={profile} />
-            </div>
-            <p>{profile.cards.length.toString().padStart(2, "0")} PRODUCTS</p>
-          </div>
-
-          {profile.cards.length === 0 ? (
-            <div className="empty-state">
-              <h3>No published products yet.</h3>
-              <p>Draft and private records stay off this page.</p>
-            </div>
-          ) : (
-            <div className="card-grid">
-              {profile.cards.map((card, index) => (
-                <ProductCard
-                  key={`${card.product.slug}-${index}`}
-                  card={card}
-                  index={index}
-                  goTo={card.goTo}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <footer className="profile-footer">
+      <section className="stack" aria-labelledby="stack-heading">
+        <div className="section-heading">
           <div>
-            <span>@{profile.handle}</span>
+            <p className="eyebrow">@{profile.handle} / TOOLS WITH A TRACK RECORD</p>
+            <h1 id="stack-heading" className={styles.name}><ProfileName profile={profile} /></h1>
+            {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
+            <ProfileLinks profile={profile} />
           </div>
-          <a href={`mailto:33@lecturesfrom.com?subject=${encodeURIComponent(`Report proper-respect.com/${profile.handle}`)}`}>
-            Report this page
-          </a>
-          <Link href="/app/collection">Open your private collection →</Link>
-        </footer>
-      </main>
-    </Suspense>
+          <p>{profile.cards.length.toString().padStart(2, "0")} PRODUCTS</p>
+        </div>
+
+        {profile.cards.length === 0 ? (
+          <div className="empty-state">
+            <h3>No published products yet.</h3>
+            <p>Draft and private records stay off this page.</p>
+          </div>
+        ) : (
+          <div className="card-grid">
+            {profile.cards.map((card, index) => (
+              <ProductCard
+                key={`${card.product.slug}-${index}`}
+                card={card}
+                index={index}
+                goTo={card.goTo}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <footer className="profile-footer">
+        <div>
+          <span>@{profile.handle}</span>
+        </div>
+        <a href={`mailto:33@lecturesfrom.com?subject=${encodeURIComponent(`Report proper-respect.com/${profile.handle}`)}`}>
+          Report this page
+        </a>
+        <Link href="/app/collection">Open your private collection →</Link>
+      </footer>
+    </main>
   );
 }
