@@ -1,6 +1,8 @@
 // Receives report-only CSP violations (R04). It keeps nothing: it logs the
 // violated directive and the blocked origin, never the page, path or policy.
 
+import { blockedReportOrigin } from "@/src/domain/http-url";
+
 const MAX_BODY_BYTES = 8 * 1024;
 
 async function boundedText(request: Request): Promise<string | null> {
@@ -26,8 +28,7 @@ async function boundedText(request: Request): Promise<string | null> {
 function blockedOrigin(value: unknown): string {
   if (typeof value !== "string" || value === "") return "unknown";
   try {
-    const url = new URL(value);
-    return url.origin === "null" ? url.protocol.replace(/:$/, "") : url.origin;
+    return blockedReportOrigin(value);
   } catch {
     // "inline", "eval", "self" and similar keywords carry no URL.
     return /^[a-z-]{1,32}$/.test(value) ? value : "unknown";

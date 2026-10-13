@@ -3,7 +3,7 @@ import type { ActivityModule, PublicProfile } from "./public-profile";
 import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
 import { usageLinkLabelText, usageLinkSchema } from "./usage-links";
-import { isHttpUrl } from "./profile-links";
+import { isHttpUrl } from "./http-url.ts";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;

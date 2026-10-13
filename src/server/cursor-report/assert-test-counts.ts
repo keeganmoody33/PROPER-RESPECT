@@ -18,18 +18,20 @@ export function countDeclaredTests(source: string): number {
   return [...source.matchAll(/^\s*test\(/gm)].length;
 }
 
-export function assertCollectorBridgeCounts(actual: TapCounts, expectedPass: number): void {
+export function assertCollectorBridgeCounts(actual: TapCounts, expectedPass: number): TapCounts {
   if (actual.skipped !== 0 || actual.fail !== 0 || actual.pass !== expectedPass || actual.tests !== expectedPass) {
     throw new Error(
       `collector-bridge.test.mjs must report pass=${expectedPass} skip=0 fail=0; got pass=${actual.pass} skipped=${actual.skipped} fail=${actual.fail} tests=${actual.tests}`,
     );
   }
+  return actual;
 }
 
-export function assertGlobHasNoSkips(actual: TapCounts): void {
+export function assertGlobHasNoSkips(actual: TapCounts): TapCounts {
   if (actual.skipped !== 0) {
     throw new Error(`cursor-report Node suite must not skip; got skipped=${actual.skipped} pass=${actual.pass}`);
   }
+  return actual;
 }
 
 const collectorBridgeUrl = new URL("./collector-bridge.test.mjs", import.meta.url);

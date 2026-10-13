@@ -33,12 +33,12 @@ describe("collector-bridge test count gate", () => {
   });
 
   it("accepts an exact pass count with zero skips", () => {
-    expect(() => assertCollectorBridgeCounts(parseTapSummary(greenTap), 16)).not.toThrow();
+    expect(assertCollectorBridgeCounts(parseTapSummary(greenTap), 16)).toEqual({ tests: 16, pass: 16, fail: 0, skipped: 0 });
   });
 
   it("fails a Cursor report glob TAP that contains skips", () => {
     expect(() => assertGlobHasNoSkips(parseTapSummary(skippedTap))).toThrow(/must not skip/);
-    expect(() => assertGlobHasNoSkips(parseTapSummary(greenTap))).not.toThrow();
+    expect(assertGlobHasNoSkips(parseTapSummary(greenTap))).toEqual({ tests: 16, pass: 16, fail: 0, skipped: 0 });
   });
 
   it("counts declared collector-bridge tests from source rather than a stale constant", () => {

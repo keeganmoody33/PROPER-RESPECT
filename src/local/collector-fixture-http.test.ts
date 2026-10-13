@@ -82,7 +82,9 @@ it("serves IPv6 loopback ::1 with the same Host, Origin and size checks and neve
   const ipv6Origin = http.ipv6Origin;
   expect(ipv6Origin).toMatch(/^http:\/\/\[::1\]:\d+$/);
   if (!ipv6Origin) throw new Error("IPv6 origin missing.");
-  expect(() => createCollectorFixtureTransport({ origin: ipv6Origin })).not.toThrow();
+  const transport = createCollectorFixtureTransport({ origin: ipv6Origin });
+  expect(typeof transport.getGrant).toBe("function");
+  expect(typeof transport.commitReview).toBe("function");
   const accepted = await fetch(`${ipv6Origin}/fixture/state`, { headers: { authorization: `Bearer ${ownerToken}`, origin: ipv6Origin } });
   expect(accepted.status).toBe(200);
   expect(await accepted.json()).toEqual({ loopback: "ipv6" });

@@ -14,7 +14,7 @@ import type {
 import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
 import { compactNumber } from "@/src/domain/format-activity-number";
 import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
-import { isHttpUrl } from "@/src/domain/profile-links";
+import { isHttpUrl } from "@/src/domain/http-url";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart, usageChartLog } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";

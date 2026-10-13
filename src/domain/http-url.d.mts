@@ -1,0 +1,10 @@
+export function isHttpProtocol(url: URL): boolean;
+export function isHttpsProtocol(url: URL): boolean;
+export function allowsWebProtocol(url: URL): boolean;
+export function allowsHttpsProtocol(url: URL): boolean;
+export function allowsOriginProtocol(url: URL, allowHttp: boolean): boolean;
+export function isHttpUrl(value: string): boolean;
+export function isHttpsUrl(value: string): boolean;
+export function parseLooseHttpUrl(value: string): URL | null;
+export function httpsUrlHref(value: string): string | undefined;
+export function blockedReportOrigin(value: string): string;

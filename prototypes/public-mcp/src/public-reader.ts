@@ -1,3 +1,4 @@
+import { allowsHttpsProtocol, isHttpsProtocol } from "@/src/domain/http-url";
 import { getPublicProfile } from "@/src/data/get-public-profile";
 import { handleSchema, publicProfileSchema, type PublicProfile } from "@/src/domain/public-profile";
 import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
@@ -19,7 +20,7 @@ export function parseProfileReference(value: string, origin: URL): string {
   if (!value.includes(":")) return handleSchema.parse(value);
   if (!value.startsWith(`${origin.origin}/`) || /[%\\?#\s]/.test(value)) throw new Error("Invalid reference");
   const url = new URL(value);
-  if (url.protocol !== "https:" || url.origin !== origin.origin || url.username || url.password || url.search || url.hash) throw new Error("Invalid reference");
+  if (!isHttpsProtocol(url) || url.origin !== origin.origin || url.username || url.password || url.search || url.hash) throw new Error("Invalid reference");
   const rawPath = value.slice(origin.origin.length);
   if (!/^\/[a-z0-9-]+$/.test(rawPath)) throw new Error("Invalid reference");
   return handleSchema.parse(rawPath.slice(1));
@@ -49,7 +50,7 @@ export function projectPresentation(profile: PublicProfile): CardPresentation[] 
 }
 
 function requireHttpsOrigin(origin: URL): URL {
-  if (origin.protocol !== "https:" || origin.username || origin.password || origin.pathname !== "/" || origin.search || origin.hash) {
+  if (!allowsHttpsProtocol(origin) || origin.pathname !== "/" || origin.search || origin.hash) {
     throw new Error("PUBLIC_SITE_ORIGIN must be an HTTPS origin for the local MCP prototype.");
   }
   return origin;

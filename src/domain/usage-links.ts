@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isHttpsUrl } from "./http-url.ts";
 
 // A usage link: the owner's work-sample link, shown on the back of a card
 // under a label they pick, like a Loom of them building in Clay. Only the link
@@ -22,14 +23,10 @@ export function usageLinkLabelText(label: UsageLinkLabel) {
 // The private work-sample field's rule (src/domain/inventory.ts): https, no
 // credentials, at most 2,048 characters. Zod still runs a refine after a
 // failed url check, so the parse must not throw on text that isn't a URL.
-export const usageLinkUrlSchema = z.string().url().max(2048).refine(value => {
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password;
-  } catch {
-    return false;
-  }
-}, "Use an https link without embedded credentials.");
+export const usageLinkUrlSchema = z.string().url().max(2048).refine(
+  isHttpsUrl,
+  "Use an https link without embedded credentials.",
+);
 
 export const usageLinkSchema = z.object({
   url: usageLinkUrlSchema,

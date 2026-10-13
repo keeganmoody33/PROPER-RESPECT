@@ -1,4 +1,5 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { convexAuthToken } from "@/src/domain/convex-auth-token";
 import { ConvexHttpClient } from "convex/browser";
 import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
@@ -26,9 +27,7 @@ export async function POST(request: Request) {
     "oauth_github",
   );
   const githubToken = oauthTokens.data[0]?.token;
-  const convexToken = sessionClaims?.aud === "convex"
-    ? await getToken()
-    : await getToken({ template: "convex" });
+  const convexToken = await convexAuthToken({ sessionClaims, getToken });
   if (!githubToken || !convexToken) {
     return Response.json(
       { error: "Link GitHub to your account before connecting it." },
