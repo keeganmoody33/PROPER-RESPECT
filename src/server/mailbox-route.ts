@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { convexAuthToken } from "@/src/domain/convex-auth-token";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -14,9 +15,7 @@ function error(status: number, message: string) { return Response.json({ error: 
 async function client() {
   const { userId, sessionClaims, getToken } = await auth();
   if (!userId) return null;
-  const token = sessionClaims?.aud === "convex"
-    ? await getToken()
-    : await getToken({ template: "convex" });
+  const token = await convexAuthToken({ sessionClaims, getToken });
   if (!token) return null;
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!url) throw new Error("Configuration unavailable.");
