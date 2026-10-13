@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 import ProfilePage from "@/app/[handle]/page";
@@ -14,6 +16,23 @@ const NOT_FOUND = "NEXT_HTTP_ERROR_FALLBACK;404";
 const render = (handle: string) => ProfilePage({ params: Promise.resolve({ handle }) });
 
 describe("public profile page", () => {
+  it("does not add a route-level loading.tsx that would stream 200 before notFound()", () => {
+    expect(existsSync(new URL("../../app/[handle]/loading.tsx", import.meta.url))).toBe(false);
+  });
+
+  it("renders a published profile without a ProfileLoading fallback", async () => {
+    vi.mocked(getPublicProfile).mockResolvedValue({
+      handle: "owner",
+      displayName: "Owner",
+      bio: "Published.",
+      cards: [],
+    });
+    const html = renderToStaticMarkup(await render("owner"));
+    expect(html).toContain("Owner");
+    expect(html).not.toContain("PROFILE · LOADING");
+    expect(html).not.toContain("Loading shared product collection");
+  });
+
   it("renders an absent profile as a 404", async () => {
     vi.mocked(getPublicProfile).mockResolvedValue(null);
     await expect(render("owner")).rejects.toMatchObject({ digest: NOT_FOUND });

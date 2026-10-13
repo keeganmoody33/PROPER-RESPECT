@@ -520,6 +520,202 @@ main {
   min-width: 4px;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.usage-chart {
+  --blueprint-stroke: color-mix(in srgb, currentColor 42%, transparent);
+  --blueprint-dot: color-mix(in srgb, currentColor 22%, transparent);
+  position: relative;
+  min-height: 4.75rem;
+}
+
+.usage-chart[data-state="skeleton"][data-framed="true"] {
+  background-image: radial-gradient(var(--blueprint-dot) 1px, transparent 1px);
+  background-size: 16px 16px;
+  border: 1px dashed var(--blueprint-stroke);
+  padding: 0.85rem 0.55rem 0.35rem;
+}
+
+.usage-chart[data-state="resolved"] .activity-bars > span {
+  height: var(--bar-height, 0%);
+  transform: scaleY(1);
+  transform-origin: bottom;
+  animation: usage-bar-grow 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--bar-delay, 0ms);
+}
+
+.usage-chart:not([data-ready="true"])[data-state="resolved"] .activity-bars > span {
+  animation: none;
+  transform: scaleY(0);
+}
+
+.usage-chart-blueprint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  background-image: radial-gradient(var(--blueprint-dot) 1px, transparent 1px);
+  background-size: 16px 16px;
+  border: 1px dashed var(--blueprint-stroke);
+  padding: 0.85rem 0.55rem 0.35rem;
+}
+
+.usage-chart-skeleton-bars {
+  align-items: end;
+  display: flex;
+  gap: 4px;
+  height: 4rem;
+  margin: 0;
+  width: 100%;
+}
+
+.usage-chart-skeleton-bars span {
+  flex: 1;
+  min-width: 4px;
+}
+
+.usage-chart-skeleton-bars [data-skeleton-bar] {
+  background: transparent;
+  height: 100%;
+  outline: 1px dashed var(--blueprint-stroke, var(--control-line));
+  outline-offset: 0;
+}
+
+.usage-chart-log {
+  color: var(--secondary);
+  font-family: var(--homepage-mono, "Courier New"), monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin: 0.45rem 0 0;
+  text-transform: uppercase;
+}
+
+:root[data-theme="dark"] .usage-chart-log,
+.product-card .usage-chart-log {
+  color: var(--signal);
+}
+
+.blueprint-dim {
+  color: var(--secondary);
+  font-family: var(--homepage-mono, "Courier New"), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  position: absolute;
+}
+
+.blueprint-dim-w {
+  border-top: 1px dashed var(--blueprint-stroke, var(--control-line));
+  left: 0.55rem;
+  padding-top: 0.2rem;
+  right: 0.55rem;
+  text-align: center;
+  top: 0.15rem;
+}
+
+.blueprint-dim-h {
+  border-right: 1px dashed var(--blueprint-stroke, var(--control-line));
+  bottom: 1.4rem;
+  left: -0.15rem;
+  padding-right: 0.2rem;
+  text-align: center;
+  top: 1.1rem;
+  transform: rotate(180deg);
+  writing-mode: vertical-rl;
+}
+
+.product-card-skeleton-status {
+  overflow: visible;
+  position: relative;
+}
+
+.product-card-skeleton {
+  --blueprint-stroke: color-mix(in srgb, currentColor 42%, transparent);
+  --blueprint-dot: color-mix(in srgb, currentColor 22%, transparent);
+  background-color: transparent;
+  background-image: radial-gradient(var(--blueprint-dot) 1px, transparent 1px);
+  background-size: 16px 16px;
+  border: 1px dashed var(--blueprint-stroke);
+  border-radius: 1rem;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+  margin: 1.35rem 0 0.5rem 1.15rem;
+  min-height: 20rem;
+  padding: 1.6rem 1.15rem 1rem;
+  position: relative;
+}
+
+.product-card-skeleton .blueprint-dim-w {
+  left: 0;
+  right: 0;
+  top: -1.15rem;
+}
+
+.product-card-skeleton .blueprint-dim-h {
+  bottom: 0;
+  left: -1.05rem;
+  top: 0;
+}
+
+.product-card-skeleton-top,
+.product-card-skeleton-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.product-card-skeleton-ghost {
+  background: transparent;
+  border: 1px dashed var(--blueprint-stroke);
+  display: block;
+  margin-top: 0.15rem;
+  position: relative;
+}
+
+.product-card-skeleton-ghost::after {
+  color: var(--secondary);
+  content: attr(data-dim);
+  font-family: var(--homepage-mono, "Courier New"), monospace;
+  font-size: 0.58rem;
+  left: 0;
+  letter-spacing: 0.04em;
+  position: absolute;
+  top: -0.8rem;
+}
+
+.product-card-skeleton-top .product-card-skeleton-ghost { height: 14px; width: 72px; }
+.product-card-skeleton-ghost-wide { width: 140px !important; }
+.product-card-skeleton-title { height: 26px; width: min(200px, 70%); }
+.product-card-skeleton-sub { height: 16px; width: min(260px, 85%); }
+.product-card-skeleton-metric { height: 40px; width: min(180px, 60%); }
+.product-card-skeleton-foot .product-card-skeleton-ghost { height: 13px; width: 120px; }
+.product-card-skeleton-foot .product-card-skeleton-ghost:last-child { width: 90px; }
+
+.profile-loading-name {
+  display: block;
+  height: 48px;
+  margin-top: 0.7rem;
+  width: min(240px, 70%);
+}
+
+@keyframes usage-bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
 .artifact-list {
   display: grid;
   gap: 0.5rem;
@@ -1063,6 +1259,18 @@ main {
   .product-card[data-side] .card-front,
   .product-card[data-side] .card-back {
     animation: none;
+  }
+
+  .usage-chart[data-state="resolved"] .activity-bars > span,
+  .usage-chart:not([data-ready="true"])[data-state="resolved"] .activity-bars > span {
+    animation: none;
+    transform: none;
+  }
+
+  .usage-chart-blueprint,
+  .usage-chart[data-state="resolved"] .blueprint-dim,
+  .usage-chart[data-state="resolved"] .usage-chart-log {
+    display: none;
   }
 
   *,

@@ -36,6 +36,9 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   if (!profile) notFound();
   if (profile.handle !== rawHandle) permanentRedirect(`/${profile.handle}`);
 
+  // No app/[handle]/loading.tsx and no in-page Suspense here: either one
+  // around this await would stream HTTP 200 before notFound() can set 404.
+  // ProfileLoading is the inventory/collection/profile-loading fallback.
   return (
     <main>
       <PublicProfileWebMcp profile={projectVisiblePublicProfile(profile)} />
