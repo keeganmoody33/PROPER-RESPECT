@@ -21,7 +21,7 @@ export default function HomePage() {
           <div className={styles.intro}>
             <p className={styles.label}>A personal record of the tools you use.</p>
             <h1 id="homepage-title">Your tools.<br /><span>Your track record.</span></h1>
-            <p className={styles.description}>Build a collection of the tools you use. Add your experience and usage evidence where available, then choose which cards to share on your profile.</p>
+            <p className={styles.description}>What you use now, what you have used, and the evidence you choose to show. Your collection stays private until you publish a card.</p>
             <div className={styles.actions}>
               <Link className={styles.primary} href="/app/collection">Start your collection</Link>
               <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
