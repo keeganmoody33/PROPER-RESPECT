@@ -388,6 +388,7 @@ export function ProductCard({
   audience = "visitor",
   expandedActivity = false,
   privateUsage,
+  viewerSignedIn = false,
 }: {
   card: Card;
   index: number;
@@ -397,6 +398,7 @@ export function ProductCard({
   audience?: "owner" | "visitor";
   expandedActivity?: boolean;
   privateUsage?: PrivateUsageCard;
+  viewerSignedIn?: boolean;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -487,7 +489,8 @@ export function ProductCard({
             aria-label={`${webLink.label}${linkDisclosure ? ` · ${linkDisclosure}` : ""} (opens in a new tab)`}
           >
             ↗
-          </a>{linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}</div>}
+          </a>{linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}
+          {viewerSignedIn && linkDisclosure && <button type="button" className="card-props-action">Give props</button>}</div>}
         </div>
 
         <p className="card-headline">

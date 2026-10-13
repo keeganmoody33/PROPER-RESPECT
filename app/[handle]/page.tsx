@@ -1,3 +1,4 @@
+import { auth } from "@clerk/nextjs/server";
 import { PublicProfileWebMcp } from "@/components/public-profile-webmcp";
 import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
 import { ProfileName, ProfileLinks } from "@/components/profile-identity";
@@ -12,6 +13,15 @@ import styles from "./profile.module.css";
 type ProfilePageProps = {
   params: Promise<{ handle: string }>;
 };
+
+async function viewerHasAccount() {
+  try {
+    const { userId } = await auth();
+    return Boolean(userId);
+  } catch {
+    return false;
+  }
+}
 
 export async function generateMetadata({
   params,
@@ -35,6 +45,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   if (!profile) notFound();
   if (profile.handle !== rawHandle) permanentRedirect(`/${profile.handle}`);
+  const viewerSignedIn = await viewerHasAccount();
 
   // No app/[handle]/loading.tsx and no in-page Suspense here: either one
   // around this await would stream HTTP 200 before notFound() can set 404.
@@ -68,6 +79,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 card={card}
                 index={index}
                 goTo={card.goTo}
+                viewerSignedIn={viewerSignedIn}
               />
             ))}
           </div>
