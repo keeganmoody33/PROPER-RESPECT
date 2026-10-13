@@ -78,6 +78,43 @@ test("deleted original cannot replay or contribute to a stale source review", as
   await expect(owner.query(api.onboarding.previewPublication, { selections: [selection(propId, [first.rawEvidenceId])] })).rejects.toThrow();
 });
 
+test("a public snapshot stores only rows the owner published and a private product stores none", async () => {
+  const { t, owner, propId } = await fixture();
+  const text = JSON.stringify({
+    format: "proper-measurements-v1", captureId: "capture-1", capturedAt: "2026-10-01T00:00:00.000Z", source,
+    measurements: [
+      { id: "exact", metric: "input_tokens", value: "9007199254740993123456789", unit: "tokens", period: { kind: "unknown" }, scope: "ACCOUNT", coverage: "PARTIAL", temporality: "SNAPSHOT", aggregation: "NON_ADDITIVE", overlapGroup: "private-overlap" },
+      { id: "unknown", metric: "output_tokens", value: null, unit: "tokens", period: { kind: "unknown" }, scope: "ACCOUNT", coverage: "UNKNOWN", temporality: "SNAPSHOT", aggregation: "NON_ADDITIVE", overlapGroup: null },
+      { id: "withheld", metric: "cache_creation_tokens", value: "424242424242424242", unit: "tokens", period: { kind: "unknown" }, scope: "ACCOUNT", coverage: "PARTIAL", temporality: "SNAPSHOT", aggregation: "NON_ADDITIVE", overlapGroup: "private-withheld" },
+    ],
+  });
+  const first = await owner.mutation(retain, { propId, text });
+  const entry = (await owner.query(read, { propId }))[0];
+  const publishedIds = entry.measurements.filter((row: { metric: string }) => row.metric !== "cache_creation_tokens").map((row: { id: string }) => row.id);
+  await owner.mutation(review, { propId, rawEvidenceId: first.rawEvidenceId, expectedDigest: entry.digest, expectedReviewVersion: 0, measurementIds: publishedIds });
+  const privatePropId = await t.run(async ctx => {
+    const user = (await ctx.db.query("users").collect()).find(row => row.handle === "owner");
+    if (!user) throw new Error("Owner missing");
+    const productId = await ctx.db.insert("products", { name: "Private tool", slug: "private-tool", domain: "", description: "" });
+    return ctx.db.insert("props", { userId: user._id, productId, visibility: "PRIVATE", status: "ACTIVE", headline: "", note: "", confirmedAt: "2026-10-01T00:00:00.000Z", relationshipVersion: 1 });
+  });
+  const privateImport = await owner.mutation(retain, { propId: privatePropId, text: input("private-capture", "777777777777777777", { source: { ...source, sourceAlias: "private-export" } }) });
+  const privateEntry = (await owner.query(read, { propId: privatePropId }))[0];
+  await owner.mutation(review, { propId: privatePropId, rawEvidenceId: privateImport.rawEvidenceId, expectedDigest: privateEntry.digest, expectedReviewVersion: 0, measurementIds: [privateEntry.measurements[0].id] });
+  const selections = [selection(propId, [first.rawEvidenceId]), { ...selection(privatePropId, [privateImport.rawEvidenceId]), publish: false }];
+  const preview = await owner.query(api.onboarding.previewPublication, { selections });
+  await owner.mutation(api.onboarding.publishSelected, { selections, expectedPreviewHash: preview.previewHash, expectedPublicationRevision: preview.revision });
+  const stored = await t.run(ctx => ctx.db.query("publishedProfiles").collect());
+  expect(stored).toHaveLength(1);
+  expect(stored[0].profile.cards).toHaveLength(1);
+  expect(stored[0].profile.cards[0].measurements?.map(row => row.value)).toEqual(["9007199254740993123456789", null]);
+  const snapshot = JSON.stringify(stored);
+  expect(snapshot).not.toContain("424242424242424242");
+  expect(snapshot).not.toContain("777777777777777777");
+  expect(snapshot).not.toContain("private-withheld");
+  expect(stored[0].profile.cards[0].measurements?.some(row => row.value === "0")).toBe(false);
+});
+
 test("multiple accounts remain separate and the no-measurement old frontend still publishes", async () => {
   const { owner, propId } = await fixture();
   await owner.mutation(retain, { propId, text: input() });

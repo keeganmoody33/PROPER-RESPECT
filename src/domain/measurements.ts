@@ -155,3 +155,17 @@ export function projectMeasurement(row: Measurement): PublicMeasurement {
     capturedAt: row.capturedAt, status: row.status, sample: row.sample, derivation: row.derivation, identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN",
   });
 }
+
+/** A retained amount is on the published card only when that product is public and the owner published the row. Exact strings stay strings. Unknown stays null. */
+export function projectPublishedMeasurements(
+  visibility: "PUBLIC" | "PRIVATE" | "DRAFT",
+  retained: readonly Measurement[],
+  publishedIds: readonly string[],
+): PublicMeasurement[] | undefined {
+  if (visibility !== "PUBLIC") return undefined;
+  const allowed = new Set(publishedIds);
+  if (allowed.size !== publishedIds.length) throw new Error("Publish each retained measurement once.");
+  const projected = retained.filter(row => allowed.has(row.id)).map(projectMeasurement);
+  if (projected.length !== allowed.size) throw new Error("Publish only retained measurements.");
+  return projected.length ? projected : undefined;
+}

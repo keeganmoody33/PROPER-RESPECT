@@ -3,7 +3,7 @@ import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/s
 import type { Doc, Id } from "./_generated/dataModel";
 import { addManualProductHandler } from "./manualProducts";
 import { sha256 } from "../src/domain/product-knowledge";
-import { MEASUREMENT_LIMITS, measurementDigest, parseMeasurementImport, projectMeasurement, reviewMeasurementImports, type PublicMeasurement } from "../src/domain/measurements";
+import { MEASUREMENT_LIMITS, measurementDigest, parseMeasurementImport, reviewMeasurementImports, type Measurement } from "../src/domain/measurements";
 import { requireUser } from "./authHelpers";
 import { ingestSignalsForOwner } from "./discovery";
 import { verifyRetainedProductEvidence } from "../src/domain/retained-product-evidence";
@@ -184,18 +184,20 @@ export const reviewMeasurements = mutation({
 });
 
 /** Used by both publication preview and commit, never trusting client projections. */
-export async function reviewedMeasurementsForPublication(ctx: QueryCtx | MutationCtx, userId: Id<"users">, propId: Id<"props">, evidenceIds: Id<"rawEvidence">[]): Promise<{ measurements: PublicMeasurement[]; approvalDigest: string } | undefined> {
+export async function reviewedMeasurementsForPublication(ctx: QueryCtx | MutationCtx, userId: Id<"users">, propId: Id<"props">, evidenceIds: Id<"rawEvidence">[]): Promise<{ retained: Measurement[]; publishedIds: string[]; approvalDigest: string } | undefined> {
   if (!evidenceIds.length) return undefined;
   if (evidenceIds.length > MEASUREMENT_LIMITS.publicSources || new Set(evidenceIds).size !== evidenceIds.length) throw new Error("Choose at most eight distinct reviewed measurement sources.");
   const entries = measurementEntries(await measurementHistory(ctx, userId, propId));
   const approvals: { id: Id<"rawEvidence">; digest: string; reviewVersion: number }[] = [];
-  const projected = evidenceIds.flatMap(id => {
+  const retained: Measurement[] = [];
+  const publishedIds: string[] = [];
+  for (const id of evidenceIds) {
     const entry = entries.find(item => item.rawEvidenceId === id);
     if (!entry || !entry.reviewedMeasurementIds.length) throw new Error("Open a current measurement review before sharing this source.");
     approvals.push({ id, digest: entry.digest, reviewVersion: entry.reviewVersion });
-    const reviewed = new Set(entry.reviewedMeasurementIds);
-    return entry.measurements.filter(row => reviewed.has(row.id)).map(projectMeasurement);
-  });
-  if (projected.length > MEASUREMENT_LIMITS.publicRows) throw new Error("Share at most 24 measurement rows on a card.");
-  return { measurements: projected, approvalDigest: measurementDigest(approvals) };
+    retained.push(...entry.measurements);
+    publishedIds.push(...entry.reviewedMeasurementIds);
+  }
+  if (publishedIds.length > MEASUREMENT_LIMITS.publicRows) throw new Error("Share at most 24 measurement rows on a card.");
+  return { retained, publishedIds, approvalDigest: measurementDigest(approvals) };
 }
