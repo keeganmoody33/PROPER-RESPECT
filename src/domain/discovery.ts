@@ -3,6 +3,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import { evidenceObservationSchema } from "./evidence-claims.ts";
 import { captureProvenanceSchema } from "./capture-provenance.ts";
+import { parseLooseHttpUrl } from "./http-url.ts";
 
 export const evidenceSourceTypeSchema = z.enum([
   "MANUAL",
@@ -325,20 +326,13 @@ export function normalizeVendorName(input: string): string {
 }
 
 export function extractDomain(url: string): string | null {
-  try {
-    const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(url)
-      ? url
-      : `https://${url}`;
-    const parsed = new URL(withScheme);
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-    // URL accepts single words, credentials, and non-web schemes. They are not
-    // evidence of a product domain (e.g. a package named "react").
-    if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password ||
-        !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(host)) return null;
-    return host;
-  } catch {
-    return null;
-  }
+  const parsed = parseLooseHttpUrl(url);
+  if (!parsed) return null;
+  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+  // URL accepts single words. They are not evidence of a product domain
+  // (e.g. a package named "react").
+  if (!/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(host)) return null;
+  return host;
 }
 
 function matchCatalogUrl(input: string, requireProductWebsite = false): CatalogEntry | null {

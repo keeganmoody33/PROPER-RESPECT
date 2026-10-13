@@ -109,7 +109,7 @@ describe("sanitized Claude metrics evidence", () => {
       capture({...bundle(),counts:{...bundle().counts,input:"1".repeat(31)}}), capture({...bundle(),sourceCostUsd:"0.1234567890123"}),
     ]) expect(()=>parse(value)).toThrow("Invalid Claude metrics capture.");
     expect(()=>parseClaudeMetricsCapture("x".repeat(256001))).toThrow("Invalid Claude metrics capture.");
-    expect(()=>reviewClaudeMetricsCaptures([good as never])).not.toThrow();
+    expect(reviewClaudeMetricsCaptures([parse(good)]).rows.length).toBeGreaterThan(0);
     expect(()=>reviewClaudeMetricsCaptures([{...good,prompt:"secret"} as never])).toThrow("Invalid Claude metrics capture.");
     expect(()=>reviewClaudeMetricsCaptures(Array(33).fill(parse(good)))).toThrow();
   });

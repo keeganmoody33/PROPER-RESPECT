@@ -1,7 +1,8 @@
 import { reviewedMeasurementsForPublication } from "./retainedEvidence";
 import { sameGithubRefreshBinding, validGithubRefreshBinding, type GithubRefreshBinding } from "./githubRefreshIdentity";
 import { relationshipLinks } from "./relationshipLinks";
-import { isHttpUrl, validateProfileLinks } from "../src/domain/profile-links";
+import { isHttpUrl } from "../src/domain/http-url";
+import { validateProfileLinks } from "../src/domain/profile-links";
 import { mailboxTesterAllowed } from "../src/domain/mailbox-testers";
 import { uploadAttributionStatus } from "../src/domain/evidence-upload";
 import { addManualProductArgs, addManualProductHandler } from "./manualProducts";

@@ -2,6 +2,7 @@
 
 import { ProfileName, ProfileLinks } from "./profile-identity";
 import { ProfileLinksFields } from "./profile-links-fields";
+import { convexAuthToken } from "@/src/domain/convex-auth-token";
 import { classifyEvidenceUpload, EVIDENCE_UPLOAD_ACCEPT } from "@/src/domain/evidence-upload";
 import {
   SignInButton,
@@ -232,7 +233,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     await run("Original file retained privately. Review the product in your collection; add selected observations only if the original supports them.", async () => {
       const { sourceType } = classifyEvidenceUpload({ filename: file.name, mimeType: file.type, byteSize: file.size });
       const vendor = String(form.get("vendor"));
-      const token = sessionClaims?.aud === "convex" ? await getToken() : await getToken({ template: "convex" });
+      const token = await convexAuthToken({ sessionClaims, getToken });
       if (!token) throw new Error("Sign in again before uploading evidence.");
       if (uploadAttempt.current?.file !== file || uploadAttempt.current.vendor !== vendor) {
         const { uploadUrl } = await beginUpload({ filename: file.name, mimeType: file.type || "application/octet-stream", byteSize: file.size, vendor });

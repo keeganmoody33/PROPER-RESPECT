@@ -62,7 +62,8 @@ describe("public profile registration contract (native API double)", () => {
       if (synchronous) throw new Error("Unsupported policy");
       return Promise.reject(new Error("Unsupported policy"));
     } };
-    expect(() => registerPublicProfileTool(context, profile)).not.toThrow();
+    registerPublicProfileTool(context, profile);
+    expect(typeof retained?.execute).toBe("function");
     await Promise.resolve();
     await expect(invoke(retained!)).rejects.toMatchObject({ name: "AbortError" });
   });

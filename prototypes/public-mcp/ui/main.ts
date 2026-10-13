@@ -1,4 +1,5 @@
 import { App } from "@modelcontextprotocol/ext-apps";
+import { httpsUrlHref } from "@/src/domain/http-url";
 import { publicToolResultSchema, type PublicProfileResult } from "../src/contracts";
 import github from "./assets/github.svg";
 import wispr from "./assets/wispr-flow.jpg";
@@ -54,8 +55,7 @@ function values(value: unknown): HTMLElement {
   return el("span", typeof value === "boolean" ? (value ? "Yes" : "No") : String(value ?? "Not supplied"));
 }
 function safeExternalUrl(raw: string): string | undefined {
-  try { const url = new URL(raw); return url.protocol === "https:" && !url.username && !url.password ? url.href : undefined; }
-  catch { return undefined; }
+  return httpsUrlHref(raw);
 }
 async function openSource(url: string) {
   const safeUrl = safeExternalUrl(url);

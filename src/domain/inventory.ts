@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isHttpsUrl } from "./http-url.ts";
 
 const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const parsed = new Date(`${value}T00:00:00Z`);
@@ -12,14 +13,10 @@ export const relationshipEditSchema = z.object({
   note: z.string().trim().max(4000),
   startedAt: optionalDate,
   // Zod still runs this refine after a failed url check, so it must not throw.
-  supportingUrl: z.string().url().max(2048).refine(value => {
-    try {
-      const url = new URL(value);
-      return url.protocol === "https:" && !url.username && !url.password;
-    } catch {
-      return false;
-    }
-  }, "Use an HTTPS work sample or workflow link without credentials.").optional(),
+  supportingUrl: z.string().url().max(2048).refine(
+    isHttpsUrl,
+    "Use an HTTPS work sample or workflow link without credentials.",
+  ).optional(),
 });
 
 export const inventoryViews = ["All", "Discoveries", "Current", "Testing", "Go-to", "History", "Archived"] as const;

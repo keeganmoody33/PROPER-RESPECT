@@ -58,13 +58,13 @@ beforeEach(() => {
 });
 
 test("Clerk sign-in waits for Convex token acceptance before owner queries mount", () => {
-  expect(render).not.toThrow();
+  expect(render()).toContain("Verifying your session");
   expect(auth.protectedQuery).not.toHaveBeenCalled();
 });
 
 test("rejected or lost Convex authentication never mounts protected owner queries", () => {
   auth.convex = { isLoading: false, isAuthenticated: false };
-  expect(render).not.toThrow();
+  expect(render()).toContain("Could not verify your session");
   expect(auth.protectedQuery).not.toHaveBeenCalled();
 });
 
@@ -74,7 +74,7 @@ test("token acceptance and subsequent loss reconcile the owner boundary on each 
   expect(auth.protectedQuery).toHaveBeenCalledTimes(1);
   auth.protectedQuery.mockClear();
   auth.convex = { isLoading: true, isAuthenticated: false };
-  expect(render).not.toThrow();
+  expect(render()).toContain("Verifying your session");
   expect(auth.protectedQuery).not.toHaveBeenCalled();
 });
 
