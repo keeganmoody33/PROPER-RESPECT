@@ -1,3 +1,4 @@
+import { isHttpsProtocol } from "@/src/domain/http-url";
 import { publicSiteOrigin } from "./public-site";
 import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
@@ -131,7 +132,7 @@ export function agentCatalog() {
         "How do I read a person's published tool collection on Proper Respect?",
         "How should I interpret the usage evidence on a Proper Respect profile?",
       ],
-      ...(origin.protocol === "https:" ? {
+      ...(isHttpsProtocol(origin) ? {
         trustManifest: {
           identity: guideUrl,
           identityType: "https",

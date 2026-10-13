@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import process from "node:process";
+import { isHttpsProtocol } from "../src/domain/http-url.mjs";
 
 const args = new Set(process.argv.slice(2));
 const strict = args.has("--strict");
@@ -70,7 +71,7 @@ function validateHttpsUrl(name, value, hostSuffix) {
 
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:") {
+    if (!isHttpsProtocol(url)) {
       errors.push(`${name} must use HTTPS.`);
     }
     if (hostSuffix && !url.hostname.endsWith(hostSuffix)) {

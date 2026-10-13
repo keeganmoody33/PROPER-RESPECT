@@ -1,4 +1,5 @@
 import { extractDomain } from "./discovery.ts";
+import { parseLooseHttpUrl } from "./http-url.ts";
 
 export type DestinationProduct = {
   name: string;
@@ -29,17 +30,6 @@ const GITHUB_MARKETING_PATHS = new Set([
   "pulls", "readme", "search", "security", "settings", "sponsors", "topics",
 ]);
 
-function parseHttpUrl(value: string): URL | null {
-  try {
-    const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`;
-    const parsed = new URL(withScheme);
-    if (!/^https?:$/.test(parsed.protocol) || parsed.username || parsed.password) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
 function productHost(product: DestinationProduct): string | null {
   return extractDomain(product.domain.includes("://") ? product.domain : `https://${product.domain}`);
 }
@@ -58,7 +48,7 @@ function githubLogin(value: string): string | null {
 
 /** Catalog homepage and www variants, not an owner account or product path. */
 export function isProductWebsite(url: string, product: DestinationProduct): boolean {
-  const parsed = parseHttpUrl(url);
+  const parsed = parseLooseHttpUrl(url);
   const host = extractDomain(url);
   const expected = productHost(product);
   if (!parsed || !host || !expected || host !== expected) return false;
@@ -71,7 +61,7 @@ function githubAccountProfileUrl(login: string): string {
 
 function githubAccountFromUrl(url: string, product: DestinationProduct, expectedLogin?: string): string | undefined {
   if (product.slug !== "github" || productHost(product) !== "github.com") return undefined;
-  const parsed = parseHttpUrl(url);
+  const parsed = parseLooseHttpUrl(url);
   if (!parsed || extractDomain(url) !== "github.com") return undefined;
   const segments = parsed.pathname.replace(/\/+$/, "").split("/").filter(Boolean);
   if (segments.length !== 1) return undefined;

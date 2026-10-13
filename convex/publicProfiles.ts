@@ -5,7 +5,7 @@ import { requireUser } from "./authHelpers";
 import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
-import { isHttpUrl } from "../src/domain/profile-links";
+import { isHttpUrl } from "../src/domain/http-url";
 import { PUBLISHED_URL_MAX } from "../src/domain/published-text-limits";
 import {
   publicRetainedMailboxAggregate,

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { isHttpProtocol } from "../domain/http-url.ts";
 import { chunkSchema, manifestSchema, COLLECTOR_LIMITS } from "../domain/collector-contract.ts";
 import type { CollectorTransport } from "./collector-companion.ts";
 import type { CollectorOwner, CollectorService } from "./collector-service.ts";
@@ -136,7 +137,7 @@ export async function startCollectorFixtureHttp(input: {
 export function createCollectorFixtureTransport(input: { origin: string }): CollectorTransport {
   const url = new URL(input.origin);
   const loopbackHost = url.hostname === "127.0.0.1" || url.hostname === "::1" || url.hostname === "[::1]";
-  if (url.protocol !== "http:" || !loopbackHost || !url.port || url.username || url.password || url.pathname !== "/" || url.search || url.hash || input.origin !== url.origin) throw new Error("A loopback fixture origin is required.");
+  if (!isHttpProtocol(url) || !loopbackHost || !url.port || url.username || url.password || url.pathname !== "/" || url.search || url.hash || input.origin !== url.origin) throw new Error("A loopback fixture origin is required.");
   const post = async (path: string, body: unknown, signal?: AbortSignal): Promise<unknown> => {
     const encoded = JSON.stringify(body);
     if (Buffer.byteLength(encoded) > MAX_HTTP_BYTES) throw new Error(fixedError);

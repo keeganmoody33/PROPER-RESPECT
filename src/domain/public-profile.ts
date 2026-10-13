@@ -1,5 +1,6 @@
 import { publicMeasurementSchema, type PublicMeasurement } from "./measurements";
-import { isHttpUrl, profileLinksSchema, profileLinkUrlSchema } from "./profile-links";
+import { isHttpUrl } from "./http-url.ts";
+import { profileLinksSchema, profileLinkUrlSchema } from "./profile-links";
 import { z } from "zod";
 import { costSchema, type Cost, type CostVisibility } from "./cost";
 import { usageLinkSchema, type UsageLink } from "./usage-links";

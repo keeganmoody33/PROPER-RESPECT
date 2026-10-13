@@ -1,4 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { allowsOriginProtocol } from "@/src/domain/http-url";
 
 // Provider contracts checked 2026-09-16:
 // https://developers.google.com/identity/protocols/oauth2/web-server
@@ -75,8 +76,7 @@ export function createMailboxOAuthConfig(input: {
   providerContract(input.provider);
   const origin = new URL(boundedText(input.applicationOrigin, "application origin"));
   const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname);
-  if (origin.username || origin.password || origin.pathname !== "/" || origin.search || origin.hash ||
-      (origin.protocol !== "https:" && !(input.allowLoopbackHttp && loopback && origin.protocol === "http:"))) {
+  if (!allowsOriginProtocol(origin, Boolean(input.allowLoopbackHttp && loopback)) || origin.pathname !== "/" || origin.search || origin.hash) {
     throw new Error("OAuth requires a fixed HTTPS application origin (or explicitly enabled loopback HTTP).");
   }
   return Object.freeze({
