@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { openRelationship, relationshipFromHash, relationshipHref, subscribeRelationship } from "@/src/client/relationship-location";
 import { InventoryDetails, RetainedEvidenceIntake, SavedRelationshipPreview } from "./private-inventory";
+import { ProductCardSkeleton } from "./product-card-skeleton";
 import { PrivateMeasurements } from "./measurement-review";
 import { DiscoveryReview } from "./discovery-review";
 import styles from "./private-inventory.module.css";
@@ -92,7 +93,7 @@ export function RelationshipFocus({ name, label, children }: { name: string; lab
 function SelectedRelationship({ propId, brandEnrichmentAvailable }: { propId: string; brandEnrichmentAvailable: boolean }) {
   const item = useQuery(api.inventory.detail, { propId });
   const save = useMutation(api.inventory.save);
-  if (item === undefined) return <p role="status">Opening your relationship…</p>;
+  if (item === undefined) return <ProductCardSkeleton label="Opening your relationship…" log="RELATIONSHIP · LOADING" />;
   if (item === null) return <div role="status"><p>This relationship is unavailable for this account.</p><a href="#private-collection-title">Back to my collection</a></div>;
   return <RelationshipFocus name={item.product.name} label={item.prop.confirmedAt || item.prop.visibility !== "DRAFT" ? "Saved tool" : "Needs your decision"}>
     <RelatedRelationships propId={item.prop._id} />

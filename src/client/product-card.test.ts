@@ -427,6 +427,24 @@ test("a recorded zero remains distinct from an empty time series", () => {
   expect($(".card-back .activity-hero strong").text()).toBe("0");
 });
 
+test("a supplied time series keeps its bars and a coverage log without a score", () => {
+  const $ = renderCard({
+    activity: {
+      ...activityEvidence,
+      kind: "timeSeries",
+      label: "Minutes recorded",
+      unit: "min",
+      points: [{ date: "2026-09-15", value: 45 }],
+    },
+  });
+
+  expect($(".card-front .activity-bars")).toHaveLength(0);
+  expect($(".card-back .activity-bars > span")).toHaveLength(1);
+  expect($(".card-back .activity-bars > span").attr("title")).toBe("2026-09-15: 45 min");
+  expect($(".card-back .usage-chart-log").text()).toBe("PERSONAL · 15D");
+  expect($(".card-back .usage-chart-log").text()).not.toMatch(/score|rank/i);
+});
+
 test("brand preview exposes brand provenance without exposing any supplied personal evidence", () => {
   const card = { ...baseCard, product: { ...baseCard.product, brand }, startedAt: "2024-06-03", activity: activityExamples[1] };
   const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, displayMode: "brand-preview" })));
