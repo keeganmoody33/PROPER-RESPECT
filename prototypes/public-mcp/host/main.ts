@@ -1,4 +1,5 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { allowsHttpsProtocol } from "@/src/domain/http-url";
 import { AppBridge, PostMessageTransport } from "@modelcontextprotocol/ext-apps/app-bridge";
 import { HOST_ORIGIN, MCP_URL, PROFILE_RESOURCE_URI } from "../src/contracts";
 
@@ -25,7 +26,7 @@ async function start() {
   }, { hostContext: { theme, platform: "web", displayMode: "inline", availableDisplayModes: ["inline"], containerDimensions: { maxHeight: 12000 } } });
   bridge.onopenlink = async ({ url }) => {
     const parsed = new URL(url);
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return { isError: true };
+    if (!allowsHttpsProtocol(parsed)) return { isError: true };
     const link = document.createElement("a");
     link.href = parsed.href;
     link.rel = "noopener noreferrer";

@@ -1,4 +1,5 @@
 import { load } from "cheerio/slim";
+import { allowsHttpsProtocol } from "./http-url.ts";
 
 /** Public statements only. Never account usage, invoices, or owner payment amounts. */
 export type OfferingPrice = {
@@ -428,13 +429,7 @@ export async function sha256(input: string | ArrayBuffer): Promise<string> {
 }
 export function validateOfficialUrl(raw: string, definition: SourceDefinition) {
   const url = new URL(raw);
-  if (
-    url.protocol !== "https:" ||
-    url.username ||
-    url.password ||
-    url.port ||
-    !definition.allowedHosts.includes(url.hostname)
-  )
+  if (!allowsHttpsProtocol(url) || url.port || !definition.allowedHosts.includes(url.hostname))
     throw new Error("URL is not an allowed official HTTPS host.");
   return url.href;
 }

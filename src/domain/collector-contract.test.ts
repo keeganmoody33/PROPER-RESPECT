@@ -27,7 +27,7 @@ it("rejects arbitrary fields, false totals and mismatched durable acknowledgment
   expect(reviewSchema.safeParse({ ...value, responses: { ...value.responses, totals: value.responses.totals.map(row => ({ ...row, value: "100" })) } }).success).toBe(false);
   const delivery = buildReviewDelivery({ grant: grant(), review: value });
   const receipt = { format: "collector-commit-receipt-v1", connectionId: "connection-one", generation: 1, batchId: delivery.manifest.batchId, digest: delivery.manifest.digest, checkpoint: delivery.manifest.nextCheckpoint, committedAt: "2026-10-02T00:00:00.000Z" };
-  expect(() => assertMatchingReceipt({ manifest: delivery.manifest, receipt })).not.toThrow();
+  expect(assertMatchingReceipt({ manifest: delivery.manifest, receipt })).toEqual(receipt);
   expect(() => assertMatchingReceipt({ manifest: delivery.manifest, receipt: { ...receipt, generation: 2 } })).toThrow();
 });
 

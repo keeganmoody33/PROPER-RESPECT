@@ -95,6 +95,18 @@ off main per concern; do not interleave unrelated remediation. Start fixes with
 a RED regression. Name the inspected branch/head in reports; any new commit
 restarts review and exact-head merge authorization must be rechecked.
 
+## What enforces these rules
+
+A rule stays here only while its check can still fail. When the mistake
+cannot happen, delete the row.
+
+| Rule | What enforces it |
+| --- | --- |
+| Publish, render, and origin checks use `isHttpUrl`, `isHttpsUrl`, `allowsWebProtocol`, or `allowsHttpsProtocol` from `src/domain/http-url.ts`. Nothing else reads `URL.protocol`. | `scripts/http-url-owner.test.mjs` |
+| Take a Convex auth token with `convexAuthToken` from `src/domain/convex-auth-token.ts`. | `scripts/convex-auth-token-owner.test.mjs` |
+| A test asserts the value a function returns. `not.toThrow()` is not that assertion. | `scripts/assert-return-value.test.mjs` |
+| CI, local development, and Convex use the Node major in `.nvmrc`. | `scripts/deployment-preflight.test.mjs` (same Node major for every setup-node step) |
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

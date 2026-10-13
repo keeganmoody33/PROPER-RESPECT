@@ -1,9 +1,10 @@
 // Verified 2026-09-19. Official presentation assets; never evidence of ownership or use.
 import { z } from "zod";
+import { isHttpsUrl } from "./http-url.ts";
 import copilotManifest from "../../public/product-assets/github-copilot/2026-09-19/source-manifest.json";
 
 const sha256 = z.string().regex(/^[a-f0-9]{64}$/);
-const sourceUrl = z.url().refine(value => new URL(value).protocol === "https:");
+const sourceUrl = z.url().refine(isHttpsUrl);
 const assetPath = z.string().regex(/^\/product-assets\/[a-z0-9-]+\/\d{4}-\d{2}-\d{2}\/[a-zA-Z0-9_.-]+$/);
 const asset = z.object({ path: assetPath, sha256 });
 const verifiedProductAssetsSchema = z.object({
