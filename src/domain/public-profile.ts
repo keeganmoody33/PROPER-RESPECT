@@ -1,4 +1,4 @@
-import { publicMeasurementSchema, type PublicMeasurement } from "./measurements";
+import { projectPublishedMeasurements, publicMeasurementSchema, type Measurement, type PublicMeasurement } from "./measurements";
 import { isHttpUrl, profileLinksSchema, profileLinkUrlSchema } from "./profile-links";
 import { z } from "zod";
 import { costSchema, type Cost, type CostVisibility } from "./cost";
@@ -208,6 +208,8 @@ export type CuratedProp = {
   startedAt?: string;
   activity?: ActivityModule;
   measurements?: PublicMeasurement[];
+  retainedMeasurements?: readonly Measurement[];
+  publishedMeasurementIds?: readonly string[];
   cost?: Cost;
   costVisibility?: CostVisibility;
   product: PublicProfile["cards"][number]["product"];
@@ -235,7 +237,9 @@ export function projectPublicProfile(input: {
         note: prop.note,
         startedAt: prop.startedAt,
         activity: withHttpArtifacts(prop.activity),
-        measurements: prop.measurements,
+        measurements: prop.retainedMeasurements
+          ? projectPublishedMeasurements(prop.visibility, prop.retainedMeasurements, prop.publishedMeasurementIds ?? [])
+          : prop.measurements,
         cost: prop.costVisibility === "PUBLIC" ? prop.cost : undefined,
         primaryLink: primaryLink ? {
           type: primaryLink.type,
