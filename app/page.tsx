@@ -21,7 +21,11 @@ export default function HomePage() {
           <div className={styles.intro}>
             <p className={styles.label}>A personal record of the tools you use.</p>
             <h1 id="homepage-title">Your tools.<br /><span>Your track record.</span></h1>
-            <p className={styles.description}>What you use now, what you have used, and the evidence you choose to show. Your collection stays private until you publish a card.</p>
+            <ul className={styles.facts}>
+              <li>A public profile can show a retained measurement you published, including how much, and withholds an amount you did not publish.</li>
+              <li>More than one mailbox can be connected. Disconnect stops recording from that mailbox. A retained aggregate of personal and former-employer accounts can stay visible when you record it as public, with the stored label and no email address.</li>
+              <li>A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.</li>
+            </ul>
             <div className={styles.actions}>
               <Link className={styles.primary} href="/app/collection">Start your collection</Link>
               <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
