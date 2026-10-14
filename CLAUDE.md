@@ -26,3 +26,9 @@ Rules that apply to every agent belong in AGENTS.md (via PR).
   place in titles and subjects. (#107)
 - **The box can be heavily loaded:** run Vitest one file at a time with a
   timeout, and run long Claude Code jobs in the background. (#107 run)
+
+## Recovery program
+
+Started 2026-10-14. Resume from [docs/recovery/HANDOFF.md](docs/recovery/HANDOFF.md);
+the other recovery artifacts (baseline, inventory, STATE, BACKLOG,
+VERIFICATION) sit beside it.
