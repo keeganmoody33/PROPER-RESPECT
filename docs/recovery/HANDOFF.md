@@ -30,7 +30,22 @@ stays as it is.
   `collection-refinement` (1), and `~/Downloads/PROPER-RESPECT-composio-spike-20260917` (3).
 - ADRs live in `docs/adr/` and run to 061, past the 028 in the brief.
 
-## Open asks to Keegan
+- **Access probed 2026-10-14:** Vercel MCP reads the `proper-respect`
+  project. PostHog MCP reads project `groundskeep` (shared by several sites;
+  filter on the `site` property). The Convex MCP has no deployment configured
+  in this repo, and reading one from another worktree's `.env.local` was
+  refused as credential exploration. Don't retry that.
+- **P0 evidence:** see `STATE.md`. The `receipts` branch logs the daily
+  freshness check; read it with `git log origin/receipts`.
 
-None yet. Phase 1 will collect access needs (Convex logs, Vercel, PostHog) into
-one list.
+## Open asks to Keegan (2026-10-14)
+
+1. Read access to Convex production logs, to find why the daily GitHub
+   refresh fails. One of: run `npx convex logs --prod` and paste the refresh
+   failures, or approve a read-only logs path for the agent.
+2. Journey steps 1 to 6 need a signed-in user. Agents may not create accounts
+   or sign in. Either Keegan drives sign-up and connect in the in-app browser
+   while the agent watches, or those steps are labeled from preview and local
+   fixtures only.
+3. Former employer accounts: confirm the safe default (keep only counts,
+   totals and first and last seen dates after access ends; never raw content).
