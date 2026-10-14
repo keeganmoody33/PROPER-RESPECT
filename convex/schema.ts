@@ -413,6 +413,17 @@ export default defineSchema({
     createdAt: v.string(),
   }).index("by_handle", ["handle"]),
 
+  linkCredits: defineTable({
+    handle: v.string(),
+    productSlug: v.string(),
+    productName: v.string(),
+    sourceType: v.union(v.literal("AFFILIATE"), v.literal("REFERRAL")),
+    sourceUrl: v.string(),
+    giverId: v.id("users"),
+  })
+    .index("by_handle", ["handle"])
+    .index("by_handle_slug_giver", ["handle", "productSlug", "giverId"]),
+
   publishedProfiles: defineTable({
     handle: v.string(),
     revision: v.number(),

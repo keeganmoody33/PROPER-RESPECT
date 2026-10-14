@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
 import { PublicSiteGuideWebMcp } from "@/components/public-site-guide-webmcp";
-import { productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
+import { homepageProvenFacts, productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
@@ -21,7 +21,9 @@ export default function HomePage() {
           <div className={styles.intro}>
             <p className={styles.label}>A personal record of the tools you use.</p>
             <h1 id="homepage-title">Your tools.<br /><span>Your track record.</span></h1>
-            <p className={styles.description}>What you use now, what you have used, and the evidence you choose to show. Your collection stays private until you publish a card.</p>
+            <ul className={styles.facts}>
+              {homepageProvenFacts.map(fact => <li key={fact}>{fact}</li>)}
+            </ul>
             <div className={styles.actions}>
               <Link className={styles.primary} href="/app/collection">Start your collection</Link>
               <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>

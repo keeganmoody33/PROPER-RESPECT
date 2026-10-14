@@ -48,6 +48,10 @@ export const mailboxTables = {
     // strandedGrant: a reconnect refused during this revocation got fresh tokens that couldn't be revoked.
     revocationPending: v.optional(v.object({ token: v.string(), until: v.number(), strandedGrant: v.optional(v.boolean()) })),
     connectedAt: v.string(), updatedAt: v.string(), lastSyncedAt: v.optional(v.string()),
+    // Owner choice for this account's retained aggregate. Absent stays off the public page.
+    retainedAggregateDisplay: v.optional(v.union(v.literal("public"), v.literal("private"))),
+    // Copied only when the stored account already records it. Never inferred from an address.
+    accountDistinction: v.optional(v.union(v.literal("personal"), v.literal("former-employer"))),
   }).index("by_owner", ["ownerId"])
     .index("by_maintenance_due", ["maintenanceEnabled", "nextMaintenanceAt"])
     .index("by_owner_provider_account", ["ownerId", "provider", "providerAccountId"]),

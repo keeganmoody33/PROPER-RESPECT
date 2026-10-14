@@ -13,6 +13,7 @@ import { mutation, query, internalMutation, internalQuery, type QueryCtx, type M
 import type { Doc, Id } from "./_generated/dataModel";
 import { consumeWriteLimit, requireIdentity, requireUser } from "./authHelpers";
 import { claimableHandleSchema } from "../src/domain/onboarding";
+import { projectPublishedMeasurements } from "../src/domain/measurements";
 import { projectPublicProfile, publicProfileSchema, withHttpArtifacts } from "../src/domain/public-profile";
 import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evidence-upload";
 import { resolveProduct } from "../src/domain/discovery";
@@ -770,9 +771,13 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);
     if (!product) throw new Error("The product for this relationship is unavailable.");
+    const projection = measurementProjection.get(prop._id);
+    const measurements = projection
+      ? projectPublishedMeasurements(selection.publish ? "PUBLIC" : "PRIVATE", projection.retained, projection.publishedIds)
+      : undefined;
     const cards = projectPublicProfile({ user: profileUser, props: [{
       visibility: "PUBLIC", status: prop.status, goTo: prop.goTo, headline: prop.headline, note: prop.note,
-      startedAt: prop.startedAt, activity: selection.activity, measurements: measurementProjection.get(prop._id)?.measurements,
+      startedAt: prop.startedAt, activity: selection.activity, measurements,
       cost: selection.costVisibility !== undefined ? (selection.cost === undefined ? undefined : costSchema.parse(selection.cost)) : prop.cost,
       costVisibility: selection.costVisibility ?? prop.costVisibility,
       product: { name: product.name, slug: product.slug, domain: product.domain, description: product.description, logoUrl: product.logoUrl },
