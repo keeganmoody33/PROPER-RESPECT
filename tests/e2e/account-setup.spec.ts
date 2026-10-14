@@ -143,6 +143,40 @@ for (const width of [1280, 390]) for (const claimed of [true, false, undefined])
   await identity.screenshot({ path: testInfo.outputPath(`2026-10-08-published-identity-${width}.png`), animations: "disabled" });
 });
 
+for (const width of [1280, 390]) test(`blank display name preserves the saved identity and can be corrected at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  const identity = page.locator("#collection-profile");
+  await identity.locator("summary").click();
+  await identity.getByLabel("Handle", { exact: true }).fill("synthetic-owner");
+  const name = identity.getByLabel("Display name", { exact: true });
+  for (const blank of ["   ", "\u2028\u2029"]) {
+    await name.fill(blank);
+    await identity.getByRole("button", { name: "Save public identity", exact: true }).click();
+    await expect.poll(() => name.evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(false);
+    await expect(name).toBeFocused();
+  }
+  const calls = () => page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
+  expect((await calls()).filter((call: { name: string }) => call.name === "claimHandle")).toEqual([]);
+  await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
+  await identity.screenshot({ path: testInfo.outputPath(`profile-name-invalid-${width}.png`) });
+
+  await name.fill("\u2028Corrected synthetic owner\u2029");
+  await expect.poll(() => name.evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(true);
+  await name.press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Identity changes saved to your draft." })).toBeVisible();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!).user.displayName)).toBe("Corrected synthetic owner");
+  await page.getByRole("button", { name: "Preview sharing", exact: true }).click();
+  const preview = page.getByRole("region", { name: "Your visitor’s view", exact: true });
+  await expect(preview).toContainText("Corrected synthetic owner");
+  await expect(preview.getByRole("button", { name: "Publish this preview", exact: true })).toBeDisabled();
+  expect((await calls()).filter((call: { name: string }) => call.name === "publishSelected")).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await preview.screenshot({ path: testInfo.outputPath(`profile-name-corrected-${width}.png`) });
+});
+
 test("unknown publication state explains why identity saving is unavailable", async ({ page }) => {
   await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
     ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());

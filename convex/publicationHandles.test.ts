@@ -186,6 +186,23 @@ test.each(["collection", "app"])("existing %s owners can edit their private iden
   expect(await t.query(api.publicProfiles.getByHandleV2, { handle })).toEqual(publishedBefore);
 });
 
+test.each(["", "   ", "\t\n"])("blank display name %j cannot replace a usable public identity", async displayName => {
+  const { t, owner, userId } = await fixture();
+  await owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "Saved owner", bio: "Saved bio" });
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  await owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  const state = () => t.run(async ctx => ({
+    user: await ctx.db.get(userId),
+    sites: await ctx.db.query("sites").collect(),
+    publications: await ctx.db.query("publishedProfiles").collect(),
+  }));
+  const before = await state();
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName, bio: "Unsaved bio" }))
+    .rejects.toThrow("Enter a display name before saving your public identity.");
+  expect(await state()).toEqual(before);
+  expect((await owner.query(api.onboarding.previewPublication, { selections: [] })).profile.displayName).toBe("Saved owner");
+});
+
 test.each([
   ["displayName", 80, true], ["displayName", 81, false],
   ["bio", 500, true], ["bio", 501, false],
