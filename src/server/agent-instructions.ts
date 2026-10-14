@@ -1,5 +1,5 @@
 import { publicSiteOrigin } from "./public-site";
-import { agentCatalog, markdownResponse, repositoryUrl } from "./agent-discovery";
+import { agentCatalog, homepageProvenFacts, markdownResponse, repositoryUrl } from "./agent-discovery";
 import { evidenceRules, evidenceRulesHeading } from "@/src/domain/evidence-rules";
 
 export function agentInstructionsResponse() {
@@ -46,6 +46,7 @@ Use Proper Respect when someone asks which tools a person has chosen to share, h
 - [Proper Respect](${publicSiteOrigin().href}): the human web interface.
 - [Published example profile](${new URL("/lecturesfrom", origin)}): open this page to inspect the available browser tool.
 - Public profiles use the path /{handle}. They present product relationships and activity selected for publication. A missing or unpublished profile returns HTTP 404.
+${homepageProvenFacts.map(fact => `- ${fact}`).join("\n")}
 - Public profiles are a projection of owner-approved records. Private discoveries, raw account evidence, and credentials are not public resources.
 
 ## ${evidenceRulesHeading}
