@@ -1,10 +1,17 @@
-import { internalMutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
+import type { Doc, Id } from "./_generated/dataModel";
+import { requireUser } from "./authHelpers";
 import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
 import { isHttpUrl } from "../src/domain/http-url";
 import { PUBLISHED_URL_MAX } from "../src/domain/published-text-limits";
+import {
+  publicRetainedMailboxAggregate,
+  type RetainedMailboxRow,
+  type StoredMailboxAccount,
+} from "../src/domain/retained-mailbox-aggregate";
 
 const cardValidator = publicProfileValidator.fields.cards.element;
 const publicProfileV1Validator = v.object({
@@ -121,5 +128,88 @@ export const restoreHandle = internalMutation({
     if (args.dryRun) return { status: "ready" as const, ...summary, ...record };
     await ctx.db.patch(publication._id, { takenDownAt: undefined, takedownReason: undefined });
     return { status: "restored" as const, ...summary, ...record };
+  },
+});
+
+const retainedSourceValidator = v.object({
+  accountId: v.string(),
+  recording: v.union(v.literal("recording"), v.literal("stopped")),
+  label: v.union(v.literal("Personal"), v.literal("Former employer"), v.literal("Retained source")),
+  retainedCount: v.number(),
+});
+
+function storedMailbox(account: Doc<"mailboxAccounts">): StoredMailboxAccount {
+  return {
+    id: account._id,
+    status: account.status,
+    ...(account.status === "DISCONNECTED" ? { disconnectedAt: account.updatedAt } : {}),
+    ...(account.accountDistinction ? { distinction: account.accountDistinction } : {}),
+    ...(account.retainedAggregateDisplay ? { display: account.retainedAggregateDisplay } : {}),
+  };
+}
+
+async function retainedMailboxRows(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  accounts: readonly Doc<"mailboxAccounts">[],
+): Promise<RetainedMailboxRow[]> {
+  const accountIdBySource = new Map(accounts.map(account => [account.evidenceSourceId, account._id]));
+  const rows: RetainedMailboxRow[] = [];
+  let cursor: string | null = null;
+  for (;;) {
+    const page = await ctx.db
+      .query("rawEvidence")
+      .withIndex("by_user", q => q.eq("userId", userId))
+      .paginate({ numItems: 100, cursor });
+    for (const evidence of page.page) {
+      const accountId = accountIdBySource.get(evidence.evidenceSourceId);
+      if (!accountId || evidence.deletedAt) continue;
+      rows.push({ id: evidence._id, accountId, retainedAt: evidence.capturedAt });
+    }
+    if (page.isDone) break;
+    cursor = page.continueCursor;
+  }
+  return rows;
+}
+
+/**
+ * Public page aggregate for mailboxes the owner chose to display.
+ * Visitors are not signed in. The result is counts and stored labels only:
+ * no message payload, no account label, and no address.
+ */
+export const getRetainedMailboxAggregate = query({
+  args: { handle: v.string() },
+  returns: v.array(retainedSourceValidator),
+  handler: async (ctx, args) => {
+    const profile = await readPublishedProfile(ctx, args.handle);
+    if (!profile) return [];
+    const user = await ctx.db.query("users").withIndex("by_handle", q => q.eq("handle", profile.handle)).unique();
+    if (!user) return [];
+    const accounts = await ctx.db.query("mailboxAccounts").withIndex("by_owner", q => q.eq("ownerId", user._id)).collect();
+    const rows = await retainedMailboxRows(ctx, user._id, accounts);
+    return [...publicRetainedMailboxAggregate({
+      accounts: accounts.map(storedMailbox),
+      rows,
+    })];
+  },
+});
+
+/** Records the owner's display choice. Does not read a provider or change disconnect. */
+export const setRetainedAggregateDisplay = mutation({
+  args: {
+    accountId: v.id("mailboxAccounts"),
+    display: v.union(v.literal("public"), v.literal("private")),
+    distinction: v.optional(v.union(v.literal("personal"), v.literal("former-employer"))),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx);
+    const account = await ctx.db.get(args.accountId);
+    if (!account || account.ownerId !== user._id) throw new Error("Mailbox unavailable.");
+    await ctx.db.patch(args.accountId, {
+      retainedAggregateDisplay: args.display,
+      ...(args.distinction ? { accountDistinction: args.distinction } : {}),
+    });
+    return null;
   },
 });

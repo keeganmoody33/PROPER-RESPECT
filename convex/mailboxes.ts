@@ -156,6 +156,7 @@ export const listAccounts = query({
       lastReadStatus: account.lastReadStatus, hasMore: account.cursor !== null,
       lastFailure: account.lastFailure, maintenanceEnabled: account.maintenanceEnabled ?? false,
       nextMaintenanceAt: account.nextMaintenanceAt, lastRevocation: account.lastRevocation,
+      retainedAggregateDisplay: account.retainedAggregateDisplay, accountDistinction: account.accountDistinction,
       capability: "READ_ONLY_HEADERS" as const,
       discoveryRun: account.discoveryRunId ? publicDiscoveryRun(await ctx.db.get(account.discoveryRunId)) : null,
       contexts: await ctx.db.query("mailboxScanContexts").withIndex("by_account_mode", q => q.eq("accountId", account._id)).take(3),

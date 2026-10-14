@@ -3,6 +3,7 @@ import { PublicProfileWebMcp } from "@/components/public-profile-webmcp";
 import { ProfileLinkProps } from "@/components/profile-link-props";
 import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
 import { ProfileName, ProfileLinks } from "@/components/profile-identity";
+import { RetainedMailboxAggregate } from "@/components/retained-mailbox-aggregate";
 import { convexAuthToken } from "@/src/domain/convex-auth-token";
 import { getLinkProps } from "@/src/data/get-link-props";
 import type { LinkPropCredit } from "@/src/domain/link-prop";
@@ -11,6 +12,7 @@ import { giveStoredLinkProp } from "./give-link-prop";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
+import { getPublicMailboxAggregate } from "@/src/data/get-public-mailbox-aggregate";
 import { getPublicProfile } from "@/src/data/get-public-profile";
 import { publicPageMetadata } from "@/src/server/public-site";
 import styles from "./profile.module.css";
@@ -61,6 +63,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   if (!profile) notFound();
   if (profile.handle !== rawHandle) permanentRedirect(`/${profile.handle}`);
+  const retainedSources = await getPublicMailboxAggregate(profile.handle);
   const viewer = await signedInViewer();
   const viewerSignedIn = viewer !== null;
   const linkProps = await propsForViewer(profile.handle, viewer?.token);
@@ -106,6 +109,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         )}
         <ProfileLinkProps credits={linkProps} viewerSignedIn={viewerSignedIn} />
       </section>
+
+      <RetainedMailboxAggregate sources={retainedSources} />
 
       <footer className="profile-footer">
         <div>
