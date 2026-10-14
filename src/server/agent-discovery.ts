@@ -63,11 +63,19 @@ export function publicSiteGuide() {
 
 export type PublicSiteGuide = ReturnType<typeof publicSiteGuide>;
 
+export const homepageProvenFacts = [
+  "A public profile can show a retained measurement you published, including how much, and withholds an amount you did not publish.",
+  "More than one mailbox can be connected. Disconnect stops recording from that mailbox. A retained aggregate of personal and former-employer accounts can stay visible when you record it as public, with the stored label and no email address.",
+  "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
+] as const;
+
 export function homepageMarkdown() {
   const origin = publicSiteOrigin();
   return `# Proper Respect
 
 Your tools. Your track record.
+
+${homepageProvenFacts.join("\n\n")}
 
 ${productIdentity().description}
 

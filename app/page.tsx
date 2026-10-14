@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
 import { PublicSiteGuideWebMcp } from "@/components/public-site-guide-webmcp";
-import { productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
+import { homepageProvenFacts, productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
@@ -22,9 +22,7 @@ export default function HomePage() {
             <p className={styles.label}>A personal record of the tools you use.</p>
             <h1 id="homepage-title">Your tools.<br /><span>Your track record.</span></h1>
             <ul className={styles.facts}>
-              <li>A public profile can show a retained measurement you published, including how much, and withholds an amount you did not publish.</li>
-              <li>More than one mailbox can be connected. Disconnect stops recording from that mailbox. A retained aggregate of personal and former-employer accounts can stay visible when you record it as public, with the stored label and no email address.</li>
-              <li>A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.</li>
+              {homepageProvenFacts.map(fact => <li key={fact}>{fact}</li>)}
             </ul>
             <div className={styles.actions}>
               <Link className={styles.primary} href="/app/collection">Start your collection</Link>
