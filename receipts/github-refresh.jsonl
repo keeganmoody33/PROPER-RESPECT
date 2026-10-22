@@ -24,3 +24,4 @@
 {"checkedAt":"2026-10-19T15:39:56.040Z","event":"schedule","runId":"39279640493","sha":"29c0666f05f03df6a178275acbe799ffc4bf7ead","handle":"lecturesfrom","capturedAt":"2026-10-09T06:00:28.234Z","freshness":"STALE","ageHours":249.66,"ok":false}
 {"checkedAt":"2026-10-20T13:34:38.394Z","event":"schedule","runId":"39431547091","sha":"29c0666f05f03df6a178275acbe799ffc4bf7ead","handle":"lecturesfrom","capturedAt":"2026-10-09T06:00:28.234Z","freshness":"STALE","ageHours":271.57,"ok":false}
 {"checkedAt":"2026-10-21T08:36:37.642Z","event":"schedule","runId":"39570515369","sha":"29c0666f05f03df6a178275acbe799ffc4bf7ead","handle":"lecturesfrom","capturedAt":"2026-10-09T06:00:28.234Z","freshness":"STALE","ageHours":290.6,"ok":false}
+{"checkedAt":"2026-10-22T08:37:39.926Z","event":"schedule","runId":"39749090665","sha":"29c0666f05f03df6a178275acbe799ffc4bf7ead","handle":"lecturesfrom","capturedAt":"2026-10-09T06:00:28.234Z","freshness":"STALE","ageHours":314.62,"ok":false}
