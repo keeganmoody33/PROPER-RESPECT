@@ -1,9 +1,8 @@
 import { NextRequest } from "next/server";
 import { afterEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ clerk: vi.fn((handler: (_auth: unknown, request: NextRequest) => unknown) => (request: NextRequest) => handler({}, request)) }));
-vi.mock("@clerk/nextjs/server", () => ({ clerkMiddleware: mocks.clerk }));
-afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); mocks.clerk.mockClear(); });
+vi.mock("@clerk/nextjs/server", () => ({ clerkMiddleware: (handler: (_auth: unknown, request: NextRequest) => unknown) => (request: NextRequest) => handler({}, request) }));
+afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
 
 async function loadProxy(vercelEnv: string, nodeEnv = "production") {
   vi.stubEnv("NODE_ENV", nodeEnv);
@@ -13,7 +12,7 @@ async function loadProxy(vercelEnv: string, nodeEnv = "production") {
   return (await import("../../proxy")).default;
 }
 
-it("sends production pages on another host to the public origin before Clerk loads", async () => {
+it("sends production pages on another host to the public origin", async () => {
   const proxy = await loadProxy("production");
   for (const method of ["GET", "HEAD"]) {
     const response = await proxy(new NextRequest("https://proper-respect.vercel.app/sign-in?redirect_url=%2Fapp", { method }), {} as never);
