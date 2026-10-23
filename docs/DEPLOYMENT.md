@@ -23,7 +23,10 @@ apex-to-`props.lecturesfrom.com` sequence is historical, not a current setup tas
 share image, and sitemap. Production uses `https://proper-respect.com`. The value
 is server-side, must be an HTTPS origin in production, and does not infer authority
 from Host or forwarded headers. Production rendering and deployment preflight
-reject missing or invalid values. Preview pages are noindex.
+reject missing or invalid values. Preview pages are noindex. The production
+Clerk instance serves only this origin, so `proxy.ts` sends page requests on any
+other production host (for example the project's `vercel.app` alias) to it with
+a 308. API and `/__clerk` requests stay on the host they reached.
 
 The sitemap includes the homepage and Origins, Contact, and Privacy pages with
 last-modified dates. It does not enumerate owners or private profiles. Profile

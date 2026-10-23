@@ -1,5 +1,6 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import type { NextFetchEvent, NextRequest } from "next/server";
+import { canonicalHostRedirect } from "@/src/server/canonical-host";
 import { homepageRepresentation } from "@/src/server/homepage-representation";
 import { classifyUserAgent, isCountablePageRequest } from "@/src/server/request-tally";
 import { recordHit } from "@/src/server/tally-store";
@@ -9,6 +10,8 @@ const clerkRoute = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   : null;
 
 export default function proxy(request: NextRequest, event: NextFetchEvent) {
+  const redirect = canonicalHostRedirect(request);
+  if (redirect) return redirect;
   if (typeof event?.waitUntil === "function" && isCountablePageRequest(request.method, request.nextUrl.pathname, request.headers)) {
     event.waitUntil(recordHit(classifyUserAgent(request.headers.get("user-agent"))));
   }
