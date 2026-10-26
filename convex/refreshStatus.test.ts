@@ -18,6 +18,9 @@ const AES_GCM_IV_BYTES = 12;
 const RECONNECTED_GENERATION = 2;
 const refresh = makeFunctionReference<"action">("connectors:refreshApproved");
 const forOwner = makeFunctionReference<"query">("refreshStatus:forOwner");
+const connectGithub = makeFunctionReference<"action">("connectors:connectGithub");
+const revokeConnector = makeFunctionReference<"mutation">("connectors:revokeConnector");
+const recordOutcome = makeFunctionReference<"mutation">("connectors:recordRefreshAttemptOutcome");
 const activity = (total: number) => ({ kind: "contributionCalendar" as const, total, days: [], attributionScope: "PERSONAL" as const,
   capturedAt: "2026-09-22T10:00:00.000Z", freshness: "FRESH" as const, provenanceLabel: "Synthetic" });
 const response = (status = HTTP_OK) => new Response(JSON.stringify({ data: { viewer: { id: "U_synthetic-account", login: "synthetic-account",
@@ -65,15 +68,46 @@ test("a successful scheduled refresh reads RUNNING with its ledger row", async (
   expect(f.fetcher).toHaveBeenCalledTimes(1);
 });
 
-test("a reconnect after approval reads REAUTHORIZE and the refresh is skipped without a provider call", async () => {
+test("a real reconnect revokes the approval and still reads REAUTHORIZE for the owner", async () => {
   const f = await fixture();
-  // Reconnecting the same account is a new credential generation (#150).
+  await f.t.action(refresh, {});
+  // connectGithub is a new credential generation and revokes the approval (#150).
+  await f.owner.action(connectGithub, { token: "synthetic-new-token" });
+  const revoked = await f.t.run(ctx => ctx.db.get(f.ids.subscriptionId));
+  expect(revoked?.revokedAt).toBeDefined();
+  const rows = await f.owner.query(forOwner, {});
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ subscriptionId: f.ids.subscriptionId, state: "REAUTHORIZE", revokedAt: revoked?.revokedAt });
+  expect(rows[0].lastAttempt).toMatchObject({ outcome: "SUCCESS" });
+});
+
+test("a current approval whose connection moved on reads REAUTHORIZE and is skipped without a provider call", async () => {
+  const f = await fixture();
   await f.t.run(ctx => ctx.db.patch(f.ids.connectorId, { githubBinding: { providerAccountId: "U_synthetic-account", generation: RECONNECTED_GENERATION } }));
   await f.t.action(refresh, {});
   const rows = await f.owner.query(forOwner, {});
   expect(rows[0].state).toBe("REAUTHORIZE");
   expect(rows[0].lastAttempt).toMatchObject({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
   expect(f.fetcher).not.toHaveBeenCalled();
+});
+
+test("a stale duplicate completion after a success does not ask for reauthorization", async () => {
+  const f = await fixture();
+  await f.t.action(refresh, {});
+  // Two overlapping completions: the second one records STALE_GRANT on a still-current approval.
+  await f.t.mutation(recordOutcome, { subscriptionId: f.ids.subscriptionId, outcome: "SKIPPED", errorClass: "STALE_GRANT", provider: "GITHUB" });
+  const rows = await f.owner.query(forOwner, {});
+  expect(rows[0].state).toBe("RUNNING");
+  expect(rows[0].lastAttempt).toMatchObject({ outcome: "SKIPPED", errorClass: "STALE_GRANT" });
+});
+
+test("a current approval the scheduler declines for another reason reads SKIPPED", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.patch(f.ids.propId, { visibility: "PRIVATE" }));
+  await f.t.action(refresh, {});
+  const rows = await f.owner.query(forOwner, {});
+  expect(rows[0].state).toBe("SKIPPED");
+  expect(rows[0].lastAttempt).toMatchObject({ outcome: "SKIPPED", errorClass: "NOT_ELIGIBLE" });
 });
 
 test("a provider failure on a valid approval reads FAILING", async () => {
@@ -90,8 +124,32 @@ test("another signed-in user sees no rows", async () => {
   expect(await f.other.query(forOwner, {})).toEqual([]);
 });
 
-test("a revoked approval is not listed", async () => {
+test("an approval revoked by disconnecting GitHub is not listed", async () => {
+  const f = await fixture();
+  await f.owner.mutation(revokeConnector, { connectorId: f.ids.connectorId });
+  expect(await f.owner.query(forOwner, {})).toEqual([]);
+});
+
+test("an approval revoked while its connection still matches is not listed", async () => {
   const f = await fixture();
   await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { revokedAt: "2026-10-01T00:00:00.000Z" }));
   expect(await f.owner.query(forOwner, {})).toEqual([]);
+});
+
+test("a reconnect-revoked approval is not listed once the card is private", async () => {
+  const f = await fixture();
+  await f.owner.action(connectGithub, { token: "synthetic-new-token" });
+  await f.t.run(ctx => ctx.db.patch(f.ids.propId, { visibility: "PRIVATE" }));
+  expect(await f.owner.query(forOwner, {})).toEqual([]);
+});
+
+test("a reconnect-revoked approval is replaced by a fresh approval on the new connection", async () => {
+  const f = await fixture();
+  await f.owner.action(connectGithub, { token: "synthetic-new-token" });
+  const connector = await f.t.run(ctx => ctx.db.get(f.ids.connectorId));
+  const fresh = await f.t.run(ctx => ctx.db.insert("metricSubscriptions", { userId: connector!.userId, propId: f.ids.propId, connectorId: f.ids.connectorId,
+    githubBinding: connector!.githubBinding, metricKey: "github.contributions", attributionScope: "PERSONAL", refreshCadence: "DAILY", approvedAt: "2026-10-02T00:00:00.000Z" }));
+  const rows = await f.owner.query(forOwner, {});
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ subscriptionId: fresh, state: "NEVER_RUN" });
 });

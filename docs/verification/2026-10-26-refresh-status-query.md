@@ -28,9 +28,20 @@ and a derived `state`:
 | state | meaning |
 | --- | --- |
 | `RUNNING` | approval matches the live connection and the last attempt succeeded |
-| `REAUTHORIZE` | the connection was replaced after approval, or the last attempt was skipped as ineligible or stale |
-| `FAILING` | approval valid, last attempt failed at the provider |
+| `REAUTHORIZE` | no current approval can run: a reconnect revoked it and nothing replaced it, or the connection behind a current approval no longer matches it |
+| `FAILING` | approval current, last attempt failed at the provider |
+| `SKIPPED` | approval current, scheduler declined the last attempt for a reason other than the connection (error class says which) |
 | `NEVER_RUN` | approved, no attempt yet |
+
+Revision after Copilot review (same day): a real reconnect through
+`connectors:connectGithub` revokes the approval (`saveConnectedSnapshot`), so
+the query also lists the most recent revoked approval for a card when the
+owner's connection moved on without it and the card is still public. A
+disconnect (`revokeConnector`), a revocation while the connection still
+matches, a card taken private, or a fresh approval on the new connection all
+drop the row. `REAUTHORIZE` is derived from the current connection, never
+from a ledger row: a `SKIPPED / STALE_GRANT` row from an overlapping duplicate
+completion is reported as the last attempt but does not decide the state.
 
 No UI change in this slice. The query is the contract a collection card can
 read to show "daily refresh paused, approve again on the current connection".
@@ -38,9 +49,15 @@ read to show "daily refresh paused, approve again on the current connection".
 ## Proof
 
 - RED: `npx vitest run convex/refreshStatus.test.ts` with the module absent,
-  6 failed (`Could not find module for: "refreshStatus"`).
-- GREEN: same file, 6 passed. Covers never run, running, reconnect skips without
-  a provider call, provider failure, other-user isolation, revoked approval.
+  6 failed (`Could not find module for: "refreshStatus"`). After review, the
+  three added cases (real reconnect, stale duplicate completion, non-connection
+  skip) failed against the first commit's module: 3 failed, 9 passed.
+- GREEN: same file, 12 passed. Covers never run, running, real reconnect via
+  `connectors:connectGithub`, moved-on connection skips without a provider
+  call, stale duplicate completion, non-connection skip, provider failure,
+  other-user isolation, disconnect, matching-connection revocation, private
+  card, and replacement by a fresh approval.
+- `npx vitest run convex/githubRefreshSafety.test.ts`: 67 passed.
 - `npx tsc --noEmit` passed. `npx eslint` on the two new files passed.
 - `node --test` owner-rule scripts (`assert-return-value`,
   `convex-auth-token-owner`, `http-url-owner`): 6 passed.
