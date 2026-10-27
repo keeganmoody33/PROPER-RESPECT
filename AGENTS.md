@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Updated: 2026-09-27.
+Updated: 2026-10-27.
 
 ## Active remediation program
 
@@ -84,6 +84,15 @@ Keep source, capture, observation, review, relationship, and publication distinc
 Keep secrets in ignored configuration and private originals outside Git. Follow `docs/DEPLOYMENT.md`; verify target and authorization before backend synchronization, real reads, recurrence, deployment, or publication. Never seed over owner data. Use pstack-codex as the primary execution workflow per the September 19 owner direction. Preserve the accepted checkout, existing Ref and Tasks 1–4; do not reset to main or restart completed slices. Compound Engineering remains available for focused supporting work.
 
 ## Concurrent Review Protocol
+
+**Truth-check fixes.** Owner decision, 2026-10-27. The daily
+"lecturesfrom truth check" automation may open one small PR per `bug` issue it
+filed for something false or stale on a public page. The PR names its issue,
+follows every rule in this file, and carries the `needs-owner` label. A
+reviewer other than Devin (Copilot or Claude) reviews it, and the owner merges.
+Devin never merges, never pushes to another writer's branch, and gains no
+authority to release, deploy, change production configuration, read providers,
+or edit or publish the owner's collection.
 
 Devin reports; Codex, or the delivery-pass lead named under "Active
 remediation program", writes. Do not build on a Devin-pushed branch or commit;
