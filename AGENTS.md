@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Updated: 2026-09-27.
+Updated: 2026-10-27.
 
 ## Active remediation program
 
@@ -85,8 +85,19 @@ Keep secrets in ignored configuration and private originals outside Git. Follow 
 
 ## Concurrent Review Protocol
 
-Devin reports; Codex, or the delivery-pass lead named under "Active
-remediation program", writes. Do not build on a Devin-pushed branch or commit;
+**Truth-check fixes.** Owner decision, 2026-10-27. The daily
+"lecturesfrom truth check" automation may open one small PR per `bug` issue it
+filed for something false or stale on a public page. This is the one exception
+to "Devin reports" below. The PR names its issue, follows every other rule in
+this file, and carries the `needs-owner` label. Other writers treat its branch as
+held by the truth check and don't build on it. A
+reviewer other than Devin (Copilot or Claude) reviews it, and the owner merges.
+Devin never merges, never pushes to another writer's branch, and gains no
+authority to release, deploy, change production configuration, read providers,
+or edit or publish the owner's collection.
+
+Except for truth-check fixes above, Devin reports; Codex, or the delivery-pass
+lead named under "Active remediation program", writes. Do not build on a Devin-pushed branch or commit;
 report it to the owner first. Record every review comment in the current dated
 verification receipt as fix now, deferred with reason, superseded, or not a bug
 with evidence before changing code. Resolve contradictory findings by regression
