@@ -627,6 +627,18 @@ async function githubFixture(connector: { status?: "CONNECTED" | "ERROR" | "REVO
   return { t, owner, ...ids, selection, publish, subscriptions, publishedCard, refreshApproved };
 }
 
+test("a card can't start before its source account was created (#190)", async () => {
+  const f = await githubFixture();
+  const withMember = { ...calendar(3, "2026-09-20T10:00:00.000Z"), memberSince: "2024-12-02" };
+  await f.t.run(ctx => ctx.db.patch(f.propId, { startedAt: "2024-01-01", activity: withMember }));
+  const early = f.selection({ startedAt: "2024-01-01", activity: withMember, autoRefresh: false, connectorId: undefined, metricKey: undefined });
+  await expect(f.owner.query(api.onboarding.previewPublication, { selections: [early] })).rejects.toThrow("The GitHub card starts on 2024-01-01, before its account was created on 2024-12-02. Change the start date to 2024-12-02 or later, save it privately, then preview again.");
+  await f.t.run(ctx => ctx.db.patch(f.propId, { startedAt: "2024-12-02" }));
+  const sel = f.selection({ startedAt: "2024-12-02", activity: withMember, autoRefresh: false, connectorId: undefined, metricKey: undefined });
+  await f.owner.mutation(api.onboarding.publishSelected, await reviewedPublication(f.owner, { selections: [sel] }));
+  expect((await f.publishedCard())?.startedAt).toBe("2024-12-02");
+});
+
 test("a checked GitHub publish creates one active subscription that getState reports as approved", async () => {
   const f = await githubFixture();
   expect(await f.refreshApproved()).toBe(false);
