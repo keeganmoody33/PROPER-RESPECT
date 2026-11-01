@@ -777,7 +777,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
       : undefined;
     const cards = projectPublicProfile({ user: profileUser, props: [{
       visibility: "PUBLIC", status: prop.status, goTo: prop.goTo, headline: prop.headline, note: prop.note,
-      startedAt: prop.startedAt, activity: selection.activity, measurements,
+      startedAt: prop.startedAt, startedAtPrecision: prop.startedAtPrecision, activity: selection.activity, measurements,
       cost: selection.costVisibility !== undefined ? (selection.cost === undefined ? undefined : costSchema.parse(selection.cost)) : prop.cost,
       costVisibility: selection.costVisibility ?? prop.costVisibility,
       product: { name: product.name, slug: product.slug, domain: product.domain, description: product.description, logoUrl: product.logoUrl },

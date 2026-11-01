@@ -32,6 +32,8 @@ export const costValidator = v.object({
   period: v.optional(v.object({ start: v.string(), end: v.string() })),
 });
 
+export const startDatePrecisionValidator = v.union(v.literal("year"), v.literal("month"), v.literal("day"));
+
 export const statusValidator = v.union(
   v.literal("ACTIVE"),
   v.literal("TESTING"),
@@ -213,6 +215,7 @@ export const publicProfileValidator = v.object({
       headline: v.string(),
       note: v.string(),
       startedAt: v.optional(v.string()),
+      startedAtPrecision: v.optional(startDatePrecisionValidator),
       activity: v.optional(activityModuleValidator),
       measurements: v.optional(v.array(publicMeasurementValidator)),
       cost: v.optional(costValidator),

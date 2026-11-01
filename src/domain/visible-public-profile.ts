@@ -1,5 +1,5 @@
 import { publicMeasurementSchema, type PublicMeasurement } from "./measurements";
-import type { ActivityModule, PublicProfile } from "./public-profile";
+import { displayStartDate, type ActivityModule, type PublicProfile } from "./public-profile";
 import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
 import { usageLinkLabelText, usageLinkSchema } from "./usage-links";
@@ -118,7 +118,7 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
       status: card.status, ownerSelectedGoTo: card.goTo === true,
       headline: card.headline || card.note || "Relationship note not supplied.",
       note: card.note || "Relationship note not supplied.",
-      ...(card.startedAt ? { startedAt: card.startedAt } : { startDateNote: "Start date not supplied" }),
+      ...(card.startedAt ? { startedAt: displayStartDate(card.startedAt, card.startedAtPrecision) } : { startDateNote: "Start date not supplied" }),
       ...(card.activity ? { activity: visibleActivity(card.activity) } : {}),
       ...(card.measurements?.length ? { measurements: card.measurements.map(row => publicMeasurementSchema.parse(row)) } : {}),
       ...(card.cost ? { cost: {

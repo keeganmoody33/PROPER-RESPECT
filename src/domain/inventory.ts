@@ -12,6 +12,7 @@ export const relationshipEditSchema = z.object({
   headline: z.string().trim().max(240),
   note: z.string().trim().max(4000),
   startedAt: optionalDate,
+  startedAtPrecision: z.enum(["year", "month", "day"]).optional(),
   // Zod still runs this refine after a failed url check, so it must not throw.
   supportingUrl: z.string().url().max(2048).refine(
     isHttpsUrl,

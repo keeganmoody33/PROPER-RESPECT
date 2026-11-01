@@ -54,6 +54,13 @@ test("relationship evidence receives an explicit draft-date action without savin
   expect(save).not.toHaveBeenCalled();
 });
 
+test("the start-date precision defaults to year only until the owner records more (#191)", () => {
+  const unset = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item, evidence: [], onSave: vi.fn() })));
+  expect(unset('select[name="startedAtPrecision"] option[selected]').attr("value")).toBe("year");
+  const day = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item: { ...item, prop: { ...item.prop, startedAt: "2025-06-14", startedAtPrecision: "day" } }, evidence: [], onSave: vi.fn() })));
+  expect(day('select[name="startedAtPrecision"] option[selected]').attr("value")).toBe("day");
+});
+
 test("a short retained answer stays with its original question and is not silently rewritten into an owner explanation", () => {
   const html = renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item, evidence: [testimony], onSave: vi.fn() }));
   const $ = load(html);

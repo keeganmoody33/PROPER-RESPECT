@@ -592,6 +592,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                       headline: card.prop.headline,
                       note: card.prop.note,
                       startedAt: card.prop.startedAt,
+                      startedAtPrecision: card.prop.startedAtPrecision,
                       activity: card.prop.activity,
                       cost: card.prop.cost,
                       primaryLink: privateDestination,

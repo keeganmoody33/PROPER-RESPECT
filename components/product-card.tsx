@@ -7,9 +7,10 @@ import {
   selectProductBrandLogo,
   type ProductBrandSnapshot,
 } from "@/src/domain/product-brand";
-import type {
-  ActivityModule,
-  PublicProfile,
+import {
+  displayStartDate,
+  type ActivityModule,
+  type PublicProfile,
 } from "@/src/domain/public-profile";
 import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
 import { compactNumber } from "@/src/domain/format-activity-number";
@@ -551,7 +552,7 @@ export function ProductCard({
             {!relationshipConfirmed && <p>Needs your review</p>}
             {card.note ? <blockquote>{card.note}</blockquote> : <p>{notePlaceholder}</p>}
             <p className="relationship-date">
-              {!relationshipConfirmed ? "Relationship not confirmed" : card.startedAt ? <>Since <time dateTime={card.startedAt}>{card.startedAt}</time></> : "Start date not supplied"}
+              {!relationshipConfirmed ? "Relationship not confirmed" : card.startedAt ? <>Since <time dateTime={displayStartDate(card.startedAt, card.startedAtPrecision)}>{displayStartDate(card.startedAt, card.startedAtPrecision)}</time></> : "Start date not supplied"}
             </p>
           </>}
           <p>{card.product.description}</p>

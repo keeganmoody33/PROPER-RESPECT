@@ -7,7 +7,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
 import { readPublishedProfile } from "./publicProfiles";
-import { statusValidator } from "./validators";
+import { startDatePrecisionValidator, statusValidator } from "./validators";
 import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
 import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
 import { privateCardPrimaryLink } from "../src/domain/product-destination";
@@ -22,7 +22,7 @@ async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
 function relationshipState(prop: Doc<"props">) {
   return { status: prop.status, goTo: prop.goTo ?? false,
     confirmed: isRelationshipConfirmed(prop),
-    headline: prop.headline, note: prop.note, startedAt: prop.startedAt,
+    headline: prop.headline, note: prop.note, startedAt: prop.startedAt, startedAtPrecision: prop.startedAtPrecision,
     supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId };
 }
 
@@ -51,7 +51,8 @@ export const save = mutation({
   args: {
     propId: v.id("props"), operationId: v.string(), expectedVersion: v.number(),
     status: statusValidator, goTo: v.boolean(), headline: v.string(), note: v.string(),
-    startedAt: v.optional(v.string()), supportingUrl: v.optional(v.string()),
+    startedAt: v.optional(v.string()), startedAtPrecision: v.optional(startDatePrecisionValidator),
+    supportingUrl: v.optional(v.string()),
     activityEvidenceId: v.optional(v.id("rawEvidence")),
     clearActivity: v.optional(v.boolean()),
   },
@@ -59,7 +60,8 @@ export const save = mutation({
     const { user, prop } = await ownedProp(ctx, args.propId);
     if (!args.operationId.trim() || args.operationId.length > 128 || !Number.isSafeInteger(args.expectedVersion) || args.expectedVersion < 0) throw new Error("Invalid save operation.");
     if (args.clearActivity && args.activityEvidenceId) throw new Error("Choose a supporting snapshot or remove it, not both.");
-    const edit = relationshipEditSchema.parse(args);
+    const parsed = relationshipEditSchema.parse(args);
+    const edit = { ...parsed, startedAtPrecision: parsed.startedAt ? parsed.startedAtPrecision : undefined };
     const requestJson = JSON.stringify({ ...edit, expectedVersion: args.expectedVersion, activityEvidenceId: args.activityEvidenceId, ...(args.clearActivity ? { clearActivity: true } : {}) });
     const previous = await ctx.db.query("relationshipEvents")
       .withIndex("by_prop_operation", q => q.eq("propId", prop._id).eq("operationId", args.operationId)).unique();
@@ -281,7 +283,7 @@ export const exportRelationships = query({
         product: product ? { name: product.name, slug: product.slug, domain: product.domain } : null,
         status: prop.status, visibility: prop.visibility, goTo: prop.goTo ?? false,
         headline: prop.headline, note: prop.note, confirmedAt: prop.confirmedAt,
-        relationshipVersion: prop.relationshipVersion ?? 0, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
+        relationshipVersion: prop.relationshipVersion ?? 0, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource, startedAtPrecision: prop.startedAtPrecision,
         supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId,
         activity: prop.activity, cost: prop.cost, costVisibility: prop.costVisibility,
         links: links.slice(0, EXPORT_LINK_LIMIT).map(link => ({ type: link.type, url: link.url, label: link.label, isPrimary: link.isPrimary })),
