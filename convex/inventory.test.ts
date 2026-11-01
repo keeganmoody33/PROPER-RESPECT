@@ -282,3 +282,18 @@ test("collection shell omits cards and sharing reads bounded pages without misbi
   expect(new Set([...first.page, ...second.page].map(card => card.prop._id)).size).toBe(32);
   expect((await other.query(sharing, firstPage)).page).toEqual([]);
 });
+
+test("a start date keeps the precision the owner saved, and clearing the date clears it (#191)", async () => {
+  const { t, owner, propId } = await fixture();
+  const base = { propId, status: "ACTIVE", goTo: false, headline: "", note: "" };
+  await owner.mutation(save, { ...base, expectedVersion: 0, operationId: "year", startedAt: "2025-01-01", startedAtPrecision: "year" });
+  expect(await t.run(ctx => ctx.db.get(propId))).toMatchObject({ startedAt: "2025-01-01", startedAtPrecision: "year" });
+  await owner.mutation(save, { ...base, expectedVersion: 1, operationId: "day", startedAt: "2025-06-14", startedAtPrecision: "day" });
+  expect(await t.run(ctx => ctx.db.get(propId))).toMatchObject({ startedAt: "2025-06-14", startedAtPrecision: "day" });
+  await owner.mutation(save, { ...base, expectedVersion: 2, operationId: "clear", startedAtPrecision: "day" });
+  const cleared = await t.run(ctx => ctx.db.get(propId));
+  expect(cleared?.startedAt).toBeUndefined();
+  expect(cleared?.startedAtPrecision).toBeUndefined();
+  const events = await owner.query(history, { propId, paginationOpts: { numItems: 20, cursor: null } });
+  expect(events.page[0].before).toMatchObject({ startedAt: "2025-06-14", startedAtPrecision: "day" });
+});

@@ -143,6 +143,16 @@ export function withHttpArtifacts<T extends ActivityModule | undefined>(activity
   return { ...activity, artifacts: activity.artifacts.filter(artifact => isHttpUrl(artifact.url)) } as T;
 }
 
+
+export const startDatePrecisionSchema = z.enum(["year", "month", "day"]);
+export type StartDatePrecision = z.infer<typeof startDatePrecisionSchema>;
+
+// A start date without a recorded precision is shown year-only (#191).
+export function displayStartDate(startedAt: string, precision?: StartDatePrecision) {
+  if (precision === "day") return startedAt;
+  return startedAt.slice(0, precision === "month" ? 7 : 4);
+}
+
 export const publicProfileSchema = z.object({
   handle: handleSchema,
   displayName: z.string().min(1),
@@ -165,6 +175,7 @@ export const publicProfileSchema = z.object({
       headline: z.string(),
       note: z.string(),
       startedAt: z.iso.date().optional(),
+      startedAtPrecision: startDatePrecisionSchema.optional(),
       activity: activityModuleSchema.optional(),
       measurements: z.array(publicMeasurementSchema).max(24).optional(),
       cost: costSchema.optional(),
@@ -207,6 +218,7 @@ export type CuratedProp = {
   headline: string;
   note: string;
   startedAt?: string;
+  startedAtPrecision?: StartDatePrecision;
   activity?: ActivityModule;
   measurements?: PublicMeasurement[];
   retainedMeasurements?: readonly Measurement[];
@@ -237,6 +249,7 @@ export function projectPublicProfile(input: {
         headline: prop.headline,
         note: prop.note,
         startedAt: prop.startedAt,
+        ...(prop.startedAt && prop.startedAtPrecision ? { startedAtPrecision: prop.startedAtPrecision } : {}),
         activity: withHttpArtifacts(prop.activity),
         measurements: prop.retainedMeasurements
           ? projectPublishedMeasurements(prop.visibility, prop.retainedMeasurements, prop.publishedMeasurementIds ?? [])

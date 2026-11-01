@@ -75,6 +75,14 @@ describe("visitor identity and missing evidence", () => {
     expect(result.startDateNote).toBe("Start date not supplied");
     expect(result).not.toHaveProperty("cost"); expect(result).not.toHaveProperty("activity");
   });
+  it("states a start date only as precisely as the owner recorded it (#191)", () => {
+    const unknown = profile(); unknown.cards[0].startedAt = "2025-01-01";
+    expect(projectVisiblePublicProfile(unknown).cards[0].startedAt).toBe("2025");
+    const month = profile(); month.cards[0].startedAt = "2025-06-14"; month.cards[0].startedAtPrecision = "month";
+    expect(projectVisiblePublicProfile(month).cards[0].startedAt).toBe("2025-06");
+    const day = profile(); day.cards[0].startedAt = "2025-06-14"; day.cards[0].startedAtPrecision = "day";
+    expect(projectVisiblePublicProfile(day).cards[0].startedAt).toBe("2025-06-14");
+  });
   it("labels missing periods and empty activity without inventing zero values", () => {
     for (const activity of [
       { ...common, kind: "contributionCalendar" as const, total: 0, days: [] },

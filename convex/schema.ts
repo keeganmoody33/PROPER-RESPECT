@@ -19,6 +19,7 @@ import {
   visibilityValidator,
   costValidator,
   costVisibilityValidator,
+  startDatePrecisionValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -101,6 +102,7 @@ export default defineSchema({
     startedAtSource: v.optional(
       v.union(v.literal("AUTHORITATIVE"), v.literal("USER_CONFIRMED")),
     ),
+    startedAtPrecision: v.optional(startDatePrecisionValidator),
     activity: v.optional(activityModuleValidator),
     cost: v.optional(costValidator),
     costVisibility: v.optional(costVisibilityValidator),

@@ -1,6 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
-import { statusValidator } from "./validators";
+import { startDatePrecisionValidator, statusValidator } from "./validators";
 
 export const relationshipStateValidator = v.object({
   status: statusValidator,
@@ -9,6 +9,7 @@ export const relationshipStateValidator = v.object({
   headline: v.string(),
   note: v.string(),
   startedAt: v.optional(v.string()),
+  startedAtPrecision: v.optional(startDatePrecisionValidator),
   supportingUrl: v.optional(v.string()),
   activityEvidenceId: v.optional(v.id("rawEvidence")),
 });

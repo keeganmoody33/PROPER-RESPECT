@@ -92,6 +92,21 @@ test("sharing preview is owner-only, read-only, and exactly matches the approved
   expect((await published()).profile).toEqual(preview.profile);
 });
 
+test("a published card carries the saved start-date precision, and an older card without one still loads (#191)", async () => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture(2);
+  await t.run(async ctx => {
+    await ctx.db.patch(a, { startedAt: "2025-06-14", startedAtPrecision: "month" });
+    await ctx.db.patch(b, { startedAt: "2025-01-01" });
+  });
+  const args = await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] });
+  await owner.mutation(api.onboarding.publishSelected, args);
+  const cards = (await published()).profile.cards;
+  expect(cards[0]).toMatchObject({ startedAt: "2025-06-14", startedAtPrecision: "month" });
+  expect(cards[1].startedAt).toBe("2025-01-01");
+  expect(cards[1]).not.toHaveProperty("startedAtPrecision");
+  expect(await t.query(api.publicProfiles.getByHandle, { handle: "owner" })).toMatchObject({ cards: [{ startedAtPrecision: "month" }, { startedAt: "2025-01-01" }] });
+});
+
 test.each(["publish", "remove"] as const)("another authenticated owner cannot %s a relationship through sharing preview or publication", async mode => {
   const { t, owner, propIds: [publicProp, privateProp], otherPropId, selection } = await fixture();
   const other = t.withIdentity({ subject: "other" });

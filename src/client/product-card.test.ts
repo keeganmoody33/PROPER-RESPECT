@@ -311,6 +311,25 @@ test.each(["ACTIVE", "TESTING", "ARCHIVED"] as const)(
   },
 );
 
+test("a start date without a stored precision shows only its year, not an invented day (#191)", () => {
+  const $ = renderCard({ status: "ACTIVE", startedAt: "2025-01-01" });
+
+  expect($(".card-back .relationship-date").text()).toBe("Since 2025");
+  expect($(".card-back .relationship-date time").attr("datetime")).toBe("2025");
+  expect($.text()).not.toContain("2025-01-01");
+});
+
+test.each([
+  ["year", "2025"],
+  ["month", "2025-06"],
+  ["day", "2025-06-14"],
+] as const)("a %s-precision start date renders as %s (#191)", (startedAtPrecision, shown) => {
+  const $ = renderCard({ status: "ACTIVE", startedAt: "2025-06-14", startedAtPrecision });
+
+  expect($(".card-back .relationship-date").text()).toBe(`Since ${shown}`);
+  expect($(".card-back .relationship-date time").attr("datetime")).toBe(shown);
+});
+
 const activityEvidence = {
   attributionScope: "PERSONAL" as const,
   capturedAt: "2026-09-18T12:00:00.000Z",

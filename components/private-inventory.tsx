@@ -67,6 +67,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       status: currentRelationship.status as SaveInput["status"], goTo: form.get("goTo") === "on",
       headline: String(form.get("headline") ?? ""), note: String(form.get("note") ?? ""),
       startedAt: String(form.get("startedAt") ?? "") || undefined,
+      startedAtPrecision: (String(form.get("startedAtPrecision") ?? "") || undefined) as SaveInput["startedAtPrecision"],
       supportingUrl: String(form.get("supportingUrl") ?? "") || undefined,
       activityEvidenceId: (activityChoice === "__remove__" ? undefined : activityChoice || undefined) as Id<"rawEvidence"> | undefined,
       clearActivity: activityChoice === "__remove__" ? true : undefined,
@@ -100,6 +101,9 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       <label className={styles.dateField}><span>Started using (optional)</span><input name="startedAt" type="date" aria-label="Started using (optional)" value={startedAt} onChange={event => onStartDateChange(event.target.value)} />
         {startedAt !== (item.prop.startedAt ?? "") && <span className={styles.draftLabel}>Unsaved</span>}
       </label>
+      <label>How exact is that date?<select name="startedAtPrecision" defaultValue={item.prop.startedAtPrecision ?? "year"}>
+        <option value="year">Year only</option><option value="month">Year and month</option><option value="day">Exact day</option>
+      </select></label>
       {dateNotice && <p className={styles.dateNotice} role="status">{dateNotice}</p>}
       <p className={styles.hint}>Leave the date blank when you do not know. Signup dates and capture dates are not first use.</p>
     </fieldset>
@@ -249,7 +253,7 @@ export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focus
 function InventoryCard({ item, index, expandedActivity = false }: { item: Item; index: number; expandedActivity?: boolean }) {
   return <ProductCard audience="owner" index={index} expandedActivity={expandedActivity} relationshipConfirmed={isRelationshipConfirmed(item.prop)} goTo={item.prop.goTo} card={{
     product: item.product, status: item.prop.status, headline: item.prop.headline, note: item.prop.note,
-    startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
+    startedAt: item.prop.startedAt, startedAtPrecision: item.prop.startedAtPrecision, activity: item.prop.activity, cost: item.prop.cost,
     primaryLink: privateCardPrimaryLink({
       product: item.product,
       links: item.links,
