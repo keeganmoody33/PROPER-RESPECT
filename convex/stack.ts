@@ -8,6 +8,7 @@ import {
   normalizeProductName,
   normalizeWebsite,
   resolveTypedProduct,
+  STACK_BATCH_RECEIPT_PREFIX,
   type IntakeOutcome,
   type ResolvedProduct,
 } from "./manualProducts";
@@ -28,8 +29,8 @@ export type StackPick = Infer<typeof stackPickValidator>;
 export type SaveSelectionItem = { propId: Id<"props">; productName: string; outcome: IntakeOutcome };
 export type SaveSelectionResult = { items: SaveSelectionItem[]; created: number; confirmed: number; unchanged: number };
 
-// Each pick leaves a manualProductIntakes row keyed `${operationId}:${productSlug}`. Its
-// requestJson holds this receipt, so a retry can return the first result unchanged.
+// Each pick leaves a manualProductIntakes row keyed `stack-batch:${operationId}:${productSlug}`.
+// Its requestJson holds this receipt, so a retry can return the first result unchanged.
 const receiptSchema = z.object({
   kind: z.literal("saveSelection"),
   requestHash: z.string(),
@@ -58,10 +59,13 @@ function summarize(items: SaveSelectionItem[]): SaveSelectionResult {
   return { items, created: count("CREATED"), confirmed: count("CONFIRMED_DRAFT"), unchanged: count("UNCHANGED") };
 }
 
+const itemReceiptPrefix = (operationId: string) => `${STACK_BATCH_RECEIPT_PREFIX}${operationId}:`;
+
 async function replay(ctx: MutationCtx, user: Doc<"users">, operationId: string, requestHash: string, pickCount: number) {
   // The operationId has no colon, so this range holds exactly this operation's receipts.
   const rows = await ctx.db.query("manualProductIntakes")
-    .withIndex("by_user_operation", q => q.eq("userId", user._id).gte("operationId", `${operationId}:`).lt("operationId", `${operationId};`))
+    .withIndex("by_user_operation", q => q.eq("userId", user._id)
+      .gte("operationId", itemReceiptPrefix(operationId)).lt("operationId", `${STACK_BATCH_RECEIPT_PREFIX}${operationId};`))
     .take(MAX_STACK_PICKS + 1);
   if (rows.length === 0) return null;
   const receipts = rows.map(row => ({ row, receipt: receiptSchema.safeParse(JSON.parse(row.requestJson)).data }));
@@ -117,7 +121,7 @@ export const saveSelection = mutation({
     const items: SaveSelectionItem[] = [];
     for (const [index, pick] of picks.entries()) {
       const product = resolved[index]!;
-      const itemOperationId = `${operationId}:${product.identity.slug}`;
+      const itemOperationId = `${itemReceiptPrefix(operationId)}${product.identity.slug}`;
       const edit = relationshipEditSchema.parse({ status: pick.status, goTo: false, headline: "", note: "" });
       const { propId, product: saved, outcome } = await intakeRelationship(ctx, user, {
         resolved: product, edit, note: "", confirmDraft: true,
