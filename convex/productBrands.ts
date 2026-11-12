@@ -6,7 +6,8 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { resolveCatalogProduct } from "../src/domain/discovery";
 import { directoryDomainOwner, directoryEntry } from "../src/domain/product-directory";
-import { brandTitleNamesProduct, canonicalBrandDomainSchema, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
+import { DIRECTORY_ENTRIES } from "../src/domain/product-directory-entries";
+import { brandNameKey, canonicalBrandDomainSchema, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
 import { productBrandSnapshotValidator } from "./productBrandTables";
 import { retrieveProductBrand } from "../src/server/context-brand";
 import { internal } from "./_generated/api";
@@ -18,18 +19,22 @@ const PREPARATION_BATCH_SIZE = 25;
 type BrandProductIdentity = Pick<Doc<"products">, "slug" | "name" | "domain">;
 type ListedIdentity = Readonly<{ slug: string; domain: string; names: readonly string[]; handChecked: boolean }>;
 
-/** The directory product this row is: by its slug, or for a typed row, by a hand-checked product's name or a listed product's website and name. */
+const asIdentity = (entry: (typeof DIRECTORY_ENTRIES)[number]): ListedIdentity =>
+  ({ slug: entry.slug, domain: entry.domain, names: [entry.name, ...entry.aliases], handChecked: entry.evidence !== undefined });
+
+/**
+ * The directory product this row is: by its slug; for an older typed row, by a hand-checked
+ * product's name; or for any typed or discovered row, by a listed product's website and whole name.
+ */
 function listedIdentity(product: BrandProductIdentity): ListedIdentity | null {
   const entry = directoryEntry(product.slug);
-  if (entry) return { slug: entry.slug, domain: entry.domain, names: [entry.name, ...entry.aliases], handChecked: entry.evidence !== undefined };
-  if (!product.slug.startsWith("manual-")) return null;
-  const named = resolveCatalogProduct({ vendor: product.name })?.product;
+  if (entry) return asIdentity(entry);
+  const named = product.slug.startsWith("manual-") ? resolveCatalogProduct({ vendor: product.name })?.product : undefined;
   if (named) return { slug: named.slug, domain: named.domain, names: [named.name], handChecked: true };
-  // A listed product typed in with its own website and one of its names is that product.
-  const owner = directoryDomainOwner(product.domain);
-  const names = owner ? [owner.name, ...owner.aliases] : [];
-  return owner && brandTitleNamesProduct(product.name, names)
-    ? { slug: owner.slug, domain: owner.domain, names, handChecked: owner.evidence !== undefined } : null;
+  const name = brandNameKey(product.name);
+  const match = name ? DIRECTORY_ENTRIES.find(candidate => candidate.domain === product.domain &&
+    [candidate.name, ...candidate.aliases].some(known => brandNameKey(known) === name)) : undefined;
+  return match ? asIdentity(match) : null;
 }
 
 /**
@@ -37,17 +42,18 @@ function listedIdentity(product: BrandProductIdentity): ListedIdentity | null {
  * listed website; a product nobody listed uses the website on its row, unless a listed product owns it.
  */
 export function productBrandEligibility(product: BrandProductIdentity) {
-  const listed = listedIdentity(product);
-  if (!listed) {
-    const ownWebsite = canonicalBrandDomainSchema.safeParse(product.domain).success && !directoryDomainOwner(product.domain);
+  const identity = listedIdentity(product);
+  if (!identity) {
+    // A listed product's website, root or not, is never an unlisted product's own.
+    const ownWebsite = canonicalBrandDomainSchema.safeParse(product.domain).success && !DIRECTORY_ENTRIES.some(entry => entry.domain === product.domain);
     return ownWebsite ? null : "UNVERIFIED_DOMAIN" as const;
   }
-  if (listed.domain !== product.domain) return "UNVERIFIED_DOMAIN" as const;
+  if (identity.domain !== product.domain) return "UNVERIFIED_DOMAIN" as const;
   // Verified 2026-09-19: this subdomain's provider result carries Google branding.
   // An exact domain match cannot establish NotebookLM's product-specific identity.
-  if (listed.slug === "notebooklm") return "PRODUCT_IDENTITY_REQUIRED" as const;
+  if (identity.slug === "notebooklm") return "PRODUCT_IDENTITY_REQUIRED" as const;
   // Root-domain retrieval cannot distinguish a product inside another product's site from its parent.
-  if (directoryDomainOwner(listed.domain)?.slug !== listed.slug) return "PRODUCT_IDENTITY_REQUIRED" as const;
+  if (directoryDomainOwner(identity.domain)?.slug !== identity.slug) return "PRODUCT_IDENTITY_REQUIRED" as const;
   return null;
 }
 
@@ -56,9 +62,9 @@ export function productBrandEligibility(product: BrandProductIdentity) {
  * their provider result, so they need no check; every other product is checked on each fetch.
  */
 function expectedBrandNames(product: BrandProductIdentity): readonly string[] | undefined {
-  const listed = listedIdentity(product);
-  if (listed?.handChecked) return undefined;
-  return listed ? listed.names : [product.name];
+  const identity = listedIdentity(product);
+  if (identity?.handChecked) return undefined;
+  return identity ? identity.names : [product.name];
 }
 
 function verifiedDomain(product: Doc<"products">): string | null {

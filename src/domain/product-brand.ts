@@ -170,7 +170,7 @@ function normalizedFontLinks(value: unknown, source: "fonts" | "styleguide", fam
 // Letters, their marks and digits in any script, so "Open Places" and "openplaces" compare equal
 // and "Café" stays distinct from "Caf". Keeps "工具" whole; drops the space in "Open Places".
 const NOT_NAME_CHARACTER = /[^\p{L}\p{M}\p{N}]/gu;
-const nameKey = (value: string) => value.normalize("NFKC").toLowerCase().replace(NOT_NAME_CHARACTER, "");
+export const brandNameKey = (value: string) => value.normalize("NFKC").toLowerCase().replace(NOT_NAME_CHARACTER, "");
 // The first run of words before a separator: "Cursor" in "Cursor: The AI Code Editor" and "Porkbun" in "Porkbun | Domains".
 // Matches "Cursor: The AI Code Editor" up to "Cursor"; leaves "GitHub Copilot" whole.
 const TITLE_LEAD = /^[^:|\u2013\u2014]+?(?=\s*[:|\u2013\u2014]|\s+-\s|$)/;
@@ -181,9 +181,9 @@ const TITLE_LEAD = /^[^:|\u2013\u2014]+?(?=\s*[:|\u2013\u2014]|\s+-\s|$)/;
  */
 export function brandTitleNamesProduct(title: unknown, names: readonly string[]): boolean {
   if (typeof title !== "string") return false;
-  const whole = nameKey(title), lead = nameKey(TITLE_LEAD.exec(title.trim())?.[0] ?? "");
+  const whole = brandNameKey(title), lead = brandNameKey(TITLE_LEAD.exec(title.trim())?.[0] ?? "");
   if (!whole) return false;
-  return names.map(nameKey).some(name => name !== "" && (name === whole || name === lead));
+  return names.map(brandNameKey).some(name => name !== "" && (name === whole || name === lead));
 }
 
 export function normalizeProductBrand(input: SnapshotInput, responses: ContextBrandResponses): ProductBrandSnapshot {
