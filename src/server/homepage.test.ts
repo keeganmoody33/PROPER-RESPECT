@@ -27,3 +27,18 @@ it("keeps the same three statements in the homepage markdown", () => {
   for (const statement of statements) expect(opening).toContain(statement);
   expect(opening).not.toMatch(/Wispr|Clay|token spend|live site|already shows|finds affiliate|find affiliate/i);
 });
+
+const steps = [
+  ["Pick your tools.", "Start from a role or search by name. Add anything that is missing by its name."],
+  ["Say how you use each one.", "Mark what you use, what you are testing and what you used before. Save the whole list privately in one step."],
+  ["Preview once, then share.", "See exactly what visitors will see. Approve that preview once to put every confirmed tool on your public page."],
+];
+const retired = ["Start with one tool", "connect a supported source", "measurement packet", "Wispr", "NotebookLM", "TIDAL"];
+
+it("describes the same three steps of the flow that exists, on the page and in its markdown", () => {
+  const html = renderToStaticMarkup(HomePage());
+  const markdown = homepageMarkdown();
+  expect(steps.map(([title, body]) => html.includes(`<h3>${title}</h3><p>${body}</p>`))).toEqual([true, true, true]);
+  expect(markdown).toContain(steps.map(([title, body], index) => `${index + 1}. ${title} ${body}`).join("\n"));
+  expect(retired.filter(text => html.includes(text) || markdown.includes(text))).toEqual([]);
+});

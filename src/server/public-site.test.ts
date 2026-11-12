@@ -38,7 +38,7 @@ it("marks preview pages noindex and keeps the sitemap limited to completed publi
   vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://public.example");
   expect(layoutMetadata().robots).toEqual({ index: false, follow: false });
   expect(sitemap()).toEqual([
-    { url: "https://public.example/", lastModified: "2026-09-23T00:00:00.000Z" },
+    { url: "https://public.example/", lastModified: "2026-11-12T00:00:00.000Z" },
     ...["origins", "contact"].map(slug => ({ url: `https://public.example/about/${slug}`, lastModified: "2026-09-22" })),
     { url: "https://public.example/about/privacy", lastModified: "2026-10-06" },
     ...["terms", "methodology"].map(slug => ({ url: `https://public.example/about/${slug}`, lastModified: "2026-09-28" })),

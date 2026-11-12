@@ -3,7 +3,8 @@ import Link from "next/link";
 import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
 import { PublicSiteGuideWebMcp } from "@/components/public-site-guide-webmcp";
-import { homepageProvenFacts, productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
+import { homepageExamples } from "@/src/data/homepage-examples";
+import { homepageProvenFacts, homepageSteps, productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
@@ -30,7 +31,7 @@ export default function HomePage() {
             </div>
             <p className={styles.privacy}>Start with a private collection. Publishing is your choice.</p>
           </div>
-          <div className={styles.example} id="example"><ProductExample /></div>
+          <div className={styles.example} id="example"><ProductExample examples={homepageExamples()} /></div>
         </section>
         <section id="how-it-works" className={styles.journey} aria-labelledby="journey-title">
           <div className={styles.sectionHeading}>
@@ -38,9 +39,7 @@ export default function HomePage() {
             <p>From a tool you are trying to one you keep coming back to.</p>
           </div>
           <ol className={styles.steps}>
-            <li><span className={styles.stepNumber} aria-hidden="true">01 / Collect</span><h3>Start with one tool.</h3><p>Sign in, add a product manually or connect a supported source. Keep what you find in your private collection.</p></li>
-            <li><span className={styles.stepNumber} aria-hidden="true">02 / Make it yours</span><h3>Keep the context.</h3><p>Record what you use, what you are testing, and what you have moved on from. Add your own notes and choose your go-to tools.</p></li>
-            <li><span className={styles.stepNumber} aria-hidden="true">03 / Share deliberately</span><h3>Preview every choice.</h3><p>Select the saved cards and details you want to share. Review the exact preview before you approve publication.</p></li>
+            {homepageSteps.map(step => <li key={step.label}><span className={styles.stepNumber} aria-hidden="true">{step.label}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}
           </ol>
         </section>
         <section className={styles.respect} aria-labelledby="respect-title">

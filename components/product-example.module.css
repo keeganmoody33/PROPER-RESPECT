@@ -7,7 +7,9 @@
 .choices button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--action-text); }
 .carousel button:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 3px; }
 .sample { margin: 0 0 .6rem; color: var(--sample-text); }
-.slide { min-width: 0; }
+.stage { display: grid; min-width: 0; }
+.slide { grid-area: 1 / 1; min-width: 0; }
+.slide[data-current="false"] { visibility: hidden; }
 .slide :global(.product-card) { width: 100%; margin: 0; animation: none; border-radius: 10px; }
 .slide[data-example="github"] :global(.product-logo) { background: #fff; }
 .slide :global(.card-front) { min-height: 330px; }
@@ -18,11 +20,8 @@
 .slide :global(.activity-preview-metrics dd) { font-size: 1.1rem; margin: .15rem 0 0; font-weight: 600; }
 .slide[data-example="github"] { --brand-card-background: #0d1117; --brand-card-text: #e6edf3; --brand-card-heading-font: -apple-system, "Segoe UI", Helvetica, sans-serif; --brand-card-body-font: -apple-system, "Segoe UI", Helvetica, sans-serif; }
 .slide[data-example="clay"] { --brand-card-background: #f7f5ef; --brand-card-text: #25241f; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: Arial, sans-serif; --card-line: #d4d1c7; }
-.slide[data-example="wispr"] { --brand-card-background: #f3efe4; --brand-card-text: #1d2b1e; --brand-card-heading-font: Arial, sans-serif; --brand-card-body-font: Arial, sans-serif; --brand-card-heading-weight: 700; --card-line: #d8d2bd; }
-.slide[data-example="claude"] { --brand-card-background: #292724; --brand-card-text: #f5f0e8; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: ui-monospace, monospace; }
+.slide[data-example="claude-code"] { --brand-card-background: #292724; --brand-card-text: #f5f0e8; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: ui-monospace, monospace; }
 .slide[data-example="clay"] :global(.product-card) { border: 1px solid #d4d1c7; }
-.slide[data-example="wispr"] :global(.product-card) { border: 1px solid #d8d2bd; }
-.slide[data-example="claude"] :global(.product-logo) { color: #292724; background: #d9a38d; font-family: ui-monospace, monospace; }
 .caveat { font-size: .78rem; line-height: 1.6; margin: 1rem 0 .5rem; }
 .source { text-underline-offset: .2em; }
 .controls { display: flex; align-items: center; gap: .65rem; margin-top: 1.2rem; }

@@ -3,7 +3,7 @@ import { publicSiteOrigin } from "./public-site";
 import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
 export const repositoryUrl = "https://github.com/keeganmoody33/PROPER-RESPECT";
-export const homepageUpdatedAt = "2026-09-23T00:00:00.000Z";
+export const homepageUpdatedAt = "2026-11-12T00:00:00.000Z";
 
 export function creatorBusinessIdentity() {
   return {
@@ -69,6 +69,13 @@ export const homepageProvenFacts = [
   "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
 ] as const;
 
+/** The homepage's three steps, shared word for word by the page and its Markdown mirror. */
+export const homepageSteps = [
+  { label: "01 / Pick", title: "Pick your tools.", body: "Start from a role or search by name. Add anything that is missing by its name." },
+  { label: "02 / Keep it private", title: "Say how you use each one.", body: "Mark what you use, what you are testing and what you used before. Save the whole list privately in one step." },
+  { label: "03 / Share", title: "Preview once, then share.", body: "See exactly what visitors will see. Approve that preview once to put every confirmed tool on your public page." },
+] as const;
+
 export function homepageMarkdown() {
   const origin = publicSiteOrigin();
   return `# Proper Respect
@@ -81,9 +88,7 @@ ${productIdentity().description}
 
 ## How it works
 
-1. Start with one tool. Sign in and add a product manually or connect a supported source. Keep what you find in your private collection.
-2. Keep the context. Record what you use, what you are testing, and what you have moved on from. Add your own notes and choose your go-to tools.
-3. Preview every choice. Select the saved cards and details you want to share. Review the exact preview before you approve publication.
+${homepageSteps.map((step, index) => `${index + 1}. ${step.title} ${step.body}`).join("\n")}
 
 Private by default. Shared by choice. Activity does not rank importance. Homepage usage examples contain sample data, not connected account measurements.
 
