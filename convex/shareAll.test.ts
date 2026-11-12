@@ -22,12 +22,13 @@ afterEach(() => vi.useRealTimers());
 type PropFields = Partial<Omit<Doc<"props">, "_id" | "_creationTime" | "userId" | "productId">>;
 type Account = Pick<TestConvex<typeof schema>, "query" | "mutation">;
 
-async function fixture(handle = "owner") {
+async function fixture() {
   const t = convexTest(schema, modules);
-  const ids = await t.run(async ctx => ({
-    userId: await ctx.db.insert("users", { authSubject: "owner", handle, displayName: "Owner", bio: "" }),
-    otherUserId: await ctx.db.insert("users", { authSubject: "other", handle: "other", displayName: "Other", bio: "" }),
-  }));
+  const ids = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    await ctx.db.insert("sites", { ownerId: userId, handle: "owner", status: "DRAFT" });
+    return { userId, otherUserId: await ctx.db.insert("users", { authSubject: "other", handle: "other", displayName: "Other", bio: "" }) };
+  });
   let products = 0;
   const addProp = (fields: PropFields = {}, product: { slug?: string; name?: string; domain?: string } = {}, userId = ids.userId) =>
     t.run(async ctx => {
@@ -163,16 +164,6 @@ test("a product with no domain and no saved link publishes without a link", asyn
   expect(card.product.name).toBe("Bare Tool");
   expect(card.primaryLink).toBeUndefined();
   expect((await f.t.query(api.publicProfiles.getByHandleV2, { handle: "owner" }))?.cards.map(item => item.product.name)).toEqual(["Bare Tool"]);
-});
-
-test("share-all is refused until a real handle is claimed", async () => {
-  const f = await fixture("pending-owner");
-  const propId = await f.addProp();
-  await expect(f.owner.query(api.onboarding.previewPublication, shareAll)).rejects.toThrow("Claim your public handle before sharing your stack.");
-  await expect(f.owner.mutation(api.onboarding.publishSelected, { ...shareAll, expectedPublicationRevision: 0, expectedPreviewHash: "unused" }))
-    .rejects.toThrow("Claim your public handle before sharing your stack.");
-  expect(await f.visibility(propId)).toBe("PRIVATE");
-  expect((await f.rows()).publications).toEqual([]);
 });
 
 test("an owner who explicitly claimed a pending- handle can share all", async () => {

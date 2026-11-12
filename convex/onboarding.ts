@@ -41,6 +41,12 @@ function pendingHandle(subject: string) {
   return `pending-${suffix || "account"}`;
 }
 
+// claimHandle writes the site's handle, so a placeholder from ensureAccount never matches,
+// while an explicitly claimed handle does even when it starts with "pending-".
+function hasClaimedPublicIdentity(site: Doc<"sites"> | null, user: Doc<"users">) {
+  return site?.handle === user.handle;
+}
+
 async function ownersForHandle(ctx: QueryCtx | MutationCtx, handle: string) {
   return ctx.db.query("users").withIndex("by_handle", q => q.eq("handle", handle)).take(2);
 }
@@ -244,7 +250,7 @@ async function getStateHandler(ctx: QueryCtx, args: {
       isDone: propPage?.isDone ?? true,
       continueCursor: propPage?.continueCursor ?? "",
       hasPublicationAtCurrentHandle: published !== null,
-      hasClaimedPublicIdentity: site?.handle === user.handle,
+      hasClaimedPublicIdentity: hasClaimedPublicIdentity(site, user),
       brandEnrichmentAvailable: true,
       privateInventoryAvailable: true,
       mailboxAvailable: mailboxTesterAllowed(identity.email, process.env.MAILBOX_GOOGLE_TEST_EMAILS),
@@ -663,7 +669,10 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   // Older rows were saved before these caps, so every publish checks them.
   if (user.displayName.length > DISPLAY_NAME_MAX) throw new Error("Shorten your display name to 80 characters or fewer before sharing.");
   if (user.bio.length > BIO_MAX) throw new Error("Shorten your bio to 500 characters or fewer before sharing.");
-  if (change.kind === "SHARE_ALL_CONFIRMED" && user.handle.startsWith("pending-")) throw new Error("Claim your public handle before sharing your stack.");
+  if (change.kind === "SHARE_ALL_CONFIRMED" &&
+    !hasClaimedPublicIdentity(await ctx.db.query("sites").withIndex("by_owner", q => q.eq("ownerId", user._id)).unique(), user)) {
+    throw new Error("Claim your public handle before sharing your stack.");
+  }
   const removeAllCards = change.kind === "REMOVE_ALL";
   const allProps = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).collect();
   const propsById = new Map(allProps.map(prop => [prop._id, prop]));
