@@ -49,4 +49,6 @@ test("the preview summary and skip reasons are plain sentences", () => {
   expect(previewSummary({ sharedCount: BATCH, remainingCount: REMAINING, skipped: [] })).toBe("100 cards will be shared. 7 more remain. Share them in another run after this one.");
   expect(skipReasonText("LINK_NEEDS_REVIEW")).toBe("its saved link is not a public web address. Fix the link in your collection.");
   expect(skipReasonText("LINK_TOO_LONG")).toBe("its saved link or link label is too long to publish. Shorten it in your collection.");
+  expect(skipReasonText("ALREADY_ON_PAGE_NEEDS_REVIEW")).toBe(
+    "your page already shows an older card for this product that can't be matched to one relationship. Review that product's cards together in your collection.");
 });

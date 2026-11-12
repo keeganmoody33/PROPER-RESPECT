@@ -1,4 +1,6 @@
-export type SkipReason = "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG";
+import type { SkippedShare } from "@/src/domain/share-all";
+
+export type SkipReason = SkippedShare<string>["reason"];
 
 export type ShareAllPreview<Profile> = Readonly<{
   profile: Profile;
@@ -70,6 +72,7 @@ export function shareFlow<Profile>(state: ShareState<Profile>, event: ShareEvent
 const SKIP_REASONS: Record<SkipReason, string> = {
   LINK_NEEDS_REVIEW: "its saved link is not a public web address. Fix the link in your collection.",
   LINK_TOO_LONG: "its saved link or link label is too long to publish. Shorten it in your collection.",
+  ALREADY_ON_PAGE_NEEDS_REVIEW: "your page already shows an older card for this product that can't be matched to one relationship. Review that product's cards together in your collection.",
 };
 
 export function skipReasonText(reason: SkipReason) {
