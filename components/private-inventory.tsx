@@ -248,7 +248,7 @@ export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focus
 
 function InventoryCard({ item, index, expandedActivity = false }: { item: Item; index: number; expandedActivity?: boolean }) {
   return <ProductCard audience="owner" index={index} expandedActivity={expandedActivity} relationshipConfirmed={isRelationshipConfirmed(item.prop)} goTo={item.prop.goTo} card={{
-    product: item.product, status: item.prop.status, headline: item.prop.headline, note: item.prop.note,
+    product: item.product, status: item.prop.status, level: item.prop.level, headline: item.prop.headline, note: item.prop.note,
     startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
     primaryLink: privateCardPrimaryLink({
       product: item.product,

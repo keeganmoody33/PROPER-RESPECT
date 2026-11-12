@@ -583,6 +583,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                     <ProductCard audience="owner" index={index} relationshipConfirmed={confirmed} goTo={card.prop.goTo} card={{
                       product: savedCard.product,
                       status: card.prop.status,
+                      level: card.prop.level,
                       headline: card.prop.headline,
                       note: card.prop.note,
                       startedAt: card.prop.startedAt,
