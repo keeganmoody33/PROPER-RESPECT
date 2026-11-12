@@ -168,6 +168,43 @@ async function noAxeViolations(browserPage: Page) {
   expect(errors).toEqual([]);
 }));
 
+test("a typed alias, name or website of a listed product joins as that product, and a conflicting pair is refused before save", async ({ page: browserPage }) => {
+  await open(browserPage, DESKTOP, "light");
+  const builder = browserPage.getByRole("region", { name: "Build your stack" });
+  const status = builder.getByRole("status");
+  const search = builder.getByRole("combobox", { name: "Search products" });
+  const results = builder.getByRole("listbox", { name: "Matching products" });
+  await search.fill("windsurf");
+  await search.press("Enter");
+  await expect(status).toHaveText("Added 1 to your list.");
+
+  await search.fill("codeium");
+  await expect(results.getByRole("option").filter({ hasText: "Windsurf" })).toContainText("In your list");
+  await expect(results.getByRole("option").filter({ hasText: "Add “codeium”" })).toHaveCount(0);
+
+  await builder.getByText("Add a tool with its website").click();
+  const name = builder.getByLabel("Tool name");
+  const website = builder.getByLabel("Website (optional)");
+  const add = builder.getByRole("button", { name: "Add to list" });
+  await name.fill("Codeium");
+  await add.click();
+  await expect(status).toHaveText("1 already in your list.");
+  await name.fill("My editor");
+  await website.fill("codeium.com");
+  await add.click();
+  await expect(status).toHaveText("1 already in your list.");
+  await name.fill("GitHub");
+  await website.fill("notion.so");
+  await add.click();
+  await expect(builder.getByRole("alert")).toHaveText("That website does not match the named catalog product. Correct the name or website.");
+  await expect(name).toHaveValue("GitHub");
+  await expect(builder.getByRole("heading", { name: "Your list (1)" })).toBeVisible();
+
+  await builder.getByRole("button", { name: "Save 1 tool privately" }).click();
+  const saves = (await calls(browserPage)).filter(call => call.name === "saveSelection");
+  expect(saves.map(call => call.args.picks)).toEqual([[{ kind: "directory", slug: "windsurf", status: "ACTIVE" }]]);
+});
+
 test("a failed save keeps the tray and reuses its operation for the unchanged retry", async ({ page: browserPage }) => {
   await open(browserPage, DESKTOP, "light");
   await browserPage.evaluate(storageKey => {
