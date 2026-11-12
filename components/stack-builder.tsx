@@ -217,7 +217,7 @@ export function StackBuilder({ mode }: { mode: BuilderMode }) {
         <input ref={search} id={`${ids}-search`} className={styles.search} type="text" role="combobox" autoComplete="off"
           aria-expanded={expanded} aria-controls={`${ids}-results`} aria-autocomplete="list"
           aria-activedescendant={expanded && active >= 0 ? optionId(active) : undefined}
-          placeholder="HubSpot, Figma, Cursor…" value={query} maxLength={TYPED_NAME_MAX}
+          placeholder="Firecrawl, Figma, Cursor…" value={query} maxLength={TYPED_NAME_MAX}
           onChange={event => { setQuery(event.target.value); setOpen(true); setActive(-1); }}
           onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={onKeyDown} />
         {expanded && <ul id={`${ids}-results`} role="listbox" aria-label="Matching products" className={styles.results}>

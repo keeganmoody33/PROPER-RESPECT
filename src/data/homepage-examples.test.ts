@@ -8,18 +8,22 @@ const YEAR_DIGITS = 4;
 const DAYS_IN_YEAR = 365;
 // The same sample calendar the homepage has shown since 2026-09-21.
 const SAMPLE_CONTRIBUTIONS = 859;
+const LINE_LIMIT = 60;
 
 test("the homepage shows a go-to-market engineering stack whose names and links come from the directory", () => {
   expect(examples.map(example => [example.card.product.name, example.card.status, example.card.startedAt?.slice(0, YEAR_DIGITS)])).toEqual([
-    ["GitHub", "ACTIVE", "2016"],
+    ["GitHub", "ACTIVE", "2019"],
     ["Claude Code", "ACTIVE", "2025"],
+    ["Firecrawl", "ACTIVE", "2025"],
     ["Exa", "ACTIVE", "2025"],
-    ["Spider", "TESTING", "2026"],
-    ["HubSpot", "ACTIVE", "2021"],
-    ["Apollo.io", "ACTIVE", "2023"],
+    ["Cloudflare", "ACTIVE", "2020"],
+    ["Porkbun", "ACTIVE", "2021"],
+    ["Spider", "ACTIVE", "2026"],
+    ["Docker", "ACTIVE", "2020"],
+    ["Elicit", "TESTING", "2026"],
+    ["Context.dev", "TESTING", "2026"],
+    ["n8n", "ACTIVE", "2024"],
     ["Clay", "ARCHIVED", "2022"],
-    ["n8n", "TESTING", "2026"],
-    ["Gong", "ACTIVE", "2024"],
   ]);
   const fromDirectory = examples.map(({ id }) => {
     const entry = directoryEntry(id)!;
@@ -31,6 +35,12 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
   expect(fromDirectory.filter(({ category }) => category === "CONSUMER")).toEqual([]);
   expect(examples.map(example => example.id)).not.toEqual(expect.arrayContaining(["notebooklm"]));
   expect(examples.map(example => example.id)).not.toEqual(expect.arrayContaining(["wisprflow"]));
+  expect(fromDirectory.filter(({ category }) => category === "SALES").map(({ product }) => product.slug)).toEqual(["clay"]);
+});
+
+test("every headline and note is a short line under the card's limit", () => {
+  const tooLong = examples.flatMap(({ card }) => [card.headline, card.note]).filter(text => !text || text.length >= LINE_LIMIT);
+  expect(tooLong).toEqual([]);
 });
 
 test("only GitHub carries sample usage: its contribution calendar covers one year", () => {

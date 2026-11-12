@@ -46,19 +46,22 @@ type ExampleSource = Readonly<{
  */
 const EXAMPLES: readonly ExampleSource[] = [
   {
-    slug: "github", status: "ACTIVE", since: "2016", headline: "The work behind the code.", logoUrl: "/brand/github/2026-09-21/favicon.svg",
-    note: "Example only. Contribution totals do not measure code quality or hours worked.", activity: githubActivity,
+    slug: "github", status: "ACTIVE", since: "2019", headline: "Where every project's code lives.", logoUrl: "/brand/github/2026-09-21/favicon.svg",
+    note: "Contribution counts don't measure quality or hours.", activity: githubActivity,
     caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
     source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
   },
-  { slug: "claude-code", status: "ACTIVE", since: "2025", headline: "Writes and fixes the pipeline scripts.", note: "Example only. Used daily for enrichment and routing code." },
-  { slug: "exa", status: "ACTIVE", since: "2025", headline: "Search for account research.", note: "Example only. Finds company pages and news for each target account." },
-  { slug: "spider", status: "TESTING", since: "2026", headline: "Crawling company sites.", note: "Example only. Trying it next to the current scraper." },
-  { slug: "hubspot", status: "ACTIVE", since: "2021", headline: "Where the pipeline lives.", note: "Example only. The CRM every workflow writes back to." },
-  { slug: "apollo", status: "ACTIVE", since: "2023", headline: "Prospect lists and contact data.", note: "Example only. The first stop for new contacts." },
-  { slug: "clay", status: "ARCHIVED", since: "2022", headline: "Enrichment tables, before code.", note: "Example only. Used from 2022 to 2025, then moved that work into scripts." },
-  { slug: "n8n", status: "TESTING", since: "2026", headline: "Scheduled enrichment jobs.", note: "Example only. Testing it for jobs that run every night." },
-  { slug: "gong", status: "ACTIVE", since: "2024", headline: "Calls for deal reviews.", note: "Example only. Recordings the team reviews before each forecast." },
+  { slug: "claude-code", status: "ACTIVE", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code." },
+  { slug: "firecrawl", status: "ACTIVE", since: "2025", headline: "Turns any site into clean Markdown.", note: "I pull docs and pages through it for my agents." },
+  { slug: "exa", status: "ACTIVE", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news." },
+  { slug: "cloudflare", status: "ACTIVE", since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it." },
+  { slug: "porkbun", status: "ACTIVE", since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here." },
+  { slug: "spider", status: "ACTIVE", since: "2026", headline: "Crawls whole sites fast.", note: "I run the large crawls on it." },
+  { slug: "docker", status: "ACTIVE", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container." },
+  { slug: "elicit", status: "TESTING", since: "2026", headline: "Reading research papers faster.", note: "I'm testing it for pulling claims from papers." },
+  { slug: "context-dev", status: "TESTING", since: "2026", headline: "Brand and company data from a domain.", note: "I'm testing it for logos and company details." },
+  { slug: "n8n", status: "ACTIVE", since: "2024", headline: "Scheduled jobs and webhooks.", note: "I run my nightly enrichment jobs on it." },
+  { slug: "clay", status: "ARCHIVED", since: "2022", headline: "Enrichment tables, before I wrote code.", note: "I moved this work into my own scripts." },
 ];
 
 export function homepageExamples(): HomepageExample[] {

@@ -40,13 +40,16 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   const githubHeight = await slideBox();
   for (const [name, text] of [
     ["Claude Code", "ACTIVE · SINCE 2025"],
+    ["Firecrawl", "ACTIVE · SINCE 2025"],
     ["Exa", "ACTIVE · SINCE 2025"],
-    ["Spider", "TESTING · SINCE 2026"],
-    ["HubSpot", "ACTIVE · SINCE 2021"],
-    ["Apollo.io", "ACTIVE · SINCE 2023"],
+    ["Cloudflare", "ACTIVE · SINCE 2020"],
+    ["Porkbun", "ACTIVE · SINCE 2021"],
+    ["Spider", "ACTIVE · SINCE 2026"],
+    ["Docker", "ACTIVE · SINCE 2020"],
+    ["Elicit", "TESTING · SINCE 2026"],
+    ["Context.dev", "TESTING · SINCE 2026"],
+    ["n8n", "ACTIVE · SINCE 2024"],
     ["Clay", "ARCHIVED · SINCE 2022"],
-    ["n8n", "TESTING · SINCE 2026"],
-    ["Gong", "ACTIVE · SINCE 2024"],
   ]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });
@@ -62,10 +65,10 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await carousel.getByRole("button", { name: "Next example" }).click();
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Previous example" }).click();
-  await expect(carousel.getByRole("article", { name: "Gong card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Details", exact: true }).click();
   await expect(carousel.getByRole("button", { name: "Close details" })).toBeVisible();
-  await carousel.getByRole("button", { name: "Clay", exact: true }).click();
+  await carousel.getByRole("button", { name: "n8n", exact: true }).click();
   await expect(carousel.getByRole("button", { name: "Details", exact: true })).toBeVisible();
 });
 
@@ -85,17 +88,17 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await expect(carousel.getByRole("article", { name: "Claude Code card" })).toBeVisible();
   await page.mouse.move(0, 0);
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Details", exact: true }).focus();
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Spider card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Pause slideshow" }).click();
   await page.mouse.move(0, 0);
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Spider card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
 });
 
