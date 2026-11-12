@@ -113,9 +113,10 @@ export function StackBuilder({ mode }: { mode: BuilderMode }) {
   }, [restored, tray, signedIn]);
 
   useEffect(() => {
-    if (!focusSave.current || !tray.items.length) return;
+    if (!focusSave.current) return;
+    // The request is spent on the restore itself, even when everything restored was already saved.
     focusSave.current = false;
-    saveButton.current?.focus();
+    if (tray.items.length) saveButton.current?.focus();
   }, [tray]);
 
   const load: DirectoryLoad = directoryFailed ? "failed" : "loading";

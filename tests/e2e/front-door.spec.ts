@@ -149,6 +149,23 @@ test("a tampered stored list restores nothing and the page still works", async (
   await expect(builder.getByRole("button", { name: "Sign in to save 12 tools" })).toBeEnabled();
 });
 
+test("a restored list the account already holds leaves focus in search when the owner adds another tool", async ({ page }) => {
+  await page.addInitScript(storage => {
+    localStorage.setItem("fixture-signed-in", "true");
+    if (!sessionStorage.getItem("seeded")) sessionStorage.setItem(storage, JSON.stringify({ version: 1, picks: [{ kind: "directory", slug: "vercel", status: "ACTIVE" }] }));
+    sessionStorage.setItem("seeded", "true");
+  }, pendingKey);
+  await open(page, DESKTOP, "light");
+  const builder = page.getByRole("region", { name: "Build your stack" });
+  await expect(builder.getByRole("status")).toHaveText("1 already saved.");
+  await expect(builder.getByRole("heading", { name: "Your list (0)" })).toBeVisible();
+  const search = builder.getByRole("combobox", { name: "Search products" });
+  await search.fill("figma");
+  await search.press("Enter");
+  await expect(builder.getByRole("heading", { name: "Your list (1)" })).toBeVisible();
+  await expect(search).toBeFocused();
+});
+
 test("a usage-data choice still carries through sign-in", async ({ page }) => {
   await open(page, PHONE, "light");
   const usageData = page.getByRole("region", { name: "Already have usage data?" });
