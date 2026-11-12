@@ -6,7 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { resolveCatalogProduct } from "../src/domain/discovery";
 import { directoryDomainOwner, directoryEntry } from "../src/domain/product-directory";
-import { canonicalBrandDomainSchema, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
+import { brandTitleNamesProduct, canonicalBrandDomainSchema, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
 import { productBrandSnapshotValidator } from "./productBrandTables";
 import { retrieveProductBrand } from "../src/server/context-brand";
 import { internal } from "./_generated/api";
@@ -18,12 +18,18 @@ const PREPARATION_BATCH_SIZE = 25;
 type BrandProductIdentity = Pick<Doc<"products">, "slug" | "name" | "domain">;
 type ListedIdentity = Readonly<{ slug: string; domain: string; names: readonly string[]; handChecked: boolean }>;
 
-/** The directory product this row is: by its slug, or for an older typed row, by a hand-checked product's name. */
+/** The directory product this row is: by its slug, or for a typed row, by a hand-checked product's name or a listed product's website and name. */
 function listedIdentity(product: BrandProductIdentity): ListedIdentity | null {
   const entry = directoryEntry(product.slug);
   if (entry) return { slug: entry.slug, domain: entry.domain, names: [entry.name, ...entry.aliases], handChecked: entry.evidence !== undefined };
-  const named = product.slug.startsWith("manual-") ? resolveCatalogProduct({ vendor: product.name })?.product : undefined;
-  return named ? { slug: named.slug, domain: named.domain, names: [named.name], handChecked: true } : null;
+  if (!product.slug.startsWith("manual-")) return null;
+  const named = resolveCatalogProduct({ vendor: product.name })?.product;
+  if (named) return { slug: named.slug, domain: named.domain, names: [named.name], handChecked: true };
+  // A listed product typed in with its own website and one of its names is that product.
+  const owner = directoryDomainOwner(product.domain);
+  const names = owner ? [owner.name, ...owner.aliases] : [];
+  return owner && brandTitleNamesProduct(product.name, names)
+    ? { slug: owner.slug, domain: owner.domain, names, handChecked: owner.evidence !== undefined } : null;
 }
 
 /**

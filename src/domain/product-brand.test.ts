@@ -178,6 +178,11 @@ it.each([
   ["", ["Cursor"], false],
   [undefined, ["Cursor"], false],
   ["Cursor", [], false],
+  ["工具", ["工具"], true],
+  ["Café", ["Café"], true],
+  ["Caf", ["Café"], false],
+  ["工具", ["道具"], false],
+  ["---", ["Cursor"], false],
 ] as const)("a provider brand titled %j is accepted for %j: %j", (title, names, accepted) => {
   expect(brandTitleNamesProduct(title, names)).toBe(accepted);
 });

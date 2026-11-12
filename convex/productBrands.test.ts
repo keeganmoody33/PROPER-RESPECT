@@ -27,6 +27,9 @@ test("any product with its own website can have its brand fetched; a product ins
   expect(eligible("porkbun", "Porkbun", "porkbun.com")).toBeNull();
   // A product nobody listed, with the website its owner typed.
   expect(eligible("manual-field-notes-1", "Field Notes", "field-notes.example")).toBeNull();
+  // A listed product typed in by name and website is that product.
+  expect(eligible("manual-porkbun-1", "Porkbun", "porkbun.com")).toBeNull();
+  expect(eligible("manual-porkbun-2", "pork bun", "porkbun.com")).toBeNull();
   expect(eligible("grok-bot", "Grok Bot", "x.ai")).toBe("PRODUCT_IDENTITY_REQUIRED");
   expect(eligible("manual-field-notes-2", "Field Notes", "")).toBe("UNVERIFIED_DOMAIN");
   expect(eligible("manual-field-notes-3", "Field Notes", "not a domain")).toBe("UNVERIFIED_DOMAIN");

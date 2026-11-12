@@ -167,8 +167,10 @@ function normalizedFontLinks(value: unknown, source: "fonts" | "styleguide", fam
 }
 
 /** The caller establishes canonical identity; a provider redirect never changes it. */
-// Letters and digits only, so "Open Places" and "openplaces" compare equal.
-const nameKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+// Letters, their marks and digits in any script, so "Open Places" and "openplaces" compare equal
+// and "Café" stays distinct from "Caf". Keeps "工具" whole; drops the space in "Open Places".
+const NOT_NAME_CHARACTER = /[^\p{L}\p{M}\p{N}]/gu;
+const nameKey = (value: string) => value.normalize("NFKC").toLowerCase().replace(NOT_NAME_CHARACTER, "");
 // The first run of words before a separator: "Cursor" in "Cursor: The AI Code Editor" and "Porkbun" in "Porkbun | Domains".
 // Matches "Cursor: The AI Code Editor" up to "Cursor"; leaves "GitHub Copilot" whole.
 const TITLE_LEAD = /^[^:|\u2013\u2014]+?(?=\s*[:|\u2013\u2014]|\s+-\s|$)/;
