@@ -58,6 +58,8 @@ const EXAMPLES: readonly ExampleSource[] = [
   { slug: "porkbun", status: "ACTIVE", since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here." },
   { slug: "spider", status: "ACTIVE", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it." },
   { slug: "docker", status: "ACTIVE", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container." },
+  { slug: "open-places", status: "ACTIVE", since: "2026", headline: "Local business lists by category and city.", note: "I start local prospect lists here." },
+  { slug: "grok-bot", status: "TESTING", since: "2026", headline: "An agent with its own cloud computer.", note: "I'm testing it on research and outreach chores." },
   { slug: "elicit", status: "TESTING", since: "2026", headline: "Reading research papers faster.", note: "I'm testing it for pulling claims from papers." },
   { slug: "context-dev", status: "TESTING", since: "2026", headline: "Brand and company data from a domain.", note: "I'm testing it for logos and company details." },
   { slug: "n8n", status: "ACTIVE", since: "2024", headline: "Scheduled jobs and webhooks.", note: "I run my nightly enrichment jobs on it." },

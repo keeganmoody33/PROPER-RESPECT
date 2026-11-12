@@ -46,6 +46,8 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     ["Porkbun", "ACTIVE · SINCE 2021"],
     ["Spider", "ACTIVE · SINCE 2026"],
     ["Docker", "ACTIVE · SINCE 2020"],
+    ["Open Places", "ACTIVE · SINCE 2026"],
+    ["Grok Bot", "TESTING · SINCE 2026"],
     ["Elicit", "TESTING · SINCE 2026"],
     ["Context.dev", "TESTING · SINCE 2026"],
     ["n8n", "ACTIVE · SINCE 2024"],

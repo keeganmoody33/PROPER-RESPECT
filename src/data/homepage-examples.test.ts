@@ -20,6 +20,8 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
     ["Porkbun", "ACTIVE", "2021"],
     ["Spider", "ACTIVE", "2026"],
     ["Docker", "ACTIVE", "2020"],
+    ["Open Places", "ACTIVE", "2026"],
+    ["Grok Bot", "TESTING", "2026"],
     ["Elicit", "TESTING", "2026"],
     ["Context.dev", "TESTING", "2026"],
     ["n8n", "ACTIVE", "2024"],
