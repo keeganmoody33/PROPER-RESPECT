@@ -479,3 +479,32 @@ test("the scheduled refresh picks up an attempt that was abandoned a day ago, an
   expect(await f.job()).toMatchObject({ status: "PENDING", generation: 2 });
   expect(f.brandRequests()).toBe(1);
 });
+
+test("each scheduled run takes only the ten oldest due brands of each kind and leaves the rest for the next run", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  const now = Date.now();
+  // Ages in days, deliberately out of order; the two youngest of each kind are 40 and 41 days old.
+  const ages = [47, 41, 52, 44, 50, 40, 49, 43, 51, 46, 48, 45];
+  await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    for (const status of ["READY", "FAILED"] as const) for (const age of ages) {
+      const key = `${status.toLowerCase()}-${age}`;
+      const productId = await ctx.db.insert("products", { slug: `manual-${key}`, name: `Product ${key}`, domain: `${key}.example`, description: "" });
+      await ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: "", note: "" });
+      await ctx.db.insert("productBrandJobs", { productId, canonicalDomain: `${key}.example`, generation: 1, status,
+        requestedAt: now - age * DAY_MS, completedAt: now - age * DAY_MS });
+    }
+  });
+  const queuedDomains = async () => (await t.run(ctx => ctx.db.query("productBrandJobs").collect()))
+    .filter(job => job.generation === 2).map(job => job.canonicalDomain).sort();
+  const oldestTen = (status: string) => ages.filter(age => age > 41).map(age => `${status}-${age}.example`);
+  expect(await t.mutation(refreshDue, {})).toEqual({ queued: 20 });
+  expect(await queuedDomains()).toEqual([...oldestTen("failed"), ...oldestTen("ready")].sort());
+  // No provider key here, so each attempt ends as a fresh failure, which is not due again for a week.
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await t.mutation(refreshDue, {})).toEqual({ queued: 4 });
+  expect(await queuedDomains()).toHaveLength(24);
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await t.mutation(refreshDue, {})).toEqual({ queued: 0 });
+});
