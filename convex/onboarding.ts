@@ -694,7 +694,9 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   const previousPropIds = published ? await resolvePublishedCardPropIds(ctx, published, user._id, allProps) : [];
   const products = await Promise.all([...new Set(allProps.map(prop => prop.productId))].map(id => ctx.db.get(id)));
   const productById = new Map(products.flatMap(product => product ? [[product._id, product] as const] : []));
-  const shareAll = change.kind === "SHARE_ALL_CONFIRMED" ? await shareAllFromSavedState(ctx, allProps, productById, new Set(previousPropIds)) : null;
+  const unresolvedSlugs = new Set((published?.profile.cards ?? []).flatMap((card, index) => previousPropIds[index] ? [] : [card.product.slug]));
+  const shareAll = change.kind === "SHARE_ALL_CONFIRMED"
+    ? await shareAllFromSavedState(ctx, allProps, productById, new Set(previousPropIds), unresolvedSlugs) : null;
   const selections: PublicationSelection[] = change.kind === "SELECTED" ? change.selections : shareAll?.selections ?? [];
   if (selections.length > 100) throw new Error("Select at most 100 relationships to change.");
   const selectedIds = new Set(selections.map(selection => selection.propId));
@@ -847,7 +849,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
 }
 
 async function shareAllFromSavedState(ctx: QueryCtx | MutationCtx, allProps: Doc<"props">[],
-  productById: Map<Id<"products">, Doc<"products">>, onPage: Set<Id<"props"> | null>) {
+  productById: Map<Id<"products">, Doc<"products">>, onPage: Set<Id<"props"> | null>, unresolvedSlugs: Set<string>) {
   const candidates = await Promise.all(allProps.map(async prop => {
     const product = productById.get(prop.productId);
     if (!product) return [];
@@ -855,7 +857,8 @@ async function shareAllFromSavedState(ctx: QueryCtx | MutationCtx, allProps: Doc
     const primaryLink = prop.visibility === "PRIVATE" ? await ctx.db.query("links")
       .withIndex("by_prop_primary", q => q.eq("propId", prop._id).eq("isPrimary", true)).order("desc").first() : null;
     return [{
-      propId: prop._id, visibility: prop.visibility, onPublishedPage: onPage.has(prop._id), relationshipVersion: prop.relationshipVersion,
+      propId: prop._id, visibility: prop.visibility, onPublishedPage: onPage.has(prop._id),
+      matchesUnresolvedPublishedCard: unresolvedSlugs.has(product.slug), relationshipVersion: prop.relationshipVersion,
       status: prop.status, headline: prop.headline, note: prop.note, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
       cost: prop.cost, product: { name: product.name, domain: product.domain }, primaryLink: primaryLink ?? undefined,
     }];
