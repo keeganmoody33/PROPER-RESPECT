@@ -41,6 +41,7 @@ it("marks preview pages noindex and keeps the sitemap limited to completed publi
     { url: "https://public.example/", lastModified: "2026-11-12T00:00:00.000Z" },
     ...["origins", "contact"].map(slug => ({ url: `https://public.example/about/${slug}`, lastModified: "2026-09-22" })),
     { url: "https://public.example/about/privacy", lastModified: "2026-10-06" },
-    ...["terms", "methodology"].map(slug => ({ url: `https://public.example/about/${slug}`, lastModified: "2026-09-28" })),
+    { url: "https://public.example/about/terms", lastModified: "2026-09-28" },
+    { url: "https://public.example/about/methodology", lastModified: "2026-11-12" },
   ]);
 });
