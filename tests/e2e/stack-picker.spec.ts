@@ -122,7 +122,7 @@ async function noAxeViolations(browserPage: Page) {
   if (screenshots && theme === "light") await builder.screenshot({ path: `${screenshots}/builder-filled-tray-${width}.png`, animations: "disabled" });
 
   await builder.getByRole("button", { name: "Save 12 tools privately" }).click();
-  await expect(status).toHaveText("Saved 12 tools privately. Nothing is public yet.");
+  await expect(status).toHaveText("Saved 12 tools privately. This save made nothing public.");
   await expect(builder.getByRole("heading", { name: "Your list (0)" })).toBeVisible();
   const saves = (await calls(browserPage)).filter(call => call.name === "saveSelection");
   expect(saves).toHaveLength(1);

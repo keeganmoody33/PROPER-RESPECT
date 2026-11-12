@@ -5,7 +5,7 @@ import { useMutation } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { SaveSelectionResult } from "@/convex/stack";
 import {
-  addedMessage, emptyTray, nextActiveOption, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, trayPicks, trayReducer,
+  addedMessage, emptyTray, nextActiveOption, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, TYPED_NAME_MAX, trayPicks, trayReducer,
   type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus, type TypedResolution,
 } from "@/src/client/stack-tray";
 import styles from "./stack-builder.module.css";
@@ -170,7 +170,7 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
         <input ref={search} id={`${ids}-search`} className={styles.search} type="text" role="combobox" autoComplete="off"
           aria-expanded={expanded} aria-controls={`${ids}-results`} aria-autocomplete="list"
           aria-activedescendant={expanded && active >= 0 ? optionId(active) : undefined}
-          placeholder="HubSpot, Figma, Cursor…" value={query}
+          placeholder="HubSpot, Figma, Cursor…" value={query} maxLength={TYPED_NAME_MAX}
           onChange={event => { setQuery(event.target.value); setOpen(true); setActive(-1); }}
           onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onKeyDown={onKeyDown} />
         {expanded && <ul id={`${ids}-results`} role="listbox" aria-label="Matching products" className={styles.results}>

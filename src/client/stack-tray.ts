@@ -8,6 +8,8 @@ export const TRAY_STATUSES: readonly { value: TrayStatus; label: string }[] = [
 
 // Matches MAX_STACK_PICKS in convex/stack.ts, which refuses anything larger.
 export const TRAY_LIMIT = 100;
+// normalizeProductName in convex/manualProducts.ts refuses a longer name, and one refusal fails the whole save.
+export const TYPED_NAME_MAX = 160;
 
 export type TrayEntry = Readonly<{ slug: string; name: string; domain: string }>;
 
@@ -85,7 +87,7 @@ const handlers: Handlers = {
     // entry, so it is counted as saved or listed instead of saved twice.
     if (action.resolution.kind === "directory") return add(tray, [directoryItem(action.resolution.entry)], action.held);
     const name = typedName(action.name);
-    return name ? add(tray, [typedItem(name, action.website, action.resolution.domain)], action.held) : tray;
+    return name && name.length <= TYPED_NAME_MAX ? add(tray, [typedItem(name, action.website, action.resolution.domain)], action.held) : tray;
   },
   setStatus: (tray, action) => ({
     ...tray,
@@ -128,9 +130,11 @@ export function saveButtonLabel(count: number) {
 }
 
 export function savedMessage(summary: SavedSummary) {
-  const parts = [`Saved ${summary.saved} tool${summary.saved === 1 ? "" : "s"} privately. Nothing is public yet.`];
+  // An unchanged tool may already be public, so the message speaks only for this save.
+  const fresh = summary.created + summary.confirmed;
+  const parts = [fresh ? `Saved ${fresh} tool${fresh === 1 ? "" : "s"} privately.` : "No new tools were saved.", "This save made nothing public."];
   if (summary.confirmed) parts.push(`${summary.confirmed} discover${summary.confirmed === 1 ? "y was" : "ies were"} confirmed.`);
-  if (summary.unchanged) parts.push(`${summary.unchanged} already in your collection kept ${summary.unchanged === 1 ? "its" : "their"} saved choices.`);
+  if (summary.unchanged) parts.push(`${summary.unchanged} already in your collection ${summary.unchanged === 1 ? "was left as it is" : "were left as they are"}, public or private.`);
   return parts.join(" ");
 }
 
