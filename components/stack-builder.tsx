@@ -5,8 +5,8 @@ import { useMutation } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { SaveSelectionResult } from "@/convex/stack";
 import {
-  addedMessage, emptyTray, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, TYPED_NAME_MAX, trayPicks, trayReducer,
-  type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus, type TypedResolution,
+  addedMessage, emptyTray, directoryNote, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, TYPED_NAME_MAX, trayPicks, trayReducer,
+  type DirectoryLoad, type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus, type TypedResolution,
 } from "@/src/client/stack-tray";
 import styles from "./stack-builder.module.css";
 
@@ -32,8 +32,8 @@ function entryState(slug: string, held: ReadonlySet<string>, listed: ReadonlySet
   return listed.has(`directory:${slug}`) ? "listed" : "available";
 }
 
-function resolve(directory: DirectoryModule | null, name: string, website?: string): TypedResolution {
-  return resolveTypedWhenReady(directory && directory.resolveTypedPick, name, website);
+function resolve(directory: DirectoryModule | null, load: DirectoryLoad, name: string, website?: string): TypedResolution {
+  return resolveTypedWhenReady(directory && directory.resolveTypedPick, name, website, load);
 }
 
 export function StackPicker({ held }: { held: readonly string[] }) {
@@ -67,11 +67,12 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
     return () => { current = false; };
   }, []);
 
+  const load: DirectoryLoad = directoryFailed ? "failed" : "loading";
   const heldSlugs = new Set(held);
   const listedKeys = new Set(tray.items.map(item => item.key));
   const trimmed = query.trim();
   const found: TrayEntry[] = trimmed ? (directory?.searchDirectory(trimmed, RESULT_LIMIT) ?? []) : [];
-  const typed = trimmed ? resolve(directory, trimmed) : null;
+  const typed = trimmed ? resolve(directory, load, trimmed) : null;
   const resolvedEntry = typed?.kind === "directory" && !found.some(entry => entry.slug === typed.entry.slug) ? [typed.entry] : [];
   const options: Option[] = [
     ...[...found, ...resolvedEntry].map((entry): Option => ({
@@ -118,7 +119,7 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
     const data = new FormData(form);
     const name = String(data.get("name") ?? "");
     const website = String(data.get("website") ?? "");
-    const resolution = resolve(directory, name, website);
+    const resolution = resolve(directory, load, name, website);
     if (resolution.kind === "refused") {
       setError(resolution.message);
       return;
@@ -144,7 +145,6 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
     }
   }
 
-  const directoryNote = directoryFailed ? "The product list did not load. You can still add tools by name below, or reload to try again." : "Loading starter sets…";
   const savedStatus = tray.saved ? savedMessage(tray.saved) : "";
   const status = tray.lastAdded ? addedMessage(tray.lastAdded) : savedStatus;
 
@@ -160,7 +160,7 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
           aria-label={set.label} aria-describedby={`${ids}-${set.role}`}
           onClick={() => dispatch({ type: "addStarterSet", entries: set.entries.map(entry => ({ slug: entry.slug, name: entry.name, domain: entry.domain })), held })}>
           {set.label}<span id={`${ids}-${set.role}`} className={styles.blurb}>{set.blurb}</span>
-        </button>) : <p className={styles.hint}>{directoryNote}</p>}
+        </button>) : <p className={styles.hint}>{directoryNote(load)}</p>}
       </div>
 
       <label className={styles.searchLabel} htmlFor={`${ids}-search`}>Search products</label>

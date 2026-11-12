@@ -50,8 +50,17 @@ export type StackPick =
 
 // Before the directory loads nothing can say which product a typed name is, and two
 // spellings of one tool would both join the list and fail the whole save.
-export function resolveTypedWhenReady(resolver: ((name: string, website?: string) => TypedResolution) | null, name: string, website?: string): TypedResolution {
-  return resolver ? resolver(name, website) : { kind: "refused", message: "The product list is still loading. Add this tool again in a moment." };
+export type DirectoryLoad = "loading" | "failed";
+
+/** A failed load never recovers on its own, so it must not offer anything that needs the list. */
+export function directoryNote(load: DirectoryLoad) {
+  return load === "failed" ? "The product list did not load. Reload the page to try again." : "Loading starter sets…";
+}
+
+export function resolveTypedWhenReady(resolver: ((name: string, website?: string) => TypedResolution) | null,
+  name: string, website?: string, load: DirectoryLoad = "loading"): TypedResolution {
+  if (resolver) return resolver(name, website);
+  return { kind: "refused", message: load === "failed" ? directoryNote("failed") : "The product list is still loading. Add this tool again in a moment." };
 }
 
 export const emptyTray: Tray = { items: [], lastAdded: null, saved: null };
