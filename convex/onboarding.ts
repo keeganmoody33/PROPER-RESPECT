@@ -41,6 +41,12 @@ function pendingHandle(subject: string) {
   return `pending-${suffix || "account"}`;
 }
 
+// claimHandle writes the site's handle, so a placeholder from ensureAccount never matches,
+// while an explicitly claimed handle does even when it starts with "pending-".
+function hasClaimedPublicIdentity(site: Doc<"sites"> | null, user: Doc<"users">) {
+  return site?.handle === user.handle;
+}
+
 async function ownersForHandle(ctx: QueryCtx | MutationCtx, handle: string) {
   return ctx.db.query("users").withIndex("by_handle", q => q.eq("handle", handle)).take(2);
 }
@@ -244,7 +250,7 @@ async function getStateHandler(ctx: QueryCtx, args: {
       isDone: propPage?.isDone ?? true,
       continueCursor: propPage?.continueCursor ?? "",
       hasPublicationAtCurrentHandle: published !== null,
-      hasClaimedPublicIdentity: site?.handle === user.handle,
+      hasClaimedPublicIdentity: hasClaimedPublicIdentity(site, user),
       brandEnrichmentAvailable: true,
       privateInventoryAvailable: true,
       mailboxAvailable: mailboxTesterAllowed(identity.email, process.env.MAILBOX_GOOGLE_TEST_EMAILS),
@@ -663,7 +669,10 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   // Older rows were saved before these caps, so every publish checks them.
   if (user.displayName.length > DISPLAY_NAME_MAX) throw new Error("Shorten your display name to 80 characters or fewer before sharing.");
   if (user.bio.length > BIO_MAX) throw new Error("Shorten your bio to 500 characters or fewer before sharing.");
-  if (change.kind === "SHARE_ALL_CONFIRMED" && user.handle.startsWith("pending-")) throw new Error("Claim your public handle before sharing your stack.");
+  if (change.kind === "SHARE_ALL_CONFIRMED" &&
+    !hasClaimedPublicIdentity(await ctx.db.query("sites").withIndex("by_owner", q => q.eq("ownerId", user._id)).unique(), user)) {
+    throw new Error("Claim your public handle before sharing your stack.");
+  }
   const removeAllCards = change.kind === "REMOVE_ALL";
   const allProps = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).collect();
   const propsById = new Map(allProps.map(prop => [prop._id, prop]));
@@ -685,7 +694,9 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   const previousPropIds = published ? await resolvePublishedCardPropIds(ctx, published, user._id, allProps) : [];
   const products = await Promise.all([...new Set(allProps.map(prop => prop.productId))].map(id => ctx.db.get(id)));
   const productById = new Map(products.flatMap(product => product ? [[product._id, product] as const] : []));
-  const shareAll = change.kind === "SHARE_ALL_CONFIRMED" ? await shareAllFromSavedState(ctx, allProps, productById, new Set(previousPropIds)) : null;
+  const unresolvedSlugs = new Set((published?.profile.cards ?? []).flatMap((card, index) => previousPropIds[index] ? [] : [card.product.slug]));
+  const shareAll = change.kind === "SHARE_ALL_CONFIRMED"
+    ? await shareAllFromSavedState(ctx, allProps, productById, new Set(previousPropIds), unresolvedSlugs) : null;
   const selections: PublicationSelection[] = change.kind === "SELECTED" ? change.selections : shareAll?.selections ?? [];
   if (selections.length > 100) throw new Error("Select at most 100 relationships to change.");
   const selectedIds = new Set(selections.map(selection => selection.propId));
@@ -838,7 +849,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
 }
 
 async function shareAllFromSavedState(ctx: QueryCtx | MutationCtx, allProps: Doc<"props">[],
-  productById: Map<Id<"products">, Doc<"products">>, onPage: Set<Id<"props"> | null>) {
+  productById: Map<Id<"products">, Doc<"products">>, onPage: Set<Id<"props"> | null>, unresolvedSlugs: Set<string>) {
   const candidates = await Promise.all(allProps.map(async prop => {
     const product = productById.get(prop.productId);
     if (!product) return [];
@@ -846,7 +857,8 @@ async function shareAllFromSavedState(ctx: QueryCtx | MutationCtx, allProps: Doc
     const primaryLink = prop.visibility === "PRIVATE" ? await ctx.db.query("links")
       .withIndex("by_prop_primary", q => q.eq("propId", prop._id).eq("isPrimary", true)).order("desc").first() : null;
     return [{
-      propId: prop._id, visibility: prop.visibility, onPublishedPage: onPage.has(prop._id), relationshipVersion: prop.relationshipVersion,
+      propId: prop._id, visibility: prop.visibility, onPublishedPage: onPage.has(prop._id),
+      matchesUnresolvedPublishedCard: unresolvedSlugs.has(product.slug), relationshipVersion: prop.relationshipVersion,
       status: prop.status, headline: prop.headline, note: prop.note, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
       cost: prop.cost, product: { name: product.name, domain: product.domain }, primaryLink: primaryLink ?? undefined,
     }];

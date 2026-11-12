@@ -22,12 +22,13 @@ afterEach(() => vi.useRealTimers());
 type PropFields = Partial<Omit<Doc<"props">, "_id" | "_creationTime" | "userId" | "productId">>;
 type Account = Pick<TestConvex<typeof schema>, "query" | "mutation">;
 
-async function fixture(handle = "owner") {
+async function fixture() {
   const t = convexTest(schema, modules);
-  const ids = await t.run(async ctx => ({
-    userId: await ctx.db.insert("users", { authSubject: "owner", handle, displayName: "Owner", bio: "" }),
-    otherUserId: await ctx.db.insert("users", { authSubject: "other", handle: "other", displayName: "Other", bio: "" }),
-  }));
+  const ids = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    await ctx.db.insert("sites", { ownerId: userId, handle: "owner", status: "DRAFT" });
+    return { userId, otherUserId: await ctx.db.insert("users", { authSubject: "other", handle: "other", displayName: "Other", bio: "" }) };
+  });
   let products = 0;
   const addProp = (fields: PropFields = {}, product: { slug?: string; name?: string; domain?: string } = {}, userId = ids.userId) =>
     t.run(async ctx => {
@@ -165,14 +166,54 @@ test("a product with no domain and no saved link publishes without a link", asyn
   expect((await f.t.query(api.publicProfiles.getByHandleV2, { handle: "owner" }))?.cards.map(item => item.product.name)).toEqual(["Bare Tool"]);
 });
 
-test("share-all is refused until a real handle is claimed", async () => {
-  const f = await fixture("pending-owner");
-  const propId = await f.addProp();
-  await expect(f.owner.query(api.onboarding.previewPublication, shareAll)).rejects.toThrow("Claim your public handle before sharing your stack.");
-  await expect(f.owner.mutation(api.onboarding.publishSelected, { ...shareAll, expectedPublicationRevision: 0, expectedPreviewHash: "unused" }))
+test("an owner who explicitly claimed a pending- handle can share all", async () => {
+  const f = await fixture();
+  const claimer = f.t.withIdentity({ subject: "claimer" });
+  const userId = await claimer.mutation(api.onboarding.ensureAccount, {});
+  await claimer.mutation(api.onboarding.claimHandle, { handle: "pending-victim123", displayName: "Claimer", bio: "" });
+  const propId = await f.addProp({}, {}, userId);
+
+  const preview = await publishAll(claimer);
+  expect(preview).toMatchObject({ sharedCount: 1, remainingCount: 0, skipped: [] });
+  expect(await f.visibility(propId)).toBe("PUBLIC");
+  const publications = (await f.rows()).publications;
+  expect(publications.map(row => [row.handle, row.cardPropIds])).toEqual([["pending-victim123", [propId]]]);
+  expect((await f.t.query(api.publicProfiles.getByHandleV2, { handle: "pending-victim123" }))?.cards.map(card => card.product.name)).toEqual(["Tool 1"]);
+});
+
+test("an account still on its auto-assigned placeholder handle is refused", async () => {
+  const f = await fixture();
+  const newcomer = f.t.withIdentity({ subject: "newcomer" });
+  const userId = await newcomer.mutation(api.onboarding.ensureAccount, {});
+  expect(await f.t.run(async ctx => (await ctx.db.get(userId))!.handle)).toBe("pending-newcomer");
+  const propId = await f.addProp({}, {}, userId);
+
+  await expect(newcomer.query(api.onboarding.previewPublication, shareAll)).rejects.toThrow("Claim your public handle before sharing your stack.");
+  await expect(newcomer.mutation(api.onboarding.publishSelected, { ...shareAll, expectedPublicationRevision: 0, expectedPreviewHash: "unused" }))
     .rejects.toThrow("Claim your public handle before sharing your stack.");
   expect(await f.visibility(propId)).toBe("PRIVATE");
   expect((await f.rows()).publications).toEqual([]);
+});
+
+test("a legacy card that can't be matched to one relationship is skipped and kept; unrelated cards still share", async () => {
+  const f = await fixture();
+  const shared = await f.addProp({}, { slug: "twin", name: "Twin Tool" });
+  await publishAll(f.owner);
+  const sibling = await f.addProp({}, { slug: "twin", name: "Twin Tool" });
+  const unrelated = await f.addProp();
+  const legacy = (await f.rows()).publications[0];
+  await f.t.run(ctx => ctx.db.patch(legacy._id, { cardPropIds: undefined }));
+
+  const preview = await publishAll(f.owner);
+  expect(preview).toMatchObject({
+    sharedCount: 1, remainingCount: 0,
+    skipped: [{ propId: sibling, productName: "Twin Tool", reason: "ALREADY_ON_PAGE_NEEDS_REVIEW" }],
+  });
+  expect(await f.visibilities([shared, sibling, unrelated])).toEqual(["PUBLIC", "PRIVATE", "PUBLIC"]);
+  const stored = (await f.rows()).publications[0];
+  expect(stored.profile.cards[0]).toEqual(legacy.profile.cards[0]);
+  expect(stored.profile.cards.map(card => card.product.name)).toEqual(["Twin Tool", "Tool 3"]);
+  expect(stored.cardPropIds).toEqual([null, unrelated]);
 });
 
 test.each(["selections", "remove-all"] as const)("share-all can't be combined with %s", async combined => {

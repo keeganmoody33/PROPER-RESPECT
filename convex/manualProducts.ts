@@ -32,6 +32,9 @@ export const addManualProductArgs = {
 };
 type ManualProductArgs = ObjectType<typeof addManualProductArgs>;
 
+/** Batch stack saves key their per-item receipts under this prefix; a single add may not use it. */
+export const STACK_BATCH_RECEIPT_PREFIX = "stack-batch:";
+
 export function normalizeProductName(input: string): string {
   const name = input.trim().replace(/\s+/g, " ");
   if (!name || name.length > 160) throw new Error("Enter a product name of 160 characters or fewer.");
@@ -176,7 +179,7 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
     ? JSON.stringify({ version: 2, name, website: website ?? null, note, status: edit.status })
     : JSON.stringify({ version: 1, name, website: website ?? null, note });
   const operationId = args.operationId === undefined ? `legacy:${await sha256(requestJson)}` : args.operationId.trim();
-  if (!operationId || operationId.length > 128) throw new Error("Invalid add-product operation.");
+  if (!operationId || operationId.length > 128 || operationId.startsWith(STACK_BATCH_RECEIPT_PREFIX)) throw new Error("Invalid add-product operation.");
   const previous = await ctx.db.query("manualProductIntakes")
     .withIndex("by_user_operation", q => q.eq("userId", user._id).eq("operationId", operationId)).unique();
   if (previous) {

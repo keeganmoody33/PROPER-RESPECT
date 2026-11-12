@@ -8,6 +8,8 @@ export type ShareAllProp<PropId extends string, Cost> = Readonly<{
   propId: PropId;
   visibility: "PUBLIC" | "PRIVATE" | "DRAFT";
   onPublishedPage: boolean;
+  /** The published page has a card for this product that no single relationship owns. */
+  matchesUnresolvedPublishedCard: boolean;
   relationshipVersion?: number;
   status: "ACTIVE" | "TESTING" | "ARCHIVED";
   headline: string;
@@ -37,10 +39,10 @@ export type ShareAllSelection<PropId extends string, Cost> = {
 export type SkippedShare<PropId extends string> = {
   propId: PropId;
   productName: string;
-  reason: "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG";
+  reason: "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG" | "ALREADY_ON_PAGE_NEEDS_REVIEW";
 };
 
-function linkProblem(link: CardLink): SkippedShare<string>["reason"] | null {
+function linkProblem(link: CardLink): "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG" | null {
   if (!isHttpUrl(link.url) || link.label.length === 0) return "LINK_NEEDS_REVIEW";
   if (link.url.length > PUBLISHED_URL_MAX || link.label.length > LINK_LABEL_MAX) return "LINK_TOO_LONG";
   return null;
@@ -48,10 +50,16 @@ function linkProblem(link: CardLink): SkippedShare<string>["reason"] | null {
 
 // Built only from saved values, so preparePublication's "save privately first"
 // checks pass. Owner-chosen links are refused, not dropped: a bad saved link
-// skips its card by name so the owner can fix it.
+// skips its card by name so the owner can fix it. A card sharing its product with
+// a published card no relationship owns is skipped too: selecting it would make
+// that approved card ambiguous, and the owner must pick its relationships together.
 export function shareAllSelections<PropId extends string, Cost>(props: readonly ShareAllProp<PropId, Cost>[]) {
   const skipped: SkippedShare<PropId>[] = [];
   const shareable = props.filter(prop => prop.visibility === "PRIVATE" && !prop.onPublishedPage).flatMap(prop => {
+    if (prop.matchesUnresolvedPublishedCard) {
+      skipped.push({ propId: prop.propId, productName: prop.product.name, reason: "ALREADY_ON_PAGE_NEEDS_REVIEW" });
+      return [];
+    }
     const offered = defaultPrimaryLink(prop.primaryLink, prop.product.domain);
     const problem = offered && linkProblem(offered.link);
     if (problem && offered.source === "SAVED") {

@@ -103,9 +103,9 @@ test("a mixed batch saves directory and typed picks as private confirmed relatio
       ["APPROVED", notebook, "https://notebook.example.com/"],
     ]);
     expect((await ctx.db.query("manualProductIntakes").collect()).map(receipt => [receipt.operationId, receipt.propId])).toEqual([
-      ["first-save:salesforce", salesforce],
-      ["first-save:github", github],
-      [`first-save:${typedProduct.slug}`, notebook],
+      ["stack-batch:first-save:salesforce", salesforce],
+      ["stack-batch:first-save:github", github],
+      [`stack-batch:first-save:${typedProduct.slug}`, notebook],
     ]);
     expect(await ctx.db.query("rateLimits").collect()).toMatchObject([{ userId: owner._id, operation: "saveStack", windowStart: WINDOW_START, count: 3 }]);
     expect(await ctx.db.get(owner._id)).toMatchObject({ onboardingStatus: "REVIEW" });
@@ -151,7 +151,7 @@ test("a pick of an unconfirmed draft confirms it the way a private save does", a
     const events = await ctx.db.query("relationshipEvents").collect();
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      propId: draft, operationId: "confirm:github", version: 1, basis: "OWNER_ASSERTED", recordedAt: NOW.toISOString(),
+      propId: draft, operationId: "stack-batch:confirm:github", version: 1, basis: "OWNER_ASSERTED", recordedAt: NOW.toISOString(),
       before: { status: "TESTING", confirmed: false, goTo: false, headline: "", note: "Found in my mail" },
       after: { status: "ACTIVE", confirmed: true, goTo: false, headline: "", note: "Found in my mail" },
     });
@@ -169,7 +169,7 @@ test("a pick of an already confirmed relationship changes nothing", async () => 
   expect(result).toEqual({ items: [{ propId: saved, productName: "GitHub", outcome: "UNCHANGED" }], created: 0, confirmed: 0, unchanged: 1 });
   const after = await everyRow(t);
   expect({ ...after, receipts: [] }).toEqual({ ...before, receipts: [] });
-  expect(after.receipts.map(receipt => receipt.operationId)).toEqual(["saved", "again:github"]);
+  expect(after.receipts.map(receipt => receipt.operationId)).toEqual(["saved", "stack-batch:again:github"]);
 });
 
 test("a double submit returns the first result and writes nothing new", async () => {
@@ -288,4 +288,41 @@ test("an unauthenticated caller saves nothing", async () => {
   const { t } = await fixture();
   await expect(t.mutation(saveSelection, { operationId: "anon", picks: [dir("salesforce")] })).rejects.toThrow("Authentication required");
   expect(await t.run(ctx => ctx.db.query("props").collect())).toEqual([]);
+});
+
+test("a single add whose id looks like a batch item does not block a later batch", async () => {
+  const { t, owner } = await fixture();
+  const single = await owner.mutation(add, { name: "GitHub", operationId: "save:github" });
+  const batch = await owner.mutation(saveSelection, { operationId: "save", picks: [dir("github", "TESTING")] });
+  expect(batch).toEqual({ items: [{ propId: single, productName: "GitHub", outcome: "CONFIRMED_DRAFT" }], created: 0, confirmed: 1, unchanged: 0 });
+  expect(await owner.mutation(saveSelection, { operationId: "save", picks: [dir("github", "TESTING")] })).toEqual(batch);
+  expect(await owner.mutation(add, { name: "GitHub", operationId: "save:github" })).toBe(single);
+  const rows = await everyRow(t);
+  expect(rows.receipts.map(receipt => [receipt.operationId, receipt.propId])).toEqual([
+    ["save:github", single],
+    ["stack-batch:save:github", single],
+  ]);
+  expect(rows.props).toMatchObject([{ _id: single, status: "TESTING", visibility: "PRIVATE", relationshipVersion: 1 }]);
+});
+
+test("a batch item receipt does not block a later single add with the same-looking id", async () => {
+  const { t, owner } = await fixture();
+  const batch = await owner.mutation(saveSelection, { operationId: "save", picks: [dir("github", "ACTIVE")] });
+  const propId = batch.items[0]!.propId;
+  expect(await owner.mutation(add, { name: "GitHub", operationId: "save:github" })).toBe(propId);
+  expect(await owner.mutation(saveSelection, { operationId: "save", picks: [dir("github", "ACTIVE")] })).toEqual(batch);
+  const rows = await everyRow(t);
+  expect(rows.receipts.map(receipt => [receipt.operationId, receipt.propId])).toEqual([
+    ["stack-batch:save:github", propId],
+    ["save:github", propId],
+  ]);
+  expect(rows.props).toMatchObject([{ _id: propId, status: "ACTIVE", visibility: "PRIVATE", relationshipVersion: 1 }]);
+});
+
+test("a single add cannot write into the batch receipt key space", async () => {
+  const { t, owner } = await fixture();
+  await expect(owner.mutation(add, { name: "GitHub", operationId: "stack-batch:save:github" })).rejects.toThrow("Invalid add-product operation.");
+  await expect(owner.mutation(add, { name: "GitHub", operationId: "stack-batch:" })).rejects.toThrow("Invalid add-product operation.");
+  const rows = await everyRow(t);
+  expect(Object.values(rows).every(table => table.length === 0)).toBe(true);
 });
