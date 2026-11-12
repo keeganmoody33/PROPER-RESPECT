@@ -4,7 +4,6 @@ import { ProfileLinksFields } from "./profile-links-fields";
 import { convexAuthToken } from "@/src/domain/convex-auth-token";
 import { classifyEvidenceUpload, EVIDENCE_UPLOAD_ACCEPT } from "@/src/domain/evidence-upload";
 import {
-  SignInButton,
   Show,
   UserButton,
   useUser,
@@ -37,8 +36,9 @@ import { SharingPreview } from "./sharing-preview";
 import { StackPicker } from "./stack-builder";
 import { ShareAllSection } from "./share-all-step";
 import { MeasurementSharingChoices } from "./measurement-review";
-import { FirstResultPanel, SourcePicker, useFirstResultSource } from "./first-result";
-import { firstResultSources, firstResultReturnUrl, selectFirstResultSource } from "@/src/client/first-result-intent";
+import { FirstResultPanel, useFirstResultSource } from "./first-result";
+import { SignedOutCollection } from "./signed-out-collection";
+import { selectFirstResultSource } from "@/src/client/first-result-intent";
 
 type ManualProductInput = { name: string; website?: string; description?: string; status?: "ACTIVE" | "TESTING" | "ARCHIVED"; operationId: string };
 
@@ -455,7 +455,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
       </nav>
       {message && <p className="message" role="status">{message}</p>}
       {state.privateInventoryAvailable && (source || state.cards.length === 0) && <FirstResultPanel source={source} busy={busy} onConnectGithub={connectGithub} />}
-      <StackPicker held={heldSlugs} />
+      <StackPicker mode={{ kind: "signed-in", held: heldSlugs }} />
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />
@@ -844,21 +844,11 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
 
 export function OnboardingClient({ publicOrigin }: { publicOrigin?: string }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const source = useFirstResultSource();
-  const label = firstResultSources.find(option => option.id === source)?.label;
+  const { isLoaded } = useAuth();
+  // Clerk renders nothing until it knows the session; the builder shell shows meanwhile.
+  if (!isLoaded) return <SignedOutCollection session="checking" />;
   return (
-    <Show when="signed-in" fallback={
-      <main className="onboarding-shell">
-        <p className="onboarding-kicker">PROPER—RESPECT / PRIVATE FIRST</p>
-        <h1>Start with one source</h1>
-        <p>Bring in a usage snapshot or add a tool yourself. Your first result stays private. No mailbox or public profile required.</p>
-        <SourcePicker selected={source} />
-        <SignInButton mode="modal" forceRedirectUrl={firstResultReturnUrl(source)} signUpForceRedirectUrl={firstResultReturnUrl(source)}>
-          <button className="primary-action">{source ? `Continue with ${label}` : "Sign in or create account"}</button>
-        </SignInButton>
-        <p>Sign in to save your collection. Sharing is a separate choice.</p>
-      </main>
-    }>
+    <Show when="signed-in" fallback={<SignedOutCollection session="signed-out" />}>
       {isAuthenticated ? <Builder publicOrigin={publicOrigin} /> : <main className="system-message">
         <p role="status">{isLoading ? "Verifying your session…" : "Could not verify your session. Reload this page to retry."}</p>
       </main>}

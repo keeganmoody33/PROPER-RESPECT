@@ -2,12 +2,15 @@
 
 import { useEffect, useId, useReducer, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation } from "convex/react";
+import { SignInButton } from "@clerk/nextjs";
 import { makeFunctionReference } from "convex/server";
 import type { SaveSelectionResult } from "@/convex/stack";
 import {
-  addedMessage, emptyTray, directoryNote, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, TYPED_NAME_MAX, trayPicks, trayReducer,
+  addedMessage, emptyTray, directoryNote, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, signInToSaveLabel, TRAY_STATUSES, TYPED_NAME_MAX, trayPicks, trayReducer,
   type DirectoryLoad, type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus, type TypedResolution,
 } from "@/src/client/stack-tray";
+import { readPendingStack, restorablePicks, writePendingStack } from "@/src/client/pending-stack";
+import { firstResultReturnUrl } from "@/src/client/first-result-intent";
 import styles from "./stack-builder.module.css";
 
 type DirectoryModule = typeof import("@/src/domain/product-directory") & typeof import("@/src/client/typed-pick");
@@ -36,12 +39,33 @@ function resolve(directory: DirectoryModule | null, load: DirectoryLoad, name: s
   return resolveTypedWhenReady(directory && directory.resolveTypedPick, name, website, load);
 }
 
-export function StackPicker({ held }: { held: readonly string[] }) {
-  const save = useMutation(saveSelection);
-  return <StackBuilder held={held} onSave={save} />;
+/**
+ * Who is building the list. Before sign-in nothing is sent anywhere: the list lives in
+ * this tab and its save button opens sign-in. "checking" is the moment before the
+ * session is known, when the list can already be built but not yet saved.
+ */
+export type StackPickerMode =
+  | Readonly<{ kind: "signed-out" }>
+  | Readonly<{ kind: "checking" }>
+  | Readonly<{ kind: "signed-in"; held: readonly string[] }>;
+
+type BuilderMode =
+  | Exclude<StackPickerMode, { kind: "signed-in" }>
+  | Readonly<{ kind: "signed-in"; held: readonly string[]; onSave: (args: SaveArgs) => Promise<SaveResult> }>;
+
+const NOTHING_HELD: readonly string[] = [];
+
+export function StackPicker({ mode }: { mode: StackPickerMode }) {
+  return mode.kind === "signed-in" ? <SavingStackPicker held={mode.held} /> : <StackBuilder mode={mode} />;
 }
 
-export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave: (args: SaveArgs) => Promise<SaveResult> }) {
+function SavingStackPicker({ held }: { held: readonly string[] }) {
+  const save = useMutation(saveSelection);
+  return <StackBuilder mode={{ kind: "signed-in", held, onSave: save }} />;
+}
+
+export function StackBuilder({ mode }: { mode: BuilderMode }) {
+  const held = mode.kind === "signed-in" ? mode.held : NOTHING_HELD;
   const ids = useId();
   const [directory, setDirectory] = useState<DirectoryModule | null>(null);
   const [directoryFailed, setDirectoryFailed] = useState(false);
@@ -51,21 +75,46 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
   const [active, setActive] = useState(-1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [restored, setRestored] = useState(false);
   const attempt = useRef<SaveAttempt | null>(null);
   const search = useRef<HTMLInputElement>(null);
+  const saveButton = useRef<HTMLButtonElement>(null);
+  const focusSave = useRef(false);
 
+  const restoreInto = useRef({ held, signedIn: mode.kind === "signed-in" });
+  useEffect(() => { restoreInto.current = { held, signedIn: mode.kind === "signed-in" }; });
+
+  // The stored list comes back once the directory can drop unknown products, and is
+  // written again only after that, so the first empty render never erases it.
   useEffect(() => {
     let current = true;
     void (async () => {
       try {
         const [entries, typed] = await Promise.all([import("@/src/domain/product-directory"), import("@/src/client/typed-pick")]);
-        if (current) setDirectory({ ...entries, ...typed });
+        if (!current) return;
+        setDirectory({ ...entries, ...typed });
+        const picks = restorablePicks(readPendingStack(), { entry: entries.directoryEntry, resolveTypedPick: typed.resolveTypedPick });
+        if (picks.length) {
+          dispatch({ type: "restore", picks, held: restoreInto.current.held });
+          focusSave.current = restoreInto.current.signedIn;
+        }
+        setRestored(true);
       } catch {
         if (current) setDirectoryFailed(true);
       }
     })();
     return () => { current = false; };
   }, []);
+
+  useEffect(() => {
+    if (restored) writePendingStack(tray);
+  }, [restored, tray]);
+
+  useEffect(() => {
+    if (!focusSave.current || !tray.items.length) return;
+    focusSave.current = false;
+    saveButton.current?.focus();
+  }, [tray]);
 
   const load: DirectoryLoad = directoryFailed ? "failed" : "loading";
   const heldSlugs = new Set(held);
@@ -129,7 +178,7 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
     form.reset();
   }
 
-  async function saveTray() {
+  async function saveTray(onSave: (args: SaveArgs) => Promise<SaveResult>) {
     const picks = trayPicks(tray);
     attempt.current = saveAttempt(attempt.current, picks, () => crypto.randomUUID());
     setSaving(true);
@@ -208,11 +257,16 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
     </fieldset>
 
     <div className="action-row">
-      <button type="button" className="primary-action" disabled={saving || tray.items.length === 0} onClick={() => void saveTray()}>
-        {saving ? "Saving…" : saveButtonLabel(tray.items.length)}
-      </button>
-      {tray.saved && tray.items.length === 0 && <a href="#share-all">Next: share your stack</a>}
+      {mode.kind === "signed-in" ? <>
+        <button ref={saveButton} type="button" className="primary-action" disabled={saving || tray.items.length === 0} onClick={() => void saveTray(mode.onSave)}>
+          {saving ? "Saving…" : saveButtonLabel(tray.items.length)}
+        </button>
+        {tray.saved && tray.items.length === 0 && <a href="#share-all">Next: share your stack</a>}
+      </> : mode.kind === "signed-out" ? <SignInButton mode="modal" forceRedirectUrl={firstResultReturnUrl(null)} signUpForceRedirectUrl={firstResultReturnUrl(null)}>
+        <button type="button" className="primary-action" disabled={tray.items.length === 0}>{signInToSaveLabel(tray.items.length)}</button>
+      </SignInButton> : <button type="button" className="primary-action" disabled>Checking your session…</button>}
     </div>
+    {mode.kind !== "signed-in" && <p className={styles.hint}>Your list stays in this browser tab until you sign in. Nothing is saved or shared before then.</p>}
     <p role="status" className={styles.status}>{status}</p>
     <p role="alert" className={styles.error}>{error}</p>
   </section>;

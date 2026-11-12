@@ -14,7 +14,7 @@ export function useFirstResultSource() {
 }
 
 export function SourcePicker({ selected }: { selected: FirstResultSource | null }) {
-  return <div className={styles.sources} role="group" aria-label="Choose your first source">
+  return <div className={styles.sources} role="group" aria-label="Choose what to bring in">
     {firstResultSources.map(source => <button key={source.id} type="button" aria-label={source.label} aria-pressed={selected === source.id}
       className={styles.source} onClick={() => selectFirstResultSource(source.id)}>
       <strong>{source.label}</strong><span>{source.detail}</span>
