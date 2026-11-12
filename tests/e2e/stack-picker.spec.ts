@@ -32,7 +32,7 @@ test.beforeAll(async () => {
           export const SignInButton=({children})=>children;
           export const UserButton=()=>null;
           export const useUser=()=>({user});
-          export const useAuth=()=>({getToken:async()=>null,sessionClaims:{}});
+          export const useAuth=()=>({isLoaded:true,getToken:async()=>null,sessionClaims:{}});
           export const useClerk=()=>({openUserProfile:()=>{}});
         ` : readFileSync("tests/e2e/fixtures/fresh-user-backend.js", "utf8"),
       }));

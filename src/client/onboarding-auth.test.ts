@@ -9,6 +9,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 
 const auth = vi.hoisted(() => ({
   clerkSignedIn: true,
+  clerkLoaded: true,
   convex: { isLoading: true, isAuthenticated: false },
   protectedQuery: vi.fn(),
   ownerState: undefined as Record<string, unknown> | undefined,
@@ -24,7 +25,7 @@ vi.mock("@clerk/nextjs", () => ({
   SignInButton: ({ children }: { children: ReactNode }) => children,
   UserButton: () => null,
   useUser: () => ({ user: { fullName: "Test owner", imageUrl: "" } }),
-  useAuth: () => ({ getToken: vi.fn() }),
+  useAuth: () => ({ isLoaded: auth.clerkLoaded, getToken: vi.fn() }),
   useClerk: () => ({ openUserProfile: vi.fn() }),
 }));
 
@@ -49,6 +50,7 @@ const render = () => renderToString(createElement(OnboardingClient, { publicOrig
 
 beforeEach(() => {
   auth.clerkSignedIn = true;
+  auth.clerkLoaded = true;
   auth.convex = { isLoading: true, isAuthenticated: false };
   auth.protectedQuery.mockClear();
   auth.ownerState = undefined;
@@ -79,9 +81,22 @@ test("token acceptance and subsequent loss reconcile the owner boundary on each 
   expect(auth.protectedQuery).not.toHaveBeenCalled();
 });
 
-test("a signed-out Clerk session retains the existing sign-in entry", () => {
+test("a signed-out Clerk session leads with the stack builder and keeps the usage-data sign-in entry", () => {
   auth.clerkSignedIn = false;
-  expect(render()).toContain("Sign in or create account");
+  const html = render();
+  expect(html).toContain("<h1>Start your collection</h1>");
+  expect(html).toContain("Sign in to save 0 tools</button>");
+  expect(html).toContain("Already have usage data?</h2>");
+  expect(html).toContain(">Sign in</button>");
+  expect(auth.protectedQuery).not.toHaveBeenCalled();
+});
+
+test("before Clerk knows the session, the builder shell renders and nothing can be saved yet", () => {
+  auth.clerkLoaded = false;
+  const html = render();
+  expect(html).toContain("<h1>Start your collection</h1>");
+  expect(html).toContain("Checking your session…</button>");
+  expect(html).not.toContain("Sign in to save");
   expect(auth.protectedQuery).not.toHaveBeenCalled();
 });
 
