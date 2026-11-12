@@ -343,7 +343,7 @@ export const saveConnectedSnapshot = internalMutation({
       const subscriptions = await ctx.db.query("metricSubscriptions")
         .withIndex("by_connector", q => q.eq("connectorId", connector!._id)).collect();
       for (const subscription of subscriptions) {
-        if (subscription.revokedAt === undefined) await ctx.db.patch(subscription._id, { revokedAt: now });
+        if (subscription.revokedAt === undefined) await ctx.db.patch(subscription._id, { revokedAt: now, revokedReason: "RECONNECT" });
       }
     }
     const connectorValue = {
@@ -550,7 +550,7 @@ export const revokeConnector = mutation({
       .collect();
     const now = new Date().toISOString();
     for (const subscription of subscriptions) {
-      if (subscription.revokedAt === undefined) await ctx.db.patch(subscription._id, { revokedAt: now });
+      if (subscription.revokedAt === undefined) await ctx.db.patch(subscription._id, { revokedAt: now, revokedReason: "DISCONNECT" });
     }
     if (connector.secretRef) {
       await ctx.db.delete(connector.secretRef);

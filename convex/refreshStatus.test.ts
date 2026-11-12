@@ -21,6 +21,9 @@ const forOwner = makeFunctionReference<"query">("refreshStatus:forOwner");
 const connectGithub = makeFunctionReference<"action">("connectors:connectGithub");
 const revokeConnector = makeFunctionReference<"mutation">("connectors:revokeConnector");
 const recordOutcome = makeFunctionReference<"mutation">("connectors:recordRefreshAttemptOutcome");
+const previewPublication = makeFunctionReference<"query">("onboarding:previewPublication");
+const publishSelected = makeFunctionReference<"mutation">("onboarding:publishSelected");
+const STALE_SKIPS_PAST_LOOKBACK = 6;
 const activity = (total: number) => ({ kind: "contributionCalendar" as const, total, days: [], attributionScope: "PERSONAL" as const,
   capturedAt: "2026-09-22T10:00:00.000Z", freshness: "FRESH" as const, provenanceLabel: "Synthetic" });
 const response = (status = HTTP_OK) => new Response(JSON.stringify({ data: { viewer: { id: "U_synthetic-account", login: "synthetic-account",
@@ -50,6 +53,13 @@ async function fixture(fetcher = vi.fn(async () => response())) {
     return { propId, connectorId, subscriptionId };
   });
   return { t, ids, fetcher, owner: t.withIdentity({ subject: "owner" }), other: t.withIdentity({ subject: "other" }) };
+}
+
+async function publishWithRefreshOff(f: Awaited<ReturnType<typeof fixture>>) {
+  const selections = [{ propId: f.ids.propId, expectedRelationshipVersion: 0, publish: true, status: "ACTIVE",
+    headline: "Approved", note: "Owner context", autoRefresh: false, activity: activity(RETAINED_TOTAL) }];
+  const preview = await f.owner.query(previewPublication, { selections });
+  await f.owner.mutation(publishSelected, { selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
 }
 
 test("an approved refresh that has not run yet reads NEVER_RUN", async () => {
@@ -116,6 +126,50 @@ test("a provider failure on a valid approval reads FAILING", async () => {
   const rows = await f.owner.query(forOwner, {});
   expect(rows[0].state).toBe("FAILING");
   expect(rows[0].lastAttempt?.outcome).toBe("FAILURE");
+});
+
+test("a first attempt that completes stale reads SKIPPED, not NEVER_RUN", async () => {
+  const f = await fixture();
+  await f.t.mutation(recordOutcome, { subscriptionId: f.ids.subscriptionId, outcome: "SKIPPED", errorClass: "STALE_GRANT", provider: "GITHUB" });
+  const rows = await f.owner.query(forOwner, {});
+  expect(rows[0].state).toBe("SKIPPED");
+  expect(rows[0].lastAttempt).toMatchObject({ outcome: "SKIPPED", errorClass: "STALE_GRANT" });
+});
+
+test("a success buried under many stale duplicate completions still reads RUNNING", async () => {
+  const f = await fixture();
+  await f.t.action(refresh, {});
+  await Promise.all(Array.from({ length: STALE_SKIPS_PAST_LOOKBACK }, () =>
+    f.t.mutation(recordOutcome, { subscriptionId: f.ids.subscriptionId, outcome: "SKIPPED", errorClass: "STALE_GRANT", provider: "GITHUB" })));
+  const rows = await f.owner.query(forOwner, {});
+  expect(rows[0].state).toBe("RUNNING");
+  expect(rows[0].lastSuccessfulAt).toBeDefined();
+  expect(rows[0].lastAttempt).toMatchObject({ outcome: "SKIPPED", errorClass: "STALE_GRANT" });
+});
+
+test("turning refresh off on a public card is not listed, even after a later reconnect", async () => {
+  const f = await fixture();
+  await publishWithRefreshOff(f);
+  const stopped = await f.t.run(ctx => ctx.db.get(f.ids.subscriptionId));
+  expect(stopped).toMatchObject({ revokedReason: "OWNER" });
+  expect(await f.owner.query(forOwner, {})).toEqual([]);
+  await f.owner.action(connectGithub, { token: "synthetic-new-token" });
+  expect(await f.owner.query(forOwner, {})).toEqual([]);
+});
+
+test("a reconnect-revoked approval drops once the owner publishes with refresh off", async () => {
+  const f = await fixture();
+  await f.owner.action(connectGithub, { token: "synthetic-new-token" });
+  expect((await f.owner.query(forOwner, {}))[0]?.state).toBe("REAUTHORIZE");
+  await publishWithRefreshOff(f);
+  expect(await f.owner.query(forOwner, {})).toEqual([]);
+});
+
+test("a revoked row written before revokedReason existed still falls back to the connection", async () => {
+  const f = await fixture();
+  await f.t.run(ctx => ctx.db.patch(f.ids.connectorId, { githubBinding: { providerAccountId: "U_synthetic-account", generation: RECONNECTED_GENERATION } }));
+  await f.t.run(ctx => ctx.db.patch(f.ids.subscriptionId, { revokedAt: "2026-10-01T00:00:00.000Z" }));
+  expect((await f.owner.query(forOwner, {}))[0]?.state).toBe("REAUTHORIZE");
 });
 
 test("another signed-in user sees no rows", async () => {

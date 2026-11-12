@@ -831,7 +831,7 @@ export const publishSelected = mutation({
         if (prop.visibility === "PUBLIC") await ctx.db.patch(prop._id, { visibility: "PRIVATE" });
       }
       const subscriptions = await ctx.db.query("metricSubscriptions").withIndex("by_user", q => q.eq("userId", user._id)).collect();
-      for (const subscription of subscriptions) if (!subscription.revokedAt) await ctx.db.patch(subscription._id, { revokedAt: now });
+      for (const subscription of subscriptions) if (!subscription.revokedAt) await ctx.db.patch(subscription._id, { revokedAt: now, revokedReason: "OWNER" });
     }
     const brandProductIds = new Set<Id<"products">>();
     for (const selection of selections) {
@@ -841,7 +841,7 @@ export const publishSelected = mutation({
         ? { userId: user._id, propId: prop._id, connectorId: selection.connectorId,
           metricKey: selection.metricKey, attributionScope: selection.activity.attributionScope,
           githubBinding: account ? { providerAccountId: account.providerAccountId, generation: account.generation } : undefined,
-          refreshCadence: "DAILY" as const, approvedAt: now, revokedAt: undefined }
+          refreshCadence: "DAILY" as const, approvedAt: now, revokedAt: undefined, revokedReason: undefined }
         : undefined;
       const subscriptions = await ctx.db.query("metricSubscriptions")
         .withIndex("by_prop_metric", q => q.eq("propId", prop._id)).collect();
@@ -849,10 +849,13 @@ export const publishSelected = mutation({
         (refresh.metricKey !== "github.contributions" || (subscription.revokedAt === undefined && sameGithubRefreshBinding(subscription.githubBinding, refresh.githubBinding)))) : undefined;
       // A new selection replaces this relationship's public refresh permission.
       // Omitted relationships keep their previously approved subscriptions.
+      // Choosing no refresh also settles any earlier revocation for this card
+      // as the owner's decision, so a reconnect-ended approval stops asking
+      // to be approved again.
       for (const subscription of subscriptions) {
-        if (subscription.userId === user._id && !subscription.revokedAt && subscription._id !== existingRefresh?._id) {
-          await ctx.db.patch(subscription._id, { revokedAt: now });
-        }
+        if (subscription.userId !== user._id || subscription._id === existingRefresh?._id) continue;
+        if (!subscription.revokedAt) await ctx.db.patch(subscription._id, { revokedAt: now, revokedReason: "OWNER" });
+        else if (!refresh && subscription.revokedReason !== "OWNER") await ctx.db.patch(subscription._id, { revokedReason: "OWNER" });
       }
       if (refresh) {
         if (existingRefresh) await ctx.db.patch(existingRefresh._id, refresh);

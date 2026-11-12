@@ -23,17 +23,20 @@ import { sameGithubRefreshBinding } from "./githubRefreshIdentity";
  */
 export type RefreshState = "RUNNING" | "REAUTHORIZE" | "FAILING" | "SKIPPED" | "NEVER_RUN";
 
-const LEDGER_LOOKBACK = 5;
-
 function connectionCurrent(subscription: Doc<"metricSubscriptions">, connector: Doc<"connectorAccounts"> | null) {
   if (!connector || !["CONNECTED", "ERROR"].includes(connector.status)) return false;
   if (subscription.metricKey !== "github.contributions") return true;
   return connector.provider === "GITHUB" && sameGithubRefreshBinding(subscription.githubBinding, connector.githubBinding);
 }
 
-function stateFromLedger(rows: Doc<"refreshAttempts">[]): RefreshState {
-  const decisive = rows.find(row => !(row.outcome === "SKIPPED" && row.errorClass === "STALE_GRANT"));
-  if (!decisive) return "NEVER_RUN";
+const staleDuplicate = (row: Doc<"refreshAttempts">) => row.outcome === "SKIPPED" && row.errorClass === "STALE_GRANT";
+
+function stateFromLedger(lastAttempt: Doc<"refreshAttempts"> | null, decisive: Doc<"refreshAttempts"> | null): RefreshState {
+  if (!lastAttempt) return "NEVER_RUN";
+  // History with no decisive row: every attempt was a stale completion (for
+  // example a prop edit changed the authority fingerprint mid-refresh). That
+  // is a skip, not "never run".
+  if (!decisive) return "SKIPPED";
   if (decisive.outcome === "SUCCESS") return "RUNNING";
   if (decisive.outcome === "FAILURE") return "FAILING";
   return "SKIPPED";
@@ -64,17 +67,25 @@ export const forOwner = query({
       const ownConnector = connector?.userId === user._id ? connector : null;
       const current = connectionCurrent(subscription, ownConnector);
       if (!active) {
-        // A revoked approval is a diagnostic only when the owner's connection
-        // moved on without it. A disconnected connector, a connection that
-        // still matches, or a card taken private all record a deliberate stop.
+        // A revoked approval is a diagnostic only when a reconnect ended it
+        // and the card is still public. The stored reason decides when it is
+        // present; rows written before the field existed fall back to the
+        // connection: a disconnected connector or one that still matches the
+        // approval means the owner stopped it on purpose.
         const prop = await ctx.db.get(subscription.propId);
-        if (current || !ownConnector || !["CONNECTED", "ERROR"].includes(ownConnector.status) ||
-            !prop || prop.userId !== user._id || prop.visibility !== "PUBLIC") return null;
+        const reconnectEnded = subscription.revokedReason
+          ? subscription.revokedReason === "RECONNECT"
+          : !current && !!ownConnector && ["CONNECTED", "ERROR"].includes(ownConnector.status);
+        if (!reconnectEnded || !prop || prop.userId !== user._id || prop.visibility !== "PUBLIC") return null;
       }
-      const ledger = await ctx.db.query("refreshAttempts")
-        .withIndex("by_subscription_attemptedAt", q => q.eq("subscriptionId", subscription._id))
-        .order("desc").take(LEDGER_LOOKBACK);
-      const lastAttempt = ledger[0];
+      const attempts = () => ctx.db.query("refreshAttempts")
+        .withIndex("by_subscription_attemptedAt", q => q.eq("subscriptionId", subscription._id)).order("desc");
+      const lastAttempt = await attempts().first();
+      // The latest outcome that was not a stale duplicate completion, however
+      // many stale rows sit in front of it.
+      const decisive = lastAttempt && staleDuplicate(lastAttempt)
+        ? await attempts().filter(q => q.neq(q.field("errorClass"), "STALE_GRANT")).first()
+        : lastAttempt;
       return {
         subscriptionId: subscription._id,
         propId: subscription.propId,
@@ -85,7 +96,7 @@ export const forOwner = query({
         lastAttempt: lastAttempt
           ? { attemptedAt: lastAttempt.attemptedAt, outcome: lastAttempt.outcome, errorClass: lastAttempt.errorClass }
           : null,
-        state: current ? stateFromLedger(ledger) : ("REAUTHORIZE" as RefreshState),
+        state: current ? stateFromLedger(lastAttempt, decisive) : ("REAUTHORIZE" as RefreshState),
       };
     }));
     return rows.filter(row => row !== null);

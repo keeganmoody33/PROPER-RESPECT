@@ -43,6 +43,24 @@ drop the row. `REAUTHORIZE` is derived from the current connection, never
 from a ledger row: a `SKIPPED / STALE_GRANT` row from an overlapping duplicate
 completion is reported as the last attempt but does not decide the state.
 
+Second revision after Copilot review (2026-11-12). Three findings, all
+verified against the code:
+
+- A revoked row from a reconnect and one from the owner turning refresh off
+  were byte-identical, so no read-side rule could tell them apart. The
+  schema gains `metricSubscriptions.revokedReason` (`OWNER`, `RECONNECT`,
+  `DISCONNECT`), stamped at every revocation site in `convex/onboarding.ts`
+  and `convex/connectors.ts`. Publishing a card with refresh off also settles
+  that card's earlier reconnect revocation as `OWNER`, so the diagnostic
+  clears in both orderings. Rows without a reason keep the connection-based
+  fallback, so stored data is never rejected.
+- A first attempt that completes `STALE_GRANT` now reads `SKIPPED`, not
+  `NEVER_RUN`.
+- The decisive outcome is read with an indexed filter rather than a
+  five-row lookback, so any number of stale duplicate completions in front of
+  a success still reads `RUNNING`. `lastAttempt` still reports the actual
+  latest row.
+
 No UI change in this slice. The query is the contract a collection card can
 read to show "daily refresh paused, approve again on the current connection".
 
@@ -57,7 +75,11 @@ read to show "daily refresh paused, approve again on the current connection".
   call, stale duplicate completion, non-connection skip, provider failure,
   other-user isolation, disconnect, matching-connection revocation, private
   card, and replacement by a fresh approval.
+- Second revision: the four added cases (first-attempt stale, success under
+  six stale skips, refresh off then reconnect, reconnect then refresh off)
+  failed against `42af902`: 4 failed, 13 passed. After the change, 17 passed.
 - `npx vitest run convex/githubRefreshSafety.test.ts`: 67 passed.
+  `inventory.test.ts`: 11 passed. `connectorPrivacy.test.ts`: 11 passed.
 - `npx tsc --noEmit` passed. `npx eslint` on the two new files passed.
 - `node --test` owner-rule scripts (`assert-return-value`,
   `convex-auth-token-owner`, `http-url-owner`): 6 passed.

@@ -372,6 +372,11 @@ export default defineSchema({
     lastAttemptedAt: v.optional(v.string()),
     lastError: v.optional(v.string()),
     revokedAt: v.optional(v.string()),
+    // Why the approval ended. OWNER: the owner turned refresh off or took the
+    // card down. RECONNECT: a new connection generation revoked it (#150).
+    // DISCONNECT: the connector was revoked. Absent on rows written before
+    // this field existed.
+    revokedReason: v.optional(v.union(v.literal("OWNER"), v.literal("RECONNECT"), v.literal("DISCONNECT"))),
   })
     .index("by_user", ["userId"])
     .index("by_connector", ["connectorId"])
