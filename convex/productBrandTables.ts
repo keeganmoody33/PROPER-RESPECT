@@ -56,7 +56,8 @@ export const productBrandTables = {
     currentSnapshotId: v.optional(v.id("productBrandSnapshots")),
     lastError: v.optional(v.string()),
   }).index("by_product", ["productId"])
-    .index("by_status_completed", ["status", "completedAt"]),
+    .index("by_status_completed", ["status", "completedAt"])
+    .index("by_status_requested", ["status", "requestedAt"]),
   productBrandSnapshots: defineTable({
     productId: v.id("products"), generation: v.number(),
     snapshot: productBrandSnapshotValidator,

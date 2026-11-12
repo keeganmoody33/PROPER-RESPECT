@@ -454,3 +454,28 @@ test("the scheduled refresh does not fetch a brand for a product nobody has any 
   // It stays out of the way of products that are still used.
   expect(await f.run()).toEqual({ queued: 0 });
 });
+
+test("the scheduled refresh picks up an attempt that was abandoned a day ago, and only while the product is in use", async () => {
+  for (const abandoned of [{ status: "PENDING" as const }, { status: "RUNNING" as const, leaseUntil: Date.now() + 180_000 }]) {
+    const f = await storedGithubBrand();
+    const stored = (await f.owner.query(get, { propId: f.propId })).current;
+    // What an interrupted attempt leaves behind: never claimed, or claimed and never finished.
+    const jobId = (await f.job())._id;
+    await f.t.run(ctx => ctx.db.patch(jobId, { ...abandoned, generation: 2, requestedAt: Date.now(), completedAt: undefined }));
+    vi.setSystemTime(Date.now() + 23 * 3_600_000);
+    expect(await f.run()).toEqual({ queued: 0 });
+    expect(await f.job()).toMatchObject({ status: abandoned.status, generation: 2 });
+    expect((await f.owner.query(get, { propId: f.propId })).current).toEqual(stored);
+    vi.setSystemTime(Date.now() + 2 * 3_600_000);
+    expect(await f.run()).toEqual({ queued: 1 });
+    expect(await f.job()).toMatchObject({ status: "READY", generation: 3 });
+    expect(f.brandRequests()).toBe(2);
+  }
+  const f = await storedGithubBrand();
+  const jobId = (await f.job())._id;
+  await f.t.run(async ctx => { await ctx.db.patch(jobId, { status: "PENDING", generation: 2, requestedAt: Date.now(), completedAt: undefined }); await ctx.db.delete(f.propId); });
+  vi.setSystemTime(Date.now() + 25 * 3_600_000);
+  expect(await f.run()).toEqual({ queued: 0 });
+  expect(await f.job()).toMatchObject({ status: "PENDING", generation: 2 });
+  expect(f.brandRequests()).toBe(1);
+});
