@@ -58,6 +58,7 @@ export default defineSchema({
       v.literal("beginUpload"),
       v.literal("publishSelected"),
       v.literal("connectGithub"),
+      v.literal("saveStack"),
     ),
     windowStart: v.number(),
     count: v.number(),

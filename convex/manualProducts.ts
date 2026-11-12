@@ -13,7 +13,8 @@ import {
 } from "../src/domain/discovery";
 import { sha256 } from "../src/domain/product-knowledge";
 import { allowsWebProtocol, isHttpUrl } from "../src/domain/http-url";
-import { relationshipEditSchema, type RelationshipEdit } from "../src/domain/inventory";
+import { isRelationshipConfirmed, relationshipEditSchema, type RelationshipEdit } from "../src/domain/inventory";
+import { approvePendingDraftImports, relationshipState } from "./inventory";
 import { statusValidator } from "./validators";
 
 export const addManualProductArgs = {
@@ -93,18 +94,23 @@ export async function resolveTypedProduct(userId: Id<"users">, name: string, web
   };
 }
 
-export type IntakeOutcome = "CREATED" | "UNCHANGED";
+export type IntakeOutcome = "CREATED" | "CONFIRMED_DRAFT" | "UNCHANGED";
 
-/** The one writer that turns a resolved product into the owner's relationship. It never publishes. */
+/**
+ * The one writer that turns a resolved product into the owner's relationship. It never publishes.
+ * An existing confirmed relationship is never changed. An existing unconfirmed draft is confirmed
+ * with the edit's status only when confirmDraft is set, the way inventory.save confirms.
+ */
 export async function intakeRelationship(ctx: MutationCtx, user: Doc<"users">, input: {
   resolved: ResolvedProduct;
   edit: RelationshipEdit | undefined;
   note: string;
+  confirmDraft: boolean;
   operationId: string;
   requestJson: string;
   now: string;
 }): Promise<{ propId: Id<"props">; product: Doc<"products">; outcome: IntakeOutcome }> {
-  const { resolved: { identity, primaryUrl, evidence }, edit, note, operationId, requestJson, now } = input;
+  const { resolved: { identity, primaryUrl, evidence }, edit, note, confirmDraft, operationId, requestJson, now } = input;
   let product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", identity.slug)).unique();
   if (product && (product.domain !== identity.domain || product.name.toLowerCase() !== identity.name.toLowerCase())) {
     throw new Error("The stored product identity conflicts with this product. It needs review before adding.");
@@ -114,7 +120,18 @@ export async function intakeRelationship(ctx: MutationCtx, user: Doc<"users">, i
     product = (await ctx.db.get(productId)) as Doc<"products">;
   }
   const existing = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", user._id).eq("productId", product._id)).first();
-  if (existing) return { propId: existing._id, product, outcome: "UNCHANGED" };
+  if (existing) {
+    if (!confirmDraft || !edit || isRelationshipConfirmed(existing)) return { propId: existing._id, product, outcome: "UNCHANGED" };
+    const before = relationshipState(existing);
+    const version = (existing.relationshipVersion ?? 0) + 1;
+    await ctx.db.insert("relationshipEvents", {
+      userId: user._id, propId: existing._id, operationId, requestJson, version,
+      recordedAt: now, basis: "OWNER_ASSERTED", before, after: { ...before, status: edit.status, confirmed: true },
+    });
+    await ctx.db.patch(existing._id, { status: edit.status, relationshipVersion: version, confirmedAt: now, visibility: "PRIVATE" });
+    await approvePendingDraftImports(ctx, existing, product);
+    return { propId: existing._id, product, outcome: "CONFIRMED_DRAFT" };
+  }
 
   const propId = await ctx.db.insert("props", {
     userId: user._id, productId: product._id, status: edit?.status ?? "TESTING", visibility: edit ? "PRIVATE" : "DRAFT",
@@ -173,7 +190,7 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
   await consumeWriteLimit(ctx, user._id, "addManualProduct");
   const resolved = await resolveTypedProduct(user._id, name, website);
   const now = new Date().toISOString();
-  const { propId } = await intakeRelationship(ctx, user, { resolved, edit, note, operationId, requestJson, now });
+  const { propId } = await intakeRelationship(ctx, user, { resolved, edit, note, confirmDraft: false, operationId, requestJson, now });
   await ctx.db.insert("manualProductIntakes", { userId: user._id, operationId, requestJson, propId, createdAt: now });
   return propId;
 }
