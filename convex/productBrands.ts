@@ -4,8 +4,10 @@ import { internalAction, internalMutation, mutation, query } from "./_generated/
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
-import { canonicalCatalogProduct, resolveCatalogProduct } from "../src/domain/discovery";
-import { productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
+import { resolveCatalogProduct } from "../src/domain/discovery";
+import { directoryDomainOwner, directoryEntry, extractDomain } from "../src/domain/product-directory";
+import { DIRECTORY_ENTRIES } from "../src/domain/product-directory-entries";
+import { brandNameKey, canonicalBrandDomainSchema, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
 import { productBrandSnapshotValidator } from "./productBrandTables";
 import { retrieveProductBrand } from "../src/server/context-brand";
 import { internal } from "./_generated/api";
@@ -15,22 +17,58 @@ const refreshReference = makeFunctionReference<"action">("productBrands:refresh"
 const PREPARATION_BATCH_SIZE = 25;
 
 type BrandProductIdentity = Pick<Doc<"products">, "slug" | "name" | "domain">;
+type ListedIdentity = Readonly<{ slug: string; domain: string; names: readonly string[]; handChecked: boolean }>;
 
-function catalogIdentity(product: BrandProductIdentity) {
-  return canonicalCatalogProduct(product.slug) ?? (product.slug.startsWith("manual-")
-    ? resolveCatalogProduct({ vendor: product.name })?.product : undefined);
+/** Each listed product's domain and the host of its website: "x.ai" and "docs.x.ai" for Grok Bot. */
+const listedHosts = (entry: (typeof DIRECTORY_ENTRIES)[number]) => [entry.domain, extractDomain(entry.website)];
+const LISTED_HOSTS = new Set(DIRECTORY_ENTRIES.flatMap(listedHosts));
+
+const asIdentity = (entry: (typeof DIRECTORY_ENTRIES)[number]): ListedIdentity =>
+  ({ slug: entry.slug, domain: entry.domain, names: [entry.name, ...entry.aliases], handChecked: entry.evidence !== undefined });
+
+/**
+ * The directory product this row is: by its slug; for an older typed row, by a hand-checked
+ * product's name; or for any typed or discovered row, by a listed product's website and whole name.
+ */
+function listedIdentity(product: BrandProductIdentity): ListedIdentity | null {
+  const entry = directoryEntry(product.slug);
+  if (entry) return asIdentity(entry);
+  const named = product.slug.startsWith("manual-") ? resolveCatalogProduct({ vendor: product.name })?.product : undefined;
+  if (named) return { slug: named.slug, domain: named.domain, names: [named.name], handChecked: true };
+  const name = brandNameKey(product.name);
+  const match = name ? DIRECTORY_ENTRIES.find(candidate => listedHosts(candidate).includes(product.domain) &&
+    [candidate.name, ...candidate.aliases].some(known => brandNameKey(known) === name)) : undefined;
+  return match ? asIdentity(match) : null;
 }
 
+/**
+ * Any product with its own website can have its brand fetched. A listed product keeps its
+ * listed website; a product nobody listed uses the website on its row, unless a listed product owns it.
+ */
 export function productBrandEligibility(product: BrandProductIdentity) {
-  const canonical = catalogIdentity(product);
-  if (!canonical || canonical.domain !== product.domain) return "UNVERIFIED_DOMAIN" as const;
+  const identity = listedIdentity(product);
+  if (!identity) {
+    // A listed product's website, root or not, is never an unlisted product's own.
+    const ownWebsite = canonicalBrandDomainSchema.safeParse(product.domain).success && !LISTED_HOSTS.has(product.domain);
+    return ownWebsite ? null : "UNVERIFIED_DOMAIN" as const;
+  }
+  if (identity.domain !== product.domain) return "UNVERIFIED_DOMAIN" as const;
   // Verified 2026-09-19: this subdomain's provider result carries Google branding.
   // An exact domain match cannot establish NotebookLM's product-specific identity.
-  if (canonical.slug === "notebooklm") return "PRODUCT_IDENTITY_REQUIRED" as const;
-  // Root-domain retrieval cannot distinguish a catalog subproduct from its parent.
-  const domainProduct = resolveCatalogProduct({ url: `https://${canonical.domain}` })?.product;
-  if (domainProduct?.slug !== canonical.slug) return "PRODUCT_IDENTITY_REQUIRED" as const;
+  if (identity.slug === "notebooklm") return "PRODUCT_IDENTITY_REQUIRED" as const;
+  // Root-domain retrieval cannot distinguish a product inside another product's site from its parent.
+  if (directoryDomainOwner(identity.domain)?.slug !== identity.slug) return "PRODUCT_IDENTITY_REQUIRED" as const;
   return null;
+}
+
+/**
+ * The names a fetched brand must carry. The hand-checked products were each verified against
+ * their provider result, so they need no check; every other product is checked on each fetch.
+ */
+function expectedBrandNames(product: BrandProductIdentity): readonly string[] | undefined {
+  const identity = listedIdentity(product);
+  if (identity?.handChecked) return undefined;
+  return identity ? identity.names : [product.name];
 }
 
 function verifiedDomain(product: Doc<"products">): string | null {
@@ -156,7 +194,8 @@ export const claim = internalMutation({
     const relationship = await ctx.db.query("props").withIndex("by_product", q => q.eq("productId", productId)).first();
     if (!relationship) return null;
     await ctx.db.patch(job._id, { status: "RUNNING", leaseUntil: Date.now() + 180_000 });
-    return { productSlug: product.slug, canonicalDomain: job.canonicalDomain, retrievalId: `${productId}_${generation}` };
+    const expectedNames = expectedBrandNames(product);
+    return { productSlug: product.slug, canonicalDomain: job.canonicalDomain, retrievalId: `${productId}_${generation}`, ...(expectedNames ? { expectedNames: [...expectedNames] } : {}) };
   },
 });
 
@@ -207,7 +246,8 @@ export const refresh = internalAction({
       return;
     }
     try {
-      const { snapshot, response } = await retrieveProductBrand(identity, { apiKey });
+      const { expectedNames, ...product } = identity;
+      const { snapshot, response } = await retrieveProductBrand(product, { apiKey, expectedNames });
       await ctx.runMutation(internal.productBrands.retain, { ...args, snapshot, responseJson: JSON.stringify(response) });
     } catch {
       await ctx.runMutation(internal.productBrands.fail, { ...args, reason: "RETRIEVAL_FAILED" });

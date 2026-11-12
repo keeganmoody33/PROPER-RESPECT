@@ -1,5 +1,5 @@
 import {
-  normalizeProductBrand, productBrandRetrievalSchema,
+  brandTitleNamesProduct, normalizeProductBrand, productBrandRetrievalSchema,
   type ProductBrandReceipt, type ProductBrandSnapshot, type ProductBrandTypographyRole,
 } from "../domain/product-brand.ts";
 
@@ -121,7 +121,7 @@ function retainedResponse(snapshot: ProductBrandSnapshot) {
  */
 export async function retrieveProductBrand(
   input: { productSlug: string; canonicalDomain: string; retrievalId?: string; retrievedAt?: string },
-  options: { apiKey: string; fetcher?: typeof fetch },
+  options: { apiKey: string; fetcher?: typeof fetch; expectedNames?: readonly string[] },
 ): Promise<{ snapshot: ProductBrandSnapshot; response: unknown }> {
   if (!options.apiKey.trim() || /[\r\n]/.test(options.apiKey)) throw new Error("Context.dev API key is not configured.");
   const metadata = productBrandRetrievalSchema.parse({
@@ -131,6 +131,9 @@ export async function retrieveProductBrand(
   const brand = await request("brand", metadata.canonicalDomain, options.apiKey, fetcher);
   // Fail identity mismatch before issuing optional paid requests.
   normalizeProductBrand(metadata, { brand: brand.value });
+  if (options.expectedNames && !brandTitleNamesProduct(record(record(brand.value).brand).title, options.expectedNames)) {
+    throw new Error("Context.dev brand did not name this product.");
+  }
   const [fonts, styleguide] = await Promise.all([
     request("fonts", metadata.canonicalDomain, options.apiKey, fetcher),
     request("styleguide", metadata.canonicalDomain, options.apiKey, fetcher),

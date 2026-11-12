@@ -167,6 +167,29 @@ function normalizedFontLinks(value: unknown, source: "fonts" | "styleguide", fam
 }
 
 /** The caller establishes canonical identity; a provider redirect never changes it. */
+// Letters, their marks and digits in any script, so "Open Places" and "openplaces" compare equal
+// and "Café" stays distinct from "Caf". Keeps "工具" whole; drops the space in "Open Places".
+const NOT_NAME_CHARACTER = /[^\p{L}\p{M}\p{N}]/gu;
+export const brandNameKey = (value: string) => value.normalize("NFKC").toLowerCase().replace(NOT_NAME_CHARACTER, "");
+// No product is named at this length; a longer title is refused before any scanning.
+const TITLE_MAX = 200;
+// One of : | – —, or a hyphen with a space on each side. Splits "Cursor: The AI Code Editor" after "Cursor"; leaves "Wispr-Flow" whole.
+const TITLE_SEPARATOR = /[:|\u2013\u2014]| - /;
+// Any run of whitespace. Turns "Cursor   -   Editor" into "Cursor - Editor".
+const WHITESPACE_RUN = /\s+/g;
+
+/**
+ * A website can answer with its parent company's brand. The brand is used only when its
+ * title is the product's name or one of its other names, alone or before a separator.
+ */
+export function brandTitleNamesProduct(title: unknown, names: readonly string[]): boolean {
+  if (typeof title !== "string" || title.length > TITLE_MAX) return false;
+  const spaced = title.replace(WHITESPACE_RUN, " ").trim();
+  const whole = brandNameKey(spaced), lead = brandNameKey(spaced.split(TITLE_SEPARATOR, 1)[0]);
+  if (!whole) return false;
+  return names.map(brandNameKey).some(name => name !== "" && (name === whole || name === lead));
+}
+
 export function normalizeProductBrand(input: SnapshotInput, responses: ContextBrandResponses): ProductBrandSnapshot {
   canonicalBrandDomainSchema.parse(input.canonicalDomain);
   const brandResponse = record(responses.brand), brand = record(brandResponse.brand);
