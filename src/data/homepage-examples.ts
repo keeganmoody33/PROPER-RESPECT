@@ -52,7 +52,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
   },
   { slug: "claude-code", status: "ACTIVE", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code." },
-  { slug: "firecrawl", status: "ACTIVE", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and pages through it for my agents." },
+  { slug: "firecrawl", status: "ACTIVE", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it." },
   { slug: "exa", status: "ACTIVE", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news." },
   { slug: "cloudflare", status: "ACTIVE", since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it." },
   { slug: "porkbun", status: "ACTIVE", since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here." },
