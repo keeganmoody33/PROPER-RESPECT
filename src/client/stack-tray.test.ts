@@ -60,6 +60,24 @@ test("a typed website on a directory domain joins as that product; an unknown pr
   ]);
 });
 
+test("typed products are the same entry when the server would make them one product: same name and website domain", () => {
+  const payroll = addTyped(emptyTray, "Portal", "payroll.example");
+  const both = addTyped(payroll, "Portal", "expenses.example");
+  expect(trayPicks(both)).toEqual([
+    { kind: "typed", name: "Portal", website: "payroll.example", status: "ACTIVE" },
+    { kind: "typed", name: "Portal", website: "expenses.example", status: "ACTIVE" },
+  ]);
+  expect(both.lastAdded).toEqual({ added: 1, alreadySaved: 0, alreadyListed: 0, overLimit: 0 });
+
+  const respelled = addTyped(payroll, "portal", "https://www.payroll.example/");
+  expect(trayPicks(respelled)).toEqual([{ kind: "typed", name: "Portal", website: "payroll.example", status: "ACTIVE" }]);
+  expect(respelled.lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
+
+  const bare = addTyped(addTyped(emptyTray, "Portal"), "Portal");
+  expect(trayPicks(bare)).toEqual([{ kind: "typed", name: "Portal", status: "ACTIVE" }]);
+  expect(bare.lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
+});
+
 test("a name and website the server would refuse are refused with its message before anything is added", () => {
   expect(resolveTypedPick("GitHub", "notion.so")).toEqual({ kind: "refused", message: "That website does not match the named catalog product. Correct the name or website." });
   expect(resolveTypedPick("Tool", "javascript:alert(1)")).toEqual({ kind: "refused", message: "Use a public HTTP or HTTPS product website without credentials, or leave it blank." });
