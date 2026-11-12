@@ -6,9 +6,10 @@ import { SignInButton } from "@clerk/nextjs";
 import { makeFunctionReference } from "convex/server";
 import type { SaveSelectionResult } from "@/convex/stack";
 import {
-  addedMessage, emptyTray, directoryNote, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, signInToSaveLabel, TRAY_STATUSES, TYPED_NAME_MAX, trayPicks, trayReducer,
-  type DirectoryLoad, type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus, type TypedResolution,
+  addedMessage, emptyTray, directoryNote, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, signInToSaveLabel, TRAY_LEVELS, TYPED_NAME_MAX, trayPicks, trayReducer,
+  type DirectoryLoad, type SaveAttempt, type StackPick, type TrayEntry, type TypedResolution,
 } from "@/src/client/stack-tray";
+import { levelDefinition, statusFallbackLabel, type RelationshipLevel } from "@/src/domain/relationship-level";
 import { readPendingStack, restorablePicks, writePendingStack } from "@/src/client/pending-stack";
 import { firstResultReturnUrl } from "@/src/client/first-result-intent";
 import styles from "./stack-builder.module.css";
@@ -244,15 +245,22 @@ export function StackBuilder({ mode }: { mode: BuilderMode }) {
       <h3 className={styles.trayTitle} id={`${ids}-tray`}>Your list ({tray.items.length})</h3>
       {tray.items.length === 0 && <p className={styles.hint}>Nothing picked yet. Choose a role or search above.</p>}
       {tray.items.length > 0 && <ul className={styles.tray} aria-labelledby={`${ids}-tray`}>
-        {tray.items.map(item => <li key={item.key} className={styles.item}>
+        {tray.items.map((item, index) => {
+          const definition = item.level ? levelDefinition(item.level) : "Choose how often you use it.";
+          return <li key={item.key} className={styles.item}>
           <span className={styles.itemName}><strong>{item.name}</strong><small>{item.kind === "directory" ? item.domain : (item.website ?? "Added by name")}</small></span>
-          <select aria-label={`How you use ${item.name}`} value={item.status}
-            onChange={event => dispatch({ type: "setStatus", key: item.key, status: event.target.value as TrayStatus })}>
-            {TRAY_STATUSES.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          <span className={styles.choice}>
+            <select aria-label={`How you use ${item.name}`} aria-describedby={`${ids}-level-${index}`} title={definition} value={item.level ?? ""}
+              onChange={event => dispatch({ type: "setLevel", key: item.key, level: event.target.value as RelationshipLevel })}>
+              {!item.level && <option value="" disabled>{statusFallbackLabel(item.status)}</option>}
+              {TRAY_LEVELS.map(option => <option key={option.key} value={option.key} title={option.definition}>{option.label}</option>)}
+            </select>
+            <small id={`${ids}-level-${index}`}>{definition}</small>
+          </span>
           <button type="button" className={styles.remove} aria-label={`Remove ${item.name}`}
             onClick={() => { dispatch({ type: "remove", key: item.key }); search.current?.focus(); }}>Remove</button>
-        </li>)}
+        </li>;
+        })}
       </ul>}
     </fieldset>
 

@@ -127,10 +127,10 @@ async function noAxeViolations(browserPage: Page) {
   const saves = (await calls(browserPage)).filter(call => call.name === "saveSelection");
   expect(saves).toHaveLength(1);
   expect(saves[0].args.picks).toEqual([
-    ...["claude-code", "cursor", "github"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
-    { kind: "directory", slug: "clay", status: "TESTING" },
-    ...["exa", "firecrawl", "spider", "n8n", "cloudflare", "posthog", "figma"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
-    { kind: "typed", name: "Field Notes", status: "ACTIVE" },
+    ...["claude-code", "cursor", "github"].map(slug => ({ kind: "directory", slug, status: "ACTIVE", level: "WEEKLY" })),
+    { kind: "directory", slug: "clay", status: "TESTING", level: "TESTING" },
+    ...["exa", "firecrawl", "spider", "n8n", "cloudflare", "posthog", "figma"].map(slug => ({ kind: "directory", slug, status: "ACTIVE", level: "WEEKLY" })),
+    { kind: "typed", name: "Field Notes", status: "ACTIVE", level: "WEEKLY" },
   ]);
   expect(saves[0].args.operationId).toHaveLength(crypto.randomUUID().length);
 

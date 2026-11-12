@@ -127,9 +127,9 @@ const fits = (page: Page) => page.evaluate(() => document.documentElement.scroll
   await expect(status).toHaveText("Saved 11 tools privately. This save made nothing public.");
   const saves = (await calls(page)).filter(call => call.name === "saveSelection");
   expect(saves.map(call => call.args.picks)).toEqual([[
-    ...["claude-code", "cursor", "github"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
-    { kind: "directory", slug: "clay", status: "TESTING" },
-    ...["exa", "firecrawl", "spider", "n8n", "cloudflare", "posthog", "figma"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
+    ...["claude-code", "cursor", "github"].map(slug => ({ kind: "directory", slug, status: "ACTIVE", level: "WEEKLY" })),
+    { kind: "directory", slug: "clay", status: "TESTING", level: "TESTING" },
+    ...["exa", "firecrawl", "spider", "n8n", "cloudflare", "posthog", "figma"].map(slug => ({ kind: "directory", slug, status: "ACTIVE", level: "WEEKLY" })),
   ]]);
   expect(await page.evaluate(storage => sessionStorage.getItem(storage), pendingKey)).toBeNull();
   await page.reload();

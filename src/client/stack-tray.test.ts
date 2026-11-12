@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addedMessage, directoryNote, emptyTray, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
+import { addedMessage, directoryNote, emptyTray, TRAY_LEVELS, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
 import { resolveTypedPick } from "./typed-pick";
 
 const windsurf: TrayEntry = { slug: "windsurf", name: "Windsurf", domain: "windsurf.com" };
@@ -12,12 +12,12 @@ const CREATED = 4;
 const SAVED = 6;
 const FIELD_NOTES_KEY = 'typed:["field notes","field-notes.example"]';
 
-test("a starter set adds its entries as currently used, skipping saved products and ones already listed", () => {
+test("a starter set adds its entries as used weekly, skipping saved products and ones already listed", () => {
   const listed = trayReducer(emptyTray, { type: "addEntry", entry: clay, held: [] });
   const tray = trayReducer(listed, { type: "addStarterSet", entries: [firecrawl, clay, vercel], held: ["vercel"] });
   expect(tray.items).toEqual([
-    { key: "directory:clay", kind: "directory", slug: "clay", name: "Clay", domain: "clay.com", status: "ACTIVE" },
-    { key: "directory:firecrawl", kind: "directory", slug: "firecrawl", name: "Firecrawl", domain: "firecrawl.dev", status: "ACTIVE" },
+    { key: "directory:clay", kind: "directory", slug: "clay", name: "Clay", domain: "clay.com", status: "ACTIVE", level: "WEEKLY" },
+    { key: "directory:firecrawl", kind: "directory", slug: "firecrawl", name: "Firecrawl", domain: "firecrawl.dev", status: "ACTIVE", level: "WEEKLY" },
   ]);
   expect(tray.lastAdded).toEqual({ added: 1, alreadySaved: 1, alreadyListed: 1, overLimit: 0 });
   expect(addedMessage(tray.lastAdded!)).toBe("Added 1 to your list. 1 already saved. 1 already in your list.");
@@ -31,7 +31,7 @@ function addTyped(tray: Tray, name: string, website?: string, held: readonly str
 
 test("a typed product keeps its trimmed name and website, and one named exactly like a directory product joins as that product", () => {
   const typed = addTyped(emptyTray, "  Field   Notes ", " field-notes.example ");
-  expect(typed.items).toEqual([{ key: FIELD_NOTES_KEY, kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" }]);
+  expect(typed.items).toEqual([{ key: FIELD_NOTES_KEY, kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE", level: "WEEKLY" }]);
   const matched = addTyped(typed, "clay");
   expect(matched.items.map(item => item.key)).toEqual([FIELD_NOTES_KEY, "directory:clay"]);
   expect(addTyped(matched, "   ")).toBe(matched);
@@ -39,9 +39,9 @@ test("a typed product keeps its trimmed name and website, and one named exactly 
 
 test("Windsurf from search and then a typed codeium alias make one entry", () => {
   const tray = addTyped(trayReducer(emptyTray, { type: "addEntry", entry: windsurf, held: [] }), "codeium");
-  expect(tray.items).toEqual([{ key: "directory:windsurf", kind: "directory", slug: "windsurf", name: "Windsurf", domain: "windsurf.com", status: "ACTIVE" }]);
+  expect(tray.items).toEqual([{ key: "directory:windsurf", kind: "directory", slug: "windsurf", name: "Windsurf", domain: "windsurf.com", status: "ACTIVE", level: "WEEKLY" }]);
   expect(tray.lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
-  expect(trayPicks(tray)).toEqual([{ kind: "directory", slug: "windsurf", status: "ACTIVE" }]);
+  expect(trayPicks(tray)).toEqual([{ kind: "directory", slug: "windsurf", status: "ACTIVE", level: "WEEKLY" }]);
 });
 
 test("a typed Codeium first and then Windsurf from search make one entry, and a saved Windsurf is not added again", () => {
@@ -60,7 +60,7 @@ test("a typed website on a directory domain joins as that product; an unknown pr
   expect(resolveTypedPick("Portal", "https://www.Payroll.example/login")).toEqual({ kind: "typed", domain: "payroll.example" });
   expect(resolveTypedPick("Portal")).toEqual({ kind: "typed", domain: "" });
   expect(addTyped(emptyTray, "Field Notes", "field-notes.example").items).toEqual([
-    { key: FIELD_NOTES_KEY, kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" },
+    { key: FIELD_NOTES_KEY, kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE", level: "WEEKLY" },
   ]);
 });
 
@@ -68,17 +68,17 @@ test("typed products are the same entry when the server would make them one prod
   const payroll = addTyped(emptyTray, "Portal", "payroll.example");
   const both = addTyped(payroll, "Portal", "expenses.example");
   expect(trayPicks(both)).toEqual([
-    { kind: "typed", name: "Portal", website: "payroll.example", status: "ACTIVE" },
-    { kind: "typed", name: "Portal", website: "expenses.example", status: "ACTIVE" },
+    { kind: "typed", name: "Portal", website: "payroll.example", status: "ACTIVE", level: "WEEKLY" },
+    { kind: "typed", name: "Portal", website: "expenses.example", status: "ACTIVE", level: "WEEKLY" },
   ]);
   expect(both.lastAdded).toEqual({ added: 1, alreadySaved: 0, alreadyListed: 0, overLimit: 0 });
 
   const respelled = addTyped(payroll, "portal", "https://www.payroll.example/");
-  expect(trayPicks(respelled)).toEqual([{ kind: "typed", name: "Portal", website: "payroll.example", status: "ACTIVE" }]);
+  expect(trayPicks(respelled)).toEqual([{ kind: "typed", name: "Portal", website: "payroll.example", status: "ACTIVE", level: "WEEKLY" }]);
   expect(respelled.lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
 
   const bare = addTyped(addTyped(emptyTray, "Portal"), "Portal");
-  expect(trayPicks(bare)).toEqual([{ kind: "typed", name: "Portal", status: "ACTIVE" }]);
+  expect(trayPicks(bare)).toEqual([{ kind: "typed", name: "Portal", status: "ACTIVE", level: "WEEKLY" }]);
   expect(bare.lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
   expect(addTyped(addTyped(emptyTray, "Field Notes"), "field  notes").lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
 });
@@ -91,7 +91,7 @@ test("a directory name joins as that product only without a website or with one 
 
   const tray = addTyped(emptyTray, "Slack", "https://other.example", ["slack"]);
   expect(tray.lastAdded).toEqual({ added: 1, alreadySaved: 0, alreadyListed: 0, overLimit: 0 });
-  expect(trayPicks(tray)).toEqual([{ kind: "typed", name: "Slack", website: "https://other.example", status: "ACTIVE" }]);
+  expect(trayPicks(tray)).toEqual([{ kind: "typed", name: "Slack", website: "https://other.example", status: "ACTIVE", level: "WEEKLY" }]);
 });
 
 test("a name and website the server would refuse are refused with its message before anything is added", () => {
@@ -99,19 +99,19 @@ test("a name and website the server would refuse are refused with its message be
   expect(resolveTypedPick("Tool", "javascript:alert(1)")).toEqual({ kind: "refused", message: "Use a public HTTP or HTTPS product website without credentials, or leave it blank." });
 });
 
-test("status and removal change only the named item, and picks keep tray order", () => {
+test("a level and removal change only the named item, picks send the level with its status, and keep tray order", () => {
   const tray = [
     { type: "addEntry", entry: firecrawl, held: [] },
     { type: "addTyped", name: "Field Notes", resolution: { kind: "typed", domain: "" }, held: [] },
     { type: "addEntry", entry: clay, held: [] },
-    { type: "setStatus", key: "directory:clay", status: "ARCHIVED" },
-    { type: "setStatus", key: 'typed:["field notes",""]', status: "TESTING" },
+    { type: "setLevel", key: "directory:clay", level: "STOPPED" },
+    { type: "setLevel", key: 'typed:["field notes",""]', level: "TESTING" },
     { type: "remove", key: "directory:firecrawl" },
   ] as const;
   const result = tray.reduce<Tray>((current, action) => trayReducer(current, action), emptyTray);
   expect(trayPicks(result)).toEqual([
-    { kind: "typed", name: "Field Notes", status: "TESTING" },
-    { kind: "directory", slug: "clay", status: "ARCHIVED" },
+    { kind: "typed", name: "Field Notes", status: "TESTING", level: "TESTING" },
+    { kind: "directory", slug: "clay", status: "ARCHIVED", level: "STOPPED" },
   ]);
   expect(saveButtonLabel(result.items.length)).toBe("Save 2 tools privately");
   expect(saveButtonLabel(1)).toBe("Save 1 tool privately");
@@ -151,7 +151,7 @@ test("arrow keys from no active option go to the first or last option, then wrap
 test("a retry of the same picks reuses its operation, and any change in picks or order starts a new one", () => {
   const ids = ["first", "second", "third"];
   const next = () => ids.shift()!;
-  const picks = [{ kind: "directory", slug: "clay", status: "ACTIVE" }, { kind: "directory", slug: "slack", status: "ACTIVE" }] as const;
+  const picks = [{ kind: "directory", slug: "clay", status: "ACTIVE", level: "WEEKLY" }, { kind: "directory", slug: "slack", status: "ACTIVE", level: "WEEKLY" }] as const;
   const first = saveAttempt(null, picks, next);
   expect(first.operationId).toBe("first");
   expect(saveAttempt(first, [...picks], next).operationId).toBe("first");
@@ -184,4 +184,12 @@ test("when the product list fails to load, every message says to reload and none
   expect(directoryNote("loading")).toBe("Loading starter sets…");
   expect(resolveTypedWhenReady(null, "Portal", undefined, "failed"))
     .toEqual({ kind: "refused", message: "The product list did not load. Reload the page to try again." });
+});
+
+test("the tray offers the seven levels cold to hot, each with its definition", () => {
+  expect(TRAY_LEVELS.map(option => [option.key, option.label])).toEqual([
+    ["TRIED_NOT_ADOPTED", "Tried, didn't adopt"], ["STOPPED", "Stopped using"], ["PAUSED", "Paused"], ["OCCASIONAL", "Occasionally"],
+    ["TESTING", "Testing"], ["WEEKLY", "Weekly"], ["DAILY", "Daily"],
+  ]);
+  expect(TRAY_LEVELS.every(option => option.definition.length > 0)).toBe(true);
 });
