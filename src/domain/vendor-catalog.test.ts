@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
-import { canonicalCatalogSenderDomains, VENDOR_CATALOG } from "./discovery";
+import { canonicalCatalogProduct, canonicalCatalogSenderDomains, resolveCatalogProduct, VENDOR_CATALOG } from "./discovery";
+import { directoryEntry } from "./product-directory";
 
 // Pinned 2026-11-12 from the literal catalog, before its rows moved into the
 // product directory. The Gmail query, sender classification, brand eligibility
@@ -366,4 +367,13 @@ it("keeps every catalog row exactly as pinned", () => {
 
 it("keeps the Gmail sender domains exactly as pinned", () => {
   expect(canonicalCatalogSenderDomains()).toStrictEqual(PINNED_SENDER_DOMAINS);
+});
+
+it("adds no sender domain or catalog row for listed directory entries", () => {
+  expect(directoryEntry("salesforce")?.domain).toBe("salesforce.com");
+  expect(directoryEntry("tidal")?.domain).toBe("tidal.com");
+  expect(canonicalCatalogSenderDomains()).toStrictEqual(PINNED_SENDER_DOMAINS);
+  expect(canonicalCatalogProduct("salesforce")).toBeNull();
+  expect(resolveCatalogProduct({ vendor: "Salesforce" })).toBeNull();
+  expect(resolveCatalogProduct({ url: "https://tidal.com" })).toBeNull();
 });

@@ -139,7 +139,19 @@ describe("the shipped directory", () => {
     expect(slugs.at(-1)).toBe("exa");
   });
 
-  it("ships no starter sets until listed entries exist", () => {
-    expect(starterSets()).toEqual([]);
+  it("finds listed entries by name prefix and alias", () => {
+    expect(searchDirectory("tid").map(entry => entry.slug)).toEqual(["tidal"]);
+    expect(searchDirectory("twitter").map(entry => entry.slug)).toEqual(["x"]);
+    expect(searchDirectory("sales nav").map(entry => entry.slug)).toEqual(["linkedin-sales-navigator"]);
+    expect(directoryDomainOwner("linkedin.com")?.slug).toBe("linkedin");
+    expect(directoryDomainOwner("apple.com")).toBeNull();
+  });
+
+  it("resolves every starter set in curated order", () => {
+    expect(starterSets().map(set => [set.role, set.entries.length])).toEqual([
+      ["sales", 12], ["engineering", 10], ["design", 6], ["ai", 6], ["creator", 7], ["everyday", 8],
+    ]);
+    expect(starterSets()[0].entries.slice(0, 4).map(entry => entry.slug))
+      .toEqual(["salesforce", "hubspot", "linkedin-sales-navigator", "apollo"]);
   });
 });
