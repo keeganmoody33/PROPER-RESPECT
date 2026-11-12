@@ -97,11 +97,23 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(8100);
   await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
-  await carousel.getByRole("button", { name: "Pause slideshow" }).click();
-  await page.mouse.move(0, 0);
+  const toggle = carousel.getByRole("button", { name: /slideshow$/ });
+  await toggle.focus();
+  await expect(toggle).toHaveText("Pause slideshow");
   await page.clock.fastForward(16000);
   await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
-  await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
+  await toggle.press("Enter");
+  await expect(toggle).toHaveText("Play slideshow");
+  await page.clock.fastForward(16000);
+  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
+  await toggle.press("Enter");
+  await expect(toggle).toHaveText("Pause slideshow");
+  await expect(toggle).toBeFocused();
+  await page.clock.fastForward(8100);
+  await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
+  await carousel.getByRole("button", { name: "Next example" }).focus();
+  await page.clock.fastForward(16000);
+  await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
 });
 
 test("slideshow never advances on its own for a visitor who prefers reduced motion", async ({ page }) => {

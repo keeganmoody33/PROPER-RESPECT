@@ -45,9 +45,10 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
     setIndex((next + examples.length) % examples.length);
   }
 
-  // Focus on the play toggle is the visitor asking to play, so it must not hold the slideshow.
-  function enter(event: FocusEvent<HTMLElement>) {
-    setFocused(!(event.target instanceof HTMLElement && event.target.dataset.playToggle !== undefined));
+  // Pressing play is the visitor asking for movement, so it lets go of the hold that keyboard focus puts on the slideshow.
+  function toggle() {
+    setChoice(playing ? "paused" : "playing");
+    if (!playing) setFocused(false);
   }
 
   function leave(event: FocusEvent<HTMLElement>) {
@@ -55,7 +56,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   }
 
   return <section className={styles.carousel} aria-label="Product usage examples" aria-roledescription="carousel"
-    onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={enter} onBlur={leave}>
+    onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setFocused(true)} onBlur={leave}>
     <p className={styles.label}>Inside a card / Illustrative examples</p>
     <div className={styles.choices} aria-label="Choose a product example">
       {examples.map((item, itemIndex) => <button type="button" key={item.id} aria-pressed={index === itemIndex} onClick={() => select(itemIndex)}>{item.card.product.name}</button>)}
@@ -76,7 +77,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
       <button type="button" onClick={() => select(index - 1)} aria-label="Previous example">←</button>
       <span>{index + 1} / {examples.length}</span>
       <button type="button" onClick={() => select(index + 1)} aria-label="Next example">→</button>
-      <button type="button" className={styles.play} data-play-toggle onClick={() => setChoice(playing ? "paused" : "playing")}>{playing ? "Pause slideshow" : "Play slideshow"}</button>
+      <button type="button" className={styles.play} onClick={toggle}>{playing ? "Pause slideshow" : "Play slideshow"}</button>
     </div>
     <p className={styles.label}>Keep your usage private. Choose what to share.</p>
   </section>;

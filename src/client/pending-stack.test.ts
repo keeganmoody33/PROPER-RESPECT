@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { directoryEntry } from "@/src/domain/product-directory";
-import { PENDING_STACK_MAX_CHARS, PENDING_WEBSITE_MAX, parsePendingStack, restorablePicks, serializePendingStack } from "./pending-stack";
+import { PENDING_STACK_MAX_CHARS, PENDING_WEBSITE_MAX, parsePendingStack, pendingStackValue, restorablePicks, serializePendingStack } from "./pending-stack";
 import { emptyTray, TRAY_LIMIT, TYPED_NAME_MAX, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
 import { resolveTypedPick } from "./typed-pick";
 
@@ -49,6 +49,20 @@ test.each([
 ])("a tampered, foreign or oversize payload restores an empty list: %#", raw => {
   expect(parsePendingStack(raw)).toEqual([]);
   expect(restore(raw).items).toEqual([]);
+});
+
+test("only a signed-out visitor's list is stored; a signed-in owner's list clears the shared key", () => {
+  expect(pendingStackValue(built(), false)).toBe(serializePendingStack(built()));
+  expect(pendingStackValue(built(), true)).toBeNull();
+});
+
+test("the largest list the builder allows, with names that need escaping, still reads back", () => {
+  const picks = Array.from({ length: TRAY_LIMIT }, (_, index) => ({
+    kind: "typed", name: `${index}`.padEnd(TYPED_NAME_MAX, "\u0001"), website: "x".repeat(PENDING_WEBSITE_MAX), status: "ACTIVE",
+  }));
+  const raw = JSON.stringify({ version: 1, picks });
+  expect(raw.length).toBeLessThanOrEqual(PENDING_STACK_MAX_CHARS);
+  expect(parsePendingStack(raw)).toEqual(picks);
 });
 
 test("an unknown slug and a name the server would refuse are dropped once the directory is loaded; a typed directory name rejoins as that product", () => {

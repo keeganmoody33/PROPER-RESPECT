@@ -8,10 +8,13 @@ import { TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, type RestoredPick, type StackPic
  */
 export const PENDING_STACK_KEY = "proper-respect:pending-stack:v1";
 
-// A full list of typed picks with long websites stays well under this.
-export const PENDING_STACK_MAX_CHARS = 64_000;
 export const PENDING_WEBSITE_MAX = 2_048;
 const SLUG_MAX = 80;
+// JSON writes a control character as six: \u0001.
+const JSON_ESCAPE_MAX = 6;
+const PICK_OVERHEAD = 100;
+// The largest list the builder can write: a full tray of typed picks at their longest, every character escaped.
+export const PENDING_STACK_MAX_CHARS = PICK_OVERHEAD + TRAY_LIMIT * (PICK_OVERHEAD + JSON_ESCAPE_MAX * (TYPED_NAME_MAX + PENDING_WEBSITE_MAX));
 
 const status = z.enum(["ACTIVE", "TESTING", "ARCHIVED"]);
 const pendingStackSchema = z.object({
@@ -63,9 +66,17 @@ export function readPendingStack(): StackPick[] {
   }
 }
 
-export function writePendingStack(tray: Tray) {
+/**
+ * The key is shared by everyone who uses this tab, so it only carries a signed-out
+ * visitor's list across sign-in. A signed-in owner's unsaved list is never written to it.
+ */
+export function pendingStackValue(tray: Tray, signedIn: boolean): string | null {
+  return signedIn ? null : serializePendingStack(tray);
+}
+
+export function writePendingStack(tray: Tray, signedIn: boolean) {
   try {
-    const value = serializePendingStack(tray);
+    const value = pendingStackValue(tray, signedIn);
     if (value) window.sessionStorage.setItem(PENDING_STACK_KEY, value);
     else window.sessionStorage.removeItem(PENDING_STACK_KEY);
   } catch {
