@@ -202,7 +202,7 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
   await page.getByRole("button", { name: "Testing", exact: true }).click();
   await assertInspected("synthetic-testing", "TESTING", "Testing a GitHub workflow", "Synthetic testing note.");
   await expect(copilot).toHaveCount(0);
-  await page.getByRole("button", { name: "Archived", exact: true }).click();
+  await page.getByRole("button", { name: "Used before", exact: true }).click();
   await assertInspected("synthetic-archived", "USED BEFORE", "Earlier GitHub workflow", "Synthetic archived note.");
   await page.getByRole("button", { name: "All", exact: true }).click();
   await assertInspected("synthetic-active", "USING", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");

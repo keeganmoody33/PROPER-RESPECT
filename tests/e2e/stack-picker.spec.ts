@@ -204,7 +204,7 @@ test("a typed alias, name or website of a listed product joins as that product, 
 
   await builder.getByRole("button", { name: "Save 1 tool privately" }).click();
   const saves = (await calls(browserPage)).filter(call => call.name === "saveSelection");
-  expect(saves.map(call => call.args.picks)).toEqual([[{ kind: "directory", slug: "windsurf", status: "ACTIVE" }]]);
+  expect(saves.map(call => call.args.picks)).toEqual([[{ kind: "directory", slug: "windsurf", status: "ACTIVE", level: "WEEKLY" }]]);
 });
 
 test("arrow keys keep the active option inside the scrolled listbox, including when they wrap", async ({ page: browserPage }) => {
