@@ -289,3 +289,40 @@ test("an unauthenticated caller saves nothing", async () => {
   await expect(t.mutation(saveSelection, { operationId: "anon", picks: [dir("salesforce")] })).rejects.toThrow("Authentication required");
   expect(await t.run(ctx => ctx.db.query("props").collect())).toEqual([]);
 });
+
+test("a single add whose id looks like a batch item does not block a later batch", async () => {
+  const { t, owner } = await fixture();
+  const single = await owner.mutation(add, { name: "GitHub", operationId: "save:github" });
+  const batch = await owner.mutation(saveSelection, { operationId: "save", picks: [dir("github", "TESTING")] });
+  expect(batch).toEqual({ items: [{ propId: single, productName: "GitHub", outcome: "CONFIRMED_DRAFT" }], created: 0, confirmed: 1, unchanged: 0 });
+  expect(await owner.mutation(saveSelection, { operationId: "save", picks: [dir("github", "TESTING")] })).toEqual(batch);
+  expect(await owner.mutation(add, { name: "GitHub", operationId: "save:github" })).toBe(single);
+  const rows = await everyRow(t);
+  expect(rows.receipts.map(receipt => [receipt.operationId, receipt.propId])).toEqual([
+    ["save:github", single],
+    ["stack-batch:save:github", single],
+  ]);
+  expect(rows.props).toMatchObject([{ _id: single, status: "TESTING", visibility: "PRIVATE", relationshipVersion: 1 }]);
+});
+
+test("a batch item receipt does not block a later single add with the same-looking id", async () => {
+  const { t, owner } = await fixture();
+  const batch = await owner.mutation(saveSelection, { operationId: "save", picks: [dir("github", "ACTIVE")] });
+  const propId = batch.items[0]!.propId;
+  expect(await owner.mutation(add, { name: "GitHub", operationId: "save:github" })).toBe(propId);
+  expect(await owner.mutation(saveSelection, { operationId: "save", picks: [dir("github", "ACTIVE")] })).toEqual(batch);
+  const rows = await everyRow(t);
+  expect(rows.receipts.map(receipt => [receipt.operationId, receipt.propId])).toEqual([
+    ["stack-batch:save:github", propId],
+    ["save:github", propId],
+  ]);
+  expect(rows.props).toMatchObject([{ _id: propId, status: "ACTIVE", visibility: "PRIVATE", relationshipVersion: 1 }]);
+});
+
+test("a single add cannot write into the batch receipt key space", async () => {
+  const { t, owner } = await fixture();
+  await expect(owner.mutation(add, { name: "GitHub", operationId: "stack-batch:save:github" })).rejects.toThrow("Invalid add-product operation.");
+  await expect(owner.mutation(add, { name: "GitHub", operationId: "stack-batch:" })).rejects.toThrow("Invalid add-product operation.");
+  const rows = await everyRow(t);
+  expect(Object.values(rows).every(table => table.length === 0)).toBe(true);
+});
