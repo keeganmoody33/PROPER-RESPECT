@@ -14,7 +14,8 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:3001",
     trace: "retain-on-failure",
     launchOptions: {
-      args: ["--enable-features=WebMCPTesting,DevToolsWebMCPSupport"],
+      // Chrome 157+ gates document.modelContext behind WebMCP; WebMCPTesting alone no longer exposes it.
+      args: ["--enable-features=WebMCP,WebMCPTesting,DevToolsWebMCPSupport"],
     },
   },
   webServer: {
