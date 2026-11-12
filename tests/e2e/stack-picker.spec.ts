@@ -12,7 +12,6 @@ const PHONE = 375;
 const SHARED = 13;
 // Swaps "@clerk/nextjs" and "convex/react" for synthetic stand-ins; "convex/server" stays real.
 const boundary = /^(@clerk\/nextjs|convex\/react)$/;
-// Every path inside the synthetic namespace, from "" to "convex/react".
 const anyPath = /.*/;
 
 let page: string;
