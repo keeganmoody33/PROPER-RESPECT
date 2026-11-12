@@ -145,6 +145,11 @@ describe("the shipped directory", () => {
     expect(searchDirectory("sales nav").map(entry => entry.slug)).toEqual(["linkedin-sales-navigator"]);
     expect(directoryDomainOwner("linkedin.com")?.slug).toBe("linkedin");
     expect(directoryDomainOwner("apple.com")).toBeNull();
+    expect(searchDirectory("brand.dev").map(entry => entry.slug)).toEqual(["context-dev"]);
+    expect(searchDirectory("xai").map(entry => entry.slug)).toEqual(["grok"]);
+    expect(["porkbun.com", "dynadot.com", "elicit.com", "context.dev", "grok.com"].map(domain => directoryDomainOwner(domain)?.slug))
+      .toEqual(["porkbun", "dynadot", "elicit", "context-dev", "grok"]);
+    expect(evidenceTier().map(entry => entry.slug)).not.toEqual(expect.arrayContaining(["porkbun"]));
   });
 
   it("resolves every starter set in curated order", () => {
