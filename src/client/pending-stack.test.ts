@@ -5,7 +5,7 @@ import { emptyTray, TRAY_LIMIT, TYPED_NAME_MAX, trayReducer, type Tray, type Tra
 import { resolveTypedPick } from "./typed-pick";
 
 const directory = { entry: directoryEntry, resolveTypedPick };
-const hubspot: TrayEntry = { slug: "hubspot", name: "HubSpot", domain: "hubspot.com" };
+const firecrawl: TrayEntry = { slug: "firecrawl", name: "Firecrawl", domain: "firecrawl.dev" };
 const clay: TrayEntry = { slug: "clay", name: "Clay", domain: "clay.com" };
 const BUILT = 3;
 const NEXT_VERSION = 2;
@@ -17,18 +17,18 @@ function restore(raw: string | null, held: readonly string[] = [], tray: Tray = 
 }
 
 function built(): Tray {
-  let tray = trayReducer(emptyTray, { type: "addStarterSet", entries: [hubspot, clay], held: [] });
+  let tray = trayReducer(emptyTray, { type: "addStarterSet", entries: [firecrawl, clay], held: [] });
   tray = trayReducer(tray, { type: "addTyped", name: "Field Notes", website: "field-notes.example", resolution: { kind: "typed", domain: "field-notes.example" }, held: [] });
-  tray = trayReducer(tray, { type: "setStatus", key: "directory:hubspot", status: "TESTING" });
+  tray = trayReducer(tray, { type: "setStatus", key: "directory:firecrawl", status: "TESTING" });
   return trayReducer(tray, { type: "setStatus", key: "directory:clay", status: "ARCHIVED" });
 }
 
 test("a list round-trips with every status and typed website, and an empty list stores nothing", () => {
   const raw = serializePendingStack(built());
-  expect(raw).toBe('{"version":1,"picks":[{"kind":"directory","slug":"hubspot","status":"TESTING"},{"kind":"directory","slug":"clay","status":"ARCHIVED"},{"kind":"typed","name":"Field Notes","website":"field-notes.example","status":"ACTIVE"}]}');
+  expect(raw).toBe('{"version":1,"picks":[{"kind":"directory","slug":"firecrawl","status":"TESTING"},{"kind":"directory","slug":"clay","status":"ARCHIVED"},{"kind":"typed","name":"Field Notes","website":"field-notes.example","status":"ACTIVE"}]}');
   const restored = restore(raw);
   expect(restored.items).toEqual([
-    { key: "directory:hubspot", kind: "directory", slug: "hubspot", name: "HubSpot", domain: "hubspot.com", status: "TESTING" },
+    { key: "directory:firecrawl", kind: "directory", slug: "firecrawl", name: "Firecrawl", domain: "firecrawl.dev", status: "TESTING" },
     { key: "directory:clay", kind: "directory", slug: "clay", name: "Clay", domain: "clay.com", status: "ARCHIVED" },
     { key: FIELD_NOTES_KEY, kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" },
   ]);
@@ -66,9 +66,9 @@ test("an unknown slug and a name the server would refuse are dropped once the di
 
 test("restoring keeps the tray limit and skips tools already saved or listed", () => {
   const typed = Array.from({ length: TRAY_LIMIT }, (_, index) => ({ kind: "typed", name: `Tool ${index}`, status: "ACTIVE" }));
-  const raw = JSON.stringify({ version: 1, picks: [{ kind: "directory", slug: "hubspot", status: "ACTIVE" }, ...typed.slice(0, TRAY_LIMIT - 1)] });
+  const raw = JSON.stringify({ version: 1, picks: [{ kind: "directory", slug: "firecrawl", status: "ACTIVE" }, ...typed.slice(0, TRAY_LIMIT - 1)] });
   const listed = trayReducer(emptyTray, { type: "addEntry", entry: clay, held: [] });
-  const restored = restore(raw, ["hubspot"], listed);
+  const restored = restore(raw, ["firecrawl"], listed);
   expect(restored.items).toHaveLength(TRAY_LIMIT);
   expect(restored.lastAdded).toEqual({ added: TRAY_LIMIT - 1, alreadySaved: 1, alreadyListed: 0, overLimit: 0 });
   const full = restore(JSON.stringify({ version: 1, picks: typed }), [], listed);

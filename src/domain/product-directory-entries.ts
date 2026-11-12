@@ -27,7 +27,7 @@ export type DirectoryEntry = Readonly<{
   evidence?: Readonly<{ domains: readonly string[]; canonicalUrl?: string }>;
 }>;
 
-export type StarterRole = "sales" | "engineering" | "design" | "ai" | "creator" | "everyday";
+export type StarterRole = "gtm-engineering" | "engineering" | "design" | "ai" | "creator" | "everyday";
 
 export type StarterSetSource = Readonly<{
   role: StarterRole;
@@ -39,8 +39,8 @@ export type StarterSetSource = Readonly<{
 
 export const STARTER_SETS: readonly StarterSetSource[] = [
   {
-    role: "sales", label: "Sales", blurb: "CRM, prospecting, outreach and pipeline.",
-    slugs: ["salesforce", "hubspot", "linkedin-sales-navigator", "apollo", "outreach", "salesloft", "gong", "clay", "zoominfo", "mixmax", "calendly", "slack"],
+    role: "gtm-engineering", label: "GTM engineering", blurb: "Data, scraping, agents and the infrastructure under them.",
+    slugs: ["claude-code", "cursor", "github", "clay", "exa", "firecrawl", "spider", "n8n", "cloudflare", "vercel", "supabase", "posthog"],
   },
   {
     role: "engineering", label: "Engineering", blurb: "Code, infrastructure and AI coding.",

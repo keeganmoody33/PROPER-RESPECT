@@ -45,15 +45,15 @@ test.beforeAll(async () => {
     <body><div id="root"></div><script>${javascript.replaceAll("</script", "<\\/script")}</script></body></html>`;
 });
 
-// The account already holds Slack, so the restored list must count it as saved.
+// The account already holds Vercel, so the restored list must count it as saved.
 const seeded = {
   user: { _id: "synthetic-owner", handle: "pending-owner", displayName: "Synthetic owner", bio: "" },
   connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true, brandEnrichmentAvailable: false,
   hasPublicationAtCurrentHandle: false, hasClaimedPublicIdentity: false,
   cards: [
-    { product: { _id: "product-slack", _creationTime: 1, name: "Slack", slug: "slack", domain: "slack.com", description: "Synthetic saved product" },
-      prop: { _id: "saved-slack", _creationTime: 1, userId: "synthetic-owner", productId: "product-slack", status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
-      links: [{ type: "CANONICAL", url: "https://slack.com", label: "Open Slack", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false },
+    { product: { _id: "product-vercel", _creationTime: 1, name: "Vercel", slug: "vercel", domain: "vercel.com", description: "Synthetic saved product" },
+      prop: { _id: "saved-vercel", _creationTime: 1, userId: "synthetic-owner", productId: "product-vercel", status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
+      links: [{ type: "CANONICAL", url: "https://vercel.com", label: "Open Vercel", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false },
   ],
 };
 
@@ -88,12 +88,12 @@ const fits = (page: Page) => page.evaluate(() => document.documentElement.scroll
   const status = builder.getByRole("status");
   await expect(builder.getByRole("button", { name: "Sign in to save 0 tools" })).toBeDisabled();
 
-  await builder.getByRole("button", { name: "Sales", exact: true }).click();
+  await builder.getByRole("button", { name: "GTM engineering", exact: true }).click();
   await expect(status).toHaveText("Added 12 to your list.");
   const search = builder.getByRole("combobox", { name: "Search products" });
   await search.fill("figma");
   await search.press("Enter");
-  await builder.getByRole("button", { name: "Remove ZoomInfo" }).click();
+  await builder.getByRole("button", { name: "Remove Supabase" }).click();
   await builder.getByRole("combobox", { name: "How you use Clay" }).selectOption("TESTING");
   await expect(builder.getByRole("heading", { name: "Your list (12)" })).toBeVisible();
   const signIn = builder.getByRole("button", { name: "Sign in to save 12 tools" });
@@ -127,9 +127,9 @@ const fits = (page: Page) => page.evaluate(() => document.documentElement.scroll
   await expect(status).toHaveText("Saved 11 tools privately. This save made nothing public.");
   const saves = (await calls(page)).filter(call => call.name === "saveSelection");
   expect(saves.map(call => call.args.picks)).toEqual([[
-    ...["salesforce", "hubspot", "linkedin-sales-navigator", "apollo", "outreach", "salesloft", "gong"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
+    ...["claude-code", "cursor", "github"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
     { kind: "directory", slug: "clay", status: "TESTING" },
-    ...["mixmax", "calendly", "figma"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
+    ...["exa", "firecrawl", "spider", "n8n", "cloudflare", "posthog", "figma"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
   ]]);
   expect(await page.evaluate(storage => sessionStorage.getItem(storage), pendingKey)).toBeNull();
   await page.reload();
@@ -141,9 +141,9 @@ test("a tampered stored list restores nothing and the page still works", async (
   await page.addInitScript(storage => sessionStorage.setItem(storage, JSON.stringify({ version: 1, picks: [{ kind: "directory", slug: "clay", status: "PUBLIC" }] })), pendingKey);
   await open(page, DESKTOP, "light");
   const builder = page.getByRole("region", { name: "Build your stack" });
-  await expect(builder.getByRole("button", { name: "Sales", exact: true })).toBeVisible();
+  await expect(builder.getByRole("button", { name: "GTM engineering", exact: true })).toBeVisible();
   await expect(builder.getByRole("heading", { name: "Your list (0)" })).toBeVisible();
-  await builder.getByRole("button", { name: "Sales", exact: true }).click();
+  await builder.getByRole("button", { name: "GTM engineering", exact: true }).click();
   await expect(builder.getByRole("button", { name: "Sign in to save 12 tools" })).toBeEnabled();
 });
 
