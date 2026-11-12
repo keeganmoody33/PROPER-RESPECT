@@ -181,6 +181,7 @@ test("a typed alias, name or website of a listed product joins as that product, 
   await search.fill("codeium");
   await expect(results.getByRole("option").filter({ hasText: "Windsurf" })).toContainText("In your list");
   await expect(results.getByRole("option").filter({ hasText: "Add “codeium”" })).toHaveCount(0);
+  await search.press("Escape");
 
   await builder.getByText("Add a tool with its website").click();
   const name = builder.getByLabel("Tool name");

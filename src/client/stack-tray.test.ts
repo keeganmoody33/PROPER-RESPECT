@@ -1,6 +1,8 @@
 import { expect, test } from "vitest";
 import { addedMessage, emptyTray, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
+import { resolveTypedPick } from "./typed-pick";
 
+const windsurf: TrayEntry = { slug: "windsurf", name: "Windsurf", domain: "windsurf.com" };
 const hubspot: TrayEntry = { slug: "hubspot", name: "HubSpot", domain: "hubspot.com" };
 const clay: TrayEntry = { slug: "clay", name: "Clay", domain: "clay.com" };
 const slack: TrayEntry = { slug: "slack", name: "Slack", domain: "slack.com" };
@@ -19,18 +21,54 @@ test("a starter set adds its entries as currently used, skipping saved products 
   expect(addedMessage(tray.lastAdded!)).toBe("Added 1 to your list. 1 already saved. 1 already in your list.");
 });
 
+function addTyped(tray: Tray, name: string, website?: string, held: readonly string[] = []): Tray {
+  const resolution = resolveTypedPick(name, website);
+  if (resolution.kind === "refused") throw new Error(resolution.message);
+  return trayReducer(tray, { type: "addTyped", name, website, resolution, held });
+}
+
 test("a typed product keeps its trimmed name and website, and one named exactly like a directory product joins as that product", () => {
-  const typed = trayReducer(emptyTray, { type: "addTyped", name: "  Field   Notes ", website: " field-notes.example ", directoryMatch: null, held: [] });
+  const typed = addTyped(emptyTray, "  Field   Notes ", " field-notes.example ");
   expect(typed.items).toEqual([{ key: "typed:field notes", kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" }]);
-  const matched = trayReducer(typed, { type: "addTyped", name: "clay", directoryMatch: clay, held: [] });
+  const matched = addTyped(typed, "clay");
   expect(matched.items.map(item => item.key)).toEqual(["typed:field notes", "directory:clay"]);
-  expect(trayReducer(matched, { type: "addTyped", name: "   ", directoryMatch: null, held: [] })).toBe(matched);
+  expect(addTyped(matched, "   ")).toBe(matched);
+});
+
+test("Windsurf from search and then a typed codeium alias make one entry", () => {
+  const tray = addTyped(trayReducer(emptyTray, { type: "addEntry", entry: windsurf, held: [] }), "codeium");
+  expect(tray.items).toEqual([{ key: "directory:windsurf", kind: "directory", slug: "windsurf", name: "Windsurf", domain: "windsurf.com", status: "ACTIVE" }]);
+  expect(tray.lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
+  expect(trayPicks(tray)).toEqual([{ kind: "directory", slug: "windsurf", status: "ACTIVE" }]);
+});
+
+test("a typed Codeium first and then Windsurf from search make one entry, and a saved Windsurf is not added again", () => {
+  const typed = addTyped(emptyTray, "Codeium");
+  expect(typed.items.map(item => item.key)).toEqual(["directory:windsurf"]);
+  const tray = trayReducer(typed, { type: "addEntry", entry: windsurf, held: [] });
+  expect(tray.items.map(item => item.key)).toEqual(["directory:windsurf"]);
+  expect(tray.lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
+  expect(addTyped(emptyTray, "codeium", undefined, ["windsurf"]).lastAdded).toEqual({ added: 0, alreadySaved: 1, alreadyListed: 0, overLimit: 0 });
+});
+
+test("a typed website on a directory domain joins as that product; an unknown product stays typed", () => {
+  expect(resolveTypedPick("My editor", "codeium.com")).toEqual({ kind: "directory", entry: windsurf });
+  expect(addTyped(emptyTray, "My editor", "https://codeium.com/").items.map(item => item.key)).toEqual(["directory:windsurf"]);
+  expect(resolveTypedPick("Field Notes", "field-notes.example")).toEqual({ kind: "typed" });
+  expect(addTyped(emptyTray, "Field Notes", "field-notes.example").items).toEqual([
+    { key: "typed:field notes", kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" },
+  ]);
+});
+
+test("a name and website the server would refuse are refused with its message before anything is added", () => {
+  expect(resolveTypedPick("GitHub", "notion.so")).toEqual({ kind: "refused", message: "That website does not match the named catalog product. Correct the name or website." });
+  expect(resolveTypedPick("Tool", "javascript:alert(1)")).toEqual({ kind: "refused", message: "Use a public HTTP or HTTPS product website without credentials, or leave it blank." });
 });
 
 test("status and removal change only the named item, and picks keep tray order", () => {
   const tray = [
     { type: "addEntry", entry: hubspot, held: [] },
-    { type: "addTyped", name: "Field Notes", directoryMatch: null, held: [] },
+    { type: "addTyped", name: "Field Notes", resolution: { kind: "typed" }, held: [] },
     { type: "addEntry", entry: clay, held: [] },
     { type: "setStatus", key: "directory:clay", status: "ARCHIVED" },
     { type: "setStatus", key: "typed:field notes", status: "TESTING" },

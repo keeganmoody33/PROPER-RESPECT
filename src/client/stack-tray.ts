@@ -11,6 +11,12 @@ export const TRAY_LIMIT = 100;
 
 export type TrayEntry = Readonly<{ slug: string; name: string; domain: string }>;
 
+/** What the server would make of a typed name and website: a directory product, the owner's own product, or a refusal. */
+export type TypedResolution =
+  | Readonly<{ kind: "directory"; entry: TrayEntry }>
+  | Readonly<{ kind: "typed" }>
+  | Readonly<{ kind: "refused"; message: string }>;
+
 export type TrayItem =
   | Readonly<{ key: string; kind: "directory"; slug: string; name: string; domain: string; status: TrayStatus }>
   | Readonly<{ key: string; kind: "typed"; name: string; website?: string; status: TrayStatus }>;
@@ -28,7 +34,7 @@ export type Tray = Readonly<{
 export type TrayAction =
   | { type: "addStarterSet"; entries: readonly TrayEntry[]; held: readonly string[] }
   | { type: "addEntry"; entry: TrayEntry; held: readonly string[] }
-  | { type: "addTyped"; name: string; website?: string; directoryMatch: TrayEntry | null; held: readonly string[] }
+  | { type: "addTyped"; name: string; website?: string; resolution: Exclude<TypedResolution, { kind: "refused" }>; held: readonly string[] }
   | { type: "setStatus"; key: string; status: TrayStatus }
   | { type: "remove"; key: string }
   | { type: "saved"; result: { created: number; confirmed: number; unchanged: number } };
@@ -70,9 +76,9 @@ const handlers: Handlers = {
   addStarterSet: (tray, action) => add(tray, action.entries.map(directoryItem), action.held),
   addEntry: (tray, action) => add(tray, [directoryItem(action.entry)], action.held),
   addTyped: (tray, action) => {
-    // A typed name that is exactly a directory product resolves to the same
-    // product on the server, so it joins the tray as that entry.
-    if (action.directoryMatch) return add(tray, [directoryItem(action.directoryMatch)], action.held);
+    // A typed pick the server would resolve to a directory product joins as that
+    // entry, so it is counted as saved or listed instead of saved twice.
+    if (action.resolution.kind === "directory") return add(tray, [directoryItem(action.resolution.entry)], action.held);
     const name = typedName(action.name);
     return name ? add(tray, [typedItem(name, action.website)], action.held) : tray;
   },

@@ -6,11 +6,11 @@ import { makeFunctionReference } from "convex/server";
 import type { SaveSelectionResult } from "@/convex/stack";
 import {
   addedMessage, emptyTray, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, trayPicks, trayReducer,
-  type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus,
+  type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus, type TypedResolution,
 } from "@/src/client/stack-tray";
 import styles from "./stack-builder.module.css";
 
-type DirectoryModule = typeof import("@/src/domain/product-directory");
+type DirectoryModule = typeof import("@/src/domain/product-directory") & typeof import("@/src/client/typed-pick");
 type SaveArgs = { operationId: string; picks: StackPick[] };
 type SaveResult = Pick<SaveSelectionResult, "created" | "confirmed" | "unchanged">;
 
@@ -32,10 +32,9 @@ function entryState(slug: string, held: ReadonlySet<string>, listed: ReadonlySet
   return listed.has(`directory:${slug}`) ? "listed" : "available";
 }
 
-function exactMatch(directory: DirectoryModule | null, name: string) {
-  const wanted = name.trim().toLowerCase();
-  const hit = directory?.searchDirectory(name, 1)[0];
-  return hit && hit.name.toLowerCase() === wanted ? { slug: hit.slug, name: hit.name, domain: hit.domain } : null;
+// Before the directory loads, nothing can be resolved, so a typed pick stays typed.
+function resolve(directory: DirectoryModule | null, name: string, website?: string): TypedResolution {
+  return directory ? directory.resolveTypedPick(name, website) : { kind: "typed" };
 }
 
 export function StackPicker({ held }: { held: readonly string[] }) {
@@ -60,8 +59,8 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
     let current = true;
     void (async () => {
       try {
-        const loaded = await import("@/src/domain/product-directory");
-        if (current) setDirectory(loaded);
+        const [entries, typed] = await Promise.all([import("@/src/domain/product-directory"), import("@/src/client/typed-pick")]);
+        if (current) setDirectory({ ...entries, ...typed });
       } catch {
         if (current) setDirectoryFailed(true);
       }
@@ -72,13 +71,16 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
   const heldSlugs = new Set(held);
   const listedKeys = new Set(tray.items.map(item => item.key));
   const trimmed = query.trim();
-  const options: Option[] = trimmed ? [
-    ...(directory?.searchDirectory(trimmed, RESULT_LIMIT) ?? []).map((entry): Option => ({
+  const found: TrayEntry[] = trimmed ? (directory?.searchDirectory(trimmed, RESULT_LIMIT) ?? []) : [];
+  const typed = trimmed ? resolve(directory, trimmed) : null;
+  const resolvedEntry = typed?.kind === "directory" && !found.some(entry => entry.slug === typed.entry.slug) ? [typed.entry] : [];
+  const options: Option[] = [
+    ...[...found, ...resolvedEntry].map((entry): Option => ({
       kind: "entry", entry: { slug: entry.slug, name: entry.name, domain: entry.domain },
       state: entryState(entry.slug, heldSlugs, listedKeys),
     })),
-    ...(exactMatch(directory, trimmed) ? [] : [{ kind: "typed", name: trimmed } as const]),
-  ] : [];
+    ...(typed?.kind === "typed" ? [{ kind: "typed", name: trimmed } as const] : []),
+  ];
   const expanded = open && options.length > 0;
   const optionId = (index: number) => `${ids}-option-${index}`;
 
@@ -86,7 +88,7 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
     if (option.kind === "entry" && option.state !== "available") return;
     dispatch(option.kind === "entry"
       ? { type: "addEntry", entry: option.entry, held }
-      : { type: "addTyped", name: option.name, directoryMatch: null, held });
+      : { type: "addTyped", name: option.name, resolution: { kind: "typed" }, held });
     setQuery("");
     setActive(-1);
     search.current?.focus();
@@ -112,7 +114,14 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
   function addTyped(form: HTMLFormElement) {
     const data = new FormData(form);
     const name = String(data.get("name") ?? "");
-    dispatch({ type: "addTyped", name, website: String(data.get("website") ?? ""), directoryMatch: exactMatch(directory, name), held });
+    const website = String(data.get("website") ?? "");
+    const resolution = resolve(directory, name, website);
+    if (resolution.kind === "refused") {
+      setError(resolution.message);
+      return;
+    }
+    setError("");
+    dispatch({ type: "addTyped", name, website, resolution, held });
     form.reset();
   }
 
