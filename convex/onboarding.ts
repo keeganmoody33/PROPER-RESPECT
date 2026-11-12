@@ -829,7 +829,12 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   });
   // Omitted cards retain their exact approved stored projection.
   const cardsWithIdentity = [...preserved, ...replacements];
-  const profile = publicProfileSchema.parse({ ...profileUser, cards: cardsWithIdentity.map(entry => entry.card) });
+  const checked = publicProfileSchema.parse({ ...profileUser, cards: cardsWithIdentity.map(entry => entry.card) });
+  // The schema reads a level the registry no longer knows as none. That is for display: an omitted card is stored with the level it was published with.
+  const profile = { ...checked, cards: checked.cards.map((card, index) => {
+    const kept = index < preserved.length ? preserved[index].card.level : undefined;
+    return kept === undefined ? card : { ...card, level: kept };
+  }) };
   const cardPropIds = cardsWithIdentity.map(entry => entry.propId);
   if (new TextEncoder().encode(JSON.stringify({ profile, cardPropIds })).length > PUBLISHED_PROFILE_MAX_BYTES) {
     throw new Error("This page is too large to publish. Share fewer cards or shorten long notes, then preview again.");
