@@ -11,10 +11,13 @@ export const TRAY_LIMIT = 100;
 
 export type TrayEntry = Readonly<{ slug: string; name: string; domain: string }>;
 
-/** What the server would make of a typed name and website: a directory product, the owner's own product, or a refusal. */
+/**
+ * What the server would make of a typed name and website: a directory product, the owner's own
+ * product (one per normalized name and website domain, "" without a website), or a refusal.
+ */
 export type TypedResolution =
   | Readonly<{ kind: "directory"; entry: TrayEntry }>
-  | Readonly<{ kind: "typed" }>
+  | Readonly<{ kind: "typed"; domain: string }>
   | Readonly<{ kind: "refused"; message: string }>;
 
 export type TrayItem =
@@ -45,17 +48,19 @@ export type StackPick =
 
 export const emptyTray: Tray = { items: [], lastAdded: null, saved: null };
 
+// Collapses whitespace like normalizeProductName in convex/manualProducts.ts, so a pasted
+// non-breaking space keys the same product the server sees.
 function typedName(name: string) {
-  return name.split(" ").filter(Boolean).join(" ").trim();
+  return name.trim().replace(/\s+/g, " ");
 }
 
 function directoryItem(entry: TrayEntry): TrayItem {
   return { key: `directory:${entry.slug}`, kind: "directory", slug: entry.slug, name: entry.name, domain: entry.domain, status: "ACTIVE" };
 }
 
-function typedItem(name: string, website: string | undefined): TrayItem {
+function typedItem(name: string, website: string | undefined, domain: string): TrayItem {
   const trimmed = website?.trim();
-  return { key: `typed:${name.toLowerCase()}`, kind: "typed", name, ...(trimmed ? { website: trimmed } : {}), status: "ACTIVE" };
+  return { key: `typed:${JSON.stringify([name.toLowerCase(), domain])}`, kind: "typed", name, ...(trimmed ? { website: trimmed } : {}), status: "ACTIVE" };
 }
 
 function add(tray: Tray, candidates: readonly TrayItem[], held: readonly string[]): Tray {
@@ -80,7 +85,7 @@ const handlers: Handlers = {
     // entry, so it is counted as saved or listed instead of saved twice.
     if (action.resolution.kind === "directory") return add(tray, [directoryItem(action.resolution.entry)], action.held);
     const name = typedName(action.name);
-    return name ? add(tray, [typedItem(name, action.website)], action.held) : tray;
+    return name ? add(tray, [typedItem(name, action.website, action.resolution.domain)], action.held) : tray;
   },
   setStatus: (tray, action) => ({
     ...tray,

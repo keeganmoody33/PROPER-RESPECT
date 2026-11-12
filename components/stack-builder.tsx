@@ -32,9 +32,10 @@ function entryState(slug: string, held: ReadonlySet<string>, listed: ReadonlySet
   return listed.has(`directory:${slug}`) ? "listed" : "available";
 }
 
-// Before the directory loads, nothing can be resolved, so a typed pick stays typed.
+// Before the directory loads, nothing can be resolved or normalized, so a typed pick stays typed
+// and keys on its website as entered. The server refuses two spellings of one website as picked twice.
 function resolve(directory: DirectoryModule | null, name: string, website?: string): TypedResolution {
-  return directory ? directory.resolveTypedPick(name, website) : { kind: "typed" };
+  return directory ? directory.resolveTypedPick(name, website) : { kind: "typed", domain: website?.trim().toLowerCase() ?? "" };
 }
 
 export function StackPicker({ held }: { held: readonly string[] }) {
@@ -92,7 +93,7 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
     if (option.kind === "entry" && option.state !== "available") return;
     dispatch(option.kind === "entry"
       ? { type: "addEntry", entry: option.entry, held }
-      : { type: "addTyped", name: option.name, resolution: { kind: "typed" }, held });
+      : { type: "addTyped", name: option.name, resolution: { kind: "typed", domain: "" }, held });
     setQuery("");
     setActive(-1);
     search.current?.focus();

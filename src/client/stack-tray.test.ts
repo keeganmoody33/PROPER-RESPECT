@@ -9,6 +9,7 @@ const slack: TrayEntry = { slug: "slack", name: "Slack", domain: "slack.com" };
 const OVER_LIMIT = 2;
 const CREATED = 4;
 const SAVED = 6;
+const FIELD_NOTES_KEY = 'typed:["field notes","field-notes.example"]';
 
 test("a starter set adds its entries as currently used, skipping saved products and ones already listed", () => {
   const listed = trayReducer(emptyTray, { type: "addEntry", entry: clay, held: [] });
@@ -29,9 +30,9 @@ function addTyped(tray: Tray, name: string, website?: string, held: readonly str
 
 test("a typed product keeps its trimmed name and website, and one named exactly like a directory product joins as that product", () => {
   const typed = addTyped(emptyTray, "  Field   Notes ", " field-notes.example ");
-  expect(typed.items).toEqual([{ key: "typed:field notes", kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" }]);
+  expect(typed.items).toEqual([{ key: FIELD_NOTES_KEY, kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" }]);
   const matched = addTyped(typed, "clay");
-  expect(matched.items.map(item => item.key)).toEqual(["typed:field notes", "directory:clay"]);
+  expect(matched.items.map(item => item.key)).toEqual([FIELD_NOTES_KEY, "directory:clay"]);
   expect(addTyped(matched, "   ")).toBe(matched);
 });
 
@@ -54,9 +55,11 @@ test("a typed Codeium first and then Windsurf from search make one entry, and a 
 test("a typed website on a directory domain joins as that product; an unknown product stays typed", () => {
   expect(resolveTypedPick("My editor", "codeium.com")).toEqual({ kind: "directory", entry: windsurf });
   expect(addTyped(emptyTray, "My editor", "https://codeium.com/").items.map(item => item.key)).toEqual(["directory:windsurf"]);
-  expect(resolveTypedPick("Field Notes", "field-notes.example")).toEqual({ kind: "typed" });
+  expect(resolveTypedPick("Field Notes", "field-notes.example")).toEqual({ kind: "typed", domain: "field-notes.example" });
+  expect(resolveTypedPick("Portal", "https://www.Payroll.example/login")).toEqual({ kind: "typed", domain: "payroll.example" });
+  expect(resolveTypedPick("Portal")).toEqual({ kind: "typed", domain: "" });
   expect(addTyped(emptyTray, "Field Notes", "field-notes.example").items).toEqual([
-    { key: "typed:field notes", kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" },
+    { key: FIELD_NOTES_KEY, kind: "typed", name: "Field Notes", website: "field-notes.example", status: "ACTIVE" },
   ]);
 });
 
@@ -76,6 +79,7 @@ test("typed products are the same entry when the server would make them one prod
   const bare = addTyped(addTyped(emptyTray, "Portal"), "Portal");
   expect(trayPicks(bare)).toEqual([{ kind: "typed", name: "Portal", status: "ACTIVE" }]);
   expect(bare.lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
+  expect(addTyped(addTyped(emptyTray, "Field Notes"), "field  notes").lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
 });
 
 test("a name and website the server would refuse are refused with its message before anything is added", () => {
@@ -86,10 +90,10 @@ test("a name and website the server would refuse are refused with its message be
 test("status and removal change only the named item, and picks keep tray order", () => {
   const tray = [
     { type: "addEntry", entry: hubspot, held: [] },
-    { type: "addTyped", name: "Field Notes", resolution: { kind: "typed" }, held: [] },
+    { type: "addTyped", name: "Field Notes", resolution: { kind: "typed", domain: "" }, held: [] },
     { type: "addEntry", entry: clay, held: [] },
     { type: "setStatus", key: "directory:clay", status: "ARCHIVED" },
-    { type: "setStatus", key: "typed:field notes", status: "TESTING" },
+    { type: "setStatus", key: 'typed:["field notes",""]', status: "TESTING" },
     { type: "remove", key: "directory:hubspot" },
   ] as const;
   const result = tray.reduce<Tray>((current, action) => trayReducer(current, action), emptyTray);
