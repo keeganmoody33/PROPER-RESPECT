@@ -84,6 +84,10 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
   const expanded = open && options.length > 0;
   const optionId = (index: number) => `${ids}-option-${index}`;
 
+  useEffect(() => {
+    if (expanded && active >= 0) document.getElementById(`${ids}-option-${active}`)?.scrollIntoView({ block: "nearest" });
+  }, [expanded, active, ids]);
+
   function choose(option: Option) {
     if (option.kind === "entry" && option.state !== "available") return;
     dispatch(option.kind === "entry"
