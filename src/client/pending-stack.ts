@@ -42,7 +42,6 @@ export function parsePendingStack(raw: string | null): StackPick[] {
   }
 }
 
-/** Resolves each stored pick against the directory as a fresh pick would be; unknown slugs and refused names are dropped. */
 export function restorablePicks(picks: readonly StackPick[], directory: PendingDirectory): RestoredPick[] {
   return picks.flatMap((pick): RestoredPick[] => {
     if (pick.kind === "directory") {

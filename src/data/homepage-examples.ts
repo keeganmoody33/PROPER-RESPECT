@@ -10,7 +10,6 @@ export type HomepageExample = Readonly<{
   source?: Readonly<{ href: string; label: string }>;
 }>;
 
-// One digit per day, repeated with a stride so the sample calendar looks irregular.
 const COUNT_PATTERN = "0241062300471250321046203142";
 const PATTERN_STRIDE = 11;
 const DAYS_PER_WEEK = 7;

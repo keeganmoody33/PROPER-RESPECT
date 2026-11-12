@@ -73,7 +73,7 @@ export const homepageProvenFacts = [
 export const homepageSteps = [
   { label: "01 / Pick", title: "Pick your tools.", body: "Start from a role or search by name. Add anything that is missing by its name." },
   { label: "02 / Keep it private", title: "Say how you use each one.", body: "Mark what you use, what you are testing and what you used before. Save the whole list privately in one step." },
-  { label: "03 / Share", title: "Preview once, then share.", body: "See exactly what visitors will see. Approve that preview once to put every confirmed tool on your public page." },
+  { label: "03 / Share", title: "Preview once, then share.", body: "See exactly what visitors will see. Approve that preview once to share your confirmed tools on your public page." },
 ] as const;
 
 export function homepageMarkdown() {

@@ -5,7 +5,6 @@ import { firstResultReturnUrl, firstResultSources } from "@/src/client/first-res
 import { SourcePicker, useFirstResultSource } from "./first-result";
 import { StackPicker } from "./stack-builder";
 
-/** The collection page before sign-in, and while the session is still being checked. */
 export function SignedOutCollection({ session }: { session: "signed-out" | "checking" }) {
   const source = useFirstResultSource();
   const label = firstResultSources.find(option => option.id === source)?.label;
