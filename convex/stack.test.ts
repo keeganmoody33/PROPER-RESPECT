@@ -223,6 +223,36 @@ test("a product picked twice in one request is refused", async () => {
   expect(Object.values(rows).every(table => table.length === 0)).toBe(true);
 });
 
+test("typed picks with one name are one product per website domain, so equivalent spellings are picked twice", async () => {
+  const { t, owner } = await fixture();
+  await expect(owner.mutation(saveSelection, { operationId: "respelled", picks: [typed("Portal", "ACTIVE", "https://www.payroll.example/"), typed("portal", "TESTING", "payroll.example")] }))
+    .rejects.toThrow("Portal is picked twice. Keep one.");
+  await expect(owner.mutation(saveSelection, { operationId: "bare", picks: [typed("Portal"), typed("Portal", "TESTING")] }))
+    .rejects.toThrow("Portal is picked twice. Keep one.");
+  expect(Object.values(await everyRow(t)).every(table => table.length === 0)).toBe(true);
+
+  const saved = await owner.mutation(saveSelection, { operationId: "two-portals", picks: [typed("Portal", "ACTIVE", "payroll.example"), typed("Portal", "TESTING", "expenses.example")] });
+  expect(saved).toEqual({
+    items: [
+      { propId: expect.any(String), productName: "Portal", outcome: "CREATED" },
+      { propId: expect.any(String), productName: "Portal", outcome: "CREATED" },
+    ],
+    created: saved.items.length, confirmed: 0, unchanged: 0,
+  });
+  const rows = await everyRow(t);
+  expect(rows.products.map(product => product.domain)).toEqual(["payroll.example", "expenses.example"]);
+  expect(rows.links.map(link => link.url)).toEqual(["https://payroll.example/", "https://expenses.example/"]);
+});
+
+test("a typed directory-only name with another website saves as the owner's product with that link", async () => {
+  const { t, owner } = await fixture();
+  await owner.mutation(saveSelection, { operationId: "own-slack", picks: [typed("Slack", "ACTIVE", "https://other.example")] });
+  const rows = await everyRow(t);
+  expect(rows.products.map(({ name, domain }) => ({ name, domain }))).toEqual([{ name: "Slack", domain: "other.example" }]);
+  expect(rows.products[0]?.slug.startsWith("manual-slack-")).toBe(true);
+  expect(rows.links.map(link => link.url)).toEqual(["https://other.example/"]);
+});
+
 test("an unknown slug or an unsafe website fails the whole batch", async () => {
   const { t, owner } = await fixture();
   await expect(owner.mutation(saveSelection, { operationId: "unknown", picks: [dir("salesforce"), typed("Studio tool"), dir("not-in-the-directory")] }))

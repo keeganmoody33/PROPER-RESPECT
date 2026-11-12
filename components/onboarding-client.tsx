@@ -1,6 +1,5 @@
 "use client";
 
-import { ProfileName, ProfileLinks } from "./profile-identity";
 import { ProfileLinksFields } from "./profile-links-fields";
 import { convexAuthToken } from "@/src/domain/convex-auth-token";
 import { classifyEvidenceUpload, EVIDENCE_UPLOAD_ACCEPT } from "@/src/domain/evidence-upload";
@@ -34,6 +33,9 @@ import { openRelationship } from "@/src/client/relationship-location";
 import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 import { CopyProfileLink } from "./copy-profile-link";
+import { SharingPreview } from "./sharing-preview";
+import { StackPicker } from "./stack-builder";
+import { ShareAllSection } from "./share-all-step";
 import { MeasurementSharingChoices } from "./measurement-review";
 import { FirstResultPanel, SourcePicker, useFirstResultSource } from "./first-result";
 import { firstResultSources, firstResultReturnUrl, selectFirstResultSource } from "@/src/client/first-result-intent";
@@ -121,25 +123,6 @@ export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProduc
     <p role="status">{notice?.text}</p>
     {notice?.kind === "saved" && <a href="#private-collection-title">Review your collection</a>}
   </div>;
-}
-
-export function SharingPreview({ profile, current, busy, onPublish, refreshAccounts = [] }: {
-  profile: PublicProfile; current: boolean; busy: boolean; onPublish: () => void;
-  refreshAccounts?: { accountLabel: string }[];
-}) {
-  const [approved, setApproved] = useState(false);
-  return <section className="sharing-preview" aria-labelledby="sharing-preview-title">
-    <h3 id="sharing-preview-title">Your visitor’s view</h3>
-    <p>This is the public information after your selected changes, including previously approved cards that you kept. Private originals and unselected details are excluded.</p>
-    {!current && <p role="status">Your saved collection or sharing choices changed. Preview again before publishing.</p>}
-    {profile.cards.some(card => card.usageLink) && <p>The links on the backs of these cards open only if their own sharing settings allow it. Check that each shows nothing private, like other people’s contact details.</p>}
-    <div className="card-grid">{profile.cards.map((card, index) => <ProductCard key={`${card.product.slug}-${index}`} card={card} index={index} goTo={card.goTo} />)}</div>
-    {!profile.cards.length && <p>No products will be public.</p>}
-    <footer className="profile-footer"><div><strong><ProfileName profile={profile} /></strong><span>@{profile.handle}</span></div><p>{profile.bio}</p><ProfileLinks profile={profile} /></footer>
-    {refreshAccounts.map((account, index) => <p key={index}>Daily GitHub refresh will read activity from {account.accountLabel} and update the approved metric on your public card. Reconnecting requires a fresh sharing preview and approval.</p>)}
-    <label className="sharing-preview-confirmation"><input type="checkbox" checked={approved} disabled={!current || busy} onChange={event => setApproved(event.target.checked)} />I approve making exactly this preview visible to anyone with the public link.</label>
-    <button type="button" className="primary-action" disabled={!current || busy || !approved} onClick={onPublish}>{busy ? "Publishing…" : "Publish this preview"}</button>
-  </section>;
 }
 
 function Builder({ publicOrigin }: { publicOrigin?: string }) {
@@ -439,6 +422,13 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     : state.hasPublicationAtCurrentHandle === false && publicIdentityClaimed !== null ? "draft" : "unknown";
   const publicProfilePath = `/${encodeURIComponent(state.user.handle)}`;
   const publicProfileUrl = publicOrigin ? new URL(publicProfilePath, publicOrigin).href : publicProfilePath;
+  const heldSlugs = state.cards.flatMap(card => card.product && isRelationshipConfirmed(card.prop) ? [card.product.slug] : []);
+  const shareAllBasis = JSON.stringify({ cards: state.cards, user: state.user });
+  const openIdentity = () => {
+    const identity = document.getElementById("collection-profile");
+    identity?.setAttribute("open", "");
+    identity?.querySelector<HTMLInputElement>("input[name='handle']")?.focus();
+  };
 
   return (
     <main className="onboarding-shell">
@@ -457,6 +447,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
 
       <nav className="collection-navigation" aria-label="Your collection workspace">
         <a href="#private-collection-title">Collection</a>
+        <a href="#build-stack">Build your stack</a>
         <a href="#add-product">Add a tool</a>
         <a href="#collection-sources">Sources</a>
         <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Profile and links</a>
@@ -464,6 +455,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
       </nav>
       {message && <p className="message" role="status">{message}</p>}
       {state.privateInventoryAvailable && (source || state.cards.length === 0) && <FirstResultPanel source={source} busy={busy} onConnectGithub={connectGithub} />}
+      <StackPicker held={heldSlugs} />
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />
@@ -557,6 +549,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
             <div className="action-row full"><button className="secondary-action" disabled={busy || handleState === "unknown"}>Save public identity</button></div>
           </form>
         </details>
+        <ShareAllSection identityClaimed={publicIdentityClaimed} basis={shareAllBasis} profileUrl={publicProfileUrl} onSetUpIdentity={openIdentity} />
         <fieldset>
           <legend>Cost visibility</legend>
           <p>Apply cost choices to selected cards, then review before publishing. Unmatched older public cards stay unchanged unless you explicitly select their saved relationships.</p>

@@ -4,15 +4,10 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { consumeWriteLimit, requireUser } from "./authHelpers";
 import { registerProductSources } from "./productKnowledge";
 import { ensureProductBrand } from "./productBrands";
-import {
-  extractDomain,
-  resolveCatalogProduct,
-  resolveCatalogProductWebsite,
-  type DraftProposal,
-  type ProductIdentity,
-} from "../src/domain/discovery";
+import { extractDomain, type ProductIdentity } from "../src/domain/discovery";
 import { sha256 } from "../src/domain/product-knowledge";
-import { allowsWebProtocol, isHttpUrl } from "../src/domain/http-url";
+import { isHttpUrl } from "../src/domain/http-url";
+import { normalizeWebsite, resolveTypedCatalogProduct } from "../src/domain/typed-product";
 import { isRelationshipConfirmed, relationshipEditSchema, type RelationshipEdit } from "../src/domain/inventory";
 import { approvePendingDraftImports, relationshipState } from "./inventory";
 import { statusValidator } from "./validators";
@@ -41,35 +36,6 @@ export function normalizeProductName(input: string): string {
   return name;
 }
 
-export function normalizeWebsite(input: string | undefined): string | undefined {
-  const value = input?.trim();
-  if (!value) return undefined;
-  if (value.length > 2048) throw new Error("The product website is too long.");
-  const candidate = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
-  let url: URL;
-  try { url = new URL(candidate); } catch { throw new Error("Use a public HTTP or HTTPS product website, or leave it blank."); }
-  if (!extractDomain(candidate) || !allowsWebProtocol(url) || url.port) {
-    throw new Error("Use a public HTTP or HTTPS product website without credentials, or leave it blank.");
-  }
-  url.hash = "";
-  return url.href;
-}
-
-function resolveCatalog(name: string, website: string | undefined): Pick<DraftProposal, "product" | "canonicalUrl"> | undefined {
-  const named = resolveCatalogProduct({ vendor: name });
-  const byWebsite = website ? resolveCatalogProductWebsite(website) : undefined;
-  if (named && website) {
-    const websiteFamily = byWebsite ?? resolveCatalogProduct({ url: website });
-    const specificProductConflict = byWebsite && byWebsite.product.slug !== named.product.slug && new URL(website).pathname.replace(/\/+$/, "") !== "";
-    // A named subproduct may use its company's root website. An explicitly
-    // cataloged destination for a different product must not override the name.
-    if (!websiteFamily || websiteFamily.product.domain !== named.product.domain || specificProductConflict) {
-      throw new Error("That website does not match the named catalog product. Correct the name or website.");
-    }
-  }
-  return named ?? byWebsite ?? undefined;
-}
-
 export type ResolvedProduct = Readonly<{
   identity: ProductIdentity;
   primaryUrl?: string;
@@ -79,7 +45,7 @@ export type ResolvedProduct = Readonly<{
 
 /** Today's free-text rules: a catalog name or website, otherwise the owner's own manual- identity. */
 export async function resolveTypedProduct(userId: Id<"users">, name: string, website: string | undefined): Promise<ResolvedProduct> {
-  const catalog = resolveCatalog(name, website);
+  const catalog = resolveTypedCatalogProduct(name, website);
   if (catalog) return { identity: catalog.product, primaryUrl: catalog.canonicalUrl, evidence: true };
   const domain = website ? extractDomain(website)! : "";
   const identityHash = await sha256(JSON.stringify([userId, name.toLowerCase(), domain]));

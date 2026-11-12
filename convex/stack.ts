@@ -6,7 +6,6 @@ import { consumeWriteLimit, requireUser } from "./authHelpers";
 import {
   intakeRelationship,
   normalizeProductName,
-  normalizeWebsite,
   resolveTypedProduct,
   STACK_BATCH_RECEIPT_PREFIX,
   type IntakeOutcome,
@@ -16,6 +15,7 @@ import { statusValidator } from "./validators";
 import { relationshipEditSchema } from "../src/domain/inventory";
 import { directoryEntry } from "../src/domain/product-directory";
 import { sha256 } from "../src/domain/product-knowledge";
+import { normalizeWebsite } from "../src/domain/typed-product";
 
 export const MAX_STACK_PICKS = 100;
 
