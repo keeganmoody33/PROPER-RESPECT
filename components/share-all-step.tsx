@@ -66,7 +66,8 @@ export function ShareAllStep({ identityClaimed, basis, profileUrl, onSetUpIdenti
   }
 
   const shown = state.step === "previewed" || state.step === "publishing" ? state : null;
-  const liveUrl = isHttpUrl(profileUrl) ? profileUrl : null;
+  const resolvedUrl = state.step === "published" ? new URL(profileUrl, window.location.origin).href : "";
+  const liveUrl = isHttpUrl(resolvedUrl) ? resolvedUrl : null;
 
   return <section id="share-all" className={styles.share} aria-labelledby="share-all-title" tabIndex={-1}>
     <h3 id="share-all-title">Share every confirmed tool</h3>

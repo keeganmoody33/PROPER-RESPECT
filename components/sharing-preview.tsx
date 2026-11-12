@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { PublicProfile } from "@/src/domain/public-profile";
 import { ProductCard } from "./product-card";
 import { ProfileLinks, ProfileName } from "./profile-identity";
@@ -10,8 +10,9 @@ export function SharingPreview({ profile, current, busy, onPublish, refreshAccou
   refreshAccounts?: { accountLabel: string }[];
 }) {
   const [approved, setApproved] = useState(false);
-  return <section className="sharing-preview" aria-labelledby="sharing-preview-title">
-    <h3 id="sharing-preview-title">Your visitor’s view</h3>
+  const titleId = useId();
+  return <section className="sharing-preview" aria-labelledby={titleId}>
+    <h3 id={titleId}>Your visitor’s view</h3>
     <p>This is the public information after your selected changes, including previously approved cards that you kept. Private originals and unselected details are excluded.</p>
     {!current && <p role="status">Your saved collection or sharing choices changed. Preview again before publishing.</p>}
     {profile.cards.some(card => card.usageLink) && <p>The links on the backs of these cards open only if their own sharing settings allow it. Check that each shows nothing private, like other people’s contact details.</p>}
