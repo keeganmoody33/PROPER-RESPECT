@@ -27,6 +27,18 @@ export type DirectoryEntry = Readonly<{
   evidence?: Readonly<{ domains: readonly string[]; canonicalUrl?: string }>;
 }>;
 
+export type StarterRole = "sales" | "engineering" | "design" | "ai" | "creator" | "everyday";
+
+export type StarterSetSource = Readonly<{
+  role: StarterRole;
+  label: string;
+  blurb: string;
+  /** Curated order is the only order. No score, no popularity. */
+  slugs: readonly string[];
+}>;
+
+export const STARTER_SETS: readonly StarterSetSource[] = [];
+
 export const DIRECTORY_ENTRIES: readonly DirectoryEntry[] = [
   // Exact product identities already retained with publisher artwork in
   // public/product-assets/2026-09-24-product-icons.json. Parent domains do not
