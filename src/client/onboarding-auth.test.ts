@@ -1,7 +1,8 @@
 import { createElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { beforeEach, expect, test, vi } from "vitest";
-import { OnboardingClient, SharingPreview } from "../../components/onboarding-client";
+import { OnboardingClient } from "../../components/onboarding-client";
+import { SharingPreview } from "../../components/sharing-preview";
 import { getFunctionName, type FunctionReference } from "convex/server";
 import { ProductBrandControls } from "../../components/product-brand-controls";
 import type { Id } from "../../convex/_generated/dataModel";
