@@ -308,6 +308,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
           ...(state.privateInventoryAvailable ? { expectedRelationshipVersion: card.prop.relationshipVersion ?? 0 } : {}),
           publish: edit.publish,
           status: edit.status,
+          level: edit.level,
           headline: edit.headline,
           note: edit.note,
           startedAt: edit.startedAt || undefined,

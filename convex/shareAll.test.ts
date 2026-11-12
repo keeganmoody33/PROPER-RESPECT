@@ -303,3 +303,15 @@ test("share-all with nothing left to share is refused and publishes no page", as
   })).rejects.toThrow("There are no confirmed cards left to share.");
   expect((await f.rows()).publications).toEqual([]);
 });
+
+test("share-all carries each saved level to the public card, and cards without one stay without", async () => {
+  const f = await fixture();
+  await f.addProp({ status: "ARCHIVED", level: "STOPPED" });
+  await f.addProp({ status: "ACTIVE", level: "DAILY", goTo: true });
+  await f.addProp({ status: "TESTING" });
+  await publishAll(f.owner);
+  const page = await f.t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(page?.cards.map(card => [card.status, card.level, card.goTo])).toEqual([
+    ["ARCHIVED", "STOPPED", undefined], ["ACTIVE", "DAILY", true], ["TESTING", undefined, undefined],
+  ]);
+});

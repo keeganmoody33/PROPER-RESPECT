@@ -18,6 +18,12 @@ function prop(propId: string, overrides: Partial<ShareAllProp<string, typeof cos
 }
 
 describe("shareAllSelections", () => {
+  it("sends a saved level beside its status and sends none for a card without one", () => {
+    const result = shareAllSelections([prop("a", { status: "ARCHIVED", level: "PAUSED" }), prop("b")]);
+    expect(result.selections.map(selection => [selection.status, selection.level])).toEqual([["ARCHIVED", "PAUSED"], ["ACTIVE", undefined]]);
+    expect(result.selections[1]).not.toHaveProperty("level");
+  });
+
   it("builds one selection per confirmed private card from saved values only", () => {
     const result = shareAllSelections([
       prop("a", { startedAt: "2025-01-02", startedAtSource: "USER_CONFIRMED", cost,

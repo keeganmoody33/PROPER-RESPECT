@@ -159,3 +159,13 @@ describe("profile link schemes", () => {
     expect(JSON.stringify(result)).not.toContain("javascript:");
   });
 });
+
+describe("relationship label for agents and visitors", () => {
+  it("reads the owner's level, or the fallback word for a card without one", () => {
+    const base = profile();
+    const leveled = projectVisiblePublicProfile({ ...base, cards: [{ ...base.cards[0], status: "ARCHIVED", level: "STOPPED" }, { ...base.cards[0], status: "ARCHIVED" }] });
+    expect(leveled.cards.map(card => [card.status, card.level, card.relationshipLabel, card.ownerSelectedGoTo]))
+      .toEqual([["ARCHIVED", "STOPPED", "Stopped using", true], ["ARCHIVED", undefined, "Used before", true]]);
+    expect(leveled.cards[1]).not.toHaveProperty("level");
+  });
+});

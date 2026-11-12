@@ -6,6 +6,7 @@ import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
 import { isHttpUrl } from "../src/domain/http-url";
+import { isRelationshipLevel, type RelationshipLevel } from "../src/domain/relationship-level";
 import { PUBLISHED_URL_MAX } from "../src/domain/published-text-limits";
 import {
   publicRetainedMailboxAggregate,
@@ -43,7 +44,9 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
     }),
   ));
   // Links and artifact links from before the http(s) rule are dropped on read; storage is unchanged.
-  const cards = published.profile.cards.map(stored => {
+  const cards = published.profile.cards.map(({ level: storedLevel, ...rest }) => {
+    // A level the registry no longer knows is dropped on read; storage is unchanged.
+    const stored: typeof rest & { level?: RelationshipLevel } = isRelationshipLevel(storedLevel) ? { ...rest, level: storedLevel } : rest;
     const linked = stored.primaryLink && !isHttpUrl(stored.primaryLink.url) ? { ...stored, primaryLink: undefined } : stored;
     const activity = withHttpArtifacts(linked.activity);
     const card = activity === linked.activity ? linked : { ...linked, activity };

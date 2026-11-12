@@ -67,7 +67,7 @@ async function reviewedPublication(owner: Pick<TestConvex<typeof schema>, "query
 function fromReview(cards: Awaited<ReturnType<Awaited<ReturnType<typeof fixture>>["reviewCards"]>>, edits: Record<string, ReviewEdit>): Selection[] {
   return explicitPublicationCards(cards, edits).map(({ card, edit }) => ({
     propId: card.prop._id, expectedRelationshipVersion: card.prop.relationshipVersion ?? 0,
-    publish: edit.publish, status: edit.status, headline: edit.headline, note: edit.note,
+    publish: edit.publish, status: edit.status, level: edit.level, headline: edit.headline, note: edit.note,
     startedAt: edit.startedAt || undefined,
     primaryLink: { type: edit.linkType, url: edit.linkUrl, label: edit.linkLabel },
     activity: edit.publish && edit.approveActivity ? card.prop.activity : undefined,
@@ -747,4 +747,18 @@ test("replacement approval creates a new grant without rewriting the old grant's
   expect(grants.find(grant => grant._id === old._id)).toMatchObject({ githubBinding: old.githubBinding, revokedAt: "2026-10-01T00:00:00.000Z" });
   expect(grants.find(grant => grant._id !== old._id)).toMatchObject({ githubBinding: { providerAccountId: "U_replacement", generation: 2 } });
   expect(await f.refreshApproved()).toBe(true);
+});
+
+test("a published card carries the saved level, and a selection whose level differs from the saved one is refused", async () => {
+  const { t, owner, propIds: [a], selection, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(a, { level: "OCCASIONAL", goTo: true }));
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a, { level: "DAILY" })] }))
+    .rejects.toThrow("Save relationship changes privately before publishing.");
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a)] }))
+    .rejects.toThrow("Save relationship changes privately before publishing.");
+  const selections = [await selection(a, { level: "OCCASIONAL" })];
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
+  expect((await published()).profile.cards.map(card => [card.status, card.level, card.goTo])).toEqual([["ACTIVE", "OCCASIONAL", true]]);
+  const page = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(page?.cards.map(card => card.level)).toEqual(["OCCASIONAL"]);
 });
