@@ -251,3 +251,14 @@ test("share-all starts no logo retrieval for listed products and keeps it for ev
   expect(after.brandJobs.map(job => [job.productId, job.canonicalDomain])).toEqual([[notion!._id, "notion.so"]]);
   expect(after.scheduled).toHaveLength(1);
 });
+
+test("share-all with nothing left to share is refused and publishes no page", async () => {
+  const f = await fixture();
+  await f.addProp({ visibility: "DRAFT", confirmedAt: undefined });
+  const preview = await f.owner.query(api.onboarding.previewPublication, shareAll);
+  expect(preview.sharedCount).toBe(0);
+  await expect(f.owner.mutation(api.onboarding.publishSelected, {
+    ...shareAll, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash,
+  })).rejects.toThrow("There are no confirmed cards left to share.");
+  expect((await f.rows()).publications).toEqual([]);
+});

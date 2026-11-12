@@ -174,7 +174,7 @@ async function getStateHandler(ctx: QueryCtx, args: {
       args.includeCards === false ? [] : propPage ? propPage.page : propQuery.collect(),
       args.includeLegacyCollections === false ? [] : ctx.db
         .query("draftImports")
-        .filter((q) => q.eq(q.field("userId"), user._id))
+        .withIndex("by_user_slug", (q) => q.eq("userId", user._id))
         .collect(),
       ctx.db
         .query("connectorAccounts")
@@ -304,7 +304,7 @@ export const reviewClaim = mutation({
     const raw = await ctx.db.get(args.rawEvidenceId);
     if (!prop || prop.userId !== user._id || !raw || raw.userId !== user._id || raw.deletedAt) throw new Error("Evidence unavailable.");
     if (!Number.isInteger(args.observationIndex) || args.observationIndex < 0 || !raw.observations?.[args.observationIndex]) throw new Error("Unknown observation.");
-    const proof = await ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", prop._id)).filter(q => q.eq(q.field("rawEvidenceId"), raw._id)).first();
+    const proof = await ctx.db.query("proofs").withIndex("by_propId_and_rawEvidenceId", q => q.eq("propId", prop._id).eq("rawEvidenceId", raw._id)).first();
     if (!proof) throw new Error("Evidence does not support this card.");
     if ((args.correction?.length ?? 0) > 4000) throw new Error("Correction is too long.");
     return await ctx.db.insert("claimReviews", { ...args, userId: user._id, reviewedAt: new Date().toISOString() });
@@ -876,6 +876,7 @@ export const publishSelected = mutation({
     if (prepared.published?.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
     if (expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");
     if (expectedPreviewHash !== prepared.previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
+    if (change.kind === "SHARE_ALL_CONFIRMED" && prepared.selections.length === 0) throw new Error("There are no confirmed cards left to share.");
     const now = new Date().toISOString();
     if (change.kind === "REMOVE_ALL") {
       // Every public relationship goes private and stops refreshing, as each
