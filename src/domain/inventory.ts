@@ -18,6 +18,7 @@ export const relationshipEditSchema = z.object({
     "Use an HTTPS work sample or workflow link without credentials.",
   ).optional(),
 });
+export type RelationshipEdit = z.infer<typeof relationshipEditSchema>;
 
 export const inventoryViews = ["All", "Discoveries", "Current", "Testing", "Go-to", "History", "Archived"] as const;
 export type InventoryView = typeof inventoryViews[number];

@@ -19,7 +19,7 @@ async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   if (!prop || prop.userId !== user._id) throw new Error("Relationship unavailable.");
   return { user, prop };
 }
-function relationshipState(prop: Doc<"props">) {
+export function relationshipState(prop: Doc<"props">) {
   return { status: prop.status, goTo: prop.goTo ?? false,
     confirmed: isRelationshipConfirmed(prop),
     headline: prop.headline, note: prop.note, startedAt: prop.startedAt,
@@ -91,14 +91,16 @@ export const save = mutation({
       visibility: prop.visibility === "DRAFT" ? "PRIVATE" : prop.visibility,
     });
     const product = await ctx.db.get(prop.productId);
-    if (product) {
-      const drafts = await ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", user._id).eq("suggestedProductSlug", product.slug)).collect();
-      for (const draft of drafts) if (draft.resultPropId === prop._id && draft.status === "PENDING") await ctx.db.patch(draft._id, { status: "APPROVED" });
-    }
+    if (product) await approvePendingDraftImports(ctx, prop, product);
     // Private saving never writes a published projection or enables collection.
     return { version, duplicate: false };
   },
 });
+
+export async function approvePendingDraftImports(ctx: MutationCtx, prop: Doc<"props">, product: Doc<"products">) {
+  const drafts = await ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", prop.userId).eq("suggestedProductSlug", product.slug)).collect();
+  for (const draft of drafts) if (draft.resultPropId === prop._id && draft.status === "PENDING") await ctx.db.patch(draft._id, { status: "APPROVED" });
+}
 
 export const list = query({
   args: { paginationOpts: paginationOptsValidator, includeAccountEvidence: v.optional(v.boolean()) },
