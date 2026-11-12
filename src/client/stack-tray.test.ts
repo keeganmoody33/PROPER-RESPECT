@@ -82,6 +82,17 @@ test("typed products are the same entry when the server would make them one prod
   expect(addTyped(addTyped(emptyTray, "Field Notes"), "field  notes").lastAdded).toEqual({ added: 0, alreadySaved: 0, alreadyListed: 1, overLimit: 0 });
 });
 
+test("a directory name joins as that product only without a website or with one on its domain; another website stays typed", () => {
+  const onSlack = [undefined, "https://slack.com", "https://app.slack.com", "www.slack.com/downloads"];
+  expect(onSlack.map(website => resolveTypedPick("Slack", website))).toEqual(onSlack.map(() => ({ kind: "directory", entry: slack })));
+  expect(resolveTypedPick("Slack", "https://other.example")).toEqual({ kind: "typed", domain: "other.example" });
+  expect(resolveTypedPick("Slack", "https://notslack.com")).toEqual({ kind: "typed", domain: "notslack.com" });
+
+  const tray = addTyped(emptyTray, "Slack", "https://other.example", ["slack"]);
+  expect(tray.lastAdded).toEqual({ added: 1, alreadySaved: 0, alreadyListed: 0, overLimit: 0 });
+  expect(trayPicks(tray)).toEqual([{ kind: "typed", name: "Slack", website: "https://other.example", status: "ACTIVE" }]);
+});
+
 test("a name and website the server would refuse are refused with its message before anything is added", () => {
   expect(resolveTypedPick("GitHub", "notion.so")).toEqual({ kind: "refused", message: "That website does not match the named catalog product. Correct the name or website." });
   expect(resolveTypedPick("Tool", "javascript:alert(1)")).toEqual({ kind: "refused", message: "Use a public HTTP or HTTPS product website without credentials, or leave it blank." });
