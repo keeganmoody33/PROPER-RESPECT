@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addedMessage, emptyTray, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
+import { addedMessage, directoryNote, emptyTray, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
 import { resolveTypedPick } from "./typed-pick";
 
 const windsurf: TrayEntry = { slug: "windsurf", name: "Windsurf", domain: "windsurf.com" };
@@ -176,4 +176,11 @@ test("a typed pick is refused until the directory can resolve it", () => {
     .toEqual({ kind: "refused", message: "The product list is still loading. Add this tool again in a moment." });
   expect(resolveTypedWhenReady(() => ({ kind: "typed", domain: "payroll.example" }), "Portal", "payroll.example"))
     .toEqual({ kind: "typed", domain: "payroll.example" });
+});
+
+test("when the product list fails to load, every message says to reload and none offers adding by name", () => {
+  expect(directoryNote("failed")).toBe("The product list did not load. Reload the page to try again.");
+  expect(directoryNote("loading")).toBe("Loading starter sets…");
+  expect(resolveTypedWhenReady(null, "Portal", undefined, "failed"))
+    .toEqual({ kind: "refused", message: "The product list did not load. Reload the page to try again." });
 });
