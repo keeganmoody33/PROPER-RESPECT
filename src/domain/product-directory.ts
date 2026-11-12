@@ -104,7 +104,6 @@ function checkEntry(entry: DirectoryEntry): void {
   }
 }
 
-/** Builds every index once and throws on the first invalid entry or starter set. */
 export function parseDirectory(
   entries: readonly DirectoryEntry[],
   starters: readonly StarterSetSource[],
@@ -186,7 +185,6 @@ export function directoryEntry(slug: string): DirectoryEntry | null {
   return DIRECTORY.entry(slug);
 }
 
-/** Typeahead over names, aliases and domains: exact, then prefix, then word prefix, then name. */
 export function searchDirectory(text: string, limit?: number): DirectoryEntry[] {
   return DIRECTORY.search(text, limit);
 }
