@@ -175,6 +175,35 @@ test("share-all is refused until a real handle is claimed", async () => {
   expect((await f.rows()).publications).toEqual([]);
 });
 
+test("an owner who explicitly claimed a pending- handle can share all", async () => {
+  const f = await fixture();
+  const claimer = f.t.withIdentity({ subject: "claimer" });
+  const userId = await claimer.mutation(api.onboarding.ensureAccount, {});
+  await claimer.mutation(api.onboarding.claimHandle, { handle: "pending-victim123", displayName: "Claimer", bio: "" });
+  const propId = await f.addProp({}, {}, userId);
+
+  const preview = await publishAll(claimer);
+  expect(preview).toMatchObject({ sharedCount: 1, remainingCount: 0, skipped: [] });
+  expect(await f.visibility(propId)).toBe("PUBLIC");
+  const publications = (await f.rows()).publications;
+  expect(publications.map(row => [row.handle, row.cardPropIds])).toEqual([["pending-victim123", [propId]]]);
+  expect((await f.t.query(api.publicProfiles.getByHandleV2, { handle: "pending-victim123" }))?.cards.map(card => card.product.name)).toEqual(["Tool 1"]);
+});
+
+test("an account still on its auto-assigned placeholder handle is refused", async () => {
+  const f = await fixture();
+  const newcomer = f.t.withIdentity({ subject: "newcomer" });
+  const userId = await newcomer.mutation(api.onboarding.ensureAccount, {});
+  expect(await f.t.run(async ctx => (await ctx.db.get(userId))!.handle)).toBe("pending-newcomer");
+  const propId = await f.addProp({}, {}, userId);
+
+  await expect(newcomer.query(api.onboarding.previewPublication, shareAll)).rejects.toThrow("Claim your public handle before sharing your stack.");
+  await expect(newcomer.mutation(api.onboarding.publishSelected, { ...shareAll, expectedPublicationRevision: 0, expectedPreviewHash: "unused" }))
+    .rejects.toThrow("Claim your public handle before sharing your stack.");
+  expect(await f.visibility(propId)).toBe("PRIVATE");
+  expect((await f.rows()).publications).toEqual([]);
+});
+
 test.each(["selections", "remove-all"] as const)("share-all can't be combined with %s", async combined => {
   const f = await fixture();
   const propId = await f.addProp();
