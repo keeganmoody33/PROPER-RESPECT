@@ -549,8 +549,12 @@ export const revokeConnector = mutation({
       )
       .collect();
     const now = new Date().toISOString();
+    // Disconnecting also settles an approval a reconnect ended but nothing
+    // replaced: the owner is walking away from the connection, so it stops
+    // asking to be approved again. Its original revokedAt is kept.
     for (const subscription of subscriptions) {
       if (subscription.revokedAt === undefined) await ctx.db.patch(subscription._id, { revokedAt: now, revokedReason: "DISCONNECT" });
+      else if (subscription.revokedReason === "RECONNECT") await ctx.db.patch(subscription._id, { revokedReason: "DISCONNECT" });
     }
     if (connector.secretRef) {
       await ctx.db.delete(connector.secretRef);

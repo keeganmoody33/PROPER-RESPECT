@@ -61,6 +61,12 @@ verified against the code:
   a success still reads `RUNNING`. `lastAttempt` still reports the actual
   latest row.
 
+Third revision (2026-11-12, Copilot): a reconnect followed by a disconnect
+left `RECONNECT` on the row because the disconnect site wrote only unrevoked
+approvals. `revokeConnector` now settles an earlier `RECONNECT` revocation as
+`DISCONNECT`, keeping its original `revokedAt`. Regression covers reconnect
+then disconnect: 1 failed on the previous module, 18 passed after.
+
 No UI change in this slice. The query is the contract a collection card can
 read to show "daily refresh paused, approve again on the current connection".
 

@@ -165,6 +165,17 @@ test("a reconnect-revoked approval drops once the owner publishes with refresh o
   expect(await f.owner.query(forOwner, {})).toEqual([]);
 });
 
+test("a reconnect followed by a disconnect is not listed and keeps the original revokedAt", async () => {
+  const f = await fixture();
+  await f.owner.action(connectGithub, { token: "synthetic-new-token" });
+  const afterReconnect = await f.t.run(ctx => ctx.db.get(f.ids.subscriptionId));
+  expect((await f.owner.query(forOwner, {}))[0]?.state).toBe("REAUTHORIZE");
+  await f.owner.mutation(revokeConnector, { connectorId: f.ids.connectorId });
+  const afterDisconnect = await f.t.run(ctx => ctx.db.get(f.ids.subscriptionId));
+  expect(afterDisconnect).toMatchObject({ revokedReason: "DISCONNECT", revokedAt: afterReconnect?.revokedAt });
+  expect(await f.owner.query(forOwner, {})).toEqual([]);
+});
+
 test("a revoked row written before revokedReason existed still falls back to the connection", async () => {
   const f = await fixture();
   await f.t.run(ctx => ctx.db.patch(f.ids.connectorId, { githubBinding: { providerAccountId: "U_synthetic-account", generation: RECONNECTED_GENERATION } }));
