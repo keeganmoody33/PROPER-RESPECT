@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isHttpsUrl } from "./http-url.ts";
+import { levelMatchesStatus, relationshipLevelSchema } from "./relationship-level.ts";
 
 const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const parsed = new Date(`${value}T00:00:00Z`);
@@ -8,6 +9,7 @@ const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
 
 export const relationshipEditSchema = z.object({
   status: z.enum(["ACTIVE", "TESTING", "ARCHIVED"]),
+  level: relationshipLevelSchema.optional(),
   goTo: z.boolean(),
   headline: z.string().trim().max(240),
   note: z.string().trim().max(4000),
@@ -17,10 +19,13 @@ export const relationshipEditSchema = z.object({
     isHttpsUrl,
     "Use an HTTPS work sample or workflow link without credentials.",
   ).optional(),
+}).refine(edit => levelMatchesStatus(edit.level, edit.status), {
+  message: "This level does not match its status. Choose the level again.",
+  path: ["status"],
 });
 export type RelationshipEdit = z.infer<typeof relationshipEditSchema>;
 
-export const inventoryViews = ["All", "Discoveries", "Current", "Testing", "Go-to", "History", "Archived"] as const;
+export const inventoryViews = ["All", "Discoveries", "Current", "Testing", "Go-to", "History", "Used before"] as const;
 export type InventoryView = typeof inventoryViews[number];
 export function isRelationshipConfirmed(prop: { confirmedAt?: string; visibility: string }) {
   return Boolean(prop.confirmedAt) || prop.visibility !== "DRAFT";
@@ -37,6 +42,6 @@ export function inInventoryView(view: InventoryView, item: {
     case "Testing": return confirmed && item.prop.status === "TESTING";
     case "Go-to": return confirmed && item.prop.goTo === true && item.prop.status !== "ARCHIVED";
     case "History": return confirmed && (item.previousStatuses.length > 0 || item.prop.status === "ARCHIVED");
-    case "Archived": return confirmed && item.prop.status === "ARCHIVED";
+    case "Used before": return confirmed && item.prop.status === "ARCHIVED";
   }
 }

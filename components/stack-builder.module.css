@@ -31,6 +31,8 @@
 .item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9.5rem, auto) auto; align-items: center; gap: .5rem 1rem; padding-block: .75rem; border-bottom: 1px solid var(--line); }
 .itemName { display: grid; gap: .15rem; min-width: 0; overflow-wrap: anywhere; }
 .itemName small { color: var(--secondary); font-size: .8rem; }
+.choice { display: grid; gap: .25rem; min-width: 0; }
+.choice small { color: var(--secondary); font-size: .8rem; line-height: 1.4; }
 .item select { min-height: 44px; padding: .5rem .75rem; border: 1px solid var(--control-line); border-radius: 0; color: var(--ink); background: var(--input); font: inherit; }
 .remove { min-height: 44px; padding: .5rem .75rem; border: 1px solid transparent; background: transparent; color: var(--ink); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; }
 .remove:hover { border-color: var(--ink); }
@@ -55,5 +57,6 @@
 
 @media (max-width: 640px) {
   .item { grid-template-columns: minmax(0, 1fr) auto; }
-  .item select { grid-column: 1 / -1; grid-row: 2; width: 100%; }
+  .choice { grid-column: 1 / -1; grid-row: 2; }
+  .item select { width: 100%; }
 }

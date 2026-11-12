@@ -67,7 +67,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
         return <div key={example.id} className={styles.slide} data-example={example.id} data-current={current} role="group" aria-roledescription="slide"
           aria-label={`${slideIndex + 1} of ${examples.length}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
           <p className={styles.sample}>Sample data / No account connected</p>
-          <ProductCard card={example.card} index={slideIndex} expandedActivity />
+          <ProductCard card={example.card} index={slideIndex} goTo={example.card.goTo} expandedActivity />
           {example.caveat && <p className={styles.caveat}>{example.caveat}</p>}
           {example.source && isHttpUrl(example.source.href) && <a className={styles.source} href={example.source.href} target="_blank" rel="noreferrer">{example.source.label} ↗</a>}
         </div>;

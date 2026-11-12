@@ -30,6 +30,7 @@ import {
   activityModuleValidator,
   linkTypeValidator,
   statusValidator,
+  relationshipLevelValidator,
   costValidator,
   costVisibilityValidator,
   claimVerdictValidator,
@@ -587,6 +588,7 @@ const selectionValidator = v.object({
   expectedRelationshipVersion: v.optional(v.number()),
   publish: v.boolean(),
   status: statusValidator,
+  level: v.optional(relationshipLevelValidator),
   headline: v.string(),
   note: v.string(),
   startedAt: v.optional(v.string()),
@@ -713,7 +715,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     if (selection.primaryLink && !isHttpUrl(selection.primaryLink.url)) throw new Error("Use an http or https link without embedded credentials.");
     if (selection.primaryLink && selection.primaryLink.label.length > LINK_LABEL_MAX) throw new Error("Use a link label of 200 characters or fewer.");
     if (selection.primaryLink && selection.primaryLink.url.length > PUBLISHED_URL_MAX) throw new Error("Use a link of 2,048 characters or fewer.");
-    if (selection.status !== prop.status || selection.headline.trim() !== prop.headline ||
+    if (selection.status !== prop.status || selection.level !== prop.level || selection.headline.trim() !== prop.headline ||
         selection.note.trim() !== prop.note || selection.startedAt !== prop.startedAt) {
       throw new Error("Save relationship changes privately before publishing.");
     }
@@ -814,7 +816,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
       ? projectPublishedMeasurements(selection.publish ? "PUBLIC" : "PRIVATE", projection.retained, projection.publishedIds)
       : undefined;
     const cards = projectPublicProfile({ user: profileUser, props: [{
-      visibility: "PUBLIC", status: prop.status, goTo: prop.goTo, headline: prop.headline, note: prop.note,
+      visibility: "PUBLIC", status: prop.status, level: prop.level, goTo: prop.goTo, headline: prop.headline, note: prop.note,
       startedAt: prop.startedAt, activity: selection.activity, measurements,
       cost: selection.costVisibility !== undefined ? (selection.cost === undefined ? undefined : costSchema.parse(selection.cost)) : prop.cost,
       costVisibility: selection.costVisibility ?? prop.costVisibility,
@@ -827,7 +829,12 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   });
   // Omitted cards retain their exact approved stored projection.
   const cardsWithIdentity = [...preserved, ...replacements];
-  const profile = publicProfileSchema.parse({ ...profileUser, cards: cardsWithIdentity.map(entry => entry.card) });
+  const checked = publicProfileSchema.parse({ ...profileUser, cards: cardsWithIdentity.map(entry => entry.card) });
+  // The schema reads a level the registry no longer knows as none. That is for display: an omitted card is stored with the level it was published with.
+  const profile = { ...checked, cards: checked.cards.map((card, index) => {
+    const kept = index < preserved.length ? preserved[index].card.level : undefined;
+    return kept === undefined ? card : { ...card, level: kept };
+  }) };
   const cardPropIds = cardsWithIdentity.map(entry => entry.propId);
   if (new TextEncoder().encode(JSON.stringify({ profile, cardPropIds })).length > PUBLISHED_PROFILE_MAX_BYTES) {
     throw new Error("This page is too large to publish. Share fewer cards or shorten long notes, then preview again.");
@@ -859,7 +866,7 @@ async function shareAllFromSavedState(ctx: QueryCtx | MutationCtx, allProps: Doc
     return [{
       propId: prop._id, visibility: prop.visibility, onPublishedPage: onPage.has(prop._id),
       matchesUnresolvedPublishedCard: unresolvedSlugs.has(product.slug), relationshipVersion: prop.relationshipVersion,
-      status: prop.status, headline: prop.headline, note: prop.note, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
+      status: prop.status, level: prop.level, headline: prop.headline, note: prop.note, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
       cost: prop.cost, product: { name: product.name, domain: product.domain }, primaryLink: primaryLink ?? undefined,
     }];
   }));

@@ -4,7 +4,7 @@ import { canonicalJson } from "./canonical-json";
 import { DEFAULT_USAGE_LINK_LABEL, usageLinkUrlSchema, type UsageLink, type UsageLinkLabel } from "./usage-links";
 
 export type ReviewCard = {
-  prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & {
+  prop: Pick<CuratedProp, "visibility" | "status" | "level" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & {
     relationshipVersion?: number;
     supportingUrl?: string;
   };
@@ -113,6 +113,7 @@ export function defaultReview(card: ReviewCard) {
     basis: reviewBasis(card),
     publish: card.isPublishedAtCurrentHandle === true,
     status: card.prop.status,
+    level: card.prop.level,
     headline: card.prop.headline,
     note: card.prop.note,
     startedAt: card.prop.startedAt ?? "",

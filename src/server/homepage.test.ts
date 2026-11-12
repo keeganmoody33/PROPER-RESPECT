@@ -30,7 +30,7 @@ it("keeps the same three statements in the homepage markdown", () => {
 
 const steps = [
   ["Pick your tools.", "Start from a role or search by name. Add anything that is missing by its name."],
-  ["Say how you use each one.", "Mark what you use, what you are testing and what you used before. Save the whole list privately in one step."],
+  ["Say how you use each one.", "Pick how often you use each one, from tried and dropped to daily. Save the whole list privately in one step."],
   ["Preview once, then share.", "See exactly what visitors will see. Approve that preview once to share your confirmed tools on your public page."],
 ];
 const retired = ["Start with one tool", "connect a supported source", "measurement packet", "Wispr", "NotebookLM", "TIDAL"];

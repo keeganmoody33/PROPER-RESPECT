@@ -39,19 +39,19 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   const slideBox = () => carousel.locator("[aria-roledescription=slide]").first().evaluate(element => element.parentElement!.getBoundingClientRect().height);
   const githubHeight = await slideBox();
   for (const [name, text] of [
-    ["Claude Code", "ACTIVE · SINCE 2025"],
-    ["Firecrawl", "ACTIVE · SINCE 2025"],
-    ["Exa", "ACTIVE · SINCE 2025"],
-    ["Cloudflare", "ACTIVE · SINCE 2020"],
-    ["Porkbun", "ACTIVE · SINCE 2021"],
-    ["Spider", "ACTIVE · SINCE 2026"],
-    ["Docker", "ACTIVE · SINCE 2020"],
-    ["Open Places", "ACTIVE · SINCE 2026"],
+    ["Claude Code", "DAILY · SINCE 2025"],
+    ["Firecrawl", "WEEKLY · SINCE 2025"],
+    ["Exa", "WEEKLY · SINCE 2025"],
+    ["Cloudflare", "DAILY · SINCE 2020"],
+    ["Porkbun", "OCCASIONALLY · SINCE 2021"],
+    ["Spider", "OCCASIONALLY · SINCE 2026"],
+    ["Docker", "WEEKLY · SINCE 2020"],
+    ["Open Places", "OCCASIONALLY · SINCE 2026"],
     ["Grok Bot", "TESTING · SINCE 2026"],
     ["Elicit", "TESTING · SINCE 2026"],
     ["Context.dev", "TESTING · SINCE 2026"],
-    ["n8n", "ACTIVE · SINCE 2024"],
-    ["Clay", "ARCHIVED · SINCE 2022"],
+    ["n8n", "PAUSED · STARTED 2024"],
+    ["Clay", "STOPPED USING · STARTED 2022"],
   ]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });

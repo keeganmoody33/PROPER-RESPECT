@@ -1,6 +1,7 @@
 import { isHttpUrl } from "./http-url";
 import { LINK_LABEL_MAX, PUBLISHED_URL_MAX } from "./published-text-limits";
 import { defaultPrimaryLink, type CardLink } from "./review";
+import type { RelationshipLevel } from "./relationship-level";
 
 export const SHARE_ALL_MAX = 100;
 
@@ -12,6 +13,7 @@ export type ShareAllProp<PropId extends string, Cost> = Readonly<{
   matchesUnresolvedPublishedCard: boolean;
   relationshipVersion?: number;
   status: "ACTIVE" | "TESTING" | "ARCHIVED";
+  level?: RelationshipLevel;
   headline: string;
   note: string;
   startedAt?: string;
@@ -26,6 +28,7 @@ export type ShareAllSelection<PropId extends string, Cost> = {
   expectedRelationshipVersion: number;
   publish: true;
   status: ShareAllProp<PropId, Cost>["status"];
+  level?: RelationshipLevel;
   headline: string;
   note: string;
   startedAt?: string;
@@ -71,6 +74,7 @@ export function shareAllSelections<PropId extends string, Cost>(props: readonly 
       expectedRelationshipVersion: prop.relationshipVersion ?? 0,
       publish: true,
       status: prop.status,
+      ...(prop.level !== undefined ? { level: prop.level } : {}),
       headline: prop.headline,
       note: prop.note,
       ...(prop.startedAt !== undefined ? { startedAt: prop.startedAt } : {}),

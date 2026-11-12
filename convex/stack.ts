@@ -11,7 +11,8 @@ import {
   type IntakeOutcome,
   type ResolvedProduct,
 } from "./manualProducts";
-import { statusValidator } from "./validators";
+import { relationshipLevelValidator, statusValidator } from "./validators";
+import { levelLabel, levelMatchesStatus } from "../src/domain/relationship-level";
 import { relationshipEditSchema } from "../src/domain/inventory";
 import { directoryEntry } from "../src/domain/product-directory";
 import { sha256 } from "../src/domain/product-knowledge";
@@ -19,10 +20,13 @@ import { normalizeWebsite } from "../src/domain/typed-product";
 
 export const MAX_STACK_PICKS = 100;
 
-/** A directory pick names a slug and nothing else: name, domain and website come from the directory. */
+/**
+ * A directory pick names a slug and nothing else: name, domain and website come from the directory.
+ * A pick may carry the owner's level; its status must be the one the level implies.
+ */
 export const stackPickValidator = v.union(
-  v.object({ kind: v.literal("directory"), slug: v.string(), status: statusValidator }),
-  v.object({ kind: v.literal("typed"), name: v.string(), website: v.optional(v.string()), status: statusValidator }),
+  v.object({ kind: v.literal("directory"), slug: v.string(), status: statusValidator, level: v.optional(relationshipLevelValidator) }),
+  v.object({ kind: v.literal("typed"), name: v.string(), website: v.optional(v.string()), status: statusValidator, level: v.optional(relationshipLevelValidator) }),
 );
 export type StackPick = Infer<typeof stackPickValidator>;
 
@@ -41,9 +45,11 @@ const receiptSchema = z.object({
 type Receipt = z.infer<typeof receiptSchema>;
 
 function normalizePick(pick: StackPick): StackPick {
-  if (pick.kind === "directory") return { kind: "directory", slug: pick.slug, status: pick.status };
+  // A status-only pick hashes as it always did, so earlier receipts still replay.
+  const level = pick.level ? { level: pick.level } : {};
+  if (pick.kind === "directory") return { kind: "directory", slug: pick.slug, status: pick.status, ...level };
   const website = normalizeWebsite(pick.website);
-  return { kind: "typed", name: normalizeProductName(pick.name), ...(website ? { website } : {}), status: pick.status };
+  return { kind: "typed", name: normalizeProductName(pick.name), ...(website ? { website } : {}), status: pick.status, ...level };
 }
 
 async function resolvePick(userId: Id<"users">, pick: StackPick): Promise<ResolvedProduct> {
@@ -103,6 +109,8 @@ export const saveSelection = mutation({
     if (args.picks.length === 0) throw new Error("Pick at least one product to save.");
     if (args.picks.length > MAX_STACK_PICKS) throw new Error(`Save at most ${MAX_STACK_PICKS} products at a time.`);
     const picks = args.picks.map(normalizePick);
+    const mismatched = picks.find(pick => !levelMatchesStatus(pick.level, pick.status));
+    if (mismatched?.level) throw new Error(`The level ${levelLabel(mismatched.level)} does not match its status. Choose the level again.`);
     const requestHash = await sha256(JSON.stringify(picks));
     const replayed = await replay(ctx, user, operationId, requestHash, picks.length);
     if (replayed) return replayed;
@@ -122,7 +130,7 @@ export const saveSelection = mutation({
     for (const [index, pick] of picks.entries()) {
       const product = resolved[index]!;
       const itemOperationId = `${itemReceiptPrefix(operationId)}${product.identity.slug}`;
-      const edit = relationshipEditSchema.parse({ status: pick.status, goTo: false, headline: "", note: "" });
+      const edit = relationshipEditSchema.parse({ status: pick.status, ...(pick.level ? { level: pick.level } : {}), goTo: false, headline: "", note: "" });
       const { propId, product: saved, outcome } = await intakeRelationship(ctx, user, {
         resolved: product, edit, note: "", confirmDraft: true,
         operationId: itemOperationId, requestJson: JSON.stringify(pick), now,

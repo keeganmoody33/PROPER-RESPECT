@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   projectPublicProfile,
   projectPublicProfileV1,
+  publicProfileSchema,
   publicProfileV1Schema,
   type CuratedProp,
 } from "./public-profile";
@@ -182,5 +183,18 @@ describe("projectPublicProfile", () => {
     expect(profile.cards).toHaveLength(3);
     expect(profile.cards[1].product.domain).toBe("");
     expect(profile.cards[2].primaryLink).toBeUndefined();
+  });
+});
+
+describe("stored relationship levels", () => {
+  const card = {
+    product: { name: "Tool", slug: "tool", domain: "tool.example", description: "" },
+    status: "ACTIVE", headline: "", note: "",
+  };
+  it("keeps a known level and drops an unknown or malformed one instead of refusing the page", () => {
+    const parsed = publicProfileSchema.parse({ handle: "owner", displayName: "Owner", bio: "", cards: [
+      { ...card, level: "WEEKLY" }, { ...card, level: "SOMETIMES" }, { ...card, level: 7 }, card,
+    ] });
+    expect(parsed.cards.map(entry => entry.level)).toEqual(["WEEKLY", undefined, undefined, undefined]);
   });
 });

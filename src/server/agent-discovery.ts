@@ -1,4 +1,5 @@
 import { isHttpsProtocol } from "@/src/domain/http-url";
+import { relationshipLevelsRule } from "@/src/domain/relationship-level";
 import { publicSiteOrigin } from "./public-site";
 import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
@@ -57,6 +58,7 @@ export function publicSiteGuide() {
       "Public reading only. A public profile URL grants no access to private collections, sources, or account controls.",
       "These browser tools do not connect providers, edit records, or publish cards. No public HTTP API or remote MCP server is offered.",
       "Unknown usage is not zero. Captured activity does not establish an owner's relationship or rank importance. Homepage usage examples are sample data, not connected account measurements.",
+      relationshipLevelsRule,
     ],
   };
 }
@@ -72,7 +74,7 @@ export const homepageProvenFacts = [
 /** The homepage's three steps, shared word for word by the page and its Markdown mirror. */
 export const homepageSteps = [
   { label: "01 / Pick", title: "Pick your tools.", body: "Start from a role or search by name. Add anything that is missing by its name." },
-  { label: "02 / Keep it private", title: "Say how you use each one.", body: "Mark what you use, what you are testing and what you used before. Save the whole list privately in one step." },
+  { label: "02 / Keep it private", title: "Say how you use each one.", body: "Pick how often you use each one, from tried and dropped to daily. Save the whole list privately in one step." },
   { label: "03 / Share", title: "Preview once, then share.", body: "See exactly what visitors will see. Approve that preview once to share your confirmed tools on your public page." },
 ] as const;
 

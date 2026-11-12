@@ -10,9 +10,10 @@ import type { Id } from "./_generated/dataModel";
 const modules = import.meta.glob("./**/*.ts");
 
 type Status = "ACTIVE" | "TESTING" | "ARCHIVED";
+type Level = "TRIED_NOT_ADOPTED" | "STOPPED" | "PAUSED" | "OCCASIONAL" | "TESTING" | "WEEKLY" | "DAILY";
 type Pick =
-  | { kind: "directory"; slug: string; status: Status }
-  | { kind: "typed"; name: string; website?: string; status: Status };
+  | { kind: "directory"; slug: string; status: Status; level?: Level }
+  | { kind: "typed"; name: string; website?: string; status: Status; level?: Level };
 type Outcome = "CREATED" | "CONFIRMED_DRAFT" | "UNCHANGED";
 type SaveResult = {
   items: { propId: Id<"props">; productName: string; outcome: Outcome }[];
@@ -355,4 +356,65 @@ test("a single add cannot write into the batch receipt key space", async () => {
   await expect(owner.mutation(add, { name: "GitHub", operationId: "stack-batch:" })).rejects.toThrow("Invalid add-product operation.");
   const rows = await everyRow(t);
   expect(Object.values(rows).every(table => table.length === 0)).toBe(true);
+});
+
+test("level picks save the level with the status it implies, and status-only picks keep working", async () => {
+  const { t, owner } = await fixture();
+  const result = await owner.mutation(saveSelection, { operationId: "levels", picks: [
+    { ...dir("github", "ACTIVE"), level: "DAILY" },
+    { ...typed("Studio tool", "ARCHIVED"), level: "TRIED_NOT_ADOPTED" },
+    dir("salesforce", "TESTING"),
+  ] });
+  expect(result.created).toBe(3);
+  const rows = await everyRow(t);
+  expect(rows.props.map(prop => [prop.status, prop.level, prop.goTo])).toEqual([
+    ["ACTIVE", "DAILY", false], ["ARCHIVED", "TRIED_NOT_ADOPTED", false], ["TESTING", undefined, false],
+  ]);
+  expect(rows.events.map(event => [event.after.status, event.after.level])).toEqual([
+    ["ACTIVE", "DAILY"], ["ARCHIVED", "TRIED_NOT_ADOPTED"], ["TESTING", undefined],
+  ]);
+});
+
+test("a level pick confirming a draft writes the level and leaves go-to alone", async () => {
+  const { t, owner } = await fixture();
+  const draft = await owner.mutation(add, { name: "GitHub", operationId: "draft" });
+  await owner.mutation(saveSelection, { operationId: "confirm", picks: [{ ...dir("github", "ARCHIVED"), level: "PAUSED" }] });
+  expect(await t.run(async ctx => {
+    const prop = await ctx.db.get(draft);
+    return { status: prop?.status, level: prop?.level, goTo: prop?.goTo };
+  })).toEqual({ status: "ARCHIVED", level: "PAUSED", goTo: undefined });
+});
+
+test("a pick whose status disagrees with its level is refused and nothing is saved", async () => {
+  const { t, owner } = await fixture();
+  await expect(owner.mutation(saveSelection, { operationId: "bad", picks: [
+    dir("salesforce"), { ...dir("github", "ARCHIVED"), level: "DAILY" },
+  ] })).rejects.toThrow("does not match");
+  const rows = await everyRow(t);
+  expect(Object.values(rows).every(table => table.length === 0)).toBe(true);
+});
+
+test("an operation reused with different levels is refused", async () => {
+  const { t, owner } = await fixture();
+  await owner.mutation(saveSelection, { operationId: "used", picks: [{ ...dir("github"), level: "WEEKLY" }] });
+  const before = await everyRow(t);
+  await expect(owner.mutation(saveSelection, { operationId: "used", picks: [{ ...dir("github"), level: "DAILY" }] }))
+    .rejects.toThrow("This save was already used with different picks.");
+  expect(await everyRow(t)).toEqual(before);
+});
+
+test("no write path leaves a level beside a status it does not imply", async () => {
+  const { t, owner } = await fixture();
+  const save = makeFunctionReference<"mutation">("inventory:save");
+  const draft = await owner.mutation(add, { name: "Notion", operationId: "draft" });
+  await owner.mutation(saveSelection, { operationId: "batch", picks: [
+    { ...dir("notion", "ACTIVE"), level: "DAILY" }, { ...dir("github", "TESTING"), level: "TESTING" }, dir("salesforce", "ARCHIVED"),
+  ] });
+  await owner.mutation(save, { propId: draft, expectedVersion: 1, operationId: "archive", status: "ARCHIVED", goTo: true, headline: "", note: "" });
+  await owner.mutation(save, { propId: draft, expectedVersion: 2, operationId: "stopped", status: "ARCHIVED", level: "STOPPED", goTo: true, headline: "", note: "" });
+  const implied = { TRIED_NOT_ADOPTED: "ARCHIVED", STOPPED: "ARCHIVED", PAUSED: "ARCHIVED", OCCASIONAL: "ACTIVE", TESTING: "TESTING", WEEKLY: "ACTIVE", DAILY: "ACTIVE" };
+  const rows = await everyRow(t);
+  const states = [...rows.props, ...rows.events.flatMap(event => [event.before, event.after])];
+  expect(states.filter(state => state.level !== undefined && implied[state.level] !== state.status)).toEqual([]);
+  expect(rows.props.map(prop => [prop.level, prop.status])).toEqual([["STOPPED", "ARCHIVED"], ["TESTING", "TESTING"], [undefined, "ARCHIVED"]]);
 });

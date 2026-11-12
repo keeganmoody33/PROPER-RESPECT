@@ -11,21 +11,21 @@ const SAMPLE_CONTRIBUTIONS = 859;
 const LINE_LIMIT = 60;
 
 test("the homepage shows a go-to-market engineering stack whose names and links come from the directory", () => {
-  expect(examples.map(example => [example.card.product.name, example.card.status, example.card.startedAt?.slice(0, YEAR_DIGITS)])).toEqual([
-    ["GitHub", "ACTIVE", "2019"],
-    ["Claude Code", "ACTIVE", "2025"],
-    ["Firecrawl", "ACTIVE", "2025"],
-    ["Exa", "ACTIVE", "2025"],
-    ["Cloudflare", "ACTIVE", "2020"],
-    ["Porkbun", "ACTIVE", "2021"],
-    ["Spider", "ACTIVE", "2026"],
-    ["Docker", "ACTIVE", "2020"],
-    ["Open Places", "ACTIVE", "2026"],
-    ["Grok Bot", "TESTING", "2026"],
-    ["Elicit", "TESTING", "2026"],
-    ["Context.dev", "TESTING", "2026"],
-    ["n8n", "ACTIVE", "2024"],
-    ["Clay", "ARCHIVED", "2022"],
+  expect(examples.map(example => [example.card.product.name, example.card.level, example.card.status, example.card.goTo === true, example.card.startedAt?.slice(0, YEAR_DIGITS)])).toEqual([
+    ["GitHub", "DAILY", "ACTIVE", true, "2019"],
+    ["Claude Code", "DAILY", "ACTIVE", false, "2025"],
+    ["Firecrawl", "WEEKLY", "ACTIVE", false, "2025"],
+    ["Exa", "WEEKLY", "ACTIVE", false, "2025"],
+    ["Cloudflare", "DAILY", "ACTIVE", true, "2020"],
+    ["Porkbun", "OCCASIONAL", "ACTIVE", true, "2021"],
+    ["Spider", "OCCASIONAL", "ACTIVE", false, "2026"],
+    ["Docker", "WEEKLY", "ACTIVE", false, "2020"],
+    ["Open Places", "OCCASIONAL", "ACTIVE", false, "2026"],
+    ["Grok Bot", "TESTING", "TESTING", false, "2026"],
+    ["Elicit", "TESTING", "TESTING", false, "2026"],
+    ["Context.dev", "TESTING", "TESTING", false, "2026"],
+    ["n8n", "PAUSED", "ARCHIVED", false, "2024"],
+    ["Clay", "STOPPED", "ARCHIVED", false, "2022"],
   ]);
   const fromDirectory = examples.map(({ id }) => {
     const entry = directoryEntry(id)!;

@@ -1,10 +1,18 @@
-export type TrayStatus = "ACTIVE" | "TESTING" | "ARCHIVED";
+import { DEFAULT_STACK_LEVEL, levelStatus, RELATIONSHIP_LEVELS, type RelationshipLevel, type RelationshipStatus } from "@/src/domain/relationship-level";
 
-export const TRAY_STATUSES: readonly { value: TrayStatus; label: string }[] = [
-  { value: "ACTIVE", label: "Currently use" },
-  { value: "TESTING", label: "Testing" },
-  { value: "ARCHIVED", label: "Used before" },
-];
+export type TrayStatus = RelationshipStatus;
+
+export const TRAY_LEVELS = RELATIONSHIP_LEVELS;
+
+/**
+ * What the owner chose for one tool. A level always travels with the status it implies. A list
+ * saved before levels existed holds a status alone, so no level is chosen for it until the owner picks one.
+ */
+export type TrayChoice = Readonly<{ status: TrayStatus; level?: RelationshipLevel }>;
+
+export function levelChoice(level: RelationshipLevel): TrayChoice {
+  return { status: levelStatus(level), level };
+}
 
 // Matches MAX_STACK_PICKS in convex/stack.ts, which refuses anything larger.
 export const TRAY_LIMIT = 100;
@@ -23,8 +31,8 @@ export type TypedResolution =
   | Readonly<{ kind: "refused"; message: string }>;
 
 export type TrayItem =
-  | Readonly<{ key: string; kind: "directory"; slug: string; name: string; domain: string; status: TrayStatus }>
-  | Readonly<{ key: string; kind: "typed"; name: string; website?: string; status: TrayStatus }>;
+  | (Readonly<{ key: string; kind: "directory"; slug: string; name: string; domain: string }> & TrayChoice)
+  | (Readonly<{ key: string; kind: "typed"; name: string; website?: string }> & TrayChoice);
 
 export type TrayAdded = Readonly<{ added: number; alreadySaved: number; alreadyListed: number; overLimit: number }>;
 
@@ -41,18 +49,18 @@ export type TrayAction =
   | { type: "addEntry"; entry: TrayEntry; held: readonly string[] }
   | { type: "addTyped"; name: string; website?: string; resolution: Exclude<TypedResolution, { kind: "refused" }>; held: readonly string[] }
   | { type: "restore"; picks: readonly RestoredPick[]; held: readonly string[] }
-  | { type: "setStatus"; key: string; status: TrayStatus }
+  | { type: "setLevel"; key: string; level: RelationshipLevel }
   | { type: "remove"; key: string }
   | { type: "saved"; result: { created: number; confirmed: number; unchanged: number } };
 
 export type StackPick =
-  | { kind: "directory"; slug: string; status: TrayStatus }
-  | { kind: "typed"; name: string; website?: string; status: TrayStatus };
+  | { kind: "directory"; slug: string; status: TrayStatus; level?: RelationshipLevel }
+  | { kind: "typed"; name: string; website?: string; status: TrayStatus; level?: RelationshipLevel };
 
-/** A stored pick resolved again against the directory, ready to rejoin the tray with its status. */
+/** A stored pick resolved again against the directory, ready to rejoin the tray with its choice. */
 export type RestoredPick =
-  | Readonly<{ kind: "directory"; entry: TrayEntry; status: TrayStatus }>
-  | Readonly<{ kind: "typed"; name: string; website?: string; domain: string; status: TrayStatus }>;
+  | (Readonly<{ kind: "directory"; entry: TrayEntry }> & TrayChoice)
+  | (Readonly<{ kind: "typed"; name: string; website?: string; domain: string }> & TrayChoice);
 
 // Before the directory loads nothing can say which product a typed name is, and two
 // spellings of one tool would both join the list and fail the whole save.
@@ -77,13 +85,17 @@ function typedName(name: string) {
   return name.trim().replace(/\s+/g, " ");
 }
 
-function directoryItem(entry: TrayEntry): TrayItem {
-  return { key: `directory:${entry.slug}`, kind: "directory", slug: entry.slug, name: entry.name, domain: entry.domain, status: "ACTIVE" };
+function choiceOf(choice: TrayChoice): TrayChoice {
+  return choice.level ? levelChoice(choice.level) : { status: choice.status };
 }
 
-function typedItem(name: string, website: string | undefined, domain: string): TrayItem {
+function directoryItem(entry: TrayEntry, choice = levelChoice(DEFAULT_STACK_LEVEL)): TrayItem {
+  return { key: `directory:${entry.slug}`, kind: "directory", slug: entry.slug, name: entry.name, domain: entry.domain, ...choiceOf(choice) };
+}
+
+function typedItem(name: string, website: string | undefined, domain: string, choice = levelChoice(DEFAULT_STACK_LEVEL)): TrayItem {
   const trimmed = website?.trim();
-  return { key: `typed:${JSON.stringify([name.toLowerCase(), domain])}`, kind: "typed", name, ...(trimmed ? { website: trimmed } : {}), status: "ACTIVE" };
+  return { key: `typed:${JSON.stringify([name.toLowerCase(), domain])}`, kind: "typed", name, ...(trimmed ? { website: trimmed } : {}), ...choiceOf(choice) };
 }
 
 function add(tray: Tray, candidates: readonly TrayItem[], held: readonly string[]): Tray {
@@ -101,7 +113,7 @@ function add(tray: Tray, candidates: readonly TrayItem[], held: readonly string[
 type Handlers = { [Type in TrayAction["type"]]: (tray: Tray, action: Extract<TrayAction, { type: Type }>) => Tray };
 
 const handlers: Handlers = {
-  addStarterSet: (tray, action) => add(tray, action.entries.map(directoryItem), action.held),
+  addStarterSet: (tray, action) => add(tray, action.entries.map(entry => directoryItem(entry)), action.held),
   addEntry: (tray, action) => add(tray, [directoryItem(action.entry)], action.held),
   addTyped: (tray, action) => {
     // A typed pick the server would resolve to a directory product joins as that
@@ -111,13 +123,13 @@ const handlers: Handlers = {
     return name && name.length <= TYPED_NAME_MAX ? add(tray, [typedItem(name, action.website, action.resolution.domain)], action.held) : tray;
   },
   restore: (tray, action) => add(tray, action.picks.flatMap((pick): TrayItem[] => {
-    if (pick.kind === "directory") return [{ ...directoryItem(pick.entry), status: pick.status }];
+    if (pick.kind === "directory") return [directoryItem(pick.entry, pick)];
     const name = typedName(pick.name);
-    return name && name.length <= TYPED_NAME_MAX ? [{ ...typedItem(name, pick.website, pick.domain), status: pick.status }] : [];
+    return name && name.length <= TYPED_NAME_MAX ? [typedItem(name, pick.website, pick.domain, pick)] : [];
   }), action.held),
-  setStatus: (tray, action) => ({
+  setLevel: (tray, action) => ({
     ...tray,
-    items: tray.items.map(item => item.key === action.key ? { ...item, status: action.status } : item),
+    items: tray.items.map(item => item.key === action.key ? { ...item, ...levelChoice(action.level) } : item),
   }),
   remove: (tray, action) => ({ ...tray, items: tray.items.filter(item => item.key !== action.key), lastAdded: null }),
   saved: (_tray, action) => ({
@@ -131,9 +143,12 @@ export function trayReducer(tray: Tray, action: TrayAction): Tray {
 }
 
 export function trayPicks(tray: Tray): StackPick[] {
-  return tray.items.map(item => item.kind === "directory"
-    ? { kind: "directory", slug: item.slug, status: item.status }
-    : { kind: "typed", name: item.name, ...(item.website ? { website: item.website } : {}), status: item.status });
+  return tray.items.map(item => {
+    const choice = choiceOf(item);
+    return item.kind === "directory"
+      ? { kind: "directory", slug: item.slug, ...choice }
+      : { kind: "typed", name: item.name, ...(item.website ? { website: item.website } : {}), ...choice };
+  });
 }
 
 export type SaveAttempt = Readonly<{ body: string; operationId: string }>;

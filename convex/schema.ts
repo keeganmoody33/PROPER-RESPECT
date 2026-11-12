@@ -15,6 +15,7 @@ import {
   refreshErrorClassValidator,
   publicProfileValidator,
   profileLinkValidator,
+  relationshipLevelValidator,
   statusValidator,
   visibilityValidator,
   costValidator,
@@ -88,6 +89,8 @@ export default defineSchema({
     userId: v.id("users"),
     productId: v.id("products"),
     status: statusValidator,
+    // The owner's chosen usage level. Written only with the status it implies.
+    level: v.optional(relationshipLevelValidator),
     visibility: visibilityValidator,
     headline: v.string(),
     note: v.string(),
