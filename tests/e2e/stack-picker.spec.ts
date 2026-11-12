@@ -206,6 +206,34 @@ test("a typed alias, name or website of a listed product joins as that product, 
   expect(saves.map(call => call.args.picks)).toEqual([[{ kind: "directory", slug: "windsurf", status: "ACTIVE" }]]);
 });
 
+test("arrow keys keep the active option inside the scrolled listbox, including when they wrap", async ({ page: browserPage }) => {
+  await open(browserPage, DESKTOP, "light");
+  const builder = browserPage.getByRole("region", { name: "Build your stack" });
+  const search = builder.getByRole("combobox", { name: "Search products" });
+  const results = builder.getByRole("listbox", { name: "Matching products" });
+  await search.fill("a");
+  const count = await results.getByRole("option").count();
+  const activeIndex = async () => Number((await search.getAttribute("aria-activedescendant"))?.split("option-")[1]);
+  const activeInView = () => browserPage.evaluate(() => {
+    const listbox = document.querySelector("[role=listbox]")!;
+    const option = document.getElementById(document.querySelector("[role=combobox]")!.getAttribute("aria-activedescendant")!)!;
+    const outer = listbox.getBoundingClientRect(), inner = option.getBoundingClientRect();
+    return listbox.scrollHeight > listbox.clientHeight && inner.top >= outer.top - 1 && inner.bottom <= outer.bottom + 1;
+  });
+
+  for (let step = 0; step < count; step++) await search.press("ArrowDown");
+  expect(await activeIndex()).toBe(count - 1);
+  await expect.poll(activeInView).toBe(true);
+
+  await search.press("ArrowDown");
+  expect(await activeIndex()).toBe(0);
+  await expect.poll(activeInView).toBe(true);
+
+  await search.press("ArrowUp");
+  expect(await activeIndex()).toBe(count - 1);
+  await expect.poll(activeInView).toBe(true);
+});
+
 test("a failed save keeps the tray and reuses its operation for the unchanged retry", async ({ page: browserPage }) => {
   await open(browserPage, DESKTOP, "light");
   await browserPage.evaluate(storageKey => {
