@@ -306,7 +306,7 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
           <label>Record to inspect for {item.product.name}
             <select value={item.prop._id} onChange={event => setInspectedRecords(current => ({ ...current, [groupId]: event.target.value }))}>
               {members.map((member, recordIndex) => <option key={member.prop._id} value={member.prop._id}>
-                {`Record ${recordIndex + 1} · ${member.prop.activity ? "Usage snapshot" : member.prop.activityEvidenceId ? "Snapshot unavailable" : "No usage snapshot"} · ${isRelationshipConfirmed(member.prop) ? member.prop.status.toLowerCase() : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
+                {`Record ${recordIndex + 1} · ${member.prop.activity ? "Usage snapshot" : member.prop.activityEvidenceId ? "Snapshot unavailable" : "No usage snapshot"} · ${isRelationshipConfirmed(member.prop) ? cardStatusLabel(member.prop) : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
               </option>)}
             </select>
           </label>

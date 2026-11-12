@@ -193,7 +193,7 @@ describe("stored relationship levels", () => {
   };
   it("keeps a known level and drops an unknown or malformed one instead of refusing the page", () => {
     const parsed = publicProfileSchema.parse({ handle: "owner", displayName: "Owner", bio: "", cards: [
-      { ...card, level: "WEEKLY" }, { ...card, level: "IN_ROTATION_SOMEDAY" }, { ...card, level: 7 }, card,
+      { ...card, level: "WEEKLY" }, { ...card, level: "SOMETIMES" }, { ...card, level: 7 }, card,
     ] });
     expect(parsed.cards.map(entry => entry.level)).toEqual(["WEEKLY", undefined, undefined, undefined]);
   });

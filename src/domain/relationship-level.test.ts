@@ -38,7 +38,7 @@ describe("relationship levels", () => {
   });
 
   it("rejects an unknown key", () => {
-    expect(relationshipLevelSchema.safeParse("CO_SIGN").success).toBe(false);
+    expect(relationshipLevelSchema.safeParse("RETIRED_LEVEL").success).toBe(false);
     expect(relationshipLevelSchema.safeParse("daily").success).toBe(false);
     expect(relationshipLevelSchema.safeParse("DAILY").data).toBe("DAILY");
     expect(isRelationshipLevel("ARCHIVED")).toBe(false);

@@ -42,7 +42,7 @@ test.each([
   JSON.stringify({ version: 1, picks: [pick], extra: true }),
   JSON.stringify({ version: 1, picks: [{ ...pick, name: "Injected name" }] }),
   JSON.stringify({ version: 1, picks: [{ ...pick, status: "PUBLIC" }] }),
-  JSON.stringify({ version: 2, picks: [{ ...pick, level: "CO_SIGN" }] }),
+  JSON.stringify({ version: 2, picks: [{ ...pick, level: "RETIRED_LEVEL" }] }),
   JSON.stringify({ version: 2, picks: [{ ...pick, level: "DAILY", status: "ARCHIVED" }] }),
   JSON.stringify({ version: 1, picks: [{ ...pick, level: "DAILY" }] }),
   JSON.stringify({ version: 1, picks: [{ kind: "typed", name: "x".repeat(TYPED_NAME_MAX + 1), status: "ACTIVE" }] }),

@@ -38,7 +38,7 @@ test("an edit's level must match its status", () => {
   expect(relationshipEditSchema.parse({ ...edit, status: "ARCHIVED", level: "PAUSED" }).level).toBe("PAUSED");
   expect(relationshipEditSchema.safeParse({ ...edit, status: "ACTIVE", level: "PAUSED" }).error?.issues.map(issue => issue.message))
     .toEqual(["This level does not match its status. Choose the level again."]);
-  expect(relationshipEditSchema.safeParse({ ...edit, status: "ACTIVE", level: "CO_SIGN" }).success).toBe(false);
+  expect(relationshipEditSchema.safeParse({ ...edit, status: "ACTIVE", level: "RETIRED_LEVEL" }).success).toBe(false);
 });
 
 test("relationship context is optional; dates and credential-free HTTPS work links are validated", () => {

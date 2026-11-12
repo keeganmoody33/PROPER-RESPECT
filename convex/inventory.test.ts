@@ -319,7 +319,7 @@ test("a level with a status it does not imply is refused and nothing is saved", 
     const prop = await ctx.db.get(propId);
     return { level: prop?.level, status: prop?.status, version: prop?.relationshipVersion, events: (await ctx.db.query("relationshipEvents").collect()).length };
   })).toEqual({ level: undefined, status: "TESTING", version: undefined, events: 0 });
-  await expect(owner.mutation(save, { propId, expectedVersion: 0, operationId: "unknown", level: "CO_SIGN", status: "ACTIVE", goTo: false, headline: "", note: "" }))
+  await expect(owner.mutation(save, { propId, expectedVersion: 0, operationId: "unknown", level: "RETIRED_LEVEL", status: "ACTIVE", goTo: false, headline: "", note: "" }))
     .rejects.toThrow("Validator error");
 });
 

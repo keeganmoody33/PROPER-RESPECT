@@ -218,7 +218,7 @@ test("a stored card keeps a known level, drops an unknown one, and a card withou
     handle: "levels", displayName: "Levels", bio: "",
     cards: [
       { ...linked, status: "ACTIVE" as const, level: "DAILY" },
-      { ...linked, status: "ACTIVE" as const, level: "CO_SIGN" },
+      { ...linked, status: "ACTIVE" as const, level: "RETIRED_LEVEL" },
       { ...linked, status: "ARCHIVED" as const },
     ],
   };
