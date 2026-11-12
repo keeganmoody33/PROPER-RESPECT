@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { initialShareState, previewSummary, shareFlow, skipReasonText, type ShareAllPreview, type ShareEvent, type ShareState } from "./share-all-flow";
+import { canApproveShare, initialShareState, previewSummary, shareFlow, skipReasonText, type ShareAllPreview, type ShareEvent, type ShareState } from "./share-all-flow";
 
 const REVISION = 3;
 const SHARED = 4;
@@ -51,4 +51,12 @@ test("the preview summary and skip reasons are plain sentences", () => {
   expect(skipReasonText("LINK_TOO_LONG")).toBe("its saved link or link label is too long to publish. Shorten it in your collection.");
   expect(skipReasonText("ALREADY_ON_PAGE_NEEDS_REVIEW")).toBe(
     "your page already shows an older card for this product that can't be matched to one relationship. Review that product's cards together in your collection.");
+});
+
+test("a preview with nothing to share offers no approval and says so", () => {
+  const nothing = { sharedCount: 0, remainingCount: 0, skipped: [] };
+  expect(canApproveShare(nothing)).toBe(false);
+  expect(previewSummary(nothing)).toBe("Nothing new can be shared.");
+  expect(previewSummary({ ...nothing, skipped: preview.skipped })).toBe("Nothing new can be shared. 1 will stay private until you fix it.");
+  expect(canApproveShare(preview)).toBe(true);
 });

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addedMessage, emptyTray, nextActiveOption, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
+import { addedMessage, emptyTray, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
 import { resolveTypedPick } from "./typed-pick";
 
 const windsurf: TrayEntry = { slug: "windsurf", name: "Windsurf", domain: "windsurf.com" };
@@ -169,4 +169,11 @@ test("a typed name longer than the server allows never joins the tray", () => {
   expect(typed("x".repeat(TYPED_NAME_MAX)).items).toHaveLength(1);
   expect(typed("x".repeat(TYPED_NAME_MAX + 1)).items).toEqual([]);
   expect(TYPED_NAME_MAX).toBe(160);
+});
+
+test("a typed pick is refused until the directory can resolve it", () => {
+  expect(resolveTypedWhenReady(null, "Portal", "payroll.example"))
+    .toEqual({ kind: "refused", message: "The product list is still loading. Add this tool again in a moment." });
+  expect(resolveTypedWhenReady(() => ({ kind: "typed", domain: "payroll.example" }), "Portal", "payroll.example"))
+    .toEqual({ kind: "typed", domain: "payroll.example" });
 });
