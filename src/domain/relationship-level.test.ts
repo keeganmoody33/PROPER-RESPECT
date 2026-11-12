@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cardStatusLabel, cardTopLine, DEFAULT_STACK_LEVEL, isRelationshipLevel, levelDefinition, levelLabel,
-  levelMatchesStatus, levelStatus, RELATIONSHIP_LEVELS, relationshipLevelSchema,
+  levelMatchesStatus, levelStatus, RELATIONSHIP_LEVELS, relationshipLevelSchema, relationshipLevelsRule,
 } from "./relationship-level";
 
 describe("relationship levels", () => {
@@ -57,6 +57,10 @@ describe("relationship levels", () => {
     expect(cardTopLine({ status: "ARCHIVED", level: "TRIED_NOT_ADOPTED", startedAt: "2024-01-01" })).toBe("TRIED, DIDN'T ADOPT");
     expect(cardTopLine({ status: "ARCHIVED", startedAt: "2020-05-05" })).toBe("USED BEFORE · SINCE 2020");
     expect(cardTopLine({ status: "ACTIVE" })).toBe("USING");
+  });
+
+  it("tells agents every level with its definition and the fallbacks", () => {
+    expect(relationshipLevelsRule).toBe("The relationship words on a card are the owner's own choice and are never derived from activity. They name one of seven usage levels, cold to hot: Tried, didn't adopt (I tried it and decided not to use it); Stopped using (I used it for real work and no longer do); Paused (I'm not using it now and may come back); Occasionally (I reach for it less than once a week, when a job needs it); Testing (I'm evaluating it and haven't decided); Weekly (I use it most weeks); Daily (I use it on most working days). A card without a level says Using, Testing or Used before. The order is not a score or a ranking, and go-to is a separate mark.");
   });
 
   it("defaults new stack picks to Weekly", () => {

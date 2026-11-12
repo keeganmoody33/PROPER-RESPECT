@@ -66,6 +66,12 @@ export function cardStatusLabel(card: { status: RelationshipStatus; level?: Rela
   return card.level ? levelLabel(card.level) : statusFallbackLabel(card.status);
 }
 
+/** How agents and the methodology page are told to read a card's relationship words. */
+export const relationshipLevelsRule = "The relationship words on a card are the owner's own choice and are never derived from activity. "
+  + `They name one of seven usage levels, cold to hot: ${RELATIONSHIP_LEVELS.map(level => `${level.label} (${level.definition.slice(0, -1)})`).join("; ")}. `
+  + `A card without a level says ${STATUS_FALLBACK_LABELS.ACTIVE}, ${STATUS_FALLBACK_LABELS.TESTING} or ${STATUS_FALLBACK_LABELS.ARCHIVED}. `
+  + "The order is not a score or a ranking, and go-to is a separate mark.";
+
 const YEAR_LENGTH = 4;
 
 /** The card's top line, for example "DAILY · SINCE 2021". Never invents a date. */
