@@ -25,7 +25,7 @@ export const relationshipEditSchema = z.object({
 });
 export type RelationshipEdit = z.infer<typeof relationshipEditSchema>;
 
-export const inventoryViews = ["All", "Discoveries", "Current", "Testing", "Go-to", "History", "Archived"] as const;
+export const inventoryViews = ["All", "Discoveries", "Current", "Testing", "Go-to", "History", "Used before"] as const;
 export type InventoryView = typeof inventoryViews[number];
 export function isRelationshipConfirmed(prop: { confirmedAt?: string; visibility: string }) {
   return Boolean(prop.confirmedAt) || prop.visibility !== "DRAFT";
@@ -42,6 +42,6 @@ export function inInventoryView(view: InventoryView, item: {
     case "Testing": return confirmed && item.prop.status === "TESTING";
     case "Go-to": return confirmed && item.prop.goTo === true && item.prop.status !== "ARCHIVED";
     case "History": return confirmed && (item.previousStatuses.length > 0 || item.prop.status === "ARCHIVED");
-    case "Archived": return confirmed && item.prop.status === "ARCHIVED";
+    case "Used before": return confirmed && item.prop.status === "ARCHIVED";
   }
 }

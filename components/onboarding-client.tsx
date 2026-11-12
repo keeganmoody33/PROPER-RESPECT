@@ -1,6 +1,7 @@
 "use client";
 
 import { ProfileLinksFields } from "./profile-links-fields";
+import { cardStatusLabel, statusFallbackLabel } from "@/src/domain/relationship-level";
 import { convexAuthToken } from "@/src/domain/convex-auth-token";
 import { classifyEvidenceUpload, EVIDENCE_UPLOAD_ACCEPT } from "@/src/domain/evidence-upload";
 import {
@@ -109,9 +110,7 @@ export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProduc
       <label>Product name<input name="name" maxLength={120} required autoComplete="off" disabled={busy} /></label>
       <label>How do you use it?<select name="relationship" aria-label="How do you use it?" defaultValue="" required disabled={busy}>
         <option value="" disabled>Choose a relationship</option>
-        <option value="ACTIVE">Currently use</option>
-        <option value="TESTING">Testing now</option>
-        <option value="ARCHIVED">Past use</option>
+        {(["ACTIVE", "TESTING", "ARCHIVED"] as const).map(status => <option key={status} value={status}>{statusFallbackLabel(status)}</option>)}
         <option value="LATER">Decide later</option>
       </select></label>
       <details className="full"><summary>Website or a note (optional)</summary><div className="form-grid">
@@ -633,9 +632,9 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                         })
                       }
                     >
-                      <option value="ACTIVE">Active</option>
-                      <option value="TESTING">Testing</option>
-                      <option value="ARCHIVED">Archived</option>
+                      {(["ACTIVE", "TESTING", "ARCHIVED"] as const).map(status => <option key={status} value={status}>
+                        {status === edit.status ? cardStatusLabel(edit) : statusFallbackLabel(status)}
+                      </option>)}
                     </select>
                   </label>
                   <label className="review-field">

@@ -80,7 +80,7 @@ export function InventoryFixture() {
     const version = args.expectedVersion + 1;
     const next: InventoryData = { ...data, cards: data.cards.map(item => item.prop._id !== args.propId ? item : ({ ...item,
       previousStatuses: item.prop.confirmedAt ? [item.prop.status] : [],
-      prop: { ...item.prop, status: args.status, goTo: args.goTo, headline: args.headline, note: args.note,
+      prop: { ...item.prop, status: args.status, level: args.level, goTo: args.goTo, headline: args.headline, note: args.note,
         startedAt: args.startedAt, supportingUrl: args.supportingUrl, relationshipVersion: version,
         activityEvidenceId: args.clearActivity ? undefined : args.activityEvidenceId ?? item.prop.activityEvidenceId,
         activity: args.clearActivity ? undefined : evidence.find(source => source.id === args.activityEvidenceId)?.suggestedActivity ?? item.prop.activity,

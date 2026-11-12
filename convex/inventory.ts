@@ -127,7 +127,7 @@ export const list = query({
 
 function locatorRow(prop: Doc<"props">, product: Doc<"products">) {
   return { propId: prop._id, productId: product._id, name: product.name, domain: product.domain,
-    status: prop.status, confirmed: isRelationshipConfirmed(prop), goTo: prop.goTo ?? false,
+    status: prop.status, level: prop.level, confirmed: isRelationshipConfirmed(prop), goTo: prop.goTo ?? false,
     headline: prop.headline };
 }
 
