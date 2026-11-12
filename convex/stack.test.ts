@@ -103,9 +103,9 @@ test("a mixed batch saves directory and typed picks as private confirmed relatio
       ["APPROVED", notebook, "https://notebook.example.com/"],
     ]);
     expect((await ctx.db.query("manualProductIntakes").collect()).map(receipt => [receipt.operationId, receipt.propId])).toEqual([
-      ["first-save:salesforce", salesforce],
-      ["first-save:github", github],
-      [`first-save:${typedProduct.slug}`, notebook],
+      ["stack-batch:first-save:salesforce", salesforce],
+      ["stack-batch:first-save:github", github],
+      [`stack-batch:first-save:${typedProduct.slug}`, notebook],
     ]);
     expect(await ctx.db.query("rateLimits").collect()).toMatchObject([{ userId: owner._id, operation: "saveStack", windowStart: WINDOW_START, count: 3 }]);
     expect(await ctx.db.get(owner._id)).toMatchObject({ onboardingStatus: "REVIEW" });
@@ -151,7 +151,7 @@ test("a pick of an unconfirmed draft confirms it the way a private save does", a
     const events = await ctx.db.query("relationshipEvents").collect();
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({
-      propId: draft, operationId: "confirm:github", version: 1, basis: "OWNER_ASSERTED", recordedAt: NOW.toISOString(),
+      propId: draft, operationId: "stack-batch:confirm:github", version: 1, basis: "OWNER_ASSERTED", recordedAt: NOW.toISOString(),
       before: { status: "TESTING", confirmed: false, goTo: false, headline: "", note: "Found in my mail" },
       after: { status: "ACTIVE", confirmed: true, goTo: false, headline: "", note: "Found in my mail" },
     });
@@ -169,7 +169,7 @@ test("a pick of an already confirmed relationship changes nothing", async () => 
   expect(result).toEqual({ items: [{ propId: saved, productName: "GitHub", outcome: "UNCHANGED" }], created: 0, confirmed: 0, unchanged: 1 });
   const after = await everyRow(t);
   expect({ ...after, receipts: [] }).toEqual({ ...before, receipts: [] });
-  expect(after.receipts.map(receipt => receipt.operationId)).toEqual(["saved", "again:github"]);
+  expect(after.receipts.map(receipt => receipt.operationId)).toEqual(["saved", "stack-batch:again:github"]);
 });
 
 test("a double submit returns the first result and writes nothing new", async () => {
