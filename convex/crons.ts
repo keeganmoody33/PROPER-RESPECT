@@ -22,4 +22,11 @@ crons.interval(
   internal.mailboxGoogle.refreshDue,
 );
 
+// Stored product brands: thirty days old is fetched again; a failure keeps the stored brand.
+crons.interval(
+  "refresh stored product brands",
+  { hours: 1 },
+  internal.productBrands.refreshDue,
+);
+
 export default crons;
