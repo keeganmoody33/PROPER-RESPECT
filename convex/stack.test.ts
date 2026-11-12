@@ -244,6 +244,15 @@ test("typed picks with one name are one product per website domain, so equivalen
   expect(rows.links.map(link => link.url)).toEqual(["https://payroll.example/", "https://expenses.example/"]);
 });
 
+test("a typed directory-only name with another website saves as the owner's product with that link", async () => {
+  const { t, owner } = await fixture();
+  await owner.mutation(saveSelection, { operationId: "own-slack", picks: [typed("Slack", "ACTIVE", "https://other.example")] });
+  const rows = await everyRow(t);
+  expect(rows.products.map(({ name, domain }) => ({ name, domain }))).toEqual([{ name: "Slack", domain: "other.example" }]);
+  expect(rows.products[0]?.slug.startsWith("manual-slack-")).toBe(true);
+  expect(rows.links.map(link => link.url)).toEqual(["https://other.example/"]);
+});
+
 test("an unknown slug or an unsafe website fails the whole batch", async () => {
   const { t, owner } = await fixture();
   await expect(owner.mutation(saveSelection, { operationId: "unknown", picks: [dir("salesforce"), typed("Studio tool"), dir("not-in-the-directory")] }))
