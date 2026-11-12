@@ -303,19 +303,19 @@ test("missing optional brand fields remain inspectable without making the card i
   expect($(".brand-receipts").text()).toContain("styleguide: error · HTTP 503");
 });
 
-test.each([["ACTIVE", "USING"], ["TESTING", "TESTING"], ["ARCHIVED", "USED BEFORE"]] as const)(
+test.each([["ACTIVE", "USING · SINCE 2024"], ["TESTING", "TESTING · SINCE 2024"], ["ARCHIVED", "USED BEFORE · STARTED 2024"]] as const)(
   "%s without a level retains the supplied relationship start year",
-  (status, words) => {
+  (status, topLine) => {
     const $ = renderCard({ status, startedAt: "2024-06-03" });
 
-    expect($(".card-title .eyebrow").text()).toBe(`${words} · SINCE 2024`);
+    expect($(".card-title .eyebrow").text()).toBe(topLine);
   },
 );
 
 test.each([
   ["TRIED_NOT_ADOPTED", "ARCHIVED", "TRIED, DIDN'T ADOPT"],
-  ["STOPPED", "ARCHIVED", "STOPPED USING · SINCE 2022"],
-  ["PAUSED", "ARCHIVED", "PAUSED · SINCE 2022"],
+  ["STOPPED", "ARCHIVED", "STOPPED USING · STARTED 2022"],
+  ["PAUSED", "ARCHIVED", "PAUSED · STARTED 2022"],
   ["OCCASIONAL", "ACTIVE", "OCCASIONALLY · SINCE 2022"],
   ["TESTING", "TESTING", "TESTING · SINCE 2022"],
   ["WEEKLY", "ACTIVE", "WEEKLY · SINCE 2022"],

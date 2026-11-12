@@ -50,8 +50,8 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     ["Grok Bot", "TESTING · SINCE 2026"],
     ["Elicit", "TESTING · SINCE 2026"],
     ["Context.dev", "TESTING · SINCE 2026"],
-    ["n8n", "PAUSED · SINCE 2024"],
-    ["Clay", "STOPPED USING · SINCE 2022"],
+    ["n8n", "PAUSED · STARTED 2024"],
+    ["Clay", "STOPPED USING · STARTED 2022"],
   ]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });

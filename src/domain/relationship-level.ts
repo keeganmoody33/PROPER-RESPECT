@@ -74,10 +74,12 @@ export const relationshipLevelsRule = "The relationship words on a card are the 
 
 const YEAR_LENGTH = 4;
 
-/** The card's top line, for example "DAILY · SINCE 2021". Never invents a date. */
+/** The card's top line, for example "DAILY · SINCE 2021" or "STOPPED USING · STARTED 2022". Never invents a date. */
 export function cardTopLine(card: { status: RelationshipStatus; level?: RelationshipLevel; startedAt?: string }): string {
   const label = cardStatusLabel(card).toUpperCase();
   // Someone who never adopted a tool has no "since".
   if (!card.startedAt || card.level === "TRIED_NOT_ADOPTED") return label;
-  return `${label} · SINCE ${card.startedAt.slice(0, YEAR_LENGTH)}`;
+  // "Stopped using since 2022" would read as the year it ended, so a tool no longer in use says when it started.
+  const word = card.status === "ARCHIVED" ? "STARTED" : "SINCE";
+  return `${label} · ${word} ${card.startedAt.slice(0, YEAR_LENGTH)}`;
 }
