@@ -113,6 +113,8 @@ export function saveAttempt(previous: SaveAttempt | null, picks: readonly StackP
 
 /** The option an arrow key makes active among `count` options; a negative `current` means none is active yet. */
 export function nextActiveOption(current: number, step: 1 | -1, count: number): number {
+  if (count <= 0) return -1;
+  if (current < 0 || current >= count) return step === 1 ? 0 : count - 1;
   return (current + step + count) % count;
 }
 
