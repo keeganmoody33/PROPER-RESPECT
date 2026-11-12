@@ -46,14 +46,9 @@ function linkProblem(link: CardLink): SkippedShare<string>["reason"] | null {
   return null;
 }
 
-/**
- * Every confirmed card not yet on the page becomes a publish selection built
- * only from saved values, so it shows nothing the owner hasn't already saved
- * privately: no activity, measurements, usage link or refresh, and never a
- * cost. A saved owner link that can't go public skips its card, which is named
- * so the owner can fix it. A derived domain link that can't is left off.
- * Above SHARE_ALL_MAX, the rest wait for the next run in collection order.
- */
+// Built only from saved values, so preparePublication's "save privately first"
+// checks pass. Owner-chosen links are refused, not dropped: a bad saved link
+// skips its card by name so the owner can fix it.
 export function shareAllSelections<PropId extends string, Cost>(props: readonly ShareAllProp<PropId, Cost>[]) {
   const skipped: SkippedShare<PropId>[] = [];
   const shareable = props.filter(prop => prop.visibility === "PRIVATE" && !prop.onPublishedPage).flatMap(prop => {
