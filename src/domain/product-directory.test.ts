@@ -111,10 +111,10 @@ describe("parseDirectory validation", () => {
   });
 
   it("rejects a starter set that names an unknown or repeated slug", () => {
-    expect(() => build(fixtures, [{ role: "sales", label: "Sales", blurb: "x", slugs: ["gong"] }]))
-      .toThrow('Starter set "sales" names "gong", which is not in the directory.');
-    expect(() => build(fixtures, [{ role: "sales", label: "Sales", blurb: "x", slugs: ["coda", "coda"] }]))
-      .toThrow('Starter set "sales" repeats a slug.');
+    expect(() => build(fixtures, [{ role: "gtm-engineering", label: "GTM engineering", blurb: "x", slugs: ["gong"] }]))
+      .toThrow('Starter set "gtm-engineering" names "gong", which is not in the directory.');
+    expect(() => build(fixtures, [{ role: "gtm-engineering", label: "GTM engineering", blurb: "x", slugs: ["coda", "coda"] }]))
+      .toThrow('Starter set "gtm-engineering" repeats a slug.');
   });
 });
 
@@ -145,13 +145,22 @@ describe("the shipped directory", () => {
     expect(searchDirectory("sales nav").map(entry => entry.slug)).toEqual(["linkedin-sales-navigator"]);
     expect(directoryDomainOwner("linkedin.com")?.slug).toBe("linkedin");
     expect(directoryDomainOwner("apple.com")).toBeNull();
+    expect(searchDirectory("brand.dev").map(entry => entry.slug)).toEqual(["context-dev"]);
+    expect(searchDirectory("xai").map(entry => entry.slug)).toEqual(["grok-bot", "grok"]);
+    expect(["porkbun.com", "dynadot.com", "elicit.com", "context.dev", "grok.com"].map(domain => directoryDomainOwner(domain)?.slug))
+      .toEqual(["porkbun", "dynadot", "elicit", "context-dev", "grok"]);
+    expect(evidenceTier().map(entry => entry.slug)).not.toEqual(expect.arrayContaining(["porkbun"]));
   });
 
   it("resolves every starter set in curated order", () => {
     expect(starterSets().map(set => [set.role, set.entries.length])).toEqual([
-      ["sales", 12], ["engineering", 10], ["design", 6], ["ai", 6], ["creator", 7], ["everyday", 8],
+      ["gtm-engineering", 12], ["engineering", 10], ["design", 6], ["ai", 6], ["creator", 7], ["everyday", 8],
     ]);
     expect(starterSets()[0].entries.slice(0, 4).map(entry => entry.slug))
-      .toEqual(["salesforce", "hubspot", "linkedin-sales-navigator", "apollo"]);
+      .toEqual(["claude-code", "cursor", "github", "clay"]);
+    expect(starterSets()[0]).toMatchObject({ label: "GTM engineering", blurb: "Data, scraping, agents and the infrastructure under them." });
+    const enterpriseSales = ["salesforce", "hubspot", "outreach", "salesloft", "gong", "apollo", "zoominfo", "linkedin-sales-navigator", "mixmax"];
+    expect(starterSets().flatMap(set => set.entries.map(entry => entry.slug)).filter(slug => enterpriseSales.includes(slug))).toEqual([]);
+    expect(enterpriseSales.map(slug => directoryEntry(slug)?.slug)).toEqual(enterpriseSales);
   });
 });

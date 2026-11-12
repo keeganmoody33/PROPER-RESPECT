@@ -3,9 +3,10 @@ import { addedMessage, directoryNote, emptyTray, nextActiveOption, resolveTypedW
 import { resolveTypedPick } from "./typed-pick";
 
 const windsurf: TrayEntry = { slug: "windsurf", name: "Windsurf", domain: "windsurf.com" };
-const hubspot: TrayEntry = { slug: "hubspot", name: "HubSpot", domain: "hubspot.com" };
+const firecrawl: TrayEntry = { slug: "firecrawl", name: "Firecrawl", domain: "firecrawl.dev" };
 const clay: TrayEntry = { slug: "clay", name: "Clay", domain: "clay.com" };
 const slack: TrayEntry = { slug: "slack", name: "Slack", domain: "slack.com" };
+const vercel: TrayEntry = { slug: "vercel", name: "Vercel", domain: "vercel.com" };
 const OVER_LIMIT = 2;
 const CREATED = 4;
 const SAVED = 6;
@@ -13,10 +14,10 @@ const FIELD_NOTES_KEY = 'typed:["field notes","field-notes.example"]';
 
 test("a starter set adds its entries as currently used, skipping saved products and ones already listed", () => {
   const listed = trayReducer(emptyTray, { type: "addEntry", entry: clay, held: [] });
-  const tray = trayReducer(listed, { type: "addStarterSet", entries: [hubspot, clay, slack], held: ["slack"] });
+  const tray = trayReducer(listed, { type: "addStarterSet", entries: [firecrawl, clay, vercel], held: ["vercel"] });
   expect(tray.items).toEqual([
     { key: "directory:clay", kind: "directory", slug: "clay", name: "Clay", domain: "clay.com", status: "ACTIVE" },
-    { key: "directory:hubspot", kind: "directory", slug: "hubspot", name: "HubSpot", domain: "hubspot.com", status: "ACTIVE" },
+    { key: "directory:firecrawl", kind: "directory", slug: "firecrawl", name: "Firecrawl", domain: "firecrawl.dev", status: "ACTIVE" },
   ]);
   expect(tray.lastAdded).toEqual({ added: 1, alreadySaved: 1, alreadyListed: 1, overLimit: 0 });
   expect(addedMessage(tray.lastAdded!)).toBe("Added 1 to your list. 1 already saved. 1 already in your list.");
@@ -100,12 +101,12 @@ test("a name and website the server would refuse are refused with its message be
 
 test("status and removal change only the named item, and picks keep tray order", () => {
   const tray = [
-    { type: "addEntry", entry: hubspot, held: [] },
+    { type: "addEntry", entry: firecrawl, held: [] },
     { type: "addTyped", name: "Field Notes", resolution: { kind: "typed", domain: "" }, held: [] },
     { type: "addEntry", entry: clay, held: [] },
     { type: "setStatus", key: "directory:clay", status: "ARCHIVED" },
     { type: "setStatus", key: 'typed:["field notes",""]', status: "TESTING" },
-    { type: "remove", key: "directory:hubspot" },
+    { type: "remove", key: "directory:firecrawl" },
   ] as const;
   const result = tray.reduce<Tray>((current, action) => trayReducer(current, action), emptyTray);
   expect(trayPicks(result)).toEqual([
@@ -128,7 +129,7 @@ test("saving empties the tray and reports what the server did", () => {
   const tray = trayReducer(trayReducer(emptyTray, { type: "addEntry", entry: clay, held: [] }), { type: "saved", result: { created: CREATED, confirmed: 1, unchanged: 1 } });
   expect(tray).toEqual({ items: [], lastAdded: null, saved: { saved: SAVED, created: CREATED, confirmed: 1, unchanged: 1 } });
   expect(savedMessage(tray.saved!)).toBe("Saved 5 tools privately. This save made nothing public. 1 discovery was confirmed. 1 already in your collection was left as it is, public or private.");
-  expect(trayReducer(tray, { type: "addEntry", entry: hubspot, held: [] }).saved).toBeNull();
+  expect(trayReducer(tray, { type: "addEntry", entry: firecrawl, held: [] }).saved).toBeNull();
 });
 
 test("arrow keys from no active option go to the first or last option, then wrap", () => {

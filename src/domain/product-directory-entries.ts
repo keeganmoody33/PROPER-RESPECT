@@ -27,7 +27,7 @@ export type DirectoryEntry = Readonly<{
   evidence?: Readonly<{ domains: readonly string[]; canonicalUrl?: string }>;
 }>;
 
-export type StarterRole = "sales" | "engineering" | "design" | "ai" | "creator" | "everyday";
+export type StarterRole = "gtm-engineering" | "engineering" | "design" | "ai" | "creator" | "everyday";
 
 export type StarterSetSource = Readonly<{
   role: StarterRole;
@@ -39,8 +39,8 @@ export type StarterSetSource = Readonly<{
 
 export const STARTER_SETS: readonly StarterSetSource[] = [
   {
-    role: "sales", label: "Sales", blurb: "CRM, prospecting, outreach and pipeline.",
-    slugs: ["salesforce", "hubspot", "linkedin-sales-navigator", "apollo", "outreach", "salesloft", "gong", "clay", "zoominfo", "mixmax", "calendly", "slack"],
+    role: "gtm-engineering", label: "GTM engineering", blurb: "Data, scraping, agents and the infrastructure under them.",
+    slugs: ["claude-code", "cursor", "github", "clay", "exa", "firecrawl", "spider", "n8n", "cloudflare", "vercel", "supabase", "posthog"],
   },
   {
     role: "engineering", label: "Engineering", blurb: "Code, infrastructure and AI coding.",
@@ -380,6 +380,10 @@ export const DIRECTORY_ENTRIES: readonly DirectoryEntry[] = [
     description: "Application and database hosting.", aliases: [], category: "ENGINEERING" },
   { slug: "digitalocean", name: "DigitalOcean", domain: "digitalocean.com", website: "https://digitalocean.com",
     description: "Cloud servers and hosting.", aliases: [], category: "ENGINEERING" },
+  { slug: "porkbun", name: "Porkbun", domain: "porkbun.com", website: "https://porkbun.com",
+    description: "Domain registration and DNS.", aliases: [], category: "ENGINEERING" },
+  { slug: "dynadot", name: "Dynadot", domain: "dynadot.com", website: "https://dynadot.com",
+    description: "Domain registration and aftermarket.", aliases: [], category: "ENGINEERING" },
   { slug: "mongodb", name: "MongoDB", domain: "mongodb.com", website: "https://mongodb.com",
     description: "Document database.", aliases: ["mongo"], category: "ENGINEERING" },
   { slug: "stripe", name: "Stripe", domain: "stripe.com", website: "https://stripe.com",
@@ -398,6 +402,24 @@ export const DIRECTORY_ENTRIES: readonly DirectoryEntry[] = [
     description: "Terminal with AI built in.", aliases: [], category: "ENGINEERING" },
   { slug: "tailwind-css", name: "Tailwind CSS", domain: "tailwindcss.com", website: "https://tailwindcss.com",
     description: "Utility-first CSS framework.", aliases: ["tailwind"], category: "ENGINEERING" },
+  { slug: "spider", name: "Spider", domain: "spider.cloud", website: "https://spider.cloud",
+    description: "Web crawling and scraping for AI applications.", aliases: ["spider cloud", "spider.cloud"], category: "ENGINEERING" },
+  { slug: "context-dev", name: "Context.dev", domain: "context.dev", website: "https://context.dev",
+    description: "Brand and web data API.", aliases: ["brand.dev", "context dev"], category: "DATA" },
+  { slug: "open-places", name: "Open Places", domain: "openplaces.practicebase.io", website: "https://openplaces.practicebase.io",
+    description: "US and UK business lists from open map data.", aliases: ["openplaces", "practicebase open places"], category: "DATA" },
+  { slug: "apify", name: "Apify", domain: "apify.com", website: "https://apify.com",
+    description: "Web scraping and automation platform.", aliases: ["apify actors"], category: "DATA" },
+  { slug: "parallel", name: "Parallel", domain: "parallel.ai", website: "https://parallel.ai",
+    description: "Web search and research APIs for AI agents.", aliases: ["parallel ai", "parallel.ai"], category: "DATA" },
+  { slug: "tinyfish", name: "TinyFish", domain: "tinyfish.ai", website: "https://tinyfish.ai",
+    description: "Web agents for browsing and data collection.", aliases: ["tiny fish"], category: "DATA" },
+  { slug: "composio", name: "Composio", domain: "composio.dev", website: "https://composio.dev",
+    description: "Tool integrations for AI agents.", aliases: [], category: "ENGINEERING" },
+  { slug: "supermemory", name: "Supermemory", domain: "supermemory.ai", website: "https://supermemory.ai",
+    description: "Memory API for AI applications.", aliases: ["super memory"], category: "ENGINEERING" },
+  { slug: "agentmail", name: "AgentMail", domain: "agentmail.to", website: "https://agentmail.to",
+    description: "Email inboxes for AI agents.", aliases: ["agent mail"], category: "ENGINEERING" },
   { slug: "snowflake", name: "Snowflake", domain: "snowflake.com", website: "https://snowflake.com",
     description: "Cloud data warehouse.", aliases: [], category: "DATA" },
   { slug: "databricks", name: "Databricks", domain: "databricks.com", website: "https://databricks.com",
@@ -490,6 +512,12 @@ export const DIRECTORY_ENTRIES: readonly DirectoryEntry[] = [
     description: "AI assistant from Google.", aliases: ["google gemini"], category: "AI" },
   { slug: "perplexity", name: "Perplexity", domain: "perplexity.ai", website: "https://perplexity.ai",
     description: "AI answer engine.", aliases: [], category: "AI" },
+  { slug: "grok", name: "Grok", domain: "grok.com", website: "https://grok.com",
+    description: "AI assistant from xAI.", aliases: ["xai grok"], category: "AI" },
+  { slug: "grok-bot", name: "Grok Bot", domain: "x.ai", website: "https://docs.x.ai/grok-bot/overview",
+    description: "AI agent from xAI with its own cloud computer.", aliases: ["grokbot"], category: "AI" },
+  { slug: "elicit", name: "Elicit", domain: "elicit.com", website: "https://elicit.com",
+    description: "AI research assistant for papers.", aliases: ["elicit ai"], category: "AI" },
   { slug: "midjourney", name: "Midjourney", domain: "midjourney.com", website: "https://midjourney.com",
     description: "AI image generation.", aliases: [], category: "AI" },
   { slug: "lovable", name: "Lovable", domain: "lovable.dev", website: "https://lovable.dev",

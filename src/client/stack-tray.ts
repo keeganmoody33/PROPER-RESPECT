@@ -40,6 +40,7 @@ export type TrayAction =
   | { type: "addStarterSet"; entries: readonly TrayEntry[]; held: readonly string[] }
   | { type: "addEntry"; entry: TrayEntry; held: readonly string[] }
   | { type: "addTyped"; name: string; website?: string; resolution: Exclude<TypedResolution, { kind: "refused" }>; held: readonly string[] }
+  | { type: "restore"; picks: readonly RestoredPick[]; held: readonly string[] }
   | { type: "setStatus"; key: string; status: TrayStatus }
   | { type: "remove"; key: string }
   | { type: "saved"; result: { created: number; confirmed: number; unchanged: number } };
@@ -47,6 +48,11 @@ export type TrayAction =
 export type StackPick =
   | { kind: "directory"; slug: string; status: TrayStatus }
   | { kind: "typed"; name: string; website?: string; status: TrayStatus };
+
+/** A stored pick resolved again against the directory, ready to rejoin the tray with its status. */
+export type RestoredPick =
+  | Readonly<{ kind: "directory"; entry: TrayEntry; status: TrayStatus }>
+  | Readonly<{ kind: "typed"; name: string; website?: string; domain: string; status: TrayStatus }>;
 
 // Before the directory loads nothing can say which product a typed name is, and two
 // spellings of one tool would both join the list and fail the whole save.
@@ -104,6 +110,11 @@ const handlers: Handlers = {
     const name = typedName(action.name);
     return name && name.length <= TYPED_NAME_MAX ? add(tray, [typedItem(name, action.website, action.resolution.domain)], action.held) : tray;
   },
+  restore: (tray, action) => add(tray, action.picks.flatMap((pick): TrayItem[] => {
+    if (pick.kind === "directory") return [{ ...directoryItem(pick.entry), status: pick.status }];
+    const name = typedName(pick.name);
+    return name && name.length <= TYPED_NAME_MAX ? [{ ...typedItem(name, pick.website, pick.domain), status: pick.status }] : [];
+  }), action.held),
   setStatus: (tray, action) => ({
     ...tray,
     items: tray.items.map(item => item.key === action.key ? { ...item, status: action.status } : item),
@@ -142,6 +153,10 @@ export function nextActiveOption(current: number, step: 1 | -1, count: number): 
 
 export function saveButtonLabel(count: number) {
   return `Save ${count} tool${count === 1 ? "" : "s"} privately`;
+}
+
+export function signInToSaveLabel(count: number) {
+  return `Sign in to save ${count} tool${count === 1 ? "" : "s"}`;
 }
 
 export function savedMessage(summary: SavedSummary) {

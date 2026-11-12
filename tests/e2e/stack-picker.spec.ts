@@ -32,7 +32,7 @@ test.beforeAll(async () => {
           export const SignInButton=({children})=>children;
           export const UserButton=()=>null;
           export const useUser=()=>({user});
-          export const useAuth=()=>({getToken:async()=>null,sessionClaims:{}});
+          export const useAuth=()=>({isLoaded:true,getToken:async()=>null,sessionClaims:{}});
           export const useClerk=()=>({openUserProfile:()=>{}});
         ` : readFileSync("tests/e2e/fixtures/fresh-user-backend.js", "utf8"),
       }));
@@ -51,9 +51,9 @@ const seeded = {
   connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true, brandEnrichmentAvailable: false,
   hasPublicationAtCurrentHandle: false, hasClaimedPublicIdentity: false,
   cards: [
-    { product: { _id: "product-slack", _creationTime: 1, name: "Slack", slug: "slack", domain: "slack.com", description: "Synthetic saved product" },
-      prop: { _id: "saved-slack", _creationTime: 1, userId: "synthetic-owner", productId: "product-slack", status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
-      links: [{ type: "CANONICAL", url: "https://slack.com", label: "Open Slack", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false },
+    { product: { _id: "product-vercel", _creationTime: 1, name: "Vercel", slug: "vercel", domain: "vercel.com", description: "Synthetic saved product" },
+      prop: { _id: "saved-vercel", _creationTime: 1, userId: "synthetic-owner", productId: "product-vercel", status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
+      links: [{ type: "CANONICAL", url: "https://vercel.com", label: "Open Vercel", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false },
     { product: { _id: "product-bad-link", _creationTime: 1, name: "Bad Link Tool", slug: "manual-bad-link-tool", domain: "", description: "" },
       prop: { _id: "saved-bad-link", _creationTime: 1, userId: "synthetic-owner", productId: "product-bad-link", status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
       links: [{ type: "AFFILIATE", url: "javascript:alert(1)", label: "Bad link", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false },
@@ -91,7 +91,7 @@ async function noAxeViolations(browserPage: Page) {
   const builder = browserPage.getByRole("region", { name: "Build your stack" });
   const status = builder.getByRole("status");
 
-  await builder.getByRole("button", { name: "Sales", exact: true }).click();
+  await builder.getByRole("button", { name: "GTM engineering", exact: true }).click();
   await expect(status).toHaveText("Added 11 to your list. 1 already saved.");
 
   const before = await pageTop(builder.getByRole("heading", { name: "Your list (11)" }));
@@ -106,15 +106,15 @@ async function noAxeViolations(browserPage: Page) {
   await expect(search).toBeFocused();
   await expect(search).toHaveValue("");
 
-  await search.fill("slack");
-  const slack = results.getByRole("option").filter({ hasText: "Slack" }).first();
-  await expect(slack).toHaveAttribute("aria-disabled", "true");
-  await expect(slack).toContainText("Already saved");
+  await search.fill("vercel");
+  const vercel = results.getByRole("option").filter({ hasText: "Vercel" }).first();
+  await expect(vercel).toHaveAttribute("aria-disabled", "true");
+  await expect(vercel).toContainText("Already saved");
   expect(await pageTop(builder.getByRole("heading", { name: "Your list (12)" }))).toBe(before);
   await search.fill("Field Notes");
   await results.getByRole("option").filter({ hasText: "Add “Field Notes”" }).click();
 
-  await builder.getByRole("button", { name: "Remove ZoomInfo" }).click();
+  await builder.getByRole("button", { name: "Remove Supabase" }).click();
   await builder.getByRole("combobox", { name: "How you use Clay" }).selectOption("TESTING");
   await expect(builder.getByRole("heading", { name: "Your list (12)" })).toBeVisible();
   expect(await browserPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -127,9 +127,9 @@ async function noAxeViolations(browserPage: Page) {
   const saves = (await calls(browserPage)).filter(call => call.name === "saveSelection");
   expect(saves).toHaveLength(1);
   expect(saves[0].args.picks).toEqual([
-    ...["salesforce", "hubspot", "linkedin-sales-navigator", "apollo", "outreach", "salesloft", "gong"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
+    ...["claude-code", "cursor", "github"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
     { kind: "directory", slug: "clay", status: "TESTING" },
-    ...["mixmax", "calendly", "figma"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
+    ...["exa", "firecrawl", "spider", "n8n", "cloudflare", "posthog", "figma"].map(slug => ({ kind: "directory", slug, status: "ACTIVE" })),
     { kind: "typed", name: "Field Notes", status: "ACTIVE" },
   ]);
   expect(saves[0].args.operationId).toHaveLength(crypto.randomUUID().length);
@@ -238,7 +238,7 @@ test("arrow keys keep the active option inside the scrolled listbox, including w
 test("ArrowUp on a fresh query makes the last option active, and Enter adds that option", async ({ page: browserPage }) => {
   await open(browserPage, DESKTOP, "light");
   const builder = browserPage.getByRole("region", { name: "Build your stack" });
-  await expect(builder.getByRole("button", { name: "Sales", exact: true })).toBeVisible();
+  await expect(builder.getByRole("button", { name: "GTM engineering", exact: true })).toBeVisible();
   const search = builder.getByRole("combobox", { name: "Search products" });
   const results = builder.getByRole("listbox", { name: "Matching products" });
   await search.fill("figma");
