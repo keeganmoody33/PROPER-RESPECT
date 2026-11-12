@@ -167,6 +167,23 @@ function normalizedFontLinks(value: unknown, source: "fonts" | "styleguide", fam
 }
 
 /** The caller establishes canonical identity; a provider redirect never changes it. */
+// Letters and digits only, so "Open Places" and "openplaces" compare equal.
+const nameKey = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+// The first run of words before a separator: "Cursor" in "Cursor: The AI Code Editor" and "Porkbun" in "Porkbun | Domains".
+// Matches "Cursor: The AI Code Editor" up to "Cursor"; leaves "GitHub Copilot" whole.
+const TITLE_LEAD = /^[^:|\u2013\u2014]+?(?=\s*[:|\u2013\u2014]|\s+-\s|$)/;
+
+/**
+ * A website can answer with its parent company's brand. The brand is used only when its
+ * title is the product's name or one of its other names, alone or before a separator.
+ */
+export function brandTitleNamesProduct(title: unknown, names: readonly string[]): boolean {
+  if (typeof title !== "string") return false;
+  const whole = nameKey(title), lead = nameKey(TITLE_LEAD.exec(title.trim())?.[0] ?? "");
+  if (!whole) return false;
+  return names.map(nameKey).some(name => name !== "" && (name === whole || name === lead));
+}
+
 export function normalizeProductBrand(input: SnapshotInput, responses: ContextBrandResponses): ProductBrandSnapshot {
   canonicalBrandDomainSchema.parse(input.canonicalDomain);
   const brandResponse = record(responses.brand), brand = record(brandResponse.brand);

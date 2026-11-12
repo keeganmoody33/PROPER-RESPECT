@@ -20,15 +20,51 @@ const prepare = makeFunctionReference<"mutation">("productBrands:prepareForProps
 const preparation = makeFunctionReference<"query">("productBrands:getPreparationForProps");
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
-test("listed directory entries stay ineligible for logo retrieval, by slug and as typed products", () => {
-  const listed = DIRECTORY_ENTRIES.filter(entry => !entry.evidence);
-  expect(listed.map(entry => entry.slug)).toContain("salesforce");
-  const verdicts = listed.flatMap(({ slug, name, domain }) => [
-    productBrandEligibility({ slug, name, domain }),
-    productBrandEligibility({ slug: `manual-${slug}`, name, domain }),
-  ]);
-  expect(new Set(verdicts)).toEqual(new Set(["UNVERIFIED_DOMAIN"]));
-  expect(productBrandEligibility({ slug: "github", name: "GitHub", domain: "github.com" })).toBeNull();
+test("any product with its own website can have its brand fetched; a product inside another product's site cannot", () => {
+  const eligible = (slug: string, name: string, domain: string) => productBrandEligibility({ slug, name, domain });
+  expect(eligible("github", "GitHub", "github.com")).toBeNull();
+  expect(eligible("open-places", "Open Places", "openplaces.practicebase.io")).toBeNull();
+  expect(eligible("porkbun", "Porkbun", "porkbun.com")).toBeNull();
+  // A product nobody listed, with the website its owner typed.
+  expect(eligible("manual-field-notes-1", "Field Notes", "field-notes.example")).toBeNull();
+  expect(eligible("grok-bot", "Grok Bot", "x.ai")).toBe("PRODUCT_IDENTITY_REQUIRED");
+  expect(eligible("manual-field-notes-2", "Field Notes", "")).toBe("UNVERIFIED_DOMAIN");
+  expect(eligible("manual-field-notes-3", "Field Notes", "not a domain")).toBe("UNVERIFIED_DOMAIN");
+  // A listed product keeps its listed website, and nothing else may claim a listed product's website.
+  expect(eligible("porkbun", "Porkbun", "porkbun.com.attacker.example")).toBe("UNVERIFIED_DOMAIN");
+  expect(eligible("manual-other-1", "Different product", "porkbun.com")).toBe("UNVERIFIED_DOMAIN");
+  const owners = DIRECTORY_ENTRIES.filter(entry => !entry.evidence && entry.website.replace(/\/$/, "") === `https://${entry.domain}`);
+  expect(owners.length).toBeGreaterThan(100);
+});
+
+test("a product outside the hand-checked list is branded only when the provider's brand carries its name", async () => {
+  vi.useFakeTimers();
+  vi.stubEnv("CONTEXT_DEV_API_KEY", "synthetic-test-key");
+  const t = convexTest(schema, modules);
+  const [openPlaces, gmail] = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const ids = [];
+    for (const [slug, name, domain] of [["open-places", "Open Places", "openplaces.practicebase.io"], ["gmail", "Gmail", "mail.google.com"]]) {
+      const productId = await ctx.db.insert("products", { slug, name, domain, description: "" });
+      ids.push(await ctx.db.insert("props", { userId, productId, visibility: "PRIVATE", status: "ACTIVE", headline: "", note: "" }));
+    }
+    return ids;
+  });
+  const titles: Record<string, string> = { "openplaces.practicebase.io": "Open Places", "mail.google.com": "Google" };
+  const fetcher = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    const domain = init?.body ? JSON.parse(String(init.body)).domain as string : new URL(String(url)).searchParams.get("domain")!;
+    return init?.body
+      ? Response.json({ status: "ok", brand: { domain, title: titles[domain], logos: [{ url: "https://assets.example.com/logo.svg", mode: "light", type: "icon" }], colors: [{ hex: "#3f5a2c" }] } })
+      : Response.json({ status: "error" });
+  });
+  vi.stubGlobal("fetch", fetcher);
+  const owner = t.withIdentity({ subject: "owner" });
+  await owner.mutation(prepare, { propIds: [openPlaces, gmail] });
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await owner.query(get, { propId: openPlaces })).toMatchObject({ status: "READY", current: { canonicalDomain: "openplaces.practicebase.io", colors: [{ hex: "#3f5a2c" }] } });
+  expect(await owner.query(get, { propId: gmail })).toMatchObject({ status: "FAILED", current: null });
+  // The mismatch is caught on the first response, before the two further paid requests.
+  expect(fetcher.mock.calls.map(([url]) => new URL(String(url)).pathname).sort()).toEqual(["/v1/brand/retrieve", "/v1/brand/retrieve", "/v1/web/fonts", "/v1/web/styleguide"]);
 });
 
 test("bounded preparation enrolls existing owner cards once and preserves their evidence and choices", async () => {
@@ -161,7 +197,7 @@ test("only an owned, verified canonical product can queue presentation enrichmen
   const { propId, unverifiedPropId } = await t.run(async (ctx) => {
     const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
     const productId = await ctx.db.insert("products", { slug: "wisprflow", name: "Wispr Flow", domain: "wisprflow.ai", description: "Dictation" });
-    const unverifiedId = await ctx.db.insert("products", { slug: "made-up", name: "Unknown", domain: "example.com", description: "" });
+    const unverifiedId = await ctx.db.insert("products", { slug: "made-up", name: "Unknown", domain: "", description: "" });
     const fields = { userId, visibility: "DRAFT" as const, status: "TESTING" as const, headline: "", note: "" };
     return {
       propId: await ctx.db.insert("props", { ...fields, productId }),

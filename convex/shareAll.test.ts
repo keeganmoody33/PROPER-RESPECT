@@ -281,7 +281,7 @@ test("a page too large for one stored document is refused before approval", asyn
   expect((await f.rows()).publications).toEqual([]);
 });
 
-test("share-all starts no logo retrieval for listed products and keeps it for evidence-tier products", async () => {
+test("share-all starts brand retrieval for every shared product with its own website", async () => {
   vi.useFakeTimers();
   const f = await fixture();
   await f.addProp({}, { slug: "tidal", name: "TIDAL", domain: "tidal.com" });
@@ -289,8 +289,9 @@ test("share-all starts no logo retrieval for listed products and keeps it for ev
   await publishAll(f.owner);
   const after = await f.rows();
   const notion = await f.t.run(ctx => ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", "notion")).unique());
-  expect(after.brandJobs.map(job => [job.productId, job.canonicalDomain])).toEqual([[notion!._id, "notion.so"]]);
-  expect(after.scheduled).toHaveLength(1);
+  const tidal = await f.t.run(ctx => ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", "tidal")).unique());
+  expect(new Set(after.brandJobs.map(job => `${job.productId} ${job.canonicalDomain}`))).toEqual(new Set([`${tidal!._id} tidal.com`, `${notion!._id} notion.so`]));
+  expect(after.scheduled).toHaveLength(2);
 });
 
 test("share-all with nothing left to share is refused and publishes no page", async () => {

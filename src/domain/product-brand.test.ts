@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeProductBrand, productBrandSnapshotSchema, selectProductBrandLogo } from "./product-brand";
+import { brandTitleNamesProduct, normalizeProductBrand, productBrandSnapshotSchema, selectProductBrandLogo } from "./product-brand";
 import wisprReceipt from "../../docs/verification/fixtures/2026-09-17-context-brands/wisprflow.json";
 import githubReceipt from "../../docs/verification/fixtures/2026-09-17-context-brands/github.json";
 
@@ -164,4 +164,20 @@ describe("retained product brand presentation", () => {
     const snapshot = normalizeProductBrand(input, responses);
     expect(productBrandSnapshotSchema.safeParse({ ...snapshot, logos: [{ ...snapshot.logos[0], url }] }).success).toBe(false);
   });
+});
+
+it.each([
+  ["Open Places", ["Open Places"], true],
+  ["open places", ["Open Places", "openplaces"], true],
+  ["OpenPlaces", ["Open Places", "openplaces"], true],
+  ["Cursor: The AI Code Editor", ["Cursor"], true],
+  ["Porkbun | Domains", ["Porkbun"], true],
+  ["Google", ["Gmail", "google mail"], false],
+  ["GitHub", ["GitHub Copilot"], false],
+  ["Cursory", ["Cursor"], false],
+  ["", ["Cursor"], false],
+  [undefined, ["Cursor"], false],
+  ["Cursor", [], false],
+] as const)("a provider brand titled %j is accepted for %j: %j", (title, names, accepted) => {
+  expect(brandTitleNamesProduct(title, names)).toBe(accepted);
 });
