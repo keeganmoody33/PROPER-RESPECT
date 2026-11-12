@@ -37,6 +37,9 @@ test("any product with its own website can have its brand fetched; a product ins
   expect(eligible("manual-porkbun-3", "Porkbun: Email", "porkbun.com")).toBe("UNVERIFIED_DOMAIN");
   expect(eligible("manual-github-1", "GitHub: Actions", "github.com")).toBe("UNVERIFIED_DOMAIN");
   expect(eligible("host-tidal-com", "Tidal", "tidal.com")).toBeNull();
+  // The host of a listed product's website counts as listed too.
+  expect(eligible("manual-grok-bot-2", "Grok Bot", "docs.x.ai")).not.toBeNull();
+  expect(eligible("manual-unlisted-2", "Field Notes", "docs.x.ai")).toBe("UNVERIFIED_DOMAIN");
   expect(eligible("manual-field-notes-2", "Field Notes", "")).toBe("UNVERIFIED_DOMAIN");
   expect(eligible("manual-field-notes-3", "Field Notes", "not a domain")).toBe("UNVERIFIED_DOMAIN");
   // A listed product keeps its listed website, and nothing else may claim a listed product's website.

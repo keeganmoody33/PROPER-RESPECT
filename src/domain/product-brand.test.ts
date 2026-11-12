@@ -186,3 +186,13 @@ it.each([
 ] as const)("a provider brand titled %j is accepted for %j: %j", (title, names, accepted) => {
   expect(brandTitleNamesProduct(title, names)).toBe(accepted);
 });
+
+it("rejects a title padded with a very long run of spaces without a slow scan", () => {
+  const LONG_RUN = 200_000, BUDGET_MS = 200;
+  const started = performance.now();
+  expect(brandTitleNamesProduct(`Cursor${" ".repeat(LONG_RUN)}x`, ["Cursor"])).toBe(false);
+  expect(brandTitleNamesProduct(`Cursor${" ".repeat(LONG_RUN)}- editor`, ["Cursor"])).toBe(false);
+  expect(performance.now() - started).toBeLessThan(BUDGET_MS);
+  expect(brandTitleNamesProduct("Cursor   -   The AI Code Editor", ["Cursor"])).toBe(true);
+  expect(brandTitleNamesProduct("Exa \u2014 Search", ["Exa"])).toBe(true);
+});

@@ -5,7 +5,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { resolveCatalogProduct } from "../src/domain/discovery";
-import { directoryDomainOwner, directoryEntry } from "../src/domain/product-directory";
+import { directoryDomainOwner, directoryEntry, extractDomain } from "../src/domain/product-directory";
 import { DIRECTORY_ENTRIES } from "../src/domain/product-directory-entries";
 import { brandNameKey, canonicalBrandDomainSchema, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
 import { productBrandSnapshotValidator } from "./productBrandTables";
@@ -18,6 +18,10 @@ const PREPARATION_BATCH_SIZE = 25;
 
 type BrandProductIdentity = Pick<Doc<"products">, "slug" | "name" | "domain">;
 type ListedIdentity = Readonly<{ slug: string; domain: string; names: readonly string[]; handChecked: boolean }>;
+
+/** Each listed product's domain and the host of its website: "x.ai" and "docs.x.ai" for Grok Bot. */
+const listedHosts = (entry: (typeof DIRECTORY_ENTRIES)[number]) => [entry.domain, extractDomain(entry.website)];
+const LISTED_HOSTS = new Set(DIRECTORY_ENTRIES.flatMap(listedHosts));
 
 const asIdentity = (entry: (typeof DIRECTORY_ENTRIES)[number]): ListedIdentity =>
   ({ slug: entry.slug, domain: entry.domain, names: [entry.name, ...entry.aliases], handChecked: entry.evidence !== undefined });
@@ -32,7 +36,7 @@ function listedIdentity(product: BrandProductIdentity): ListedIdentity | null {
   const named = product.slug.startsWith("manual-") ? resolveCatalogProduct({ vendor: product.name })?.product : undefined;
   if (named) return { slug: named.slug, domain: named.domain, names: [named.name], handChecked: true };
   const name = brandNameKey(product.name);
-  const match = name ? DIRECTORY_ENTRIES.find(candidate => candidate.domain === product.domain &&
+  const match = name ? DIRECTORY_ENTRIES.find(candidate => listedHosts(candidate).includes(product.domain) &&
     [candidate.name, ...candidate.aliases].some(known => brandNameKey(known) === name)) : undefined;
   return match ? asIdentity(match) : null;
 }
@@ -45,7 +49,7 @@ export function productBrandEligibility(product: BrandProductIdentity) {
   const identity = listedIdentity(product);
   if (!identity) {
     // A listed product's website, root or not, is never an unlisted product's own.
-    const ownWebsite = canonicalBrandDomainSchema.safeParse(product.domain).success && !DIRECTORY_ENTRIES.some(entry => entry.domain === product.domain);
+    const ownWebsite = canonicalBrandDomainSchema.safeParse(product.domain).success && !LISTED_HOSTS.has(product.domain);
     return ownWebsite ? null : "UNVERIFIED_DOMAIN" as const;
   }
   if (identity.domain !== product.domain) return "UNVERIFIED_DOMAIN" as const;
