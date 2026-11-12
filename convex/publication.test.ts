@@ -762,3 +762,16 @@ test("a published card carries the saved level, and a selection whose level diff
   const page = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
   expect(page?.cards.map(card => card.level)).toEqual(["OCCASIONAL"]);
 });
+
+test("a level saved privately publishes through the review defaults the sharing page sends", async () => {
+  const { owner, propIds: [a], published, reviewCards } = await fixture(1);
+  await owner.mutation(api.inventory.save, {
+    propId: a, expectedVersion: 1, operationId: "daily-a", status: "ACTIVE", level: "DAILY",
+    headline: "Relationship 1", note: "Approved note 1", goTo: false,
+  });
+  const card = (await reviewCards()).find(entry => entry.prop._id === a)!;
+  expect(defaultReview(card).level).toBe("DAILY");
+  const selections = fromReview([card], { [a]: { ...defaultReview(card), publish: true } });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
+  expect((await published()).profile.cards.map(entry => [entry.status, entry.level])).toEqual([["ACTIVE", "DAILY"]]);
+});

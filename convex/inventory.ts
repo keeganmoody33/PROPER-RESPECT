@@ -282,7 +282,7 @@ export const exportRelationships = query({
       return {
         id: prop._id,
         product: product ? { name: product.name, slug: product.slug, domain: product.domain } : null,
-        status: prop.status, visibility: prop.visibility, goTo: prop.goTo ?? false,
+        status: prop.status, level: prop.level, visibility: prop.visibility, goTo: prop.goTo ?? false,
         headline: prop.headline, note: prop.note, confirmedAt: prop.confirmedAt,
         relationshipVersion: prop.relationshipVersion ?? 0, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
         supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId,
