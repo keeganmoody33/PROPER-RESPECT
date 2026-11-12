@@ -59,3 +59,13 @@ test("owner source labels distinguish retained accounts while unlabeled sources 
   expect($("li").eq(0).text()).toBe("Synthetic personal GitHub · GITHUB · 2026-09-19T00:00:00.000Z · Retained original");
   expect($("li").eq(1).text()).toBe("GITHUB · 2026-09-19T00:00:00.000Z · Retained original");
 });
+
+test("candidates and the chosen target read their level or fallback words, never a raw status", () => {
+  const archived = { ...candidate, id: "archived" as Id<"props">, status: "ARCHIVED" as const };
+  const paused = { ...candidate, id: "paused" as Id<"props">, status: "ARCHIVED" as const, level: "PAUSED" as const };
+  const $ = load(renderToStaticMarkup(createElement(DiscoveryResolutionView, { ...props, candidates: [archived, paused] })));
+  expect($("select option").map((_, node) => $(node).text()).get().slice(1)).toEqual(["My work record · Used before", "My work record · Paused"]);
+  const bound = load(renderToStaticMarkup(createElement(DiscoveryResolutionView, { ...props, detail: { ...detail, target: paused, expectedHash: "hash" }, candidates: [] })));
+  expect(bound.text()).toContain("Chosen relationship: My work record · Paused.");
+  expect(bound.text().toLowerCase()).not.toContain("archived");
+});

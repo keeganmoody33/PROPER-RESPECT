@@ -210,3 +210,24 @@ test("a stored avatar link over 2,048 characters never leaves the public reader"
   await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "owner", revision: 1, publishedAt: "2026-09-18T00:00:00.000Z", profile }));
   expect((await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" }))?.avatarUrl).toBeUndefined();
 });
+
+test("a stored card keeps a known level, drops an unknown one, and a card without one still reads", async () => {
+  const t = convexTest(schema, modules);
+  const linked = e2eReferenceProfile.cards[0];
+  const stored = {
+    handle: "levels", displayName: "Levels", bio: "",
+    cards: [
+      { ...linked, status: "ACTIVE" as const, level: "DAILY" },
+      { ...linked, status: "ACTIVE" as const, level: "RETIRED_LEVEL" },
+      { ...linked, status: "ARCHIVED" as const },
+    ],
+  };
+  const id = await t.run(ctx => ctx.db.insert("publishedProfiles", { handle: "levels", revision: 1, publishedAt: "2026-11-12T00:00:00.000Z", profile: stored }));
+  const before = await t.run(ctx => ctx.db.get(id));
+  const read = await t.query(api.publicProfiles.getByHandleV2, { handle: "levels" });
+  expect(read?.cards.map(card => [card.status, card.level])).toEqual([["ACTIVE", "DAILY"], ["ACTIVE", undefined], ["ARCHIVED", undefined]]);
+  expect(read?.cards[1]).not.toHaveProperty("level");
+  const legacy = await t.query(api.publicProfiles.getByHandle, { handle: "levels" });
+  expect(legacy?.cards.map(card => card.level)).toEqual(["DAILY", undefined, undefined]);
+  expect(await t.run(ctx => ctx.db.get(id))).toEqual(before);
+});

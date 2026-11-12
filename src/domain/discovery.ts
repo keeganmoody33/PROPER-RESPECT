@@ -3,7 +3,9 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import { evidenceObservationSchema } from "./evidence-claims.ts";
 import { captureProvenanceSchema } from "./capture-provenance.ts";
-import { parseLooseHttpUrl } from "./http-url.ts";
+import { evidenceTier, extractDomain, normalizeVendorName } from "./product-directory.ts";
+
+export { extractDomain, normalizeVendorName } from "./product-directory.ts";
 
 export const evidenceSourceTypeSchema = z.enum([
   "MANUAL",
@@ -74,234 +76,15 @@ type CatalogEntry = ProductIdentity & {
   canonicalUrl?: string;
 };
 
-const VENDOR_CATALOG: CatalogEntry[] = [
-  // Exact product identities already retained with publisher artwork in
-  // public/product-assets/2026-09-24-product-icons.json. Parent domains do not
-  // establish usage of these specific products.
-  {
-    slug: "claude-code", name: "Claude Code", domain: "claude.com",
-    description: "AI-assisted software development.", domains: [], aliases: ["claude code"],
-    canonicalUrl: "https://code.claude.com/docs/en/monitoring-usage",
-  },
-  {
-    slug: "codex", name: "Codex", domain: "openai.com",
-    description: "AI-assisted software development.", domains: [], aliases: ["codex"],
-    canonicalUrl: "https://developers.openai.com/codex/app-server/",
-  },
-  // Official product identity verified at https://www.clay.com on 2026-09-18.
-  {
-    slug: "clay", name: "Clay", domain: "clay.com",
-    description: "Data enrichment and go-to-market workflows.",
-    domains: ["clay.com"], aliases: ["clay"],
-  },
-  {
-    slug: "github",
-    name: "GitHub",
-    domain: "github.com",
-    description: "The home base for code, collaboration, and shipped work.",
-    domains: ["github.com", "github.io"],
-    aliases: ["github", "github inc"],
-  },
-  {
-    slug: "github-copilot",
-    name: "GitHub Copilot",
-    domain: "github.com",
-    description: "GitHub's AI coding assistant.",
-    domains: [],
-    aliases: ["github copilot", "github copilot pro", "github copilot pro+", "github copilot pro plus"],
-    canonicalUrl: "https://github.com/features/copilot",
-  },
-  {
-    slug: "wisprflow",
-    name: "Wispr Flow",
-    domain: "wisprflow.ai",
-    description: "Voice dictation for writing across apps.",
-    domains: ["wisprflow.ai", "flowvoice.ai"],
-    aliases: ["wisprflow", "wispr flow", "wispr"],
-  },
-  {
-    slug: "notebooklm",
-    name: "NotebookLM",
-    domain: "notebooklm.google.com",
-    description: "Research and synthesis over supplied sources.",
-    domains: ["notebooklm.google.com", "notebooklm.google"],
-    aliases: ["notebooklm", "notebook lm", "google notebooklm"],
-  },
-  {
-    slug: "notion",
-    name: "Notion",
-    domain: "notion.so",
-    description: "Docs, wikis, and databases in one connected workspace.",
-    domains: ["notion.so", "notion.site", "notion.com"],
-    aliases: ["notion", "notion labs", "notion labs inc"],
-  },
-  {
-    slug: "devin",
-    name: "Devin",
-    domain: "devin.ai",
-    description: "Autonomous software engineering activity.",
-    domains: ["devin.ai", "app.devin.ai"],
-    aliases: ["devin", "devin cloud", "cognition devin"],
-  },
-  {
-    slug: "devin-desktop",
-    name: "Devin Desktop",
-    domain: "devin.ai",
-    description: "Desktop coding activity in the Devin product family.",
-    domains: [],
-    aliases: ["devin desktop"],
-    canonicalUrl: "https://devin.ai/download",
-  },
-  {
-    slug: "windsurf",
-    name: "Windsurf",
-    domain: "windsurf.com",
-    description: "AI-assisted coding activity across editor workflows.",
-    domains: ["windsurf.com", "codeium.com"],
-    aliases: ["windsurf", "codeium"],
-  },
-  {
-    slug: "greptile",
-    name: "Greptile",
-    domain: "greptile.com",
-    description: "AI code review activity and bugs caught.",
-    domains: ["greptile.com"],
-    aliases: ["greptile"],
-  },
-  // Package names and homepages verified against the installed package manifests.
-  {
-    slug: "clerk", name: "Clerk", domain: "clerk.com",
-    description: "Application authentication.",
-    domains: ["clerk.com"], aliases: ["clerk", "@clerk/nextjs"],
-  },
-  {
-    slug: "convex", name: "Convex", domain: "convex.dev",
-    description: "Application database and backend functions.",
-    domains: ["convex.dev"], aliases: ["convex"],
-  },
-  {
-    slug: "nextjs", name: "Next.js", domain: "nextjs.org",
-    description: "React application framework.",
-    domains: ["nextjs.org"], aliases: ["next", "next.js", "nextjs"],
-  },
-  {
-    slug: "react", name: "React", domain: "react.dev",
-    description: "User interface library.",
-    domains: ["react.dev"], aliases: ["react", "react-dom"],
-  },
-  {
-    slug: "zod", name: "Zod", domain: "zod.dev",
-    description: "Runtime schema parsing and validation.",
-    domains: ["zod.dev"], aliases: ["zod"],
-  },
-  {
-    slug: "typescript", name: "TypeScript", domain: "typescriptlang.org",
-    description: "Static type checking for JavaScript.",
-    domains: ["typescriptlang.org"], aliases: ["typescript"],
-  },
-  // Public identities verified 2026-09-19; sources and limits are recorded in
-  // docs/verification/2026-09-19-catalog-identities.md. These are not usage claims.
-  {
-    slug: "cursor", name: "Cursor", domain: "cursor.com",
-    description: "AI-assisted software development.",
-    domains: ["cursor.com"], aliases: ["cursor"],
-  },
-  {
-    slug: "cloudflare", name: "Cloudflare", domain: "cloudflare.com",
-    description: "Connectivity, security, and application infrastructure platform.",
-    domains: ["cloudflare.com"], aliases: ["cloudflare"],
-  },
-  {
-    slug: "searchable", name: "Searchable", domain: "searchable.com",
-    description: "AI search visibility and analytics.",
-    domains: ["searchable.com"], aliases: ["searchable"],
-  },
-  {
-    slug: "smartlead", name: "Smartlead", domain: "smartlead.ai",
-    description: "Outbound email and sales workflows.",
-    domains: ["smartlead.ai"], aliases: ["smartlead"],
-  },
-  {
-    slug: "findymail", name: "Findymail", domain: "findymail.com",
-    description: "Business contact finding and email verification.",
-    domains: ["findymail.com"], aliases: ["findymail"],
-  },
-  {
-    slug: "hunter", name: "Hunter", domain: "hunter.io",
-    description: "Email finding, verification, and outreach.",
-    domains: ["hunter.io"], aliases: ["hunter"],
-  },
-  {
-    slug: "supabase", name: "Supabase", domain: "supabase.com",
-    description: "Postgres-based application backend platform.",
-    domains: ["supabase.com"], aliases: ["supabase"],
-  },
-  {
-    slug: "neon", name: "Neon", domain: "neon.com",
-    description: "Managed serverless Postgres.",
-    domains: ["neon.com", "neon.tech"], aliases: ["neon"],
-  },
-  {
-    slug: "upstash", name: "Upstash", domain: "upstash.com",
-    description: "Serverless data and messaging infrastructure.",
-    domains: ["upstash.com"], aliases: ["upstash"],
-  },
-  {
-    slug: "posthog", name: "PostHog", domain: "posthog.com",
-    description: "Product analytics and development tools.",
-    domains: ["posthog.com"], aliases: ["posthog"],
-  },
-  {
-    slug: "elevenlabs", name: "ElevenLabs", domain: "elevenlabs.io",
-    description: "AI voice and audio tools.",
-    domains: ["elevenlabs.io"], aliases: ["elevenlabs"],
-  },
-  {
-    slug: "browserbase", name: "Browserbase", domain: "browserbase.com",
-    description: "Browser automation infrastructure.",
-    domains: ["browserbase.com"], aliases: ["browserbase"],
-  },
-  {
-    slug: "ref", name: "Ref", domain: "ref.tools",
-    description: "Documentation tools for software development.",
-    domains: ["ref.tools"], aliases: ["ref"],
-  },
-  {
-    slug: "context7", name: "Context7", domain: "context7.com",
-    description: "Library documentation for coding assistants.",
-    domains: ["context7.com"], aliases: ["context7"],
-  },
-  {
-    slug: "figma", name: "Figma", domain: "figma.com",
-    description: "Collaborative product design tools.",
-    domains: ["figma.com"], aliases: ["figma"],
-  },
-  {
-    slug: "readwise", name: "Readwise", domain: "readwise.io",
-    description: "Highlight collection and review.",
-    domains: ["readwise.io"], aliases: ["readwise"],
-  },
-  {
-    slug: "firecrawl", name: "Firecrawl", domain: "firecrawl.dev",
-    description: "Web crawling and data extraction.",
-    domains: ["firecrawl.dev"], aliases: ["firecrawl"],
-  },
-  {
-    slug: "openrouter", name: "OpenRouter", domain: "openrouter.ai",
-    description: "Unified access to AI model APIs.",
-    domains: ["openrouter.ai"], aliases: ["openrouter"],
-  },
-  {
-    slug: "tailscale", name: "Tailscale", domain: "tailscale.com",
-    description: "Private networking and access control.",
-    domains: ["tailscale.com"], aliases: ["tailscale"],
-  },
-  {
-    slug: "exa", name: "Exa", domain: "exa.ai",
-    description: "Web search and retrieval for AI applications.",
-    domains: ["exa.ai"], aliases: ["exa"],
-  },
-];
+export const VENDOR_CATALOG: readonly CatalogEntry[] = evidenceTier().map(entry => ({
+  slug: entry.slug,
+  name: entry.name,
+  domain: entry.domain,
+  description: entry.description,
+  domains: [...entry.evidence.domains],
+  aliases: [...entry.aliases],
+  ...(entry.evidence.canonicalUrl === undefined ? {} : { canonicalUrl: entry.evidence.canonicalUrl }),
+}));
 
 /** Trusted catalog identity, not a match inferred from an owner's evidence. */
 export function canonicalCatalogProduct(slug: string): ProductIdentity | null {
@@ -314,25 +97,6 @@ export function canonicalCatalogProduct(slug: string): ProductIdentity | null {
 /** Verified catalog domains for bounded email discovery, not evidence of usage. */
 export function canonicalCatalogSenderDomains(): string[] {
   return [...new Set(VENDOR_CATALOG.flatMap(product => product.domains))].sort();
-}
-
-export function normalizeVendorName(input: string): string {
-  return input
-    .toLowerCase()
-    .replace(/,?\s*\b(inc|llc|ltd|corp|co)\.?$/i, "")
-    .replace(/[^a-z0-9 ]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-export function extractDomain(url: string): string | null {
-  const parsed = parseLooseHttpUrl(url);
-  if (!parsed) return null;
-  const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
-  // URL accepts single words. They are not evidence of a product domain
-  // (e.g. a package named "react").
-  if (!/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(host)) return null;
-  return host;
 }
 
 function matchCatalogUrl(input: string, requireProductWebsite = false): CatalogEntry | null {

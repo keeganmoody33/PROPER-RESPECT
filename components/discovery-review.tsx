@@ -1,5 +1,6 @@
 "use client";
 
+import { cardStatusLabel } from "@/src/domain/relationship-level";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { useState } from "react";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
@@ -38,7 +39,7 @@ export function DiscoveryResolutionView({ detail, candidates, hasMoreCandidates,
     <details><summary>Originals in this attachment step ({detail.sources.length})</summary>
       <ul>{detail.sources.map(source => <li key={source.id}>{source.sourceLabel ? `${source.sourceLabel} · ` : ""}{source.sourceType} · <time dateTime={source.capturedAt}>{source.capturedAt}</time>{source.deleted ? " · Deleted; excluded from attachment" : " · Retained original"}</li>)}</ul>
     </details>
-    {detail.target ? <p>Chosen relationship: <strong>{detail.target.headline || "No headline recorded"}</strong> · {detail.target.status.toLowerCase()}. Further steps keep this target.</p> : <>
+    {detail.target ? <p>Chosen relationship: <strong>{detail.target.headline || "No headline recorded"}</strong> · {cardStatusLabel(detail.target)}. Further steps keep this target.</p> : <>
       <label className="review-field">Existing relationship
         <select value={selected?.id ?? ""} disabled={busy} required onChange={event => {
           const candidate = candidates.find(item => item.id === event.target.value);
@@ -46,7 +47,7 @@ export function DiscoveryResolutionView({ detail, candidates, hasMoreCandidates,
           setMessage("");
         }}>
           <option value="">Choose a relationship explicitly</option>
-          {candidates.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.headline || "No headline recorded"} · {candidate.confirmed ? candidate.status.toLowerCase() : "unconfirmed discovery"}{candidate.goTo ? " · saved go-to choice" : ""}</option>)}
+          {candidates.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.headline || "No headline recorded"} · {candidate.confirmed ? cardStatusLabel(candidate) : "unconfirmed discovery"}{candidate.goTo ? " · saved go-to choice" : ""}</option>)}
         </select>
       </label>
       {!candidates.length && !hasMoreCandidates && <p>No matching saved relationships are available.</p>}

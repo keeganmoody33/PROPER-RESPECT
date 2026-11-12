@@ -20,7 +20,7 @@ The product is not an affiliate network, a payment processor, a review site, a c
 | --- | --- | --- |
 | Linker | The person keeping a private collection of their tools and choosing which cards to publish on their profile | Affiliate, influencer |
 | Visitor | Someone browsing a linker's profile | Lead |
-| Product Stack | The set of products a linker uses, tests, or has archived | Link list |
+| Product Stack | The set of products a linker uses, tests, or used before | Link list |
 | Prop | A linker's relationship with one product | Link entry |
 | Product | The tool, app, service, course, community, or physical item being logged | Company page |
 | Link Slot | A card's optional primary link, at most one. Its type is canonical, affiliate, referral or invite, and affiliate and referral links are disclosed on the card. Several slots per card are **Later** | Ad placement |
@@ -31,7 +31,8 @@ The product is not an affiliate network, a payment processor, a review site, a c
 | Proof Source | The origin of proof: content, screenshot, receipt, public profile, extension capture, OAuth/API | Data source |
 | Content Proof | A Loom, YouTube video, article, screenshot, GitHub repo, or note that demonstrates usage | Marketing asset |
 | Usage Claim | The linker's claim that a product belongs on their stack | Verified usage |
-| Status | The linker's current relationship to a product: Active, Testing, Archived | Rank |
+| Usage level | How often the linker says they use a product, one of seven from Tried, didn't adopt to Daily | Rank, score |
+| Status | The stored compatibility field each usage level implies: ACTIVE, TESTING or ARCHIVED. Shown as Using, Testing or Used before only on a card with no level | Rank |
 | Lineage | **Later.** The story of who or what put the linker on to a product | Referral chain |
 | Put On By | **Later.** The field where the linker records lineage | Attribution form |
 | Floating Lineage | **Later.** Lineage pointing to a person/content/community/event not on PROPER-RESPECT | Orphan link |
@@ -39,15 +40,23 @@ The product is not an affiliate network, a payment processor, a review site, a c
 | Claim-on-Visit | Browser extension flow where the linker clicks while on a product page to create proof | Browser tracking |
 | Draft Prop | A prop that has been imported or created but not published | Auto-discovered product |
 
-## Status Model
+## Usage Levels
 
-| Status | Meaning |
-| --- | --- |
-| Active | The linker currently uses and recommends the product |
-| Testing | The linker is trying the product and has not fully adopted it |
-| Archived | The linker used the product before but no longer actively uses it |
+The linker picks one level per product, cold to hot. `src/domain/relationship-level.ts` is the only source of these labels, definitions and implied statuses.
 
-Status is user-curated. Automation may suggest a status, but the linker decides what appears publicly.
+| Level | Definition shown to the linker | Stored status |
+| --- | --- | --- |
+| Tried, didn't adopt | I tried it and decided not to use it. | ARCHIVED |
+| Stopped using | I used it for real work and no longer do. | ARCHIVED |
+| Paused | I'm not using it now and may come back. | ARCHIVED |
+| Occasionally | I reach for it less than once a week, when a job needs it. | ACTIVE |
+| Testing | I'm evaluating it and haven't decided. | TESTING |
+| Weekly | I use it most weeks. | ACTIVE |
+| Daily | I use it on most working days. | ACTIVE |
+
+A card saved before levels has a status and no level. It reads Using (ACTIVE), Testing (TESTING) or Used before (ARCHIVED) until the linker picks a level.
+
+Levels are user-curated. Nothing derives a level from usage data, counts or dates. The order is for display and filtering, not a score, and no level is compared between people. Go-to is a separate mark the linker sets; a level never sets or clears it.
 
 ## Proof Model
 

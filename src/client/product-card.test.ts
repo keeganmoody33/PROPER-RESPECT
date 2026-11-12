@@ -143,12 +143,13 @@ test.each(["headlineMetrics", "codingActivity"] as const)(
   },
 );
 
-test.each(["ACTIVE", "TESTING", "ARCHIVED"] as const)(
-  "%s without a start date does not imply an unsupported usage relationship or duration",
-  (status) => {
+test.each([["ACTIVE", "USING"], ["TESTING", "TESTING"], ["ARCHIVED", "USED BEFORE"]] as const)(
+  "%s without a level or start date falls back to %s and implies no duration",
+  (status, words) => {
     const $ = renderCard({ status });
 
-    expect($(".card-title .eyebrow").text()).toBe(status);
+    expect($(".card-title .eyebrow").text()).toBe(words);
+    expect($(".status-row").text()).toContain(words);
   },
 );
 
@@ -302,14 +303,39 @@ test("missing optional brand fields remain inspectable without making the card i
   expect($(".brand-receipts").text()).toContain("styleguide: error · HTTP 503");
 });
 
-test.each(["ACTIVE", "TESTING", "ARCHIVED"] as const)(
-  "%s retains the supplied relationship start year",
-  (status) => {
+test.each([["ACTIVE", "USING · SINCE 2024"], ["TESTING", "TESTING · SINCE 2024"], ["ARCHIVED", "USED BEFORE · STARTED 2024"]] as const)(
+  "%s without a level retains the supplied relationship start year",
+  (status, topLine) => {
     const $ = renderCard({ status, startedAt: "2024-06-03" });
 
-    expect($(".card-title .eyebrow").text()).toBe(`${status} · SINCE 2024`);
+    expect($(".card-title .eyebrow").text()).toBe(topLine);
   },
 );
+
+test.each([
+  ["TRIED_NOT_ADOPTED", "ARCHIVED", "TRIED, DIDN'T ADOPT"],
+  ["STOPPED", "ARCHIVED", "STOPPED USING · STARTED 2022"],
+  ["PAUSED", "ARCHIVED", "PAUSED · STARTED 2022"],
+  ["OCCASIONAL", "ACTIVE", "OCCASIONALLY · SINCE 2022"],
+  ["TESTING", "TESTING", "TESTING · SINCE 2022"],
+  ["WEEKLY", "ACTIVE", "WEEKLY · SINCE 2022"],
+  ["DAILY", "ACTIVE", "DAILY · SINCE 2022"],
+] as const)("level %s shows its own label on the top line", (level, status, line) => {
+  const $ = renderCard({ status, level, startedAt: "2022-04-05" });
+
+  expect($(".card-title .eyebrow").text()).toBe(line);
+  expect($(".product-card").text()).not.toContain("ARCHIVED");
+});
+
+test("a go-to card keeps its go-to badge whatever its level", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, {
+    card: { ...baseCard, status: "ACTIVE", level: "OCCASIONAL", startedAt: "2023-01-01" }, index: 0, goTo: true,
+  })));
+
+  expect($(".card-title .eyebrow").text()).toBe("OCCASIONALLY · SINCE 2023");
+  expect($(".card-footer .card-go-to").text()).toBe("Owner-selected go-to");
+  expect($(".card-back .card-go-to").text()).toBe("Owner-selected go-to");
+});
 
 const activityEvidence = {
   attributionScope: "PERSONAL" as const,
@@ -340,7 +366,8 @@ for (const audience of ["owner", "visitor"] as const) {
     expect(meta.text()).toContain("Snapshot recorded 2026-09-18");
     expect(meta.text()).toContain("2026-09-01 to 2026-09-15");
     expect(meta.text()).toContain(activity.provenanceLabel);
-    expect($(".status-row").text()).toContain("ARCHIVED");
+    expect($(".status-row").text()).toContain("USED BEFORE");
+    expect($(".product-card").text()).not.toContain("ARCHIVED");
   });
 }
 

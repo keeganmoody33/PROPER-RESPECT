@@ -314,3 +314,12 @@ test("a deleted original exports only that it existed and when it was deleted", 
   const serialized = JSON.stringify(rows);
   for (const identifying of ["receipt.txt", "mail.example", "shared.example/account", "activity.json"]) expect(serialized).not.toContain(identifying);
 });
+
+test("the export carries each relationship's chosen level beside its status", async () => {
+  const { owner, t, propIds: [leveled, plain] } = await fixture({ props: 2 });
+  await t.run(ctx => ctx.db.patch(leveled, { status: "ARCHIVED", level: "STOPPED" }));
+  const rows = await owner.query(api.inventory.exportRelationships, { paginationOpts: { numItems: 25, cursor: null } });
+  const byId = new Map(rows.page.map(row => [row.id, row]));
+  expect([byId.get(leveled)?.status, byId.get(leveled)?.level]).toEqual(["ARCHIVED", "STOPPED"]);
+  expect(byId.get(plain)?.level).toBeUndefined();
+});

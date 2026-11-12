@@ -4,7 +4,7 @@ import { canonicalJson } from "./canonical-json";
 import { DEFAULT_USAGE_LINK_LABEL, usageLinkUrlSchema, type UsageLink, type UsageLinkLabel } from "./usage-links";
 
 export type ReviewCard = {
-  prop: Pick<CuratedProp, "visibility" | "status" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & {
+  prop: Pick<CuratedProp, "visibility" | "status" | "level" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & {
     relationshipVersion?: number;
     supportingUrl?: string;
   };
@@ -90,9 +90,21 @@ export function setReviewCostVisibility<T extends ReviewCard & { prop: { _id: st
   return next;
 }
 
+export type CardLink = Pick<CuratedProp["links"][number], "type" | "url" | "label">;
+
+/**
+ * The link a card offers before anyone edits it: the owner's saved primary
+ * link, else the product's own site. SAVED is owner-chosen, DOMAIN is derived.
+ */
+export function defaultPrimaryLink(saved: CardLink | undefined, domain: string):
+  { source: "SAVED" | "DOMAIN"; link: CardLink } | null {
+  if (saved) return { source: "SAVED", link: { type: saved.type, url: saved.url, label: saved.label } };
+  return domain ? { source: "DOMAIN", link: { type: "CANONICAL", url: `https://${domain}`, label: "Open product" } } : null;
+}
+
 // Opening review must not promote a proposed relationship or change the owner's link.
 export function defaultReview(card: ReviewCard) {
-  const primary = card.links.find(link => link.isPrimary);
+  const primary = defaultPrimaryLink(card.links.find(link => link.isPrimary), card.product.domain)?.link;
   // The link goes public only by choice: kept when this card already shows
   // this same link, off otherwise.
   const keepsUsageLink = card.isPublishedAtCurrentHandle === true && card.publishedUsageLink !== undefined &&
@@ -101,10 +113,11 @@ export function defaultReview(card: ReviewCard) {
     basis: reviewBasis(card),
     publish: card.isPublishedAtCurrentHandle === true,
     status: card.prop.status,
+    level: card.prop.level,
     headline: card.prop.headline,
     note: card.prop.note,
     startedAt: card.prop.startedAt ?? "",
-    linkUrl: primary?.url ?? (card.product.domain ? `https://${card.product.domain}` : ""),
+    linkUrl: primary?.url ?? "",
     linkType: primary?.type ?? "CANONICAL" as const,
     linkLabel: primary?.label ?? "Open product",
     approveActivity: refreshesPublishedCalendar(card) || (card.isPublishedAtCurrentHandle === true && Boolean(card.publishedActivity) &&

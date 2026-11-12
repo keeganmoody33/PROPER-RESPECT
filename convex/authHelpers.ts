@@ -40,15 +40,18 @@ const WRITE_LIMITS: Record<LimitedOperation, { limit: number; label: string }> =
   beginUpload: { limit: 30, label: "upload attempts" },
   publishSelected: { limit: 20, label: "publication changes" },
   connectGithub: { limit: 10, label: "GitHub connection attempts" },
+  saveStack: { limit: 150, label: "saved products" },
 };
 const HOUR_MS = 60 * 60 * 1000;
 
 // Called inside the write transaction; Convex retries conflicting increments.
 // Keep one row per owner/operation and reuse it at each UTC hour boundary.
+// A batch spends several units at once and is refused whole when they don't all fit.
 export async function consumeWriteLimit(
   ctx: GenericMutationCtx<DataModel>,
   userId: Id<"users">,
   operation: LimitedOperation,
+  units = 1,
 ) {
   const now = Date.now();
   const windowStart = Math.floor(now / HOUR_MS) * HOUR_MS;
@@ -57,11 +60,11 @@ export async function consumeWriteLimit(
     .withIndex("by_user_operation", q => q.eq("userId", userId).eq("operation", operation))
     .unique();
   const count = current?.windowStart === windowStart ? current.count : 0;
-  if (count >= limit) {
+  if (count + units > limit) {
     const minutes = Math.max(1, Math.ceil((windowStart + HOUR_MS - now) / 60_000));
     throw new ConvexError(`Too many ${label}. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
   }
-  const value = { windowStart, count: count + 1 };
+  const value = { windowStart, count: count + units };
   if (current) await ctx.db.patch(current._id, value);
   else await ctx.db.insert("rateLimits", { userId, operation, ...value });
 }

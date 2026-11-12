@@ -18,7 +18,7 @@ export function agentInstructions() {
 > Proper Respect builds an evidence-backed representation of an individual's relationship with technology: tools used or tried, relationship changes, and measurable activity with its source context.
 
 Created by lecturesfrom. Contact: 33@lecturesfrom.com.
-Updated: 2026-09-23
+Updated: 2026-11-12
 
 ## When to use Proper Respect
 

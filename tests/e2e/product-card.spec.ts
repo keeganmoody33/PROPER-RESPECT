@@ -169,13 +169,13 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
   const copilot = page.locator('section[aria-label="Copilot in your collection"]');
   const selector = github.getByRole("combobox", { name: "Record to inspect for GitHub", exact: true });
   const note = github.getByRole("textbox", { name: "Explanation or workflow (optional)", exact: true });
-  const assertInspected = async (id: string, status: string, headline: string, savedNote: string) => {
+  const assertInspected = async (id: string, topLine: string, headline: string, savedNote: string) => {
     await expect(selector).toHaveValue(id);
     await expect(github.locator(".product-card")).toHaveCount(1);
-    await expect(github.locator(".card-title .eyebrow")).toHaveText(status);
+    await expect(github.locator(".card-title .eyebrow")).toHaveText(topLine);
     await expect(github.locator(".card-headline")).toHaveText(headline);
     if (!await note.isVisible()) await github.getByText("Manage relationship and context", { exact: true }).click();
-    await expect(github.getByRole("combobox", { name: "How it fits", exact: true })).toHaveValue(status);
+    await expect(github.getByRole("combobox", { name: "How it fits", exact: true })).toHaveValue("");
     await expect(note).toHaveValue(savedNote);
     await expect(page.locator("#save-count")).toHaveText("0");
   };
@@ -190,22 +190,22 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
   expect(selectorBounds.x).toBeGreaterThanOrEqual(groupBounds.x);
   expect(selectorBounds.x + selectorBounds.width).toBeLessThanOrEqual(groupBounds.x + groupBounds.width + 1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
+  await assertInspected("synthetic-active", "USING", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
   await note.fill("An unsaved synthetic edit.");
   await selector.selectOption("synthetic-testing");
   await assertInspected("synthetic-testing", "TESTING", "Testing a GitHub workflow", "Synthetic testing note.");
   await selector.selectOption("synthetic-archived");
-  await assertInspected("synthetic-archived", "ARCHIVED", "Earlier GitHub workflow", "Synthetic archived note.");
+  await assertInspected("synthetic-archived", "USED BEFORE", "Earlier GitHub workflow", "Synthetic archived note.");
   await page.getByRole("button", { name: "Current", exact: true }).click();
-  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
+  await assertInspected("synthetic-active", "USING", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
   await expect(copilot).toBeVisible();
   await page.getByRole("button", { name: "Testing", exact: true }).click();
   await assertInspected("synthetic-testing", "TESTING", "Testing a GitHub workflow", "Synthetic testing note.");
   await expect(copilot).toHaveCount(0);
-  await page.getByRole("button", { name: "Archived", exact: true }).click();
-  await assertInspected("synthetic-archived", "ARCHIVED", "Earlier GitHub workflow", "Synthetic archived note.");
+  await page.getByRole("button", { name: "Used before", exact: true }).click();
+  await assertInspected("synthetic-archived", "USED BEFORE", "Earlier GitHub workflow", "Synthetic archived note.");
   await page.getByRole("button", { name: "All", exact: true }).click();
-  await assertInspected("synthetic-active", "ACTIVE", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
+  await assertInspected("synthetic-active", "USING", "Current GitHub workflow with retained private account and repository context", "Synthetic current note.");
   await expect(page.locator(".product-card")).toHaveCount(2);
   await expect(copilot.locator(".card-headline")).toHaveText("Separate Copilot workflow");
   await expect(page.locator("#save-count")).toHaveText("0");

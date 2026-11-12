@@ -1,5 +1,6 @@
 "use client";
 
+import { cardStatusLabel } from "@/src/domain/relationship-level";
 import { useRef, useState } from "react";
 import { MAILBOX_TESTERS_ONLY } from "@/src/domain/mailbox-testers";
 import { useAction, useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
@@ -86,7 +87,7 @@ function UnmatchedRecords() {
         <label>Attach to a product in your collection
           <select name="propId" required defaultValue="" disabled={busy}>
             <option value="">Choose a product</option>
-            {choices.results.map(item => <option key={item.prop._id} value={item.prop._id}>{item.product.name} · {item.prop.status.toLowerCase()}{item.prop.headline ? ` · ${item.prop.headline.slice(0, 70)}` : ""}</option>)}
+            {choices.results.map(item => <option key={item.prop._id} value={item.prop._id}>{item.product.name} · {cardStatusLabel(item.prop)}{item.prop.headline ? ` · ${item.prop.headline.slice(0, 70)}` : ""}</option>)}
           </select>
         </label>
         <div className="action-row">

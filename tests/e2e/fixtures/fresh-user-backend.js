@@ -4,6 +4,8 @@ import { useState, useSyncExternalStore } from "react";
 import { getFunctionName } from "convex/server";
 import { parseMeasurementImport, reviewMeasurementImports, projectMeasurement } from "../../../src/domain/measurements";
 import { publicProfileSchema } from "../../../src/domain/public-profile";
+import { directoryEntry } from "../../../src/domain/product-directory";
+import { shareAllSelections } from "../../../src/domain/share-all";
 
 const key = "proper-respect-fresh-user-fixture";
 const empty = [];
@@ -26,7 +28,57 @@ function record(name, args) {
   const calls = JSON.parse(localStorage.getItem(`${key}-calls`) ?? "[]");
   localStorage.setItem(`${key}-calls`, JSON.stringify([...calls, { name, args }]));
 }
+// Share-all runs the real selection rules over the synthetic saved cards.
+function shareAll() {
+  const cards = state.cards.filter(card => card.product);
+  const result = shareAllSelections(cards.map(card => ({
+    propId: card.prop._id, visibility: card.prop.visibility, onPublishedPage: card.isPublishedAtCurrentHandle === true,
+    relationshipVersion: card.prop.relationshipVersion, status: card.prop.status, level: card.prop.level, headline: card.prop.headline, note: card.prop.note,
+    product: { name: card.product.name, domain: card.product.domain }, primaryLink: card.links.find(link => link.isPrimary),
+  })));
+  const shared = result.selections.map(selection => {
+    const { product } = cards.find(card => card.prop._id === selection.propId);
+    return { product: { name: product.name, slug: product.slug, domain: product.domain, description: product.description }, status: selection.status, level: selection.level,
+      headline: selection.headline, note: selection.note, ...(selection.primaryLink ? { primaryLink: selection.primaryLink } : {}) };
+  });
+  const profile = publicProfileSchema.parse({ ...state.user, cards: shared });
+  return { result, profile, previewHash: `synthetic-share-all-${result.selections.map(selection => selection.propId).join(",")}` };
+}
+function stackProduct(pick) {
+  if (pick.kind === "directory") {
+    const entry = directoryEntry(pick.slug);
+    if (!entry) throw new Error(`${pick.slug} is not in the directory. Search for it again.`);
+    return { product: { _id: `product-${entry.slug}`, _creationTime: 1, name: entry.name, slug: entry.slug, domain: entry.domain, description: entry.description }, website: entry.website };
+  }
+  const slug = `manual-${pick.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  return { product: { _id: `product-${slug}`, _creationTime: 1, name: pick.name, slug, domain: "", description: "" }, website: pick.website };
+}
 const mutations = {
+  "stack:saveSelection": async args => {
+    record("saveSelection", args);
+    if (args.operationId.includes(":")) throw new Error("Invalid save operation.");
+    const body = JSON.stringify(args.picks);
+    const previous = state.stackOperations?.[args.operationId];
+    if (previous) {
+      if (previous.body !== body) throw new Error("This save was already used with different picks.");
+      return previous.result;
+    }
+    let cards = state.cards;
+    const items = args.picks.map(pick => {
+      const { product, website } = stackProduct(pick);
+      const existing = cards.find(card => card.product.slug === product.slug);
+      if (existing && existing.prop.visibility !== "DRAFT") return { propId: existing.prop._id, productName: product.name, outcome: "UNCHANGED" };
+      const prop = { ...(existing?.prop ?? { _id: `stack-${product.slug}`, _creationTime: 1, userId: state.user._id, productId: product._id, headline: "", note: "" }),
+        status: pick.status, level: pick.level, visibility: "PRIVATE", confirmedAt: "2026-11-12T12:00:00Z", relationshipVersion: 1, goTo: false };
+      const card = { product, prop, links: website ? [{ type: "CANONICAL", url: website, label: `Open ${product.name}`, isPrimary: true }] : [], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false };
+      cards = existing ? cards.map(item => item === existing ? card : item) : [...cards, card];
+      return { propId: prop._id, productName: product.name, outcome: existing ? "CONFIRMED_DRAFT" : "CREATED" };
+    });
+    const count = outcome => items.filter(item => item.outcome === outcome).length;
+    const result = { items, created: count("CREATED"), confirmed: count("CONFIRMED_DRAFT"), unchanged: count("UNCHANGED") };
+    retain({ ...state, cards, stackOperations: { ...state.stackOperations, [args.operationId]: { body, result } } });
+    return result;
+  },
   "onboarding:ensureAccount": async args => {
     record("ensureAccount", args);
     if (!state) retain({
@@ -52,9 +104,9 @@ const mutations = {
     record("savePrivately", args);
     const card = state.cards.find(card => card.prop._id === args.propId);
     if (!card || args.expectedVersion !== (card.prop.relationshipVersion ?? 0)) throw new Error("Stale fixture relationship.");
-    const { status, goTo, headline, note, startedAt, supportingUrl } = args;
+    const { status, level, goTo, headline, note, startedAt, supportingUrl } = args;
     const version = args.expectedVersion + 1;
-    retain({ ...state, history: [...(state.history ?? []), { _id: `event-${args.propId}-${version}`, propId: args.propId, recordedAt: new Date().toISOString(), before: { ...card.prop, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT" }, after: { status, goTo, headline, note, startedAt, supportingUrl } }], cards: state.cards.map(item => item === card ? { ...item, prop: { ...item.prop, status, goTo, headline, note, startedAt, supportingUrl, relationshipVersion: version, confirmedAt: "2026-09-22T12:00:00Z", visibility: "PRIVATE" } } : item) });
+    retain({ ...state, history: [...(state.history ?? []), { _id: `event-${args.propId}-${version}`, propId: args.propId, recordedAt: new Date().toISOString(), before: { ...card.prop, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT" }, after: { status, level, goTo, headline, note, startedAt, supportingUrl } }], cards: state.cards.map(item => item === card ? { ...item, prop: { ...item.prop, status, level, goTo, headline, note, startedAt, supportingUrl, relationshipVersion: version, confirmedAt: "2026-09-22T12:00:00Z", visibility: "PRIVATE" } } : item) });
     return { version, duplicate: false };
   },
   "retainedEvidence:importMeasurements": async args => {
@@ -86,7 +138,16 @@ const mutations = {
   },
   "onboarding:publishSelected": async args => {
     record("publishSelected", args);
-    // Only "unpublish all" (R15) publishes here.
+    if (args.shareAllConfirmed) {
+      const { result, previewHash } = shareAll();
+      if (args.expectedPreviewHash !== previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
+      if (!result.selections.length) throw new Error("There are no confirmed cards left to share.");
+      const shared = new Set(result.selections.map(selection => selection.propId));
+      retain({ ...state, hasPublicationAtCurrentHandle: true, cards: state.cards.map(card => shared.has(card.prop._id)
+        ? { ...card, isPublishedAtCurrentHandle: true, prop: { ...card.prop, visibility: "PUBLIC" } } : card) });
+      return null;
+    }
+    // Only "unpublish all" (R15) and share-all publish here.
     if (!args.removeAllCards) throw new Error("Publication is intentionally outside this fixture journey.");
     retain({ ...state, cards: state.cards.map(card => ({ ...card, isPublishedAtCurrentHandle: false, prop: { ...card.prop, visibility: card.prop.visibility === "PUBLIC" ? "PRIVATE" : card.prop.visibility } })) });
     return null;
@@ -110,11 +171,16 @@ const client = {
     if (exportQuery) { record(getFunctionName(ref), args); return exportQuery(args); }
     if (getFunctionName(ref) !== "onboarding:previewPublication") throw new Error("Unexpected fixture query.");
     record("previewPublication", args);
+    if (args.shareAllConfirmed) {
+      if (!state.hasClaimedPublicIdentity) throw new Error("Claim your public handle before sharing your stack.");
+      const { result, profile, previewHash } = shareAll();
+      return { profile, refreshAccounts: [], revision: 0, previewHash, sharedCount: result.selections.length, remainingCount: result.remainingCount, skipped: result.skipped };
+    }
     const cards = args.removeAllCards ? [] : args.selections.filter(selection => selection.publish).map(selection => {
       const saved = state.cards.find(card => card.prop._id === selection.propId);
       if (saved.prop.visibility !== "PRIVATE") throw new Error("Save privately before preview.");
       const measurements = (state.measurementCaptures ?? []).filter(capture => capture.propId === saved.prop._id && (selection.measurementEvidenceIds ?? []).includes(capture.rawEvidenceId)).flatMap(capture => capture.measurements.filter(row => capture.reviewedMeasurementIds.includes(row.id)).map(projectMeasurement));
-      return { ...(measurements.length ? { measurements } : {}), product: saved.product, status: selection.status, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink, activity: selection.activity };
+      return { ...(measurements.length ? { measurements } : {}), product: saved.product, status: selection.status, level: selection.level, headline: selection.headline, note: selection.note, goTo: saved.prop.goTo, primaryLink: selection.primaryLink, activity: selection.activity };
     });
     const refreshAccounts = args.selections.filter(selection => selection.publish && selection.autoRefresh).map(selection => {
       const connector = state.connectors.find(connector => connector._id === selection.connectorId);
@@ -144,7 +210,7 @@ export function useQuery(ref, args) {
 }
 function located(card) {
   return { propId: card.prop._id, productId: card.product._id, name: card.product.name, domain: card.product.domain,
-    status: card.prop.status, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT", goTo: card.prop.goTo ?? false, headline: card.prop.headline };
+    status: card.prop.status, level: card.prop.level, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT", goTo: card.prop.goTo ?? false, headline: card.prop.headline };
 }
 export function usePaginatedQuery(ref, args, options) {
   const current = useSyncExternalStore(subscribe, snapshot, snapshot);

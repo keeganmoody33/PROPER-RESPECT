@@ -67,7 +67,7 @@ async function reviewedPublication(owner: Pick<TestConvex<typeof schema>, "query
 function fromReview(cards: Awaited<ReturnType<Awaited<ReturnType<typeof fixture>>["reviewCards"]>>, edits: Record<string, ReviewEdit>): Selection[] {
   return explicitPublicationCards(cards, edits).map(({ card, edit }) => ({
     propId: card.prop._id, expectedRelationshipVersion: card.prop.relationshipVersion ?? 0,
-    publish: edit.publish, status: edit.status, headline: edit.headline, note: edit.note,
+    publish: edit.publish, status: edit.status, level: edit.level, headline: edit.headline, note: edit.note,
     startedAt: edit.startedAt || undefined,
     primaryLink: { type: edit.linkType, url: edit.linkUrl, label: edit.linkLabel },
     activity: edit.publish && edit.approveActivity ? card.prop.activity : undefined,
@@ -747,4 +747,49 @@ test("replacement approval creates a new grant without rewriting the old grant's
   expect(grants.find(grant => grant._id === old._id)).toMatchObject({ githubBinding: old.githubBinding, revokedAt: "2026-10-01T00:00:00.000Z" });
   expect(grants.find(grant => grant._id !== old._id)).toMatchObject({ githubBinding: { providerAccountId: "U_replacement", generation: 2 } });
   expect(await f.refreshApproved()).toBe(true);
+});
+
+test("a published card carries the saved level, and a selection whose level differs from the saved one is refused", async () => {
+  const { t, owner, propIds: [a], selection, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(a, { level: "OCCASIONAL", goTo: true }));
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a, { level: "DAILY" })] }))
+    .rejects.toThrow("Save relationship changes privately before publishing.");
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a)] }))
+    .rejects.toThrow("Save relationship changes privately before publishing.");
+  const selections = [await selection(a, { level: "OCCASIONAL" })];
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
+  expect((await published()).profile.cards.map(card => [card.status, card.level, card.goTo])).toEqual([["ACTIVE", "OCCASIONAL", true]]);
+  const page = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(page?.cards.map(card => card.level)).toEqual(["OCCASIONAL"]);
+});
+
+test("a level saved privately publishes through the review defaults the sharing page sends", async () => {
+  const { owner, propIds: [a], published, reviewCards } = await fixture(1);
+  await owner.mutation(api.inventory.save, {
+    propId: a, expectedVersion: 1, operationId: "daily-a", status: "ACTIVE", level: "DAILY",
+    headline: "Relationship 1", note: "Approved note 1", goTo: false,
+  });
+  const card = (await reviewCards()).find(entry => entry.prop._id === a)!;
+  expect(defaultReview(card).level).toBe("DAILY");
+  const selections = fromReview([card], { [a]: { ...defaultReview(card), publish: true } });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections }));
+  expect((await published()).profile.cards.map(entry => [entry.status, entry.level])).toEqual([["ACTIVE", "DAILY"]]);
+});
+
+test("publishing another card leaves a level the registry no longer knows on the omitted card's stored snapshot", async () => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture();
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  const first = await published();
+  const retired = { ...first.profile, cards: [{ ...first.profile.cards[0], level: "RETIRED_LEVEL" }, first.profile.cards[1]] };
+  await t.run(ctx => ctx.db.patch(first._id, { profile: retired }));
+  const selections = [await selection(b, { primaryLink: { type: "CANONICAL", url: "https://shared.example", label: "Reconfirmed B" } })];
+  const preview = await owner.query(api.onboarding.previewPublication, { selections });
+  expect(preview.profile.cards.map(card => card.level)).toEqual([undefined, undefined]);
+  expect((await published()).profile).toEqual(retired);
+  await owner.mutation(api.onboarding.publishSelected, { selections, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  const after = await published();
+  expect(after.profile.cards[0]).toEqual(retired.cards[0]);
+  expect(after.profile.cards[1]).toMatchObject({ primaryLink: { label: "Reconfirmed B" } });
+  const page = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(page?.cards.map(card => card.level)).toEqual([undefined, undefined]);
 });

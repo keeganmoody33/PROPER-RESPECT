@@ -41,7 +41,9 @@ const result = {
   evidenceCapturedAt: input.capturedAt,
   execution: "LOCAL_REPLAY_NOT_LIVE_IMPORT",
   sourceCommit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: repo, encoding: "utf8" }).trim(),
-  resolverSha256: createHash("sha256").update(readFileSync(resolve(repo, "src/domain/discovery.ts"))).digest("hex"),
+  // Catalog rows and their derivation live outside discovery.ts, so the resolver is all three files.
+  resolverSha256: ["src/domain/discovery.ts", "src/domain/product-directory.ts", "src/domain/product-directory-entries.ts"]
+    .reduce((hash, file) => hash.update(readFileSync(resolve(repo, file))), createHash("sha256")).digest("hex"),
   inputSha256: createHash("sha256").update(bytes).digest("hex"),
   entries: input.entries,
   proposals: proposals.map(proposal => ({

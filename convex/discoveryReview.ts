@@ -67,7 +67,7 @@ async function expectation(draft: Doc<"draftImports">, product: Doc<"products">,
 }
 
 function relationship(prop: Doc<"props">) {
-  return { id: prop._id, headline: prop.headline, note: prop.note, status: prop.status, confirmed: isRelationshipConfirmed(prop), goTo: prop.goTo ?? false };
+  return { id: prop._id, headline: prop.headline, note: prop.note, status: prop.status, ...(prop.level ? { level: prop.level } : {}), confirmed: isRelationshipConfirmed(prop), goTo: prop.goTo ?? false };
 }
 
 function progress(draft: Doc<"draftImports">) {
