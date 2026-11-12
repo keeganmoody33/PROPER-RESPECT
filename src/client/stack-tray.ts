@@ -111,6 +111,11 @@ export function saveAttempt(previous: SaveAttempt | null, picks: readonly StackP
   return previous?.body === body ? previous : { body, operationId: newId() };
 }
 
+/** The option an arrow key makes active among `count` options; a negative `current` means none is active yet. */
+export function nextActiveOption(current: number, step: 1 | -1, count: number): number {
+  return (current + step + count) % count;
+}
+
 export function saveButtonLabel(count: number) {
   return `Save ${count} tool${count === 1 ? "" : "s"} privately`;
 }

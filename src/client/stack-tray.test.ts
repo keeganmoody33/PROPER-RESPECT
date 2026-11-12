@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addedMessage, emptyTray, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
+import { addedMessage, emptyTray, nextActiveOption, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
 import { resolveTypedPick } from "./typed-pick";
 
 const windsurf: TrayEntry = { slug: "windsurf", name: "Windsurf", domain: "windsurf.com" };
@@ -96,6 +96,22 @@ test("saving empties the tray and reports what the server did", () => {
   expect(tray).toEqual({ items: [], lastAdded: null, saved: { saved: SAVED, created: CREATED, confirmed: 1, unchanged: 1 } });
   expect(savedMessage(tray.saved!)).toBe("Saved 6 tools privately. Nothing is public yet. 1 discovery was confirmed. 1 already in your collection kept its saved choices.");
   expect(trayReducer(tray, { type: "addEntry", entry: hubspot, held: [] }).saved).toBeNull();
+});
+
+test("arrow keys from no active option go to the first or last option, then wrap", () => {
+  const DOWN = 1;
+  const UP = -1;
+  const UNSET = -1;
+  const NINE = 9;
+  const LAST = 8;
+  const MIDDLE = 3;
+  const cases = [
+    [UNSET, DOWN, 0, UNSET], [UNSET, UP, 0, UNSET],
+    [UNSET, DOWN, 1, 0], [UNSET, UP, 1, 0], [0, DOWN, 1, 0], [0, UP, 1, 0],
+    [UNSET, DOWN, NINE, 0], [UNSET, UP, NINE, LAST], [LAST, DOWN, NINE, 0], [0, UP, NINE, LAST],
+    [MIDDLE, UP, NINE, MIDDLE - 1], [MIDDLE, DOWN, NINE, MIDDLE + 1],
+  ] as const;
+  expect(cases.map(([current, step, count]) => nextActiveOption(current, step, count))).toEqual(cases.map(([, , , expected]) => expected));
 });
 
 test("a retry of the same picks reuses its operation, and any change in picks or order starts a new one", () => {

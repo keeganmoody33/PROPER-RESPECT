@@ -10,6 +10,7 @@ const HEIGHT = 900;
 const DESKTOP = 1280;
 const PHONE = 375;
 const SHARED = 13;
+const SEVERAL = 2;
 // Swaps "@clerk/nextjs" and "convex/react" for synthetic stand-ins; "convex/server" stays real.
 const boundary = /^(@clerk\/nextjs|convex\/react)$/;
 const anyPath = /.*/;
@@ -232,6 +233,25 @@ test("arrow keys keep the active option inside the scrolled listbox, including w
   await search.press("ArrowUp");
   expect(await activeIndex()).toBe(count - 1);
   await expect.poll(activeInView).toBe(true);
+});
+
+test("ArrowUp on a fresh query makes the last option active, and Enter adds that option", async ({ page: browserPage }) => {
+  await open(browserPage, DESKTOP, "light");
+  const builder = browserPage.getByRole("region", { name: "Build your stack" });
+  await expect(builder.getByRole("button", { name: "Sales", exact: true })).toBeVisible();
+  const search = builder.getByRole("combobox", { name: "Search products" });
+  const results = builder.getByRole("listbox", { name: "Matching products" });
+  await search.fill("figma");
+  await search.press("ArrowDown");
+  await search.fill("ca");
+  const options = results.getByRole("option");
+  await expect(options.last()).toContainText("Add “ca”");
+  const count = await options.count();
+  expect(count).toBeGreaterThan(SEVERAL);
+  await search.press("ArrowUp");
+  expect((await search.getAttribute("aria-activedescendant"))?.endsWith(`option-${count - 1}`)).toBe(true);
+  await search.press("Enter");
+  await expect(builder.getByRole("list", { name: "Your list (1)" }).locator("strong")).toHaveText(["ca"]);
 });
 
 test("a failed save keeps the tray and reuses its operation for the unchanged retry", async ({ page: browserPage }) => {

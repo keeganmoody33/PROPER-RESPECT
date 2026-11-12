@@ -5,7 +5,7 @@ import { useMutation } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { SaveSelectionResult } from "@/convex/stack";
 import {
-  addedMessage, emptyTray, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, trayPicks, trayReducer,
+  addedMessage, emptyTray, nextActiveOption, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, trayPicks, trayReducer,
   type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus, type TypedResolution,
 } from "@/src/client/stack-tray";
 import styles from "./stack-builder.module.css";
@@ -104,7 +104,7 @@ export function StackBuilder({ held, onSave }: { held: readonly string[]; onSave
       event.preventDefault();
       setOpen(true);
       const step = event.key === "ArrowDown" ? 1 : -1;
-      setActive(index => (index + step + options.length) % options.length);
+      setActive(index => nextActiveOption(index, step, options.length));
     } else if (event.key === "Enter" && expanded) {
       event.preventDefault();
       const option = options[active < 0 ? 0 : active];
