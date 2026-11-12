@@ -34,6 +34,8 @@ import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 import { CopyProfileLink } from "./copy-profile-link";
 import { SharingPreview } from "./sharing-preview";
+import { StackPicker } from "./stack-builder";
+import { ShareAllSection } from "./share-all-step";
 import { MeasurementSharingChoices } from "./measurement-review";
 import { FirstResultPanel, SourcePicker, useFirstResultSource } from "./first-result";
 import { firstResultSources, firstResultReturnUrl, selectFirstResultSource } from "@/src/client/first-result-intent";
@@ -420,6 +422,13 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     : state.hasPublicationAtCurrentHandle === false && publicIdentityClaimed !== null ? "draft" : "unknown";
   const publicProfilePath = `/${encodeURIComponent(state.user.handle)}`;
   const publicProfileUrl = publicOrigin ? new URL(publicProfilePath, publicOrigin).href : publicProfilePath;
+  const heldSlugs = state.cards.flatMap(card => card.product && isRelationshipConfirmed(card.prop) ? [card.product.slug] : []);
+  const shareAllBasis = JSON.stringify({ cards: state.cards, user: state.user });
+  const openIdentity = () => {
+    const identity = document.getElementById("collection-profile");
+    identity?.setAttribute("open", "");
+    identity?.querySelector<HTMLInputElement>("input[name='handle']")?.focus();
+  };
 
   return (
     <main className="onboarding-shell">
@@ -438,6 +447,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
 
       <nav className="collection-navigation" aria-label="Your collection workspace">
         <a href="#private-collection-title">Collection</a>
+        <a href="#build-stack">Build your stack</a>
         <a href="#add-product">Add a tool</a>
         <a href="#collection-sources">Sources</a>
         <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Profile and links</a>
@@ -445,6 +455,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
       </nav>
       {message && <p className="message" role="status">{message}</p>}
       {state.privateInventoryAvailable && (source || state.cards.length === 0) && <FirstResultPanel source={source} busy={busy} onConnectGithub={connectGithub} />}
+      <StackPicker held={heldSlugs} />
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />
@@ -538,6 +549,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
             <div className="action-row full"><button className="secondary-action" disabled={busy || handleState === "unknown"}>Save public identity</button></div>
           </form>
         </details>
+        <ShareAllSection identityClaimed={publicIdentityClaimed} basis={shareAllBasis} profileUrl={publicProfileUrl} onSetUpIdentity={openIdentity} />
         <fieldset>
           <legend>Cost visibility</legend>
           <p>Apply cost choices to selected cards, then review before publishing. Unmatched older public cards stay unchanged unless you explicitly select their saved relationships.</p>
