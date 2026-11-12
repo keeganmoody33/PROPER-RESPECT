@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
+import { cardStatusLabel, isRelationshipLevel, levelDefinition, levelStatus, RELATIONSHIP_LEVELS } from "@/src/domain/relationship-level";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
 import { ProductCardSkeleton } from "./product-card-skeleton";
@@ -31,7 +32,7 @@ function History({ propId }: { propId: Id<"props"> }) {
     <p>Owner decisions, recorded when saved. Earlier unknown dates remain unknown.</p>
     <ol>{results.map(event => <li key={event._id}>
       <time dateTime={event.recordedAt}>{new Date(event.recordedAt).toLocaleString()}</time>
-      {` · ${event.before.confirmed ? event.before.status.toLowerCase() : "discovery"} → ${event.after.status.toLowerCase()}`}
+      {` · ${event.before.confirmed ? cardStatusLabel(event.before) : "Discovery"} → ${cardStatusLabel(event.after)}`}
       {event.after.goTo ? " · designated go-to" : " · not designated go-to"}
       {event.before.activityEvidenceId && !event.after.activityEvidenceId && " · supporting snapshot removed"}
       {event.after.activityEvidenceId && event.after.activityEvidenceId !== event.before.activityEvidenceId && " · supporting snapshot selected"}
@@ -52,19 +53,20 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
   const formId = useId();
   const confirmed = isRelationshipConfirmed(item.prop);
   const version = item.prop.relationshipVersion ?? 0;
-  const [relationshipDraft, setRelationshipDraft] = useState({ version, status: item.prop.status as string, selected: confirmed });
-  const currentRelationship = relationshipDraft.version === version ? relationshipDraft : { version, status: item.prop.status, selected: confirmed };
+  // A card saved before levels has none selected; it keeps its fallback wording until the owner picks one.
+  const [levelDraft, setLevelDraft] = useState({ version, level: item.prop.level ?? "" });
+  const currentLevel = levelDraft.version === version ? levelDraft.level : item.prop.level ?? "";
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState({ version, text: "" });
   const retry = useRef<{ body: string; id: string } | null>(null);
   async function submit(form: FormData) {
-    if (!currentRelationship.selected) { setMessage({ version, text: "Choose how this product fits your collection." }); return; }
+    if (!isRelationshipLevel(currentLevel)) { setMessage({ version, text: "Choose how often you use this product." }); return; }
     setBusy(true);
     setMessage({ version, text: "" });
     const activityChoice = String(form.get("activityEvidenceId") ?? "");
     const fields = {
       propId: item.prop._id, expectedVersion: item.prop.relationshipVersion ?? 0,
-      status: currentRelationship.status as SaveInput["status"], goTo: form.get("goTo") === "on",
+      level: currentLevel, status: levelStatus(currentLevel), goTo: form.get("goTo") === "on",
       headline: String(form.get("headline") ?? ""), note: String(form.get("note") ?? ""),
       startedAt: String(form.get("startedAt") ?? "") || undefined,
       supportingUrl: String(form.get("supportingUrl") ?? "") || undefined,
@@ -87,13 +89,14 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
     <fieldset disabled={busy}>
       <legend>{confirmed ? "Your relationship" : "Confirm this discovery"}</legend>
       <div className={styles.relationshipChoices}><label>How it fits
-        <select name="status" value={currentRelationship.selected ? currentRelationship.status : ""} onChange={event => setRelationshipDraft({ version, status: event.target.value, selected: Boolean(event.target.value) })} required>
-          <option value="" disabled>Choose a relationship</option>
-          <option value="ACTIVE">Currently use</option><option value="TESTING">Testing now</option><option value="ARCHIVED">Past use / archived</option>
+        <select name="level" value={currentLevel} aria-describedby={`${formId}-level`} onChange={event => setLevelDraft({ version, level: event.target.value })} required>
+          <option value="" disabled>{confirmed ? `${cardStatusLabel(item.prop)}: choose how often` : "Choose how often"}</option>
+          {RELATIONSHIP_LEVELS.map(level => <option key={level.key} value={level.key} title={level.definition}>{level.label}</option>)}
         </select>
       </label>
       <label className={styles.toggle}><input name="goTo" type="checkbox" defaultChecked={item.prop.goTo ?? false} />One of my go-to tools</label></div>
-      <p className={styles.hint}>Your designation. Frequency and activity never award it automatically. Archiving keeps earlier choices in history.</p>
+      <p id={`${formId}-level`} className={styles.hint}>{isRelationshipLevel(currentLevel) ? levelDefinition(currentLevel) : "Pick the level that matches how you use it now."}</p>
+      <p className={styles.hint}>You choose the level and the go-to mark. Activity never sets either. Earlier choices stay in history.</p>
       <label>What it helps you do (optional)<input name="headline" maxLength={240} defaultValue={confirmed ? item.prop.headline : ""} /></label>
       <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
@@ -248,7 +251,7 @@ export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focus
 
 function InventoryCard({ item, index, expandedActivity = false }: { item: Item; index: number; expandedActivity?: boolean }) {
   return <ProductCard audience="owner" index={index} expandedActivity={expandedActivity} relationshipConfirmed={isRelationshipConfirmed(item.prop)} goTo={item.prop.goTo} card={{
-    product: item.product, status: item.prop.status, headline: item.prop.headline, note: item.prop.note,
+    product: item.product, status: item.prop.status, level: item.prop.level, headline: item.prop.headline, note: item.prop.note,
     startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
     primaryLink: privateCardPrimaryLink({
       product: item.product,
@@ -291,7 +294,7 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
     <h2 id="private-collection-title">What you use, test, and come back to.</h2>
     <p>Your go-to stack is your choice. Evidence and work context support the story; saving here keeps it private.</p>
     <nav className={styles.views} aria-label="Collection views">{inventoryViews.map(option => <button type="button" className="secondary-action" key={option} aria-pressed={view === option} onClick={() => { setView(option); setInspectedRecords({}); }}>{option}</button>)}</nav>
-    <p className={styles.hint}>Views can overlap. History preserves earlier decisions when a tool becomes go-to, is archived, or returns to your stack.</p>
+    <p className={styles.hint}>Views can overlap. History preserves earlier decisions when a tool becomes go-to, moves to used before, or returns to your stack.</p>
     {!cards.length && <p>{data.hasMore ? "No matches among the products loaded so far." : "No products in this view yet."}</p>}
     <div className={styles.grid}>{cards.map(([groupId, members], index) => {
       const matching = members.filter(item => inInventoryView(view, item));
@@ -303,7 +306,7 @@ export function PrivateInventoryView({ data, onSave, onImport, onLoadMore, rende
           <label>Record to inspect for {item.product.name}
             <select value={item.prop._id} onChange={event => setInspectedRecords(current => ({ ...current, [groupId]: event.target.value }))}>
               {members.map((member, recordIndex) => <option key={member.prop._id} value={member.prop._id}>
-                {`Record ${recordIndex + 1} · ${member.prop.activity ? "Usage snapshot" : member.prop.activityEvidenceId ? "Snapshot unavailable" : "No usage snapshot"} · ${isRelationshipConfirmed(member.prop) ? member.prop.status.toLowerCase() : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
+                {`Record ${recordIndex + 1} · ${member.prop.activity ? "Usage snapshot" : member.prop.activityEvidenceId ? "Snapshot unavailable" : "No usage snapshot"} · ${isRelationshipConfirmed(member.prop) ? cardStatusLabel(member.prop) : "needs review"} · ${member.prop.headline || "No explanation recorded"}`}
               </option>)}
             </select>
           </label>

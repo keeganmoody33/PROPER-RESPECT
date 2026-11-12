@@ -220,7 +220,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     title: "How evidence works",
     description: "How to read the relationships, activity and evidence on a Proper Respect card, and how the daily GitHub refresh is checked from outside.",
     eyebrow: "Methodology",
-    updatedAt: "2026-09-28",
+    updatedAt: "2026-11-12",
     introduction: [
       "A card on Proper Respect pairs what someone says about a tool with whatever supporting evidence they chose to share. This page explains what each part can and can't tell you, and how we check that a refreshed card stays current.",
     ],

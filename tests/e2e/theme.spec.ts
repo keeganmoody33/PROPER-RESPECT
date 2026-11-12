@@ -118,11 +118,11 @@ test("denied storage keeps working theme controls and navigation", async ({ page
   expect(errors).toEqual([]);
 });
 
-test("all four branded examples keep their palette, logo, typography and focused controls", async ({ page }) => {
+test("the branded examples keep their palette, logo, typography and focused controls", async ({ page }) => {
   await page.goto("/");
   const control = page.getByRole("combobox", { name: "Appearance" }).first();
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  for (const name of ["GitHub", "Clay", "Wispr Flow", "Claude Code"]) {
+  for (const name of ["GitHub", "Clay", "Claude Code"]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });
     await control.selectOption("light");

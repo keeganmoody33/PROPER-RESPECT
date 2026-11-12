@@ -19,7 +19,7 @@ test.beforeAll(async () => {
           export const SignInButton=({children})=>children;
           export const UserButton=()=>null;
           export const useUser=()=>({user});
-          export const useAuth=()=>({getToken:async()=>null,sessionClaims:{}});
+          export const useAuth=()=>({isLoaded:true,getToken:async()=>null,sessionClaims:{}});
           export const useClerk=()=>({openUserProfile:()=>{}});
         ` : `
           import {useSyncExternalStore} from "react";
@@ -87,7 +87,7 @@ test.beforeAll(async () => {
           export const SignInButton=({children})=>children;
           export const UserButton=()=>null;
           export const useUser=()=>({user});
-          export const useAuth=()=>({getToken:async()=>null,sessionClaims:{}});
+          export const useAuth=()=>({isLoaded:true,getToken:async()=>null,sessionClaims:{}});
           export const useClerk=()=>({openUserProfile:()=>{}});
         ` : readFileSync("tests/e2e/fixtures/fresh-user-backend.js", "utf8"),
       }));
@@ -253,7 +253,7 @@ for (const width of [1280, 390]) test(`first private manual card reaches exact p
   await page.getByRole("link", { name: /Field Notes/ }).click();
   await expect(page).toHaveURL(/#relationship=manual-prop$/);
   const inventory = page.getByRole("region", { name: "Field Notes", exact: true });
-  await inventory.getByRole("combobox", { name: "How it fits", exact: true }).selectOption("ACTIVE");
+  await inventory.getByRole("combobox", { name: "How it fits", exact: true }).selectOption("WEEKLY");
   await inventory.getByLabel("What it helps you do (optional)").fill("My research log");
   await expect(inventory.getByLabel("Explanation or workflow (optional)")).toHaveValue("I tried it for research notes.");
   await inventory.getByLabel("Explanation or workflow (optional)").fill("I keep interview notes here.");
@@ -439,11 +439,13 @@ for (const width of [1280, 390]) test(`owner finds later duplicate records, save
   await collection.getByRole("searchbox", { name: "Find a tool" }).fill("Shared Tool");
   await expect(collection.getByText("2 matching relationships.", { exact: true })).toBeVisible();
   await collection.screenshot({ path: testInfo.outputPath(`2026-10-06-collection-finder-${width}.png`) });
-  await collection.getByRole("link", { name: /Shared Tool Currently use/ }).click();
+  await collection.getByRole("link", { name: /Shared Tool Using/ }).click();
   await expect(page).toHaveURL(/#relationship=record-32$/);
   const focused = page.getByRole("region", { name: "Shared Tool", exact: true });
   await expect(focused.getByRole("heading", { name: "Shared Tool", exact: true })).toBeFocused();
   await expect(focused.getByLabel("Explanation or workflow (optional)")).toHaveValue("Reason 32");
+  await expect(focused.getByLabel("How it fits")).toHaveValue("");
+  await focused.getByLabel("How it fits").selectOption("OCCASIONAL");
   await focused.getByLabel("One of my go-to tools").check();
   await focused.getByLabel("Explanation or workflow (optional)").fill("Essential for my current work.");
   await focused.getByRole("button", { name: "Save privately", exact: true }).click();
@@ -460,15 +462,16 @@ for (const width of [1280, 390]) test(`owner finds later duplicate records, save
   await expect(focused.getByLabel("One of my go-to tools")).toBeChecked();
   await page.reload();
   await expect(focused.getByLabel("Explanation or workflow (optional)")).toHaveValue("Essential for my current work.");
-  await focused.getByLabel("How it fits").selectOption("ARCHIVED");
+  await expect(focused.getByLabel("How it fits")).toHaveValue("OCCASIONAL");
+  await focused.getByLabel("How it fits").selectOption("STOPPED");
   await focused.getByRole("button", { name: "Save privately", exact: true }).click();
-  await expect(focused.getByText("active → archived", { exact: false })).toBeVisible();
+  await expect(focused.getByText("Occasionally → Stopped using", { exact: false })).toBeVisible();
   await focused.getByRole("heading", { name: "Shared Tool", exact: true }).scrollIntoViewIfNeeded();
   await focused.screenshot({ path: testInfo.outputPath(`2026-09-29-owner-relationship-${width}.png`) });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await focused.getByRole("link", { name: "Back to my collection" }).click();
-  await collection.getByRole("button", { name: "Past use", exact: true }).click();
-  await expect(collection.getByRole("link", { name: /Shared Tool Past use/ })).toBeVisible();
+  await collection.getByRole("button", { name: "Used before", exact: true }).click();
+  await expect(collection.getByRole("link", { name: /Shared Tool Stopped using/ })).toBeVisible();
   await collection.getByRole("button", { name: "Discoveries", exact: true }).click();
   await expect(collection.getByRole("link", { name: /Shared Tool Needs your decision/ })).toBeVisible();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!));

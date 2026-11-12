@@ -5,6 +5,7 @@ import { z } from "zod";
 import { costSchema, type Cost, type CostVisibility } from "./cost";
 import { usageLinkSchema, type UsageLink } from "./usage-links";
 import { productBrandSnapshotSchema } from "./product-brand";
+import { relationshipLevelSchema, type RelationshipLevel } from "./relationship-level";
 
 export const handleSchema = z
   .string()
@@ -161,6 +162,8 @@ export const publicProfileSchema = z.object({
         brand: productBrandSnapshotSchema.optional(),
       }),
       status: statusSchema,
+      // An unknown level in a stored snapshot is dropped, not a reason to refuse the page.
+      level: relationshipLevelSchema.optional().catch(undefined),
       goTo: z.boolean().optional(),
       headline: z.string(),
       note: z.string(),
@@ -203,6 +206,7 @@ export function projectPublicProfileV1(profile: PublicProfile): z.infer<typeof p
 export type CuratedProp = {
   visibility: "PUBLIC" | "PRIVATE" | "DRAFT";
   status: "ACTIVE" | "TESTING" | "ARCHIVED";
+  level?: RelationshipLevel;
   goTo?: boolean;
   headline: string;
   note: string;
@@ -233,6 +237,7 @@ export function projectPublicProfile(input: {
       {
         product: prop.product,
         status: prop.status,
+        level: prop.level,
         goTo: prop.goTo,
         headline: prop.headline,
         note: prop.note,

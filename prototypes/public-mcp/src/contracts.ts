@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MEASUREMENT_LIMITS, publicMeasurementSchema } from "@/src/domain/measurements";
 import type { VisiblePublicProfile } from "@/src/domain/visible-public-profile";
+import { relationshipLevelSchema } from "@/src/domain/relationship-level";
 
 export const MCP_PORT = 8848;
 export const HOST_PORT = 8849;
@@ -32,7 +33,8 @@ export const visiblePublicProfileSchema = z.strictObject({
   profileLinks: z.array(z.strictObject({ label: z.string(), url: z.string() })), nameLink: z.string().optional(),
   cards: z.array(z.strictObject({
     product: z.strictObject({ name: z.string(), description: z.string() }),
-    status: z.enum(["ACTIVE", "TESTING", "ARCHIVED"]), ownerSelectedGoTo: z.boolean(),
+    status: z.enum(["ACTIVE", "TESTING", "ARCHIVED"]), level: relationshipLevelSchema.optional(), relationshipLabel: z.string(),
+    ownerSelectedGoTo: z.boolean(),
     headline: z.string(), note: z.string(), startedAt: z.string().optional(), startDateNote: z.string().optional(),
     activity: activity.optional(),
     measurements: z.array(publicMeasurementSchema).max(MEASUREMENT_LIMITS.publicRows).optional(),

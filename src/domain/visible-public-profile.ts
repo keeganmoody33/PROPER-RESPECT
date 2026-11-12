@@ -4,6 +4,7 @@ import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
 import { usageLinkLabelText, usageLinkSchema } from "./usage-links";
 import { isHttpUrl } from "./http-url.ts";
+import { cardStatusLabel, type RelationshipLevel } from "./relationship-level.ts";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;
@@ -33,6 +34,9 @@ export type VisiblePublicProfile = Readonly<{
   cards: readonly Readonly<{
     product: Readonly<{ name: string; description: string }>;
     status: PublicProfile["cards"][number]["status"];
+    level?: RelationshipLevel;
+    // The words visitors read for this relationship: the owner's level, or a fallback from status.
+    relationshipLabel: string;
     ownerSelectedGoTo: boolean;
     headline: string;
     note: string;
@@ -115,7 +119,8 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
     ...(nameLink ? { nameLink } : {}),
     cards: profile.cards.map(card => ({
       product: { name: card.product.name, description: card.product.description },
-      status: card.status, ownerSelectedGoTo: card.goTo === true,
+      status: card.status, ...(card.level ? { level: card.level } : {}), relationshipLabel: cardStatusLabel(card),
+      ownerSelectedGoTo: card.goTo === true,
       headline: card.headline || card.note || "Relationship note not supplied.",
       note: card.note || "Relationship note not supplied.",
       ...(card.startedAt ? { startedAt: card.startedAt } : { startDateNote: "Start date not supplied" }),

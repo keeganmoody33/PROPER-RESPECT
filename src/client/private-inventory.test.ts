@@ -23,7 +23,7 @@ test("relationship fields, independent evidence forms, private save, and optiona
     focused: true, item, evidence: [testimony], onSave: vi.fn(),
     renderEvidence: () => createElement("form", { "aria-label": "Synthetic evidence correction" }, createElement("button", { type: "submit" }, "Correct synthetic evidence")),
   })));
-  const relationship = $('select[name="status"]').closest("form");
+  const relationship = $('select[name="level"]').closest("form");
   const formId = relationship.attr("id");
   expect(formId).toBeTruthy();
   expect($('input[name="supportingUrl"]').attr("form")).toBe(formId);
@@ -60,7 +60,7 @@ test("a short retained answer stays with its original question and is not silent
   expect($.text()).toContain("Did you use this to dictate notes?");
   expect($.text()).toContain("Yes, correct.");
   expect($('textarea[name="note"]').text()).toBe("");
-  expect($('select[name="status"] option[selected]').attr("value")).toBe("");
+  expect($('select[name="level"] option[selected]').attr("value")).toBe("");
   expect($('input[name="goTo"]').attr("checked")).toBeUndefined();
 });
 
@@ -68,7 +68,7 @@ test("the owner's manual note is reused for private review without confirming a 
   const manual = { ...item, prop: { ...item.prop, ownerEntered: true, note: "An essential occasional workflow." } };
   const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item: manual, evidence: [], onSave: vi.fn() })));
   expect($('textarea[name="note"]').text()).toBe("An essential occasional workflow.");
-  expect($('select[name="status"] option[selected]').attr("value")).toBe("");
+  expect($('select[name="level"] option[selected]').attr("value")).toBe("");
   expect($('input[name="goTo"]').attr("checked")).toBeUndefined();
   expect($.text()).toContain("Confirm and save privately");
 });
@@ -136,4 +136,36 @@ test.each(["UNVERIFIED_LEGACY", "VERIFIED_OWNER_SESSION"] as const)("uploaded co
   const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item, evidence: [source], onSave: vi.fn() })));
   expect($.text()).toContain(attribution === "UNVERIFIED_LEGACY" ? "original uploader is unverified" : "authorship and product usage are not verified");
   expect($('input[name="goTo"]').attr("checked")).toBeUndefined();
+});
+
+test("the editor offers the seven levels; a card saved before levels shows no level and its fallback wording", () => {
+  const older = { ...item, prop: { ...item.prop, visibility: "PRIVATE" as const, status: "ARCHIVED" as const, relationshipVersion: 2, confirmedAt: "2026-01-01T00:00:00.000Z", goTo: true } };
+  const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item: older, evidence: [], onSave: vi.fn() })));
+  const select = $('select[name="level"]');
+  expect(select.attr("required")).toBeDefined();
+  expect(select.find("option").map((_, node) => [[$(node).attr("value"), $(node).text()]]).get()).toEqual([
+    ["", "Used before: choose how often"],
+    ["TRIED_NOT_ADOPTED", "Tried, didn't adopt"], ["STOPPED", "Stopped using"], ["PAUSED", "Paused"], ["OCCASIONAL", "Occasionally"],
+    ["TESTING", "Testing"], ["WEEKLY", "Weekly"], ["DAILY", "Daily"],
+  ]);
+  expect(select.find("option[selected]").attr("value")).toBe("");
+  expect($(`#${select.attr("aria-describedby")}`).text()).toBe("Pick the level that matches how you use it now.");
+  expect($('input[name="goTo"]').attr("checked")).toBeDefined();
+  expect($.text().toLowerCase()).not.toContain("archiv");
+  const view = load(renderToStaticMarkup(createElement(PrivateInventoryView, { data: { cards: [older], hasMore: false }, onSave: vi.fn(), onImport: vi.fn() })));
+  expect(view(".card-title .eyebrow").text()).toBe("USED BEFORE");
+  expect(view("nav button").map((_, node) => view(node).text()).get()).toContain("Used before");
+  expect(view.text().toLowerCase()).not.toContain("archiv");
+});
+
+test("a card with a level shows it selected with its definition, beside an unchanged go-to control", () => {
+  const leveled = { ...item, prop: { ...item.prop, visibility: "PRIVATE" as const, status: "ACTIVE" as const, level: "OCCASIONAL" as const, relationshipVersion: 1, confirmedAt: "2026-01-01T00:00:00.000Z", goTo: true, startedAt: "2023-02-03" } };
+  const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item: leveled, evidence: [], onSave: vi.fn() })));
+  const select = $('select[name="level"]');
+  expect(select.find("option[selected]").attr("value")).toBe("OCCASIONAL");
+  expect($(`#${select.attr("aria-describedby")}`).text()).toBe("I reach for it less than once a week, when a job needs it.");
+  expect($('input[name="goTo"]').attr("checked")).toBeDefined();
+  const view = load(renderToStaticMarkup(createElement(PrivateInventoryView, { data: { cards: [leveled], hasMore: false }, onSave: vi.fn(), onImport: vi.fn() })));
+  expect(view(".card-title .eyebrow").text()).toBe("OCCASIONALLY · SINCE 2023");
+  expect(view(".card-footer .card-go-to").text()).toBe("Owner-selected go-to");
 });

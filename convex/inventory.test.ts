@@ -282,3 +282,53 @@ test("collection shell omits cards and sharing reads bounded pages without misbi
   expect(new Set([...first.page, ...second.page].map(card => card.prop._id)).size).toBe(32);
   expect((await other.query(sharing, firstPage)).page).toEqual([]);
 });
+
+test("saving each level writes the level, the status it implies and an event, and leaves go-to as chosen", async () => {
+  const { t, owner, propId } = await fixture();
+  const expected = [
+    ["TRIED_NOT_ADOPTED", "ARCHIVED"], ["STOPPED", "ARCHIVED"], ["PAUSED", "ARCHIVED"], ["OCCASIONAL", "ACTIVE"],
+    ["TESTING", "TESTING"], ["WEEKLY", "ACTIVE"], ["DAILY", "ACTIVE"],
+  ] as const;
+  for (const [index, [level, status]] of expected.entries()) {
+    await owner.mutation(save, { propId, expectedVersion: index, operationId: `level-${level}`, level, status, goTo: index % 2 === 0, headline: "", note: "" });
+    const prop = await t.run(ctx => ctx.db.get(propId));
+    expect({ level: prop?.level, status: prop?.status, goTo: prop?.goTo }).toEqual({ level, status, goTo: index % 2 === 0 });
+  }
+  const events = await owner.query(history, { propId, paginationOpts: { numItems: 20, cursor: null } });
+  expect(events.page.map((event: { after: { level?: string; status: string } }) => [event.after.level, event.after.status]).reverse())
+    .toEqual(expected.map(pair => [...pair]));
+  expect(events.page[0].before).toMatchObject({ level: "WEEKLY", status: "ACTIVE" });
+});
+
+test("a card can be Occasionally and go-to, and saving a level never changes go-to", async () => {
+  const { t, owner, propId } = await fixture();
+  await owner.mutation(save, { propId, expectedVersion: 0, operationId: "go-to", level: "OCCASIONAL", status: "ACTIVE", goTo: true, headline: "", note: "" });
+  expect(await t.run(async ctx => {
+    const prop = await ctx.db.get(propId);
+    return { level: prop?.level, status: prop?.status, goTo: prop?.goTo };
+  })).toEqual({ level: "OCCASIONAL", status: "ACTIVE", goTo: true });
+  await owner.mutation(save, { propId, expectedVersion: 1, operationId: "daily", level: "DAILY", status: "ACTIVE", goTo: true, headline: "", note: "" });
+  expect(await t.run(async ctx => (await ctx.db.get(propId))?.goTo)).toBe(true);
+});
+
+test("a level with a status it does not imply is refused and nothing is saved", async () => {
+  const { t, owner, propId } = await fixture();
+  await expect(owner.mutation(save, { propId, expectedVersion: 0, operationId: "bad", level: "DAILY", status: "ARCHIVED", goTo: false, headline: "", note: "" }))
+    .rejects.toThrow("does not match");
+  expect(await t.run(async ctx => {
+    const prop = await ctx.db.get(propId);
+    return { level: prop?.level, status: prop?.status, version: prop?.relationshipVersion, events: (await ctx.db.query("relationshipEvents").collect()).length };
+  })).toEqual({ level: undefined, status: "TESTING", version: undefined, events: 0 });
+  await expect(owner.mutation(save, { propId, expectedVersion: 0, operationId: "unknown", level: "RETIRED_LEVEL", status: "ACTIVE", goTo: false, headline: "", note: "" }))
+    .rejects.toThrow("Validator error");
+});
+
+test("a status-only save after a level clears the level, so the two never disagree", async () => {
+  const { t, owner, propId } = await fixture();
+  await owner.mutation(save, { propId, expectedVersion: 0, operationId: "daily", level: "DAILY", status: "ACTIVE", goTo: false, headline: "", note: "" });
+  await owner.mutation(save, { propId, expectedVersion: 1, operationId: "archive", status: "ARCHIVED", goTo: false, headline: "", note: "" });
+  expect(await t.run(async ctx => {
+    const prop = await ctx.db.get(propId);
+    return { level: prop?.level, status: prop?.status };
+  })).toEqual({ level: undefined, status: "ARCHIVED" });
+});
