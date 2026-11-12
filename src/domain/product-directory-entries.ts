@@ -398,6 +398,8 @@ export const DIRECTORY_ENTRIES: readonly DirectoryEntry[] = [
     description: "Terminal with AI built in.", aliases: [], category: "ENGINEERING" },
   { slug: "tailwind-css", name: "Tailwind CSS", domain: "tailwindcss.com", website: "https://tailwindcss.com",
     description: "Utility-first CSS framework.", aliases: ["tailwind"], category: "ENGINEERING" },
+  { slug: "spider", name: "Spider", domain: "spider.cloud", website: "https://spider.cloud",
+    description: "Web crawling and scraping for AI applications.", aliases: ["spider cloud", "spider.cloud"], category: "ENGINEERING" },
   { slug: "snowflake", name: "Snowflake", domain: "snowflake.com", website: "https://snowflake.com",
     description: "Cloud data warehouse.", aliases: [], category: "DATA" },
   { slug: "databricks", name: "Databricks", domain: "databricks.com", website: "https://databricks.com",
