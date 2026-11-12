@@ -7,6 +7,8 @@ import schema from "./schema";
 import wisprReceipt from "../docs/verification/fixtures/2026-09-17-context-brands/wisprflow.json";
 import githubReceipt from "../docs/verification/fixtures/2026-09-17-context-brands/github.json";
 import { productBrandSnapshotSchema } from "../src/domain/product-brand";
+import { DIRECTORY_ENTRIES } from "../src/domain/product-directory-entries";
+import { productBrandEligibility } from "./productBrands";
 
 const modules = import.meta.glob("./**/*.ts");
 const request = makeFunctionReference<"mutation">("productBrands:requestForProp");
@@ -17,6 +19,17 @@ const history = makeFunctionReference<"query">("productBrands:historyForProp");
 const prepare = makeFunctionReference<"mutation">("productBrands:prepareForProps");
 const preparation = makeFunctionReference<"query">("productBrands:getPreparationForProps");
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+test("listed directory entries stay ineligible for logo retrieval, by slug and as typed products", () => {
+  const listed = DIRECTORY_ENTRIES.filter(entry => !entry.evidence);
+  expect(listed.map(entry => entry.slug)).toContain("salesforce");
+  const verdicts = listed.flatMap(({ slug, name, domain }) => [
+    productBrandEligibility({ slug, name, domain }),
+    productBrandEligibility({ slug: `manual-${slug}`, name, domain }),
+  ]);
+  expect(new Set(verdicts)).toEqual(new Set(["UNVERIFIED_DOMAIN"]));
+  expect(productBrandEligibility({ slug: "github", name: "GitHub", domain: "github.com" })).toBeNull();
+});
 
 test("bounded preparation enrolls existing owner cards once and preserves their evidence and choices", async () => {
   vi.useFakeTimers();
