@@ -5,7 +5,7 @@ import { useMutation } from "convex/react";
 import { makeFunctionReference } from "convex/server";
 import type { SaveSelectionResult } from "@/convex/stack";
 import {
-  addedMessage, emptyTray, nextActiveOption, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, TYPED_NAME_MAX, trayPicks, trayReducer,
+  addedMessage, emptyTray, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_STATUSES, TYPED_NAME_MAX, trayPicks, trayReducer,
   type SaveAttempt, type StackPick, type TrayEntry, type TrayStatus, type TypedResolution,
 } from "@/src/client/stack-tray";
 import styles from "./stack-builder.module.css";
@@ -32,10 +32,8 @@ function entryState(slug: string, held: ReadonlySet<string>, listed: ReadonlySet
   return listed.has(`directory:${slug}`) ? "listed" : "available";
 }
 
-// Before the directory loads, nothing can be resolved or normalized, so a typed pick stays typed
-// and keys on its website as entered. The server refuses two spellings of one website as picked twice.
 function resolve(directory: DirectoryModule | null, name: string, website?: string): TypedResolution {
-  return directory ? directory.resolveTypedPick(name, website) : { kind: "typed", domain: website?.trim().toLowerCase() ?? "" };
+  return resolveTypedWhenReady(directory && directory.resolveTypedPick, name, website);
 }
 
 export function StackPicker({ held }: { held: readonly string[] }) {

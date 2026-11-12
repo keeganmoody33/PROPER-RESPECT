@@ -79,8 +79,13 @@ export function skipReasonText(reason: SkipReason) {
   return SKIP_REASONS[reason];
 }
 
+/** The server refuses a share-all that shares nothing, so such a preview has nothing to approve. */
+export function canApproveShare(preview: Pick<ShareAllPreview<unknown>, "sharedCount">) {
+  return preview.sharedCount > 0;
+}
+
 export function previewSummary(preview: Pick<ShareAllPreview<unknown>, "sharedCount" | "remainingCount" | "skipped">) {
-  const parts = [`${preview.sharedCount} card${preview.sharedCount === 1 ? "" : "s"} will be shared.`];
+  const parts = [preview.sharedCount ? `${preview.sharedCount} card${preview.sharedCount === 1 ? "" : "s"} will be shared.` : "Nothing new can be shared."];
   if (preview.remainingCount) parts.push(`${preview.remainingCount} more remain. Share them in another run after this one.`);
   if (preview.skipped.length) parts.push(`${preview.skipped.length} will stay private until you fix ${preview.skipped.length === 1 ? "it" : "them"}.`);
   return parts.join(" ");

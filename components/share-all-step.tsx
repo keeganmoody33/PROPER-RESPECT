@@ -5,7 +5,7 @@ import { useConvex, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { PublicProfile } from "@/src/domain/public-profile";
 import { isHttpUrl } from "@/src/domain/http-url";
-import { initialShareState, previewSummary, shareFlow, skipReasonText, type ShareAllPreview, type ShareEvent, type ShareState } from "@/src/client/share-all-flow";
+import { canApproveShare, initialShareState, previewSummary, shareFlow, skipReasonText, type ShareAllPreview, type ShareEvent, type ShareState } from "@/src/client/share-all-flow";
 import { SharingPreview } from "./sharing-preview";
 import styles from "./stack-builder.module.css";
 
@@ -91,8 +91,8 @@ export function ShareAllStep({ identityClaimed, basis, profileUrl, onSetUpIdenti
         <h4>Staying private</h4>
         <ul>{shown.preview.skipped.map(card => <li key={card.propId}><strong>{card.productName}</strong> stays private: {skipReasonText(card.reason)}</li>)}</ul>
       </div>}
-      <SharingPreview key={shown.preview.previewHash} profile={shown.preview.profile} refreshAccounts={[...shown.preview.refreshAccounts ?? []]}
-        current={shown.basis === basis} busy={state.step === "publishing"} onPublish={() => void publish(shown.preview)} />
+      {canApproveShare(shown.preview) && <SharingPreview key={shown.preview.previewHash} profile={shown.preview.profile} refreshAccounts={[...shown.preview.refreshAccounts ?? []]}
+        current={shown.basis === basis} busy={state.step === "publishing"} onPublish={() => void publish(shown.preview)} />}
     </>}
   </section>;
 }

@@ -48,6 +48,12 @@ export type StackPick =
   | { kind: "directory"; slug: string; status: TrayStatus }
   | { kind: "typed"; name: string; website?: string; status: TrayStatus };
 
+// Before the directory loads nothing can say which product a typed name is, and two
+// spellings of one tool would both join the list and fail the whole save.
+export function resolveTypedWhenReady(resolver: ((name: string, website?: string) => TypedResolution) | null, name: string, website?: string): TypedResolution {
+  return resolver ? resolver(name, website) : { kind: "refused", message: "The product list is still loading. Add this tool again in a moment." };
+}
+
 export const emptyTray: Tray = { items: [], lastAdded: null, saved: null };
 
 // Collapses whitespace like normalizeProductName in convex/manualProducts.ts, so a pasted
