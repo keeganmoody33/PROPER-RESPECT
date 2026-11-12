@@ -10,7 +10,7 @@ const cost = { amount: MONTHLY_PRICE, currency: "USD", cadence: "MONTHLY", basis
 
 function prop(propId: string, overrides: Partial<ShareAllProp<string, typeof cost>> = {}): ShareAllProp<string, typeof cost> {
   return {
-    propId, visibility: "PRIVATE", onPublishedPage: false, relationshipVersion: SAVED_VERSION,
+    propId, visibility: "PRIVATE", onPublishedPage: false, matchesUnresolvedPublishedCard: false, relationshipVersion: SAVED_VERSION,
     status: "ACTIVE", headline: `Headline ${propId}`, note: `Note ${propId}`,
     product: { name: `Product ${propId}`, domain: `${propId}.example` },
     ...overrides,
@@ -77,6 +77,16 @@ describe("shareAllSelections", () => {
       { propId: "label", productName: "Product label", reason: "LINK_TOO_LONG" },
       { propId: "blank", productName: "Product blank", reason: "LINK_NEEDS_REVIEW" },
     ]);
+  });
+
+  it("skips and names a card whose product matches a published card it can't be told apart from", () => {
+    const result = shareAllSelections([
+      prop("twin", { matchesUnresolvedPublishedCard: true, primaryLink: { type: "CANONICAL", url: "javascript:alert(1)", label: "Open" } }),
+      prop("other"),
+    ]);
+    expect(result.selections.map(selection => selection.propId)).toEqual(["other"]);
+    expect(result.skipped).toEqual([{ propId: "twin", productName: "Product twin", reason: "ALREADY_ON_PAGE_NEEDS_REVIEW" }]);
+    expect(result.remainingCount).toBe(0);
   });
 
   it("shares a card with no domain and no saved link without a link", () => {

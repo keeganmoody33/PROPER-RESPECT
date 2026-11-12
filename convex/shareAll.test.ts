@@ -195,6 +195,27 @@ test("an account still on its auto-assigned placeholder handle is refused", asyn
   expect((await f.rows()).publications).toEqual([]);
 });
 
+test("a legacy card that can't be matched to one relationship is skipped and kept; unrelated cards still share", async () => {
+  const f = await fixture();
+  const shared = await f.addProp({}, { slug: "twin", name: "Twin Tool" });
+  await publishAll(f.owner);
+  const sibling = await f.addProp({}, { slug: "twin", name: "Twin Tool" });
+  const unrelated = await f.addProp();
+  const legacy = (await f.rows()).publications[0];
+  await f.t.run(ctx => ctx.db.patch(legacy._id, { cardPropIds: undefined }));
+
+  const preview = await publishAll(f.owner);
+  expect(preview).toMatchObject({
+    sharedCount: 1, remainingCount: 0,
+    skipped: [{ propId: sibling, productName: "Twin Tool", reason: "ALREADY_ON_PAGE_NEEDS_REVIEW" }],
+  });
+  expect(await f.visibilities([shared, sibling, unrelated])).toEqual(["PUBLIC", "PRIVATE", "PUBLIC"]);
+  const stored = (await f.rows()).publications[0];
+  expect(stored.profile.cards[0]).toEqual(legacy.profile.cards[0]);
+  expect(stored.profile.cards.map(card => card.product.name)).toEqual(["Twin Tool", "Tool 3"]);
+  expect(stored.cardPropIds).toEqual([null, unrelated]);
+});
+
 test.each(["selections", "remove-all"] as const)("share-all can't be combined with %s", async combined => {
   const f = await fixture();
   const propId = await f.addProp();
