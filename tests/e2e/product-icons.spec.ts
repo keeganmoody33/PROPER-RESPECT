@@ -8,8 +8,7 @@ for (const [width, density] of [[1440, 1], [1440, 2], [390, 3]]) {
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto(`${testInfo.project.use.baseURL}/`);
       const carousel = page.getByRole("region", { name: "Product usage examples" });
-      let wisprSource = "";
-      for (const product of ["Clay", "Wispr Flow"]) {
+      for (const product of ["Clay", "Claude Code"]) {
         await carousel.getByRole("button", { name: product, exact: true }).click();
         const icon = carousel.getByRole("article", { name: `${product} card` }).locator(".product-logo");
         const image = icon.locator("img");
@@ -27,13 +26,12 @@ for (const [width, density] of [[1440, 1], [1440, 2], [390, 3]]) {
         expect(geometry.width).toBe(geometry.height);
         expect(geometry.background).toBe("rgba(0, 0, 0, 0)");
         expect(geometry.border).toBe("0px");
-        if (product === "Wispr Flow") wisprSource = (await image.getAttribute("src"))!;
         await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-${product.replaceAll(" ", "-")}-${width}-${density}x.png`) });
       }
       await page.goto(`${testInfo.project.use.baseURL}/keegan`);
       const profileIcon = page.getByRole("article", { name: "Wispr Flow card" }).locator(".product-logo img");
       await expect(profileIcon).toBeVisible();
-      await expect(profileIcon).toHaveAttribute("src", wisprSource);
+      await expect(profileIcon).toHaveAttribute("src", "/product-assets/wisprflow/2026-09-21/app-icon.jpg");
       await profileIcon.evaluate((element: HTMLImageElement) => element.decode());
       await page.getByRole("article", { name: "Wispr Flow card" }).screenshot({ path: testInfo.outputPath(`2026-09-21-profile-wispr-${width}-${density}x.png`) });
     } finally { await context.close(); }

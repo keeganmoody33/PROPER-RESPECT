@@ -1,9 +1,9 @@
 export const firstResultSources = [
-  { id: "github", label: "GitHub", detail: "Connect your account for a contributions snapshot." },
-  { id: "claude-code", label: "Claude Code", detail: "Import a sanitized usage export. No device access needed." },
-  { id: "codex", label: "Codex", detail: "Import a sanitized account usage capture." },
-  { id: "metric-packet", label: "Another product", detail: "Import a prepared measurement packet with its scope and period." },
-  { id: "manual", label: "Add a tool manually", detail: "Keep a private record now and add evidence later." },
+  { id: "github", label: "GitHub", detail: "Connect your GitHub account to show your contributions." },
+  { id: "claude-code", label: "Claude Code", detail: "Upload a Claude Code usage file. Only the file you pick is read." },
+  { id: "codex", label: "Codex", detail: "Upload a usage file from your Codex account." },
+  { id: "metric-packet", label: "Another tool", detail: "Upload a file of another tool’s usage numbers and the dates they cover." },
+  { id: "manual", label: "Add a tool by name", detail: "Save it privately now. Add usage later." },
 ] as const;
 export type FirstResultSource = typeof firstResultSources[number]["id"];
 

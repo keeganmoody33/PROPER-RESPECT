@@ -19,7 +19,7 @@ test.beforeAll(async () => {
           export const SignInButton=({children,forceRedirectUrl,signUpForceRedirectUrl})=>cloneElement(children,{onClick:()=>{localStorage.setItem("fixture-signed-in","true");location.assign(sessionStorage.getItem("fixture-auth-mode")==="signup"?signUpForceRedirectUrl:forceRedirectUrl);}});
           export const UserButton=()=>null;
           export const useUser=()=>({user});
-          export const useAuth=()=>({getToken:async()=>"synthetic-token",sessionClaims:{}});
+          export const useAuth=()=>({isLoaded:true,getToken:async()=>"synthetic-token",sessionClaims:{}});
           export const useClerk=()=>({openUserProfile:()=>{}});
         ` : readFileSync("tests/e2e/fixtures/fresh-user-backend.js", "utf8"),
       }));
@@ -36,7 +36,8 @@ for (const width of [1280, 390]) for (const mode of ["signin", "signup"]) test(`
   await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8883/")
     ? route.fulfill({ contentType: "text/html", body: fixtureHtml }) : route.abort());
   await page.goto("http://127.0.0.1:8883/app/collection");
-  await expect(page.getByRole("heading", { name: "Start with one source", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start your collection", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Already have usage data?", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Claude Code", exact: true }).click();
   await page.getByRole("button", { name: "Continue with Claude Code", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/collection\?source=claude-code$/);
@@ -93,7 +94,7 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   await result.screenshot({ path: testInfo.outputPath(`first-result-exact-${width}.png`) });
   await page.reload();
   await expect(result.getByText(exact, { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Another product", exact: true }).click();
+  await page.getByRole("button", { name: "Another tool", exact: true }).click();
   await expect(first.getByRole("heading", { name: "Import another product’s measurements", exact: true })).toBeFocused();
   await first.getByLabel("Product name", { exact: true }).fill("Fixture Tool");
   await upload.setInputFiles({ name: "sanitized-again.json", mimeType: "application/json", buffer: Buffer.from(packet) });
@@ -109,7 +110,7 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   await result.getByRole("button", { name: "Save measurement choices privately", exact: true }).click();
   await expect.poll(async () => (await state()).measurementCaptures[0].reviewedMeasurementIds.length).toBe(3);
   const relationship = page.getByRole("region", { name: "Fixture Tool", exact: true });
-  await relationship.getByRole("combobox", { name: "How it fits", exact: true }).selectOption("ACTIVE");
+  await relationship.getByRole("combobox", { name: "How it fits", exact: true }).selectOption("WEEKLY");
   await relationship.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
   await page.getByRole("link", { name: "Set up your public identity", exact: true }).click();
   const identity = page.locator("#collection-profile");

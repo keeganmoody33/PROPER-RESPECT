@@ -2,7 +2,7 @@ import { load } from "cheerio";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
-import { SharingPreview } from "../../components/onboarding-client";
+import { SharingPreview } from "../../components/sharing-preview";
 import type { PublicProfile } from "../domain/public-profile";
 
 const card: PublicProfile["cards"][number] = {

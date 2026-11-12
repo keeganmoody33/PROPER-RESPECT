@@ -1,5 +1,6 @@
-import { v } from "convex/values";
+import { v, type VLiteral, type VUnion } from "convex/values";
 import { productBrandSnapshotValidator } from "./productBrandTables";
+import { RELATIONSHIP_LEVEL_KEYS, type RelationshipLevel } from "../src/domain/relationship-level";
 
 export const evidenceSourceTypeValidator = v.union(
   v.literal("MANUAL"), v.literal("PUBLIC_PROFILE"), v.literal("GITHUB"),
@@ -37,6 +38,10 @@ export const statusValidator = v.union(
   v.literal("TESTING"),
   v.literal("ARCHIVED"),
 );
+
+export const relationshipLevelValidator = v.union(
+  ...RELATIONSHIP_LEVEL_KEYS.map(key => v.literal(key)),
+) as VUnion<RelationshipLevel, VLiteral<RelationshipLevel, "required">[], "required">;
 
 export const visibilityValidator = v.union(
   v.literal("PUBLIC"),
@@ -209,6 +214,9 @@ export const publicProfileValidator = v.object({
         brand: v.optional(productBrandSnapshotValidator),
       }),
       status: statusValidator,
+      // A string, not the level union: a snapshot keeps whatever key it was published with,
+      // and readPublishedProfile drops one the registry no longer knows.
+      level: v.optional(v.string()),
       goTo: v.optional(v.boolean()),
       headline: v.string(),
       note: v.string(),

@@ -45,7 +45,7 @@ test.beforeAll(async () => {
         export const SignInButton=({children})=>children;
         export const UserButton=()=>null;
         export const useUser=()=>({user});
-        export const useAuth=()=>({getToken:async()=>"synthetic-token",sessionClaims:{}});
+        export const useAuth=()=>({isLoaded:true,getToken:async()=>"synthetic-token",sessionClaims:{}});
         export const useClerk=()=>({openUserProfile:()=>{}});
       ` : `
         export * from "./tests/e2e/fixtures/fresh-user-backend.js";

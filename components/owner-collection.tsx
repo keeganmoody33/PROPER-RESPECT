@@ -5,6 +5,7 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { cardStatusLabel } from "@/src/domain/relationship-level";
 import { openRelationship, relationshipFromHash, relationshipHref, subscribeRelationship } from "@/src/client/relationship-location";
 import { InventoryDetails, RetainedEvidenceIntake, SavedRelationshipPreview } from "./private-inventory";
 import { ProductCardSkeleton } from "./product-card-skeleton";
@@ -13,7 +14,7 @@ import { DiscoveryReview } from "./discovery-review";
 import styles from "./private-inventory.module.css";
 
 export type LocatedRelationship = FunctionReturnType<typeof api.inventory.locator>["page"][number];
-const views = ["My tools", "Current", "Testing", "Go-to", "Past use", "Discoveries", "All"] as const;
+const views = ["My tools", "Current", "Testing", "Go-to", "Used before", "Discoveries", "All"] as const;
 type View = typeof views[number];
 
 function matchesView(row: LocatedRelationship, view: View) {
@@ -23,14 +24,14 @@ function matchesView(row: LocatedRelationship, view: View) {
     case "Discoveries": return !row.confirmed;
     case "Current": return row.confirmed && row.status === "ACTIVE";
     case "Testing": return row.confirmed && row.status === "TESTING";
-    case "Past use": return row.confirmed && row.status === "ARCHIVED";
+    case "Used before": return row.confirmed && row.status === "ARCHIVED";
     case "Go-to": return row.confirmed && row.goTo && row.status !== "ARCHIVED";
   }
 }
 
 export function relationshipLabel(row: LocatedRelationship) {
   if (!row.confirmed) return "Needs your decision";
-  return `${row.status === "ACTIVE" ? "Currently use" : row.status === "TESTING" ? "Testing now" : "Past use"}${row.goTo && row.status !== "ARCHIVED" ? " · Go-to" : ""}`;
+  return `${cardStatusLabel(row)}${row.goTo && row.status !== "ARCHIVED" ? " · Go-to" : ""}`;
 }
 
 export function RelationshipFinder({ records, complete, loading, onLoadMore }: {
@@ -48,7 +49,7 @@ export function RelationshipFinder({ records, complete, loading, onLoadMore }: {
       <input type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Search your tools and discoveries" />
     </label>
     <nav className={styles.views} aria-label="Find relationships">{views.map(option => <button key={option} type="button" className="secondary-action" aria-pressed={view === option} onClick={() => setView(option)}>{option}</button>)}</nav>
-    <p className={styles.hint}>My tools are relationships you have confirmed. Discoveries still need your decision. Past use is separate from the saved decisions inside each relationship.</p>
+    <p className={styles.hint}>My tools are relationships you have confirmed. Discoveries still need your decision. Used before is separate from the saved decisions inside each relationship.</p>
     <p role="status">{complete ? `${matches.length} matching relationship${matches.length === 1 ? "" : "s"}.` : `${records.length} relationships checked. ${loading ? "Checking more…" : "More remain to check."}`}</p>
     {matches.length === 0 && <p>{complete ? "No relationships match this view. Try All, change your search, or add a product." : "No matches yet. Results are incomplete while more relationships remain."}</p>}
     <ul className={styles.results}>{matches.map(row => <li key={row.propId}>

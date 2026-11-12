@@ -43,7 +43,7 @@ for (const width of [1280, 390]) test(`optional form-associated context locks an
   await page.getByLabel("Prepared evidence files").setInputFiles({ name: "synthetic-layout-2026-10-06.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ fixture: "SYNTHETIC_INVENTORY_EVIDENCE" })) });
   await page.getByRole("button", { name: "Retain privately", exact: true }).click();
   await page.getByText("Review this discovery", { exact: true }).click();
-  await page.getByLabel("How it fits").selectOption("ACTIVE");
+  await page.getByLabel("How it fits").selectOption("WEEKLY");
   const extras = page.getByText("Work sample and supporting snapshot (optional)", { exact: true });
   await extras.click();
   const link = page.getByLabel("Work sample or workflow link (optional)", { exact: true });
@@ -136,7 +136,7 @@ for (const width of [1280, 390]) test(`observed date remains an editable private
   await expect(page.getByText("PRIVATE DISCOVERY", { exact: true }).first()).toBeVisible();
   await page.getByRole("region", { name: "Example Tool in your collection", exact: true }).screenshot({ path: testInfo.outputPath(`2026-10-06-observed-date-${width}.png`) });
   await date.fill("2024-05-20");
-  await page.getByLabel("How it fits").selectOption("ACTIVE");
+  await page.getByLabel("How it fits").selectOption("WEEKLY");
   await page.getByRole("button", { name: "Simulate one lost save response", exact: true }).click();
   await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
   await expect(page.getByText("Synthetic lost save response. Retry unchanged decisions.", { exact: true })).toBeVisible();
@@ -195,7 +195,7 @@ for (const width of [1280, 390]) test(`private collection interaction and revers
   await page.getByRole("button", { name: "Confirm and save privately" }).click();
   await expect(page.getByText("Manage relationship and context", { exact: true })).toBeVisible();
   await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
-  await page.getByLabel("How it fits").selectOption("ACTIVE");
+  await page.getByLabel("How it fits").selectOption("WEEKLY");
   await page.getByLabel("One of my go-to tools").check();
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
   await expect(page.getByText("Owner-selected go-to", { exact: true }).first()).toBeVisible();
@@ -209,13 +209,13 @@ for (const width of [1280, 390]) test(`private collection interaction and revers
   await page.keyboard.press("Escape");
   await expect(details).toBeFocused();
   await expect(page.locator(".product-card")).toHaveAttribute("data-side", "front");
-  await page.getByLabel("How it fits").selectOption("ARCHIVED");
+  await page.getByLabel("How it fits").selectOption("PAUSED");
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
   await page.getByRole("button", { name: "Go-to", exact: true }).click();
   await expect(page.getByText("No products in this view yet.")).toBeVisible();
-  await page.getByRole("button", { name: "Archived", exact: true }).click();
+  await page.getByRole("button", { name: "Used before", exact: true }).click();
   await page.getByText("Manage relationship and context", { exact: true }).click();
-  await page.getByLabel("How it fits").selectOption("ACTIVE");
+  await page.getByLabel("How it fits").selectOption("WEEKLY");
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
   await page.getByRole("button", { name: "Current", exact: true }).click();
   await expect(page.getByText("Owner-selected go-to", { exact: true }).first()).toBeVisible();
@@ -235,7 +235,7 @@ test("synthetic file import, invalid JSON, and removing a supporting snapshot pr
   await page.getByRole("button", { name: "Retain privately", exact: true }).click();
   await expect(page.getByText("Retained evidence is ready for private review.", { exact: false })).toBeVisible();
   await page.getByText("Review this discovery", { exact: true }).click();
-  await page.getByLabel("How it fits").selectOption("ACTIVE");
+  await page.getByLabel("How it fits").selectOption("WEEKLY");
   await page.getByText("Work sample and supporting snapshot (optional)", { exact: true }).click();
   await page.getByRole("combobox", { name: "Supporting snapshot", exact: true }).selectOption("synthetic-raw-evidence");
   await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
