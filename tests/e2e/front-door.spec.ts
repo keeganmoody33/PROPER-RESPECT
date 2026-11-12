@@ -119,6 +119,8 @@ const fits = (page: Page) => page.evaluate(() => document.documentElement.scroll
   await expect(status).toHaveText("Added 11 to your list. 1 already saved.");
   const save = builder.getByRole("button", { name: "Save 11 tools privately" });
   await expect(save).toBeFocused();
+  // A signed-in owner's unsaved list never sits in the storage a signed-out visitor reads.
+  expect(await page.evaluate(storage => sessionStorage.getItem(storage), pendingKey)).toBeNull();
   await expect(builder.getByRole("combobox", { name: "How you use Clay" })).toHaveValue("TESTING");
   expect(await fits(page)).toBe(true);
   await noAxeViolations(page);

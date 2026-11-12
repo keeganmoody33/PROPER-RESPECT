@@ -107,9 +107,10 @@ export function StackBuilder({ mode }: { mode: BuilderMode }) {
     return () => { current = false; };
   }, []);
 
+  const signedIn = mode.kind === "signed-in";
   useEffect(() => {
-    if (restored) writePendingStack(tray);
-  }, [restored, tray]);
+    if (restored) writePendingStack(tray, signedIn);
+  }, [restored, tray, signedIn]);
 
   useEffect(() => {
     if (!focusSave.current || !tray.items.length) return;
