@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addedMessage, emptyTray, nextActiveOption, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
+import { addedMessage, emptyTray, nextActiveOption, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
 import { resolveTypedPick } from "./typed-pick";
 
 const windsurf: TrayEntry = { slug: "windsurf", name: "Windsurf", domain: "windsurf.com" };
@@ -127,7 +127,7 @@ test("the tray holds at most the server's limit and says how many it left out", 
 test("saving empties the tray and reports what the server did", () => {
   const tray = trayReducer(trayReducer(emptyTray, { type: "addEntry", entry: clay, held: [] }), { type: "saved", result: { created: CREATED, confirmed: 1, unchanged: 1 } });
   expect(tray).toEqual({ items: [], lastAdded: null, saved: { saved: SAVED, created: CREATED, confirmed: 1, unchanged: 1 } });
-  expect(savedMessage(tray.saved!)).toBe("Saved 6 tools privately. Nothing is public yet. 1 discovery was confirmed. 1 already in your collection kept its saved choices.");
+  expect(savedMessage(tray.saved!)).toBe("Saved 5 tools privately. This save made nothing public. 1 discovery was confirmed. 1 already in your collection was left as it is, public or private.");
   expect(trayReducer(tray, { type: "addEntry", entry: hubspot, held: [] }).saved).toBeNull();
 });
 
@@ -156,4 +156,17 @@ test("a retry of the same picks reuses its operation, and any change in picks or
   expect(saveAttempt(first, [...picks], next).operationId).toBe("first");
   expect(saveAttempt(first, [picks[1], picks[0]], next).operationId).toBe("second");
   expect(saveAttempt(first, [{ ...picks[0], status: "TESTING" }, picks[1]], next).operationId).toBe("third");
+});
+
+test("a save that only meets tools already in the collection promises nothing about their privacy", () => {
+  expect(savedMessage({ saved: 2, created: 0, confirmed: 0, unchanged: 2 }))
+    .toBe("No new tools were saved. This save made nothing public. 2 already in your collection were left as they are, public or private.");
+  expect(savedMessage({ saved: 1, created: 1, confirmed: 0, unchanged: 0 })).toBe("Saved 1 tool privately. This save made nothing public.");
+});
+
+test("a typed name longer than the server allows never joins the tray", () => {
+  const typed = (name: string) => trayReducer(emptyTray, { type: "addTyped", name, resolution: { kind: "typed", domain: "" }, held: [] });
+  expect(typed("x".repeat(TYPED_NAME_MAX)).items).toHaveLength(1);
+  expect(typed("x".repeat(TYPED_NAME_MAX + 1)).items).toEqual([]);
+  expect(TYPED_NAME_MAX).toBe(160);
 });
