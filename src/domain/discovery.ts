@@ -74,7 +74,7 @@ type CatalogEntry = ProductIdentity & {
   canonicalUrl?: string;
 };
 
-const VENDOR_CATALOG: CatalogEntry[] = [
+export const VENDOR_CATALOG: readonly CatalogEntry[] = [
   // Exact product identities already retained with publisher artwork in
   // public/product-assets/2026-09-24-product-icons.json. Parent domains do not
   // establish usage of these specific products.
