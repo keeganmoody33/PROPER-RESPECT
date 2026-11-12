@@ -95,15 +95,15 @@ export async function intakeRelationship(ctx: MutationCtx, user: Doc<"users">, i
     const version = (existing.relationshipVersion ?? 0) + 1;
     await ctx.db.insert("relationshipEvents", {
       userId: user._id, propId: existing._id, operationId, requestJson, version,
-      recordedAt: now, basis: "OWNER_ASSERTED", before, after: { ...before, status: edit.status, confirmed: true },
+      recordedAt: now, basis: "OWNER_ASSERTED", before, after: { ...before, status: edit.status, level: edit.level, confirmed: true },
     });
-    await ctx.db.patch(existing._id, { status: edit.status, relationshipVersion: version, confirmedAt: now, visibility: "PRIVATE" });
+    await ctx.db.patch(existing._id, { status: edit.status, level: edit.level, relationshipVersion: version, confirmedAt: now, visibility: "PRIVATE" });
     await approvePendingDraftImports(ctx, existing, product);
     return { propId: existing._id, product, outcome: "CONFIRMED_DRAFT" };
   }
 
   const propId = await ctx.db.insert("props", {
-    userId: user._id, productId: product._id, status: edit?.status ?? "TESTING", visibility: edit ? "PRIVATE" : "DRAFT",
+    userId: user._id, productId: product._id, status: edit?.status ?? "TESTING", ...(edit?.level ? { level: edit.level } : {}), visibility: edit ? "PRIVATE" : "DRAFT",
     headline: "", note, ownerEntered: true,
     ...(edit ? { goTo: false, confirmedAt: now, relationshipVersion: 1 } : {}),
   });

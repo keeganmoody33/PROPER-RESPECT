@@ -7,7 +7,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
 import { readPublishedProfile } from "./publicProfiles";
-import { statusValidator } from "./validators";
+import { relationshipLevelValidator, statusValidator } from "./validators";
 import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
 import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
 import { privateCardPrimaryLink } from "../src/domain/product-destination";
@@ -20,7 +20,7 @@ async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   return { user, prop };
 }
 export function relationshipState(prop: Doc<"props">) {
-  return { status: prop.status, goTo: prop.goTo ?? false,
+  return { status: prop.status, level: prop.level, goTo: prop.goTo ?? false,
     confirmed: isRelationshipConfirmed(prop),
     headline: prop.headline, note: prop.note, startedAt: prop.startedAt,
     supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId };
@@ -50,7 +50,7 @@ async function evidenceEntry(ctx: QueryCtx, userId: Id<"users">, rawEvidenceId: 
 export const save = mutation({
   args: {
     propId: v.id("props"), operationId: v.string(), expectedVersion: v.number(),
-    status: statusValidator, goTo: v.boolean(), headline: v.string(), note: v.string(),
+    status: statusValidator, level: v.optional(relationshipLevelValidator), goTo: v.boolean(), headline: v.string(), note: v.string(),
     startedAt: v.optional(v.string()), supportingUrl: v.optional(v.string()),
     activityEvidenceId: v.optional(v.id("rawEvidence")),
     clearActivity: v.optional(v.boolean()),
@@ -84,7 +84,8 @@ export const save = mutation({
       after: { ...edit, confirmed: true, activityEvidenceId },
     });
     await ctx.db.patch(prop._id, {
-      ...edit, activity, activityEvidenceId, relationshipVersion: version,
+      // A save without a level clears the old one, so it can't outlive the status it implied.
+      ...edit, level: edit.level, activity, activityEvidenceId, relationshipVersion: version,
       startedAt: edit.startedAt, supportingUrl: edit.supportingUrl,
       startedAtSource: edit.startedAt ? (edit.startedAt === prop.startedAt ? prop.startedAtSource ?? "USER_CONFIRMED" : "USER_CONFIRMED") : undefined,
       confirmedAt: prop.confirmedAt ?? now,

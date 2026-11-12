@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isHttpsUrl } from "./http-url.ts";
+import { levelMatchesStatus, relationshipLevelSchema } from "./relationship-level.ts";
 
 const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
   const parsed = new Date(`${value}T00:00:00Z`);
@@ -8,6 +9,7 @@ const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
 
 export const relationshipEditSchema = z.object({
   status: z.enum(["ACTIVE", "TESTING", "ARCHIVED"]),
+  level: relationshipLevelSchema.optional(),
   goTo: z.boolean(),
   headline: z.string().trim().max(240),
   note: z.string().trim().max(4000),
@@ -17,6 +19,9 @@ export const relationshipEditSchema = z.object({
     isHttpsUrl,
     "Use an HTTPS work sample or workflow link without credentials.",
   ).optional(),
+}).refine(edit => levelMatchesStatus(edit.level, edit.status), {
+  message: "This level does not match its status. Choose the level again.",
+  path: ["status"],
 });
 export type RelationshipEdit = z.infer<typeof relationshipEditSchema>;
 

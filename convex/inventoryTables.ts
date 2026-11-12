@@ -1,9 +1,10 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
-import { statusValidator } from "./validators";
+import { relationshipLevelValidator, statusValidator } from "./validators";
 
 export const relationshipStateValidator = v.object({
   status: statusValidator,
+  level: v.optional(relationshipLevelValidator),
   goTo: v.boolean(),
   confirmed: v.boolean(),
   headline: v.string(),
