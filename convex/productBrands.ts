@@ -108,8 +108,12 @@ export async function ensureProductBrand(ctx: MutationCtx, product: Doc<"product
     if (existing.status === "FAILED" && !refresh && !retryFailed) return { status: existing.status };
     const pending = (existing.status === "PENDING" && now - existing.requestedAt < 180_000) || (existing.status === "RUNNING" && (existing.leaseUntil ?? 0) > now);
     // A brand an older adapter stored lacks what cards now read, so it counts as missing and is fetched again.
-    const retained = existing.status === "READY" && !refresh && (await retainedProductBrand(ctx, product, existing))?.adapterVersion === CONTEXT_BRAND_ADAPTER_VERSION;
-    if (pending || retained || now - (existing.completedAt ?? existing.requestedAt) < REFRESH_COOLDOWN_MS) {
+    // The cooldown spaces out fetches; it does not apply here, because the scheduled refresh restarts a
+    // job's wait when it passes over an unused product, and that is not a fetch.
+    const stored = existing.status === "READY" ? await retainedProductBrand(ctx, product, existing) : undefined;
+    const outdated = stored !== undefined && stored.adapterVersion !== CONTEXT_BRAND_ADAPTER_VERSION;
+    const retained = stored !== undefined && !refresh && !outdated;
+    if (pending || retained || (!outdated && now - (existing.completedAt ?? existing.requestedAt) < REFRESH_COOLDOWN_MS)) {
       return { status: existing.status };
     }
   }
