@@ -38,8 +38,8 @@ preview or production deployment. Its build command is
 `npm run deploy:check && npm run build`: a Vercel build is frontend-only and
 never deploys Convex. The backend deploys only from the release workflow's
 `backend` job, with `CONVEX_DEPLOY_KEY` from the `production-backend` GitHub
-environment. The release's `verify` job stops unless the repository owner pushed
-the tag and started the run, both `production-backend` and `production-frontend`
+environment. Every job in the release stops unless the repository owner pushed
+the tag and started that attempt, both `production-backend` and `production-frontend`
 deploy from `v*` tags only, and an active tag ruleset restricts `v*` tags.
 Every action it uses is pinned to a commit.
 Each secret is passed only to the steps that run its CLI, and the first of
@@ -230,12 +230,14 @@ rule is gone from both environments. Pushing the tag is the approval instead.
 Nothing pauses between `backend` and `frontend`, so a release whose migration
 must run between them needs its own plan in its release notes.
 
-Three things keep a release to the owner. The first is in the workflow; the
-other two are repository settings that only the owner can change, and `verify`
-stops the release if either is missing:
+Three things keep a release to the owner. The first is in the tagged commit;
+the other two are repository settings that only the owner can change.
+`scripts/release-gate.sh` checks all three, and `verify`, `backend` and
+`frontend` each run it first, so re-running one deploy job checks them again:
 
-1. `verify` stops unless `github.actor` and `github.triggering_actor` are both
-   the repository owner.
+1. The script stops unless `github.actor` and `github.triggering_actor` are both
+   the repository owner. The two deploy jobs also carry that condition
+   themselves.
 2. Both environments deploy from `v*` tags only (Settings, Environments, the
    environment, Deployment branches and tags). Already set.
 3. A tag ruleset (Settings, Rules, Rulesets, New tag ruleset): enforcement

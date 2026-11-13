@@ -79,83 +79,15 @@ jobs:
             exit 1
           fi
           echo "value=$expected_deployment" >> "$GITHUB_OUTPUT"
-      - name: Require the owner pushed this tag
-        # triggering_actor is whoever started this attempt, so a re-run by
-        # anyone else stops here too.
+      - name: Require the owner's release and owner-only tags
+        # scripts/release-gate.sh: the owner pushed the tag and started this
+        # attempt, both environments deploy from v* tags only, and a tag
+        # ruleset restricts v* tags.
         env:
           ACTOR: ${{ github.actor }}
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
-        run: |
-          for who in "$ACTOR" "$TRIGGERING_ACTOR"; do
-            if [ "$who" != "$GITHUB_REPOSITORY_OWNER" ]; then
-              echo "Only $GITHUB_REPOSITORY_OWNER can release. This run was started by $who."
-              exit 1
-            fi
-          done
-      - name: Require owner-only release tags
-        # The check above lives in this file, and a tag can point at a commit
-        # that rewrites it. Two repository settings close that: a tag ruleset
-        # lets only the owner create, move or delete v* tags, and each deploy
-        # environment hands its secrets only to v* tags. Both are read here, so
-        # a release stops if either is missing or can't be read. The token
-        # can't read a ruleset's bypass list; docs/DEPLOYMENT.md says who may be on it.
-        env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          api() {
-            # Prints the HTTP status; the body goes to the file named first.
-            curl --silent --output "$1" --write-out '%{http_code}' \
-              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/$2"
-          }
-          for name in production-backend production-frontend; do
-            status="$(api environment.json "environments/$name")"
-            if [ "$status" != "200" ]; then
-              echo "Could not read the $name environment (HTTP $status). Create it first."
-              exit 1
-            fi
-            status="$(api policies.json "environments/$name/deployment-branch-policies")"
-            if [ "$status" != "200" ]; then
-              echo "Could not read which branches and tags may deploy to $name (HTTP $status)."
-              exit 1
-            fi
-            if ! jq -e '.deployment_branch_policy.custom_branch_policies == true' environment.json > /dev/null ||
-              ! jq -e '
-                (.branch_policies // []) as $policies
-                | ($policies | length > 0)
-                  and ($policies | all(.type == "tag" and .name == "v*"))
-              ' policies.json > /dev/null; then
-              echo "The $name environment must deploy from v* tags only (Settings, Environments, $name, Deployment branches and tags)."
-              exit 1
-            fi
-          done
-          status="$(api rulesets.json "rulesets?includes_parents=false&per_page=100")"
-          if [ "$status" != "200" ]; then
-            echo "Could not read the repository's rulesets (HTTP $status)."
-            exit 1
-          fi
-          protected=no
-          for id in $(jq -r '.[] | select(.target == "tag" and .enforcement == "active") | .id' rulesets.json); do
-            status="$(api ruleset.json "rulesets/$id")"
-            if [ "$status" != "200" ]; then
-              echo "Could not read ruleset $id (HTTP $status)."
-              exit 1
-            fi
-            if jq -e '
-              [.rules[]?.type] as $types
-              | .target == "tag" and .enforcement == "active"
-                and ((.conditions.ref_name.include // []) | any(. == "refs/tags/v*" or . == "~ALL"))
-                and ((.conditions.ref_name.exclude // []) | length == 0)
-                and (["creation", "update", "deletion"] | all(. as $rule | $types | index($rule) != null))
-            ' ruleset.json > /dev/null; then
-              protected=yes
-            fi
-          done
-          if [ "$protected" != "yes" ]; then
-            echo "No active tag ruleset restricts creating, updating and deleting v* tags. See docs/DEPLOYMENT.md, Release a tagged version."
-            exit 1
-          fi
-          rm -f environment.json policies.json rulesets.json ruleset.json
+        run: bash scripts/release-gate.sh
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
@@ -169,13 +101,28 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # verify has already required that the owner pushed this tag.
+    # A re-run of this job alone skips verify, so the owner check is repeated
+    # here and the gate script runs again below.
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
+    permissions:
+      contents: read
+      # The gate script reads the deploy environments' tag rules.
+      actions: read
     environment: production-backend
     # Only the two Convex steps receive the key, so npm ci's install scripts never see it.
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+      - name: Require the owner's release and owner-only tags
+        # scripts/release-gate.sh: the owner pushed the tag and started this
+        # attempt, both environments deploy from v* tags only, and a tag
+        # ruleset restricts v* tags.
+        env:
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/release-gate.sh
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
@@ -185,7 +132,7 @@ jobs:
       - run: npm ci
       - name: Deploy the Convex backend
         # A deploy key scopes every Convex command to its own deployment, so no --prod.
-        # verify has already required that the owner pushed this tag. The key is
+        # The gate step above has already required the owner's release. The key is
         # checked in this step, before the CLI runs, so no other step holds it:
         # a dev key or another deployment's key would deploy somewhere else
         # while the release looked successful.
@@ -215,14 +162,33 @@ jobs:
     needs: [verify, backend]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # A re-run of this job alone skips verify, so the owner check is repeated
+    # here and the gate script runs again below.
+    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
+    permissions:
+      contents: read
+      # The gate script reads the deploy environments' tag rules.
+      actions: read
     environment: production-frontend
     env:
       PUBLIC_HANDLE: ${{ needs.verify.outputs.public_handle }}
     # Only the Vercel steps receive the token and IDs. The CLI reads them from
     # the environment, so no step passes --token.
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Require the owner's release and owner-only tags
+        # scripts/release-gate.sh: the owner pushed the tag and started this
+        # attempt, both environments deploy from v* tags only, and a tag
+        # ruleset restricts v* tags.
+        env:
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/release-gate.sh
       - name: Require the proper-respect project's IDs
-        # verify has already required that the owner pushed this tag. The IDs are
+        # The gate step above has already required the owner's release. The IDs are
         # K02's environment variables, but a missing one falls back to a
         # repository or org variable, so each must equal the project's known
         # ID, not just be non-empty. The token is checked in the deploy step.
@@ -241,9 +207,6 @@ jobs:
             echo "VERCEL_PROJECT_ID must be $expected_project. Set it on the production-frontend environment."
             exit 1
           fi
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
