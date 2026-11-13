@@ -6,7 +6,7 @@ const font = (bytes: number, init: ResponseInit = {}) => new Response(new Uint8A
 
 describe("serveBrandFont", () => {
   it("serves the provider's font from this origin, cacheable forever and with none of the upstream's headers", async () => {
-    const fetcher = vi.fn(async () => font(1200));
+    const fetcher = vi.fn(async (url: string) => (url ? font(1200) : font(0)));
     const response = await serveBrandFont(FILE, fetcher);
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0][0]).toBe(`https://media.brand.dev/fonts/${FILE}`);
@@ -19,7 +19,7 @@ describe("serveBrandFont", () => {
   });
 
   it("refuses any name that is not one content-addressed font file, without fetching", async () => {
-    const fetcher = vi.fn(async () => font(10));
+    const fetcher = vi.fn(async (url: string) => (url ? font(10) : font(0)));
     for (const file of ["../secret", "font.woff2", `${"a1".repeat(32)}.svg`, `${"a1".repeat(32)}.woff2/x`]) {
       expect((await serveBrandFont(file, fetcher)).status, file).toBe(404);
     }
