@@ -69,6 +69,14 @@ branch and PR per task. That also applies:
 
 Match existing TypeScript/TSX: two-space indentation, double quotes, semicolons, PascalCase components/types, and camelCase functions/variables. Component/domain filenames generally use kebab-case; preserve existing Convex module naming. Use `@/` for repository-root imports. Validate external data at adapter boundaries; keep credentials server-side.
 
+Interactive behavior (toggles, menus, popups, dialogs, tabs, keyboard
+navigation, focus) comes from UI SDK (`@ui-sdk/react`, owner direction
+2026-11-13), not hand-written ARIA and key handlers. Before using it, read
+`node_modules/@ui-sdk/core/skills/ui-sdk/SKILL.md` and the component's page in
+`node_modules/@ui-sdk/react/docs/`. It is a beta: both packages are pinned to
+one exact version, and they move together in their own PR. Its parts are
+unstyled; style them with the app's CSS and its `data-*` state attributes.
+
 ## Testing Guidelines
 
 Place `*.test.ts` beside domain, adapter, or Convex code; use `convex-test` for backend behavior. Browser tests use `tests/e2e/*.spec.ts` and Playwright/axe. Cover ownership, replay safety, provenance, fallback behavior, and private/public separation. No numeric coverage threshold is configured. Keep fixture E2E separate from the real signed-in runtime. Verify changed UI on desktop/mobile; distinguish synthetic checks from authorized live proof.
