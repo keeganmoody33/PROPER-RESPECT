@@ -1,6 +1,8 @@
 name: Release
-# A pushed v* tag on main deploys the backend, then the frontend. Each deploy
-# waits for the owner's approval in its GitHub environment (R10).
+# A v* tag pushed by the repository owner deploys the backend, then the
+# frontend. Pushing the tag is the owner's approval: GitHub offers required
+# reviewers on a private repository only on Enterprise, so the environments
+# can't hold a deploy for review (R10, changed 2026-11-12).
 on:
   push:
     tags: ["v*"]
@@ -15,7 +17,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      # Reads the deploy environments' protection rules below.
+      # Reads the deploy environments' tag rules below.
       actions: read
     outputs:
       # The frontend smoke test uses this checked value, not vars.PUBLIC_HANDLE,
@@ -77,38 +79,83 @@ jobs:
             exit 1
           fi
           echo "value=$expected_deployment" >> "$GITHUB_OUTPUT"
-      - name: Require protected deploy environments
-        # environment: only names an environment, and a same-named repository or
-        # org secret would still reach a job whose environment is missing or
-        # unprotected. So both environments must exist and require a reviewer
-        # before any deploy job starts. An unreadable environment also fails.
+      - name: Require the owner pushed this tag
+        # triggering_actor is whoever started this attempt, so a re-run by
+        # anyone else stops here too.
         env:
-          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
         run: |
-          for name in production-backend production-frontend; do
-            status="$(curl --silent --output environment.json --write-out '%{http_code}' \
-              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
-              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/environments/$name")"
-            if [ "$status" != "200" ]; then
-              echo "Could not read the $name environment (HTTP $status). Create it with a required reviewer first."
-              exit 1
-            fi
-            # The repository owner must be the only required reviewer: another
-            # user or a team could otherwise approve a production deploy.
-            # prevent_self_review would stop the owner, who pushes the tag, from
-            # approving their own release, so the run would wait forever.
-            if ! jq -e --arg owner "$GITHUB_REPOSITORY_OWNER" '
-              [.protection_rules[]? | select(.type == "required_reviewers")] as $rules
-              | [$rules[] | (.reviewers // [])[]] as $reviewers
-              | ($reviewers | length > 0)
-                and ($reviewers | all(.type == "User" and .reviewer.login == $owner))
-                and ($rules | all(.prevent_self_review != true))
-            ' environment.json > /dev/null; then
-              echo "The $name environment must require $GITHUB_REPOSITORY_OWNER, and only $GITHUB_REPOSITORY_OWNER, as reviewer, with \"Prevent self-review\" off."
+          for who in "$ACTOR" "$TRIGGERING_ACTOR"; do
+            if [ "$who" != "$GITHUB_REPOSITORY_OWNER" ]; then
+              echo "Only $GITHUB_REPOSITORY_OWNER can release. This run was started by $who."
               exit 1
             fi
           done
-          rm -f environment.json
+      - name: Require owner-only release tags
+        # The check above lives in this file, and a tag can point at a commit
+        # that rewrites it. Two repository settings close that: a tag ruleset
+        # lets only the owner create, move or delete v* tags, and each deploy
+        # environment hands its secrets only to v* tags. Both are read here, so
+        # a release stops if either is missing or can't be read. The token
+        # can't read a ruleset's bypass list; docs/DEPLOYMENT.md says who may be on it.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          api() {
+            # Prints the HTTP status; the body goes to the file named first.
+            curl --silent --output "$1" --write-out '%{http_code}' \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/$2"
+          }
+          for name in production-backend production-frontend; do
+            status="$(api environment.json "environments/$name")"
+            if [ "$status" != "200" ]; then
+              echo "Could not read the $name environment (HTTP $status). Create it first."
+              exit 1
+            fi
+            status="$(api policies.json "environments/$name/deployment-branch-policies")"
+            if [ "$status" != "200" ]; then
+              echo "Could not read which branches and tags may deploy to $name (HTTP $status)."
+              exit 1
+            fi
+            if ! jq -e '.deployment_branch_policy.custom_branch_policies == true' environment.json > /dev/null ||
+              ! jq -e '
+                (.branch_policies // []) as $policies
+                | ($policies | length > 0)
+                  and ($policies | all(.type == "tag" and .name == "v*"))
+              ' policies.json > /dev/null; then
+              echo "The $name environment must deploy from v* tags only (Settings, Environments, $name, Deployment branches and tags)."
+              exit 1
+            fi
+          done
+          status="$(api rulesets.json "rulesets?includes_parents=false&per_page=100")"
+          if [ "$status" != "200" ]; then
+            echo "Could not read the repository's rulesets (HTTP $status)."
+            exit 1
+          fi
+          protected=no
+          for id in $(jq -r '.[] | select(.target == "tag" and .enforcement == "active") | .id' rulesets.json); do
+            status="$(api ruleset.json "rulesets/$id")"
+            if [ "$status" != "200" ]; then
+              echo "Could not read ruleset $id (HTTP $status)."
+              exit 1
+            fi
+            if jq -e '
+              [.rules[]?.type] as $types
+              | .target == "tag" and .enforcement == "active"
+                and ((.conditions.ref_name.include // []) | any(. == "refs/tags/v*" or . == "~ALL"))
+                and ((.conditions.ref_name.exclude // []) | length == 0)
+                and (["creation", "update", "deletion"] | all(. as $rule | $types | index($rule) != null))
+            ' ruleset.json > /dev/null; then
+              protected=yes
+            fi
+          done
+          if [ "$protected" != "yes" ]; then
+            echo "No active tag ruleset restricts creating, updating and deleting v* tags. See docs/DEPLOYMENT.md, Release a tagged version."
+            exit 1
+          fi
+          rm -f environment.json policies.json rulesets.json ruleset.json
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .nvmrc
@@ -122,7 +169,7 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # Required reviewers on this environment make the owner approve the deploy.
+    # verify has already required that the owner pushed this tag.
     environment: production-backend
     # Only the two Convex steps receive the key, so npm ci's install scripts never see it.
     steps:
@@ -138,7 +185,7 @@ jobs:
       - run: npm ci
       - name: Deploy the Convex backend
         # A deploy key scopes every Convex command to its own deployment, so no --prod.
-        # verify has already required the owner as reviewer here. The key is
+        # verify has already required that the owner pushed this tag. The key is
         # checked in this step, before the CLI runs, so no other step holds it:
         # a dev key or another deployment's key would deploy somewhere else
         # while the release looked successful.
@@ -175,7 +222,7 @@ jobs:
     # the environment, so no step passes --token.
     steps:
       - name: Require the proper-respect project's IDs
-        # verify has already required the owner as reviewer here. The IDs are
+        # verify has already required that the owner pushed this tag. The IDs are
         # K02's environment variables, but a missing one falls back to a
         # repository or org variable, so each must equal the project's known
         # ID, not just be non-empty. The token is checked in the deploy step.

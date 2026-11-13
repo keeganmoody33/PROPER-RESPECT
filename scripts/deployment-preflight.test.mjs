@@ -44,13 +44,14 @@ function workflowPattern(text, name) {
   return match[1];
 }
 
-test("the release verifies both deploy environments require a reviewer before deploying", () => {
+test("the release verifies both deploy environments accept only v* tags before deploying", () => {
   const workflow = releaseWorkflow();
   const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
   assert.match(verify, /actions: read/);
-  assert.match(verify, /environments\/\$name/);
-  assert.match(verify, /required_reviewers/);
   assert.match(verify, /for name in production-backend production-frontend/);
+  assert.match(verify, /environments\/\$name\/deployment-branch-policies/);
+  assert.match(verify, /\.deployment_branch_policy\.custom_branch_policies == true/);
+  assert.match(verify, /all\(\.type == "tag" and \.name == "v\*"\)/);
 });
 
 test("the release checks the smoke-test handle before anything deploys", () => {
@@ -111,11 +112,16 @@ test("the production-domain check reads the deployment's aliases and says why it
   for (const exit of step.split("exit 1").slice(0, -1)) assert.match(exit.slice(-400), /echo "/);
 });
 
-test("the release requires the repository owner as the only reviewer", () => {
+test("the release stops unless the repository owner pushed the tag and started the run", () => {
+  // Required reviewers aren't offered on a private repository below Enterprise,
+  // so the tag push is the owner's approval (2026-11-12).
   const workflow = releaseWorkflow();
   const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
-  assert.match(verify, /--arg owner "\$GITHUB_REPOSITORY_OWNER"/);
-  assert.match(verify, /\.reviewer\.login == \$owner/);
+  assert.doesNotMatch(workflow, /required_reviewers/);
+  assert.match(workflow, /\non:\n  push:\n    tags: \["v\*"\]\npermissions:/);
+  assert.match(verify, /ACTOR: \$\{\{ github\.actor \}\}/);
+  assert.match(verify, /TRIGGERING_ACTOR: \$\{\{ github\.triggering_actor \}\}/);
+  assert.match(verify, /for who in "\$ACTOR" "\$TRIGGERING_ACTOR"; do\n\s+if \[ "\$who" != "\$GITHUB_REPOSITORY_OWNER" \]; then\n\s+echo [^\n]+\n\s+exit 1/);
 });
 
 test("the frontend smoke test uses the handle verify checked", () => {
@@ -152,10 +158,17 @@ test("the release accepts only the pinned production Convex deployment", () => {
   assert.match(verify, /\[ "\$\{BASH_REMATCH\[1\]\}" != "\$expected_deployment" \]/);
 });
 
-test("the owner can approve their own release: prevent_self_review is refused", () => {
+test("the release requires an active ruleset that restricts v* tags", () => {
+  // Without it, anyone with write access could tag a commit that rewrites the owner check.
   const workflow = releaseWorkflow();
   const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
-  assert.match(verify, /\.prevent_self_review != true/);
+  assert.match(verify, /select\(\.target == "tag" and \.enforcement == "active"\)/);
+  assert.match(verify, /any\(\. == "refs\/tags\/v\*" or \. == "~ALL"\)/);
+  assert.match(verify, /\.conditions\.ref_name\.exclude \/\/ \[\]\) \| length == 0/);
+  assert.match(verify, /\["creation", "update", "deletion"\] \| all\(/);
+  assert.match(verify, /if \[ "\$protected" != "yes" \]; then\n\s+echo [^\n]+\n\s+exit 1/);
+  // Every check runs before anything is installed or deployed.
+  assert.ok(verify.indexOf("Require owner-only release tags") < verify.indexOf("npm ci"));
 });
 
 test("the frontend is built against the same Convex deployment the backend deployed", () => {
