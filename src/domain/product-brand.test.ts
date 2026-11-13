@@ -74,6 +74,38 @@ describe("retained product brand presentation", () => {
     expect(snapshot.partial).toBe(false);
   });
 
+  it("keeps the typed card and button values a card is themed from, and no vendor CSS", () => {
+    const snapshot = normalizeProductBrand(input, { ...responses, styleguide: { ...responses.styleguide, styleguide: { ...responses.styleguide.styleguide, components: {
+      card: { backgroundColor: "#F9F9F9", textColor: "#262626", borderColor: "#e5e7eb", borderRadius: "8px", padding: "16px 20px", boxShadow: "none", css: "background-color: #f9f9f9;" },
+      button: {
+        primary: { backgroundColor: "#ff4c00", color: "#fff", borderColor: "#e5e7eb", borderRadius: "3.35544e+07px", padding: "8px", fontWeight: 450, boxShadow: "inset 0 -6px 12px red", css: "x" },
+        secondary: { backgroundColor: "transparent", color: "#262626", borderColor: "transparent", borderRadius: "12px", fontWeight: 500 },
+        link: { color: "#262626" },
+      },
+    } } } });
+    expect(snapshot.styleguide).toMatchObject({ components: {
+      card: { background: "#f9f9f9", text: "#262626", border: "#e5e7eb", radiusPx: 8, paddingPx: 16 },
+      buttonPrimary: { background: "#ff4c00", text: "#ffffff", border: "#e5e7eb", radiusPx: 9999, paddingPx: 8, weight: 450 },
+      buttonSecondary: { text: "#262626", radiusPx: 12, weight: 500 },
+    } });
+    const kept = JSON.stringify(snapshot);
+    for (const vendorCss of ["background-color", "inset", "css", "boxShadow", "transparent"]) expect(kept).not.toContain(vendorCss);
+    expect(snapshot.partial).toBe(false);
+    expect(productBrandSnapshotSchema.parse(snapshot)).toEqual(snapshot);
+  });
+
+  it("drops component values it cannot type, and still reads snapshots stored before components existed", () => {
+    const snapshot = normalizeProductBrand(input, { ...responses, styleguide: { ...responses.styleguide, styleguide: { ...responses.styleguide.styleguide, components: {
+      card: { backgroundColor: "url(https://evil.example/x)", borderRadius: "calc(1px + 2px)", padding: "-4px", textColor: 7 },
+      button: { primary: "not an object", secondary: { fontWeight: 5000, borderRadius: "50%" } },
+    } } } });
+    expect(snapshot.styleguide).not.toHaveProperty("components");
+    const before = normalizeProductBrand(input, responses);
+    expect(before.styleguide).not.toHaveProperty("components");
+    expect(productBrandSnapshotSchema.safeParse(before).success).toBe(true);
+    expect(productBrandSnapshotSchema.safeParse({ ...before, styleguide: { ...before.styleguide, components: { card: { background: "red" } } } }).success).toBe(false);
+  });
+
   it("keeps useful typography when unsafe files and CSS values are discarded", () => {
     const snapshot = normalizeProductBrand(input, {
       ...responses,
