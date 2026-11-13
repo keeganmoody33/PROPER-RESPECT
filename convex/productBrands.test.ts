@@ -105,7 +105,8 @@ test("bounded preparation enrolls existing owner cards once and preserves their 
   expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").collect())).toHaveLength(1);
   const job = (await t.run(ctx => ctx.db.query("productBrandJobs").unique()))!;
   await t.mutation(claim, { productId: job.productId, generation: 1 });
-  await t.mutation(retain, { productId: job.productId, generation: 1, snapshot: wisprReceipt.snapshot, responseJson: JSON.stringify(wisprReceipt.response) });
+  // Stored by the current adapter: a brand an older adapter stored is fetched once more, which another test covers.
+  await t.mutation(retain, { productId: job.productId, generation: 1, snapshot: { ...wisprReceipt.snapshot, adapterVersion: CONTEXT_BRAND_ADAPTER_VERSION }, responseJson: JSON.stringify(wisprReceipt.response) });
   vi.setSystemTime(Date.now() + 60_001);
   await owner.mutation(prepare, { propIds });
   expect(await owner.query(preparation, { propIds })).toEqual(propIds.map(propId => ({ propId, status: "READY" })));
@@ -516,6 +517,8 @@ test("a brand stored by an older adapter is fetched again without waiting thirty
   await f.t.run(async ctx => {
     const stored = (await ctx.db.query("productBrandSnapshots").unique())!;
     await ctx.db.patch(stored._id, { snapshot: { ...stored.snapshot, adapterVersion: "context-brand-v2-2026-09-18" } });
+    // Jobs from before the backfill existed carry no record of the adapter they were weighed against.
+    await ctx.db.patch((await ctx.db.query("productBrandJobs").unique())!._id, { adapterSeen: undefined });
   });
   vi.setSystemTime(Date.now() + DAY_MS);
   expect(await f.run()).toEqual({ queued: 1 });

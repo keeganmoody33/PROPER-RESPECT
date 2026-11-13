@@ -162,11 +162,13 @@ function normalizedTypography(value: unknown): { role?: ProductBrandTypographyRo
 }
 
 // A CSS length in pixels, alone or first in a shorthand. Reads 8 from "8px" and 16 from "16px 20px";
-// rejects "50%", "calc(1px + 2px)" and "-4px". Scientific notation is how a browser reports a pill's radius.
-const LEADING_PIXELS = /^(\d+(?:\.\d+)?(?:e\+\d{1,2})?)px(?: |$)/;
+// rejects "50%", "calc(1px + 2px)" and "-4px". Scientific notation is how a browser reports a pill's radius ("3.35544e+07px").
+const LEADING_PIXELS = /^(\d+(?:\.\d+)?(?:e[+-]?\d{1,3})?)px(?: |$)/;
+/** Kept lengths are whole hundredths of a pixel, so a kept value always writes back as plain digits. */
+const PIXEL_PLACES = 100;
 function pixels(value: unknown, max: number) {
   const match = typeof value === "string" ? LEADING_PIXELS.exec(value.trim()) : null;
-  return match ? Math.min(max, Number(match[1])) : undefined;
+  return match ? Math.round(Math.min(max, Number(match[1])) * PIXEL_PLACES) / PIXEL_PLACES : undefined;
 }
 function normalizedSurface(value: unknown, textKey: "textColor" | "color") {
   const item = record(value);

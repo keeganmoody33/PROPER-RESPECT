@@ -107,7 +107,8 @@ export async function ensureProductBrand(ctx: MutationCtx, product: Doc<"product
   if (existing && existing.canonicalDomain === canonicalDomain) {
     if (existing.status === "FAILED" && !refresh && !retryFailed) return { status: existing.status };
     const pending = (existing.status === "PENDING" && now - existing.requestedAt < 180_000) || (existing.status === "RUNNING" && (existing.leaseUntil ?? 0) > now);
-    const retained = existing.status === "READY" && !refresh && Boolean(await retainedProductBrand(ctx, product, existing));
+    // A brand an older adapter stored lacks what cards now read, so it counts as missing and is fetched again.
+    const retained = existing.status === "READY" && !refresh && (await retainedProductBrand(ctx, product, existing))?.adapterVersion === CONTEXT_BRAND_ADAPTER_VERSION;
     if (pending || retained || now - (existing.completedAt ?? existing.requestedAt) < REFRESH_COOLDOWN_MS) {
       return { status: existing.status };
     }
@@ -155,19 +156,22 @@ export const refreshDue = internalMutation({
         queued += 1;
       }
     }
-    // A brand stored by an older adapter lacks what the current one keeps. The longest-stored brands are
-    // checked each hour and fetched once more, a batch at a time; a fresh fetch moves a brand to the back.
-    const oldest = await ctx.db.query("productBrandJobs").withIndex("by_status_completed", q => q.eq("status", "READY")).take(REFRESH_DUE_BATCH);
-    for (const job of oldest) {
+    // A brand stored by an older adapter lacks what the current one keeps, so it is fetched once more.
+    // Each job records the adapter it was last weighed against, and only jobs behind the current one are
+    // read, so brands that are already current never hold an outdated one back. A product nobody uses is
+    // marked as weighed without a fetch; ensureProductBrand fetches it when someone starts using it.
+    const behind = await ctx.db.query("productBrandJobs")
+      .withIndex("by_status_adapter_seen", q => q.eq("status", "READY").lt("adapterSeen", CONTEXT_BRAND_ADAPTER_VERSION)).take(REFRESH_DUE_BATCH);
+    for (const job of behind) {
       const stored = job.currentSnapshotId && await ctx.db.get(job.currentSnapshotId);
-      if (!stored || stored.snapshot.adapterVersion === CONTEXT_BRAND_ADAPTER_VERSION) continue;
       const product = await ctx.db.get(job.productId);
       const used = product && await ctx.db.query("props").withIndex("by_product", q => q.eq("productId", job.productId)).first();
-      if (!product || !used || verifiedDomain(product) !== job.canonicalDomain) {
-        await ctx.db.patch(job._id, { completedAt: now });
+      if (!stored || stored.snapshot.adapterVersion === CONTEXT_BRAND_ADAPTER_VERSION || !product || !used || verifiedDomain(product) !== job.canonicalDomain) {
+        await ctx.db.patch(job._id, { adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
         continue;
       }
       await queueRetrieval(ctx, job.productId, job.canonicalDomain, job);
+      await ctx.db.patch(job._id, { adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
       queued += 1;
     }
     return { queued };
@@ -282,7 +286,7 @@ export const retain = internalMutation({
     const id = await ctx.db.insert("productBrandSnapshots", { ...args, snapshot });
     // Old completions remain inspectable, but cannot replace a newer selection.
     if (job.generation === args.generation && job.status === "RUNNING" && job.canonicalDomain === snapshot.canonicalDomain) {
-      await ctx.db.patch(job._id, { status: "READY", currentSnapshotId: id, completedAt: Date.now(), leaseUntil: undefined, lastError: undefined });
+      await ctx.db.patch(job._id, { status: "READY", currentSnapshotId: id, completedAt: Date.now(), leaseUntil: undefined, lastError: undefined, adapterSeen: snapshot.adapterVersion });
     }
     return id;
   },

@@ -48,12 +48,14 @@ describe("Context.dev presentation adapter", () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(Response.json(brand)).mockResolvedValueOnce(Response.json(fonts))
       .mockResolvedValueOnce(Response.json({ ...styleguide, styleguide: { ...styleguide.styleguide, components: {
         card: { backgroundColor: "#f9f9f9", textColor: "#262626", borderColor: "#e5e7eb", borderRadius: "8px", padding: "16px", css: "body{display:none}" },
-        button: { primary: { backgroundColor: "#ff4c00", color: "#ffffff", borderRadius: "9999px", fontWeight: 450, boxShadow: "inset 0 0 1px red", css: "body{display:none}" } },
+        button: { primary: { backgroundColor: "#ff4c00", color: "#ffffff", borderRadius: "9999px", fontWeight: 450, boxShadow: "inset 0 0 1px red", css: "body{display:none}" },
+          // Lengths a browser reports in scientific notation, tiny and huge, must survive the replay below.
+          secondary: { borderRadius: "0.0000001px", padding: "1.5e-120px 3px", borderColor: "#e5e7eb" } },
       } } }));
     const result = await retrieveProductBrand(input, { apiKey: "test-api-key", fetcher });
     expect(result.response).toMatchObject({ styleguide: { styleguide: { components: {
       card: { backgroundColor: "#f9f9f9", textColor: "#262626", borderColor: "#e5e7eb", borderRadius: "8px", padding: "16px" },
-      button: { primary: { backgroundColor: "#ff4c00", color: "#ffffff", borderRadius: "9999px", fontWeight: 450 } },
+      button: { primary: { backgroundColor: "#ff4c00", color: "#ffffff", borderRadius: "9999px", fontWeight: 450 }, secondary: { borderRadius: "0px", padding: "0px", borderColor: "#e5e7eb" } },
     } } } });
     expect(JSON.stringify(result)).not.toMatch(/display:none|boxShadow|inset|test-api-key/);
     expect(normalizeProductBrand({ ...input, responseHash: result.snapshot.responseHash, receipts: result.snapshot.receipts }, result.response as ContextBrandResponses)).toEqual(result.snapshot);
