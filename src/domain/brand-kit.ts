@@ -17,14 +17,12 @@ const CONTRAST_PAD = 0.05, CHANNEL_MAX = 255, HEX_RADIX = 16;
 const CHANNEL_STARTS = [1, 3, 5] as const, CHANNEL_DIGITS = 2;
 /** A border must show against the card, and a filled button must stand off it. */
 const MIN_BORDER_CONTRAST = 1.3, MIN_FILL_CONTRAST = 1.5, MIN_QUIET_FILL_CONTRAST = 1.04;
-/** Text on a button must be readable at button size and weight. */
-const MIN_LABEL_CONTRAST = 3;
-/** White is the usual label on a saturated accent; below this it is unreadable even at button weight. */
-const MIN_WHITE_ON_ACCENT = 2.8;
-/** How much of the text colour a derived border takes. */
-const BORDER_MIX = 0.22;
+/** The card's button text is small (0.7rem), so its label needs the contrast WCAG asks of body text. */
+const MIN_LABEL_CONTRAST = 4.5;
+/** How much of the text colour a derived border takes when the brand's own border is too faint. Tried lightest first; the last is the text colour itself. */
+const BORDER_MIXES = [0.22, 0.35, 0.5, 0.75, 1] as const;
 const RADIUS = { min: 6, max: 24 } as const;
-const WHITE = "#ffffff";
+const WHITE = "#ffffff", BLACK = "#000000";
 
 const solid = (value: string | undefined) => (value && SOLID_HEX.test(value) ? value.toLowerCase() : undefined);
 const channels = (hex: string) => CHANNEL_STARTS.map(start => parseInt(hex.slice(start, start + CHANNEL_DIGITS), HEX_RADIX));
@@ -42,8 +40,16 @@ function mix(from: string, into: string, amount: number) {
   const [a, b] = [channels(from), channels(into)];
   return `#${a.map((value, index) => Math.round(value * amount + b[index] * (1 - amount)).toString(HEX_RADIX).padStart(CHANNEL_DIGITS, "0")).join("")}`;
 }
-const readableOn = (fill: string, preferred: string | undefined, fallback: string) =>
-  preferred && contrast(preferred, fill) >= MIN_LABEL_CONTRAST ? preferred : contrast(WHITE, fill) >= MIN_WHITE_ON_ACCENT ? WHITE : fallback;
+/** The first of the brand's label, the card's text, white and black that small text can be read in on this fill. */
+function readableOn(fill: string, preferred: string | undefined, cardText: string) {
+  const candidates = [preferred, cardText, WHITE, BLACK].filter((value): value is string => Boolean(value));
+  return candidates.find(candidate => contrast(candidate, fill) >= MIN_LABEL_CONTRAST)
+    ?? (contrast(WHITE, fill) >= contrast(BLACK, fill) ? WHITE : BLACK);
+}
+function derivedBorder(surface: string, text: string) {
+  const mixes = BORDER_MIXES.map(amount => mix(text, surface, amount));
+  return mixes.find(candidate => contrast(candidate, surface) >= MIN_BORDER_CONTRAST) ?? text;
+}
 
 /**
  * `surface` and `text` are the colours the card is already drawn in. With no usable brand values the
@@ -58,7 +64,7 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   const kit: BrandCardKit = {};
 
   const border = solid(parts?.card?.border);
-  kit["--brand-card-border"] = border && contrast(border, surface) >= MIN_BORDER_CONTRAST ? border : mix(text, surface, BORDER_MIX);
+  kit["--brand-card-border"] = border && contrast(border, surface) >= MIN_BORDER_CONTRAST ? border : derivedBorder(surface, text);
   if (parts?.card?.radiusPx !== undefined) kit["--brand-card-radius"] = `${Math.min(RADIUS.max, Math.max(RADIUS.min, parts.card.radiusPx))}px`;
 
   // The stored "primary" is whichever button came first on the product's site. On a coloured hero that can be

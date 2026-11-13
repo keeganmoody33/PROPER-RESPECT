@@ -200,7 +200,7 @@ test("draws a branded card's edge and button from the product's stored card and 
     },
   } } });
   const style = $(".product-card").attr("style") ?? "";
-  for (const rule of ["--brand-card-border:#9aa0a6", "--brand-card-radius:8px", "--brand-card-button-fill:#ff4c00", "--brand-card-button-text:#ffffff", "--brand-card-button-radius:20px", "--brand-card-button-weight:450"]) {
+  for (const rule of ["--brand-card-border:#9aa0a6", "--brand-card-radius:8px", "--brand-card-button-fill:#ff4c00", "--brand-card-button-text:#262626", "--brand-card-button-radius:20px", "--brand-card-button-weight:450"]) {
     expect(style).toContain(rule);
   }
 });
