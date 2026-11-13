@@ -35,8 +35,9 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Require the tagged commit to be on main
+        # The full-history checkout above already fetched origin/main with its own
+        # token. A second fetch here has no credentials and fails on a private repository.
         run: |
-          git fetch origin main
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "Tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main."
             exit 1
