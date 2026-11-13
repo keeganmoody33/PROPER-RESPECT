@@ -7,7 +7,7 @@ import { requireUser } from "./authHelpers";
 import { resolveCatalogProduct } from "../src/domain/discovery";
 import { directoryDomainOwner, directoryEntry, extractDomain } from "../src/domain/product-directory";
 import { DIRECTORY_ENTRIES } from "../src/domain/product-directory-entries";
-import { brandNameKey, canonicalBrandDomainSchema, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
+import { brandNameKey, canonicalBrandDomainSchema, CONTEXT_BRAND_ADAPTER_VERSION, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
 import { productBrandSnapshotValidator } from "./productBrandTables";
 import { retrieveProductBrand } from "../src/server/context-brand";
 import { internal } from "./_generated/api";
@@ -154,6 +154,21 @@ export const refreshDue = internalMutation({
         await queueRetrieval(ctx, job.productId, job.canonicalDomain, job);
         queued += 1;
       }
+    }
+    // A brand stored by an older adapter lacks what the current one keeps. The longest-stored brands are
+    // checked each hour and fetched once more, a batch at a time; a fresh fetch moves a brand to the back.
+    const oldest = await ctx.db.query("productBrandJobs").withIndex("by_status_completed", q => q.eq("status", "READY")).take(REFRESH_DUE_BATCH);
+    for (const job of oldest) {
+      const stored = job.currentSnapshotId && await ctx.db.get(job.currentSnapshotId);
+      if (!stored || stored.snapshot.adapterVersion === CONTEXT_BRAND_ADAPTER_VERSION) continue;
+      const product = await ctx.db.get(job.productId);
+      const used = product && await ctx.db.query("props").withIndex("by_product", q => q.eq("productId", job.productId)).first();
+      if (!product || !used || verifiedDomain(product) !== job.canonicalDomain) {
+        await ctx.db.patch(job._id, { completedAt: now });
+        continue;
+      }
+      await queueRetrieval(ctx, job.productId, job.canonicalDomain, job);
+      queued += 1;
     }
     return { queued };
   },

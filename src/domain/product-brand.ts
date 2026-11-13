@@ -2,7 +2,7 @@ import { z } from "zod";
 import { allowsHttpsProtocol } from "./http-url.ts";
 
 /** Presentation context only. No owner, relationship, observation or usage fields. */
-export const CONTEXT_BRAND_ADAPTER_VERSION = "context-brand-v2-2026-09-18";
+export const CONTEXT_BRAND_ADAPTER_VERSION = "context-brand-v2-2026-11-13";
 const modeSchema = z.enum(["light", "dark", "unknown"]);
 const colorSchema = z.string().regex(/^#[0-9a-f]{6}(?:[0-9a-f]{2})?$/);
 const labelSchema = z.string().min(1).max(120);
@@ -55,6 +55,19 @@ export const productBrandTypographyRoleSchema = z.object({
   letterSpacingEm: z.number().min(-0.1).max(0.25).optional(),
 }).strict();
 export type ProductBrandTypographyRole = z.infer<typeof productBrandTypographyRoleSchema>;
+/** A pill's radius arrives as a huge computed value; anything rounder than this is the same pill. */
+const MAX_RADIUS_PX = 9_999;
+const MAX_PADDING_PX = 200;
+/** Typed values a card is themed from. No vendor CSS text is kept: colours, lengths and a weight only. */
+const componentSurfaceSchema = z.object({
+  background: colorSchema.optional(), text: colorSchema.optional(), border: colorSchema.optional(),
+  radiusPx: z.number().min(0).max(MAX_RADIUS_PX).optional(), paddingPx: z.number().min(0).max(MAX_PADDING_PX).optional(),
+}).strict();
+const componentButtonSchema = componentSurfaceSchema.extend({ weight: z.number().int().min(1).max(1_000).optional() }).strict();
+const productBrandComponentsSchema = z.object({
+  card: componentSurfaceSchema.optional(), buttonPrimary: componentButtonSchema.optional(), buttonSecondary: componentButtonSchema.optional(),
+}).strict();
+export type ProductBrandComponents = z.infer<typeof productBrandComponentsSchema>;
 const receiptSchema = z.object({
   endpoint: z.enum(["brand", "fonts", "styleguide"]),
   status: z.enum(["ok", "unavailable", "error"]),
@@ -89,6 +102,8 @@ const productBrandSnapshotV2Schema = productBrandSnapshotV1Schema.extend({
   fontLinks: z.array(fontLinkSchema).max(64),
   styleguide: productBrandSnapshotV1Schema.shape.styleguide.unwrap().extend({
     typography: z.object({ heading: productBrandTypographyRoleSchema.optional(), body: productBrandTypographyRoleSchema.optional() }).strict().optional(),
+    // Added 2026-11-13. Optional, so snapshots stored before it still read.
+    components: productBrandComponentsSchema.optional(),
   }).optional(),
 });
 export const productBrandSnapshotSchema = z.discriminatedUnion("schemaVersion", [productBrandSnapshotV1Schema, productBrandSnapshotV2Schema]);
@@ -144,6 +159,33 @@ function normalizedTypography(value: unknown): { role?: ProductBrandTypographyRo
   const dropped = (item.fontFallbacks !== undefined && (!Array.isArray(item.fontFallbacks) || fallbacks.length !== item.fontFallbacks.length)) ||
     [[item.fontWeight, weight], [item.fontSize, fontSizePx], [item.lineHeight, lineHeight], [item.letterSpacing, letterSpacingEm]].some(([raw, normalized]) => raw !== undefined && normalized === undefined);
   return { role, dropped };
+}
+
+// A CSS length in pixels, alone or first in a shorthand. Reads 8 from "8px" and 16 from "16px 20px";
+// rejects "50%", "calc(1px + 2px)" and "-4px". Scientific notation is how a browser reports a pill's radius.
+const LEADING_PIXELS = /^(\d+(?:\.\d+)?(?:e\+\d{1,2})?)px(?: |$)/;
+function pixels(value: unknown, max: number) {
+  const match = typeof value === "string" ? LEADING_PIXELS.exec(value.trim()) : null;
+  return match ? Math.min(max, Number(match[1])) : undefined;
+}
+function normalizedSurface(value: unknown, textKey: "textColor" | "color") {
+  const item = record(value);
+  return optionalFields({
+    background: color(item.backgroundColor), text: color(item[textKey]), border: color(item.borderColor),
+    radiusPx: pixels(item.borderRadius, MAX_RADIUS_PX), paddingPx: pixels(item.padding, MAX_PADDING_PX),
+  });
+}
+/** Best effort: a value that can't be typed is left out, and the card falls back to the brand's colours. */
+function normalizedComponents(value: unknown): ProductBrandComponents | undefined {
+  const components = record(value), buttons = record(components.button);
+  const button = (raw: unknown) => {
+    const weight = componentButtonSchema.shape.weight.safeParse(record(raw).fontWeight);
+    return optionalFields({ ...normalizedSurface(raw, "color"), weight: weight.success ? weight.data : undefined });
+  };
+  const kept = Object.fromEntries(Object.entries({
+    card: normalizedSurface(components.card, "textColor"), buttonPrimary: button(buttons.primary), buttonSecondary: button(buttons.secondary),
+  }).filter(([, part]) => Object.keys(part).length > 0));
+  return Object.keys(kept).length ? productBrandComponentsSchema.parse(kept) : undefined;
 }
 
 function normalizedFontLinks(value: unknown, source: "fonts" | "styleguide", families: string[]) {
@@ -224,6 +266,7 @@ export function normalizeProductBrand(input: SnapshotInput, responses: ContextBr
     mode: mode(style.mode), colors: optionalFields({ accent: color(styleColors.accent), background: color(styleColors.background), text: color(styleColors.text) }),
     headingFamily: fontFamily(record(record(typography.headings).h1).fontFamily), bodyFamily: fontFamily(record(typography.p).fontFamily),
     typography: heading.role || body.role ? optionalFields({ heading: heading.role, body: body.role }) : undefined,
+    components: normalizedComponents(style.components),
   }) : undefined;
   const dropped: Record<ProductBrandReceipt["endpoint"], boolean> = {
     brand: !Array.isArray(brand.logos) || !Array.isArray(brand.colors) || logos.length !== array(brand.logos).length || colors.length !== array(brand.colors).length,

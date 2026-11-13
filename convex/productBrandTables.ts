@@ -11,6 +11,12 @@ const typographyRole = v.object({
   family: v.string(), fallbacks: v.array(v.string()), weight: v.optional(v.number()),
   fontSizePx: v.optional(v.number()), lineHeight: v.optional(v.number()), letterSpacingEm: v.optional(v.number()),
 });
+const componentSurface = {
+  background: v.optional(v.string()), text: v.optional(v.string()), border: v.optional(v.string()),
+  radiusPx: v.optional(v.number()), paddingPx: v.optional(v.number()),
+};
+const componentButton = v.object({ ...componentSurface, weight: v.optional(v.number()) });
+const components = v.object({ card: v.optional(v.object(componentSurface)), buttonPrimary: v.optional(componentButton), buttonSecondary: v.optional(componentButton) });
 const snapshotFields = {
   provider: v.literal("context.dev"),
   adapterVersion: v.string(),
@@ -44,7 +50,11 @@ export const productBrandSnapshotValidator = v.union(
       category: v.optional(v.union(v.literal("sans-serif"), v.literal("serif"), v.literal("monospace"), v.literal("display"), v.literal("handwriting"))),
       files: v.array(v.object({ url: v.string(), weight: v.number(), format: v.union(v.literal("woff2"), v.literal("woff"), v.literal("truetype"), v.literal("opentype")) })),
     })),
-    styleguide: v.optional(v.object({ ...styleguideFields, typography: v.optional(v.object({ heading: v.optional(typographyRole), body: v.optional(typographyRole) })) })),
+    styleguide: v.optional(v.object({
+      ...styleguideFields, typography: v.optional(v.object({ heading: v.optional(typographyRole), body: v.optional(typographyRole) })),
+      // Added 2026-11-13; optional so stored snapshots stay valid.
+      components: v.optional(components),
+    })),
   }),
 );
 

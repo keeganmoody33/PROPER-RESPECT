@@ -1,6 +1,6 @@
 import {
   brandTitleNamesProduct, normalizeProductBrand, productBrandRetrievalSchema,
-  type ProductBrandReceipt, type ProductBrandSnapshot, type ProductBrandTypographyRole,
+  type ProductBrandComponents, type ProductBrandReceipt, type ProductBrandSnapshot, type ProductBrandTypographyRole,
 } from "../domain/product-brand.ts";
 
 const API_ROOT = "https://api.context.dev/v1";
@@ -75,6 +75,17 @@ async function request(endpoint: Endpoint, domain: string, apiKey: string, fetch
 }
 
 /** Only the supported presentation fields survive; provider account metadata never does. */
+/** The kept card and button values, back in the provider's field names, so normalizing the projection gives the same snapshot. */
+function providerComponents(components: ProductBrandComponents) {
+  const surface = (part: NonNullable<ProductBrandComponents["card"]>, textKey: "textColor" | "color") => ({
+    ...(part.background ? { backgroundColor: part.background } : {}), ...(part.text ? { [textKey]: part.text } : {}), ...(part.border ? { borderColor: part.border } : {}),
+    ...(part.radiusPx !== undefined ? { borderRadius: `${part.radiusPx}px` } : {}), ...(part.paddingPx !== undefined ? { padding: `${part.paddingPx}px` } : {}),
+  });
+  const button = (part: NonNullable<ProductBrandComponents["buttonPrimary"]>) => ({ ...surface(part, "color"), ...(part.weight !== undefined ? { fontWeight: part.weight } : {}) });
+  const buttons = { ...(components.buttonPrimary ? { primary: button(components.buttonPrimary) } : {}), ...(components.buttonSecondary ? { secondary: button(components.buttonSecondary) } : {}) };
+  return { ...(components.card ? { card: surface(components.card, "textColor") } : {}), ...(Object.keys(buttons).length ? { button: buttons } : {}) };
+}
+
 function retainedResponse(snapshot: ProductBrandSnapshot) {
   const base = (endpoint: Endpoint) => {
     const receipt = snapshot.receipts.find((item) => item.endpoint === endpoint)!;
@@ -95,6 +106,7 @@ function retainedResponse(snapshot: ProductBrandSnapshot) {
     ...(role.letterSpacingEm !== undefined ? { letterSpacing: `${role.letterSpacingEm}em` } : {}),
   } : family ? { fontFamily: family } : undefined;
   const roles = snapshot.schemaVersion === 2 ? snapshot.styleguide?.typography : undefined;
+  const kept = snapshot.schemaVersion === 2 ? snapshot.styleguide?.components : undefined;
   const heading = typography(roles?.heading, snapshot.styleguide?.headingFamily), body = typography(roles?.body, snapshot.styleguide?.bodyFamily);
   return {
     // This is explicitly a normalized, allowlisted response projection, not the full provider body.
@@ -112,6 +124,7 @@ function retainedResponse(snapshot: ProductBrandSnapshot) {
         ...(body ? { p: body } : {}),
       },
       ...(snapshot.schemaVersion === 2 ? { fontLinks: fontLinks("styleguide") } : {}),
+      ...(kept ? { components: providerComponents(kept) } : {}),
     } } : {}) },
   };
 }
