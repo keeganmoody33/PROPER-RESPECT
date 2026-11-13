@@ -385,3 +385,126 @@ test("provider action retains a normalized snapshot and optional endpoint failur
   expect((await owner.query(get, { propId })).status).toBe("FAILED");
   expect((await owner.query(get, { propId })).current).toEqual(state.current);
 });
+
+const refreshDue = makeFunctionReference<"mutation">("productBrands:refreshDue");
+const DAY_MS = 86_400_000;
+
+async function storedGithubBrand() {
+  vi.useFakeTimers();
+  vi.stubEnv("CONTEXT_DEV_API_KEY", "synthetic-test-key");
+  const t = convexTest(schema, modules);
+  const { productId, propId } = await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    const productId = await ctx.db.insert("products", { slug: "github", name: "GitHub", domain: "github.com", description: "Code" });
+    const propId = await ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: "", note: "" });
+    return { productId, propId };
+  });
+  const provider = { up: true };
+  const fetcher = vi.fn(async (url: string | URL | Request) => provider.up && String(url).includes("/brand/retrieve")
+    ? Response.json({ status: "ok", code: 200, brand: { domain: "github.com", logos: [{ url: "https://example.com/brand.png", type: "icon", mode: "dark" }], colors: [] }, request_id: "synthetic-brand-id" })
+    : Response.json({ message: "synthetic endpoint unavailable" }, { status: 503 }));
+  vi.stubGlobal("fetch", fetcher);
+  const owner = t.withIdentity({ subject: "owner" });
+  await owner.mutation(request, { propId });
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  const brandRequests = () => fetcher.mock.calls.filter(([url]) => String(url).includes("/brand/retrieve")).length;
+  const job = async () => (await t.run(ctx => ctx.db.query("productBrandJobs").unique()))!;
+  const run = async () => { const result = await t.mutation(refreshDue, {}); await t.finishAllScheduledFunctions(() => vi.runAllTimers()); return result; };
+  return { t, owner, productId, propId, provider, brandRequests, job, run };
+}
+
+test("the scheduled refresh fetches a stored brand again after thirty days and leaves a newer one alone", async () => {
+  const f = await storedGithubBrand();
+  expect(await f.job()).toMatchObject({ status: "READY", generation: 1 });
+  vi.setSystemTime(Date.now() + 29 * DAY_MS);
+  expect(await f.run()).toEqual({ queued: 0 });
+  expect(f.brandRequests()).toBe(1);
+  vi.setSystemTime(Date.now() + 2 * DAY_MS);
+  expect(await f.run()).toEqual({ queued: 1 });
+  expect(await f.job()).toMatchObject({ status: "READY", generation: 2 });
+  expect(f.brandRequests()).toBe(2);
+  expect(await f.owner.query(history, { propId: f.propId })).toHaveLength(2);
+  expect(await f.run()).toEqual({ queued: 0 });
+});
+
+test("a failed scheduled refresh keeps the stored brand and is tried again a week later", async () => {
+  const f = await storedGithubBrand();
+  const stored = (await f.owner.query(get, { propId: f.propId })).current;
+  expect(stored).not.toBeNull();
+  f.provider.up = false;
+  vi.setSystemTime(Date.now() + 31 * DAY_MS);
+  expect(await f.run()).toEqual({ queued: 1 });
+  expect(await f.job()).toMatchObject({ status: "FAILED", generation: 2, lastError: "RETRIEVAL_FAILED" });
+  expect((await f.owner.query(get, { propId: f.propId })).current).toEqual(stored);
+  vi.setSystemTime(Date.now() + 6 * DAY_MS);
+  expect(await f.run()).toEqual({ queued: 0 });
+  f.provider.up = true;
+  vi.setSystemTime(Date.now() + 2 * DAY_MS);
+  expect(await f.run()).toEqual({ queued: 1 });
+  expect(await f.job()).toMatchObject({ status: "READY", generation: 3 });
+});
+
+test("the scheduled refresh does not fetch a brand for a product nobody has any more", async () => {
+  const f = await storedGithubBrand();
+  await f.t.run(ctx => ctx.db.delete(f.propId));
+  vi.setSystemTime(Date.now() + 31 * DAY_MS);
+  expect(await f.run()).toEqual({ queued: 0 });
+  expect(f.brandRequests()).toBe(1);
+  expect(await f.job()).toMatchObject({ status: "READY", generation: 1 });
+  // It stays out of the way of products that are still used.
+  expect(await f.run()).toEqual({ queued: 0 });
+});
+
+test("the scheduled refresh picks up an attempt that was abandoned a day ago, and only while the product is in use", async () => {
+  for (const abandoned of [{ status: "PENDING" as const }, { status: "RUNNING" as const, leaseUntil: Date.now() + 180_000 }]) {
+    const f = await storedGithubBrand();
+    const stored = (await f.owner.query(get, { propId: f.propId })).current;
+    // What an interrupted attempt leaves behind: never claimed, or claimed and never finished.
+    const jobId = (await f.job())._id;
+    await f.t.run(ctx => ctx.db.patch(jobId, { ...abandoned, generation: 2, requestedAt: Date.now(), completedAt: undefined }));
+    vi.setSystemTime(Date.now() + 23 * 3_600_000);
+    expect(await f.run()).toEqual({ queued: 0 });
+    expect(await f.job()).toMatchObject({ status: abandoned.status, generation: 2 });
+    expect((await f.owner.query(get, { propId: f.propId })).current).toEqual(stored);
+    vi.setSystemTime(Date.now() + 2 * 3_600_000);
+    expect(await f.run()).toEqual({ queued: 1 });
+    expect(await f.job()).toMatchObject({ status: "READY", generation: 3 });
+    expect(f.brandRequests()).toBe(2);
+  }
+  const f = await storedGithubBrand();
+  const jobId = (await f.job())._id;
+  await f.t.run(async ctx => { await ctx.db.patch(jobId, { status: "PENDING", generation: 2, requestedAt: Date.now(), completedAt: undefined }); await ctx.db.delete(f.propId); });
+  vi.setSystemTime(Date.now() + 25 * 3_600_000);
+  expect(await f.run()).toEqual({ queued: 0 });
+  expect(await f.job()).toMatchObject({ status: "PENDING", generation: 2 });
+  expect(f.brandRequests()).toBe(1);
+});
+
+test("each scheduled run takes only the ten oldest due brands of each kind and leaves the rest for the next run", async () => {
+  vi.useFakeTimers();
+  const t = convexTest(schema, modules);
+  const now = Date.now();
+  // Ages in days, deliberately out of order; the two youngest of each kind are 40 and 41 days old.
+  const ages = [47, 41, 52, 44, 50, 40, 49, 43, 51, 46, 48, 45];
+  await t.run(async ctx => {
+    const userId = await ctx.db.insert("users", { authSubject: "owner", handle: "owner", displayName: "Owner", bio: "" });
+    for (const status of ["READY", "FAILED"] as const) for (const age of ages) {
+      const key = `${status.toLowerCase()}-${age}`;
+      const productId = await ctx.db.insert("products", { slug: `manual-${key}`, name: `Product ${key}`, domain: `${key}.example`, description: "" });
+      await ctx.db.insert("props", { userId, productId, visibility: "DRAFT", status: "TESTING", headline: "", note: "" });
+      await ctx.db.insert("productBrandJobs", { productId, canonicalDomain: `${key}.example`, generation: 1, status,
+        requestedAt: now - age * DAY_MS, completedAt: now - age * DAY_MS });
+    }
+  });
+  const queuedDomains = async () => (await t.run(ctx => ctx.db.query("productBrandJobs").collect()))
+    .filter(job => job.generation === 2).map(job => job.canonicalDomain).sort();
+  const oldestTen = (status: string) => ages.filter(age => age > 41).map(age => `${status}-${age}.example`);
+  expect(await t.mutation(refreshDue, {})).toEqual({ queued: 20 });
+  expect(await queuedDomains()).toEqual([...oldestTen("failed"), ...oldestTen("ready")].sort());
+  // No provider key here, so each attempt ends as a fresh failure, which is not due again for a week.
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await t.mutation(refreshDue, {})).toEqual({ queued: 4 });
+  expect(await queuedDomains()).toHaveLength(24);
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await t.mutation(refreshDue, {})).toEqual({ queued: 0 });
+});

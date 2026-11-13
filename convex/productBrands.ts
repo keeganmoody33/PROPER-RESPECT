@@ -13,6 +13,17 @@ import { retrieveProductBrand } from "../src/server/context-brand";
 import { internal } from "./_generated/api";
 
 const REFRESH_COOLDOWN_MS = 60_000;
+const DAY_MS = 86_400_000;
+/** A stored brand is fetched again after this long, so a rebrand reaches the cards. */
+const BRAND_MAX_AGE_MS = 30 * DAY_MS;
+const FAILED_RETRY_MS = 7 * DAY_MS;
+/** An attempt still unfinished after this long was interrupted, and is started again. */
+const ABANDONED_MS = DAY_MS;
+const REFRESH_DUE_BATCH = 10;
+const DUE = [
+  { status: "READY", age: BRAND_MAX_AGE_MS }, { status: "FAILED", age: FAILED_RETRY_MS },
+  { status: "PENDING", age: ABANDONED_MS }, { status: "RUNNING", age: ABANDONED_MS },
+] as const;
 const refreshReference = makeFunctionReference<"action">("productBrands:refresh");
 const PREPARATION_BATCH_SIZE = 25;
 
@@ -101,14 +112,52 @@ export async function ensureProductBrand(ctx: MutationCtx, product: Doc<"product
       return { status: existing.status };
     }
   }
+  await queueRetrieval(ctx, product._id, canonicalDomain, existing);
+  return { status: "PENDING" as const };
+}
+
+async function queueRetrieval(ctx: MutationCtx, productId: Id<"products">, canonicalDomain: string, existing: Doc<"productBrandJobs"> | null) {
   const generation = (existing?.generation ?? 0) + 1;
-  const fields = { productId: product._id, canonicalDomain, generation, status: "PENDING" as const, requestedAt: now,
+  const fields = { productId, canonicalDomain, generation, status: "PENDING" as const, requestedAt: Date.now(),
     completedAt: undefined, leaseUntil: undefined, lastError: undefined };
   if (existing) await ctx.db.patch(existing._id, fields);
   else await ctx.db.insert("productBrandJobs", fields);
-  await ctx.scheduler.runAfter(0, refreshReference, { productId: product._id, generation });
-  return { status: "PENDING" as const };
+  await ctx.scheduler.runAfter(0, refreshReference, { productId, generation });
 }
+
+/**
+ * Hourly: fetch again the oldest stored brands that are over thirty days old, retry week-old
+ * failures, and restart attempts abandoned a day ago. A failed fetch leaves the stored brand in place.
+ */
+export const refreshDue = internalMutation({
+  args: {},
+  handler: async ctx => {
+    const now = Date.now();
+    let queued = 0;
+    for (const { status, age } of DUE) {
+      // A finished job is aged from when it finished; an unfinished one from when it was requested.
+      const finished = status === "READY" || status === "FAILED";
+      const due = await (finished
+        ? ctx.db.query("productBrandJobs").withIndex("by_status_completed", q => q.eq("status", status).lt("completedAt", now - age))
+        : ctx.db.query("productBrandJobs").withIndex("by_status_requested", q => q.eq("status", status).lt("requestedAt", now - age))
+      ).take(REFRESH_DUE_BATCH);
+      for (const job of due) {
+        if (status === "RUNNING" && (job.leaseUntil ?? 0) > now) continue;
+        const product = await ctx.db.get(job.productId);
+        const used = product && await ctx.db.query("props").withIndex("by_product", q => q.eq("productId", job.productId)).first();
+        if (!product || !used || verifiedDomain(product) !== job.canonicalDomain) {
+          // Nothing to fetch for a product nobody has or one that lost its website. Look again
+          // after the same wait, so it does not hold up the products that are in use.
+          await ctx.db.patch(job._id, finished ? { completedAt: now } : { requestedAt: now });
+          continue;
+        }
+        await queueRetrieval(ctx, job.productId, job.canonicalDomain, job);
+        queued += 1;
+      }
+    }
+    return { queued };
+  },
+});
 
 export const requestForProp = mutation({
   args: { propId: v.id("props"), refresh: v.optional(v.boolean()) },
