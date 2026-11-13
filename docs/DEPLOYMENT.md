@@ -1,8 +1,8 @@
 # Deployment runbook
 
-Updated: 2026-09-28. Releases ship `main` at a pushed `v*` tag through
-`.github/workflows/release.yml`: the Convex backend first, then the Vercel
-frontend, each after the owner approves it in its GitHub environment. The first
+Updated: 2026-11-12. Releases ship `main` at a `v*` tag the owner pushes,
+through `.github/workflows/release.yml`: the Convex backend first, then the
+Vercel frontend. Pushing the tag is the owner's approval. The first
 release is [v0.2.0](releases/v0.2.0.md); later ones follow
 [the template](releases/TEMPLATE.md). The earlier selective-release procedure
 below is historical.
@@ -38,9 +38,10 @@ preview or production deployment. Its build command is
 `npm run deploy:check && npm run build`: a Vercel build is frontend-only and
 never deploys Convex. The backend deploys only from the release workflow's
 `backend` job, with `CONVEX_DEPLOY_KEY` from the `production-backend` GitHub
-environment. The release's `verify` job stops unless both
-`production-backend` and `production-frontend` exist with the repository owner as
-their only required reviewer, and every action it uses is pinned to a commit.
+environment. Every job in the release stops unless the repository owner pushed
+the tag and started that attempt, both `production-backend` and `production-frontend`
+deploy from `v*` tags only, and an active tag ruleset restricts `v*` tags.
+Every action it uses is pinned to a commit.
 Each secret is passed only to the steps that run its CLI, and the first of
 those checks the secret before the CLI starts. That check can't tell where the
 secret came from,
@@ -214,11 +215,41 @@ credential values.
 ## Release a tagged version
 
 Follow [the release template](releases/TEMPLATE.md), or
-[v0.2.0](releases/v0.2.0.md) for the first release. In short: push a `v*` tag on
-`main`, approve `backend`, run any listed migration, approve `frontend`, then
-verify. The workflow refuses a tag that is not on `main`, and the frontend job
-fails unless `proper-respect.com` is an alias of the new deployment and the
-smoke-test routes return 200.
+[v0.2.0](releases/v0.2.0.md) for the first release. In short: the owner pushes a
+`v*` tag on `main`, the workflow deploys `backend` then `frontend`, then the
+owner verifies. The workflow refuses a tag that is not on `main`, and the
+frontend job fails unless `proper-respect.com` is an alias of the new deployment
+and the smoke-test routes return 200.
+
+### Who can release (changed 2026-11-12)
+
+Until v0.2.7 each deploy job waited for the owner's approval as the required
+reviewer of its GitHub environment. The repository is now private, and GitHub
+offers required reviewers on a private repository only on Enterprise, so that
+rule is gone from both environments. Pushing the tag is the approval instead.
+Nothing pauses between `backend` and `frontend`, so a release whose migration
+must run between them needs its own plan in its release notes.
+
+Three things keep a release to the owner. The first is in the tagged commit;
+the other two are repository settings that only the owner can change.
+`scripts/release-gate.sh` checks all three, and `verify`, `backend` and
+`frontend` each run it first, so re-running one deploy job checks them again:
+
+1. The script stops unless `github.actor` and `github.triggering_actor` are both
+   the repository owner. The two deploy jobs also carry that condition
+   themselves.
+2. Both environments deploy from `v*` tags only (Settings, Environments, the
+   environment, Deployment branches and tags). Already set.
+3. A tag ruleset (Settings, Rules, Rulesets, New tag ruleset): enforcement
+   **Active**, target tags matching `v*`, with **Restrict creations**,
+   **Restrict updates** and **Restrict deletions** on. Its bypass list holds
+   **Repository admin** only, which is the owner. Without it, any app or
+   collaborator with write access could tag a commit that rewrites check 1.
+   The workflow can't read the bypass list, so check it by hand whenever a
+   collaborator or app gains admin access.
+
+An agent working with the owner's credentials passes all three, so an agent
+pushes a release tag only when the owner asks for that release.
 
 ## Historical: prepare a selective release
 

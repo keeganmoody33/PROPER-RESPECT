@@ -149,7 +149,7 @@ operator receipts and originals remain private.
 The native `proper-respect.com` cutover is complete. Do not restart the former
 apex-to-`props.lecturesfrom.com` transition. Git-triggered deployments remain
 disabled, and the Vercel build is frontend-only. The backend deploys only from
-the tagged release workflow, after the owner's approval.
+the tagged release workflow, when the owner pushes a `v*` tag.
 Additional provider reads, recurrence, data transfer, and publication retain
 their separate authorization boundaries.
 

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 const validEnvironment = {
@@ -44,13 +46,68 @@ function workflowPattern(text, name) {
   return match[1];
 }
 
-test("the release verifies both deploy environments require a reviewer before deploying", () => {
-  const workflow = releaseWorkflow();
-  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
-  assert.match(verify, /actions: read/);
-  assert.match(verify, /environments\/\$name/);
-  assert.match(verify, /required_reviewers/);
-  assert.match(verify, /for name in production-backend production-frontend/);
+// Runs scripts/release-gate.sh with a stub curl that answers GitHub's API from `api`.
+function runReleaseGate({ actor = "owner", triggeringActor = "owner", api = {} } = {}) {
+  const bin = mkdtempSync(join(tmpdir(), "release-gate-"));
+  const tagOnly = { branch_policies: [{ type: "tag", name: "v*" }] };
+  const responses = {
+    "environments/production-backend": { deployment_branch_policy: { custom_branch_policies: true } },
+    "environments/production-backend/deployment-branch-policies": tagOnly,
+    "environments/production-frontend": { deployment_branch_policy: { custom_branch_policies: true } },
+    "environments/production-frontend/deployment-branch-policies": tagOnly,
+    "rulesets?includes_parents=false&per_page=100": [{ id: 7, target: "tag", enforcement: "active" }],
+    "rulesets/7": releaseTagRuleset(),
+    ...api,
+  };
+  writeFileSync(join(bin, "responses.json"), JSON.stringify(responses));
+  writeFileSync(join(bin, "curl"), `#!/usr/bin/env node
+const { readFileSync, writeFileSync } = require("node:fs");
+const args = process.argv.slice(2);
+const path = args.at(-1).split("/repos/owner/repo/")[1];
+const body = JSON.parse(readFileSync(${JSON.stringify(join(bin, "responses.json"))}, "utf8"))[path];
+writeFileSync(args[args.indexOf("--output") + 1], JSON.stringify(body ?? {}));
+process.stdout.write(body === undefined || body === null ? "404" : "200");
+`, { mode: 0o755 });
+  const result = spawnSync("bash", ["scripts/release-gate.sh"], {
+    encoding: "utf8",
+    env: {
+      PATH: `${bin}:${process.env.PATH}`, TMPDIR: tmpdir(), ACTOR: actor, TRIGGERING_ACTOR: triggeringActor, GH_TOKEN: "stub",
+      GITHUB_REPOSITORY_OWNER: "owner", GITHUB_REPOSITORY: "owner/repo", GITHUB_API_URL: "https://api.github.test",
+    },
+  });
+  rmSync(bin, { recursive: true, force: true });
+  return { status: result.status, output: result.stdout + result.stderr };
+}
+
+const releaseTagRuleset = (change = {}) => ({
+  target: "tag", enforcement: "active",
+  conditions: { ref_name: { include: ["refs/tags/v*"], exclude: [] } },
+  rules: [{ type: "creation" }, { type: "update" }, { type: "deletion" }],
+  ...change,
+});
+
+test("the release gate passes for the owner's tag with tag-only environments and a v* tag ruleset", () => {
+  assert.deepEqual(runReleaseGate(), { status: 0, output: "" });
+  const everyTag = releaseTagRuleset({ conditions: { ref_name: { include: ["~ALL"], exclude: [] } } });
+  assert.equal(runReleaseGate({ api: { "rulesets/7": everyTag } }).status, 0);
+});
+
+test("the release gate stops when a deploy environment accepts more than v* tags", () => {
+  for (const name of ["production-backend", "production-frontend"]) {
+    for (const [path, body] of [
+      [`environments/${name}`, null],
+      [`environments/${name}`, { deployment_branch_policy: null }],
+      [`environments/${name}`, { deployment_branch_policy: { custom_branch_policies: false } }],
+      [`environments/${name}/deployment-branch-policies`, null],
+      [`environments/${name}/deployment-branch-policies`, { branch_policies: [] }],
+      [`environments/${name}/deployment-branch-policies`, { branch_policies: [{ type: "tag", name: "v*" }, { type: "branch", name: "main" }] }],
+      [`environments/${name}/deployment-branch-policies`, { branch_policies: [{ type: "tag", name: "*" }] }],
+    ]) {
+      const result = runReleaseGate({ api: { [path]: body } });
+      assert.equal(result.status, 1, `${path} ${JSON.stringify(body)}`);
+      assert.match(result.output, new RegExp(name));
+    }
+  }
 });
 
 test("the release checks the smoke-test handle before anything deploys", () => {
@@ -111,11 +168,44 @@ test("the production-domain check reads the deployment's aliases and says why it
   for (const exit of step.split("exit 1").slice(0, -1)) assert.match(exit.slice(-400), /echo "/);
 });
 
-test("the release requires the repository owner as the only reviewer", () => {
+test("the release gate stops unless the repository owner pushed the tag and started this attempt", () => {
+  // Required reviewers aren't offered on a private repository below Enterprise,
+  // so the tag push is the owner's approval (2026-11-12).
+  assert.doesNotMatch(releaseWorkflow(), /required_reviewers/);
+  assert.match(releaseWorkflow(), /\non:\n  push:\n    tags: \["v\*"\]\npermissions:/);
+  const pushedByBot = runReleaseGate({ actor: "devin-ai-integration[bot]" });
+  assert.equal(pushedByBot.status, 1);
+  assert.match(pushedByBot.output, /Only owner can release\. This run was started by devin-ai-integration\[bot\]\./);
+  const rerunByOther = runReleaseGate({ triggeringActor: "collaborator" });
+  assert.equal(rerunByOther.status, 1);
+  assert.match(rerunByOther.output, /started by collaborator\./);
+});
+
+test("every release job checks the gate itself, so re-running one deploy job can't skip it", () => {
+  // A re-run of backend or frontend alone reuses verify's earlier result.
   const workflow = releaseWorkflow();
-  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
-  assert.match(verify, /--arg owner "\$GITHUB_REPOSITORY_OWNER"/);
-  assert.match(verify, /\.reviewer\.login == \$owner/);
+  const jobs = {
+    verify: workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:")),
+    backend: workflow.slice(workflow.indexOf("\n  backend:"), workflow.indexOf("\n  frontend:")),
+    frontend: workflow.slice(workflow.indexOf("\n  frontend:")),
+  };
+  for (const [name, job] of Object.entries(jobs)) {
+    assert.match(job, /actions: read/, name);
+    const gate = job.indexOf("run: bash scripts/release-gate.sh");
+    assert.ok(gate > 0, name);
+    const step = job.slice(job.lastIndexOf("\n      - ", gate), gate);
+    assert.match(step, /ACTOR: \$\{\{ github\.actor \}\}/, name);
+    assert.match(step, /TRIGGERING_ACTOR: \$\{\{ github\.triggering_actor \}\}/, name);
+    assert.match(step, /GH_TOKEN: \$\{\{ github\.token \}\}/, name);
+    // Before anything is installed, and before any step that holds a secret or a deploy variable.
+    for (const later of ["run: npm ci", "${{ secrets.", "${{ vars.VERCEL"]) {
+      const at = job.indexOf(later);
+      if (at >= 0) assert.ok(gate < at, `${name}: ${later}`);
+    }
+  }
+  for (const name of ["backend", "frontend"]) {
+    assert.match(jobs[name], /\n    if: github\.actor == github\.repository_owner && github\.triggering_actor == github\.repository_owner\n/, name);
+  }
 });
 
 test("the frontend smoke test uses the handle verify checked", () => {
@@ -152,10 +242,28 @@ test("the release accepts only the pinned production Convex deployment", () => {
   assert.match(verify, /\[ "\$\{BASH_REMATCH\[1\]\}" != "\$expected_deployment" \]/);
 });
 
-test("the owner can approve their own release: prevent_self_review is refused", () => {
-  const workflow = releaseWorkflow();
-  const verify = workflow.slice(workflow.indexOf("\n  verify:"), workflow.indexOf("\n  backend:"));
-  assert.match(verify, /\.prevent_self_review != true/);
+test("the release gate requires an active ruleset that restricts v* tags", () => {
+  // Without it, anyone with write access could tag a commit that rewrites the owner check.
+  const refused = [
+    releaseTagRuleset({ enforcement: "disabled" }),
+    releaseTagRuleset({ enforcement: "evaluate" }),
+    releaseTagRuleset({ target: "branch" }),
+    releaseTagRuleset({ conditions: { ref_name: { include: ["refs/tags/release-*"], exclude: [] } } }),
+    releaseTagRuleset({ conditions: { ref_name: { include: ["refs/tags/v*"], exclude: ["refs/tags/v0*"] } } }),
+    releaseTagRuleset({ conditions: undefined }),
+    releaseTagRuleset({ rules: [{ type: "update" }, { type: "deletion" }] }),
+    releaseTagRuleset({ rules: [{ type: "creation" }, { type: "deletion" }] }),
+    releaseTagRuleset({ rules: [{ type: "creation" }, { type: "update" }] }),
+    releaseTagRuleset({ rules: undefined }),
+  ];
+  for (const ruleset of refused) {
+    const result = runReleaseGate({ api: { "rulesets/7": ruleset } });
+    assert.equal(result.status, 1, JSON.stringify(ruleset));
+    assert.match(result.output, /No active tag ruleset restricts creating, updating and deleting v\* tags/);
+  }
+  assert.equal(runReleaseGate({ api: { "rulesets?includes_parents=false&per_page=100": [] } }).status, 1);
+  assert.equal(runReleaseGate({ api: { "rulesets?includes_parents=false&per_page=100": null } }).status, 1);
+  assert.equal(runReleaseGate({ api: { "rulesets/7": null } }).status, 1);
 });
 
 test("the frontend is built against the same Convex deployment the backend deployed", () => {

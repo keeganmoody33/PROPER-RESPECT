@@ -16,17 +16,20 @@ every step. Setup (GitHub environments, secrets, `PUBLIC_HANDLE`) is in
    release-tools/node_modules/.bin/vercel promote <deployment-url>
    ```
 
-2. **Tag the release** on a commit that is on `main`:
+2. **Tag the release** on a commit that is on `main`. Pushing the tag is your
+   approval: both deploys follow without another prompt
+   ([who can release](../DEPLOYMENT.md#who-can-release-changed-2026-11-12)).
+   A migration that must run between them needs its own plan in this file:
 
    ```sh
    git fetch origin && git checkout origin/main
    git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z
    ```
 
-3. **Approve `backend`** in the Actions run. It deploys Convex and records
+3. **Watch `backend`** in the Actions run. It deploys Convex and records
    `DEPLOYED_SHA`.
 4. **Run any migration this release lists** (none by default), dry run first.
-5. **Approve `frontend`.** It deploys, checks the production alias, and smoke
+5. **Watch `frontend`.** It deploys, checks the production alias, and smoke
    tests `/`, `/$PUBLIC_HANDLE` and `/sitemap.xml`.
 6. **Verify** signed out, then signed in as the owner.
 7. **Check the refresh receipt.** Decide whether this release restarts the
