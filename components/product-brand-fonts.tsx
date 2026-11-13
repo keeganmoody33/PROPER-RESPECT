@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { ownOriginFontUrl } from "@/src/domain/brand-font-url";
 import {
   genericFontFamilies,
   productBrandFontFamilyKey,
@@ -25,7 +26,7 @@ function retainedTypography(snapshot?: ProductBrandSnapshot) {
     const files = [...new Map(links.flatMap((link) => link.files).reverse().map((file) => [file.weight, file])).values()];
     const alias = `PRBrand-${brand.productSlug}-${brand.responseHash.slice(0, 16)}-${name}`;
     for (const file of files) {
-      faces.push(`@font-face{font-family:"${alias}";src:url("${file.url}") format("${file.format}");font-weight:${file.weight};font-style:normal;font-display:swap;}`);
+      faces.push(`@font-face{font-family:"${alias}";src:url("${ownOriginFontUrl(file.url)}") format("${file.format}");font-weight:${file.weight};font-style:normal;font-display:swap;}`);
     }
     const observedFallbacks = brand.fonts.find((font) => productBrandFontFamilyKey(font.family) === key)?.fallbacks ?? [];
     const category = links.find((link) => link.category && genericFontFamilies.has(link.category))?.category;
