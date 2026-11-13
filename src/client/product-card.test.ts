@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { load } from "cheerio";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -203,6 +204,11 @@ test("draws a branded card's edge and button from the product's stored card and 
   for (const rule of ["--brand-card-border:#9aa0a6", "--brand-card-radius:8px", "--brand-card-button-fill:#ff4c00", "--brand-card-button-text:#262626", "--brand-card-button-radius:20px", "--brand-card-button-weight:450"]) {
     expect(style).toContain(rule);
   }
+});
+
+test("an unbranded card's button keeps its bold weight", () => {
+  // The base .card-button rule is 700; only a stored brand weight may change it.
+  expect(readFileSync("app/globals.css", "utf8")).toContain("font-weight: var(--brand-card-button-weight, 700);");
 });
 
 test("gives a branded card a border that shows when its brand stored none, and leaves an unbranded card to the default edge", () => {

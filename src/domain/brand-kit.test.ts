@@ -82,6 +82,12 @@ describe("brandCardKit", () => {
     expect(contrast(border, "#000000")).toBeGreaterThanOrEqual(1.3);
   });
 
+  it("keeps the default outlined button for a brand stored before button values were kept, even with an accent", () => {
+    // Until the hourly re-fetch reaches it, such a brand has an accent and no components.
+    const legacy = stored({ accent: "#123456", background: "#ffffff", text: "#111111" });
+    expect(Object.keys(brandCardKit(legacy, "#ffffff", "#111111"))).toEqual(["--brand-card-border"]);
+  });
+
   it("leaves buttons alone when the brand has nothing that shows, and does nothing without solid card colours", () => {
     const plain = stored({ background: "#ffffff", text: "#111111" });
     expect(Object.keys(brandCardKit(plain, "#ffffff", "#111111"))).toEqual(["--brand-card-border"]);
