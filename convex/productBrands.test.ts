@@ -508,3 +508,19 @@ test("each scheduled run takes only the ten oldest due brands of each kind and l
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   expect(await t.mutation(refreshDue, {})).toEqual({ queued: 0 });
 });
+
+test("a brand stored by an older adapter is fetched again without waiting thirty days, and a current one is left", async () => {
+  // The adapter now keeps card and button values; brands stored before that need one fresh fetch to get them.
+  const f = await storedGithubBrand();
+  expect(await f.run()).toEqual({ queued: 0 });
+  await f.t.run(async ctx => {
+    const stored = (await ctx.db.query("productBrandSnapshots").unique())!;
+    await ctx.db.patch(stored._id, { snapshot: { ...stored.snapshot, adapterVersion: "context-brand-v2-2026-09-18" } });
+  });
+  vi.setSystemTime(Date.now() + DAY_MS);
+  expect(await f.run()).toEqual({ queued: 1 });
+  expect(await f.job()).toMatchObject({ status: "READY", generation: 2 });
+  expect(f.brandRequests()).toBe(2);
+  expect(await f.run()).toEqual({ queued: 0 });
+  expect(f.brandRequests()).toBe(2);
+});
