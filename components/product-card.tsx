@@ -21,6 +21,7 @@ import { UsageChart, usageChartLog } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
+import { brandCardKit } from "@/src/domain/brand-kit";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
 import {
   verifiedProductAssets,
@@ -57,6 +58,8 @@ function brandAppearance(brand?: ProductBrandSnapshot) {
   if (readablePair && roles?.background && roles.text) {
     style["--brand-card-background"] = roles.background;
     style["--brand-card-text"] = roles.text;
+    // The card's edge and buttons follow the brand's own, by the fixed rules in brand-kit.
+    Object.assign(style, brandCardKit(brand, roles.background, roles.text));
   }
   const accent = roles?.accent && luminance(roles.accent);
   // Default cards alternate between these two dark surfaces. An accent must

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { load } from "cheerio";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -189,6 +190,32 @@ test("uses explicit readable styleguide roles and chooses a logo for that surfac
   expect($(".product-card").attr("style")).toContain("--brand-card-text:#111111");
   expect($(".product-card").attr("style")).toContain("--brand-card-accent:#123456");
   expect($(".product-logo img").attr("src")).toBe("https://example.com/light.svg");
+});
+
+test("draws a branded card's edge and button from the product's stored card and button values", () => {
+  const $ = renderCard({ product: { ...baseCard.product, brand: {
+    ...brand, schemaVersion: 2, fontLinks: [],
+    styleguide: {
+      mode: "light", colors: { background: "#f9f9f9", text: "#262626", accent: "#ff4c00" },
+      components: { card: { border: "#9aa0a6", radiusPx: 8 }, buttonPrimary: { background: "#ff4c00", text: "#ffffff", radiusPx: 20, weight: 450 } },
+    },
+  } } });
+  const style = $(".product-card").attr("style") ?? "";
+  for (const rule of ["--brand-card-border:#9aa0a6", "--brand-card-radius:8px", "--brand-card-button-fill:#ff4c00", "--brand-card-button-text:#262626", "--brand-card-button-radius:20px", "--brand-card-button-weight:450"]) {
+    expect(style).toContain(rule);
+  }
+});
+
+test("an unbranded card's button keeps its bold weight", () => {
+  // The base .card-button rule is 700; only a stored brand weight may change it.
+  expect(readFileSync("app/globals.css", "utf8")).toContain("font-weight: var(--brand-card-button-weight, 700);");
+});
+
+test("gives a branded card a border that shows when its brand stored none, and leaves an unbranded card to the default edge", () => {
+  const branded = renderCard({ product: { ...baseCard.product, brand: { ...brand, styleguide: { mode: "light", colors: { background: "#FFFFFF", text: "#111111" } } } } });
+  expect(branded(".product-card").attr("style")).toContain("--brand-card-border:#cbcbcb");
+  expect(branded(".product-card").attr("style")).not.toContain("--brand-card-button-fill");
+  expect(renderCard()(".product-card").attr("style") ?? "").not.toContain("--brand-card-border");
 });
 
 test.each([

@@ -161,7 +161,9 @@ main {
   color-scheme: light;
   --card-line: color-mix(in srgb, currentColor 22%, transparent);
   background: var(--brand-card-background, var(--ink));
-  border-radius: 1rem;
+  /* Every card has a defined edge; a branded card takes its product's border and corners. */
+  border: 1.5px solid var(--brand-card-border, var(--card-line));
+  border-radius: var(--brand-card-radius, 1rem);
   color: var(--brand-card-text, var(--paper));
   display: flex;
   flex-direction: column;
@@ -833,17 +835,26 @@ main {
 .product-card .close-button {
   background: transparent;
   border: 1px solid currentColor;
-  border-radius: 0.45rem;
+  border-radius: var(--brand-card-button-radius, 0.45rem);
   color: inherit;
   font-size: 0.7rem;
   min-height: 2.75rem;
   padding: 0.55rem 0.7rem;
 }
 
+/* A branded card's own button: the product's fill, label, corners and weight. */
+.product-card .card-button {
+  background: var(--brand-card-button-fill, transparent);
+  border-color: var(--brand-card-button-fill, currentColor);
+  color: var(--brand-card-button-text, inherit);
+  font-weight: var(--brand-card-button-weight, 700);
+}
+
 .product-card .card-button:hover,
 .product-card .card-button:focus-visible,
 .product-card .close-button:hover {
   background: var(--brand-card-text, var(--paper));
+  border-color: var(--brand-card-text, var(--paper));
   color: var(--brand-card-background, var(--ink));
 }
 
