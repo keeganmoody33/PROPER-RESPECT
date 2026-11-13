@@ -4,7 +4,7 @@
 .label:last-child { margin: 1rem 0 0; }
 .choices { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
 .choices button, .controls button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--control-line); padding: .45rem .65rem; min-height: 36px; cursor: pointer; }
-.choices button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--action-text); }
+.choices button[data-pressed] { background: var(--ink); border-color: var(--ink); color: var(--action-text); }
 .carousel button:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 3px; }
 .sample { margin: 0 0 .6rem; color: var(--sample-text); }
 .stage { display: grid; min-width: 0; }

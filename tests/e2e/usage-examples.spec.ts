@@ -125,3 +125,33 @@ test("slideshow never advances on its own for a visitor who prefers reduced moti
   await page.clock.fastForward(24000);
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
 });
+
+test("the example chooser is one tab stop: arrows move, a press picks, and the picked example stays pressed", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const chooser = page.getByRole("group", { name: "Choose a product example" });
+  const github = chooser.getByRole("button", { name: "GitHub", exact: true });
+  const second = chooser.getByRole("button").nth(1);
+  const third = chooser.getByRole("button").nth(2);
+  await expect(github).toHaveAttribute("aria-pressed", "true");
+  await github.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(second).toBeFocused();
+  // Moving focus doesn't change the example; a press does.
+  await expect(github).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Enter");
+  await expect(second).toHaveAttribute("aria-pressed", "true");
+  await expect(github).toHaveAttribute("aria-pressed", "false");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await expect(carousel.getByRole("article")).toHaveAccessibleName(`${await second.textContent()} card`);
+  // Pressing the picked example again keeps it: one example is always shown.
+  await page.keyboard.press("Enter");
+  await expect(second).toHaveAttribute("aria-pressed", "true");
+  // The whole group is one tab stop.
+  await page.keyboard.press("Tab");
+  await expect(third).not.toBeFocused();
+  await expect(chooser.locator(":focus")).toHaveCount(0);
+  // The arrows in the controls still move the pressed toggle.
+  await carousel.getByRole("button", { name: "Next example" }).click();
+  await expect(third).toHaveAttribute("aria-pressed", "true");
+});

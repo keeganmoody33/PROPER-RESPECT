@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore, type FocusEvent } from "react";
+import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
 import { ProductCard } from "./product-card";
 import { isHttpUrl } from "@/src/domain/http-url";
 import type { HomepageExample } from "@/src/data/homepage-examples";
@@ -58,9 +59,11 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   return <section className={styles.carousel} aria-label="Product usage examples" aria-roledescription="carousel"
     onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setFocused(true)} onBlur={leave}>
     <p className={styles.label}>Inside a card / Illustrative examples</p>
-    <div className={styles.choices} aria-label="Choose a product example">
-      {examples.map((item, itemIndex) => <button type="button" key={item.id} aria-pressed={index === itemIndex} onClick={() => select(itemIndex)}>{item.card.product.name}</button>)}
-    </div>
+    {/* One tab stop; arrow keys move between examples and a press picks one. The current example stays pressed. */}
+    <ToggleGroup className={styles.choices} aria-label="Choose a product example" value={[examples[index].id]} deselectable={false}
+      onValueChange={value => { const next = examples.findIndex(item => item.id === value[0]); if (next >= 0) select(next); }}>
+      {examples.map(item => <Toggle key={item.id} value={item.id}>{item.card.product.name}</Toggle>)}
+    </ToggleGroup>
     <div className={styles.stage} aria-live={advancing ? "off" : "polite"}>
       {examples.map((example, slideIndex) => {
         const current = slideIndex === index;
