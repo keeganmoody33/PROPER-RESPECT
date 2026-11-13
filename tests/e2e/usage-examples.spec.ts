@@ -155,3 +155,20 @@ test("the example chooser is one tab stop: arrows move, a press picks, and the p
   await carousel.getByRole("button", { name: "Next example" }).click();
   await expect(third).toHaveAttribute("aria-pressed", "true");
 });
+
+test("pressing the example already shown stops the slideshow for good", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
+  const github = page.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name: "GitHub", exact: true });
+  await expect(github).toHaveAttribute("aria-pressed", "true");
+  await github.press("Enter");
+  await expect(github).toHaveAttribute("aria-pressed", "true");
+  await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
+  // With focus and the pointer gone, nothing holds the slideshow but the visitor's choice.
+  await page.locator("#homepage-content").focus();
+  await page.mouse.move(0, 0);
+  await page.clock.fastForward(24000);
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+});

@@ -62,7 +62,8 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
     {/* One tab stop; arrow keys move between examples and a press picks one. The current example stays pressed. */}
     <ToggleGroup className={styles.choices} aria-label="Choose a product example" value={[examples[index].id]} deselectable={false}
       onValueChange={value => { const next = examples.findIndex(item => item.id === value[0]); if (next >= 0) select(next); }}>
-      {examples.map(item => <Toggle key={item.id} value={item.id}>{item.card.product.name}</Toggle>)}
+      {/* Pressing the example already shown changes no value, so the pause is on the press itself. */}
+      {examples.map(item => <Toggle key={item.id} value={item.id} onClick={() => setChoice("paused")}>{item.card.product.name}</Toggle>)}
     </ToggleGroup>
     <div className={styles.stage} aria-live={advancing ? "off" : "polite"}>
       {examples.map((example, slideIndex) => {
