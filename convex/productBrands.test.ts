@@ -554,13 +554,15 @@ test("an unused outdated brand is passed over once, then fetched when someone st
     await ctx.db.patch((await ctx.db.query("productBrandJobs").unique())!._id, { adapterSeen: "context-brand-v2-2026-09-18" });
     await ctx.db.delete(f.propId);
   });
-  vi.setSystemTime(Date.now() + DAY_MS);
+  // Past thirty days too, so the scheduled refresh also passes over it and restarts its wait in the same run.
+  vi.setSystemTime(Date.now() + 31 * DAY_MS);
   expect(await f.run()).toEqual({ queued: 0 });
   expect(await f.job()).toMatchObject({ status: "READY", generation: 1, adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
   const propId = await f.t.run(async ctx => {
     const user = (await ctx.db.query("users").unique())!;
     return ctx.db.insert("props", { userId: user._id, productId: f.productId, visibility: "DRAFT", status: "TESTING", headline: "", note: "" });
   });
+  // Seconds later, inside the cooldown that follows a fetch: no fetch happened, so the cooldown must not apply.
   await f.owner.mutation(request, { propId });
   await f.t.finishAllScheduledFunctions(() => vi.runAllTimers());
   expect(await f.job()).toMatchObject({ status: "READY", generation: 2, adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
