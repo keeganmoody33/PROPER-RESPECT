@@ -10,9 +10,17 @@ const FOREVER = "public, max-age=31536000, immutable";
 
 const failure = (status: number) => new Response(null, { status, headers: { "cache-control": "no-store" } });
 
+/** Closes a response that won't be served, so its connection and buffers are released at once. */
+async function discard(response: Response) {
+  await response.body?.cancel().catch(() => {});
+}
+
 /** Reads at most MAX_FONT_BYTES; null when the body is larger or missing. */
 async function boundedBytes(response: Response): Promise<Uint8Array | null> {
-  if (Number(response.headers.get("content-length") ?? "0") > MAX_FONT_BYTES) return null;
+  if (Number(response.headers.get("content-length") ?? "0") > MAX_FONT_BYTES) {
+    await discard(response);
+    return null;
+  }
   const reader = response.body?.getReader();
   if (!reader) return null;
   const chunks: Uint8Array[] = [];
@@ -45,8 +53,10 @@ export async function serveBrandFont(file: string, fetcher: (url: string, init: 
   if (!upstream) return failure(NOT_FOUND);
   try {
     const response = await fetcher(upstream.url, { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS), redirect: "error", credentials: "omit" });
-    if (response.status === NOT_FOUND) return failure(NOT_FOUND);
-    if (!response.ok) return failure(BAD_GATEWAY);
+    if (!response.ok) {
+      await discard(response);
+      return failure(response.status === NOT_FOUND ? NOT_FOUND : BAD_GATEWAY);
+    }
     const bytes = await boundedBytes(response);
     if (!bytes || bytes.byteLength === 0) return failure(BAD_GATEWAY);
     return new Response(bytes.buffer as ArrayBuffer, { headers: { "content-type": upstream.contentType, "cache-control": FOREVER, "x-content-type-options": "nosniff" } });
