@@ -31,7 +31,8 @@ describe("brandCardKit", () => {
     expect(brandCardKit(firecrawl, "#f9f9f9", "#262626")).toEqual({
       // Its own border (#e5e7eb) is too faint to define the card's edge, so one is drawn from its text colour.
       "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px",
-      "--brand-card-button-fill": "#ff4c00", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450",
+      // White on this orange is 3.3:1, too low for the button's small text, so the label is black.
+      "--brand-card-button-fill": "#ff4c00", "--brand-card-button-text": "#000000", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450",
       "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff",
     });
   });
@@ -40,7 +41,7 @@ describe("brandCardKit", () => {
     // Cloudflare's first button sits on its orange hero, so it is white: invisible on a white card.
     const kit = brandCardKit(cloudflare, "#ffffff", "#262626");
     expect(kit["--brand-card-button-fill"]).toBe("#ff5e1f");
-    expect(kit["--brand-card-button-text"]).toBe("#ffffff");
+    expect(kit["--brand-card-button-text"]).toBe("#262626");
     expect(kit["--brand-card-button-radius"]).toBe("9999px");
     expect(kit["--brand-card-radius"]).toBe("6px");
     expect(kit).not.toHaveProperty("--brand-card-quiet-fill");
@@ -61,6 +62,24 @@ describe("brandCardKit", () => {
     expect(kit).toMatchObject({ "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-quiet-fill": "#f3f2ed", "--brand-card-quiet-text": "#000000", "--brand-card-radius": "18px" });
     const unreadable = stored({ accent: "#ffb000", background: "#ffffff", text: "#111111" }, { button: { primary: { backgroundColor: "#ffb000", color: "#ffe9a0" } } });
     expect(brandCardKit(unreadable, "#ffffff", "#111111")["--brand-card-button-text"]).toBe("#111111");
+  });
+
+  it("never puts a label on a button that small text can't be read on", () => {
+    // The card's button text is 0.7rem, so it needs 4.5:1, not the 3:1 that large text gets.
+    for (const [snapshot, surface, text] of [[firecrawl, "#f9f9f9", "#262626"], [cloudflare, "#ffffff", "#262626"], [clay, "#ffffff", "#000000"]] as const) {
+      const kit = brandCardKit(snapshot, surface, text);
+      expect(contrast(kit["--brand-card-button-text"]!, kit["--brand-card-button-fill"]!), snapshot.canonicalDomain).toBeGreaterThanOrEqual(4.5);
+      if (kit["--brand-card-quiet-fill"]) expect(contrast(kit["--brand-card-quiet-text"]!, kit["--brand-card-quiet-fill"])).toBeGreaterThanOrEqual(4.5);
+    }
+    // A dark card with white text and a white button: the card's text can't be the fallback label.
+    const whiteButton = stored({ background: "#101010", text: "#ffffff" }, { button: { primary: { backgroundColor: "#ffffff", color: "#fafafa" } } });
+    expect(brandCardKit(whiteButton, "#101010", "#ffffff")).toMatchObject({ "--brand-card-button-fill": "#ffffff", "--brand-card-button-text": "#000000" });
+  });
+
+  it("darkens a derived border until it shows, down to the card's text colour", () => {
+    // Grey text on black: a light mix of it is still nearly black.
+    const border = brandCardKit(stored({ background: "#000000", text: "#757575" }), "#000000", "#757575")["--brand-card-border"]!;
+    expect(contrast(border, "#000000")).toBeGreaterThanOrEqual(1.3);
   });
 
   it("leaves buttons alone when the brand has nothing that shows, and does nothing without solid card colours", () => {
