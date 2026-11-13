@@ -847,7 +847,7 @@ main {
   background: var(--brand-card-button-fill, transparent);
   border-color: var(--brand-card-button-fill, currentColor);
   color: var(--brand-card-button-text, inherit);
-  font-weight: var(--brand-card-button-weight, inherit);
+  font-weight: var(--brand-card-button-weight, 700);
 }
 
 .product-card .card-button:hover,

@@ -70,7 +70,8 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   // The stored "primary" is whichever button came first on the product's site. On a coloured hero that can be
   // a white button, which would vanish on the card; then the brand's accent carries the button in the same shape.
   const primary = parts?.buttonPrimary, pulledFill = solid(primary?.background);
-  const fill = pulledFill && contrast(pulledFill, surface) >= MIN_FILL_CONTRAST ? pulledFill : accent && contrast(accent, surface) >= MIN_FILL_CONTRAST ? accent : undefined;
+  // With no stored button at all (a brand fetched before buttons were kept), the card keeps its default outlined button.
+  const fill = !primary ? undefined : pulledFill && contrast(pulledFill, surface) >= MIN_FILL_CONTRAST ? pulledFill : accent && contrast(accent, surface) >= MIN_FILL_CONTRAST ? accent : undefined;
   if (fill) {
     kit["--brand-card-button-fill"] = fill;
     kit["--brand-card-button-text"] = readableOn(fill, fill === pulledFill ? solid(primary?.text) : undefined, text);
