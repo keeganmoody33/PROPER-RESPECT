@@ -6,7 +6,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import schema from "./schema";
 import wisprReceipt from "../docs/verification/fixtures/2026-09-17-context-brands/wisprflow.json";
 import githubReceipt from "../docs/verification/fixtures/2026-09-17-context-brands/github.json";
-import { productBrandSnapshotSchema } from "../src/domain/product-brand";
+import { CONTEXT_BRAND_ADAPTER_VERSION, productBrandSnapshotSchema } from "../src/domain/product-brand";
 import { DIRECTORY_ENTRIES } from "../src/domain/product-directory-entries";
 import { productBrandEligibility } from "./productBrands";
 
@@ -105,7 +105,8 @@ test("bounded preparation enrolls existing owner cards once and preserves their 
   expect(await t.run(ctx => ctx.db.system.query("_scheduled_functions").collect())).toHaveLength(1);
   const job = (await t.run(ctx => ctx.db.query("productBrandJobs").unique()))!;
   await t.mutation(claim, { productId: job.productId, generation: 1 });
-  await t.mutation(retain, { productId: job.productId, generation: 1, snapshot: wisprReceipt.snapshot, responseJson: JSON.stringify(wisprReceipt.response) });
+  // Stored by the current adapter: a brand an older adapter stored is fetched once more, which another test covers.
+  await t.mutation(retain, { productId: job.productId, generation: 1, snapshot: { ...wisprReceipt.snapshot, adapterVersion: CONTEXT_BRAND_ADAPTER_VERSION }, responseJson: JSON.stringify(wisprReceipt.response) });
   vi.setSystemTime(Date.now() + 60_001);
   await owner.mutation(prepare, { propIds });
   expect(await owner.query(preparation, { propIds })).toEqual(propIds.map(propId => ({ propId, status: "READY" })));
@@ -507,4 +508,63 @@ test("each scheduled run takes only the ten oldest due brands of each kind and l
   expect(await queuedDomains()).toHaveLength(24);
   await t.finishAllScheduledFunctions(() => vi.runAllTimers());
   expect(await t.mutation(refreshDue, {})).toEqual({ queued: 0 });
+});
+
+test("a brand stored by an older adapter is fetched again without waiting thirty days, and a current one is left", async () => {
+  // The adapter now keeps card and button values; brands stored before that need one fresh fetch to get them.
+  const f = await storedGithubBrand();
+  expect(await f.run()).toEqual({ queued: 0 });
+  await f.t.run(async ctx => {
+    const stored = (await ctx.db.query("productBrandSnapshots").unique())!;
+    await ctx.db.patch(stored._id, { snapshot: { ...stored.snapshot, adapterVersion: "context-brand-v2-2026-09-18" } });
+    // Jobs from before the backfill existed carry no record of the adapter they were weighed against.
+    await ctx.db.patch((await ctx.db.query("productBrandJobs").unique())!._id, { adapterSeen: undefined });
+  });
+  vi.setSystemTime(Date.now() + DAY_MS);
+  expect(await f.run()).toEqual({ queued: 1 });
+  expect(await f.job()).toMatchObject({ status: "READY", generation: 2 });
+  expect(f.brandRequests()).toBe(2);
+  expect(await f.run()).toEqual({ queued: 0 });
+  expect(f.brandRequests()).toBe(2);
+});
+
+test("brands already on the current adapter never hold an outdated one back", async () => {
+  const f = await storedGithubBrand();
+  const outdatedAt = (await f.job()).completedAt!;
+  await f.t.run(async ctx => {
+    const stored = (await ctx.db.query("productBrandSnapshots").unique())!;
+    await ctx.db.patch(stored._id, { snapshot: { ...stored.snapshot, adapterVersion: "context-brand-v2-2026-09-18" } });
+    await ctx.db.patch((await ctx.db.query("productBrandJobs").unique())!._id, { adapterSeen: "context-brand-v2-2026-09-18" });
+    // Eleven brands finished earlier and already current: more than one hourly batch, all ahead of the outdated one.
+    for (let index = 0; index < 11; index += 1) {
+      const productId = await ctx.db.insert("products", { slug: `current-${index}`, name: `Current ${index}`, domain: `current-${index}.example`, description: "" });
+      await ctx.db.insert("productBrandJobs", { productId, canonicalDomain: `current-${index}.example`, generation: 1, status: "READY", requestedAt: outdatedAt - 2000, completedAt: outdatedAt - 1000 + index, adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
+    }
+  });
+  vi.setSystemTime(Date.now() + DAY_MS);
+  expect(await f.run()).toEqual({ queued: 1 });
+  expect(f.brandRequests()).toBe(2);
+});
+
+test("an unused outdated brand is passed over once, then fetched when someone starts using the product", async () => {
+  const f = await storedGithubBrand();
+  await f.t.run(async ctx => {
+    const stored = (await ctx.db.query("productBrandSnapshots").unique())!;
+    await ctx.db.patch(stored._id, { snapshot: { ...stored.snapshot, adapterVersion: "context-brand-v2-2026-09-18" } });
+    await ctx.db.patch((await ctx.db.query("productBrandJobs").unique())!._id, { adapterSeen: "context-brand-v2-2026-09-18" });
+    await ctx.db.delete(f.propId);
+  });
+  // Past thirty days too, so the scheduled refresh also passes over it and restarts its wait in the same run.
+  vi.setSystemTime(Date.now() + 31 * DAY_MS);
+  expect(await f.run()).toEqual({ queued: 0 });
+  expect(await f.job()).toMatchObject({ status: "READY", generation: 1, adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
+  const propId = await f.t.run(async ctx => {
+    const user = (await ctx.db.query("users").unique())!;
+    return ctx.db.insert("props", { userId: user._id, productId: f.productId, visibility: "DRAFT", status: "TESTING", headline: "", note: "" });
+  });
+  // Seconds later, inside the cooldown that follows a fetch: no fetch happened, so the cooldown must not apply.
+  await f.owner.mutation(request, { propId });
+  await f.t.finishAllScheduledFunctions(() => vi.runAllTimers());
+  expect(await f.job()).toMatchObject({ status: "READY", generation: 2, adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
+  expect(f.brandRequests()).toBe(2);
 });

@@ -7,7 +7,7 @@ import { requireUser } from "./authHelpers";
 import { resolveCatalogProduct } from "../src/domain/discovery";
 import { directoryDomainOwner, directoryEntry, extractDomain } from "../src/domain/product-directory";
 import { DIRECTORY_ENTRIES } from "../src/domain/product-directory-entries";
-import { brandNameKey, canonicalBrandDomainSchema, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
+import { brandNameKey, canonicalBrandDomainSchema, CONTEXT_BRAND_ADAPTER_VERSION, productBrandSnapshotSchema, type ProductBrandSnapshot } from "../src/domain/product-brand";
 import { productBrandSnapshotValidator } from "./productBrandTables";
 import { retrieveProductBrand } from "../src/server/context-brand";
 import { internal } from "./_generated/api";
@@ -107,8 +107,13 @@ export async function ensureProductBrand(ctx: MutationCtx, product: Doc<"product
   if (existing && existing.canonicalDomain === canonicalDomain) {
     if (existing.status === "FAILED" && !refresh && !retryFailed) return { status: existing.status };
     const pending = (existing.status === "PENDING" && now - existing.requestedAt < 180_000) || (existing.status === "RUNNING" && (existing.leaseUntil ?? 0) > now);
-    const retained = existing.status === "READY" && !refresh && Boolean(await retainedProductBrand(ctx, product, existing));
-    if (pending || retained || now - (existing.completedAt ?? existing.requestedAt) < REFRESH_COOLDOWN_MS) {
+    // A brand an older adapter stored lacks what cards now read, so it counts as missing and is fetched again.
+    // The cooldown spaces out fetches; it does not apply here, because the scheduled refresh restarts a
+    // job's wait when it passes over an unused product, and that is not a fetch.
+    const stored = existing.status === "READY" ? await retainedProductBrand(ctx, product, existing) : undefined;
+    const outdated = stored !== undefined && stored.adapterVersion !== CONTEXT_BRAND_ADAPTER_VERSION;
+    const retained = stored !== undefined && !refresh && !outdated;
+    if (pending || retained || (!outdated && now - (existing.completedAt ?? existing.requestedAt) < REFRESH_COOLDOWN_MS)) {
       return { status: existing.status };
     }
   }
@@ -154,6 +159,24 @@ export const refreshDue = internalMutation({
         await queueRetrieval(ctx, job.productId, job.canonicalDomain, job);
         queued += 1;
       }
+    }
+    // A brand stored by an older adapter lacks what the current one keeps, so it is fetched once more.
+    // Each job records the adapter it was last weighed against, and only jobs behind the current one are
+    // read, so brands that are already current never hold an outdated one back. A product nobody uses is
+    // marked as weighed without a fetch; ensureProductBrand fetches it when someone starts using it.
+    const behind = await ctx.db.query("productBrandJobs")
+      .withIndex("by_status_adapter_seen", q => q.eq("status", "READY").lt("adapterSeen", CONTEXT_BRAND_ADAPTER_VERSION)).take(REFRESH_DUE_BATCH);
+    for (const job of behind) {
+      const stored = job.currentSnapshotId && await ctx.db.get(job.currentSnapshotId);
+      const product = await ctx.db.get(job.productId);
+      const used = product && await ctx.db.query("props").withIndex("by_product", q => q.eq("productId", job.productId)).first();
+      if (!stored || stored.snapshot.adapterVersion === CONTEXT_BRAND_ADAPTER_VERSION || !product || !used || verifiedDomain(product) !== job.canonicalDomain) {
+        await ctx.db.patch(job._id, { adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
+        continue;
+      }
+      await queueRetrieval(ctx, job.productId, job.canonicalDomain, job);
+      await ctx.db.patch(job._id, { adapterSeen: CONTEXT_BRAND_ADAPTER_VERSION });
+      queued += 1;
     }
     return { queued };
   },
@@ -267,7 +290,7 @@ export const retain = internalMutation({
     const id = await ctx.db.insert("productBrandSnapshots", { ...args, snapshot });
     // Old completions remain inspectable, but cannot replace a newer selection.
     if (job.generation === args.generation && job.status === "RUNNING" && job.canonicalDomain === snapshot.canonicalDomain) {
-      await ctx.db.patch(job._id, { status: "READY", currentSnapshotId: id, completedAt: Date.now(), leaseUntil: undefined, lastError: undefined });
+      await ctx.db.patch(job._id, { status: "READY", currentSnapshotId: id, completedAt: Date.now(), leaseUntil: undefined, lastError: undefined, adapterSeen: snapshot.adapterVersion });
     }
     return id;
   },
