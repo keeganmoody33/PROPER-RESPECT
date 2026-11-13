@@ -65,7 +65,10 @@ export const productBrandTables = {
     requestedAt: v.number(), completedAt: v.optional(v.number()), leaseUntil: v.optional(v.number()),
     currentSnapshotId: v.optional(v.id("productBrandSnapshots")),
     lastError: v.optional(v.string()),
+    // The adapter version the hourly backfill last weighed this brand against. Missing on jobs from before 2026-11-13.
+    adapterSeen: v.optional(v.string()),
   }).index("by_product", ["productId"])
+    .index("by_status_adapter_seen", ["status", "adapterSeen"])
     .index("by_status_completed", ["status", "completedAt"])
     .index("by_status_requested", ["status", "requestedAt"]),
   productBrandSnapshots: defineTable({
