@@ -40,6 +40,18 @@ describe("serveBrandFont", () => {
     expect((await serveBrandFont(FILE, async () => undeclared)).status).toBe(502);
   });
 
+  it("closes an upstream response it is not going to serve", async () => {
+    const refused = (status: number, bytes = 10) => {
+      const cancel = vi.fn();
+      const body = new ReadableStream<Uint8Array>({ pull(controller) { controller.enqueue(new Uint8Array(1)); }, cancel });
+      return { cancel, response: new Response(body, { status, headers: { "content-length": String(bytes) } }) };
+    };
+    for (const upstream of [refused(404), refused(500), refused(200, 3 * 1024 * 1024 + 1)]) {
+      await serveBrandFont(FILE, async () => upstream.response);
+      expect(upstream.cancel, String(upstream.response.status)).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it("does not cache a failure for a year", async () => {
     const response = await serveBrandFont(FILE, async () => new Response("no", { status: 500 }));
     expect(response.headers.get("cache-control")).toBe("no-store");
