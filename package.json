@@ -28,11 +28,11 @@
     "@ui-sdk/react": "0.1.0-beta.2",
     "cheerio": "1.2.0",
     "convex": "^1.42.3",
-    "next": "^16.3.8",
+    "next": "^16.4.6",
     "posthog-js": "^1.436.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
@@ -45,6 +45,6 @@
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.3.5",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.12"
   }
 }
