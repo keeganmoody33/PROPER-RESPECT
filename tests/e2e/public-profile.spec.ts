@@ -39,6 +39,23 @@ test("visitor sees the approved public reference projection", async ({
   expect(accessibility.violations).toEqual([]);
 });
 
+const DESKTOP_WIDTH = 1280;
+const PHONE_WIDTH = 390;
+const VIEWPORT_HEIGHT = 1000;
+[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`a visitor sees what each product does for its owner at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/keegan");
+  const github = page.locator(".product-card", { has: page.getByRole("heading", { name: "GitHub" }) });
+  await expect(github.getByText("I use it to", { exact: true })).toBeVisible();
+  await expect(github.getByRole("list", { name: "What I use it for" }).getByRole("listitem"))
+    .toHaveText(["host my code and its history", "review and merge pull requests"]);
+  await expect(page.getByRole("list", { name: "What I use it for" })).toHaveCount(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath(`2026-11-13-published-uses-${width}-light.png`), fullPage: true, animations: "disabled" });
+}));
+
 test("a public profile links to a report address for that page", async ({ page }) => {
   await page.goto("/keegan");
   await expect(page.getByRole("link", { name: "Report this page" })).toHaveAttribute(
