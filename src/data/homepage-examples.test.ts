@@ -12,6 +12,10 @@ const DAYS_IN_YEAR = 365;
 // The same sample calendar the homepage has shown since 2026-09-21.
 const SAMPLE_CONTRIBUTIONS = 859;
 const LINE_LIMIT = 60;
+const WEEKS = 12;
+const DAYS_PER_WEEK = 7;
+const DAY_MS = 86_400_000;
+const CODING_DAYS = 31;
 
 test("the homepage shows a go-to-market engineering stack whose names and links come from the directory", () => {
   expect(examples.map(example => [example.card.product.name, example.card.level, example.card.status, example.card.goTo === true, example.card.startedAt?.slice(0, YEAR_DIGITS)])).toEqual([
@@ -48,26 +52,57 @@ test("every headline and note is a short line under the card's limit", () => {
   expect(tooLong).toEqual([]);
 });
 
-test("every example carries a sample chart labelled as illustrative, never as account data", () => {
+test("every example carries a sample labelled as illustrative, never as account data, and most draw a chart", () => {
   expect(examples.map(({ id, card }) => [id, card.activity?.kind])).toEqual([
     ["github", "contributionCalendar"],
     ["claude-code", "codingActivity"],
-    ["firecrawl", "headlineMetrics"],
-    ["exa", "headlineMetrics"],
-    ["cloudflare", "headlineMetrics"],
+    ["firecrawl", "timeSeries"],
+    ["exa", "timeSeries"],
+    ["cloudflare", "timeSeries"],
     ["porkbun", "headlineMetrics"],
-    ["spider", "headlineMetrics"],
-    ["docker", "headlineMetrics"],
-    ["open-places", "headlineMetrics"],
+    ["spider", "timeSeries"],
+    ["docker", "timeSeries"],
+    ["open-places", "timeSeries"],
     ["grok-bot", "headlineMetrics"],
-    ["elicit", "headlineMetrics"],
-    ["context-dev", "headlineMetrics"],
-    ["n8n", "headlineMetrics"],
+    ["elicit", "timeSeries"],
+    ["context-dev", "timeSeries"],
+    ["n8n", "timeSeries"],
     ["clay", "headlineMetrics"],
   ]);
   const labels = new Set(examples.map(({ card }) => `${card.activity?.provenanceLabel} / ${card.activity?.freshness}`));
   expect(labels).toEqual(new Set(["Illustrative sample, not account data / STALE"]));
   expect(examples.filter(({ card }) => !activityModuleSchema.safeParse(card.activity).success).map(({ id }) => id)).toEqual([]);
+});
+
+test("each weekly sample is twelve consecutive weeks, read per week, and its period covers exactly those weeks", () => {
+  const series = examples.flatMap(({ id, card }) => card.activity?.kind === "timeSeries" ? [{ id, activity: card.activity }] : []);
+  expect(series.map(({ id, activity }) => [id, activity.label, activity.unit, activity.points.at(-1)?.value])).toEqual([
+    ["firecrawl", "pages scraped", "per week", 1100],
+    ["exa", "searches run", "per week", 277],
+    ["cloudflare", "requests served", "per week", 48360],
+    ["spider", "pages crawled", "per week", 8120],
+    ["docker", "images built", "per week", 8],
+    ["open-places", "businesses exported", "per week", 440],
+    ["elicit", "papers screened", "per week", 36],
+    ["context-dev", "domains looked up", "per week", 77],
+    ["n8n", "workflow runs", "per week", 185],
+  ]);
+  for (const { id, activity } of series) {
+    expect(activity.points, id).toHaveLength(WEEKS);
+    const gaps = activity.points.slice(1).map((point, index) => (Date.parse(point.date) - Date.parse(activity.points[index].date)) / DAY_MS);
+    expect(new Set(gaps), id).toEqual(new Set([DAYS_PER_WEEK]));
+    expect(activity.period, id).toEqual({ start: activity.points[0].date, end: new Date(Date.parse(activity.points.at(-1)!.date) + (DAYS_PER_WEEK - 1) * DAY_MS).toISOString().slice(0, 10) });
+  }
+  expect(series.find(({ id }) => id === "n8n")?.activity.period).toEqual({ start: "2025-01-06", end: "2025-03-30" });
+  expect(series.find(({ id }) => id === "firecrawl")?.activity.period).toEqual({ start: "2026-06-08", end: "2026-08-30" });
+});
+
+test("Claude Code's sessions are the sum of the days it draws", () => {
+  const activity = examples[1].card.activity;
+  if (activity?.kind !== "codingActivity" || !activity.days) throw new Error("Claude Code sample days missing");
+  expect(activity.days).toHaveLength(CODING_DAYS);
+  expect(activity.primary).toEqual({ label: "sessions", value: activity.days.reduce((sum, day) => sum + day.count, 0) });
+  expect(activity.period).toEqual({ start: "2026-08-01", end: "2026-08-31" });
 });
 
 test("every example says what it is used for, in two or three of its product's own listed uses", () => {

@@ -29,21 +29,46 @@ const githubActivity: ActivityModule = {
   total: githubDays.reduce((sum, day) => sum + day.count, 0), days: githubDays,
 };
 
-/** A paused or stopped product's sample sits in the months it was used; the rest cover August 2026. */
+/** Coding sessions cover August 2026; a weekly series ends with the week of 2026-08-24 unless the product was paused earlier. */
 const AUGUST_2026 = { start: "2026-08-01", end: "2026-08-31" };
 const CODING_DAYS = 31;
 const codingDays = githubDays.slice(-CODING_DAYS).map((day, index) => ({
   ...day, date: new Date(Date.parse(AUGUST_2026.start) + index * DAY_MS).toISOString().split("T")[0],
 }));
+const WEEKS = 12;
+const LAST_WEEK = "2026-08-24";
+/** How busy each week was against the product's peak. Each series starts at a different week of it, so no two charts look alike. */
+const WEEKLY_SHAPE = [0.55, 0.62, 0.58, 0.71, 0.66, 0.8, 0.74, 0.69, 0.86, 0.93, 0.81, 1] as const;
+const SHAPE_STRIDE = 5;
 type Metric = Readonly<{ label: string; value: number }>;
-type SampleUsage = Readonly<{ primary: Metric; supporting: readonly Metric[]; period?: Readonly<{ start: string; end: string }> }>;
-const SAMPLE_USAGE: Readonly<Record<string, SampleUsage>> = sampleUsage;
+type SampleUsage = Readonly<{
+  coding: Readonly<Record<string, Readonly<{ label: string; supporting: readonly Metric[] }>>>;
+  weekly: Readonly<Record<string, Readonly<{ label: string; peak: number; lastWeek?: string }>>>;
+  totals: Readonly<Record<string, Readonly<{ primary: Metric; supporting: readonly Metric[]; period?: Readonly<{ start: string; end: string }> }>>>;
+}>;
+const SAMPLE_USAGE: SampleUsage = sampleUsage;
+const isoDate = (time: number) => new Date(time).toISOString().split("T")[0];
 
-/** Coding tools count sessions; everything else shows totals for the month. */
+/** A count per period draws as weekly bars, coding as sessions per day; only totals that have no honest series stay totals. */
 function sampleActivity(slug: string): ActivityModule {
-  const { primary, supporting, period = AUGUST_2026 } = SAMPLE_USAGE[slug];
-  const metrics = { ...SAMPLE, period, primary, supporting: [...supporting] };
-  return slug === "claude-code" ? { ...metrics, kind: "codingActivity", days: codingDays } : { ...metrics, kind: "headlineMetrics" };
+  const coding = SAMPLE_USAGE.coding[slug];
+  if (coding) {
+    const sessions = codingDays.reduce((sum, day) => sum + day.count, 0);
+    return { ...SAMPLE, period: AUGUST_2026, kind: "codingActivity", primary: { label: coding.label, value: sessions }, supporting: [...coding.supporting], days: codingDays };
+  }
+  const weekly = SAMPLE_USAGE.weekly[slug];
+  if (weekly) {
+    const offset = (Object.keys(SAMPLE_USAGE.weekly).indexOf(slug) * SHAPE_STRIDE) % WEEKS;
+    const last = Date.parse(weekly.lastWeek ?? LAST_WEEK);
+    const points = WEEKLY_SHAPE.map((_, week) => ({
+      date: isoDate(last - (WEEKS - 1 - week) * DAYS_PER_WEEK * DAY_MS),
+      value: Math.round(weekly.peak * WEEKLY_SHAPE[(week + offset) % WEEKS]),
+    }));
+    const period = { start: points[0].date, end: isoDate(last + (DAYS_PER_WEEK - 1) * DAY_MS) };
+    return { ...SAMPLE, period, kind: "timeSeries", label: weekly.label, unit: "per week", points };
+  }
+  const { primary, supporting, period = AUGUST_2026 } = SAMPLE_USAGE.totals[slug];
+  return { ...SAMPLE, period, kind: "headlineMetrics", primary, supporting: [...supporting] };
 }
 
 type ExampleSource = Readonly<{

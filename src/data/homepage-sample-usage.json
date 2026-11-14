@@ -1,15 +1,21 @@
 {
-  "claude-code": { "primary": { "label": "sessions", "value": 46 }, "supporting": [{ "label": "Pull requests", "value": 18 }, { "label": "Lines changed", "value": 4200 }, { "label": "Active days", "value": 22 }] },
-  "firecrawl": { "primary": { "label": "pages scraped", "value": 3840 }, "supporting": [{ "label": "Sites crawled", "value": 26 }, { "label": "Credits used", "value": 4100 }] },
-  "exa": { "primary": { "label": "searches run", "value": 1250 }, "supporting": [{ "label": "Pages fetched", "value": 610 }, { "label": "Agents using it", "value": 3 }] },
-  "cloudflare": { "primary": { "label": "domains on DNS", "value": 14 }, "supporting": [{ "label": "Workers deployed", "value": 6 }, { "label": "Requests served", "value": 182000 }] },
-  "porkbun": { "primary": { "label": "domains registered", "value": 11 }, "supporting": [{ "label": "Renewals", "value": 9 }, { "label": "Email forwards", "value": 5 }] },
-  "spider": { "primary": { "label": "pages crawled", "value": 52000 }, "supporting": [{ "label": "Crawls run", "value": 8 }] },
-  "docker": { "primary": { "label": "images built", "value": 37 }, "supporting": [{ "label": "Containers running", "value": 9 }, { "label": "Compose stacks", "value": 4 }] },
-  "open-places": { "primary": { "label": "businesses exported", "value": 2400 }, "supporting": [{ "label": "Lists built", "value": 6 }, { "label": "Cities covered", "value": 4 }] },
-  "grok-bot": { "primary": { "label": "tasks handed off", "value": 12 }, "supporting": [{ "label": "Tasks finished", "value": 9 }] },
-  "elicit": { "primary": { "label": "papers screened", "value": 140 }, "supporting": [{ "label": "Claims extracted", "value": 38 }] },
-  "context-dev": { "primary": { "label": "domains looked up", "value": 320 }, "supporting": [{ "label": "Logos pulled", "value": 210 }] },
-  "n8n": { "primary": { "label": "workflow runs", "value": 900 }, "supporting": [{ "label": "Workflows", "value": 7 }], "period": { "start": "2025-03-01", "end": "2025-03-31" } },
-  "clay": { "primary": { "label": "rows enriched", "value": 15000 }, "supporting": [{ "label": "Tables", "value": 12 }], "period": { "start": "2023-05-01", "end": "2023-05-31" } }
+  "coding": {
+    "claude-code": { "label": "sessions", "supporting": [{ "label": "Pull requests", "value": 18 }, { "label": "Lines changed", "value": 4200 }, { "label": "Active days", "value": 22 }] }
+  },
+  "weekly": {
+    "firecrawl": { "label": "pages scraped", "peak": 1100 },
+    "exa": { "label": "searches run", "peak": 420 },
+    "cloudflare": { "label": "requests served", "peak": 52000 },
+    "spider": { "label": "pages crawled", "peak": 14000 },
+    "docker": { "label": "images built", "peak": 12 },
+    "open-places": { "label": "businesses exported", "peak": 800 },
+    "elicit": { "label": "papers screened", "peak": 45 },
+    "context-dev": { "label": "domains looked up", "peak": 95 },
+    "n8n": { "label": "workflow runs", "peak": 260, "lastWeek": "2025-03-24" }
+  },
+  "totals": {
+    "porkbun": { "primary": { "label": "domains registered", "value": 11 }, "supporting": [{ "label": "Renewals", "value": 9 }, { "label": "Email forwards", "value": 5 }] },
+    "grok-bot": { "primary": { "label": "tasks handed off", "value": 12 }, "supporting": [{ "label": "Tasks finished", "value": 9 }] },
+    "clay": { "primary": { "label": "rows enriched", "value": 15000 }, "supporting": [{ "label": "Tables", "value": 12 }], "period": { "start": "2023-05-01", "end": "2023-05-31" } }
+  }
 }

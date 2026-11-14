@@ -80,13 +80,16 @@ const PHONE_WIDTH = 390;
 const VIEWPORT_HEIGHT = 1000;
 
 // Each brand's own surface colour, from its committed snapshot; the default card is rgb(37, 37, 31) in Arial.
+// A weekly sample draws bars in the brand's accent, or in the card's text colour when the accent is too faint (n8n); a total shows metrics.
 const BRANDED = [
-  { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)" },
-  { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)" },
-  { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)" },
+  { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)", bars: "rgb(255, 76, 0)" },
+  { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)", bars: "rgb(255, 94, 31)" },
+  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: "rgb(22, 22, 22)" },
+  { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)", bars: undefined },
 ] as const;
+const WEEKS = 12;
 
-[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`branded example cards wear their brand, say what they're used for and show sample metrics at ${width}px`, async ({ page }) => {
+[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`branded example cards wear their brand, say what they're used for and show a sample chart or metrics at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -103,7 +106,14 @@ const BRANDED = [
     await expect.poll(() => logo.evaluate(image => (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
     await expect(card.getByText("I use it to")).toBeVisible();
     expect(await card.getByRole("list", { name: "What I use it for" }).getByRole("listitem").count()).toBeGreaterThanOrEqual(2);
-    await expect(card.locator(".card-front .activity-preview-metrics")).toBeVisible();
+    if (brand.bars) {
+      const bars = card.locator(".card-front .activity-bars > span");
+      await expect(bars).toHaveCount(WEEKS);
+      await expect(bars.last()).toHaveCSS("background-color", brand.bars);
+      await expect(card.locator(".card-front .activity-bars")).toHaveAttribute("role", "img");
+    } else {
+      await expect(card.locator(".card-front .activity-preview-metrics")).toBeVisible();
+    }
     await expect(card).toContainText("stale");
   }
 }));
