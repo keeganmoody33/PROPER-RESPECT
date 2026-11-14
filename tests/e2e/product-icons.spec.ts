@@ -12,7 +12,7 @@ for (const [width, density] of [[1440, 1], [1440, 2], [390, 3]]) {
       await carousel.getByRole("button", { name: "More examples" }).click();
       for (const product of ["Clay", "Claude Code"]) {
         await carousel.getByRole("button", { name: product, exact: true }).click();
-        const icon = carousel.getByRole("article", { name: `${product} card` }).locator(".product-logo");
+        const icon = carousel.getByRole("article", { name: `${product} card` }).locator(".card-front .product-logo");
         const image = icon.locator("img");
         await expect(image).toBeVisible();
         await image.evaluate((element: HTMLImageElement) => element.decode());
@@ -31,7 +31,7 @@ for (const [width, density] of [[1440, 1], [1440, 2], [390, 3]]) {
         await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-${product.replaceAll(" ", "-")}-${width}-${density}x.png`) });
       }
       await page.goto(`${testInfo.project.use.baseURL}/keegan`);
-      const profileIcon = page.getByRole("article", { name: "Wispr Flow card" }).locator(".product-logo img");
+      const profileIcon = page.getByRole("article", { name: "Wispr Flow card" }).locator(".card-front .product-logo img");
       await expect(profileIcon).toBeVisible();
       await expect(profileIcon).toHaveAttribute("src", "/product-assets/wisprflow/2026-09-21/app-icon.jpg");
       await profileIcon.evaluate((element: HTMLImageElement) => element.decode());
@@ -48,7 +48,7 @@ test("an official icon that fails before hydration falls back to product initial
   await page.route("**/product-assets/wisprflow/**", route => { requested = true; return route.abort(); });
   try {
     await page.goto("/keegan", { waitUntil: "commit" });
-    const icon = page.getByRole("article", { name: "Wispr Flow card" }).locator(".product-logo");
+    const icon = page.getByRole("article", { name: "Wispr Flow card" }).locator(".card-front .product-logo");
     await expect(icon.locator("img")).toHaveCount(1);
     await expect.poll(() => icon.locator("img").evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth === 0)).toBe(true);
     await expect.poll(() => requested).toBe(true);

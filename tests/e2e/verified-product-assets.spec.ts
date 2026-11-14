@@ -73,7 +73,7 @@ for (const width of [1280, 390]) test(`official Copilot lockups and scoped fonts
   }, assets.typography.cssFamily);
   for (const [index, mode] of ["dark", "light"].entries()) {
     const card = page.locator(".product-card").nth(index);
-    const image = card.locator(".product-logo img");
+    const image = card.locator(".card-front .product-logo img");
     await expect(image).toHaveAttribute("src", assets.logos.find(logo => logo.mode === mode)!.path);
     await image.evaluate((element: HTMLImageElement) => element.decode());
     const size = await image.boundingBox();
@@ -164,14 +164,14 @@ for (const width of [1280, 390]) test(`exact NotebookLM and Devin Desktop icons 
     await expect(cards).toHaveCount(4);
     for (let index = 0; index < exactCards.length; index++) {
       const card = cards.nth(index);
-      const image = card.locator(".product-logo img");
+      const image = card.locator(".card-front .product-logo img");
       await expect(image).toBeVisible();
       await expect(image).toHaveAttribute("src", `/product-assets/${exactCards[index].product.slug}/2026-09-22/app-icon.png`);
       await image.evaluate((element: HTMLImageElement) => element.decode());
       const size = await image.evaluate((element: HTMLImageElement) => ({ width: element.width, height: element.height, naturalWidth: element.naturalWidth, naturalHeight: element.naturalHeight }));
       expect(size.naturalWidth).toBeGreaterThanOrEqual(size.width * 3);
       expect(size.naturalHeight).toBeGreaterThanOrEqual(size.height * 3);
-      await expect(card.locator(".product-logo")).toHaveAttribute("data-logo-provider", "official-vendor");
+      await expect(card.locator(".card-front .product-logo")).toHaveAttribute("data-logo-provider", "official-vendor");
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(requests).toEqual([]);
@@ -180,7 +180,8 @@ for (const width of [1280, 390]) test(`exact NotebookLM and Devin Desktop icons 
 });
 test("failed exact icons retain safe initials on both surfaces", async ({ page }) => {
   const requests = await mountExactIcons(page, true);
-  const logos = page.locator(".product-logo");
+  // The front's logos; each back repeats its own.
+  const logos = page.locator(".card-front .product-logo");
   await expect(logos).toHaveCount(4);
   await expect(logos.locator("img")).toHaveCount(0);
   for (let index = 0; index < 4; index++) await expect(logos.nth(index)).toHaveText(exactProducts[Math.floor(index / 2)].initials);

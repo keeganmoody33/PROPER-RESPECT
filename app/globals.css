@@ -395,11 +395,24 @@ main {
   text-decoration: none;
 }
 
+/* The headline is the owner's one line about the product: set in the brand's heading face, large, and a step smaller as it gets long. */
 .card-headline {
-  font-size: 1.1rem;
-  line-height: 1.5;
+  font-family: var(--brand-card-heading-font, var(--brand-card-body-font, Arial, Helvetica, sans-serif));
+  font-size: 1.5rem;
+  font-weight: var(--brand-card-heading-weight, 400);
+  letter-spacing: var(--brand-card-heading-tracking, -0.02em);
+  line-height: 1.25;
   margin: 0.1rem 0;
   overflow-wrap: anywhere;
+}
+
+.card-headline[data-length="medium"] {
+  font-size: 1.3rem;
+}
+
+.card-headline[data-length="long"] {
+  font-size: 1.15rem;
+  line-height: 1.4;
 }
 
 .card-reason {

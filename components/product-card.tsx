@@ -243,6 +243,12 @@ function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kin
   );
 }
 
+/** Past these many characters a headline steps down a size, so the longest an owner can write (240) stays a few lines. */
+const HEADLINE_STEPS = [[120, "long"], [60, "medium"]] as const;
+function headlineLength(text: string): "short" | "medium" | "long" {
+  return HEADLINE_STEPS.find(([limit]) => text.length > limit)?.[1] ?? "short";
+}
+
 /** How long a shown table waits before its running row fills in, so the visitor sees it pending first. */
 const FILL_IN_DELAY_MS = 600;
 
@@ -449,6 +455,7 @@ export function ProductCard({
   // A paused or stopped card's note is why, so its front says it under the headline.
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
   const notePlaceholder = relationshipConfirmed ? "Relationship note not supplied." : "Discovery note not supplied.";
+  const headlineText = brandPreview ? card.product.description : card.headline || card.note || notePlaceholder;
   const [isFlipped, setIsFlipped] = useState(false);
   // Turned over, a card keeps at least the height it had, so its back never makes the page under it jump up.
   const [frontHeight, setFrontHeight] = useState<number>();
@@ -534,9 +541,7 @@ export function ProductCard({
           }}>Give props</button>}</div>}
         </div>
 
-        <p className="card-headline">
-          {brandPreview ? card.product.description : card.headline || card.note || notePlaceholder}
-        </p>
+        <p className="card-headline" data-length={headlineLength(headlineText)}>{headlineText}</p>
         {reason && <p className="card-reason">{reason}</p>}
         {!!useLabels.length && <div className="card-uses-block">
           <p className="card-uses-lead">{pastUse ? "I used it to" : "I use it to"}</p>

@@ -49,10 +49,11 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   const first = page.locator(".product-card").first();
   await expect(first).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath(`2026-09-19-card-front-${width}.png`), fullPage: true, animations: "disabled" });
-  for (const selector of [".eyebrow", ".card-headline", ".card-button", ".card-activity-preview", ".activity-meta", ".status-row", ".severity-row span", ".close-button", ".card-back-content"]) {
+  for (const selector of [".eyebrow", ".card-button", ".card-activity-preview", ".activity-meta", ".status-row", ".severity-row span", ".close-button", ".card-back-content"]) {
     await expect(first.locator(selector).first()).toHaveCSS("font-family", 'Verdana, sans-serif');
   }
-  for (const selector of ["h2", ".metric-row strong", ".product-logo"]) {
+  // The headline is set in the brand's heading face, like the name above it.
+  for (const selector of ["h2", ".card-headline", ".metric-row strong", ".product-logo"]) {
     await expect(first.locator(selector).first()).toHaveCSS("font-family", '"Trebuchet MS", sans-serif');
   }
   const frontHeight = (await first.boundingBox())!.height;
@@ -303,4 +304,27 @@ for (const width of [320, 1280]) test(`contribution calendar retains missing per
   // The back doesn't draw the calendar again.
   await page.getByRole("button", { name: "Details", exact: true }).click();
   await expect(page.locator(".card-back .activity-calendar")).toHaveCount(0);
+});
+
+const HEADLINE_LIMIT = 240;
+for (const width of [320, 1280]) test(`a headline is set large in the heading face, and the longest one an owner can write still fits at ${width}px`, async ({ page }) => {
+  const headlines = ["Short.", "A".repeat(80), "An owner can say a lot about why this product matters to them, ".repeat(4).slice(0, HEADLINE_LIMIT)];
+  const bundle = buildSync({ stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    const card = ${JSON.stringify(card)};
+    createRoot(document.getElementById("root")).render(createElement("div", { className: "card-grid" },
+      ...${JSON.stringify(headlines)}.map((headline, index) => createElement(ProductCard, { key: index, card: { ...card, headline, activity: undefined }, index }))));`, resolveDir: process.cwd() },
+    bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic", define: { "process.env.NODE_ENV": '"production"' },
+  });
+  await page.setViewportSize({ width, height: 1000 });
+  await page.setContent('<main id="root"></main>');
+  await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
+  await page.addScriptTag({ content: bundle.outputFiles[0].text });
+  const shown = await page.locator(".card-front .card-headline").evaluateAll(elements => elements.map(element => {
+    const style = getComputedStyle(element);
+    return { size: parseFloat(style.fontSize), family: style.fontFamily, fits: element.scrollWidth <= element.clientWidth };
+  }));
+  // 1.5rem for a short line, stepping down for a long one so 240 characters stay a paragraph, not a wall.
+  expect(shown.map(({ size }) => size)).toEqual([24, 20.8, 18.4]);
+  expect(shown.every(({ family, fits }) => family === '"Trebuchet MS", sans-serif' && fits)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
