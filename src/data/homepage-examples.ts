@@ -65,8 +65,11 @@ const isoDate = (time: number) => new Date(time).toISOString().split("T")[0];
 function sampleActivity(slug: string): ActivityModule | undefined {
   const coding = SAMPLE_USAGE.coding[slug];
   if (coding) {
+    // Counted from the days drawn beside them, so the numbers and the chart can't disagree.
     const sessions = codingDays.reduce((sum, day) => sum + day.count, 0);
-    return { ...SAMPLE, period: AUGUST_2026, kind: "codingActivity", primary: { label: coding.label, value: sessions }, supporting: [...coding.supporting], days: codingDays };
+    const activeDays = codingDays.filter(day => day.count > 0).length;
+    return { ...SAMPLE, period: AUGUST_2026, kind: "codingActivity", primary: { label: coding.label, value: sessions },
+      supporting: [...coding.supporting, { label: "Active days", value: activeDays }], days: codingDays };
   }
   const weekly = SAMPLE_USAGE.weekly[slug];
   if (weekly) {

@@ -177,6 +177,15 @@ test("each weekly sample is twelve consecutive weeks, read per week, and its per
   expect(series.find(({ id }) => id === "firecrawl")?.activity.period).toEqual({ start: "2026-06-08", end: "2026-08-30" });
 });
 
+test("every count a sample states beside its series is counted from that series: sessions are its sum, active days its days with a session", () => {
+  const coding = examples.flatMap(({ id, card }) => card.activity?.kind === "codingActivity" && card.activity.days ? [{ id, activity: card.activity, days: card.activity.days }] : []);
+  expect(coding.map(({ id }) => id)).toEqual(["claude-code"]);
+  for (const { id, activity, days } of coding) {
+    expect(activity.primary, id).toEqual({ label: "sessions", value: days.reduce((sum, day) => sum + day.count, 0) });
+    expect(activity.supporting.find(({ label }) => label === "Active days"), id).toEqual({ label: "Active days", value: days.filter(day => day.count > 0).length });
+  }
+});
+
 test("Claude Code's sessions are the sum of the days it draws", () => {
   const activity = examples.find(({ id }) => id === "claude-code")?.card.activity;
   if (activity?.kind !== "codingActivity" || !activity.days) throw new Error("Claude Code sample days missing");

@@ -1,6 +1,6 @@
 {
   "coding": {
-    "claude-code": { "label": "sessions", "supporting": [{ "label": "Pull requests", "value": 18 }, { "label": "Lines changed", "value": 4200 }, { "label": "Active days", "value": 22 }] }
+    "claude-code": { "label": "sessions", "supporting": [{ "label": "Pull requests", "value": 18 }, { "label": "Lines changed", "value": 4200 }] }
   },
   "weekly": {
     "firecrawl": { "label": "pages scraped", "peak": 1100 },
