@@ -8,6 +8,8 @@ for (const [width, density] of [[1440, 1], [1440, 2], [390, 3]]) {
       await page.emulateMedia({ reducedMotion: "reduce" });
       await page.goto(`${testInfo.project.use.baseURL}/`);
       const carousel = page.getByRole("region", { name: "Product usage examples" });
+      // Claude Code is one of the examples behind More examples.
+      await carousel.getByRole("button", { name: "More examples" }).click();
       for (const product of ["Clay", "Claude Code"]) {
         await carousel.getByRole("button", { name: product, exact: true }).click();
         const icon = carousel.getByRole("article", { name: `${product} card` }).locator(".product-logo");

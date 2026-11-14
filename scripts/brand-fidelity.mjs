@@ -125,6 +125,8 @@ async function card() {
       await page.goto(base, { waitUntil: "load", timeout: NAVIGATION_TIMEOUT_MS });
       const carousel = page.getByRole("region", { name: "Product usage examples" });
       await carousel.getByRole("button", { name: "Pause slideshow" }).click({ timeout: 2_000 }).catch(() => undefined);
+      // Every brand's toggle is in the chooser once the examples behind More examples are shown.
+      await carousel.getByRole("button", { name: "More examples" }).click({ timeout: 2_000 }).catch(() => undefined);
       for (const brand of [...brands, ...(args.includes("--with-unbranded") ? UNBRANDED : [])]) {
         await carousel.getByRole("button", { name: brand.name, exact: true }).click();
         const article = carousel.getByRole("article", { name: `${brand.name} card` });

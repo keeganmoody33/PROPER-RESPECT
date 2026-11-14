@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState, useSyncExternalStore, type FocusEvent } from "react";
 import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 import { ProductCard } from "./product-card";
 import { isHttpUrl } from "@/src/domain/http-url";
 import type { HomepageExample } from "@/src/data/homepage-examples";
@@ -25,7 +26,10 @@ function useReducedMotion() {
 }
 
 export function ProductExample({ examples }: { examples: readonly HomepageExample[] }) {
+  const featured = examples.filter(example => example.featured);
+  const ordered = [...featured, ...examples.filter(example => !example.featured)];
   const [index, setIndex] = useState(0);
+  const [more, setMore] = useState(false);
   const [choice, setChoice] = useState<PlayChoice>("auto");
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -33,22 +37,24 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const chooserId = useId();
   const playing = choice === "playing" || (choice === "auto" && !reducedMotion);
   const advancing = playing && !hovered && !focused;
+  // The slideshow moves through the featured examples until the visitor opens the rest or is looking at one of them.
+  const inPlay = more || index >= featured.length ? ordered.length : featured.length;
   // A slide fetches its brand fonts and logo once it is shown or next, so the page doesn't load every example's at once.
-  const upcoming = (index + 1) % examples.length;
+  const upcoming = (index + 1) % inPlay;
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([index, upcoming]));
   if (!revealed.has(index) || !revealed.has(upcoming)) setRevealed(new Set([...revealed, index, upcoming]));
 
   useEffect(() => {
     if (!advancing) return;
     const timer = window.setInterval(() => {
-      if (!document.hidden) setIndex(current => (current + 1) % examples.length);
+      if (!document.hidden) setIndex(current => (current + 1) % inPlay);
     }, ADVANCE_MS);
     return () => window.clearInterval(timer);
-  }, [advancing, examples.length]);
+  }, [advancing, inPlay]);
 
   function select(next: number) {
     setChoice("paused");
-    setIndex((next + examples.length) % examples.length);
+    setIndex((next + inPlay) % inPlay);
   }
 
   // Pressing play is the visitor asking for movement, so it lets go of the hold that keyboard focus puts on the slideshow.
@@ -61,23 +67,28 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
     if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
   }
 
+  // Each toggle is named by its product and described by what it shows, which the slide also says above its card.
+  const chooserToggle = (item: HomepageExample) => <Toggle key={item.id} value={item.id} onClick={() => setChoice("paused")} aria-describedby={`${chooserId}-${item.id}`}>
+    {item.card.product.name}<span id={`${chooserId}-${item.id}`} className="visually-hidden" aria-hidden="true">{item.capability}</span>
+  </Toggle>;
+
   return <section className={styles.carousel} aria-label="Product usage examples" aria-roledescription="carousel"
     onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setFocused(true)} onBlur={leave}>
     <p className={styles.label}>Inside a card / Illustrative examples</p>
-    {/* One tab stop; arrow keys move between examples and a press picks one. The current example stays pressed.
-        Each toggle is named by its product and described by what it shows, so the visible second line isn't read twice. */}
-    <ToggleGroup className={styles.choices} aria-label="Choose a product example" value={[examples[index].id]} deselectable={false}
-      onValueChange={value => { const next = examples.findIndex(item => item.id === value[0]); if (next >= 0) select(next); }}>
-      {/* Pressing the example already shown changes no value, so the pause is on the press itself. */}
-      {examples.map(item => <Toggle key={item.id} value={item.id} onClick={() => setChoice("paused")} aria-describedby={`${chooserId}-${item.id}`}>
-        {item.card.product.name}<span id={`${chooserId}-${item.id}`} className={styles.capabilityTag} aria-hidden="true">{item.capability}</span>
-      </Toggle>)}
-    </ToggleGroup>
+    {/* One tab stop across every shown toggle; arrow keys move between examples and a press picks one. The current example stays pressed. */}
+    <Collapsible className={styles.chooser} open={more} onOpenChange={setMore}>
+      <ToggleGroup className={styles.choices} aria-label="Choose a product example" value={[ordered[index].id]} deselectable={false}
+        onValueChange={value => { const next = ordered.findIndex(item => item.id === value[0]); if (next >= 0) { setChoice("paused"); setIndex(next); } }}>
+        {featured.map(chooserToggle)}
+        <CollapsiblePanel className={styles.more}>{ordered.slice(featured.length).map(chooserToggle)}</CollapsiblePanel>
+      </ToggleGroup>
+      <CollapsibleTrigger className={styles.moreTrigger}>More examples <span aria-hidden="true">{more ? "−" : "+"}</span></CollapsibleTrigger>
+    </Collapsible>
     <div className={styles.stage} aria-live={advancing ? "off" : "polite"}>
-      {examples.map((example, slideIndex) => {
+      {ordered.slice(0, inPlay).map((example, slideIndex) => {
         const current = slideIndex === index;
         return <div key={example.id} className={styles.slide} data-example={example.id} data-current={current} role="group" aria-roledescription="slide"
-          aria-label={`${slideIndex + 1} of ${examples.length}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
+          aria-label={`${slideIndex + 1} of ${inPlay}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
           <p className={styles.capability} data-capability>{example.capability}</p>
           <p className={styles.sample}>Sample data / No account connected</p>
           <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} backHint={example.backHint} />
@@ -88,7 +99,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
     </div>
     <div className={styles.controls}>
       <button type="button" onClick={() => select(index - 1)} aria-label="Previous example">←</button>
-      <span>{index + 1} / {examples.length}</span>
+      <span>{index + 1} / {inPlay}</span>
       <button type="button" onClick={() => select(index + 1)} aria-label="Next example">→</button>
       <button type="button" className={styles.play} onClick={toggle}>{playing ? "Pause slideshow" : "Play slideshow"}</button>
     </div>

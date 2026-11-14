@@ -11,6 +11,8 @@ import { levelStatus, type RelationshipLevel } from "@/src/domain/relationship-l
 
 export type HomepageExample = Readonly<{
   id: string;
+  /** Shown in the chooser from the start and cycled by the slideshow; every other example waits behind "More examples". */
+  featured: boolean;
   /** The part of a card this example shows, named above it and in the chooser. */
   capability: string;
   card: PublicProfile["cards"][number];
@@ -109,6 +111,8 @@ const clayMeasurements: PublicMeasurement[] = [
 
 type ExampleSource = Readonly<{
   slug: string;
+  /** One of the five the chooser shows first; the rest wait behind "More examples". Featured examples come first. */
+  featured?: true;
   capability: string;
   level: RelationshipLevel;
   goTo?: true;
@@ -135,36 +139,40 @@ type ExampleSource = Readonly<{
  */
 const EXAMPLES: readonly ExampleSource[] = [
   {
-    slug: "github", capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.",
-    note: "Contribution counts don't measure quality or hours.", uses: ["host-code", "review-pull-requests", "run-ci"], activity: githubActivity,
-    caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
-    source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
-  },
-  {
-    slug: "clay", capability: "Published usage numbers", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
+    slug: "clay", featured: true, capability: "Published usage numbers", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
     uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
     cost: { amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
     usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
     caveat: "Its work-sample link opens Clay's public templates.", backHint: "Cost, numbers and a work sample inside",
   },
   {
-    slug: "claude-code", capability: "Coding days", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code.",
-    uses: ["write-features", "fix-bugs", "automate-chores"],
+    slug: "cloudflare", featured: true, capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
+    uses: ["manage-dns", "run-workers", "cache-and-protect"],
+    cost: { amount: CLOUDFLARE_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
   },
   {
-    slug: "firecrawl", capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it.",
+    slug: "firecrawl", featured: true, capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it.",
     uses: ["scrape-pages", "crawl-sites"], linkType: "REFERRAL",
     caveat: "A real card's referral link carries its owner's code. This sample's goes to Firecrawl's home page and credits nobody.",
+  },
+  {
+    slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.",
+    note: "Contribution counts don't measure quality or hours.", uses: ["host-code", "review-pull-requests", "run-ci"], activity: githubActivity,
+    caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
+    source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
+  },
+  {
+    slug: "n8n", featured: true, capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
+    uses: ["schedule-jobs", "move-data"],
+  },
+  {
+    slug: "claude-code", capability: "Coding days", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code.",
+    uses: ["write-features", "fix-bugs", "automate-chores"],
   },
   {
     slug: "exa", capability: "A demo link on the back", level: "WEEKLY", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news.",
     uses: ["search-for-agents", "find-companies"], usageLink: { url: "https://exa.ai/search", label: "DEMO" },
     caveat: "The demo link goes to Exa's own public search page, standing in for an owner's recording.",
-  },
-  {
-    slug: "cloudflare", capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
-    uses: ["manage-dns", "run-workers", "cache-and-protect"],
-    cost: { amount: CLOUDFLARE_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
   },
   {
     slug: "porkbun", capability: "Running totals", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here.",
@@ -196,10 +204,6 @@ const EXAMPLES: readonly ExampleSource[] = [
     slug: "context-dev", capability: "Testing, week by week", level: "TESTING", since: "2026", headline: "Brand and company data from a domain.", note: "I'm testing it for logos and company details.",
     uses: ["pull-brand-data", "enrich-companies"],
   },
-  {
-    slug: "n8n", capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
-    uses: ["schedule-jobs", "move-data"],
-  },
 ];
 
 export function homepageExamples(): HomepageExample[] {
@@ -211,6 +215,7 @@ export function homepageExamples(): HomepageExample[] {
     const activity = example.activity ?? sampleActivity(entry.slug);
     return {
       id: entry.slug,
+      featured: example.featured === true,
       capability: example.capability,
       card: {
         product: { name: entry.name, slug: entry.slug, domain: entry.domain, description: entry.description, ...(brand ? { brand } : {}) },

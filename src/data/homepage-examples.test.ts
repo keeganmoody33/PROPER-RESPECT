@@ -20,12 +20,13 @@ const CODING_DAYS = 31;
 
 test("the homepage shows a go-to-market engineering stack whose names and links come from the directory", () => {
   expect(examples.map(example => [example.card.product.name, example.card.level, example.card.status, example.card.goTo === true, example.card.startedAt?.slice(0, YEAR_DIGITS)])).toEqual([
-    ["GitHub", "DAILY", "ACTIVE", true, "2019"],
     ["Clay", "DAILY", "ACTIVE", false, "2023"],
-    ["Claude Code", "DAILY", "ACTIVE", false, "2025"],
-    ["Firecrawl", "WEEKLY", "ACTIVE", false, "2025"],
-    ["Exa", "WEEKLY", "ACTIVE", false, "2025"],
     ["Cloudflare", "DAILY", "ACTIVE", true, "2020"],
+    ["Firecrawl", "WEEKLY", "ACTIVE", false, "2025"],
+    ["GitHub", "DAILY", "ACTIVE", true, "2019"],
+    ["n8n", "PAUSED", "ARCHIVED", false, "2024"],
+    ["Claude Code", "DAILY", "ACTIVE", false, "2025"],
+    ["Exa", "WEEKLY", "ACTIVE", false, "2025"],
     ["Porkbun", "OCCASIONAL", "ACTIVE", true, "2021"],
     ["Spider", "OCCASIONAL", "ACTIVE", false, "2026"],
     ["Docker", "WEEKLY", "ACTIVE", false, "2020"],
@@ -33,7 +34,6 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
     ["Grok Bot", "TESTING", "TESTING", false, "2026"],
     ["Elicit", "STOPPED", "ARCHIVED", false, "2026"],
     ["Context.dev", "TESTING", "TESTING", false, "2026"],
-    ["n8n", "PAUSED", "ARCHIVED", false, "2024"],
   ]);
   const fromDirectory = examples.map(({ id }) => {
     const entry = directoryEntry(id)!;
@@ -58,12 +58,13 @@ const CONTEXT_DEV_LAST_WEEK = 76;
 
 test("each example names the part of a card it shows, in a few words no other example uses", () => {
   expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
-    ["github", "A year of contributions"],
     ["clay", "Published usage numbers"],
-    ["claude-code", "Coding days"],
-    ["firecrawl", "Referral link, disclosed"],
-    ["exa", "A demo link on the back"],
     ["cloudflare", "Go-to, with what it costs"],
+    ["firecrawl", "Referral link, disclosed"],
+    ["github", "A year of contributions"],
+    ["n8n", "Paused, and why"],
+    ["claude-code", "Coding days"],
+    ["exa", "A demo link on the back"],
     ["porkbun", "Running totals"],
     ["spider", "Affiliate link, disclosed"],
     ["docker", "A list of linked work"],
@@ -71,10 +72,17 @@ test("each example names the part of a card it shows, in a few words no other ex
     ["grok-bot", "Still testing"],
     ["elicit", "Stopped using, and why"],
     ["context-dev", "Testing, week by week"],
-    ["n8n", "Paused, and why"],
   ]);
   expect(new Set(examples.map(({ capability }) => capability)).size).toBe(examples.length);
   expect(examples.filter(({ capability }) => capability.length > CAPABILITY_LIMIT).map(({ id }) => id)).toEqual([]);
+});
+
+test("five examples are featured, first, in the order the chooser shows them; the other nine wait behind More examples", () => {
+  expect(examples.map(({ id, featured }) => [id, featured])).toEqual([
+    ["clay", true], ["cloudflare", true], ["firecrawl", true], ["github", true], ["n8n", true],
+    ["claude-code", false], ["exa", false], ["porkbun", false], ["spider", false], ["docker", false],
+    ["open-places", false], ["grok-bot", false], ["elicit", false], ["context-dev", false],
+  ]);
 });
 
 test("only Clay's card says what is behind Details, since its back holds the most", () => {
@@ -89,12 +97,13 @@ test("every headline and note is a short line under the card's limit", () => {
 test("each example shows a different part of a card: its link, cost, work sample, published numbers and kind of activity", () => {
   expect(examples.map(({ id, card }) => [id, card.primaryLink?.type, card.cost && `${card.cost.amount} ${card.cost.currency} ${card.cost.cadence} ${card.cost.basis}`,
     card.usageLink && `${usageLinkLabelText(card.usageLink.label)} / ${usageLinkHost(card.usageLink.url)}`, card.measurements?.length, card.activity?.kind])).toEqual([
-    ["github", "CANONICAL", undefined, undefined, undefined, "contributionCalendar"],
     ["clay", "CANONICAL", "149 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", CLAY_MEASUREMENTS, undefined],
-    ["claude-code", "CANONICAL", undefined, undefined, undefined, "codingActivity"],
-    ["firecrawl", "REFERRAL", undefined, undefined, undefined, "timeSeries"],
-    ["exa", "CANONICAL", undefined, "Demo / exa.ai", undefined, "timeSeries"],
     ["cloudflare", "CANONICAL", "5 USD MONTHLY OWNER_REPORTED", undefined, undefined, "timeSeries"],
+    ["firecrawl", "REFERRAL", undefined, undefined, undefined, "timeSeries"],
+    ["github", "CANONICAL", undefined, undefined, undefined, "contributionCalendar"],
+    ["n8n", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
+    ["claude-code", "CANONICAL", undefined, undefined, undefined, "codingActivity"],
+    ["exa", "CANONICAL", undefined, "Demo / exa.ai", undefined, "timeSeries"],
     ["porkbun", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
     ["spider", "AFFILIATE", undefined, undefined, undefined, "timeSeries"],
     ["docker", "CANONICAL", undefined, undefined, undefined, "artifactCollection"],
@@ -102,7 +111,6 @@ test("each example shows a different part of a card: its link, cost, work sample
     ["grok-bot", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
     ["elicit", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["context-dev", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
-    ["n8n", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
   ]);
   expect(examples.filter(({ card }) => !publicProfileSchema.shape.cards.element.safeParse(card).success).map(({ id }) => id)).toEqual([]);
 });
@@ -143,17 +151,17 @@ test("Docker lists three things as links to public pages, and every outbound lin
 
 test("a stopped and a paused example each say why in their note", () => {
   expect(examples.filter(({ card }) => card.status === "ARCHIVED").map(({ id, card }) => [id, card.level, card.note])).toEqual([
-    ["elicit", "STOPPED", "I stopped once my market study was done."],
     ["n8n", "PAUSED", "Paused while my nightly jobs move to plain cron."],
+    ["elicit", "STOPPED", "I stopped once my market study was done."],
   ]);
 });
 
 test("each weekly sample is twelve consecutive weeks, read per week, and its period covers exactly those weeks", () => {
   const series = examples.flatMap(({ id, card }) => card.activity?.kind === "timeSeries" ? [{ id, activity: card.activity }] : []);
   expect(series.map(({ id, activity }) => [id, activity.label, activity.unit, activity.points.at(-1)?.value])).toEqual([
+    ["cloudflare", "requests served", "per week", 48360],
     ["firecrawl", "pages scraped", "per week", 1100],
     ["exa", "searches run", "per week", 277],
-    ["cloudflare", "requests served", "per week", 48360],
     ["spider", "pages crawled", "per week", 8120],
     ["open-places", "businesses exported", "per week", OPEN_PLACES_LAST_WEEK],
     ["elicit", "papers screened", "per week", ELICIT_LAST_WEEK],
@@ -179,12 +187,13 @@ test("Claude Code's sessions are the sum of the days it draws", () => {
 
 test("every example says what it is used for, in two or three of its product's own listed uses", () => {
   expect(examples.map(({ id, card }) => [id, productUseLabels(id, card.uses)])).toEqual([
-    ["github", ["host my code and its history", "review and merge pull requests", "run tests and deploys on every push"]],
     ["clay", ["enrich lead and account lists", "find contact details"]],
-    ["claude-code", ["build features from a description", "find and fix bugs", "automate repetitive engineering work"]],
-    ["firecrawl", ["turn web pages into Markdown", "crawl whole sites"]],
-    ["exa", ["give my agents web search", "find companies and people that fit a description"]],
     ["cloudflare", ["run DNS for my domains", "run code at the edge with Workers", "cache and protect my sites"]],
+    ["firecrawl", ["turn web pages into Markdown", "crawl whole sites"]],
+    ["github", ["host my code and its history", "review and merge pull requests", "run tests and deploys on every push"]],
+    ["n8n", ["run jobs on a schedule", "move data between systems"]],
+    ["claude-code", ["build features from a description", "find and fix bugs", "automate repetitive engineering work"]],
+    ["exa", ["give my agents web search", "find companies and people that fit a description"]],
     ["porkbun", ["register and renew domains", "manage DNS records"]],
     ["spider", ["crawl sites quickly at volume", "feed web data to my agents"]],
     ["docker", ["run databases and services locally", "package apps to run anywhere"]],
@@ -192,14 +201,13 @@ test("every example says what it is used for, in two or three of its product's o
     ["grok-bot", ["hand off tasks to an agent", "research a topic for me"]],
     ["elicit", ["find papers on a question", "pull data out of studies into a table"]],
     ["context-dev", ["pull a company's logo, colors and fonts", "look up company details by domain"]],
-    ["n8n", ["run jobs on a schedule", "move data between systems"]],
   ]);
   expect(examples.filter(({ id, card }) => listedUses(id, card.uses)?.picks.length !== card.uses?.picks.length).map(({ id }) => id)).toEqual([]);
 });
 
 test("every example with a committed brand carries it, matched to its own product", () => {
   expect(examples.filter(({ card }) => card.product.brand).map(({ id }) => id)).toEqual([
-    "github", "clay", "firecrawl", "exa", "cloudflare", "porkbun", "spider", "docker", "open-places", "elicit", "context-dev", "n8n",
+    "clay", "cloudflare", "firecrawl", "github", "n8n", "exa", "porkbun", "spider", "docker", "open-places", "elicit", "context-dev",
   ]);
   const mismatched = examples.filter(({ card }) => card.product.brand && (card.product.brand.productSlug !== card.product.slug
     || card.product.brand.canonicalDomain !== card.product.domain || !productBrandSnapshotSchema.safeParse(card.product.brand).success));
@@ -208,12 +216,13 @@ test("every example with a committed brand carries it, matched to its own produc
 });
 
 test("GitHub's sample contribution calendar covers one year", () => {
-  const activity = examples[0].card.activity;
+  const github = examples.find(({ id }) => id === "github")!;
+  const activity = github.card.activity;
   if (activity?.kind !== "contributionCalendar") throw new Error("GitHub sample calendar missing");
   expect(activity.days).toHaveLength(DAYS_IN_YEAR);
   expect(activity.days[0]).toEqual({ date: "2025-09-01", count: 0, level: 0 });
   expect(activity.days.at(-1)?.date).toBe("2026-08-31");
   expect(activity.total).toBe(SAMPLE_CONTRIBUTIONS);
   expect(activity.days.reduce((sum, day) => sum + day.count, 0)).toBe(SAMPLE_CONTRIBUTIONS);
-  expect(examples[0].source?.href).toBe("https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference");
+  expect(github.source?.href).toBe("https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference");
 });
