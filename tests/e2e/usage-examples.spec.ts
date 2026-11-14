@@ -552,3 +552,28 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Clay's running 
   const [address, status] = motion === "reduce" ? ["Finding…", "Running"] : ["d.reyes@quillon.example", "Enriched"];
   await expect(row.getByRole("cell")).toHaveText(["quillon.example", address, status]);
 });
+
+const ADVANCE_MS = 8000;
+const PHONE_HEIGHT = 844;
+/** Just short of a turn, then just past it. */
+const TURN_MARGIN_MS = 100;
+test("the slideshow waits for the visitor to reach it before it moves on, then moves on", async ({ page }) => {
+  await page.clock.install();
+  await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const current = carousel.locator("[data-current=true] [data-capability]");
+  await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
+  expect(await carousel.evaluate(element => element.getBoundingClientRect().top > innerHeight)).toBe(true);
+  // Longer than a slide's turn at the top of the page, with the slideshow below the fold.
+  await page.clock.runFor(ADVANCE_MS * 2);
+  await carousel.locator("[data-current=true] article").scrollIntoViewIfNeeded();
+  await expect(current).toHaveText("Published usage numbers");
+  // In view, it starts playing (its slides stop announcing themselves) and gets a whole turn before moving on.
+  await expect(carousel.locator("[aria-live]")).toHaveAttribute("aria-live", "off");
+  await page.clock.runFor(ADVANCE_MS - TURN_MARGIN_MS);
+  await expect(current).toHaveText("Published usage numbers");
+  await page.clock.runFor(TURN_MARGIN_MS * 2);
+  await expect(current).not.toHaveText("Published usage numbers");
+});

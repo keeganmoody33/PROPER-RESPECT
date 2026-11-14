@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type FocusEvent } from "react";
+import { useEffect, useId, useRef, useState, type FocusEvent, type RefObject } from "react";
 import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 import { ProductCard } from "./product-card";
@@ -14,6 +14,19 @@ const ADVANCE_MS = 8000;
 /** "auto" follows the visitor's motion preference; a press of play or pause, or picking an example, is their own choice. */
 type PlayChoice = "auto" | "playing" | "paused";
 
+/** Whether any of the element is on screen; false until the browser says so. */
+function useInView(ref: RefObject<HTMLElement | null>): boolean {
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+  return inView;
+}
+
 export function ProductExample({ examples }: { examples: readonly HomepageExample[] }) {
   const featured = examples.filter(example => example.featured);
   const ordered = [...featured, ...examples.filter(example => !example.featured)];
@@ -24,8 +37,11 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const [focused, setFocused] = useState(false);
   const reducedMotion = useReducedMotion();
   const chooserId = useId();
+  const stageRef = useRef<HTMLDivElement>(null);
+  // Nobody watches a slideshow below the fold: it holds still until the visitor reaches it, and each arrival starts a whole turn.
+  const inView = useInView(stageRef);
   const playing = choice === "playing" || (choice === "auto" && !reducedMotion);
-  const advancing = playing && !hovered && !focused;
+  const advancing = playing && !hovered && !focused && inView;
   // The slideshow and its count stay with the featured examples until the visitor picks one of the others; after that, all of them.
   const [pickedOther, setPickedOther] = useState(false);
   const othersInPlay = pickedOther || index >= featured.length;
@@ -77,14 +93,14 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
       </ToggleGroup>
       <CollapsibleTrigger className={styles.moreTrigger}>More examples <span aria-hidden="true">{more ? "−" : "+"}</span></CollapsibleTrigger>
     </Collapsible>
-    <div className={styles.stage} aria-live={advancing ? "off" : "polite"}>
+    <div ref={stageRef} className={styles.stage} aria-live={advancing ? "off" : "polite"}>
       {ordered.slice(0, mounted).map((example, slideIndex) => {
         const current = slideIndex === index;
         return <div key={example.id} className={styles.slide} data-example={example.id} data-current={current} role="group" aria-roledescription="slide"
           aria-label={`${slideIndex + 1} of ${mounted}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
           <p className={styles.capability} data-capability>{example.capability}</p>
           <p className={styles.sample}>Sample data / No account connected</p>
-          <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} shown={current} backHint={example.backHint} tablePreview={example.tablePreview} />
+          <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} shown={current && inView} backHint={example.backHint} tablePreview={example.tablePreview} />
           {example.caveat && <p className={styles.caveat}>{example.caveat}</p>}
           {example.source && isHttpUrl(example.source.href) && <a className={styles.source} href={example.source.href} target="_blank" rel="noreferrer">{example.source.label} ↗</a>}
         </div>;
