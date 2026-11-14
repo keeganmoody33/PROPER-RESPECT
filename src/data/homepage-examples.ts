@@ -1,4 +1,5 @@
-import { HOMEPAGE_BRANDS } from "@/src/data/homepage-brands";
+import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "@/src/data/homepage-brands";
+import type { BrandSiteTraits } from "@/src/domain/brand-site-traits";
 import sampleUsage from "@/src/data/homepage-sample-usage.json";
 import { directoryEntry } from "@/src/domain/product-directory";
 import type { ProductUses } from "@/src/domain/product-uses";
@@ -8,6 +9,8 @@ import { levelStatus, type RelationshipLevel } from "@/src/domain/relationship-l
 export type HomepageExample = Readonly<{
   id: string;
   card: PublicProfile["cards"][number];
+  /** What measuring the product's own site added to its brand. Presentation only, never part of the card's data. */
+  site?: BrandSiteTraits;
   caveat?: string;
   source?: Readonly<{ href: string; label: string }>;
 }>;
@@ -155,7 +158,7 @@ export function homepageExamples(): HomepageExample[] {
   return EXAMPLES.map(example => {
     const entry = directoryEntry(example.slug);
     if (!entry) throw new Error(`Homepage example "${example.slug}" is not in the product directory.`);
-    const brand = HOMEPAGE_BRANDS[entry.slug];
+    const brand = HOMEPAGE_BRANDS[entry.slug], site = HOMEPAGE_SITE_TRAITS[entry.slug];
     const uses: ProductUses = { picks: [...example.uses] };
     return {
       id: entry.slug,
@@ -164,6 +167,7 @@ export function homepageExamples(): HomepageExample[] {
         status: levelStatus(example.level), level: example.level, ...(example.goTo ? { goTo: true } : {}), headline: example.headline, note: example.note, startedAt: `${example.since}-01-01`,
         uses, primaryLink: { type: "CANONICAL", url: entry.website, label: `Open ${entry.name}` }, activity: example.activity ?? sampleActivity(entry.slug),
       },
+      ...(site ? { site } : {}),
       ...(example.caveat ? { caveat: example.caveat } : {}),
       ...(example.source ? { source: example.source } : {}),
     };

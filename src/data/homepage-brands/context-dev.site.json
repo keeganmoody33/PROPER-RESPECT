@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "context-dev",
+  "canonicalDomain": "context.dev",
+  "measuredAt": "2026-11-14T12:33:06.754Z",
+  "url": "https://context.dev/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#ffffff",
+      "from": "page background"
+    },
+    "text": {
+      "value": "#000000",
+      "from": "text on the page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "rethinkSans",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "labelFont": {
+      "value": {
+        "family": "rethinkSans",
+        "generic": "sans-serif"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "as typed",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#000000",
+        "text": "#ffffff",
+        "radius": {
+          "px": 42.31,
+          "pill": true
+        },
+        "font": {
+          "family": "rethinkSans",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#ffffff",
+        "text": "#2563eb",
+        "border": "#2563eb",
+        "radius": {
+          "px": 42.31,
+          "pill": true
+        },
+        "font": {
+          "family": "rethinkSans",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 25.2,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#2563eb",
+      "from": "logo"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

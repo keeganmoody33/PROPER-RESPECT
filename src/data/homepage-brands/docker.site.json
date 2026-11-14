@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "docker",
+  "canonicalDomain": "docker.com",
+  "measuredAt": "2026-11-14T12:33:12.902Z",
+  "url": "https://docker.com/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#f9fafb",
+      "from": "page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Repro",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "Inter",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "Inter",
+        "generic": "sans-serif"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "as typed",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": -0.011,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#2560ff",
+        "text": "#ffffff",
+        "border": "#000000",
+        "radius": {
+          "px": 8,
+          "pill": false
+        },
+        "font": {
+          "family": "Inter",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": -0.011
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#ffffff",
+        "text": "#000000",
+        "border": "#000000",
+        "radius": {
+          "px": 8,
+          "pill": false
+        },
+        "font": {
+          "family": "Inter",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": -0.011
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 0,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#2560ff",
+      "from": "primary call-to-action"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

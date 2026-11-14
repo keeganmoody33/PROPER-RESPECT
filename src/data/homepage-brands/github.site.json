@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "github",
+  "canonicalDomain": "github.com",
+  "measuredAt": "2026-11-14T12:33:40.998Z",
+  "url": "https://github.com/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#ffffff",
+      "from": "page background"
+    },
+    "text": {
+      "value": "#000000",
+      "from": "text on the page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Mona Sans",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "labelFont": {
+      "value": {
+        "family": "Mona Sans",
+        "generic": "sans-serif"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "as typed",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0.015,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#08872b",
+        "text": "#ffffff",
+        "radius": {
+          "px": 6,
+          "pill": false
+        },
+        "font": {
+          "family": "Mona Sans",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0.01
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#f9fbf9",
+        "text": "#000000",
+        "border": "#e4ebe6",
+        "radius": {
+          "px": 46,
+          "pill": true
+        },
+        "font": {
+          "family": "Mona Sans",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0.013
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 8,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#08872b",
+      "from": "primary call-to-action"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

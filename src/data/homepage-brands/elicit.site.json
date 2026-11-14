@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "elicit",
+  "canonicalDomain": "elicit.com",
+  "measuredAt": "2026-11-14T12:33:21.687Z",
+  "url": "https://elicit.com/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#fcfcf8",
+      "from": "page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Martina Plantijn Regular",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "Special Gothic Variable",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#026370",
+        "text": "#fcfcf8",
+        "radius": {
+          "px": 8,
+          "pill": false
+        },
+        "font": {
+          "family": "Special Gothic Variable",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0.009
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#083d44",
+        "text": "#fcfcf8",
+        "radius": {
+          "px": 8,
+          "pill": false
+        },
+        "font": {
+          "family": "Special Gothic Variable",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0.01
+      },
+      "from": "secondary call-to-action"
+    },
+    "signature": {
+      "value": "#026370",
+      "from": "primary call-to-action"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

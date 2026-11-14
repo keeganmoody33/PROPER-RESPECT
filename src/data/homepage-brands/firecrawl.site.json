@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "firecrawl",
+  "canonicalDomain": "firecrawl.dev",
+  "measuredAt": "2026-11-14T12:33:34.242Z",
+  "url": "https://firecrawl.dev/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#f9f9f9",
+      "from": "page background"
+    },
+    "text": {
+      "value": "#262626",
+      "from": "text on the page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "suisse",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "suisse",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "suisse",
+        "generic": "sans-serif"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "as typed",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#ff4c00",
+        "text": "#ffffff",
+        "radius": {
+          "px": 10,
+          "pill": false
+        },
+        "font": {
+          "family": "suisse",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "primary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 20,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#ff4c00",
+      "from": "primary call-to-action"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "open-places",
+  "canonicalDomain": "openplaces.practicebase.io",
+  "measuredAt": "2026-11-14T12:33:57.204Z",
+  "url": "https://openplaces.practicebase.io/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#f7f5ef",
+      "from": "page background"
+    },
+    "text": {
+      "value": "#23261f",
+      "from": "text on the page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Figtree",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "Figtree",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "Figtree",
+        "generic": "sans-serif"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "as typed",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#3f5a2c",
+        "text": "#ffffff",
+        "radius": {
+          "px": 46,
+          "pill": true
+        },
+        "font": {
+          "family": "Figtree",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#ffffff",
+        "text": "#23261f",
+        "radius": {
+          "px": 46,
+          "pill": true
+        },
+        "font": {
+          "family": "Figtree",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 18,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#3f5a2c",
+      "from": "primary call-to-action"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

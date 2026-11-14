@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "spider",
+  "canonicalDomain": "spider.cloud",
+  "measuredAt": "2026-11-14T12:34:02.952Z",
+  "url": "https://spider.cloud/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#0c0e13",
+      "from": "page background"
+    },
+    "text": {
+      "value": "#f8fafc",
+      "from": "text on the page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Fraunces Variable",
+        "generic": "serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "Inter Variable",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "Berkeley",
+        "generic": "monospace"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "uppercase",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0.14,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#f8fafc",
+        "text": "#0c0e13",
+        "radius": {
+          "px": 0,
+          "pill": false
+        },
+        "font": {
+          "family": "Berkeley",
+          "generic": "monospace"
+        },
+        "case": "uppercase",
+        "trackingEm": 0.14
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#0c0e13",
+        "text": "#94a3b8",
+        "border": "#414a58",
+        "radius": {
+          "px": 0,
+          "pill": false
+        },
+        "font": {
+          "family": "Berkeley",
+          "generic": "monospace"
+        },
+        "case": "uppercase",
+        "trackingEm": 0.14
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 0,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#3bde77",
+      "from": "heading highlight"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

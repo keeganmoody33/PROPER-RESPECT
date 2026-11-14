@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "cloudflare",
+  "canonicalDomain": "cloudflare.com",
+  "measuredAt": "2026-11-14T12:33:00.577Z",
+  "url": "https://cloudflare.com/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#ffffff",
+      "from": "page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "STK Bureau Sans",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "STK Bureau Sans",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#ffffff",
+        "text": "#1f1f1f",
+        "radius": {
+          "px": 50,
+          "pill": true
+        },
+        "font": {
+          "family": "STK Bureau Sans",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "text": "#262626",
+        "border": "#f0f0f0",
+        "radius": {
+          "px": 38,
+          "pill": true
+        },
+        "font": {
+          "family": "STK Bureau Sans",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "secondary call-to-action"
+    },
+    "signature": {
+      "value": "#ff5f08",
+      "from": "logo"
+    },
+    "hero": {
+      "value": {
+        "kind": "colour",
+        "hex": "#ff5e1f"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

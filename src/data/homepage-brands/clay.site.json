@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "clay",
+  "canonicalDomain": "clay.com",
+  "measuredAt": "2026-11-14T12:32:52.000Z",
+  "url": "https://clay.com/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#ffffff",
+      "from": "page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Roobertvf",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "Roobertvf",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "Roobertvf",
+        "generic": "sans-serif"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "as typed",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#cbd810",
+        "text": "#000000",
+        "radius": {
+          "px": 12,
+          "pill": false
+        },
+        "font": {
+          "family": "Roobertvf",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": -0.01
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#ffffff",
+        "text": "#000000",
+        "radius": {
+          "px": 12,
+          "pill": false
+        },
+        "font": {
+          "family": "Roobertvf",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": -0.01
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 48,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#cbd810",
+      "from": "primary call-to-action"
+    },
+    "hero": {
+      "value": {
+        "kind": "colour",
+        "hex": "#035d44"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

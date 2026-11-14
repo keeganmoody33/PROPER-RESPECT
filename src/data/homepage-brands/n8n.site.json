@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "n8n",
+  "canonicalDomain": "n8n.io",
+  "measuredAt": "2026-11-14T12:33:47.381Z",
+  "url": "https://n8n.io/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#fafafa",
+      "from": "page background"
+    },
+    "text": {
+      "value": "#161616",
+      "from": "text on the page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "n8n Baumer Uniwidth",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "n8n Baumer Uniwidth",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "n8n Baumer Mono",
+        "generic": "monospace"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "uppercase",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0.02,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#ffbcca",
+        "text": "#212121",
+        "radius": {
+          "px": 42,
+          "pill": true
+        },
+        "font": {
+          "family": "n8n Baumer Mono",
+          "generic": "monospace"
+        },
+        "case": "uppercase",
+        "trackingEm": 0.02
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#d9d9d9",
+        "text": "#161616",
+        "radius": {
+          "px": 42,
+          "pill": true
+        },
+        "font": {
+          "family": "n8n Baumer Mono",
+          "generic": "monospace"
+        },
+        "case": "uppercase",
+        "trackingEm": 0.02
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 34,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#ffbcca",
+      "from": "primary call-to-action"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    }
+  }
+}

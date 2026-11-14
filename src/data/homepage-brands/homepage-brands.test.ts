@@ -4,10 +4,11 @@ import { expect, test } from "vitest";
 import { productBrandEligibility } from "@/convex/productBrands";
 import { CONTEXT_BRAND_ADAPTER_VERSION, productBrandSnapshotSchema } from "@/src/domain/product-brand";
 import { directoryEntry } from "@/src/domain/product-directory";
-import { HOMEPAGE_BRANDS } from "./index";
+import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "./index";
 
 const DIRECTORY = join(process.cwd(), "src/data/homepage-brands");
-const files = readdirSync(DIRECTORY).filter(name => name.endsWith(".json")).sort();
+const files = readdirSync(DIRECTORY).filter(name => name.endsWith(".json") && !name.endsWith(".site.json")).sort();
+const siteFiles = readdirSync(DIRECTORY).filter(name => name.endsWith(".site.json")).sort();
 
 test("every committed homepage brand is loaded by the index", () => {
   expect(files).toEqual([
@@ -47,4 +48,21 @@ test("Claude Code and Grok Bot get no brand: their listed domains belong to a pa
 test("the pull had no fonts endpoint to call, so each snapshot records that request as failed", () => {
   const fontReceipts = Object.values(HOMEPAGE_BRANDS).map(brand => brand.receipts.find(receipt => receipt.endpoint === "fonts")?.status);
   expect(new Set(fontReceipts)).toEqual(new Set(["error"]));
+});
+
+test("every brand but Porkbun has a measured site file, loaded by the index; Porkbun's site blocked the measurement", () => {
+  expect(siteFiles).toEqual([
+    "clay.site.json", "cloudflare.site.json", "context-dev.site.json", "docker.site.json", "elicit.site.json", "exa.site.json",
+    "firecrawl.site.json", "github.site.json", "n8n.site.json", "open-places.site.json", "spider.site.json",
+  ]);
+  expect(Object.keys(HOMEPAGE_SITE_TRAITS).sort()).toEqual(siteFiles.map(name => name.replace(".site.json", "")));
+  expect(Object.keys(HOMEPAGE_SITE_TRAITS)).not.toEqual(expect.arrayContaining(["porkbun"]));
+});
+
+test("each site file measured the root of its own brand's domain at desktop width", () => {
+  const wrong = Object.entries(HOMEPAGE_SITE_TRAITS).filter(([slug, site]) => site.productSlug !== slug || site.canonicalDomain !== HOMEPAGE_BRANDS[slug].canonicalDomain
+    || site.url !== `https://${HOMEPAGE_BRANDS[slug].canonicalDomain}/` || site.viewport.width !== 1440);
+  expect(wrong.map(([slug]) => slug)).toEqual([]);
+  expect(HOMEPAGE_SITE_TRAITS.spider.traits.signature).toEqual({ value: "#3bde77", from: "heading highlight" });
+  expect(HOMEPAGE_SITE_TRAITS.clay.traits.hero).toEqual({ value: { kind: "colour", hex: "#035d44" }, from: "backdrop behind the first heading" });
 });
