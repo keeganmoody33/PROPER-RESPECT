@@ -83,6 +83,16 @@ test("a card's work-sample link reaches agents exactly as visitors see it", asyn
   assert(publicToolResultSchema.safeParse(result).success);
 });
 
+test("what a product does for its owner reaches agents as the labels visitors read", async () => {
+  const withUses = { ...fixture(), cards: fixture().cards.map((card, index) => index === 0 ? { ...card, uses: { picks: ["review-pull-requests", "retired-choice", "host-code"], other: "ship side projects" } } : card) };
+  const result = await createPublicReader({ ...options, readPublished: async () => withUses })("keegan");
+  assert.equal(result.kind, "profile");
+  if (result.kind !== "profile") assert.fail();
+  assert.deepEqual(result.profile.cards[0].uses, ["host my code and its history", "review and merge pull requests", "ship side projects"]);
+  assert.equal("uses" in result.profile.cards[1], false);
+  assert(publicToolResultSchema.safeParse(result).success);
+});
+
 test("exact public measurements survive the reader and both MCP result representations", async () => {
   for (const dataMode of ["synthetic", "published"] as const) {
     const source = measurementProfile();
