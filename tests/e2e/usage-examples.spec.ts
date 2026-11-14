@@ -35,7 +35,6 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     expect(await page.evaluate(() => window.scrollX)).toBe(0);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  if (width === 1440) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
   await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("A year of contributions");
   await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
   const slideBox = () => carousel.locator("[aria-roledescription=slide]").first().evaluate(element => element.parentElement!.getBoundingClientRect().height);
@@ -70,7 +69,6 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     await expect(carousel.locator("[data-current=true]")).toContainText("Sample data / No account connected");
     expect(await slideBox()).toBe(githubHeight);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    if (width === 1440) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
     await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-${name.toLowerCase().replaceAll(" ", "-")}-${width}.png`) });
     await expect(card.locator(".card-front .card-link-disclosure")).toHaveText(FRONT_DISCLOSURE[name] ?? []);
     const back = BACK_TEXT[name];
@@ -79,7 +77,6 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     // A stored link type: matches "CANONICAL", not "Direct link". https://regex101.com/?regex=CANONICAL%7CAFFILIATE%7CREFERRAL%7CINVITE&testString=Weekly%20%C2%B7%20Direct%20link%0ACANONICAL
     await expect(card.locator(".card-back .status-row")).not.toContainText(/CANONICAL|AFFILIATE|REFERRAL|INVITE/);
     await Promise.all(back.map(text => expect(card.locator(".card-back")).toContainText(text)));
-    if (width === DESKTOP_WIDTH) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
     await card.getByRole("button", { name: "Close details" }).click();
   }
   await carousel.getByRole("button", { name: "Next example" }).click();
@@ -91,6 +88,12 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await carousel.getByRole("button", { name: "Clay", exact: true }).click();
   await expect(carousel.getByRole("button", { name: "Details", exact: true })).toBeVisible();
 });
+
+/**
+ * The example on show. All fourteen slides stay mounted, so auditing the whole slideshow after every pick re-audited
+ * every card each time. The slideshow is audited whole once, on load; after that, each card when it is shown.
+ */
+const SHOWN_EXAMPLE = '[aria-label="Product usage examples"] [data-current="true"]';
 
 /** What each example shows, named above its card and as its chooser toggle's description. */
 const CAPABILITIES: Readonly<Record<string, string>> = {
@@ -126,6 +129,27 @@ const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
 const DESKTOP_WIDTH = 1440;
 const PHONE_WIDTH = 390;
 const VIEWPORT_HEIGHT = 1000;
+
+// Its own test, so the audit's twenty-odd axe runs don't share the slideshow test's time with its checks.
+test(`every example card, front and back, passes axe at ${DESKTOP_WIDTH}px`, async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
+  for (const name of Object.keys(CAPABILITIES)) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await expect(card).toBeVisible();
+    expect((await new AxeBuilder({ page }).include(SHOWN_EXAMPLE).analyze()).violations, `${name} front`).toEqual([]);
+    if (!BACK_TEXT[name]) continue;
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
+    expect((await new AxeBuilder({ page }).include(SHOWN_EXAMPLE).analyze()).violations, `${name} back`).toEqual([]);
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+});
 
 // Each brand's own surface colour, from its committed snapshot; the default card is rgb(37, 37, 31) in Arial.
 // A weekly sample draws bars in the brand's accent; a total shows metrics.
