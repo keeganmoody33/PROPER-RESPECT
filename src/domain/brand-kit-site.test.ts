@@ -43,3 +43,37 @@ describe("corners", () => {
     });
   });
 });
+
+describe("the button", () => {
+  it("takes the fill and label of the site's primary call-to-action when it shows on the card, else falls back as before", () => {
+    const buttons = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, [kit(slug)["--brand-card-button-fill"], kit(slug)["--brand-card-button-text"]]]));
+    expect(buttons).toEqual({
+      // The site's own call-to-action: Clay's lime, Context.dev's black pill, Elicit's lighter teal.
+      clay: ["#cbd810", "#000000"], "context-dev": ["#000000", "#ffffff"], elicit: ["#026370", "#fcfcf8"],
+      docker: ["#2560ff", "#ffffff"], exa: ["#000000", "#ffffff"], github: ["#08872b", "#ffffff"], n8n: ["#ffbcca", "#212121"], "open-places": ["#3f5a2c", "#ffffff"], spider: ["#f8fafc", "#0c0e13"],
+      // White on Firecrawl's orange is 3.3:1, under the 4.5:1 floor, so the label stays the card's text colour.
+      firecrawl: ["#ff4c00", "#262626"],
+      // Cloudflare's call-to-action is white on its orange hero and would vanish on the white card, so the fallback holds.
+      cloudflare: ["#ff5e1f", "#262626"],
+      porkbun: ["#ef7878", "#000000"],
+    });
+  });
+
+  it("takes the site's button outline, type, case and letter-spacing", () => {
+    expect(kit("docker")["--brand-card-button-border"]).toBe("#000000");
+    expect(kit("clay")).not.toHaveProperty("--brand-card-button-border");
+    expect(kits("--brand-card-button-case")).toEqual({
+      spider: "uppercase", n8n: "uppercase", clay: "none", cloudflare: "none", "context-dev": "none", docker: "none", elicit: "none", exa: "none", firecrawl: "none", github: "none", "open-places": "none",
+      porkbun: undefined,
+    });
+    expect(kits("--brand-card-button-tracking")).toMatchObject({ spider: "0.14em", n8n: "0.02em", clay: "-0.01em", exa: "-0.02em", firecrawl: "0em", porkbun: undefined });
+    expect(kits("--brand-card-button-font")).toEqual({
+      // Spider's Berkeley and n8n's Baumer Mono have no file the provider stored, so the card uses a system monospace face.
+      spider: 'ui-monospace, "SF Mono", Menlo, monospace', n8n: 'ui-monospace, "SF Mono", Menlo, monospace',
+      // Every other measured button is set in the family the card already loads for its body text.
+      clay: "var(--brand-card-body-font)", cloudflare: "var(--brand-card-body-font)", "context-dev": "var(--brand-card-body-font)", docker: "var(--brand-card-body-font)",
+      elicit: "var(--brand-card-body-font)", exa: "var(--brand-card-body-font)", firecrawl: "var(--brand-card-body-font)", github: "var(--brand-card-body-font)", "open-places": "var(--brand-card-body-font)",
+      porkbun: undefined,
+    });
+  });
+});

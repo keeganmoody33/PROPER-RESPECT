@@ -1,6 +1,6 @@
-import type { BrandSiteTraits } from "./brand-site-traits";
+import type { BrandSiteTraits, SiteFont } from "./brand-site-traits";
 import { oklchChroma } from "./oklab";
-import type { ProductBrandSnapshot } from "./product-brand";
+import { productBrandFontFamilyKey, type ProductBrandSnapshot } from "./product-brand";
 
 /**
  * The edge and buttons of a product's card, derived from its stored brand by fixed rules.
@@ -9,7 +9,8 @@ import type { ProductBrandSnapshot } from "./product-brand";
  */
 export type BrandCardKit = Partial<Record<
   "--brand-card-border" | "--brand-card-radius" | "--brand-card-button-fill" | "--brand-card-button-text" | "--brand-card-button-radius"
-  | "--brand-card-button-weight" | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart", string>>;
+  | "--brand-card-button-weight" | "--brand-card-button-border" | "--brand-card-button-font" | "--brand-card-button-case" | "--brand-card-button-tracking"
+  | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -37,6 +38,17 @@ const WHITE = "#ffffff", BLACK = "#000000";
  */
 const NEUTRAL_MAX_CHROMA = 0.045;
 
+/**
+ * A measured family the card can't load (no file was stored for it, as with Spider's Berkeley) is drawn in a system
+ * face of the same kind, so its case and letter-spacing still read as the site's.
+ */
+const SYSTEM_FACES: Readonly<Record<SiteFont["generic"], string>> = {
+  monospace: 'ui-monospace, "SF Mono", Menlo, monospace',
+  serif: 'ui-serif, Georgia, "Times New Roman", serif',
+  "sans-serif": 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif',
+};
+const CSS_CASE = { uppercase: "uppercase", "as typed": "none" } as const;
+
 const solid = (value: string | undefined) => (value && SOLID_HEX.test(value) ? value.toLowerCase() : undefined);
 const channels = (hex: string) => CHANNEL_STARTS.map(start => parseInt(hex.slice(start, start + CHANNEL_DIGITS), HEX_RADIX));
 function luminance(hex: string) {
@@ -62,6 +74,16 @@ function readableOn(fill: string, preferred: string | undefined, cardText: strin
 function derivedBorder(surface: string, text: string) {
   const mixes = BORDER_MIXES.map(amount => mix(text, surface, amount));
   return mixes.find(candidate => contrast(candidate, surface) >= MIN_BORDER_CONTRAST) ?? text;
+}
+
+/** The card's stack for a measured family: the brand face the card already loads when it is that family, else a system face of its kind. */
+function measuredFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { schemaVersion: 2 }>["styleguide"]) {
+  const key = font.family && productBrandFontFamilyKey(font.family);
+  const loaded = (["body", "heading"] as const).find(role => {
+    const family = guide?.typography?.[role]?.family ?? (role === "body" ? guide?.bodyFamily : guide?.headingFamily);
+    return key && family && productBrandFontFamilyKey(family) === key;
+  });
+  return loaded ? `var(--brand-card-${loaded}-font)` : SYSTEM_FACES[font.generic];
 }
 
 export type BrandAccent = { hex: string; source: "site accent" | "primary button" | "logo colour" | "site colour" };
@@ -109,20 +131,25 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   // site's other stored button carries the card's button, then the brand's accent, in the primary's shape.
   const primary = parts?.buttonPrimary, secondary = parts?.buttonSecondary;
   const fills = [
+    { fill: measuredButton?.fill, label: measuredButton?.text, border: measuredButton?.border },
     { fill: solid(primary?.background), label: solid(primary?.text) },
     { fill: solid(secondary?.background), label: solid(secondary?.text) },
     { fill: accent, label: undefined },
   ];
   // With no stored button at all (a brand fetched before buttons were kept), the card keeps its default outlined button.
-  const chosen = primary ? fills.find(({ fill }) => fill && contrast(fill, surface) >= MIN_FILL_CONTRAST) : undefined;
+  const chosen = primary || measuredButton ? fills.find(({ fill }) => fill && contrast(fill, surface) >= MIN_FILL_CONTRAST) : undefined;
   const fill = chosen?.fill;
   if (fill) {
     kit["--brand-card-button-fill"] = fill;
     kit["--brand-card-button-text"] = readableOn(fill, chosen.label, text);
+    if (chosen.border) kit["--brand-card-button-border"] = chosen.border;
   }
   if (measuredButton?.radius) kit["--brand-card-button-radius"] = measuredButton.radius.pill ? PILL_RADIUS : `${measuredButton.radius.px}px`;
   else if (primary?.radiusPx !== undefined) kit["--brand-card-button-radius"] = `${primary.radiusPx}px`;
   if (primary?.weight !== undefined) kit["--brand-card-button-weight"] = String(primary.weight);
+  if (measuredButton?.font) kit["--brand-card-button-font"] = measuredFace(measuredButton.font, guide);
+  if (measuredButton?.case) kit["--brand-card-button-case"] = CSS_CASE[measuredButton.case];
+  if (measuredButton?.trackingEm !== undefined) kit["--brand-card-button-tracking"] = `${measuredButton.trackingEm}em`;
 
   kit["--brand-card-chart"] = accent && contrast(accent, surface) >= MIN_CHART_CONTRAST ? accent : text;
 

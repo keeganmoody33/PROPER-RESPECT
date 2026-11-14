@@ -888,12 +888,14 @@ main {
   padding: 0.55rem 0.7rem;
 }
 
-/* A branded card's own button: the product's fill, label, corners and weight. */
+/* A branded card's own button: the product's fill, label, outline, corners, type and weight. */
 .product-card .card-button {
   background: var(--brand-card-button-fill, transparent);
-  border-color: var(--brand-card-button-fill, currentColor);
+  border-color: var(--brand-card-button-border, var(--brand-card-button-fill, currentColor));
   color: var(--brand-card-button-text, inherit);
+  font-family: var(--brand-card-button-font, inherit);
   font-weight: var(--brand-card-button-weight, 700);
+  letter-spacing: var(--brand-card-button-tracking, var(--brand-card-body-tracking, normal));
 }
 
 .product-card .card-button:hover,
