@@ -816,7 +816,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
       ? projectPublishedMeasurements(selection.publish ? "PUBLIC" : "PRIVATE", projection.retained, projection.publishedIds)
       : undefined;
     const cards = projectPublicProfile({ user: profileUser, props: [{
-      visibility: "PUBLIC", status: prop.status, level: prop.level, goTo: prop.goTo, headline: prop.headline, note: prop.note,
+      visibility: "PUBLIC", status: prop.status, level: prop.level, goTo: prop.goTo, headline: prop.headline, uses: prop.uses, note: prop.note,
       startedAt: prop.startedAt, activity: selection.activity, measurements,
       cost: selection.costVisibility !== undefined ? (selection.cost === undefined ? undefined : costSchema.parse(selection.cost)) : prop.cost,
       costVisibility: selection.costVisibility ?? prop.costVisibility,
@@ -830,10 +830,12 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   // Omitted cards retain their exact approved stored projection.
   const cardsWithIdentity = [...preserved, ...replacements];
   const checked = publicProfileSchema.parse({ ...profileUser, cards: cardsWithIdentity.map(entry => entry.card) });
-  // The schema reads a level the registry no longer knows as none. That is for display: an omitted card is stored with the level it was published with.
+  // The schema reads a level the registry no longer knows as none, and drops uses it can't accept. That is for display:
+  // an omitted card is stored with the level and uses it was published with.
   const profile = { ...checked, cards: checked.cards.map((card, index) => {
-    const kept = index < preserved.length ? preserved[index].card.level : undefined;
-    return kept === undefined ? card : { ...card, level: kept };
+    if (index >= preserved.length) return card;
+    const { level, uses } = preserved[index].card;
+    return { ...card, ...(level !== undefined ? { level } : {}), ...(uses !== undefined ? { uses } : {}) };
   }) };
   const cardPropIds = cardsWithIdentity.map(entry => entry.propId);
   if (new TextEncoder().encode(JSON.stringify({ profile, cardPropIds })).length > PUBLISHED_PROFILE_MAX_BYTES) {

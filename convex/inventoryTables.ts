@@ -1,9 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
-import { relationshipLevelValidator, statusValidator } from "./validators";
-
-// Permissive on purpose: ids a product no longer lists still read, and are dropped when shown.
-export const productUsesValidator = v.object({ picks: v.array(v.string()), other: v.optional(v.string()) });
+import { productUsesValidator, relationshipLevelValidator, statusValidator } from "./validators";
 
 export const relationshipStateValidator = v.object({
   status: statusValidator,

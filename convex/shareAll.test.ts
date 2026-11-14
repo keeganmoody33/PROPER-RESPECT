@@ -127,6 +127,17 @@ test("a card that was already public keeps its approved projection; private edit
   expect(await f.visibility(added)).toBe("PUBLIC");
 });
 
+test("share-all publishes each card's saved uses, the same as publishing it alone", async () => {
+  const f = await fixture();
+  await f.addProp({ uses: { picks: ["sync-crm", "enrich-leads"], other: "score inbound leads" } }, { slug: "clay", name: "Clay", domain: "clay.com" });
+  await f.addProp({ uses: { picks: ["retired-choice"] } }, { slug: "github", name: "GitHub", domain: "github.com" });
+  const preview = await publishAll(f.owner);
+  const expected = [{ picks: ["enrich-leads", "sync-crm"], other: "score inbound leads" }, undefined];
+  expect(preview.profile.cards.map(card => card.uses)).toEqual(expected);
+  const page = await f.t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(page?.cards.map(card => [card.product.name, card.uses])).toEqual([["Clay", expected[0]], ["GitHub", undefined]]);
+});
+
 test("share-all never publishes a saved public cost, and keeps the saved amount", async () => {
   const f = await fixture();
   const priced = await f.addProp({ cost, costVisibility: "PUBLIC" });

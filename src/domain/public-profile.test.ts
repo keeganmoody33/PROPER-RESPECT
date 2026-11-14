@@ -29,6 +29,17 @@ const baseProp: CuratedProp = {
 };
 
 describe("projectPublicProfile", () => {
+  it("copies the saved uses the product still lists, and none when nothing is left", () => {
+    const user = { handle: "example", displayName: "Example", bio: "" };
+    const props: CuratedProp[] = [
+      { ...baseProp, uses: { picks: ["run-ci", "retired-choice", "host-code"], other: "keep a record of shipped work" } },
+      { ...baseProp, uses: { picks: ["retired-choice"] } },
+      baseProp,
+    ];
+    const cards = projectPublicProfile({ user, props }).cards;
+    expect(cards.map(card => card.uses)).toEqual([{ picks: ["host-code", "run-ci"], other: "keep a record of shipped work" }, undefined, undefined]);
+    expect(projectPublicProfileV1({ ...user, cards }).cards[0].uses).toEqual({ picks: ["host-code", "run-ci"], other: "keep a record of shipped work" });
+  });
   it("keeps costs private by default and supports all-public, all-private, and per-card choices", () => {
     const cost = { amount: 12.34, currency: "USD", cadence: "MONTHLY" as const, basis: "RECEIPT" as const, asOf: "2026-09-01" };
     const user = { handle: "example", displayName: "Example", bio: "" };
