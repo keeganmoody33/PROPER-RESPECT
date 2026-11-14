@@ -309,6 +309,8 @@ export async function captureSite(browser, brand, directory) {
     } catch (error) {
       capture.blocked ??= `navigation failed: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`;
     } finally { await context.close(); }
+    // A site that blocked the desktop visit is asked nothing more: no second visit at phone width.
+    if (capture.blocked) break;
   }
   return capture;
 }
