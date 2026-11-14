@@ -18,6 +18,7 @@ import { isHttpUrl } from "@/src/domain/http-url";
 import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
 import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relationship-level";
 import { costDetail, costSummary } from "@/src/domain/cost";
+import { formatPeriod, freshnessNote } from "@/src/domain/format-period";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart, usageChartLog } from "./usage-chart";
@@ -257,6 +258,7 @@ function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kin
 function ActivityPreview({ activity, unreviewed = false, expanded = false }: { activity: ActivityModule; unreviewed?: boolean; expanded?: boolean }) {
   const metric = activityHighlight(activity);
   const series = activitySeries(activity);
+  const freshness = freshnessNote(activity.freshness, activity.capturedAt);
   return (
     <div className="card-activity-preview">
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
@@ -264,7 +266,6 @@ function ActivityPreview({ activity, unreviewed = false, expanded = false }: { a
         {metric.value === undefined ? "No observations supplied" : <>
           <strong>{expanded ? fullNumber(metric.value) : compactNumber(metric.value)}</strong>{" "}
           {metric.label}{metric.unit ? ` · ${metric.unit}` : ""}
-          {activity.kind === "timeSeries" ? " · observation" : ""}
         </>}
       </p>
       {activity.kind === "contributionCalendar" && <ContributionCalendar activity={activity} />}
@@ -273,10 +274,10 @@ function ActivityPreview({ activity, unreviewed = false, expanded = false }: { a
       {expanded && (activity.kind === "headlineMetrics" || activity.kind === "codingActivity") && <dl className="activity-preview-metrics">
         {activity.supporting.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{compactNumber(metric.value)}{metric.unit ? ` ${metric.unit}` : ""}</dd></div>)}
       </dl>}
+      {/* The front says the period and its age in words; the back keeps the scope, exact dates and status word. */}
       <p className="card-activity-coverage">
-        {activity.attributionScope.toLowerCase()} activity ·{" "}
-        {activity.period ? `${activity.period.start} to ${activity.period.end}` : "Measurement period not supplied"}
-        {activity.freshness !== "FRESH" && <span data-freshness={activity.freshness}> · {activity.freshness.toLowerCase()}</span>}
+        {activity.period ? formatPeriod(activity.period.start, activity.period.end) : "Measurement period not supplied"}
+        {freshness && <span data-freshness={activity.freshness}> · {freshness}</span>}
       </p>
     </div>
   );

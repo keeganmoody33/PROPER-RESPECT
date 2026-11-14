@@ -1,5 +1,6 @@
 import type { Measurement, PublicMeasurement } from "@/src/domain/measurements";
 import { groupedDecimal } from "@/src/domain/format-activity-number";
+import { formatPeriod } from "@/src/domain/format-period";
 
 type VisibleMeasurement = Pick<Measurement, "metric" | "value" | "unit" | "period" | "scope" | "coverage" | "temporality" | "aggregation" | "capturedAt" | "status" | "sample" | "derivation">;
 export const measurementLabel = (metric: string) => metric.replaceAll("_", " ").replace(/^./, first => first.toUpperCase());
@@ -11,13 +12,25 @@ export function measurementPeriod(period: VisibleMeasurement["period"]) {
   }
 }
 
+const NANOS_PER_MILLI = BigInt(1_000_000);
+const nanosDate = (nanos: string) => new Date(Number(BigInt(nanos) / NANOS_PER_MILLI)).toISOString();
+
+/** A period in months, for a card's front; the back keeps the exact dates, time zone or nanoseconds. */
+export function measurementPeriodInWords(period: VisibleMeasurement["period"]) {
+  switch (period.kind) {
+    case "unknown": return "Period unknown";
+    case "date": return formatPeriod(period.start, period.end);
+    case "instant": return formatPeriod(nanosDate(period.startUnixNano), nanosDate(period.endUnixNano));
+  }
+}
+
 /** Compact, on a card's front, keeps what the number means; how it was recorded stays on the back, which shows every row in full. */
 export function MeasurementValue({ measurement, compact = false }: { measurement: VisibleMeasurement; compact?: boolean }) {
   return <div className="usage-measurement-measurement">
     <span className="usage-measurement-label">{measurementLabel(measurement.metric)}</span>
     <strong className="usage-measurement-value">{measurement.value === null ? "Unknown" : groupedDecimal(measurement.value)}</strong>
     <span className="usage-measurement-unit">{measurementLabel(measurement.unit)}</span>
-    <p>{measurementPeriod(measurement.period)}</p>
+    <p>{compact ? measurementPeriodInWords(measurement.period) : measurementPeriod(measurement.period)}</p>
     {!compact && <p>Scope: {measurement.scope.toLowerCase()} · Coverage: {measurement.coverage.toLowerCase()}</p>}
     {!compact && <p>{measurement.temporality.toLowerCase()} · {measurement.aggregation === "NON_ADDITIVE" ? "Do not add to other views" : measurement.aggregation.toLowerCase()}</p>}
     <p>{measurement.sample === "synthetic" ? "Synthetic sample. Not real account activity." : measurement.sample === "owner-supplied" ? "Owner-supplied sample" : "Sample origin unknown"}</p>

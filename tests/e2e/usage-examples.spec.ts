@@ -237,7 +237,10 @@ const NARROWEST_WIDTH = 320;
       await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("Numbers and a work sample inside");
       continue;
     }
-    await expect(card).toContainText("stale");
+    // Every sample was captured on 2026-09-01: the front says when, in words, not "stale".
+    await expect(card.locator(".card-front [data-freshness]")).toHaveText(" · last updated Sep 2026");
+    // What a visitor reads under the number; the screen-reader table of bars keeps each bar's exact dates.
+    expect(await card.locator(".card-front .card-activity-preview > p").allInnerTexts()).not.toContainEqual(expect.stringMatching(/stale|observation|personal activity|UTC|\d{4}-\d{2}-\d{2}/));
   }
 }));
 

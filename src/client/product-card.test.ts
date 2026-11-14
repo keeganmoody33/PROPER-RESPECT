@@ -398,10 +398,14 @@ for (const audience of ["owner", "visitor"] as const) {
   });
 }
 
-test.each(["STALE", "ERROR"] as const)("%s keeps its warning alongside the retained snapshot date", (freshness) => {
+test.each([
+  ["STALE", "last updated Sep 2026"],
+  ["ERROR", "last updated Sep 2026 · refresh failed"],
+] as const)("%s says on the front when it was last updated, and keeps its status word on the back", (freshness, front) => {
   const $ = renderCard({ activity: { ...activityExamples[0], freshness } });
 
-  expect($(".card-front [data-freshness]").text()).toContain(freshness.toLowerCase());
+  expect($(".card-front [data-freshness]").text()).toBe(` · ${front}`);
+  expect($(".card-front").text()).not.toContain(freshness.toLowerCase() === "stale" ? "stale" : "error");
   expect($(".activity-meta [data-freshness]").text()).toBe(freshness.toLowerCase());
   expect($(".activity-meta").text()).toContain("Snapshot recorded 2026-09-18");
   expect($(".status-row").text()).toContain("Testing");
@@ -415,8 +419,7 @@ test("the compact front leads with the owner relationship and leaves full eviden
   expect(front.text().indexOf(baseCard.headline)).toBeLessThan(front.text().indexOf("120"));
   expect(front.find(".metric-row, .activity-calendar, .activity-bars, .activity-meta")).toHaveLength(0);
   expect(front.find(".card-activity-preview").text()).toContain("120");
-  expect(front.find(".card-activity-preview").text()).toContain("2026-09-01 to 2026-09-15");
-  expect(front.find(".card-activity-preview").text()).toContain("stale");
+  expect(front.find(".card-activity-coverage").text()).toBe("Sep 2026 · last updated Sep 2026");
   expect($(".card-back").text()).toContain(baseCard.note);
 });
 
@@ -497,7 +500,9 @@ test("a supplied time series draws its bars on the front and keeps them with a c
   expect($(".card-front .activity-bars").attr("role")).toBe("img");
   expect($(".card-front .activity-bars").attr("aria-label")).toBe("Minutes recorded trend");
   expect($(".card-front .card-activity-preview strong").text()).toBe("45");
-  expect($(".card-front .card-activity-coverage").text()).toContain("2026-09-01 to 2026-09-15");
+  expect($(".card-front .card-activity-coverage").text()).toContain("Sep 2026");
+  // What a visitor reads; the screen-reader table of bars keeps each bar's exact dates.
+  expect($(".card-front .card-activity-preview > p").text()).not.toMatch(/observation|personal activity|\d{4}-\d{2}-\d{2}/);
   expect($(".card-front .usage-chart-log, .card-front .blueprint-dim")).toHaveLength(0);
   expect($(".card-back .activity-bars > span")).toHaveLength(1);
   expect($(".card-back .activity-bars > span").attr("title")).toBe("2026-09-15: 45 min");
@@ -578,7 +583,8 @@ test("unconfirmed discoveries keep supplied measurements and provenance visibly 
 
   expect($(".card-activity-preview").text()).toContain("Unreviewed evidence");
   expect($(".card-activity-preview strong").text()).toBe("120");
-  expect($(".card-activity-preview").text()).toContain("2026-09-01 to 2026-09-15");
+  expect($(".card-activity-coverage").text()).toBe("Sep 2026 · last updated Sep 2026");
+  expect($(".card-back .activity-meta").text()).toContain("2026-09-01 to 2026-09-15");
   expect($(".card-back").text()).toContain("Unreviewed evidence");
   expect($(".card-back .activity-meta").text()).toContain(activity.provenanceLabel);
   expect($(".card-back .activity-hero strong").text()).toBe("120");
@@ -743,7 +749,8 @@ test("published numbers say how they were recorded on the back, where every row 
   const recorded = ["Scope: workspace · Coverage: complete", "cumulative · Do not add to other views", "Source-reported value", "Captured 2026-09-01T00:00:00.000Z"];
   expect(recorded.filter(text => $(".card-front").text().includes(text))).toEqual([]);
   expect($(".card-back .usage-measurement-measurement").toArray().map(element => recorded.filter(text => $(element).text().includes(text)).length)).toEqual([recorded.length, recorded.length]);
-  expect($(".card-front .usage-measurement-measurement").text()).toBe("Enriched2,140,000Rows2023-03-01 to 2026-08-31 · UTCSynthetic sample. Not real account activity.");
+  expect($(".card-front .usage-measurement-measurement").text()).toBe("Enriched2,140,000RowsMar 2023 – Aug 2026Synthetic sample. Not real account activity.");
+  expect($(".card-back .usage-measurement-measurement").first().text()).toContain("2023-03-01 to 2026-08-31 · UTC");
   expect($(".card-back .usage-measurement-value").toArray().map(value => $(value).text())).toEqual(["2,140,000", "86"]);
 });
 

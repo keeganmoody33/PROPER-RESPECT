@@ -262,7 +262,7 @@ for (const width of [320, 1280]) test(`contribution calendar preserves supplied 
   expect(Math.abs(cell!.width - cell!.height)).toBeLessThanOrEqual(1);
   expect(cell!.width).toBeLessThanOrEqual(12);
   await expect(front).toContainText("2 days have no supplied count");
-  await expect(front).toContainText("stale");
+  await expect(front.locator("[data-freshness]")).toHaveText(" · last updated Sep 2026");
   await expect(front.locator('[data-date="2026-09-02"]')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Details", exact: true }).click();
