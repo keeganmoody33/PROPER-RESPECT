@@ -64,10 +64,11 @@ test("a published card shows a retained measurement only when that product is pu
   expect(visible.cards[0].measurements?.map(row => row.value)).toEqual(["9007199254740993123456789", null, "0"]);
   const html = renderToStaticMarkup(createElement(ProductCard, { card: profile.cards[0], index: 0 }));
   const values = load(html)(".usage-measurement-value").toArray().map(node => load(node).text());
-  expect(values).toContain("9007199254740993123456789");
+  // The card groups thousands, digit for digit: the exact string, never rounded through a number.
+  expect(values).toContain("9,007,199,254,740,993,123,456,789");
   expect(values).toContain("Unknown");
   expect(values).toContain("0");
-  expect(values).not.toContain("424242424242424242");
+  expect(values).not.toContain("424,242,424,242,424,242");
   expect(html).not.toContain("private-withheld");
 
   const unpublished = projectPublicProfile({
