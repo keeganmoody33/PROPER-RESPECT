@@ -218,18 +218,24 @@ main {
   min-width: 0;
 }
 
+/* The incoming face turns in from edge-on, a quarter turn in 260ms; the card's own perspective makes it read as a turn. */
 .product-card[data-side="front"] .card-front,
 .product-card[data-side="back"] .card-back {
-  animation: card-turn-reveal 180ms ease-out both;
+  animation: card-turn-over 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transform-origin: center;
 }
 
+/* Turned over, the front stays laid out but unseen, so the card keeps its height and re-measures it when the width changes. */
 .product-card[data-side="back"] .card-front {
-  display: none;
+  inset: 1rem 1rem auto;
+  pointer-events: none;
+  position: absolute;
+  visibility: hidden;
 }
 
-@keyframes card-turn-reveal {
-  from { opacity: 0.45; transform: rotateY(65deg); }
-  to { opacity: 1; transform: rotateY(0); }
+@keyframes card-turn-over {
+  from { transform: rotateY(-90deg); }
+  to { transform: rotateY(0); }
 }
 
 .card-topline {
@@ -932,9 +938,57 @@ main {
 .card-back {
   background: inherit;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.8rem;
   min-width: 0;
+}
+
+/* The back's content fills the card: its links sit on the card's bottom edge, and any spare height sits above them, not under them. */
+.card-back-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.product-card .card-back-content > :is(.usage-link, .outbound-link) {
+  margin-top: auto;
+}
+
+.product-card .card-back-content > .usage-link ~ .outbound-link {
+  margin-top: 0.6rem;
+}
+
+.card-back-content > :last-child {
+  margin-bottom: 0;
+}
+
+/* A series' every value, in columns: the numbers the front's bars stand for. */
+.card-back-values {
+  columns: 4 4.2rem;
+  column-gap: 0.9rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.card-back-values li {
+  break-inside: avoid;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.card-back-values strong {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.artifact-description {
+  display: block;
+  font-size: 0.8rem;
 }
 
 .card-back[hidden] {
@@ -1072,8 +1126,8 @@ main {
   padding: 0.55rem 0.7rem;
 }
 
-/* A branded card's own button: the product's fill, label, outline, corners, type and weight. */
-.product-card .card-button {
+/* A branded card's own button, on both faces: the product's fill, label, outline, corners, type and weight. */
+.product-card :is(.card-button, .close-button) {
   background: var(--brand-card-button-fill, transparent);
   border-color: var(--brand-card-button-border, var(--brand-card-button-fill, currentColor));
   color: var(--brand-card-button-text, inherit);
@@ -1085,7 +1139,8 @@ main {
 
 .product-card .card-button:hover,
 .product-card .card-button:focus-visible,
-.product-card .close-button:hover {
+.product-card .close-button:hover,
+.product-card .close-button:focus-visible {
   background: var(--brand-card-text, var(--paper));
   border-color: var(--brand-card-text, var(--paper));
   color: var(--brand-card-background, var(--ink));
@@ -1788,7 +1843,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .card-table-preview [data-state="pending"] { font-style: italic; }
 .card-table-preview [data-state="empty"] { color: color-mix(in srgb, var(--brand-card-text, currentColor) 62%, var(--brand-card-background, #fff)); }
 @container (max-width: 27.5rem) {
-  .card-table-preview [data-droppable] { display: none; }
+  .card-table-preview:not([data-full]) [data-droppable] { display: none; }
   .card-table-preview :is(th, td) { padding: .4rem .35rem; }
   .card-table-preview tr > :first-child { padding-left: 1.6rem; }
   .card-table-preview tr > :first-child::before { width: 1.2rem; }

@@ -102,10 +102,11 @@ function sampleActivity(slug: string): ActivityModule | undefined {
   return { ...SAMPLE, period, kind: "headlineMetrics", primary, supporting: [...supporting] };
 }
 
+/** Each work with the owner's line about it, which the back shows under its link. */
 const dockerArtifacts = [
-  { title: "Sample Compose apps (awesome-compose)", url: "https://github.com/docker/awesome-compose" },
-  { title: "Official Postgres image", url: "https://hub.docker.com/_/postgres" },
-  { title: "Multi-stage build guide", url: "https://docs.docker.com/build/building/multi-stage/" },
+  { title: "Sample Compose apps (awesome-compose)", url: "https://github.com/docker/awesome-compose", label: "Compose stacks I start new services from" },
+  { title: "Official Postgres image", url: "https://hub.docker.com/_/postgres", label: "The database every scraper writes to" },
+  { title: "Multi-stage build guide", url: "https://docs.docker.com/build/building/multi-stage/", label: "How I keep agent images small" },
 ];
 const dockerActivity: ActivityModule = {
   ...SAMPLE, period: { start: "2024-01-01", end: "2026-08-31" }, kind: "artifactCollection", total: dockerArtifacts.length, artifacts: dockerArtifacts,

@@ -160,8 +160,7 @@ const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Cloudflare: ["Owner-selected go-to", "Sample cost: $5/month · as of 1 Sep 2026"],
   Docker: ["Weekly · Direct link", "Illustrative sample, not account data · the owner's own use · Jan 2024 – Aug 2026 · last updated 1 Sep 2026"],
   n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
-  Clay: ["Daily · Direct link", "Sample cost: $167/month · as of 1 Sep 2026 · 1 Sep 2025 to 31 Aug 2026", "11,800 rows enriched · Sep 2025 – Aug 2026 · workspace · sample, not account data",
-    "52 tables built · Sep 2025 – Aug 2026", "27,600 data credits used · Sep 2025 – Aug 2026", "See how I use it ↗clay.com", "How this was measured"],
+  Clay: ["Daily · Direct link", "Sample cost: $167/month · as of 1 Sep 2026 · 1 Sep 2025 to 31 Aug 2026", "See how I use it ↗clay.com", "How this was measured"],
 };
 
 const DESKTOP_WIDTH = 1440;
@@ -844,7 +843,9 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
       bandReadable: front.bandContrast === null || front.bandContrast >= MIN_BAND_CONTRAST,
       textAtLeast12: front.smallestText >= MIN_TEXT_PX, leadsWithZero: front.biggestNumber === 0,
       // The card keeps its size turned over, and its back's content ends within the target of the front's height.
-      faceDifference: Math.abs(back.height - front.height) <= MAX_FACE_DIFFERENCE_PX && back.contentBottom <= front.height + MAX_FACE_DIFFERENCE_PX,
+      // At 1440 the card keeps its size turned over, within the target. On a phone the back carries what the front can't fit
+      // (Clay's whole table, Cloudflare's 31 values), so it may be taller; it never shrinks, and the turn keeps the card's top in place (tested below).
+      faceDifference: back.height >= front.height - 1 && (width === PHONE_WIDTH || (Math.abs(back.height - front.height) <= MAX_FACE_DIFFERENCE_PX && back.contentBottom <= front.height + MAX_FACE_DIFFERENCE_PX)),
       backLogo: back.logo, shortTargets: width === PHONE_WIDTH ? front.shortTargets : 0,
     });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), look.name).toBe(true);
@@ -907,4 +908,96 @@ test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone 
   await expect(calendar.getByText("Scroll for earlier months")).toBeHidden();
   await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
   await expect(calendar.getByText("Scroll for earlier months")).toBeVisible();
+});
+
+const MAX_FLIP_SCROLL_PX = 20;
+test(`at ${PHONE_WIDTH}px turning a card over moves neither the page nor the card`, async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  await expect(card).toBeVisible();
+  await card.getByRole("button", { name: "Details", exact: true }).scrollIntoViewIfNeeded();
+  const before = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top }));
+  await card.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
+  const after = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top, focused: document.activeElement?.tagName }));
+  expect(Math.abs(after.scroll - before.scroll)).toBeLessThanOrEqual(MAX_FLIP_SCROLL_PX);
+  expect(Math.abs(after.top - before.top)).toBeLessThanOrEqual(MAX_FLIP_SCROLL_PX);
+  expect(after.focused).toBe("H2");
+});
+
+/** The most a back's last line may sit above the card's bottom edge: its padding and a little. */
+const MAX_BACK_GAP_PX = 24;
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds what its front cannot, fills its card and closes with the brand's button at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const found: Record<string, unknown> = {};
+  for (const name of FEATURED) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    const details = card.getByRole("button", { name: "Details", exact: true });
+    const detailsFill = await details.evaluate(button => getComputedStyle(button).backgroundColor);
+    await details.click();
+    const back = card.locator(".card-back");
+    await expect(back).toBeVisible();
+    const close = card.getByRole("button", { name: "Close details" });
+    found[name] = await card.evaluate(article => {
+      const box = article.getBoundingClientRect();
+      const last = Math.max(...[...article.querySelectorAll(".card-back-content > *")].map(element => element.getBoundingClientRect().bottom));
+      return { gap: Math.round(box.bottom - last) };
+    });
+    expect((found[name] as { gap: number }).gap, name).toBeLessThanOrEqual(MAX_BACK_GAP_PX);
+    expect(await close.evaluate(button => getComputedStyle(button).backgroundColor), name).toBe(detailsFill);
+    await close.click();
+  }
+  // What only the back holds: Cloudflare's day-by-day values, Clay's whole table, Docker's links with what each one is.
+  await carousel.getByRole("button", { name: "Cloudflare", exact: true }).click();
+  const cloudflare = carousel.getByRole("article", { name: "Cloudflare card" });
+  await cloudflare.getByRole("button", { name: "Details", exact: true }).click();
+  const values = cloudflare.locator(".card-back .card-back-values li");
+  await expect(values).toHaveCount(31);
+  await expect(values.first()).toHaveText("1 Aug2,840");
+  await cloudflare.getByRole("button", { name: "Close details" }).click();
+  await carousel.getByRole("button", { name: "Clay", exact: true }).click();
+  const clay = carousel.getByRole("article", { name: "Clay card" });
+  await clay.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(clay.locator(".card-back .card-table-preview th[scope=col]")).toHaveText(["Company", "Work email", "Found by", "AI: signal"]);
+  await expect(clay.locator(".card-back .card-table-preview th[scope=col]").nth(2)).toBeVisible();
+  await clay.getByRole("button", { name: "Close details" }).click();
+  await carousel.getByRole("button", { name: "Docker", exact: true }).click();
+  const docker = carousel.getByRole("article", { name: "Docker card" });
+  await docker.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(docker.locator(".card-back .artifact-list li")).toHaveCount(3);
+  await expect(docker.locator(".card-back .artifact-list li").first()).toContainText("Compose stacks");
+});
+
+test("a sample's How this was measured speaks in plain dates, keeps the exact value in the markup, and claims no source or coverage", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  await card.getByRole("button", { name: "Details", exact: true }).click();
+  await card.getByRole("button", { name: "How this was measured" }).click();
+  const panel = card.locator(".card-provenance-panel");
+  await expect(panel).toBeVisible();
+  const text = await panel.innerText();
+  expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}|Source-reported value|Coverage: complete/);
+  expect(text).toContain("Synthetic sample. Not real account activity.");
+  await expect(panel.locator("time[datetime='2026-09-01T00:00:00.000Z']").first()).toHaveText("1 Sep 2026");
+});
+
+test("with motion allowed the card visibly turns over, in under 300ms; with reduced motion it does not move", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  for (const motion of ["no-preference", "reduce"] as const) {
+    await page.emulateMedia({ reducedMotion: motion });
+    await page.goto("/");
+    const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    const turn = await card.locator(".card-back").evaluate(back => ({ name: getComputedStyle(back).animationName, seconds: parseFloat(getComputedStyle(back).animationDuration) }));
+    if (motion === "reduce") expect(turn.name).toBe("none");
+    else expect(turn).toEqual({ name: "card-turn-over", seconds: turn.seconds > 0 && turn.seconds <= 0.3 ? turn.seconds : NaN });
+  }
 });

@@ -67,7 +67,7 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   await expect(first.locator(".card-brand-provenance")).toHaveCount(0);
   await expect(first.locator(".card-back")).not.toContainText("Context.dev");
   await expect(first.locator(".activity-meta")).not.toContainText("Updated");
-  await expect(first.locator(".activity-meta")).toContainText("Snapshot recorded 2026-09-19");
+  await expect(first.locator(".activity-meta")).toContainText("Snapshot recorded 19 Sep 2026");
   const content = first.locator(".card-back-content");
   await expect(content).toHaveCSS("overflow-y", "visible");
   expect((await first.boundingBox())!.height).toBeGreaterThan(frontHeight);

@@ -1,6 +1,6 @@
 "use client";
 
-import { MeasurementLines, PublicMeasurements } from "./measurement-values";
+import { FRONT_MEASUREMENT_LIMIT, MeasurementLines, PublicMeasurements } from "./measurement-values";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
@@ -21,8 +21,8 @@ import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relati
 import { costDetail, costSummary } from "@/src/domain/cost";
 import { tablePreview as parseTablePreview, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
 import { useReducedMotion } from "./use-reduced-motion";
-import { dayMonthYear, formatPeriod, freshnessNote, yearOf } from "@/src/domain/format-period";
-import { activityHeadline, FRONT_ARTIFACT_LIMIT } from "@/src/domain/activity-headline";
+import { dayMonthYear, formatPeriod, freshnessNote, monthYear as monthYearOf, yearOf } from "@/src/domain/format-period";
+import { activityHeadline, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart } from "./usage-chart";
@@ -300,12 +300,12 @@ function cellText(text: string) {
  * A few rows of a table the product makes, drawn as a real table: a row number in the gutter, the row filled in last highlighted,
  * and on a narrow card the droppable columns left out so the rest fit, long cells wrapping rather than cut short.
  */
-function TablePreviewBlock({ preview, shown }: { preview: TablePreview; shown: boolean }) {
+function TablePreviewBlock({ preview, shown, full = false }: { preview: TablePreview; shown: boolean; full?: boolean }) {
   const captionId = useId();
   const filledIn = useFilledIn(shown);
   const cellShown = (cell: TablePreviewCell) => filledIn && cell.fillsIn ? cell.fillsIn : cell;
   return (
-    <div className="card-table-preview" role="region" tabIndex={0} aria-labelledby={captionId}>
+    <div className="card-table-preview" role="region" tabIndex={0} aria-labelledby={captionId} data-full={full ? "" : undefined}>
       <table>
         <caption id={captionId}>{preview.caption}</caption>
         <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined} {...columnMarks(column)}>{column.label}</th>)}</tr></thead>
@@ -352,6 +352,32 @@ function ActivityPreview({ activity, pastUse, unreviewed = false, expanded = fal
   );
 }
 
+/** A date a visitor reads ("1 Sep 2026"), with the exact stored value in its datetime attribute. */
+export function PlainDate({ value }: { value: string }) {
+  return <time dateTime={value}>{dayMonthYear(value)}</time>;
+}
+
+/** "1 Aug", for a date: its day and month, the year being the card's period's. */
+const dayMonth = (date: string) => dayMonthYear(date).split(" ").slice(0, 2).join(" ");
+
+/** How a point's period reads on the back: "1 Aug" for a day, "Week of 3 Aug", "Aug 2026", or the date for a level. */
+const POINT_WORDS: Readonly<Record<"day" | "week" | "month" | "level", (date: string) => string>> = {
+  day: date => dayMonth(date),
+  week: date => `Week of ${dayMonth(date)}`,
+  month: date => monthYearOf(date),
+  level: date => dayMonthYear(date),
+};
+
+/** A series' every value, in a compact list the front's bars can't show as numbers. */
+function SeriesValues({ activity }: { activity: Extract<ActivityModule, { kind: "timeSeries" }> }) {
+  const series = normalizeSeries(activity.points, activity.unit);
+  if (!series.points.length) return null;
+  const words = POINT_WORDS[series.cadence ?? "level"];
+  return <ol className="card-back-values" aria-label={`${activity.label}, ${series.cadence ? `each ${series.cadence}` : "by date"}`}>
+    {series.points.map(point => <li key={point.date}><span>{words(point.date)}</span><strong>{fullNumber(point.value)}</strong></li>)}
+  </ol>;
+}
+
 function ActivityMeta({ activity }: { activity: ActivityModule }) {
   return (
     <div className="activity-meta">
@@ -359,13 +385,13 @@ function ActivityMeta({ activity }: { activity: ActivityModule }) {
       <span>{activity.attributionScope.toLowerCase()} activity</span>
       <span>
         {activity.period
-          ? `${activity.period.start} to ${activity.period.end}`
+          ? <><PlainDate value={activity.period.start} /> to <PlainDate value={activity.period.end} /></>
           : "Measurement period not supplied"}
       </span>
       {activity.freshness !== "FRESH" && (
         <span data-freshness={activity.freshness}>{activity.freshness.toLowerCase()}</span>
       )}
-      <span>Snapshot recorded {activity.capturedAt.slice(0, 10)}</span>
+      <span>Snapshot recorded <PlainDate value={activity.capturedAt} /></span>
     </div>
   );
 }
@@ -395,10 +421,8 @@ function MetricRow({ metrics }: { metrics: readonly { label: string; value: numb
 /** What the back adds to the front's activity: never its chart or calendar again, only what the front leaves out. */
 function ActivityEvidence({ activity }: { activity: ActivityModule }) {
   const empty = (activity.kind === "timeSeries" && !activity.points.length) || (activity.kind === "artifactCollection" && !activity.artifacts.length);
-  // The works the front doesn't link: past its first few, or without a web link.
-  const unlinked = activity.kind === "artifactCollection"
-    ? activity.artifacts.filter((artifact, index, all) => !isHttpUrl(artifact.url) || all.slice(0, index).filter(earlier => isHttpUrl(earlier.url)).length >= FRONT_ARTIFACT_LIMIT)
-    : [];
+  // Every work, each with the owner's line about it: the front links only the first few, by title.
+  const works = activity.kind === "artifactCollection" ? activity.artifacts : [];
   return (
     <div className="activity-module">
       {empty && <p className="activity-empty">{activity.kind === "timeSeries" ? "No data points supplied" : "No linked works selected"}</p>}
@@ -408,9 +432,11 @@ function ActivityEvidence({ activity }: { activity: ActivityModule }) {
         <div className="severity-row">{activity.severity.map(severity => <span key={severity.label}>{severity.label} · {severity.count}</span>)}</div>
       </>}
       {activity.kind === "contributionCalendar" && activity.memberSince && <p className="activity-caption">Member since {yearOf(activity.memberSince)}</p>}
-      {unlinked.length > 0 && <ul className="artifact-list">
-        {unlinked.map((artifact, index) => <li key={`${index}:${artifact.url}`}>
+      {activity.kind === "timeSeries" && <SeriesValues activity={activity} />}
+      {works.length > 0 && <ul className="artifact-list">
+        {works.map((artifact, index) => <li key={`${index}:${artifact.url}`}>
           {isHttpUrl(artifact.url) ? <a href={artifact.url} target="_blank" rel="noreferrer">{artifact.title} ↗</a> : artifact.title}
+          {artifact.label && <span className="artifact-description">{artifact.label}</span>}
         </li>)}
       </ul>}
       <p className="activity-summary">{activitySummary(activity)}</p>
@@ -499,6 +525,7 @@ export function ProductCard({
   // Turned over, a card keeps at least the height it had, so its back never makes the page under it jump up.
   const [frontHeight, setFrontHeight] = useState<number>();
   const articleRef = useRef<HTMLElement>(null);
+  const frontRef = useRef<HTMLDivElement>(null);
   const cardId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const backHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -522,14 +549,28 @@ export function ProductCard({
     .slice(0, 2)
     .toUpperCase();
 
+  // Focus follows the turn without scrolling the page: the card stays where the visitor pressed it.
   useEffect(() => {
     if (isFlipped) {
-      backHeadingRef.current?.focus();
+      backHeadingRef.current?.focus({ preventScroll: true });
       hasFlippedRef.current = true;
     } else if (hasFlippedRef.current) {
-      triggerRef.current?.focus();
+      triggerRef.current?.focus({ preventScroll: true });
     }
   }, [isFlipped]);
+
+  // The front stays laid out, unseen, while the back shows, so a resize or a turned phone re-measures the height the card keeps.
+  useEffect(() => {
+    const front = frontRef.current, article = articleRef.current;
+    if (!front || !article || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      const style = getComputedStyle(article);
+      const frame = ["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"] as const;
+      setFrontHeight(front.offsetHeight + frame.reduce((sum, side) => sum + parseFloat(style[side]), 0));
+    });
+    observer.observe(front);
+    return () => observer.disconnect();
+  }, []);
 
   function closeCard() {
     setIsFlipped(false);
@@ -558,7 +599,7 @@ export function ProductCard({
       {deferBrandAssets ? null : verifiedAssets
         ? <style data-verified-product-fonts={verifiedAssets.productSlug}>{verifiedProductFontFaces(verifiedAssets)}</style>
         : <ProductBrandFonts snapshot={brand} />}
-      <div className="card-front" aria-hidden={isFlipped} inert={isFlipped}>
+      <div ref={frontRef} className="card-front" aria-hidden={isFlipped} inert={isFlipped}>
         <div className="card-topline">
           {!wordmark && <ProductLogo logo={logo} mark={mark} onFailed={markFailed} />}
           <div className="card-title">
@@ -611,10 +652,7 @@ export function ProductCard({
             aria-expanded={isFlipped}
             aria-controls={`${cardId}-back`}
             aria-describedby={backHint && footerLabel === backHint ? `${cardId}-footer` : undefined}
-            onClick={() => {
-              setFrontHeight(articleRef.current?.offsetHeight);
-              setIsFlipped(true);
-            }}
+            onClick={() => setIsFlipped(true)}
           >
             Details <span aria-hidden="true">↶</span>
           </button>
@@ -658,13 +696,15 @@ export function ProductCard({
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
             <ActivityEvidence activity={card.activity} />
           </>}
-          {!brandPreview && card.measurements?.length ? <MeasurementLines measurements={card.measurements} /> : null}
+          {/* Past the few the front shows; the front's own are in How this was measured, each with how it was recorded. */}
+          {!brandPreview && card.measurements && card.measurements.length > FRONT_MEASUREMENT_LIMIT ? <MeasurementLines measurements={card.measurements.slice(FRONT_MEASUREMENT_LIMIT)} /> : null}
+          {table && <TablePreviewBlock preview={table} shown full />}
           {ownerUsage && <PrivateUsageCardDetails usage={ownerUsage} />}
           {/* Every provenance line stays, folded: exact dates, scope, status words and how each number was recorded. */}
           {!brandPreview && <Collapsible className="card-provenance">
             <CollapsibleTrigger className="card-provenance-trigger">How this was measured</CollapsibleTrigger>
             <CollapsiblePanel className="card-provenance-panel" hiddenUntilFound>
-              {relationshipConfirmed && card.startedAt && <p>Relationship started <time dateTime={card.startedAt}>{card.startedAt}</time></p>}
+              {relationshipConfirmed && card.startedAt && <p>Relationship started <PlainDate value={card.startedAt} /></p>}
               {card.activity && <ActivityMeta activity={card.activity} />}
               {card.measurements?.length ? <PublicMeasurements measurements={card.measurements} /> : null}
               {!card.activity && !card.measurements?.length && <p>No activity or published numbers on this card.</p>}

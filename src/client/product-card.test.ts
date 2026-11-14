@@ -390,8 +390,8 @@ for (const audience of ["owner", "visitor"] as const) {
 
     const meta = $(".activity-meta");
     expect(meta.text()).not.toContain("Updated");
-    expect(meta.text()).toContain("Snapshot recorded 2026-09-18");
-    expect(meta.text()).toContain("2026-09-01 to 2026-09-15");
+    expect(meta.text()).toContain("Snapshot recorded 18 Sep 2026");
+    expect(meta.text()).toContain("1 Sep 2026 to 15 Sep 2026");
     expect(meta.text()).toContain(activity.provenanceLabel);
     expect($(".status-row").text()).toContain("Used before");
     expect($(".product-card").text()).not.toContain("ARCHIVED");
@@ -407,7 +407,7 @@ test.each([
   expect($(".card-front [data-freshness]").text()).toBe(` · ${front}`);
   expect($(".card-front").text()).not.toContain(freshness.toLowerCase() === "stale" ? "stale" : "error");
   expect($(".activity-meta [data-freshness]").text()).toBe(freshness.toLowerCase());
-  expect($(".activity-meta").text()).toContain("Snapshot recorded 2026-09-18");
+  expect($(".activity-meta").text()).toContain("Snapshot recorded 18 Sep 2026");
   expect($(".status-row").text()).toContain("Testing");
 });
 
@@ -464,8 +464,8 @@ test.each(activityExamples)("$kind keeps the complete supplied activity and prov
   expect(reverse.find(".activity-module")).toHaveLength(1);
   expect(reverse.find(".activity-meta").text()).toContain(activity.provenanceLabel);
   expect(reverse.find(".activity-meta").text()).toContain("personal activity");
-  expect(reverse.find(".activity-meta").text()).toContain("2026-09-01 to 2026-09-15");
-  expect(reverse.find(".activity-meta").text()).toContain("Snapshot recorded 2026-09-18");
+  expect(reverse.find(".activity-meta").text()).toContain("1 Sep 2026 to 15 Sep 2026");
+  expect(reverse.find(".activity-meta").text()).toContain("Snapshot recorded 18 Sep 2026");
 });
 
 test("an empty time series does not turn missing observations into zero activity", () => {
@@ -585,7 +585,7 @@ test("unconfirmed discoveries keep supplied measurements and provenance visibly 
   expect($(".card-activity-preview").text()).toContain("Unreviewed evidence");
   expect($(".card-activity-preview strong").text()).toBe("120");
   expect($(".card-activity-coverage").text()).toBe("1–15 Sep 2026 · last updated 18 Sep 2026");
-  expect($(".card-back .activity-meta").text()).toContain("2026-09-01 to 2026-09-15");
+  expect($(".card-back .activity-meta").text()).toContain("1 Sep 2026 to 15 Sep 2026");
   expect($(".card-back").text()).toContain("Unreviewed evidence");
   expect($(".card-back .activity-meta").text()).toContain(activity.provenanceLabel);
   // The back keeps the supporting numbers the compact front leaves out, not the front's 120 again.
@@ -751,7 +751,8 @@ test("published numbers say how they were recorded on the back, where every row 
     status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
   } as const;
   const $ = renderCard({ measurements: [row, { ...row, metric: "built", value: "86", unit: "tables" }] });
-  const recorded = ["Scope: workspace · Coverage: complete", "cumulative · Do not add to other views", "Source-reported value", "Captured 2026-09-01T00:00:00.000Z"];
+  // An invented sample claims no source and no coverage; a date reads plainly, with the exact value in its markup.
+  const recorded = ["Scope: workspace", "cumulative · Do not add to other views", "Synthetic sample. Not real account activity.", "Captured 1 Sep 2026"];
   expect(recorded.filter(text => $(".card-front").text().includes(text))).toEqual([]);
   expect($(".card-back .usage-measurement-measurement").toArray().map(element => recorded.filter(text => $(element).text().includes(text)).length)).toEqual([recorded.length, recorded.length]);
   // The front is one row of numbers, each named by what it counts; the disclosures and exact periods are on the back.
@@ -761,7 +762,7 @@ test("published numbers say how they were recorded on the back, where every row 
   expect($(".card-front .usage-measurement-public").text()).not.toMatch(/Synthetic sample|Owner-supplied evidence|more reported measurements/);
   // One period for both numbers, said once at the head of the note.
   expect($(".card-front .usage-measurement-note").text()).toBe("Mar 2023 – Aug 2026 · Sample numbers · how each was measured is in Details");
-  expect($(".card-back .usage-measurement-measurement").first().text()).toContain("2023-03-01 to 2026-08-31 · UTC");
+  expect($(".card-back .usage-measurement-measurement").first().text()).toContain("1 Mar 2023 to 31 Aug 2026 · UTC");
   expect($(".card-back").text()).toContain("Synthetic sample. Not real account activity.");
   expect($(".card-back").text()).toContain("Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.");
   expect($(".card-back .usage-measurement-value").toArray().map(value => $(value).text())).toEqual(["2,140,000", "86"]);
@@ -792,7 +793,8 @@ test("a table preview draws as a real table on the front: a caption, column head
     "th/-/-/Northwind Labs | td/-/data-droppable/northwindlabs.example | td/filled/-/a.lindqvist@northwindlabs.example | td/filled/-/Enriched",
     "th/-/-/Quillon Health | td/-/data-droppable/quillon.example | td/pending/-/Finding… | td/pending/-/Running",
   ]);
-  expect($(".card-back .card-table-preview")).toHaveLength(0);
+  // The back draws the whole table: every column, none dropped on a narrow card.
+  expect($(".card-back .card-table-preview").attr("data-full")).toBe("");
 });
 
 test("a table preview past its caps, or on a brand preview, is not drawn", () => {
@@ -849,8 +851,8 @@ test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "h
   } });
   expect($("a").filter((_, element) => $(element).attr("href") === url)).toHaveLength(0);
   expect($("a").filter((_, element) => $(element).text().includes("Bad artifact"))).toHaveLength(0);
-  // The front links the good one; the back lists the one it couldn't link, as text.
-  expect($(".card-back .artifact-list").text()).toBe("Bad artifact");
+  // The front links the good one; the back lists every work, the one it couldn't link as text.
+  expect($(".card-back .artifact-list li").map((_, item) => $(item).text()).get()).toEqual(["Bad artifact", "Good artifact ↗"]);
   expect($(".card-front .card-artifact-links a").filter((_, element) => $(element).attr("href") === "https://example.com/good")).toHaveLength(1);
 });
 
@@ -1067,12 +1069,13 @@ test("the back is the same branded object, shorter: its logo and name, plain pro
   // Plain words outside the disclosure.
   expect(back.find(".relationship-date").text()).toBe("Since 2023");
   expect(back.text()).toContain("Owner-reported cost: $149/month · as of 1 Sep 2026");
-  expect(back.find(".usage-measurement-lines li").text()).toBe("38,400 rows enriched · Mar 2023 – Aug 2026 · workspace · sample, not account data");
+  // The front shows the one number, so the back doesn't say it again; its record is in the disclosure.
+  expect(back.find(".usage-measurement-lines")).toHaveLength(0);
   // Folded, not removed: the panel is closed and holds the exact start date, the activity's stored record and how each number was recorded.
   const panel = back.find(".card-provenance [data-slot=collapsible-panel]");
   expect([back.find(".card-provenance-trigger").text(), back.find(".card-provenance-trigger").attr("aria-expanded"), panel.attr("hidden")]).toEqual(["How this was measured", "false", "hidden"]);
-  expect(["Relationship started 2023-01-01", "personal activity", "2026-09-01 to 2026-09-15", "stale", "Snapshot recorded 2026-09-18", "2023-03-01 to 2026-08-31 · UTC",
-    "Captured 2026-09-01T00:00:00.000Z", "Synthetic sample. Not real account activity.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown."]
+  expect(["Relationship started 1 Jan 2023", "personal activity", "1 Sep 2026 to 15 Sep 2026", "stale", "Snapshot recorded 18 Sep 2026", "1 Mar 2023 to 31 Aug 2026 · UTC",
+    "Captured 1 Sep 2026", "Synthetic sample. Not real account activity.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown."]
     .filter(text => !panel.text().includes(text))).toEqual([]);
   // Outside the panel, no raw date or status word.
   panel.remove();

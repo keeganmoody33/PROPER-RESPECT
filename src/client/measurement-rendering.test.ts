@@ -34,7 +34,11 @@ describe("exact public measurement rendering", () => {
   it("labels synthetic samples and derived cumulative differences", () => {
     const html = renderToStaticMarkup(createElement(PublicMeasurements, { measurements: [{ ...projected("1"), sample: "synthetic", derivation: "CUMULATIVE_DIFFERENCE" }] }));
     expect(html).toContain("Synthetic sample. Not real account activity.");
-    expect(html).toContain("Derived difference between cumulative captures");
+    // A synthetic sample claims no source: neither a reported nor a derived value.
+    expect(html).not.toContain("Derived difference between cumulative captures");
+    expect(html).not.toContain("Source-reported value");
+    const derived = renderToStaticMarkup(createElement(PublicMeasurements, { measurements: [{ ...projected("1"), derivation: "CUMULATIVE_DIFFERENCE" }] }));
+    expect(derived).toContain("Derived difference between cumulative captures");
     const unknown = renderToStaticMarkup(createElement(PublicMeasurements, { measurements: [projected("0")] }));
     expect(unknown).toContain("Sample origin unknown");
   });

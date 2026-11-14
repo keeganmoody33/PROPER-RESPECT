@@ -1,14 +1,15 @@
+import type { ReactNode } from "react";
 import type { Measurement, PublicMeasurement } from "@/src/domain/measurements";
 import { groupedDecimal } from "@/src/domain/format-activity-number";
-import { formatPeriod } from "@/src/domain/format-period";
+import { dayMonthYear, formatPeriod } from "@/src/domain/format-period";
 import { hasWord } from "@/src/domain/activity-headline";
 
 type VisibleMeasurement = Pick<Measurement, "metric" | "value" | "unit" | "period" | "scope" | "coverage" | "temporality" | "aggregation" | "capturedAt" | "status" | "sample" | "derivation">;
 export const measurementLabel = (metric: string) => metric.replaceAll("_", " ").replace(/^./, first => first.toUpperCase());
-export function measurementPeriod(period: VisibleMeasurement["period"]) {
+export function measurementPeriod(period: VisibleMeasurement["period"]): ReactNode {
   switch (period.kind) {
     case "unknown": return "Period unknown";
-    case "date": return `${period.start} to ${period.end} · ${period.timezone ?? "timezone unknown"}`;
+    case "date": return <><time dateTime={period.start}>{dayMonthYear(period.start)}</time> to <time dateTime={period.end}>{dayMonthYear(period.end)}</time> · {period.timezone ?? "timezone unknown"}</>;
     case "instant": return `${period.startUnixNano} to ${period.endUnixNano} ns since Unix epoch`;
   }
 }
@@ -27,23 +28,25 @@ export function measurementPeriodInWords(period: VisibleMeasurement["period"]) {
 
 /** One published number with how it was recorded, as the card's back and the review screen show it. */
 export function MeasurementValue({ measurement }: { measurement: VisibleMeasurement }) {
+  const synthetic = measurement.sample === "synthetic";
   return <div className="usage-measurement-measurement">
     <span className="usage-measurement-label">{measurementLabel(measurement.metric)}</span>
     <strong className="usage-measurement-value">{measurement.value === null ? "Unknown" : groupedDecimal(measurement.value)}</strong>
     <span className="usage-measurement-unit">{measurementLabel(measurement.unit)}</span>
     <p>{measurementPeriod(measurement.period)}</p>
-    <p>Scope: {measurement.scope.toLowerCase()} · Coverage: {measurement.coverage.toLowerCase()}</p>
+    {/* An invented sample was reported by no source and covers nothing, so it claims neither. */}
+    <p>Scope: {measurement.scope.toLowerCase()}{synthetic ? "" : ` · Coverage: ${measurement.coverage.toLowerCase()}`}</p>
     <p>{measurement.temporality.toLowerCase()} · {measurement.aggregation === "NON_ADDITIVE" ? "Do not add to other views" : measurement.aggregation.toLowerCase()}</p>
-    <p>{measurement.sample === "synthetic" ? "Synthetic sample. Not real account activity." : measurement.sample === "owner-supplied" ? "Owner-supplied sample" : "Sample origin unknown"}</p>
-    <p>{measurement.derivation === "CUMULATIVE_DIFFERENCE" ? "Derived difference between cumulative captures" : "Source-reported value"}</p>
+    <p>{synthetic ? "Synthetic sample. Not real account activity." : measurement.sample === "owner-supplied" ? "Owner-supplied sample" : "Sample origin unknown"}</p>
+    {!synthetic && <p>{measurement.derivation === "CUMULATIVE_DIFFERENCE" ? "Derived difference between cumulative captures" : "Source-reported value"}</p>}
     {measurement.status === "baseline" && <p>Baseline only. This is not new activity in the interval.</p>}
     {measurement.status === "conflict" && <p>Conflicting evidence. Not eligible for sharing.</p>}
-    <p className="usage-measurement-capture">Captured <time dateTime={measurement.capturedAt}>{measurement.capturedAt}</time></p>
+    <p className="usage-measurement-capture">Captured <time dateTime={measurement.capturedAt}>{dayMonthYear(measurement.capturedAt)}</time></p>
   </div>;
 }
 
 /** How many published numbers a card's front shows in its row; the back shows every one. */
-const FRONT_MEASUREMENT_LIMIT = 3;
+export const FRONT_MEASUREMENT_LIMIT = 3;
 
 /** What a number counts, in a few words: "rows enriched" for a metric and its unit, "input tokens" where the metric already names the unit. */
 function countedThing(measurement: PublicMeasurement): string {
