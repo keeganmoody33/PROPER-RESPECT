@@ -123,23 +123,33 @@ test("Clay publishes three exact numbers over a stated period, each named once: 
   const clay = examples.find(({ id }) => id === "clay")!.card;
   expect(clay.measurements?.map(row => [row.metric, row.value, row.unit, row.period.kind === "date" ? `${row.period.start} to ${row.period.end}` : row.period.kind]))
     .toEqual([
-      ["enriched", "2140000", "rows", "2023-03-01 to 2026-08-31"],
+      ["enriched", "38400", "rows", "2023-03-01 to 2026-08-31"],
       ["built", "86", "tables", "2023-03-01 to 2026-08-31"],
       ["used", "48500", "credits", "2025-09-01 to 2026-08-31"],
     ]);
   expect(clay.cost).toEqual({ amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" });
   expect(clay.usageLink).toEqual({ url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" });
   expect(clay.note).toBe("Lists that took a week of spreadsheets take an hour.");
+  // Enriching a row costs at least a credit, and the credits cover only the last year of the rows' three.
+  const [rows, , credits] = clay.measurements!.map(row => Number(row.value));
+  expect(credits).toBeGreaterThanOrEqual(rows);
 });
 
 test("only Clay's front shows a table: a few invented rows on reserved .example domains, within the preview's caps", () => {
   expect(examples.filter(({ tablePreview: table }) => table).map(({ id }) => id)).toEqual(["clay"]);
-  const table = examples.find(({ id }) => id === "clay")!.tablePreview!;
-  expect(tablePreview(table)).toEqual(table);
+  const table = tablePreview(examples.find(({ id }) => id === "clay")!.tablePreview)!;
   expect([table.columns, table.rows.length, table.rows.map(row => row[3].text)]).toEqual([
-    ["Company", "Domain", "Work email", "Status"], 5, ["Enriched", "Enriched", "Running", "Enriched", "No match"],
+    [
+      { label: "Company", droppable: false, enriched: false }, { label: "Domain", droppable: true, enriched: false },
+      { label: "Work email", droppable: false, enriched: true }, { label: "Status", droppable: false, enriched: true },
+    ],
+    5, ["Enriched", "Enriched", "Running", "Enriched", "No match"],
   ]);
-  const addresses = table.rows.flatMap(row => row.map(cell => cell.text)).filter(text => /\.[a-z]+$/.test(text));
+  // The one row still running fills in once, with an address like the others.
+  expect(table.rows.flatMap(row => row.flatMap(cell => cell.fillsIn ? [`${cell.text} -> ${cell.fillsIn.text}`] : []))).toEqual([
+    "Finding… -> d.reyes@quillon.example", "Running -> Enriched",
+  ]);
+  const addresses = table.rows.flatMap(row => row.flatMap(cell => [cell.text, ...(cell.fillsIn ? [cell.fillsIn.text] : [])])).filter(text => /\.[a-z]+$/.test(text));
   expect(addresses.filter(text => !text.endsWith(".example"))).toEqual([]);
 });
 

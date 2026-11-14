@@ -8,7 +8,7 @@ import type { PublicMeasurement } from "@/src/domain/measurements";
 import type { ActivityModule, PublicProfile } from "@/src/domain/public-profile";
 import type { UsageLink } from "@/src/domain/usage-links";
 import { levelStatus, type RelationshipLevel } from "@/src/domain/relationship-level";
-import type { TablePreview } from "@/src/domain/table-preview";
+import type { TablePreviewInput } from "@/src/domain/table-preview";
 
 export type HomepageExample = Readonly<{
   id: string;
@@ -24,7 +24,7 @@ export type HomepageExample = Readonly<{
   /** What the card's back holds, said on its front. */
   backHint?: string;
   /** A few invented rows of a table the product makes, drawn on the card's front. Presentation only, never part of the card's data. */
-  tablePreview?: TablePreview;
+  tablePreview?: TablePreviewInput;
 }>;
 
 const DAYS_PER_WEEK = 7;
@@ -116,13 +116,15 @@ const CLAY_MONTHLY_USD = 149;
 
 /** A Clay table as it fills in, with invented companies on reserved .example domains: no real company, person or address. */
 const filled = (text: string) => ({ text, state: "filled" as const });
-const CLAY_TABLE: TablePreview = {
+const CLAY_TABLE: TablePreviewInput = {
   caption: "Lead list · invented sample rows",
-  columns: ["Company", "Domain", "Work email", "Status"],
+  // Clay fills in the email and status; a phone-wide card leaves out the domain so those two stay in view.
+  columns: ["Company", { label: "Domain", droppable: true }, { label: "Work email", enriched: true }, { label: "Status", enriched: true }],
   rows: [
     [{ text: "Northwind Labs" }, { text: "northwindlabs.example" }, filled("a.lindqvist@northwindlabs.example"), filled("Enriched")],
     [{ text: "Blue Heron Freight" }, { text: "blueheron.example" }, filled("m.okafor@blueheron.example"), filled("Enriched")],
-    [{ text: "Quillon Health" }, { text: "quillon.example" }, { text: "Finding…", state: "pending" }, { text: "Running", state: "pending" }],
+    [{ text: "Quillon Health" }, { text: "quillon.example" }, { text: "Finding…", state: "pending", fillsIn: filled("d.reyes@quillon.example") },
+      { text: "Running", state: "pending", fillsIn: filled("Enriched") }],
     [{ text: "Tessel Robotics" }, { text: "tessel.example" }, filled("r.amari@tessel.example"), filled("Enriched")],
     [{ text: "Marrow & Pine" }, { text: "marrowpine.example" }, { text: "Not found", state: "empty" }, { text: "No match", state: "empty" }],
   ],
@@ -135,7 +137,7 @@ const CLAY_MEASURED = {
 } as const;
 const SINCE_2023 = { kind: "date", start: "2023-03-01", end: "2026-08-31", timezone: "UTC" } as const;
 const clayMeasurements: PublicMeasurement[] = [
-  { ...CLAY_MEASURED, metric: "enriched", value: "2140000", unit: "rows", period: SINCE_2023 },
+  { ...CLAY_MEASURED, metric: "enriched", value: "38400", unit: "rows", period: SINCE_2023 },
   { ...CLAY_MEASURED, metric: "built", value: "86", unit: "tables", period: SINCE_2023 },
   { ...CLAY_MEASURED, metric: "used", value: "48500", unit: "credits", period: { kind: "date", start: "2025-09-01", end: "2026-08-31", timezone: "UTC" } },
 ];
@@ -161,7 +163,7 @@ type ExampleSource = Readonly<{
   caveat?: string;
   source?: HomepageExample["source"];
   backHint?: string;
-  tablePreview?: TablePreview;
+  tablePreview?: TablePreviewInput;
 }>;
 
 /**

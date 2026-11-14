@@ -1615,17 +1615,34 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .usage-measurement-public .usage-measurement-note { font-size: .72rem; margin: .5rem 0 0; opacity: .8; }
 
 /* A few rows of a table the product makes. It scrolls inside its own box on a narrow card, with the first column kept in view. */
-.card-table-preview { border: 1px solid var(--card-line); border-radius: var(--brand-card-button-radius, .45rem); max-width: 100%; min-width: 0; overflow-x: auto; }
+/* The table fits its card rather than scrolling: fixed columns, long cells cut short (their full text is still read out), and on a narrow card the droppable columns left out. */
+.card-table-preview { border: 1px solid var(--card-line); border-radius: var(--brand-card-button-radius, .45rem); container-type: inline-size; max-width: 100%; min-width: 0; overflow-x: auto; }
 .card-table-preview:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.card-table-preview table { border-collapse: collapse; font-size: .74rem; line-height: 1.35; width: 100%; }
-.card-table-preview caption { caption-side: top; font-size: .7rem; font-weight: 650; padding: .45rem .6rem; text-align: left; }
-.card-table-preview :is(th, td) { border-top: 1px solid var(--card-line); max-width: 13rem; overflow: hidden; padding: .4rem .6rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.card-table-preview thead th { font-size: .68rem; font-weight: 600; opacity: .8; }
-.card-table-preview tbody th { background: var(--brand-card-background, var(--ink)); font-weight: 600; left: 0; position: sticky; }
+.card-table-preview table { border-collapse: collapse; counter-reset: preview-row; font-size: .75rem; line-height: 1.35; table-layout: fixed; width: 100%; }
+.card-table-preview caption { caption-side: top; font-size: .75rem; font-weight: 650; padding: .45rem .6rem; text-align: left; }
+.card-table-preview :is(th, td) { border-top: 1px solid var(--card-line); overflow: hidden; padding: .4rem .5rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.card-table-preview thead th { font-size: .75rem; font-weight: 600; }
+.card-table-preview thead th:first-child { width: 30%; }
+.card-table-preview thead th:last-child { width: 5.5rem; }
+/* A grid's row numbers, in a gutter beside the row's name; drawn, not read out. */
+.card-table-preview tr > :first-child::before { content: ""; display: inline-block; font-variant-numeric: tabular-nums; font-weight: 400; margin-right: .35rem; opacity: .75; width: 1.1rem; }
+.card-table-preview tbody tr { counter-increment: preview-row; }
+.card-table-preview tbody tr > :first-child::before { content: counter(preview-row) / ""; }
+/* A column the product fills in has its header tinted in the brand's colour, the way an enrichment grid marks it. */
+.card-table-preview thead th[data-enriched] { background: color-mix(in srgb, var(--brand-card-band, currentColor) 16%, var(--brand-card-background, var(--ink))); }
+.card-table-preview tbody th { background: var(--brand-card-background, var(--ink)); font-weight: 600; }
 .card-table-preview [data-state="filled"] { background: color-mix(in srgb, var(--brand-card-band, currentColor) 9%, var(--brand-card-background, var(--ink))); }
 .card-table-preview td[data-state="filled"]:last-child { color: var(--brand-card-band, inherit); font-weight: 650; }
 .card-table-preview [data-state="pending"] { font-style: italic; opacity: .6; }
 .card-table-preview [data-state="empty"] { opacity: .5; }
+@container (max-width: 27.5rem) {
+  .card-table-preview [data-droppable] { display: none; }
+  .card-table-preview :is(th, td) { padding: .4rem .35rem; }
+  .card-table-preview tr > :first-child::before { margin-right: .2rem; width: .8rem; }
+  .card-table-preview thead th:first-child { width: 34%; }
+  .card-table-preview thead th:last-child { width: 4.75rem; }
+}
+@media (prefers-reduced-motion: no-preference) { .card-table-preview :is(th, td) { transition: background-color .4s ease, color .4s ease, opacity .4s ease; } }
 .usage-measurement-panel { padding: 1.25rem 0; min-width: 0; }
 .usage-measurement-sources { display: grid; gap: 1rem; }
 .usage-measurement-source { border: 1px solid var(--border, #999); border-radius: .5rem; padding: 1rem; min-width: 0; }

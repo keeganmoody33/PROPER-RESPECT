@@ -159,7 +159,7 @@ const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Cloudflare: ["Owner-selected go-to", "Owner-reported cost: $5.00/month · as of 2026-09-01"],
   Docker: ["Sample Compose apps (awesome-compose) ↗", "Official Postgres image ↗", "Multi-stage build guide ↗"],
   n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
-  Clay: ["Daily · Direct link", "Owner-reported cost: $149.00/month · as of 2026-09-01", "Enriched2,140,000Rows", "Built86Tables", "Used48,500Credits", "See how I use it ↗clay.com",
+  Clay: ["Daily · Direct link", "Owner-reported cost: $149.00/month · as of 2026-09-01", "Enriched38,400Rows", "Built86Tables", "Used48,500Credits", "See how I use it ↗clay.com",
     "Synthetic sample. Not real account activity.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown."],
 };
 
@@ -233,11 +233,16 @@ const NARROWEST_WIDTH = 320;
       // Clay shows the product: a few rows of a table filling in, then its three published numbers in one row.
       const table = card.getByRole("table", { name: "Lead list · invented sample rows" });
       await expect(table).toBeVisible();
-      await expect(table.getByRole("columnheader")).toHaveText(["Company", "Domain", "Work email", "Status"]);
+      // A phone-wide card leaves out the domain, so the address and status Clay fills in stay in view.
+      await expect(table.getByRole("columnheader")).toHaveText(width === DESKTOP_WIDTH ? ["Company", "Domain", "Work email", "Status"] : ["Company", "Work email", "Status"]);
       await expect(table.getByRole("rowheader")).toHaveText(["Northwind Labs", "Blue Heron Freight", "Quillon Health", "Tessel Robotics", "Marrow & Pine"]);
-      await expect(card.locator(".card-front .usage-measurement-stats li")).toHaveText([
-        "2,140,000rows enrichedMar 2023 – Aug 2026", "86tables builtMar 2023 – Aug 2026", "48,500credits usedSep 2025 – Aug 2026",
+      const stats = card.locator(".card-front .usage-measurement-stats li");
+      await expect(stats).toHaveText([
+        "38,400rows enrichedMar 2023 – Aug 2026", "86tables builtMar 2023 – Aug 2026", "48,500credits usedSep 2025 – Aug 2026",
       ]);
+      // The numbers the capability names come first, above the table they come from.
+      const [statsBottom, tableTop] = [await stats.first().evaluate(item => item.getBoundingClientRect().bottom), await table.evaluate(item => item.getBoundingClientRect().top)];
+      expect(statsBottom).toBeLessThan(tableTop);
       // The disclosures are above the card and on its back, not on its front.
       await expect(card.locator(".card-front")).not.toContainText(/Synthetic sample|Owner-supplied evidence|more reported measurements/);
       // Its footer says what is behind Details, and the button carries the same words.
@@ -516,7 +521,7 @@ test("an occasional card's empty weeks draw as stubs on the baseline, so a gap r
   expect(stubs).toEqual(stubs.map(() => ({ opacity: "1", colour: barColour })));
 });
 
-for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits its card at ${width}px, or scrolls inside its own box with the company in view`, async ({ page }) => {
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits its card at ${width}px, with an enriched cell in view`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -525,17 +530,25 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's 
   const box = card.getByRole("region", { name: "Lead list · invented sample rows" });
   await expect(box).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  const fits = await box.evaluate(element => element.scrollWidth <= element.clientWidth);
-  expect(fits).toBe(width === DESKTOP_WIDTH);
-  if (fits) return;
-  // Scrolled to its end, the company column stays in view beside the status.
-  await box.evaluate(element => { element.scrollLeft = element.scrollWidth; });
-  const inView = await box.evaluate(element => {
-    const bounds = element.getBoundingClientRect();
-    const company = element.querySelector("tbody th")!.getBoundingClientRect();
-    const status = element.querySelector("tbody td:last-child")!.getBoundingClientRect();
-    return { company: company.left >= bounds.left - 1, status: status.right <= bounds.right + 1 };
+  const fit = await box.evaluate(element => {
+    const bounds = element.closest("article")!.getBoundingClientRect();
+    const enriched = [...element.querySelectorAll("td")].find(cell => cell.textContent === "Enriched")!.getBoundingClientRect();
+    return { scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, enrichedInCard: enriched.left >= bounds.left && enriched.right <= bounds.right };
   });
-  expect(inView).toEqual({ company: true, status: true });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(fit).toEqual({ scrollWidth: fit.clientWidth, clientWidth: fit.clientWidth, enrichedInCard: true });
+  // A cut-short address keeps its full text for a screen reader.
+  await expect(box.getByRole("cell", { name: "a.lindqvist@northwindlabs.example" })).toHaveCount(1);
+});
+
+const FILL_IN_WAIT_MS = 1000;
+for (const motion of ["no-preference", "reduce"] as const) test(`Clay's running row ${motion === "reduce" ? "stays running, without motion," : "fills in once"} when motion is ${motion}`, async ({ page }) => {
+  await page.clock.install();
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: motion });
+  await page.goto("/");
+  const row = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" }).getByRole("row", { name: /Quillon Health/ });
+  await expect(row).toContainText("Running");
+  await page.clock.runFor(FILL_IN_WAIT_MS);
+  const [address, status] = motion === "reduce" ? ["Finding…", "Running"] : ["d.reyes@quillon.example", "Enriched"];
+  await expect(row.getByRole("cell")).toHaveText(["quillon.example", address, status]);
 });

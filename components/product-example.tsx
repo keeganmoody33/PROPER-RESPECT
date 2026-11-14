@@ -1,29 +1,18 @@
 "use client";
 
-import { useEffect, useId, useState, useSyncExternalStore, type FocusEvent } from "react";
+import { useEffect, useId, useState, type FocusEvent } from "react";
 import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 import { ProductCard } from "./product-card";
 import { isHttpUrl } from "@/src/domain/http-url";
 import type { HomepageExample } from "@/src/data/homepage-examples";
+import { useReducedMotion } from "./use-reduced-motion";
 import styles from "./product-example.module.css";
 
 const ADVANCE_MS = 8000;
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /** "auto" follows the visitor's motion preference; a press of play or pause, or picking an example, is their own choice. */
 type PlayChoice = "auto" | "playing" | "paused";
-
-function subscribeReducedMotion(listener: () => void) {
-  const query = window.matchMedia(REDUCED_MOTION);
-  query.addEventListener("change", listener);
-  return () => query.removeEventListener("change", listener);
-}
-
-function useReducedMotion() {
-  // The server assumes reduced motion, so nothing starts moving before the preference is known.
-  return useSyncExternalStore(subscribeReducedMotion, () => window.matchMedia(REDUCED_MOTION).matches, () => true);
-}
 
 export function ProductExample({ examples }: { examples: readonly HomepageExample[] }) {
   const featured = examples.filter(example => example.featured);
@@ -95,7 +84,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
           aria-label={`${slideIndex + 1} of ${mounted}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
           <p className={styles.capability} data-capability>{example.capability}</p>
           <p className={styles.sample}>Sample data / No account connected</p>
-          <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} backHint={example.backHint} tablePreview={example.tablePreview} />
+          <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} shown={current} backHint={example.backHint} tablePreview={example.tablePreview} />
           {example.caveat && <p className={styles.caveat}>{example.caveat}</p>}
           {example.source && isHttpUrl(example.source.href) && <a className={styles.source} href={example.source.href} target="_blank" rel="noreferrer">{example.source.label} ↗</a>}
         </div>;

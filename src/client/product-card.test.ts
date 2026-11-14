@@ -763,10 +763,11 @@ test("published numbers say how they were recorded on the back, where every row 
 
 const leads = {
   caption: "Lead list, sample rows",
-  columns: ["Company", "Work email", "Status"],
+  columns: ["Company", { label: "Domain", droppable: true }, { label: "Work email", enriched: true }, { label: "Status", enriched: true }],
   rows: [
-    [{ text: "Northwind Labs" }, { text: "a.lindqvist@northwindlabs.example", state: "filled" }, { text: "Enriched", state: "filled" }],
-    [{ text: "Quillon Health" }, { text: "Finding…", state: "pending" }, { text: "Running", state: "pending" }],
+    [{ text: "Northwind Labs" }, { text: "northwindlabs.example" }, { text: "a.lindqvist@northwindlabs.example", state: "filled" }, { text: "Enriched", state: "filled" }],
+    [{ text: "Quillon Health" }, { text: "quillon.example" }, { text: "Finding…", state: "pending", fillsIn: { text: "d.reyes@quillon.example", state: "filled" } },
+      { text: "Running", state: "pending", fillsIn: { text: "Enriched", state: "filled" } }],
   ],
 } as const;
 
@@ -775,10 +776,15 @@ test("a table preview draws as a real table on the front: a caption, column head
   const box = $(".card-front .card-table-preview");
   expect([box.attr("role"), box.attr("tabindex"), box.attr("aria-labelledby")]).toEqual(["region", "0", box.find("caption").attr("id")]);
   expect(box.find("caption").text()).toBe("Lead list, sample rows");
-  expect(box.find("thead th").map((_, cell) => `${$(cell).attr("scope")}:${$(cell).text()}`).get()).toEqual(["col:Company", "col:Work email", "col:Status"]);
-  expect(box.find("tbody tr").map((_, row) => $(row).children().map((_, cell) => `${cell.tagName}/${$(cell).attr("data-state") ?? "-"}/${$(cell).text()}`).get().join(" | ")).get()).toEqual([
-    "th/-/Northwind Labs | td/filled/a.lindqvist@northwindlabs.example | td/filled/Enriched",
-    "th/-/Quillon Health | td/pending/Finding… | td/pending/Running",
+  // An enriched column's header is marked for its tint; a droppable column's cells are marked so a narrow card leaves them out.
+  const marks = (cell: Parameters<typeof $>[0]) => ["data-enriched", "data-droppable"].filter(name => $(cell).attr(name) !== undefined).join("+") || "-";
+  expect(box.find("thead th").map((_, cell) => `${$(cell).attr("scope")}:${$(cell).text()}:${marks(cell)}`).get()).toEqual([
+    "col:Company:-", "col:Domain:data-droppable", "col:Work email:data-enriched", "col:Status:data-enriched",
+  ]);
+  // The row still running is drawn pending until the card is shown; it fills in on the visitor's screen, not on the server.
+  expect(box.find("tbody tr").map((_, row) => $(row).children().map((_, cell) => `${cell.tagName}/${$(cell).attr("data-state") ?? "-"}/${marks(cell)}/${$(cell).text()}`).get().join(" | ")).get()).toEqual([
+    "th/-/-/Northwind Labs | td/-/data-droppable/northwindlabs.example | td/filled/-/a.lindqvist@northwindlabs.example | td/filled/-/Enriched",
+    "th/-/-/Quillon Health | td/-/data-droppable/quillon.example | td/pending/-/Finding… | td/pending/-/Running",
   ]);
   expect($(".card-back .card-table-preview")).toHaveLength(0);
 });

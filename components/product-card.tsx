@@ -18,7 +18,8 @@ import { isHttpUrl } from "@/src/domain/http-url";
 import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
 import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relationship-level";
 import { costDetail, costSummary } from "@/src/domain/cost";
-import { tablePreview as parseTablePreview, type TablePreview } from "@/src/domain/table-preview";
+import { tablePreview as parseTablePreview, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
+import { useReducedMotion } from "./use-reduced-motion";
 import { formatPeriod, freshnessNote } from "@/src/domain/format-period";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
@@ -256,19 +257,44 @@ function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kin
   );
 }
 
-/** A few rows of a table the product makes, drawn as a real table that scrolls inside its own box when the card is narrow. */
-function TablePreviewBlock({ preview }: { preview: TablePreview }) {
+/** How long a shown table waits before its running row fills in, so the visitor sees it pending first. */
+const FILL_IN_DELAY_MS = 600;
+
+/** Once, a moment after the card is shown, unless the visitor asked for less motion: then the running row stays as it is. */
+function useFilledIn(shown: boolean): boolean {
+  const reducedMotion = useReducedMotion();
+  const [filledIn, setFilledIn] = useState(false);
+  useEffect(() => {
+    if (!shown || reducedMotion || filledIn) return;
+    const timer = window.setTimeout(() => setFilledIn(true), FILL_IN_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [shown, reducedMotion, filledIn]);
+  return filledIn;
+}
+
+const columnMarks = (column: TablePreviewColumn) => ({ "data-droppable": column.droppable ? "" : undefined });
+
+/**
+ * A few rows of a table the product makes, drawn as a real table: a row number in the gutter, enriched columns' headers tinted,
+ * and on a narrow card the droppable columns left out so the rest fit, long cells cut short with their full text still read out.
+ */
+function TablePreviewBlock({ preview, shown }: { preview: TablePreview; shown: boolean }) {
   const captionId = useId();
+  const filledIn = useFilledIn(shown);
+  const cellShown = (cell: TablePreviewCell) => filledIn && cell.fillsIn ? cell.fillsIn : cell;
   return (
     <div className="card-table-preview" role="region" tabIndex={0} aria-labelledby={captionId}>
       <table>
         <caption id={captionId}>{preview.caption}</caption>
-        <thead><tr>{preview.columns.map(column => <th key={column} scope="col">{column}</th>)}</tr></thead>
+        <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined} {...columnMarks(column)}>{column.label}</th>)}</tr></thead>
         <tbody>
           {preview.rows.map((row, rowIndex) => <tr key={rowIndex}>
-            {row.map((cell, column) => column === 0
-              ? <th key={column} scope="row" data-state={cell.state}>{cell.text}</th>
-              : <td key={column} data-state={cell.state}>{cell.text}</td>)}
+            {row.map((cell, column) => {
+              const { text, state } = cellShown(cell);
+              return column === 0
+                ? <th key={column} scope="row" data-state={state} {...columnMarks(preview.columns[column])}>{text}</th>
+                : <td key={column} data-state={state} {...columnMarks(preview.columns[column])}>{text}</td>;
+            })}
           </tr>)}
         </tbody>
       </table>
@@ -495,6 +521,7 @@ export function ProductCard({
   siteTraits,
   backHint,
   tablePreview,
+  shown = true,
 }: {
   card: Card;
   index: number;
@@ -514,7 +541,9 @@ export function ProductCard({
   /** Says what the back holds, in the footer, for a visitor who might never press Details. */
   backHint?: string;
   /** A few rows of a table the product makes, shown on the front. Presentation only, never part of the card's stored data. */
-  tablePreview?: TablePreview;
+  tablePreview?: TablePreviewInput;
+  /** Whether a visitor can see this card now; a table preview fills in only once it is. */
+  shown?: boolean;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -634,8 +663,9 @@ export function ProductCard({
           <ul className="card-uses" aria-label={pastUse ? "What I used it for" : "What I use it for"}>{useLabels.map(label => <li key={label}>{label}</li>)}</ul>
         </div>}
 
-        {table && <TablePreviewBlock preview={table} />}
+        {/* The numbers come first, so a card that publishes them leads with them; a table preview shows where they come from. */}
         {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
+        {table && <TablePreviewBlock preview={table} shown={shown} />}
         {!brandPreview && card.activity ? (
           <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />
         ) : (brandPreview || (audience === "owner" && !ownerUsage && !card.measurements?.length)) ? (
