@@ -177,6 +177,8 @@ export const usageLinkLabelValidator = v.union(
   v.literal("SEE_HOW_I_USE_IT"), v.literal("WATCH_IT_IN_ACTION"), v.literal("PROOF_OF_USE"), v.literal("DEMO"), v.literal("TUTORIAL"),
 );
 export const usageLinkValidator = v.object({ url: v.string(), label: usageLinkLabelValidator });
+// Permissive on purpose: ids a product no longer lists still read, and are dropped when shown.
+export const productUsesValidator = v.object({ picks: v.array(v.string()), other: v.optional(v.string()) });
 
 // Exact measurement projections deliberately do not use numeric ActivityModule values.
 export const measurementPeriodValidator = v.union(
@@ -219,6 +221,7 @@ export const publicProfileValidator = v.object({
       level: v.optional(v.string()),
       goTo: v.optional(v.boolean()),
       headline: v.string(),
+      uses: v.optional(productUsesValidator),
       note: v.string(),
       startedAt: v.optional(v.string()),
       activity: v.optional(activityModuleValidator),

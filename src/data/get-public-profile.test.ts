@@ -5,6 +5,7 @@ const { fetchQuery } = vi.hoisted(() => ({ fetchQuery: vi.fn() }));
 vi.mock("convex/nextjs", () => ({ fetchQuery }));
 vi.mock("@/src/env", () => ({ getServerEnv: () => ({ NEXT_PUBLIC_CONVEX_URL: "https://test.convex.cloud" }) }));
 import { getPublicProfile, PublicProfilePayloadError } from "./get-public-profile";
+import { USE_OTHER_MAX } from "@/src/domain/product-uses";
 
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
 
@@ -72,4 +73,18 @@ test("the current web reader requests v2 and renders the approved no-website pro
   expect(await getPublicProfile("owner")).toEqual(profile);
   expect(getFunctionName(fetchQuery.mock.calls[0][0])).toBe("publicProfiles:getByHandleV2");
   expect(fetchQuery.mock.calls[0].slice(1)).toEqual([{ handle: "owner" }, { url: "https://test.convex.cloud" }]);
+});
+
+test("a stored card whose uses the reader can't accept loses only those uses, not the page", async () => {
+  vi.stubEnv("PROPER_RESPECT_E2E_REFERENCE", "0");
+  const card = { product: { name: "Clay", slug: "clay", domain: "clay.com", description: "" }, status: "ACTIVE", headline: "Enrichment tables", note: "" };
+  const listed = { ...card, uses: { picks: ["enrich-leads"], other: "score inbound leads" } };
+  fetchQuery.mockResolvedValueOnce({
+    handle: "owner", displayName: "Owner", bio: "",
+    cards: [{ ...card, uses: { picks: ["enrich-leads"], other: "y".repeat(USE_OTHER_MAX + 1) } }, { ...card, uses: "not an object" }, listed],
+  });
+
+  const profile = await getPublicProfile("owner");
+  expect(profile?.cards.map(entry => entry.uses)).toEqual([undefined, undefined, listed.uses]);
+  expect(profile?.cards.map(entry => entry.headline)).toEqual(["Enrichment tables", "Enrichment tables", "Enrichment tables"]);
 });

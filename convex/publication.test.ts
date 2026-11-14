@@ -8,6 +8,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { publishedCardIndicesForProp } from "./publication";
 import { defaultReview, explicitPublicationCards, type ReviewEdit } from "../src/domain/review";
+import { USE_OTHER_MAX, USE_PICK_ID_MAX } from "../src/domain/product-uses";
 
 const modules = import.meta.glob("./**/*.ts");
 const capturedAt = "2026-09-18T00:00:00.000Z";
@@ -405,6 +406,75 @@ test("a saved work-sample link goes on the card only when its review selects it,
   await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { usageLinkUrl: LOOM_LINK })] }));
   await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a, { publish: false })] }));
   expect((await published()).profile.cards).toEqual([]);
+});
+
+const asClay = (t: TestConvex<typeof schema>, productId: Id<"products">) =>
+  t.run(ctx => ctx.db.patch(productId, { slug: "clay", name: "Clay", domain: "clay.com" }));
+
+test("a selected card goes out with the saved uses it still lists, and both readers return them", async () => {
+  const { t, owner, productId, propIds: [a], selection, published } = await fixture(1);
+  await asClay(t, productId);
+  await t.run(ctx => ctx.db.patch(a, { uses: { picks: ["sync-crm", "retired-choice", "enrich-leads"], other: "score inbound leads" } }));
+  const uses = { picks: ["enrich-leads", "sync-crm"], other: "score inbound leads" };
+
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [await selection(a)] });
+  expect(preview.profile.cards.map(card => card.uses)).toEqual([uses]);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards.map(card => card.uses)).toEqual([uses]);
+  const pages = await Promise.all([api.publicProfiles.getByHandleV2, api.publicProfiles.getByHandle].map(reader => t.query(reader, { handle: "owner" })));
+  expect(pages.map(page => page?.cards.map(card => card.uses))).toEqual([[uses], [uses]]);
+});
+
+test("a selected card whose saved uses are all retired publishes no uses at all", async () => {
+  const { t, owner, productId, propIds: [a], selection, published } = await fixture(1);
+  await asClay(t, productId);
+  await t.run(ctx => ctx.db.patch(a, { uses: { picks: ["retired-choice"] } }));
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards.map(card => "uses" in card)).toEqual([false]);
+});
+
+test("a card left out of a later publish keeps the uses it was published with, exactly as stored", async () => {
+  const { t, owner, productId, propIds: [a, b], selection, published } = await fixture();
+  await asClay(t, productId);
+  await t.run(ctx => ctx.db.patch(a, { uses: { picks: ["enrich-leads"] } }));
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  const first = await published();
+  // A retired id and an id longer than any listed one: the stored card keeps both, the reader drops both.
+  const storedUses = { picks: ["enrich-leads", "retired-choice", "x".repeat(USE_PICK_ID_MAX + 1)] };
+  const stored = { ...first.profile, cards: [{ ...first.profile.cards[0], uses: storedUses }, first.profile.cards[1]] };
+  await t.run(async ctx => {
+    await ctx.db.patch(first._id, { profile: stored });
+    await ctx.db.patch(a, { uses: { picks: ["sync-crm"] } });
+  });
+
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, {
+    selections: [await selection(b, { primaryLink: { type: "CANONICAL", url: "https://shared.example", label: "Reconfirmed B" } })],
+  }));
+  const reconfirm = { selections: [await selection(b, { primaryLink: { type: "CANONICAL", url: "https://shared.example", label: "Reconfirmed B" } })] };
+  // The preview the owner approves shows the left-out card as the public reader will: its listed pick, not nothing.
+  expect((await owner.query(api.onboarding.previewPublication, reconfirm)).profile.cards.map(card => card.uses))
+    .toEqual([{ picks: ["enrich-leads"] }, undefined]);
+  const after = await published();
+  expect(after.profile.cards[0]).toEqual(stored.cards[0]);
+  expect((await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" }))?.cards.map(card => card.uses))
+    .toEqual([{ picks: ["enrich-leads"] }, undefined]);
+});
+
+test("reading a stored snapshot drops uses the product no longer lists and leaves other cards as they were", async () => {
+  const { t, owner, productId, propIds: [a, b], selection, published } = await fixture();
+  await asClay(t, productId);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  const first = await published();
+  const longOther = "y".repeat(USE_OTHER_MAX + 1);
+  await t.run(ctx => ctx.db.patch(first._id, { profile: { ...first.profile, cards: [
+    { ...first.profile.cards[0], uses: { picks: ["sync-crm", "retired-choice"], other: longOther } },
+    { ...first.profile.cards[1], uses: { picks: ["retired-choice"], other: " " } },
+  ] } }));
+  const page = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  // Words longer than a save allows are dropped on their own: the listed pick beside them still shows.
+  expect(page?.cards.map(card => card.uses)).toEqual([{ picks: ["sync-crm"] }, undefined]);
+  expect(page?.cards.map(card => "uses" in card)).toEqual([true, false]);
+  expect(page?.cards.map(card => card.headline)).toEqual(["Relationship 1", "Relationship 2"]);
 });
 
 test("publishing a work-sample link needs the saved https link and a listed label", async () => {

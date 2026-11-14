@@ -381,7 +381,7 @@ test("saving with no uses removes the stored ones and keeps them in history", as
     .toEqual([{ picks: ["find-contacts"] }, undefined, { picks: ["build-lists"] }, undefined]);
 });
 
-test("a privately saved use never reaches the published card", async () => {
+test("a privately saved use goes out with its card when the owner publishes that card", async () => {
   const { t, owner, propId } = await fixtureWithUses();
   const publish = makeFunctionReference<"mutation">("onboarding:publishSelected");
   await owner.mutation(save, { propId, expectedVersion: 0, operationId: "uses", status: "ACTIVE", goTo: false, headline: "Approved headline", note: "",
@@ -389,5 +389,6 @@ test("a privately saved use never reaches the published card", async () => {
   const selection = { propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "Approved headline", note: "", primaryLink: { type: "CANONICAL", url: "https://clay.com", label: "Visit" }, autoRefresh: false };
   await owner.mutation(publish, await reviewedPublication(owner, { selections: [selection] }));
   const cards = (await t.run(ctx => ctx.db.query("publishedProfiles").collect()))[0].profile.cards;
-  expect(cards.map(card => [card.product.slug, card.headline, "uses" in card])).toEqual([["clay", "Approved headline", false]]);
+  expect(cards.map(card => [card.product.slug, card.headline, card.uses]))
+    .toEqual([["clay", "Approved headline", { picks: ["enrich-leads"], other: "score inbound leads" }]]);
 });

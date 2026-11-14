@@ -6,7 +6,7 @@ import { costSchema, type Cost, type CostVisibility } from "./cost";
 import { usageLinkSchema, type UsageLink } from "./usage-links";
 import { productBrandSnapshotSchema } from "./product-brand";
 import { relationshipLevelSchema, type RelationshipLevel } from "./relationship-level";
-import { productUsesSchema } from "./product-uses";
+import { listedUses, productUsesSchema, type ProductUses } from "./product-uses";
 
 export const handleSchema = z
   .string()
@@ -167,7 +167,7 @@ export const publicProfileSchema = z.object({
       level: relationshipLevelSchema.optional().catch(undefined),
       goTo: z.boolean().optional(),
       headline: z.string(),
-      // Shown on the owner's private card only: projectPublicProfile never sets it.
+      // What the product does for the owner. Uses this reader can't accept are dropped, not a reason to refuse the page.
       uses: productUsesSchema.optional().catch(undefined),
       note: z.string(),
       startedAt: z.iso.date().optional(),
@@ -212,6 +212,7 @@ export type CuratedProp = {
   level?: RelationshipLevel;
   goTo?: boolean;
   headline: string;
+  uses?: ProductUses;
   note: string;
   startedAt?: string;
   activity?: ActivityModule;
@@ -243,6 +244,7 @@ export function projectPublicProfile(input: {
         level: prop.level,
         goTo: prop.goTo,
         headline: prop.headline,
+        uses: listedUses(prop.product.slug, prop.uses),
         note: prop.note,
         startedAt: prop.startedAt,
         activity: withHttpArtifacts(prop.activity),

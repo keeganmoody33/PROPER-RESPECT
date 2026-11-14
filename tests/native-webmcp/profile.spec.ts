@@ -88,6 +88,7 @@ test("native Chrome lists and executes only the visible published profile", asyn
       cards: [
         {
           product: { name: "GitHub" },
+          uses: ["host my code and its history", "review and merge pull requests"],
           activity: {
             kind: "contributionCalendar",
             total: { displayValue: "523", label: "contributions" },

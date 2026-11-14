@@ -5,6 +5,7 @@ import { compactNumber } from "./format-activity-number";
 import { usageLinkLabelText, usageLinkSchema } from "./usage-links";
 import { isHttpUrl } from "./http-url.ts";
 import { cardStatusLabel, type RelationshipLevel } from "./relationship-level.ts";
+import { productUseLabels } from "./product-uses.ts";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;
@@ -39,6 +40,8 @@ export type VisiblePublicProfile = Readonly<{
     relationshipLabel: string;
     ownerSelectedGoTo: boolean;
     headline: string;
+    // What the product does for the owner, each finishing "I use it to …".
+    uses?: readonly string[];
     note: string;
     startedAt?: string;
     startDateNote?: string;
@@ -110,6 +113,11 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
   }
 }
 
+function visibleUses(card: PublicProfile["cards"][number]): { uses?: readonly string[] } {
+  const uses = productUseLabels(card.product.slug, card.uses);
+  return uses.length ? { uses } : {};
+}
+
 export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePublicProfile {
   const profileLinks = (profile.profileLinks ?? []).filter(link => isHttpUrl(link.url));
   const nameLink = profileLinks.find(link => link.url === profile.preferredLinkUrl)?.url;
@@ -122,6 +130,7 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
       status: card.status, ...(card.level ? { level: card.level } : {}), relationshipLabel: cardStatusLabel(card),
       ownerSelectedGoTo: card.goTo === true,
       headline: card.headline || card.note || "Relationship note not supplied.",
+      ...visibleUses(card),
       note: card.note || "Relationship note not supplied.",
       ...(card.startedAt ? { startedAt: card.startedAt } : { startDateNote: "Start date not supplied" }),
       ...(card.activity ? { activity: visibleActivity(card.activity) } : {}),

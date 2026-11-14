@@ -4,7 +4,7 @@ import { productKnowledgeTables } from "./productKnowledgeTables";
 import { mailboxTables } from "./mailboxTables";
 import { productBrandTables } from "./productBrandTables";
 import { githubRefreshBindingValidator } from "./githubRefreshIdentity";
-import { inventoryTables, productUsesValidator } from "./inventoryTables";
+import { inventoryTables } from "./inventoryTables";
 import {
   captureProvenanceValidator,
   evidenceSourceTypeValidator,
@@ -15,6 +15,7 @@ import {
   refreshErrorClassValidator,
   publicProfileValidator,
   profileLinkValidator,
+  productUsesValidator,
   relationshipLevelValidator,
   statusValidator,
   visibilityValidator,
@@ -93,7 +94,7 @@ export default defineSchema({
     level: v.optional(relationshipLevelValidator),
     visibility: visibilityValidator,
     headline: v.string(),
-    // What the product does for the owner. Private: never copied into a published card.
+    // What the product does for the owner. Saved privately; it goes out with the card when the owner publishes it.
     uses: v.optional(productUsesValidator),
     note: v.string(),
     ownerEntered: v.optional(v.boolean()),
