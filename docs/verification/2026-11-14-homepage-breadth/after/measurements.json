@@ -1,0 +1,409 @@
+{
+  "commit": "8bb7b8dcc1b833101f063b30547d71e1f0de8513",
+  "widths": {
+    "390": {
+      "chooserHeight": 158.390625,
+      "rows": [
+        {
+          "name": "GitHub",
+          "stageHeight": 732.875,
+          "slideHeight": 731.234375,
+          "leftover": 2,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "A year of contributions",
+            "Sample data / No account connected",
+            "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
+            "GitHub contribution definitions ↗"
+          ],
+          "front": "Daily · since 2019\n\nGitHub\n↗\n\nWhere every project's code lives.\n\nI use it to\n\nhost my code and its history\nreview and merge pull requests\nrun tests and deploys on every push\n\n859\ncontributions\n\nSep\nOct\nNov\nDec\nJan\nFeb\nMar\nApr\nMay\nJun\nJul\nAug\nMon\nWed\nFri\nLess\nMore\n\npersonal activity · 2025-09-01 to 2026-08-31 · stale\n\nOwner-selected go-to\nDetails ↶"
+        },
+        {
+          "name": "Claude Code",
+          "stageHeight": 732.875,
+          "slideHeight": 695.15625,
+          "leftover": 38,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Coding days",
+            "Sample data / No account connected"
+          ],
+          "front": "DAILY · SINCE 2025\n\nClaude Code\n↗\n\nWrites and fixes my scrapers and scripts.\n\nI use it to\n\nbuild features from a description\nfind and fix bugs\nautomate repetitive engineering work\n\n63\nsessions\n\nPull requests\n18\nLines changed\n4,200\nActive days\n22\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDETAILS ↶"
+        },
+        {
+          "name": "Firecrawl",
+          "stageHeight": 732.875,
+          "slideHeight": 642.671875,
+          "leftover": 90,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Referral link, disclosed",
+            "Sample data / No account connected",
+            "A real card's referral link carries its owner's code. This sample's goes to Firecrawl's home page and credits nobody."
+          ],
+          "front": "Weekly · since 2025\n\nFirecrawl\n↗\nReferral link\n\nTurns pages into clean Markdown for my agents.\n\nI use it to\n\nturn web pages into Markdown\ncrawl whole sites\n\n1100\npages scraped · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Firecrawl\nClose details\nWeekly · Referral link\nI pull docs and product pages through it.\n\nSince 2025-01-01\n\nWeb crawling and data extraction.\n\n1,100\nPAGES SCRAPED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Firecrawl ↗\nReferral link\nHow evidence works"
+        },
+        {
+          "name": "Exa",
+          "stageHeight": 732.875,
+          "slideHeight": 561.875,
+          "leftover": 171,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "A demo link on the back",
+            "Sample data / No account connected",
+            "The demo link goes to Exa's own public search page, standing in for an owner's recording."
+          ],
+          "front": "Weekly · since 2025\n\nExa\n↗\n\nSearch my agents can call.\n\nI use it to\n\ngive my agents web search\nfind companies and people that fit a description\n\n277\nsearches run · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Exa\nClose details\nWeekly · Direct link\nI use it to find company pages and recent news.\n\nSince 2025-01-01\n\nWeb search and retrieval for AI applications.\n\n277\nSEARCHES RUN · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nDemo ↗\nexa.ai\nOpen Exa ↗\nHow evidence works"
+        },
+        {
+          "name": "Cloudflare",
+          "stageHeight": 732.875,
+          "slideHeight": 613.390625,
+          "leftover": 119,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Go-to, with what it costs",
+            "Sample data / No account connected"
+          ],
+          "front": "DAILY · SINCE 2020\n\nCloudflare\n↗\n\nDNS, Workers and caching for my projects.\n\nI use it to\n\nrun DNS for my domains\nrun code at the edge with Workers\ncache and protect my sites\n\n48360\nrequests served · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nOwner-selected go-to\nDetails ↶",
+          "back": "Cloudflare\nClose details\nDAILY · DIRECT LINK\n\nOwner-selected go-to\n\nEvery domain I own points through it.\n\nSince 2020-01-01\n\nConnectivity, security, and application infrastructure platform.\n\nOwner-reported cost: $5.00/month · as of 2026-09-01\n\n48.4K\nREQUESTS SERVED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Cloudflare ↗\nHow evidence works"
+        },
+        {
+          "name": "Porkbun",
+          "stageHeight": 732.875,
+          "slideHeight": 535.9375,
+          "leftover": 197,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Running totals",
+            "Sample data / No account connected"
+          ],
+          "front": "OCCASIONALLY · SINCE 2021\n\nPorkbun\n↗\n\nWhere every side project's domain starts.\n\nI use it to\n\nregister and renew domains\nmanage DNS records\n\n11\ndomains registered\n\nRenewals\n9\nEmail forwards\n5\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nOwner-selected go-to\nDETAILS ↶"
+        },
+        {
+          "name": "Spider",
+          "stageHeight": 732.875,
+          "slideHeight": 614.015625,
+          "leftover": 119,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Affiliate link, disclosed",
+            "Sample data / No account connected",
+            "A real card's affiliate link carries its owner's code. This sample's goes to Spider's home page and credits nobody."
+          ],
+          "front": "OCCASIONALLY · SINCE 2026\n\nSpider\n↗\nAffiliate link\n\nCrawls whole sites for my agents.\n\nI use it to\n\nCRAWL SITES QUICKLY AT VOLUME\nFEED WEB DATA TO MY AGENTS\n\n8120\npages crawled · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRELATIONSHIP & EVIDENCE\nDETAILS ↶",
+          "back": "Spider\nClose details\nOCCASIONALLY · AFFILIATE LINK\nI run the large crawls on it.\n\nSince 2026-01-01\n\nWeb crawling and scraping for AI applications.\n\n8,120\nPAGES CRAWLED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Spider ↗\nAffiliate link\nHow evidence works"
+        },
+        {
+          "name": "Docker",
+          "stageHeight": 732.875,
+          "slideHeight": 522.015625,
+          "leftover": 211,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "A list of linked work",
+            "Sample data / No account connected",
+            "The listed links go to public Docker pages, standing in for an owner's own repositories and images."
+          ],
+          "front": "Weekly · since 2020\n\nDocker\n↗\n\nPacks scrapers and agents to run anywhere.\n\nI use it to\n\nrun databases and services locally\npackage apps to run anywhere\n\n3\nartifacts\n\npersonal activity · 2024-01-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Docker\nClose details\nWeekly · Direct link\nEvery long-running job I ship is a container.\n\nSince 2020-01-01\n\nContainers for building and shipping software.\n\n3\nARTIFACTS\nSample Compose apps (awesome-compose) ↗\nOfficial Postgres image ↗\nMulti-stage build guide ↗\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2024-01-01 TO 2026-08-31\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Docker ↗\nHow evidence works"
+        },
+        {
+          "name": "Open Places",
+          "stageHeight": 732.875,
+          "slideHeight": 550.046875,
+          "leftover": 183,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Used now and then",
+            "Sample data / No account connected"
+          ],
+          "front": "Occasionally · since 2026\n\nOpen Places\n↗\n\nLocal business lists by category and city.\n\nI use it to\n\nbuild lists of local businesses\nfind businesses in one area or category\n\n552\nbusinesses exported · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "Grok Bot",
+          "stageHeight": 732.875,
+          "slideHeight": 538.984375,
+          "leftover": 194,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Still testing",
+            "Sample data / No account connected"
+          ],
+          "front": "GB\n\nTESTING · SINCE 2026\n\nGrok Bot\n↗\n\nAn agent with its own cloud computer.\n\nI use it to\n\nhand off tasks to an agent\nresearch a topic for me\n\n12\ntasks handed off\n\nTasks finished\n9\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDETAILS ↶"
+        },
+        {
+          "name": "Elicit",
+          "stageHeight": 732.875,
+          "slideHeight": 522.828125,
+          "leftover": 210,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Stopped using, and why",
+            "Sample data / No account connected"
+          ],
+          "front": "STOPPED USING · STARTED 2026\n\nElicit\n↗\n\nReading research papers faster.\n\nI use it to\n\nfind papers on a question\npull data out of studies into a table\n\n25\npapers screened · per week · observation\n\npersonal activity · 2026-01-05 to 2026-03-29 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Elicit\nClose details\nSTOPPED USING · DIRECT LINK\nI stopped once my market study was done.\n\nSince 2026-01-01\n\nAI research assistant for papers.\n\n25\nPAPERS SCREENED · PER WEEK\n\nObserved 2026-03-23\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-01-05 TO 2026-03-29\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Elicit ↗\nHow evidence works"
+        },
+        {
+          "name": "Context.dev",
+          "stageHeight": 732.875,
+          "slideHeight": 553.09375,
+          "leftover": 180,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Testing, week by week",
+            "Sample data / No account connected"
+          ],
+          "front": "Testing · since 2026\n\nContext.dev\n↗\n\nBrand and company data from a domain.\n\nI use it to\n\npull a company's logo, colors and fonts\nlook up company details by domain\n\n76\ndomains looked up · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "n8n",
+          "stageHeight": 732.875,
+          "slideHeight": 537.046875,
+          "leftover": 196,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Paused, and why",
+            "Sample data / No account connected"
+          ],
+          "front": "PAUSED · STARTED 2024\n\nn8n\n↗\n\nScheduled jobs and webhooks.\n\nI use it to\n\nRUN JOBS ON A SCHEDULE\nMOVE DATA BETWEEN SYSTEMS\n\n2140\nworkflow runs\n\nWorkflows\n14\nFailed runs\n37\n\npersonal activity · 2024-04-01 to 2025-03-31 · stale\n\nRELATIONSHIP & EVIDENCE\nDETAILS ↶",
+          "back": "n8n\nClose details\nPAUSED · DIRECT LINK\nPaused while my nightly jobs move to plain cron.\n\nSince 2024-01-01\n\nWorkflow automation.\n\n2,140\nWORKFLOW RUNS\n14\nWORKFLOWS\n37\nFAILED RUNS\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2024-04-01 TO 2025-03-31\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen n8n ↗\nHow evidence works"
+        },
+        {
+          "name": "Clay",
+          "stageHeight": 732.875,
+          "slideHeight": 632.234375,
+          "leftover": 101,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Published usage numbers",
+            "Sample data / No account connected",
+            "Its work-sample link opens Clay's public templates."
+          ],
+          "front": "Daily · since 2023\n\nClay\n↗\n\nMy lead lists, enriched.\n\nI use it to\n\nenrich lead and account lists\nfind contact details\nRows enriched\n2140000Rows\n\n2023-03-01 to 2026-08-31 · UTC\n\nSynthetic sample. Not real account activity.\n\n2 more reported measurements in Details.\n\nOwner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.\n\nCost, numbers and a work sample inside\nDetails ↶",
+          "back": "Clay\nClose details\nDaily · Direct link\nLists that took a week of spreadsheets take an hour.\n\nSince 2023-01-01\n\nData enrichment and go-to-market workflows.\n\nOwner-reported cost: $149.00/month · as of 2026-09-01\n\nRows enriched\n2140000Rows\n\n2023-03-01 to 2026-08-31 · UTC\n\nScope: workspace · Coverage: complete\n\ncumulative · Do not add to other views\n\nSynthetic sample. Not real account activity.\n\nSource-reported value\n\nCaptured 2026-09-01T00:00:00.000Z\n\nTables built\n86Tables\n\n2023-03-01 to 2026-08-31 · UTC\n\nScope: workspace · Coverage: complete\n\ncumulative · Do not add to other views\n\nSynthetic sample. Not real account activity.\n\nSource-reported value\n\nCaptured 2026-09-01T00:00:00.000Z\n\nCredits used\n48500Credits\n\n2025-09-01 to 2026-08-31 · UTC\n\nScope: workspace · Coverage: complete\n\ncumulative · Do not add to other views\n\nSynthetic sample. Not real account activity.\n\nSource-reported value\n\nCaptured 2026-09-01T00:00:00.000Z\n\nOwner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.\n\nSee how I use it ↗\nclay.com\nOpen Clay ↗\nHow evidence works"
+        }
+      ]
+    },
+    "1440": {
+      "chooserHeight": 210.609375,
+      "rows": [
+        {
+          "name": "GitHub",
+          "stageHeight": 670.046875,
+          "slideHeight": 668.40625,
+          "leftover": 2,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "A year of contributions",
+            "Sample data / No account connected",
+            "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
+            "GitHub contribution definitions ↗"
+          ],
+          "front": "Daily · since 2019\n\nGitHub\n↗\n\nWhere every project's code lives.\n\nI use it to\n\nhost my code and its history\nreview and merge pull requests\nrun tests and deploys on every push\n\n859\ncontributions\n\nSep\nOct\nNov\nDec\nJan\nFeb\nMar\nApr\nMay\nJun\nJul\nAug\nMon\nWed\nFri\nLess\nMore\n\npersonal activity · 2025-09-01 to 2026-08-31 · stale\n\nOwner-selected go-to\nDetails ↶"
+        },
+        {
+          "name": "Claude Code",
+          "stageHeight": 670.046875,
+          "slideHeight": 614.109375,
+          "leftover": 56,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Coding days",
+            "Sample data / No account connected"
+          ],
+          "front": "DAILY · SINCE 2025\n\nClaude Code\n↗\n\nWrites and fixes my scrapers and scripts.\n\nI use it to\n\nbuild features from a description\nfind and fix bugs\nautomate repetitive engineering work\n\n63\nsessions\n\nPull requests\n18\nLines changed\n4,200\nActive days\n22\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDETAILS ↶"
+        },
+        {
+          "name": "Firecrawl",
+          "stageHeight": 670.046875,
+          "slideHeight": 548.515625,
+          "leftover": 122,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Referral link, disclosed",
+            "Sample data / No account connected",
+            "A real card's referral link carries its owner's code. This sample's goes to Firecrawl's home page and credits nobody."
+          ],
+          "front": "Weekly · since 2025\n\nFirecrawl\n↗\nReferral link\n\nTurns pages into clean Markdown for my agents.\n\nI use it to\n\nturn web pages into Markdown\ncrawl whole sites\n\n1100\npages scraped · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Firecrawl\nClose details\nWeekly · Referral link\nI pull docs and product pages through it.\n\nSince 2025-01-01\n\nWeb crawling and data extraction.\n\n1,100\nPAGES SCRAPED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Firecrawl ↗\nReferral link\nHow evidence works"
+        },
+        {
+          "name": "Exa",
+          "stageHeight": 670.046875,
+          "slideHeight": 519.828125,
+          "leftover": 150,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "A demo link on the back",
+            "Sample data / No account connected",
+            "The demo link goes to Exa's own public search page, standing in for an owner's recording."
+          ],
+          "front": "Weekly · since 2025\n\nExa\n↗\n\nSearch my agents can call.\n\nI use it to\n\ngive my agents web search\nfind companies and people that fit a description\n\n277\nsearches run · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Exa\nClose details\nWeekly · Direct link\nI use it to find company pages and recent news.\n\nSince 2025-01-01\n\nWeb search and retrieval for AI applications.\n\n277\nSEARCHES RUN · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nDemo ↗\nexa.ai\nOpen Exa ↗\nHow evidence works"
+        },
+        {
+          "name": "Cloudflare",
+          "stageHeight": 670.046875,
+          "slideHeight": 527.40625,
+          "leftover": 143,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Go-to, with what it costs",
+            "Sample data / No account connected"
+          ],
+          "front": "DAILY · SINCE 2020\n\nCloudflare\n↗\n\nDNS, Workers and caching for my projects.\n\nI use it to\n\nrun DNS for my domains\nrun code at the edge with Workers\ncache and protect my sites\n\n48360\nrequests served · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nOwner-selected go-to\nDetails ↶",
+          "back": "Cloudflare\nClose details\nDAILY · DIRECT LINK\n\nOwner-selected go-to\n\nEvery domain I own points through it.\n\nSince 2020-01-01\n\nConnectivity, security, and application infrastructure platform.\n\nOwner-reported cost: $5.00/month · as of 2026-09-01\n\n48.4K\nREQUESTS SERVED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Cloudflare ↗\nHow evidence works"
+        },
+        {
+          "name": "Porkbun",
+          "stageHeight": 670.046875,
+          "slideHeight": 484.6875,
+          "leftover": 185,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Running totals",
+            "Sample data / No account connected"
+          ],
+          "front": "OCCASIONALLY · SINCE 2021\n\nPorkbun\n↗\n\nWhere every side project's domain starts.\n\nI use it to\n\nregister and renew domains\nmanage DNS records\n\n11\ndomains registered\n\nRenewals\n9\nEmail forwards\n5\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nOwner-selected go-to\nDETAILS ↶"
+        },
+        {
+          "name": "Spider",
+          "stageHeight": 670.046875,
+          "slideHeight": 578.984375,
+          "leftover": 91,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Affiliate link, disclosed",
+            "Sample data / No account connected",
+            "A real card's affiliate link carries its owner's code. This sample's goes to Spider's home page and credits nobody."
+          ],
+          "front": "OCCASIONALLY · SINCE 2026\n\nSpider\n↗\nAffiliate link\n\nCrawls whole sites for my agents.\n\nI use it to\n\nCRAWL SITES QUICKLY AT VOLUME\nFEED WEB DATA TO MY AGENTS\n\n8120\npages crawled · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRELATIONSHIP & EVIDENCE\nDETAILS ↶",
+          "back": "Spider\nClose details\nOCCASIONALLY · AFFILIATE LINK\nI run the large crawls on it.\n\nSince 2026-01-01\n\nWeb crawling and scraping for AI applications.\n\n8,120\nPAGES CRAWLED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Spider ↗\nAffiliate link\nHow evidence works"
+        },
+        {
+          "name": "Docker",
+          "stageHeight": 670.046875,
+          "slideHeight": 449.359375,
+          "leftover": 221,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "A list of linked work",
+            "Sample data / No account connected",
+            "The listed links go to public Docker pages, standing in for an owner's own repositories and images."
+          ],
+          "front": "Weekly · since 2020\n\nDocker\n↗\n\nPacks scrapers and agents to run anywhere.\n\nI use it to\n\nrun databases and services locally\npackage apps to run anywhere\n\n3\nartifacts\n\npersonal activity · 2024-01-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Docker\nClose details\nWeekly · Direct link\nEvery long-running job I ship is a container.\n\nSince 2020-01-01\n\nContainers for building and shipping software.\n\n3\nARTIFACTS\nSample Compose apps (awesome-compose) ↗\nOfficial Postgres image ↗\nMulti-stage build guide ↗\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2024-01-01 TO 2026-08-31\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Docker ↗\nHow evidence works"
+        },
+        {
+          "name": "Open Places",
+          "stageHeight": 670.046875,
+          "slideHeight": 478.484375,
+          "leftover": 192,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Used now and then",
+            "Sample data / No account connected"
+          ],
+          "front": "Occasionally · since 2026\n\nOpen Places\n↗\n\nLocal business lists by category and city.\n\nI use it to\n\nbuild lists of local businesses\nfind businesses in one area or category\n\n552\nbusinesses exported · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "Grok Bot",
+          "stageHeight": 670.046875,
+          "slideHeight": 487.734375,
+          "leftover": 182,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Still testing",
+            "Sample data / No account connected"
+          ],
+          "front": "GB\n\nTESTING · SINCE 2026\n\nGrok Bot\n↗\n\nAn agent with its own cloud computer.\n\nI use it to\n\nhand off tasks to an agent\nresearch a topic for me\n\n12\ntasks handed off\n\nTasks finished\n9\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDETAILS ↶"
+        },
+        {
+          "name": "Elicit",
+          "stageHeight": 670.046875,
+          "slideHeight": 485.03125,
+          "leftover": 185,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Stopped using, and why",
+            "Sample data / No account connected"
+          ],
+          "front": "STOPPED USING · STARTED 2026\n\nElicit\n↗\n\nReading research papers faster.\n\nI use it to\n\nfind papers on a question\npull data out of studies into a table\n\n25\npapers screened · per week · observation\n\npersonal activity · 2026-01-05 to 2026-03-29 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Elicit\nClose details\nSTOPPED USING · DIRECT LINK\nI stopped once my market study was done.\n\nSince 2026-01-01\n\nAI research assistant for papers.\n\n25\nPAPERS SCREENED · PER WEEK\n\nObserved 2026-03-23\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-01-05 TO 2026-03-29\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Elicit ↗\nHow evidence works"
+        },
+        {
+          "name": "Context.dev",
+          "stageHeight": 670.046875,
+          "slideHeight": 483.265625,
+          "leftover": 187,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Testing, week by week",
+            "Sample data / No account connected"
+          ],
+          "front": "Testing · since 2026\n\nContext.dev\n↗\n\nBrand and company data from a domain.\n\nI use it to\n\npull a company's logo, colors and fonts\nlook up company details by domain\n\n76\ndomains looked up · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "n8n",
+          "stageHeight": 670.046875,
+          "slideHeight": 507.25,
+          "leftover": 163,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Paused, and why",
+            "Sample data / No account connected"
+          ],
+          "front": "PAUSED · STARTED 2024\n\nn8n\n↗\n\nScheduled jobs and webhooks.\n\nI use it to\n\nRUN JOBS ON A SCHEDULE\nMOVE DATA BETWEEN SYSTEMS\n\n2140\nworkflow runs\n\nWorkflows\n14\nFailed runs\n37\n\npersonal activity · 2024-04-01 to 2025-03-31 · stale\n\nRELATIONSHIP & EVIDENCE\nDETAILS ↶",
+          "back": "n8n\nClose details\nPAUSED · DIRECT LINK\nPaused while my nightly jobs move to plain cron.\n\nSince 2024-01-01\n\nWorkflow automation.\n\n2,140\nWORKFLOW RUNS\n14\nWORKFLOWS\n37\nFAILED RUNS\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2024-04-01 TO 2025-03-31\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen n8n ↗\nHow evidence works"
+        },
+        {
+          "name": "Clay",
+          "stageHeight": 670.046875,
+          "slideHeight": 598.421875,
+          "leftover": 72,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Published usage numbers",
+            "Sample data / No account connected",
+            "Its work-sample link opens Clay's public templates."
+          ],
+          "front": "Daily · since 2023\n\nClay\n↗\n\nMy lead lists, enriched.\n\nI use it to\n\nenrich lead and account lists\nfind contact details\nRows enriched\n2140000Rows\n\n2023-03-01 to 2026-08-31 · UTC\n\nSynthetic sample. Not real account activity.\n\n2 more reported measurements in Details.\n\nOwner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.\n\nCost, numbers and a work sample inside\nDetails ↶",
+          "back": "Clay\nClose details\nDaily · Direct link\nLists that took a week of spreadsheets take an hour.\n\nSince 2023-01-01\n\nData enrichment and go-to-market workflows.\n\nOwner-reported cost: $149.00/month · as of 2026-09-01\n\nRows enriched\n2140000Rows\n\n2023-03-01 to 2026-08-31 · UTC\n\nScope: workspace · Coverage: complete\n\ncumulative · Do not add to other views\n\nSynthetic sample. Not real account activity.\n\nSource-reported value\n\nCaptured 2026-09-01T00:00:00.000Z\n\nTables built\n86Tables\n\n2023-03-01 to 2026-08-31 · UTC\n\nScope: workspace · Coverage: complete\n\ncumulative · Do not add to other views\n\nSynthetic sample. Not real account activity.\n\nSource-reported value\n\nCaptured 2026-09-01T00:00:00.000Z\n\nCredits used\n48500Credits\n\n2025-09-01 to 2026-08-31 · UTC\n\nScope: workspace · Coverage: complete\n\ncumulative · Do not add to other views\n\nSynthetic sample. Not real account activity.\n\nSource-reported value\n\nCaptured 2026-09-01T00:00:00.000Z\n\nOwner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.\n\nSee how I use it ↗\nclay.com\nOpen Clay ↗\nHow evidence works"
+        }
+      ]
+    }
+  }
+}

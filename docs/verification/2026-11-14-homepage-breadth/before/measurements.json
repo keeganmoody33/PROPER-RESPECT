@@ -1,0 +1,367 @@
+{
+  "commit": "a24fd1042996e5abccddee6abc1181c8f715e4b6",
+  "widths": {
+    "390": {
+      "chooserHeight": 158.390625,
+      "rows": [
+        {
+          "name": "GitHub",
+          "stageHeight": 716.234375,
+          "slideHeight": 714.59375,
+          "leftover": 2,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected",
+            "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
+            "GitHub contribution definitions ↗"
+          ],
+          "front": "Daily · since 2019\n\nGitHub\n↗\n\nWhere every project's code lives.\n\nI use it to\n\nhost my code and its history\nreview and merge pull requests\nrun tests and deploys on every push\n\n859\ncontributions\n\nSep\nOct\nNov\nDec\nJan\nFeb\nMar\nApr\nMay\nJun\nJul\nAug\nMon\nWed\nFri\nLess\nMore\n\npersonal activity · 2025-09-01 to 2026-08-31 · stale\n\nOwner-selected go-to\nDetails ↶"
+        },
+        {
+          "name": "Claude Code",
+          "stageHeight": 716.234375,
+          "slideHeight": 678.515625,
+          "leftover": 38,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "DAILY · SINCE 2025\n\nClaude Code\n↗\n\nWrites and fixes my scrapers and scripts.\n\nI use it to\n\nbuild features from a description\nfind and fix bugs\nautomate repetitive engineering work\n\n63\nsessions\n\nPull requests\n18\nLines changed\n4,200\nActive days\n22\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDETAILS ↶"
+        },
+        {
+          "name": "Firecrawl",
+          "stageHeight": 716.234375,
+          "slideHeight": 534.765625,
+          "leftover": 181,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Weekly · since 2025\n\nFirecrawl\n↗\n\nTurns pages into clean Markdown for my agents.\n\nI use it to\n\nturn web pages into Markdown\ncrawl whole sites\n\n1100\npages scraped · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Firecrawl\nClose details\nWeeklyCANONICAL\nI pull docs and product pages through it.\n\nSince 2025-01-01\n\nWeb crawling and data extraction.\n\n1,100\nPAGES SCRAPED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Firecrawl ↗\nHow evidence works"
+        },
+        {
+          "name": "Exa",
+          "stageHeight": 716.234375,
+          "slideHeight": 489.296875,
+          "leftover": 227,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Weekly · since 2025\n\nExa\n↗\n\nSearch my agents can call.\n\nI use it to\n\ngive my agents web search\nfind companies and people that fit a description\n\n277\nsearches run · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Exa\nClose details\nWeeklyCANONICAL\nI use it to find company pages and recent news.\n\nSince 2025-01-01\n\nWeb search and retrieval for AI applications.\n\n277\nSEARCHES RUN · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Exa ↗\nHow evidence works"
+        },
+        {
+          "name": "Cloudflare",
+          "stageHeight": 716.234375,
+          "slideHeight": 596.75,
+          "leftover": 119,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "DAILY · SINCE 2020\n\nCloudflare\n↗\n\nDNS, Workers and caching for my projects.\n\nI use it to\n\nrun DNS for my domains\nrun code at the edge with Workers\ncache and protect my sites\n\n48360\nrequests served · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nOwner-selected go-to\nDetails ↶",
+          "back": "Cloudflare\nClose details\nDAILYCANONICAL\n\nOwner-selected go-to\n\nEvery domain I own points through it.\n\nSince 2020-01-01\n\nConnectivity, security, and application infrastructure platform.\n\n48.4K\nREQUESTS SERVED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Cloudflare ↗\nHow evidence works"
+        },
+        {
+          "name": "Porkbun",
+          "stageHeight": 716.234375,
+          "slideHeight": 519.296875,
+          "leftover": 197,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "OCCASIONALLY · SINCE 2021\n\nPorkbun\n↗\n\nWhere every side project's domain starts.\n\nI use it to\n\nregister and renew domains\nmanage DNS records\n\n11\ndomains registered\n\nRenewals\n9\nEmail forwards\n5\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nOwner-selected go-to\nDETAILS ↶"
+        },
+        {
+          "name": "Spider",
+          "stageHeight": 716.234375,
+          "slideHeight": 541.4375,
+          "leftover": 175,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "OCCASIONALLY · SINCE 2026\n\nSpider\n↗\n\nCrawls whole sites for my agents.\n\nI use it to\n\nCRAWL SITES QUICKLY AT VOLUME\nFEED WEB DATA TO MY AGENTS\n\n8120\npages crawled · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRELATIONSHIP & EVIDENCE\nDETAILS ↶"
+        },
+        {
+          "name": "Docker",
+          "stageHeight": 716.234375,
+          "slideHeight": 535.4375,
+          "leftover": 181,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Weekly · since 2020\n\nDocker\n↗\n\nPacks scrapers and agents to run anywhere.\n\nI use it to\n\nrun databases and services locally\npackage apps to run anywhere\n\n8\nimages built · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Docker\nClose details\nWeeklyCANONICAL\nEvery long-running job I ship is a container.\n\nSince 2020-01-01\n\nContainers for building and shipping software.\n\n8\nIMAGES BUILT · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Docker ↗\nHow evidence works"
+        },
+        {
+          "name": "Open Places",
+          "stageHeight": 716.234375,
+          "slideHeight": 533.40625,
+          "leftover": 183,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Occasionally · since 2026\n\nOpen Places\n↗\n\nLocal business lists by category and city.\n\nI use it to\n\nbuild lists of local businesses\nfind businesses in one area or category\n\n440\nbusinesses exported · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "Grok Bot",
+          "stageHeight": 716.234375,
+          "slideHeight": 522.34375,
+          "leftover": 194,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "GB\n\nTESTING · SINCE 2026\n\nGrok Bot\n↗\n\nAn agent with its own cloud computer.\n\nI use it to\n\nhand off tasks to an agent\nresearch a topic for me\n\n12\ntasks handed off\n\nTasks finished\n9\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDETAILS ↶"
+        },
+        {
+          "name": "Elicit",
+          "stageHeight": 716.234375,
+          "slideHeight": 490.515625,
+          "leftover": 226,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "TESTING · SINCE 2026\n\nElicit\n↗\n\nReading research papers faster.\n\nI use it to\n\nfind papers on a question\npull data out of studies into a table\n\n36\npapers screened · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "Context.dev",
+          "stageHeight": 716.234375,
+          "slideHeight": 536.453125,
+          "leftover": 180,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Testing · since 2026\n\nContext.dev\n↗\n\nBrand and company data from a domain.\n\nI use it to\n\npull a company's logo, colors and fonts\nlook up company details by domain\n\n77\ndomains looked up · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "n8n",
+          "stageHeight": 716.234375,
+          "slideHeight": 514.828125,
+          "leftover": 201,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "PAUSED · STARTED 2024\n\nn8n\n↗\n\nScheduled jobs and webhooks.\n\nI use it to\n\nRUN JOBS ON A SCHEDULE\nMOVE DATA BETWEEN SYSTEMS\n\n185\nworkflow runs · per week · observation\n\npersonal activity · 2025-01-06 to 2025-03-30 · stale\n\nRELATIONSHIP & EVIDENCE\nDETAILS ↶",
+          "back": "n8n\nClose details\nPAUSEDCANONICAL\nI ran my nightly enrichment jobs on it.\n\nSince 2024-01-01\n\nWorkflow automation.\n\n185\nWORKFLOW RUNS · PER WEEK\n\nObserved 2025-03-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2025-01-06 TO 2025-03-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen n8n ↗\nHow evidence works"
+        },
+        {
+          "name": "Clay",
+          "stageHeight": 716.234375,
+          "slideHeight": 547.9375,
+          "leftover": 168,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Stopped using · started 2022\n\nClay\n↗\n\nEnrichment tables, before I wrote code.\n\nI use it to\n\nenrich lead and account lists\nbuild target account lists\n\n15000\nrows enriched\n\nTables\n12\n\npersonal activity · 2023-05-01 to 2023-05-31 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Clay\nClose details\nStopped usingCANONICAL\nI moved this work into my own scripts.\n\nSince 2022-01-01\n\nData enrichment and go-to-market workflows.\n\n15K\nROWS ENRICHED\n12\nTABLES\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2023-05-01 TO 2023-05-31\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Clay ↗\nHow evidence works"
+        }
+      ]
+    },
+    "1440": {
+      "chooserHeight": 78.390625,
+      "rows": [
+        {
+          "name": "GitHub",
+          "stageHeight": 653.40625,
+          "slideHeight": 651.765625,
+          "leftover": 2,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected",
+            "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
+            "GitHub contribution definitions ↗"
+          ],
+          "front": "Daily · since 2019\n\nGitHub\n↗\n\nWhere every project's code lives.\n\nI use it to\n\nhost my code and its history\nreview and merge pull requests\nrun tests and deploys on every push\n\n859\ncontributions\n\nSep\nOct\nNov\nDec\nJan\nFeb\nMar\nApr\nMay\nJun\nJul\nAug\nMon\nWed\nFri\nLess\nMore\n\npersonal activity · 2025-09-01 to 2026-08-31 · stale\n\nOwner-selected go-to\nDetails ↶"
+        },
+        {
+          "name": "Claude Code",
+          "stageHeight": 653.40625,
+          "slideHeight": 597.46875,
+          "leftover": 56,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "DAILY · SINCE 2025\n\nClaude Code\n↗\n\nWrites and fixes my scrapers and scripts.\n\nI use it to\n\nbuild features from a description\nfind and fix bugs\nautomate repetitive engineering work\n\n63\nsessions\n\nPull requests\n18\nLines changed\n4,200\nActive days\n22\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDETAILS ↶"
+        },
+        {
+          "name": "Firecrawl",
+          "stageHeight": 653.40625,
+          "slideHeight": 464.546875,
+          "leftover": 189,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Weekly · since 2025\n\nFirecrawl\n↗\n\nTurns pages into clean Markdown for my agents.\n\nI use it to\n\nturn web pages into Markdown\ncrawl whole sites\n\n1100\npages scraped · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Firecrawl\nClose details\nWeeklyCANONICAL\nI pull docs and product pages through it.\n\nSince 2025-01-01\n\nWeb crawling and data extraction.\n\n1,100\nPAGES SCRAPED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Firecrawl ↗\nHow evidence works"
+        },
+        {
+          "name": "Exa",
+          "stageHeight": 653.40625,
+          "slideHeight": 467.21875,
+          "leftover": 186,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Weekly · since 2025\n\nExa\n↗\n\nSearch my agents can call.\n\nI use it to\n\ngive my agents web search\nfind companies and people that fit a description\n\n277\nsearches run · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Exa\nClose details\nWeeklyCANONICAL\nI use it to find company pages and recent news.\n\nSince 2025-01-01\n\nWeb search and retrieval for AI applications.\n\n277\nSEARCHES RUN · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Exa ↗\nHow evidence works"
+        },
+        {
+          "name": "Cloudflare",
+          "stageHeight": 653.40625,
+          "slideHeight": 510.765625,
+          "leftover": 143,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "DAILY · SINCE 2020\n\nCloudflare\n↗\n\nDNS, Workers and caching for my projects.\n\nI use it to\n\nrun DNS for my domains\nrun code at the edge with Workers\ncache and protect my sites\n\n48360\nrequests served · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nOwner-selected go-to\nDetails ↶",
+          "back": "Cloudflare\nClose details\nDAILYCANONICAL\n\nOwner-selected go-to\n\nEvery domain I own points through it.\n\nSince 2020-01-01\n\nConnectivity, security, and application infrastructure platform.\n\n48.4K\nREQUESTS SERVED · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Cloudflare ↗\nHow evidence works"
+        },
+        {
+          "name": "Porkbun",
+          "stageHeight": 653.40625,
+          "slideHeight": 468.046875,
+          "leftover": 185,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "OCCASIONALLY · SINCE 2021\n\nPorkbun\n↗\n\nWhere every side project's domain starts.\n\nI use it to\n\nregister and renew domains\nmanage DNS records\n\n11\ndomains registered\n\nRenewals\n9\nEmail forwards\n5\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nOwner-selected go-to\nDETAILS ↶"
+        },
+        {
+          "name": "Spider",
+          "stageHeight": 653.40625,
+          "slideHeight": 498.796875,
+          "leftover": 155,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "OCCASIONALLY · SINCE 2026\n\nSpider\n↗\n\nCrawls whole sites for my agents.\n\nI use it to\n\nCRAWL SITES QUICKLY AT VOLUME\nFEED WEB DATA TO MY AGENTS\n\n8120\npages crawled · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRELATIONSHIP & EVIDENCE\nDETAILS ↶"
+        },
+        {
+          "name": "Docker",
+          "stageHeight": 653.40625,
+          "slideHeight": 464.75,
+          "leftover": 189,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Weekly · since 2020\n\nDocker\n↗\n\nPacks scrapers and agents to run anywhere.\n\nI use it to\n\nrun databases and services locally\npackage apps to run anywhere\n\n8\nimages built · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Docker\nClose details\nWeeklyCANONICAL\nEvery long-running job I ship is a container.\n\nSince 2020-01-01\n\nContainers for building and shipping software.\n\n8\nIMAGES BUILT · PER WEEK\n\nObserved 2026-08-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2026-06-08 TO 2026-08-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Docker ↗\nHow evidence works"
+        },
+        {
+          "name": "Open Places",
+          "stageHeight": 653.40625,
+          "slideHeight": 461.84375,
+          "leftover": 192,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Occasionally · since 2026\n\nOpen Places\n↗\n\nLocal business lists by category and city.\n\nI use it to\n\nbuild lists of local businesses\nfind businesses in one area or category\n\n440\nbusinesses exported · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "Grok Bot",
+          "stageHeight": 653.40625,
+          "slideHeight": 471.09375,
+          "leftover": 182,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "GB\n\nTESTING · SINCE 2026\n\nGrok Bot\n↗\n\nAn agent with its own cloud computer.\n\nI use it to\n\nhand off tasks to an agent\nresearch a topic for me\n\n12\ntasks handed off\n\nTasks finished\n9\n\npersonal activity · 2026-08-01 to 2026-08-31 · stale\n\nRelationship & evidence\nDETAILS ↶"
+        },
+        {
+          "name": "Elicit",
+          "stageHeight": 653.40625,
+          "slideHeight": 468.390625,
+          "leftover": 185,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "TESTING · SINCE 2026\n\nElicit\n↗\n\nReading research papers faster.\n\nI use it to\n\nfind papers on a question\npull data out of studies into a table\n\n36\npapers screened · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "Context.dev",
+          "stageHeight": 653.40625,
+          "slideHeight": 466.625,
+          "leftover": 187,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Testing · since 2026\n\nContext.dev\n↗\n\nBrand and company data from a domain.\n\nI use it to\n\npull a company's logo, colors and fonts\nlook up company details by domain\n\n77\ndomains looked up · per week · observation\n\npersonal activity · 2026-06-08 to 2026-08-30 · stale\n\nRelationship & evidence\nDetails ↶"
+        },
+        {
+          "name": "n8n",
+          "stageHeight": 653.40625,
+          "slideHeight": 485.03125,
+          "leftover": 168,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "PAUSED · STARTED 2024\n\nn8n\n↗\n\nScheduled jobs and webhooks.\n\nI use it to\n\nRUN JOBS ON A SCHEDULE\nMOVE DATA BETWEEN SYSTEMS\n\n185\nworkflow runs · per week · observation\n\npersonal activity · 2025-01-06 to 2025-03-30 · stale\n\nRELATIONSHIP & EVIDENCE\nDETAILS ↶",
+          "back": "n8n\nClose details\nPAUSEDCANONICAL\nI ran my nightly enrichment jobs on it.\n\nSince 2024-01-01\n\nWorkflow automation.\n\n185\nWORKFLOW RUNS · PER WEEK\n\nObserved 2025-03-24\n\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2025-01-06 TO 2025-03-30\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen n8n ↗\nHow evidence works"
+        },
+        {
+          "name": "Clay",
+          "stageHeight": 653.40625,
+          "slideHeight": 493.8125,
+          "leftover": 160,
+          "rowGap": 12.8,
+          "largestFrontGap": 12.796875,
+          "above": [
+            "Sample data / No account connected"
+          ],
+          "front": "Stopped using · started 2022\n\nClay\n↗\n\nEnrichment tables, before I wrote code.\n\nI use it to\n\nenrich lead and account lists\nbuild target account lists\n\n15000\nrows enriched\n\nTables\n12\n\npersonal activity · 2023-05-01 to 2023-05-31 · stale\n\nRelationship & evidence\nDetails ↶",
+          "back": "Clay\nClose details\nStopped usingCANONICAL\nI moved this work into my own scripts.\n\nSince 2022-01-01\n\nData enrichment and go-to-market workflows.\n\n15K\nROWS ENRICHED\n12\nTABLES\nILLUSTRATIVE SAMPLE, NOT ACCOUNT DATA\nPERSONAL ACTIVITY\n2023-05-01 TO 2023-05-31\nSTALE\nSNAPSHOT RECORDED 2026-09-01\nOpen Clay ↗\nHow evidence works"
+        }
+      ]
+    }
+  }
+}

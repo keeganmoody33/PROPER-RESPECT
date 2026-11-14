@@ -1,0 +1,12 @@
+{
+  "port": "3311",
+  "pid": "39663",
+  "cwd": "<this worktree>",
+  "command": "next-server (v16.3.8)",
+  "commit": "a24fd1042996e5abccddee6abc1181c8f715e4b6",
+  "build": {
+    "commit": "a24fd1042996e5abccddee6abc1181c8f715e4b6",
+    "uncommittedChanges": "none",
+    "builtAt": "2026-11-14T13:03:19.537Z"
+  }
+}
