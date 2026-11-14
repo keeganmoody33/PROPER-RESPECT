@@ -864,3 +864,11 @@ test("a card reads a measured site file only beside the brand it was measured fo
   expect(style(HOMEPAGE_SITE_TRAITS.docker)).toContain("--brand-card-radius:8px");
   expect(style()).toContain("--brand-card-radius:8px");
 });
+
+test("a measured site's signature colour reaches the card's link glyph", async () => {
+  const { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } = await import("../data/homepage-brands");
+  const spider = { ...baseCard, product: { name: "Spider", slug: "spider", domain: "spider.cloud", description: "Crawler.", brand: HOMEPAGE_BRANDS.spider } };
+  const style = (siteTraits?: typeof HOMEPAGE_SITE_TRAITS[string]) => load(renderToStaticMarkup(createElement(ProductCard, { card: spider, index: 0, siteTraits })))("article").attr("style") ?? "";
+  expect(style(HOMEPAGE_SITE_TRAITS.spider)).toContain("--brand-card-accent:#3bde77");
+  expect(style()).toContain("--brand-card-accent:#24c45c");
+});

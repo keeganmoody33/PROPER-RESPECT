@@ -1,5 +1,5 @@
 import type { BrandSiteTraits, SiteFont } from "./brand-site-traits";
-import { oklchChroma } from "./oklab";
+import { oklabDistance, oklchChroma } from "./oklab";
 import { productBrandFontFamilyKey, type ProductBrandSnapshot } from "./product-brand";
 
 /**
@@ -48,6 +48,8 @@ const SYSTEM_FACES: Readonly<Record<SiteFont["generic"], string>> = {
   "sans-serif": 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif',
 };
 const CSS_CASE = { uppercase: "uppercase", "as typed": "none" } as const;
+/** Two colours within this OKLab distance read as the same colour at a glance: the fidelity check's tolerance. */
+const SAME_COLOUR_DISTANCE = 0.05;
 
 const solid = (value: string | undefined) => (value && SOLID_HEX.test(value) ? value.toLowerCase() : undefined);
 const channels = (hex: string) => CHANNEL_STARTS.map(start => parseInt(hex.slice(start, start + CHANNEL_DIGITS), HEX_RADIX));
@@ -109,6 +111,17 @@ export function brandAccent(snapshot: ProductBrandSnapshot | undefined, surface:
 }
 
 /**
+ * The colour a card's marks are drawn in when it stands `minContrast` off `surface`. The site's signature colour comes
+ * first when it differs from the provider's accent; then the site's own hero colour; then the provider's accent.
+ */
+export function brandMark(snapshot: ProductBrandSnapshot | undefined, surface: string, minContrast: number, site?: BrandSiteTraits): string | undefined {
+  const provider = brandAccent(snapshot, surface)?.hex, signature = site?.traits.signature?.value, hero = site?.traits.hero?.value;
+  const differs = signature && (!provider || oklabDistance(signature, provider) > SAME_COLOUR_DISTANCE);
+  const heroColour = differs && hero?.kind === "colour" && oklchChroma(hero.hex) > NEUTRAL_MAX_CHROMA ? hero.hex : undefined;
+  return [differs ? signature : undefined, heroColour, provider].find((hex): hex is string => hex !== undefined && contrast(hex, surface) >= minContrast);
+}
+
+/**
  * `surface` and `text` are the colours the card is already drawn in. With no usable brand values the
  * result still carries a border that shows, so every card has a defined edge.
  */
@@ -151,7 +164,7 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   if (measuredButton?.case) kit["--brand-card-button-case"] = CSS_CASE[measuredButton.case];
   if (measuredButton?.trackingEm !== undefined) kit["--brand-card-button-tracking"] = `${measuredButton.trackingEm}em`;
 
-  kit["--brand-card-chart"] = accent && contrast(accent, surface) >= MIN_CHART_CONTRAST ? accent : text;
+  kit["--brand-card-chart"] = brandMark(snapshot, surface, MIN_CHART_CONTRAST, site) ?? text;
 
   const quiet = parts?.buttonSecondary, quietFill = solid(quiet?.background);
   if (quietFill && quietFill !== fill && contrast(quietFill, surface) >= MIN_QUIET_FILL_CONTRAST) {

@@ -22,7 +22,7 @@ import { UsageChart, usageChartLog } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
-import { brandAccent, brandCardKit } from "@/src/domain/brand-kit";
+import { brandAccent, brandCardKit, brandMark } from "@/src/domain/brand-kit";
 import type { BrandSiteTraits } from "@/src/domain/brand-site-traits";
 import { ownOriginImageUrl } from "@/src/domain/brand-image-url";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
@@ -37,6 +37,8 @@ import {
 type Card = PublicProfile["cards"][number];
 /** The surface an unbranded card is drawn on (globals.css --ink). */
 const DEFAULT_CARD_SURFACE = "#171713";
+/** The link glyph is text, so its colour needs the 4.5:1 WCAG asks of body text. */
+const MIN_GLYPH_CONTRAST = 4.5;
 
 function luminance(hex: string): number | undefined {
   if (!/^#[0-9a-f]{6}$/i.test(hex)) return undefined;
@@ -65,6 +67,12 @@ function brandAppearance(brand?: ProductBrandSnapshot, site?: BrandSiteTraits) {
     style["--brand-card-text"] = roles.text;
     // The card's edge and buttons follow the brand's own, by the fixed rules in brand-kit.
     Object.assign(style, brandCardKit(brand, roles.background, roles.text, site));
+  }
+  // A measured site's signature colour, where it reads as text on the card, colours the link glyph.
+  if (site && readablePair && roles?.background) {
+    const mark = brandMark(brand, roles.background, MIN_GLYPH_CONTRAST, site);
+    if (mark) style["--brand-card-accent"] = mark;
+    return { style, surface };
   }
   // The same accent the card's chart is drawn in: the site's own, unless it reported a grey.
   const accentHex = brandAccent(brand, readablePair && roles?.background ? roles.background : DEFAULT_CARD_SURFACE)?.hex;

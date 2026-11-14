@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandCardKit } from "./brand-kit";
+import { brandCardKit, brandMark } from "./brand-kit";
 import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "@/src/data/homepage-brands";
 
 /** Each homepage brand's kit with its measured site file, on the card colours the provider gave it. */
@@ -75,5 +75,28 @@ describe("the button", () => {
       elicit: "var(--brand-card-body-font)", exa: "var(--brand-card-body-font)", firecrawl: "var(--brand-card-body-font)", github: "var(--brand-card-body-font)", "open-places": "var(--brand-card-body-font)",
       porkbun: undefined,
     });
+  });
+});
+
+describe("the signature colour", () => {
+  it("draws the chart when it differs from the provider's accent, falling back to the site's hero colour, then the provider's, then the text", () => {
+    expect(kits("--brand-card-chart")).toEqual({
+      // Spider's heading green, Elicit's call-to-action teal and GitHub's sign-up green differ from the provider's accent by more than 0.05.
+      spider: "#3bde77", elicit: "#026370", github: "#08872b",
+      // Clay's lime call-to-action is 1.6:1 on its white card, under the 3:1 bars need, so the bars take its green hero.
+      clay: "#035d44",
+      // Cloudflare's logo orange is the provider's accent within 0.05, so the provider's stays.
+      cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", exa: "#1f40ed", firecrawl: "#ff4c00", "open-places": "#3f5a2c",
+      // n8n's signature is the provider's pink, 1.5:1 on the card: the bars keep the card's text colour, and Porkbun has no site file.
+      n8n: "#161616", porkbun: "#000000",
+    });
+  });
+
+  it("colours the link glyph only where it reads as text, 4.5:1", () => {
+    const glyph = (slug: string) => {
+      const brand = HOMEPAGE_BRANDS[slug];
+      return brandMark(brand, brand.styleguide!.colors.background!, 4.5, HOMEPAGE_SITE_TRAITS[slug]);
+    };
+    expect([glyph("spider"), glyph("elicit"), glyph("github"), glyph("clay"), glyph("n8n"), glyph("firecrawl")]).toEqual(["#3bde77", "#026370", "#08872b", "#035d44", undefined, undefined]);
   });
 });
