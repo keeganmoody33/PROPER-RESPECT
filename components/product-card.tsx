@@ -18,6 +18,7 @@ import { isHttpUrl } from "@/src/domain/http-url";
 import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
 import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relationship-level";
 import { costDetail, costSummary } from "@/src/domain/cost";
+import { tablePreview as parseTablePreview, type TablePreview } from "@/src/domain/table-preview";
 import { formatPeriod, freshnessNote } from "@/src/domain/format-period";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
@@ -255,6 +256,26 @@ function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kin
   );
 }
 
+/** A few rows of a table the product makes, drawn as a real table that scrolls inside its own box when the card is narrow. */
+function TablePreviewBlock({ preview }: { preview: TablePreview }) {
+  const captionId = useId();
+  return (
+    <div className="card-table-preview" role="region" tabIndex={0} aria-labelledby={captionId}>
+      <table>
+        <caption id={captionId}>{preview.caption}</caption>
+        <thead><tr>{preview.columns.map(column => <th key={column} scope="col">{column}</th>)}</tr></thead>
+        <tbody>
+          {preview.rows.map((row, rowIndex) => <tr key={rowIndex}>
+            {row.map((cell, column) => column === 0
+              ? <th key={column} scope="row" data-state={cell.state}>{cell.text}</th>
+              : <td key={column} data-state={cell.state}>{cell.text}</td>)}
+          </tr>)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function ActivityPreview({ activity, unreviewed = false, expanded = false }: { activity: ActivityModule; unreviewed?: boolean; expanded?: boolean }) {
   const metric = activityHighlight(activity);
   const series = activitySeries(activity);
@@ -473,6 +494,7 @@ export function ProductCard({
   deferBrandAssets = false,
   siteTraits,
   backHint,
+  tablePreview,
 }: {
   card: Card;
   index: number;
@@ -491,6 +513,8 @@ export function ProductCard({
   siteTraits?: BrandSiteTraits;
   /** Says what the back holds, in the footer, for a visitor who might never press Details. */
   backHint?: string;
+  /** A few rows of a table the product makes, shown on the front. Presentation only, never part of the card's stored data. */
+  tablePreview?: TablePreview;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -515,6 +539,7 @@ export function ProductCard({
   const footerLabel = ([[brandPreview, "Brand identity"], [!relationshipConfirmed, "Needs your review"], [ownerGoTo, "Owner-selected go-to"]] as const)
     .find(([applies]) => applies)?.[1] ?? backHint ?? "Relationship & evidence";
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
+  const table = brandPreview ? undefined : parseTablePreview(tablePreview);
   const pastUse = noLongerInUse(card);
   // A paused or stopped card's note is why, so its front says it under the headline.
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
@@ -609,6 +634,7 @@ export function ProductCard({
           <ul className="card-uses" aria-label={pastUse ? "What I used it for" : "What I use it for"}>{useLabels.map(label => <li key={label}>{label}</li>)}</ul>
         </div>}
 
+        {table && <TablePreviewBlock preview={table} />}
         {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
         {!brandPreview && card.activity ? (
           <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />

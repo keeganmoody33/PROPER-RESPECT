@@ -1605,6 +1605,27 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .usage-measurement-measurement p, .usage-measurement-public p { margin: .3rem 0; font-size: .78rem; line-height: 1.45; }
 .usage-measurement-capture, .usage-measurement-disclosure { font-size: .75rem; }
 .usage-measurement-public { border-top: 1px solid currentColor; margin: 1rem 0; }
+/* A card's front: the published numbers in one row, each with what it counts and when. */
+.card-front .usage-measurement-public { border-top: 0; margin: 0; }
+.usage-measurement-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.25rem), 1fr)); gap: .6rem .75rem; list-style: none; margin: 0; padding: 0; }
+.usage-measurement-stats li { display: flex; flex-direction: column; min-width: 0; }
+.usage-measurement-stats strong { font-size: clamp(1.05rem, 2.4vw, 1.5rem); font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
+.usage-measurement-stats span { font-size: .8rem; line-height: 1.3; }
+.usage-measurement-stats small { font-size: .7rem; line-height: 1.4; opacity: .75; }
+.usage-measurement-public .usage-measurement-note { font-size: .72rem; margin: .5rem 0 0; opacity: .8; }
+
+/* A few rows of a table the product makes. It scrolls inside its own box on a narrow card, with the first column kept in view. */
+.card-table-preview { border: 1px solid var(--card-line); border-radius: var(--brand-card-button-radius, .45rem); max-width: 100%; min-width: 0; overflow-x: auto; }
+.card-table-preview:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.card-table-preview table { border-collapse: collapse; font-size: .74rem; line-height: 1.35; width: 100%; }
+.card-table-preview caption { caption-side: top; font-size: .7rem; font-weight: 650; padding: .45rem .6rem; text-align: left; }
+.card-table-preview :is(th, td) { border-top: 1px solid var(--card-line); max-width: 13rem; overflow: hidden; padding: .4rem .6rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.card-table-preview thead th { font-size: .68rem; font-weight: 600; opacity: .8; }
+.card-table-preview tbody th { background: var(--brand-card-background, var(--ink)); font-weight: 600; left: 0; position: sticky; }
+.card-table-preview [data-state="filled"] { background: color-mix(in srgb, var(--brand-card-band, currentColor) 9%, var(--brand-card-background, var(--ink))); }
+.card-table-preview td[data-state="filled"]:last-child { color: var(--brand-card-band, inherit); font-weight: 650; }
+.card-table-preview [data-state="pending"] { font-style: italic; opacity: .6; }
+.card-table-preview [data-state="empty"] { opacity: .5; }
 .usage-measurement-panel { padding: 1.25rem 0; min-width: 0; }
 .usage-measurement-sources { display: grid; gap: 1rem; }
 .usage-measurement-source { border: 1px solid var(--border, #999); border-radius: .5rem; padding: 1rem; min-width: 0; }

@@ -158,7 +158,8 @@ const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Cloudflare: ["Owner-selected go-to", "Owner-reported cost: $5.00/month · as of 2026-09-01"],
   Docker: ["Sample Compose apps (awesome-compose) ↗", "Official Postgres image ↗", "Multi-stage build guide ↗"],
   n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
-  Clay: ["Daily · Direct link", "Owner-reported cost: $149.00/month · as of 2026-09-01", "Enriched2,140,000Rows", "Built86Tables", "Used48,500Credits", "See how I use it ↗clay.com"],
+  Clay: ["Daily · Direct link", "Owner-reported cost: $149.00/month · as of 2026-09-01", "Enriched2,140,000Rows", "Built86Tables", "Used48,500Credits", "See how I use it ↗clay.com",
+    "Synthetic sample. Not real account activity.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown."],
 };
 
 const DESKTOP_WIDTH = 1440;
@@ -228,13 +229,19 @@ const NARROWEST_WIDTH = 320;
       await expect(bars.last()).toHaveCSS("background-color", brand.bars.color);
       await expect(card.locator(".card-front .activity-bars")).toHaveAttribute("role", "img");
     } else {
-      // Clay publishes exact numbers instead: the first on the front, the rest behind Details.
-      await expect(card.locator(".card-front .usage-measurement-measurement")).toHaveCount(1);
-      await expect(card.locator(".card-front")).toContainText("2 more reported measurements in Details.");
-      await expect(card.locator(".card-front")).toContainText("Synthetic sample. Not real account activity.");
+      // Clay shows the product: a few rows of a table filling in, then its three published numbers in one row.
+      const table = card.getByRole("table", { name: "Lead list · invented sample rows" });
+      await expect(table).toBeVisible();
+      await expect(table.getByRole("columnheader")).toHaveText(["Company", "Domain", "Work email", "Status"]);
+      await expect(table.getByRole("rowheader")).toHaveText(["Northwind Labs", "Blue Heron Freight", "Quillon Health", "Tessel Robotics", "Marrow & Pine"]);
+      await expect(card.locator(".card-front .usage-measurement-stats li")).toHaveText([
+        "2,140,000rows enrichedMar 2023 – Aug 2026", "86tables builtMar 2023 – Aug 2026", "48,500credits usedSep 2025 – Aug 2026",
+      ]);
+      // The disclosures are above the card and on its back, not on its front.
+      await expect(card.locator(".card-front")).not.toContainText(/Synthetic sample|Owner-supplied evidence|more reported measurements/);
       // Its footer says what is behind Details, and the button carries the same words.
-      await expect(card.locator(".card-footer > span")).toHaveText("Numbers and a work sample inside");
-      await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("Numbers and a work sample inside");
+      await expect(card.locator(".card-footer > span")).toHaveText("Periods, sources and a work sample inside");
+      await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("Periods, sources and a work sample inside");
       continue;
     }
     // Every sample was captured on 2026-09-01: the front says when, in words, not "stale".
@@ -484,4 +491,28 @@ test("an occasional card's empty weeks draw as stubs on the baseline, so a gap r
   const heights = await bars.evaluateAll(spans => spans.map(span => Math.round(span.getBoundingClientRect().height)));
   expect(heights.filter(height => height === 2)).toHaveLength(9);
   expect(Math.max(...heights)).toBeGreaterThan(40);
+});
+
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits its card at ${width}px, or scrolls inside its own box with the company in view`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  const box = card.getByRole("region", { name: "Lead list · invented sample rows" });
+  await expect(box).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const fits = await box.evaluate(element => element.scrollWidth <= element.clientWidth);
+  expect(fits).toBe(width === DESKTOP_WIDTH);
+  if (fits) return;
+  // Scrolled to its end, the company column stays in view beside the status.
+  await box.evaluate(element => { element.scrollLeft = element.scrollWidth; });
+  const inView = await box.evaluate(element => {
+    const bounds = element.getBoundingClientRect();
+    const company = element.querySelector("tbody th")!.getBoundingClientRect();
+    const status = element.querySelector("tbody td:last-child")!.getBoundingClientRect();
+    return { company: company.left >= bounds.left - 1, status: status.right <= bounds.right + 1 };
+  });
+  expect(inView).toEqual({ company: true, status: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

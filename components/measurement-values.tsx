@@ -24,28 +24,58 @@ export function measurementPeriodInWords(period: VisibleMeasurement["period"]) {
   }
 }
 
-/** Compact, on a card's front, keeps what the number means; how it was recorded stays on the back, which shows every row in full. */
-export function MeasurementValue({ measurement, compact = false }: { measurement: VisibleMeasurement; compact?: boolean }) {
+/** One published number with how it was recorded, as the card's back and the review screen show it. */
+export function MeasurementValue({ measurement }: { measurement: VisibleMeasurement }) {
   return <div className="usage-measurement-measurement">
     <span className="usage-measurement-label">{measurementLabel(measurement.metric)}</span>
     <strong className="usage-measurement-value">{measurement.value === null ? "Unknown" : groupedDecimal(measurement.value)}</strong>
     <span className="usage-measurement-unit">{measurementLabel(measurement.unit)}</span>
-    <p>{compact ? measurementPeriodInWords(measurement.period) : measurementPeriod(measurement.period)}</p>
-    {!compact && <p>Scope: {measurement.scope.toLowerCase()} · Coverage: {measurement.coverage.toLowerCase()}</p>}
-    {!compact && <p>{measurement.temporality.toLowerCase()} · {measurement.aggregation === "NON_ADDITIVE" ? "Do not add to other views" : measurement.aggregation.toLowerCase()}</p>}
+    <p>{measurementPeriod(measurement.period)}</p>
+    <p>Scope: {measurement.scope.toLowerCase()} · Coverage: {measurement.coverage.toLowerCase()}</p>
+    <p>{measurement.temporality.toLowerCase()} · {measurement.aggregation === "NON_ADDITIVE" ? "Do not add to other views" : measurement.aggregation.toLowerCase()}</p>
     <p>{measurement.sample === "synthetic" ? "Synthetic sample. Not real account activity." : measurement.sample === "owner-supplied" ? "Owner-supplied sample" : "Sample origin unknown"}</p>
-    {!compact && <p>{measurement.derivation === "CUMULATIVE_DIFFERENCE" ? "Derived difference between cumulative captures" : "Source-reported value"}</p>}
+    <p>{measurement.derivation === "CUMULATIVE_DIFFERENCE" ? "Derived difference between cumulative captures" : "Source-reported value"}</p>
     {measurement.status === "baseline" && <p>Baseline only. This is not new activity in the interval.</p>}
     {measurement.status === "conflict" && <p>Conflicting evidence. Not eligible for sharing.</p>}
-    {!compact && <p className="usage-measurement-capture">Captured <time dateTime={measurement.capturedAt}>{measurement.capturedAt}</time></p>}
+    <p className="usage-measurement-capture">Captured <time dateTime={measurement.capturedAt}>{measurement.capturedAt}</time></p>
   </div>;
+}
+
+/** How many published numbers a card's front shows in its row; the back shows every one. */
+const FRONT_MEASUREMENT_LIMIT = 3;
+
+/** What a number counts, in a few words: "rows enriched" for a metric and its unit, "input tokens" where the metric already names the unit. */
+function countedThing(measurement: PublicMeasurement): string {
+  const [metric, unit] = [measurement.metric, measurement.unit].map(word => word.replaceAll("_", " ").toLowerCase());
+  return metric.includes(unit) ? metric : `${unit} ${metric}`;
+}
+
+/** A card's front: the numbers in one row, then one line saying whose they are; how each was recorded stays on the back. */
+function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] }) {
+  const shown = measurements.slice(0, FRONT_MEASUREMENT_LIMIT);
+  const more = measurements.length - shown.length;
+  const note = [
+    measurements.every(row => row.sample === "synthetic") ? "Sample numbers" : "Owner-reported, not verified",
+    ...(measurements.some(row => row.status === "baseline") ? ["includes a baseline, which is not new activity"] : []),
+    more > 0 ? `${more} more and how each was measured are in Details` : "how each was measured is in Details",
+  ].join(" · ");
+  return <section className="usage-measurement-public" aria-label="Reported usage measurements">
+    <ul className="usage-measurement-stats">
+      {shown.map((row, index) => <li key={index}>
+        <strong>{row.value === null ? "Unknown" : groupedDecimal(row.value)}</strong>
+        <span>{countedThing(row)}</span>
+        <small>{measurementPeriodInWords(row.period)}</small>
+      </li>)}
+    </ul>
+    <p className="usage-measurement-note">{note}</p>
+  </section>;
 }
 
 export function PublicMeasurements({ measurements, compact = false }: { measurements: PublicMeasurement[]; compact?: boolean }) {
   if (!measurements.length) return null;
+  if (compact) return <MeasurementStats measurements={measurements} />;
   return <section className="usage-measurement-public" aria-label="Reported usage measurements">
-    {(compact ? measurements.slice(0, 1) : measurements).map((measurement, index) => <MeasurementValue key={index} measurement={measurement} compact={compact} />)}
-    {compact && measurements.length > 1 && <p>{measurements.length - 1} more reported measurements in Details.</p>}
+    {measurements.map((measurement, index) => <MeasurementValue key={index} measurement={measurement} />)}
     <p className="usage-measurement-disclosure">Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.</p>
   </section>;
 }

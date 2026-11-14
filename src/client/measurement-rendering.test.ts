@@ -45,9 +45,8 @@ describe("exact public measurement rendering", () => {
     // https://regex101.com/?regex=%3C%5B%5E%3E%5D%2B%3E&testString=%3Cp%3E2%2C140%2C000%3C%2Fstrong%3E
     const text = html.replace(/<[^>]+>/g, "|").split("|").filter(Boolean);
     expect(text).toEqual([
-      "Input tokens", "2,140,000", "Tokens", "Sep 2001",
-      "Synthetic sample. Not real account activity.", "Baseline only. This is not new activity in the interval.",
-      "1 more reported measurements in Details.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.",
+      "2,140,000", "input tokens", "Sep 2001", "86", "input tokens", "Sep 2001",
+      "Owner-reported, not verified · includes a baseline, which is not new activity · how each was measured is in Details",
     ]);
   });
 

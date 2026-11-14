@@ -8,6 +8,7 @@ import type { PublicMeasurement } from "@/src/domain/measurements";
 import type { ActivityModule, PublicProfile } from "@/src/domain/public-profile";
 import type { UsageLink } from "@/src/domain/usage-links";
 import { levelStatus, type RelationshipLevel } from "@/src/domain/relationship-level";
+import type { TablePreview } from "@/src/domain/table-preview";
 
 export type HomepageExample = Readonly<{
   id: string;
@@ -22,6 +23,8 @@ export type HomepageExample = Readonly<{
   source?: Readonly<{ href: string; label: string }>;
   /** What the card's back holds, said on its front. */
   backHint?: string;
+  /** A few invented rows of a table the product makes, drawn on the card's front. Presentation only, never part of the card's data. */
+  tablePreview?: TablePreview;
 }>;
 
 const DAYS_PER_WEEK = 7;
@@ -111,6 +114,20 @@ const dockerActivity: ActivityModule = {
 const CLOUDFLARE_MONTHLY_USD = 5;
 const CLAY_MONTHLY_USD = 149;
 
+/** A Clay table as it fills in, with invented companies on reserved .example domains: no real company, person or address. */
+const filled = (text: string) => ({ text, state: "filled" as const });
+const CLAY_TABLE: TablePreview = {
+  caption: "Lead list · invented sample rows",
+  columns: ["Company", "Domain", "Work email", "Status"],
+  rows: [
+    [{ text: "Northwind Labs" }, { text: "northwindlabs.example" }, filled("a.lindqvist@northwindlabs.example"), filled("Enriched")],
+    [{ text: "Blue Heron Freight" }, { text: "blueheron.example" }, filled("m.okafor@blueheron.example"), filled("Enriched")],
+    [{ text: "Quillon Health" }, { text: "quillon.example" }, { text: "Finding…", state: "pending" }, { text: "Running", state: "pending" }],
+    [{ text: "Tessel Robotics" }, { text: "tessel.example" }, filled("r.amari@tessel.example"), filled("Enriched")],
+    [{ text: "Marrow & Pine" }, { text: "marrowpine.example" }, { text: "Not found", state: "empty" }, { text: "No match", state: "empty" }],
+  ],
+};
+
 /** Exact numbers an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. Each metric is a verb, since its unit already names what was counted. */
 const CLAY_MEASURED = {
   capturedAt: SAMPLE.capturedAt, status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
@@ -144,6 +161,7 @@ type ExampleSource = Readonly<{
   caveat?: string;
   source?: HomepageExample["source"];
   backHint?: string;
+  tablePreview?: TablePreview;
 }>;
 
 /**
@@ -157,7 +175,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
     cost: { amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
     usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
-    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Numbers and a work sample inside",
+    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Periods, sources and a work sample inside", tablePreview: CLAY_TABLE,
   },
   {
     slug: "cloudflare", featured: true, capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
@@ -243,6 +261,7 @@ export function homepageExamples(): HomepageExample[] {
       ...(site ? { site } : {}),
       ...(example.caveat ? { caveat: example.caveat } : {}),
       ...(example.backHint ? { backHint: example.backHint } : {}),
+      ...(example.tablePreview ? { tablePreview: example.tablePreview } : {}),
       ...(example.source ? { source: example.source } : {}),
     };
   });

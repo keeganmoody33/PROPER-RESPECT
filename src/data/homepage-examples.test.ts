@@ -5,6 +5,7 @@ import { directoryEntry } from "@/src/domain/product-directory";
 import { listedUses, productUseLabels } from "@/src/domain/product-uses";
 import { activityModuleSchema, publicProfileSchema } from "@/src/domain/public-profile";
 import { usageLinkHost, usageLinkLabelText } from "@/src/domain/usage-links";
+import { tablePreview } from "@/src/domain/table-preview";
 import { homepageExamples } from "./homepage-examples";
 
 const examples = homepageExamples();
@@ -81,7 +82,7 @@ test("five examples are featured, first, in the order the chooser shows them; th
 });
 
 test("Clay's and Exa's cards say what is behind Details: Clay's back holds the most, and Exa's holds the demo its label names", () => {
-  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "Numbers and a work sample inside"], ["exa", "A demo link inside"]]);
+  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "Periods, sources and a work sample inside"], ["exa", "A demo link inside"]]);
 });
 
 test("every headline and note is a short line under the card's limit", () => {
@@ -129,6 +130,17 @@ test("Clay publishes three exact numbers over a stated period, each named once: 
   expect(clay.cost).toEqual({ amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" });
   expect(clay.usageLink).toEqual({ url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" });
   expect(clay.note).toBe("Lists that took a week of spreadsheets take an hour.");
+});
+
+test("only Clay's front shows a table: a few invented rows on reserved .example domains, within the preview's caps", () => {
+  expect(examples.filter(({ tablePreview: table }) => table).map(({ id }) => id)).toEqual(["clay"]);
+  const table = examples.find(({ id }) => id === "clay")!.tablePreview!;
+  expect(tablePreview(table)).toEqual(table);
+  expect([table.columns, table.rows.length, table.rows.map(row => row[3].text)]).toEqual([
+    ["Company", "Domain", "Work email", "Status"], 5, ["Enriched", "Enriched", "Running", "Enriched", "No match"],
+  ]);
+  const addresses = table.rows.flatMap(row => row.map(cell => cell.text)).filter(text => /\.[a-z]+$/.test(text));
+  expect(addresses.filter(text => !text.endsWith(".example"))).toEqual([]);
 });
 
 test("Docker lists three things as links to public pages, and every outbound link on every example is https", () => {

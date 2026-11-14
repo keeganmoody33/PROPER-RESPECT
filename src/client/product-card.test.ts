@@ -749,9 +749,44 @@ test("published numbers say how they were recorded on the back, where every row 
   const recorded = ["Scope: workspace · Coverage: complete", "cumulative · Do not add to other views", "Source-reported value", "Captured 2026-09-01T00:00:00.000Z"];
   expect(recorded.filter(text => $(".card-front").text().includes(text))).toEqual([]);
   expect($(".card-back .usage-measurement-measurement").toArray().map(element => recorded.filter(text => $(element).text().includes(text)).length)).toEqual([recorded.length, recorded.length]);
-  expect($(".card-front .usage-measurement-measurement").text()).toBe("Enriched2,140,000RowsMar 2023 – Aug 2026Synthetic sample. Not real account activity.");
+  // The front is one row of numbers, each named by what it counts; the disclosures and exact periods are on the back.
+  expect($(".card-front .usage-measurement-stats li").map((_, item) => $(item).text()).get()).toEqual([
+    "2,140,000rows enrichedMar 2023 – Aug 2026", "86tables builtMar 2023 – Aug 2026",
+  ]);
+  expect($(".card-front .usage-measurement-public").text()).not.toMatch(/Synthetic sample|Owner-supplied evidence|more reported measurements/);
+  expect($(".card-front .usage-measurement-note").text()).toBe("Sample numbers · how each was measured is in Details");
   expect($(".card-back .usage-measurement-measurement").first().text()).toContain("2023-03-01 to 2026-08-31 · UTC");
+  expect($(".card-back").text()).toContain("Synthetic sample. Not real account activity.");
+  expect($(".card-back").text()).toContain("Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.");
   expect($(".card-back .usage-measurement-value").toArray().map(value => $(value).text())).toEqual(["2,140,000", "86"]);
+});
+
+const leads = {
+  caption: "Lead list, sample rows",
+  columns: ["Company", "Work email", "Status"],
+  rows: [
+    [{ text: "Northwind Labs" }, { text: "a.lindqvist@northwindlabs.example", state: "filled" }, { text: "Enriched", state: "filled" }],
+    [{ text: "Quillon Health" }, { text: "Finding…", state: "pending" }, { text: "Running", state: "pending" }],
+  ],
+} as const;
+
+test("a table preview draws as a real table on the front: a caption, column headers, each row named by its first cell", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: leads })));
+  const box = $(".card-front .card-table-preview");
+  expect([box.attr("role"), box.attr("tabindex"), box.attr("aria-labelledby")]).toEqual(["region", "0", box.find("caption").attr("id")]);
+  expect(box.find("caption").text()).toBe("Lead list, sample rows");
+  expect(box.find("thead th").map((_, cell) => `${$(cell).attr("scope")}:${$(cell).text()}`).get()).toEqual(["col:Company", "col:Work email", "col:Status"]);
+  expect(box.find("tbody tr").map((_, row) => $(row).children().map((_, cell) => `${cell.tagName}/${$(cell).attr("data-state") ?? "-"}/${$(cell).text()}`).get().join(" | ")).get()).toEqual([
+    "th/-/Northwind Labs | td/filled/a.lindqvist@northwindlabs.example | td/filled/Enriched",
+    "th/-/Quillon Health | td/pending/Finding… | td/pending/Running",
+  ]);
+  expect($(".card-back .card-table-preview")).toHaveLength(0);
+});
+
+test("a table preview past its caps, or on a brand preview, is not drawn", () => {
+  const tooWide = { ...leads, columns: ["A", "B", "C", "D", "E"], rows: [["a", "b", "c", "d", "e"].map(text => ({ text }))] };
+  expect(load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: tooWide })))(".card-table-preview")).toHaveLength(0);
+  expect(load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: leads, displayMode: "brand-preview" })))(".card-table-preview")).toHaveLength(0);
 });
 
 test("a hint names what the back holds in the footer, and describes the Details button with it", () => {
