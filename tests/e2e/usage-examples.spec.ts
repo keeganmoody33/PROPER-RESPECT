@@ -20,23 +20,32 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     const scroll = element.querySelector(".contribution-scroll")!;
     const cells = [...element.querySelectorAll("[data-date]")];
     const first = cells[0].getBoundingClientRect();
+    const box = scroll.getBoundingClientRect();
+    const newest = cells.at(-1)!.getBoundingClientRect();
+    const august = [...element.querySelectorAll(".contribution-months span")].at(-1)!.getBoundingClientRect();
     const monday = element.querySelector(".contribution-weekdays span:nth-child(2)")!.getBoundingClientRect();
     const october = element.querySelector('[data-date="2025-10-01"]')!.getBoundingClientRect();
     const octoberLabel = element.querySelector(".contribution-months span:nth-child(2)")!.getBoundingClientRect();
-    return { cellWidth: first.width, cellHeight: first.height, mondayY: monday.y, firstY: first.y, octoberX: october.x, labelX: octoberLabel.x, scrollWidth: scroll.scrollWidth, clientWidth: scroll.clientWidth };
+    return { cellWidth: first.width, cellHeight: first.height, mondayY: monday.y, firstY: first.y, octoberX: october.x, labelX: octoberLabel.x,
+      scrollWidth: scroll.scrollWidth, clientWidth: scroll.clientWidth, newestInView: newest.left >= box.left && newest.right <= box.right,
+      newestMonthInView: august.left >= box.left && august.right <= box.right };
   });
-  expect(geometry.cellWidth).toBe(10);
-  expect(geometry.cellHeight).toBe(10);
+  // Square cells, never smaller than 7px, with the weekday and month labels on their rows and columns.
+  expect(geometry.cellWidth).toBe(geometry.cellHeight);
+  expect(geometry.cellWidth).toBeGreaterThanOrEqual(7);
   expect(Math.abs(geometry.mondayY - geometry.firstY)).toBeLessThan(1);
   expect(Math.abs(geometry.octoberX - geometry.labelX)).toBeLessThan(1);
+  // Wherever it lands, the visitor first sees the newest week and its month.
+  expect([geometry.newestInView, geometry.newestMonthInView]).toEqual([true, true]);
+  if (width === 1440) expect(geometry.scrollWidth).toBe(geometry.clientWidth);
   if (width <= 390) {
     expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
     const scroll = calendar.getByRole("region", { name: "Contribution calendar; scroll horizontally to see the full period" });
     await scroll.focus();
     await expect(scroll).toBeFocused();
     const initialScrollLeft = await scroll.evaluate(element => element.scrollLeft);
-    await page.keyboard.press("ArrowRight");
-    await expect.poll(() => scroll.evaluate(element => element.scrollLeft)).toBeGreaterThan(initialScrollLeft);
+    await page.keyboard.press("ArrowLeft");
+    await expect.poll(() => scroll.evaluate(element => element.scrollLeft)).toBeLessThan(initialScrollLeft);
     expect(await page.evaluate(() => window.scrollX)).toBe(0);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

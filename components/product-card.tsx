@@ -178,7 +178,25 @@ function activitySeries(activity: ActivityModule) {
   return undefined;
 }
 
+/** Scrolls a calendar wider than its card to the newest week, once, the first time it has a width (a back face has none until opened). */
+function useNewestWeekInView() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (!element.clientWidth) return;
+      element.scrollLeft = element.scrollWidth;
+      observer.disconnect();
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  return ref;
+}
+
 function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
+  const scrollRef = useNewestWeekInView();
   const coverage = contributionCalendarCoverage(activity);
   if (!coverage) return <p className="activity-empty">No daily contribution counts supplied</p>;
   const { days, first, last, suppliedRange, gapNote } = coverage;
@@ -192,7 +210,8 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
   const columns = { gridTemplateColumns: `repeat(${weeks}, var(--contribution-cell))` };
   return (
     <div className="contribution-calendar">
-      <div className="contribution-scroll" tabIndex={0} role="region" aria-label="Contribution calendar; scroll horizontally to see the full period">
+      <div ref={scrollRef} className="contribution-scroll" tabIndex={0} role="region" aria-label="Contribution calendar; scroll horizontally to see the full period"
+        style={{ "--contribution-weeks": weeks } as CSSProperties}>
         <div className="contribution-calendar-layout">
           <div className="contribution-months" aria-hidden="true" style={columns}>
             {months.map(month => <span key={month.month} style={{ gridColumn: month.column }}>{month.label}</span>)}

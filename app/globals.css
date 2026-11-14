@@ -1500,7 +1500,14 @@ main {
 .site-skip:focus { transform: translateY(0); outline: 3px solid var(--respect-red); }
 
 /* Contribution calendars retain GitHub's activity palette inside the product card. */
-.contribution-calendar { --contribution-cell: 10px; --contribution-gap: 3px; min-width: 0; }
+/* Cells shrink from GitHub's 10px with 3px gaps to fit every week inside the card, down to 7px with 2px gaps; below that the calendar scrolls, opened at the newest week.
+   46px is the weekday column, its gap and the end padding of .contribution-calendar-layout. */
+.contribution-calendar { container-type: inline-size; min-width: 0; }
+.contribution-scroll {
+  --contribution-pitch: calc((100cqi - 46px) / var(--contribution-weeks, 53));
+  --contribution-cell: clamp(7px, round(down, calc(var(--contribution-pitch) - 2px), 1px), 10px);
+  --contribution-gap: clamp(2px, round(down, calc(var(--contribution-pitch) - var(--contribution-cell)), 1px), 3px);
+}
 .contribution-scroll { max-width: 100%; overflow-x: auto; padding: 0 0 .4rem; scrollbar-width: thin; scrollbar-color: #6e7681 #0d1117; color-scheme: dark; }
 .contribution-scroll:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .contribution-calendar-layout { display: grid; grid-template-columns: 26px max-content; grid-template-rows: 16px auto; gap: 4px 6px; width: max-content; padding-right: 14px; }
