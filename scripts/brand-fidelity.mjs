@@ -3,6 +3,7 @@
 // A dev tool: it opens public sites, so it never runs in CI or npm test.
 //
 //   node scripts/brand-fidelity.mjs reference [--only spider,exa]
+//   node scripts/brand-fidelity.mjs build
 //   node scripts/brand-fidelity.mjs card --base http://127.0.0.1:3100 --label before [--only ...] [--with-unbranded]
 //   node scripts/brand-fidelity.mjs compare --label before
 //   node scripts/brand-fidelity.mjs pairs --label after
@@ -18,6 +19,7 @@ import { captureSite, DESKTOP, PAGE_HELPERS, PHONE } from "./brand-site-measure.
 
 const ROOT = resolve(".artifacts/brand-fidelity");
 const BRANDS_DIR = resolve("src/data/homepage-brands");
+const BUILD_STAMP = resolve(".next/brand-fidelity-build.json");
 const NAMES = {
   github: "GitHub", firecrawl: "Firecrawl", exa: "Exa", cloudflare: "Cloudflare", porkbun: "Porkbun", spider: "Spider",
   docker: "Docker", "open-places": "Open Places", elicit: "Elicit", "context-dev": "Context.dev", n8n: "n8n", clay: "Clay",
@@ -95,7 +97,19 @@ function serverProof(base) {
   const commandLine = execFileSync("ps", ["-p", pid, "-o", "args="], { encoding: "utf8" }).trim();
   if (cwd !== process.cwd()) throw new Error(`Port ${port} is served from ${cwd}, not this checkout (${process.cwd()}).`);
   const dirty = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { encoding: "utf8" }).trim();
-  return { port, pid, cwd, command: commandLine, commit, uncommittedChanges: dirty || "none" };
+  // A production server serves what `build` built; that build must be of this commit, from a clean tree.
+  const built = existsSync(BUILD_STAMP) && commandLine.startsWith("next-server") ? JSON.parse(readFileSync(BUILD_STAMP, "utf8")) : undefined;
+  if (built && (built.commit !== commit || built.uncommittedChanges !== "none")) throw new Error(`The build on port ${port} is of ${built.commit} (${built.uncommittedChanges}), not ${commit}.`);
+  return { port, pid, cwd, command: commandLine, commit, uncommittedChanges: dirty || "none", build: built ?? "not a stamped production build" };
+}
+
+/** Builds the app for capture: the same fixture environment as the e2e server, so no dev-mode overlay is drawn, then stamps the commit built. */
+function build() {
+  const dirty = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { encoding: "utf8" }).trim();
+  if (dirty) throw new Error(`Commit first: a capture build must be of a commit.\n${dirty}`);
+  execFileSync("npx", ["next", "build"], { stdio: "inherit", env: { ...process.env, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "", CLERK_SECRET_KEY: "", NEXT_PUBLIC_CONVEX_URL: "", PUBLIC_SITE_ORIGIN: "https://public.example" } });
+  write(BUILD_STAMP, { commit, uncommittedChanges: "none", builtAt: new Date().toISOString() });
+  console.log(`built ${commit}; serve it with: npx next start -p PORT -H 127.0.0.1 (with the same four variables empty and PUBLIC_SITE_ORIGIN set)`);
 }
 
 async function card() {
@@ -164,7 +178,7 @@ async function pairs() {
   console.log(`pairs written to ${join(ROOT, label, "pairs")}`);
 }
 
-const COMMANDS = { reference, card, compare, pairs };
-if (!COMMANDS[command]) { console.error("Usage: node scripts/brand-fidelity.mjs reference|card|compare|pairs [--base URL] [--label NAME] [--only a,b]"); process.exit(1); }
+const COMMANDS = { reference, build, card, compare, pairs };
+if (!COMMANDS[command]) { console.error("Usage: node scripts/brand-fidelity.mjs reference|build|card|compare|pairs [--base URL] [--label NAME] [--only a,b]"); process.exit(1); }
 mkdirSync(join(ROOT, "reference"), { recursive: true });
 await COMMANDS[command]();
