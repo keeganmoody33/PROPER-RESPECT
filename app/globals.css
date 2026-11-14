@@ -655,10 +655,9 @@ main {
   transform: scaleY(0);
 }
 
-/* A zero is a stub on the baseline, so an empty week reads as zero rather than as a missing one. */
+/* A zero is a stub on the baseline, so an empty week reads as zero rather than as a missing one. Its height marks it; its colour stays opaque to hold the chart's contrast. */
 .usage-chart[data-state="resolved"] .activity-bars > span[data-zero] {
   height: 2px;
-  opacity: 0.45;
 }
 
 .usage-chart-blueprint {

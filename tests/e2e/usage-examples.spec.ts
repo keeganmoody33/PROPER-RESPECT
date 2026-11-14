@@ -509,6 +509,11 @@ test("an occasional card's empty weeks draw as stubs on the baseline, so a gap r
   const heights = await bars.evaluateAll(spans => spans.map(span => Math.round(span.getBoundingClientRect().height)));
   expect(heights.filter(height => height === 2)).toHaveLength(9);
   expect(Math.max(...heights)).toBeGreaterThan(40);
+  // A stub keeps the bars' own opaque colour, so it holds the chart's contrast against the card; its height alone marks it as zero.
+  const paint = await bars.evaluateAll(spans => spans.map(span => ({ zero: span.hasAttribute("data-zero"), opacity: getComputedStyle(span).opacity, colour: getComputedStyle(span).backgroundColor })));
+  const barColour = paint.find(bar => !bar.zero)!.colour;
+  const stubs = paint.filter(bar => bar.zero).map(({ opacity, colour }) => ({ opacity, colour }));
+  expect(stubs).toEqual(stubs.map(() => ({ opacity: "1", colour: barColour })));
 });
 
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits its card at ${width}px, or scrolls inside its own box with the company in view`, async ({ page }) => {
