@@ -855,3 +855,12 @@ test("a logo the brand provider hosts loads from this site, and other logos load
   expect(branded(".product-logo img").attr("src")).toBe("/api/brand-images/f895934e-e887-4c7d-ab99-3f7ae465499f.png");
   expect(renderCard({ product: { ...baseCard.product, brand } })(".product-logo img").attr("src")).toBe("https://example.com/dark.svg");
 });
+
+test("a card reads a measured site file only beside the brand it was measured for", async () => {
+  const { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } = await import("../data/homepage-brands");
+  const spider = { ...baseCard, product: { name: "Spider", slug: "spider", domain: "spider.cloud", description: "Crawler.", brand: HOMEPAGE_BRANDS.spider } };
+  const style = (siteTraits?: typeof HOMEPAGE_SITE_TRAITS[string]) => load(renderToStaticMarkup(createElement(ProductCard, { card: spider, index: 0, siteTraits })))("article").attr("style") ?? "";
+  expect(style(HOMEPAGE_SITE_TRAITS.spider)).toContain("--brand-card-radius:0px");
+  expect(style(HOMEPAGE_SITE_TRAITS.docker)).toContain("--brand-card-radius:8px");
+  expect(style()).toContain("--brand-card-radius:8px");
+});

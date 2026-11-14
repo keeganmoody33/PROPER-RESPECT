@@ -23,6 +23,7 @@ import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usag
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
 import { brandAccent, brandCardKit } from "@/src/domain/brand-kit";
+import type { BrandSiteTraits } from "@/src/domain/brand-site-traits";
 import { ownOriginImageUrl } from "@/src/domain/brand-image-url";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
 import {
@@ -50,7 +51,7 @@ function contrast(first: number, second: number) {
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }
 
-function brandAppearance(brand?: ProductBrandSnapshot) {
+function brandAppearance(brand?: ProductBrandSnapshot, site?: BrandSiteTraits) {
   const roles = brand?.styleguide?.colors;
   const background = roles?.background && luminance(roles.background);
   const text = roles?.text && luminance(roles.text);
@@ -63,7 +64,7 @@ function brandAppearance(brand?: ProductBrandSnapshot) {
     style["--brand-card-background"] = roles.background;
     style["--brand-card-text"] = roles.text;
     // The card's edge and buttons follow the brand's own, by the fixed rules in brand-kit.
-    Object.assign(style, brandCardKit(brand, roles.background, roles.text));
+    Object.assign(style, brandCardKit(brand, roles.background, roles.text, site));
   }
   // The same accent the card's chart is drawn in: the site's own, unless it reported a grey.
   const accentHex = brandAccent(brand, readablePair && roles?.background ? roles.background : DEFAULT_CARD_SURFACE)?.hex;
@@ -421,6 +422,7 @@ export function ProductCard({
   profileHandle,
   onGiveProps,
   deferBrandAssets = false,
+  siteTraits,
 }: {
   card: Card;
   index: number;
@@ -435,6 +437,8 @@ export function ProductCard({
   onGiveProps?: (handle: string, productSlug: string) => Promise<void>;
   /** Lays the card out without fetching its brand fonts or logo, for a card nobody can see yet. */
   deferBrandAssets?: boolean;
+  /** What measuring the product's own site added to its brand. Used only beside that same brand. */
+  siteTraits?: BrandSiteTraits;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -467,7 +471,8 @@ export function ProductCard({
     && card.product.brand.canonicalDomain === card.product.domain
     ? card.product.brand
     : undefined;
-  const appearance = brandAppearance(brand);
+  const site = brand && siteTraits?.productSlug === brand.productSlug && siteTraits.canonicalDomain === brand.canonicalDomain ? siteTraits : undefined;
+  const appearance = brandAppearance(brand, site);
   const verifiedAssets = verifiedProductAssets(card.product);
   const [failedLogoUrls, setFailedLogoUrls] = useState<string[]>([]);
   const chosenLogo = cardLogo({ brand, verifiedAssets, icon: officialProductIcon(card.product), logoUrl: card.product.logoUrl, surface: appearance.surface, failed: failedLogoUrls });

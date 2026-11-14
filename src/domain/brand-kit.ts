@@ -1,9 +1,11 @@
+import type { BrandSiteTraits } from "./brand-site-traits";
 import { oklchChroma } from "./oklab";
 import type { ProductBrandSnapshot } from "./product-brand";
 
 /**
  * The edge and buttons of a product's card, derived from its stored brand by fixed rules.
  * The same snapshot always gives the same card; nothing here is tuned for one brand.
+ * A measured site file, when there is one, wins over the provider's values: the site is what people see.
  */
 export type BrandCardKit = Partial<Record<
   "--brand-card-border" | "--brand-card-radius" | "--brand-card-button-fill" | "--brand-card-button-text" | "--brand-card-button-radius"
@@ -26,6 +28,8 @@ const MIN_LABEL_CONTRAST = 4.5;
 const BORDER_MIXES = [0.22, 0.35, 0.5, 0.75, 1] as const;
 /** A square brand keeps a square card. */
 const RADIUS = { min: 0, max: 24 } as const;
+/** A pill on the site stays a pill on the card's shorter button. */
+const PILL_RADIUS = "999px";
 const WHITE = "#ffffff", BLACK = "#000000";
 /**
  * OKLCH chroma at or under which a colour is a grey for the purpose of a brand's accent. Measured on the homepage brands:
@@ -86,17 +90,19 @@ export function brandAccent(snapshot: ProductBrandSnapshot | undefined, surface:
  * `surface` and `text` are the colours the card is already drawn in. With no usable brand values the
  * result still carries a border that shows, so every card has a defined edge.
  */
-export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surfaceColor: string, textColor: string): BrandCardKit {
+export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surfaceColor: string, textColor: string, site?: BrandSiteTraits): BrandCardKit {
   const cardSurface = solid(surfaceColor), cardText = solid(textColor);
   if (!cardSurface || !cardText) return {};
   const surface = cardSurface, text = cardText;
   const guide = snapshot?.schemaVersion === 2 ? snapshot.styleguide : undefined;
   const parts = guide?.components, accent = brandAccent(snapshot, surface)?.hex;
+  const measured = site?.traits, measuredButton = measured?.primaryButton?.value;
   const kit: BrandCardKit = {};
 
   const border = solid(parts?.card?.border);
   kit["--brand-card-border"] = border && contrast(border, surface) >= MIN_BORDER_CONTRAST ? border : derivedBorder(surface, text);
-  if (parts?.card?.radiusPx !== undefined) kit["--brand-card-radius"] = `${Math.min(RADIUS.max, Math.max(RADIUS.min, parts.card.radiusPx))}px`;
+  const cardRadius = measured?.panelRadiusPx?.value ?? parts?.card?.radiusPx;
+  if (cardRadius !== undefined) kit["--brand-card-radius"] = `${Math.min(RADIUS.max, Math.max(RADIUS.min, cardRadius))}px`;
 
   // The stored "primary" is whichever button came first on the product's site. On a coloured hero that can be
   // a white button, which would vanish on the card, and it can be an outline with no fill (GitHub's). Then the
@@ -114,7 +120,8 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
     kit["--brand-card-button-fill"] = fill;
     kit["--brand-card-button-text"] = readableOn(fill, chosen.label, text);
   }
-  if (primary?.radiusPx !== undefined) kit["--brand-card-button-radius"] = `${primary.radiusPx}px`;
+  if (measuredButton?.radius) kit["--brand-card-button-radius"] = measuredButton.radius.pill ? PILL_RADIUS : `${measuredButton.radius.px}px`;
+  else if (primary?.radiusPx !== undefined) kit["--brand-card-button-radius"] = `${primary.radiusPx}px`;
   if (primary?.weight !== undefined) kit["--brand-card-button-weight"] = String(primary.weight);
 
   kit["--brand-card-chart"] = accent && contrast(accent, surface) >= MIN_CHART_CONTRAST ? accent : text;
