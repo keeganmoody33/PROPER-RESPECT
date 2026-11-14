@@ -10,6 +10,7 @@ import { productBrandFontFamilyKey, type ProductBrandSnapshot } from "./product-
 export type BrandCardKit = Partial<Record<
   "--brand-card-border" | "--brand-card-radius" | "--brand-card-button-fill" | "--brand-card-button-text" | "--brand-card-button-radius"
   | "--brand-card-button-weight" | "--brand-card-button-border" | "--brand-card-button-font" | "--brand-card-button-case" | "--brand-card-button-tracking"
+  | "--brand-card-label-font" | "--brand-card-label-case" | "--brand-card-label-tracking"
   | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
@@ -163,6 +164,10 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   if (measuredButton?.font) kit["--brand-card-button-font"] = measuredFace(measuredButton.font, guide);
   if (measuredButton?.case) kit["--brand-card-button-case"] = CSS_CASE[measuredButton.case];
   if (measuredButton?.trackingEm !== undefined) kit["--brand-card-button-tracking"] = `${measuredButton.trackingEm}em`;
+
+  if (measured?.labelFont) kit["--brand-card-label-font"] = measuredFace(measured.labelFont.value, guide);
+  if (measured?.labelCase) kit["--brand-card-label-case"] = CSS_CASE[measured.labelCase.value];
+  if (measured?.labelTrackingEm) kit["--brand-card-label-tracking"] = `${measured.labelTrackingEm.value}em`;
 
   kit["--brand-card-chart"] = brandMark(snapshot, surface, MIN_CHART_CONTRAST, site) ?? text;
 

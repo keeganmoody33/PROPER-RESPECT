@@ -100,3 +100,24 @@ describe("the signature colour", () => {
     expect([glyph("spider"), glyph("elicit"), glyph("github"), glyph("clay"), glyph("n8n"), glyph("firecrawl")]).toEqual(["#3bde77", "#026370", "#08872b", "#035d44", undefined, undefined]);
   });
 });
+
+describe("the small labels", () => {
+  it("take the site's small-label type, case and letter-spacing", () => {
+    const mono = 'ui-monospace, "SF Mono", Menlo, monospace', body = "var(--brand-card-body-font)";
+    expect(kits("--brand-card-label-font")).toEqual({
+      spider: mono, n8n: mono,
+      clay: body, "context-dev": body, docker: body, exa: body, firecrawl: body, github: body, "open-places": body,
+      // No small labels were measured on Cloudflare's or Elicit's first screen.
+      cloudflare: undefined, elicit: undefined, porkbun: undefined,
+    });
+    expect(kits("--brand-card-label-case")).toEqual({
+      spider: "uppercase", n8n: "uppercase",
+      clay: "none", "context-dev": "none", docker: "none", exa: "none", firecrawl: "none", github: "none", "open-places": "none",
+      cloudflare: undefined, elicit: undefined, porkbun: undefined,
+    });
+    expect(kits("--brand-card-label-tracking")).toEqual({
+      spider: "0.14em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "-0.011em", exa: "-0.02em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
+      cloudflare: undefined, elicit: undefined, porkbun: undefined,
+    });
+  });
+});

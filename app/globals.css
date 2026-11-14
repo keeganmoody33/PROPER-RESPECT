@@ -183,6 +183,17 @@ main {
   letter-spacing: var(--brand-card-body-tracking, normal);
 }
 
+/* A measured site's small-label type. An unset variable with no fallback makes these inherited properties inherit, as before. */
+.product-card :is(.eyebrow, .status-row) {
+  font-family: var(--brand-card-label-font);
+  letter-spacing: var(--brand-card-label-tracking, var(--brand-card-body-tracking, normal));
+}
+
+.product-card :is(.card-footer > span, .card-uses li) {
+  font-family: var(--brand-card-label-font);
+  letter-spacing: var(--brand-card-label-tracking);
+}
+
 .product-card:nth-child(4n + 2),
 .product-card:nth-child(4n + 3) {
   background: var(--brand-card-background, #25251f);
