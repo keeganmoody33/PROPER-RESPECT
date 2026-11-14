@@ -1,4 +1,5 @@
 import type { Measurement, PublicMeasurement } from "@/src/domain/measurements";
+import { groupedDecimal } from "@/src/domain/format-activity-number";
 
 type VisibleMeasurement = Pick<Measurement, "metric" | "value" | "unit" | "period" | "scope" | "coverage" | "temporality" | "aggregation" | "capturedAt" | "status" | "sample" | "derivation">;
 export const measurementLabel = (metric: string) => metric.replaceAll("_", " ").replace(/^./, first => first.toUpperCase());
@@ -14,7 +15,7 @@ export function measurementPeriod(period: VisibleMeasurement["period"]) {
 export function MeasurementValue({ measurement, compact = false }: { measurement: VisibleMeasurement; compact?: boolean }) {
   return <div className="usage-measurement-measurement">
     <span className="usage-measurement-label">{measurementLabel(measurement.metric)}</span>
-    <strong className="usage-measurement-value">{measurement.value === null ? "Unknown" : measurement.value}</strong>
+    <strong className="usage-measurement-value">{measurement.value === null ? "Unknown" : groupedDecimal(measurement.value)}</strong>
     <span className="usage-measurement-unit">{measurementLabel(measurement.unit)}</span>
     <p>{measurementPeriod(measurement.period)}</p>
     {!compact && <p>Scope: {measurement.scope.toLowerCase()} · Coverage: {measurement.coverage.toLowerCase()}</p>}

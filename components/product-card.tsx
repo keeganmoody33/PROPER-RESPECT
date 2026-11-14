@@ -12,7 +12,7 @@ import type {
   PublicProfile,
 } from "@/src/domain/public-profile";
 import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
-import { compactNumber } from "@/src/domain/format-activity-number";
+import { compactNumber, fullNumber } from "@/src/domain/format-activity-number";
 import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
 import { isHttpUrl } from "@/src/domain/http-url";
 import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
@@ -224,7 +224,7 @@ function ActivityPreview({ activity, unreviewed = false, expanded = false }: { a
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
       <p>
         {metric.value === undefined ? "No observations supplied" : <>
-          <strong>{expanded ? String(metric.value) : compactNumber(metric.value)}</strong>{" "}
+          <strong>{expanded ? fullNumber(metric.value) : compactNumber(metric.value)}</strong>{" "}
           {metric.label}{metric.unit ? ` · ${metric.unit}` : ""}
           {activity.kind === "timeSeries" ? " · observation" : ""}
         </>}

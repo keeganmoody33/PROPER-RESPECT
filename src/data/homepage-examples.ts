@@ -95,16 +95,16 @@ const dockerActivity: ActivityModule = {
 const CLOUDFLARE_MONTHLY_USD = 5;
 const CLAY_MONTHLY_USD = 149;
 
-/** Exact numbers an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. */
+/** Exact numbers an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. Each metric is a verb, since its unit already names what was counted. */
 const CLAY_MEASURED = {
   capturedAt: SAMPLE.capturedAt, status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
   scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE",
 } as const;
 const SINCE_2023 = { kind: "date", start: "2023-03-01", end: "2026-08-31", timezone: "UTC" } as const;
 const clayMeasurements: PublicMeasurement[] = [
-  { ...CLAY_MEASURED, metric: "rows_enriched", value: "2140000", unit: "rows", period: SINCE_2023 },
-  { ...CLAY_MEASURED, metric: "tables_built", value: "86", unit: "tables", period: SINCE_2023 },
-  { ...CLAY_MEASURED, metric: "credits_used", value: "48500", unit: "credits", period: { kind: "date", start: "2025-09-01", end: "2026-08-31", timezone: "UTC" } },
+  { ...CLAY_MEASURED, metric: "enriched", value: "2140000", unit: "rows", period: SINCE_2023 },
+  { ...CLAY_MEASURED, metric: "built", value: "86", unit: "tables", period: SINCE_2023 },
+  { ...CLAY_MEASURED, metric: "used", value: "48500", unit: "credits", period: { kind: "date", start: "2025-09-01", end: "2026-08-31", timezone: "UTC" } },
 ];
 
 type ExampleSource = Readonly<{

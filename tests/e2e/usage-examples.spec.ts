@@ -116,7 +116,7 @@ const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Cloudflare: ["Owner-selected go-to", "Owner-reported cost: $5.00/month · as of 2026-09-01"],
   Docker: ["Sample Compose apps (awesome-compose) ↗", "Official Postgres image ↗", "Multi-stage build guide ↗"],
   n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
-  Clay: ["Daily · Direct link", "Owner-reported cost: $149.00/month · as of 2026-09-01", "Rows enriched2140000", "Tables built86", "Credits used48500", "See how I use it ↗clay.com"],
+  Clay: ["Daily · Direct link", "Owner-reported cost: $149.00/month · as of 2026-09-01", "Enriched2,140,000Rows", "Built86Tables", "Used48,500Credits", "See how I use it ↗clay.com"],
 };
 
 const DESKTOP_WIDTH = 1440;

@@ -50,6 +50,8 @@ for (const width of [1280, 390]) for (const mode of ["signin", "signup"]) test(`
 });
 
 const exact = "9007199254740993123456789";
+/** The same value as a person reads it: every digit, grouped in thousands. */
+const shownExact = "9,007,199,254,740,993,123,456,789";
 const packet = JSON.stringify({
   format: "proper-measurements-v1", captureId: "fixture-first-result", capturedAt: "2026-10-06T10:00:00.000Z",
   source: { namespace: "fixture-tool", identityBasis: "OWNER_SUPPLIED", sourceAlias: "private-source-alias", ownerAlias: "private-owner-alias", accountAlias: "private-account-alias", workspaceAlias: null, deviceAlias: "private-device-alias" },
@@ -84,7 +86,7 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   await first.getByRole("button", { name: "Import privately", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/collection#relationship=measurement-fixture-tool$/);
   const result = page.getByRole("region", { name: "Your private usage result", exact: true });
-  await expect(result.getByText(exact, { exact: true })).toBeVisible();
+  await expect(result.getByText(shownExact, { exact: true })).toBeVisible();
   await expect(result.getByText("0", { exact: true })).toBeVisible();
   await expect(result.getByText("Unknown", { exact: true })).toBeVisible();
   await expect(result).toContainText("Scope: device · Coverage: partial");
@@ -93,7 +95,7 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
   await result.screenshot({ path: testInfo.outputPath(`first-result-exact-${width}.png`) });
   await page.reload();
-  await expect(result.getByText(exact, { exact: true })).toBeVisible();
+  await expect(result.getByText(shownExact, { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Another tool", exact: true }).click();
   await expect(first.getByRole("heading", { name: "Import another product’s measurements", exact: true })).toBeFocused();
   await first.getByLabel("Product name", { exact: true }).fill("Fixture Tool");
@@ -121,7 +123,7 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   await review.getByRole("checkbox", { name: /Include 3 reviewed measurements from 2026-10-06/ }).check();
   await page.getByRole("button", { name: "Preview sharing", exact: true }).click();
   const preview = page.getByRole("region", { name: "Your visitor’s view", exact: true });
-  await expect(preview.getByText(exact, { exact: true }).first()).toBeVisible();
+  await expect(preview.getByText(shownExact, { exact: true }).first()).toBeVisible();
   await preview.getByRole("button", { name: "Details", exact: true }).click();
   await expect(preview.getByText("Unknown", { exact: true })).toBeVisible();
   await expect(preview.getByText("0", { exact: true })).toBeVisible();
@@ -148,7 +150,7 @@ for (const source of ["claude-code", "codex"] as const) test(`native ${source} i
   const result = page.getByRole("region", { name: "Your private usage result", exact: true });
   await expect(result).toBeVisible();
   if (source === "claude-code") {
-    await expect(result.getByText(exact, { exact: true })).toBeVisible();
+    await expect(result.getByText(shownExact, { exact: true })).toBeVisible();
     await expect(result).toContainText("Synthetic sample. Not real account activity.");
     await expect(result).toContainText("Baseline only");
   } else {
@@ -171,7 +173,7 @@ test("GitHub response opens the returned relationship and its exact private coun
   await page.getByRole("region", { name: "Connect GitHub activity", exact: true }).getByRole("button", { name: "Connect GitHub", exact: true }).click();
   await expect(page).toHaveURL(/#relationship=github-result$/);
   const result = page.getByRole("region", { name: "GitHub", exact: true });
-  await expect(result.getByText("12345", { exact: true })).toBeVisible();
+  await expect(result.getByText("12,345", { exact: true })).toBeVisible();
   await expect(result).toContainText("2026-01-01 to 2026-10-06");
   await expect(result.getByRole("button", { name: "Confirm and save privately", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
@@ -197,7 +199,7 @@ for (const width of [1280, 390]) test(`GitHub reconnect opens the same returned 
   await page.goto("http://127.0.0.1:8883/app/collection?source=github");
   await page.getByRole("region", { name: "Connect GitHub activity", exact: true }).getByRole("button", { name: "Connect GitHub", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/collection#relationship=github-result$/);
-  await expect(page.getByRole("region", { name: "GitHub", exact: true }).getByText("12345", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "GitHub", exact: true }).getByText("12,345", { exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "Connect GitHub activity", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem("proper-respect-fresh-user-fixture"))).toEqual(before);
   expect(connections).toBe(2);

@@ -14,10 +14,10 @@ function projected(value: string | null) {
 }
 
 describe("exact public measurement rendering", () => {
-  it("renders exact decimals and nanoseconds without numeric conversion", () => {
-    for (const value of ["9007199254740993123456789", "0.0000000000000000000000000000000000000000001"]) {
+  it("renders exact decimals, grouped in thousands, and nanoseconds without numeric conversion", () => {
+    for (const [value, shown] of [["9007199254740993123456789", "9,007,199,254,740,993,123,456,789"], ["0.0000000000000000000000000000000000000000001", "0.0000000000000000000000000000000000000000001"]]) {
       const html = renderToStaticMarkup(createElement(PublicMeasurements, { measurements: [projected(value)] }));
-      expect(html).toContain(value);
+      expect(html).toContain(`>${shown}</strong>`);
       expect(html).toContain("1000000000000000001 to 1000000000000000002 ns since Unix epoch");
       expect(html).toContain("Scope: workspace · Coverage: partial");
       expect(html).toContain("Do not add to other views");
@@ -41,11 +41,11 @@ describe("exact public measurement rendering", () => {
   it("on a card's front, keeps what the first number means and leaves how it was recorded to the back", () => {
     const first = { ...projected("2140000"), sample: "synthetic" as const, status: "baseline" as const };
     const html = renderToStaticMarkup(createElement(PublicMeasurements, { measurements: [first, projected("86")], compact: true }));
-    // Any one HTML tag, so only the visible text is left: matches "<p>" and "</strong>", leaves "2140000" alone.
-    // https://regex101.com/?regex=%3C%5B%5E%3E%5D%2B%3E&testString=%3Cp%3E2140000%3C%2Fstrong%3E
+    // Any one HTML tag, so only the visible text is left: matches "<p>" and "</strong>", leaves "2,140,000" alone.
+    // https://regex101.com/?regex=%3C%5B%5E%3E%5D%2B%3E&testString=%3Cp%3E2%2C140%2C000%3C%2Fstrong%3E
     const text = html.replace(/<[^>]+>/g, "|").split("|").filter(Boolean);
     expect(text).toEqual([
-      "Input tokens", "2140000", "Tokens", "1000000000000000001 to 1000000000000000002 ns since Unix epoch",
+      "Input tokens", "2,140,000", "Tokens", "1000000000000000001 to 1000000000000000002 ns since Unix epoch",
       "Synthetic sample. Not real account activity.", "Baseline only. This is not new activity in the interval.",
       "1 more reported measurements in Details.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.",
     ]);

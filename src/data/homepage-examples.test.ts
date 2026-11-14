@@ -115,13 +115,13 @@ test("every sample is labelled illustrative, never account data: activity as a s
   expect(new Set(examples.flatMap(({ card }) => card.measurements ?? []).map(row => row.sample))).toEqual(new Set(["synthetic"]));
 });
 
-test("Clay publishes three exact numbers over a stated period, in the spirit of rows enriched since 2023", () => {
+test("Clay publishes three exact numbers over a stated period, each named once: rows enriched since 2023, not rows enriched in rows", () => {
   const clay = examples.find(({ id }) => id === "clay")!.card;
   expect(clay.measurements?.map(row => [row.metric, row.value, row.unit, row.period.kind === "date" ? `${row.period.start} to ${row.period.end}` : row.period.kind]))
     .toEqual([
-      ["rows_enriched", "2140000", "rows", "2023-03-01 to 2026-08-31"],
-      ["tables_built", "86", "tables", "2023-03-01 to 2026-08-31"],
-      ["credits_used", "48500", "credits", "2025-09-01 to 2026-08-31"],
+      ["enriched", "2140000", "rows", "2023-03-01 to 2026-08-31"],
+      ["built", "86", "tables", "2023-03-01 to 2026-08-31"],
+      ["used", "48500", "credits", "2025-09-01 to 2026-08-31"],
     ]);
   expect(clay.cost).toEqual({ amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" });
   expect(clay.usageLink).toEqual({ url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" });

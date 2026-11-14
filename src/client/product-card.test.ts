@@ -735,15 +735,16 @@ test.each([["CANONICAL", "Direct link"], ["AFFILIATE", "Affiliate link"], ["REFE
 
 test("published numbers say how they were recorded on the back, where every row is shown in full", () => {
   const row = {
-    metric: "rows_enriched", value: "2140000", unit: "rows", period: { kind: "date", start: "2023-03-01", end: "2026-08-31", timezone: "UTC" },
+    metric: "enriched", value: "2140000", unit: "rows", period: { kind: "date", start: "2023-03-01", end: "2026-08-31", timezone: "UTC" },
     scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE", capturedAt: "2026-09-01T00:00:00.000Z",
     status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
   } as const;
-  const $ = renderCard({ measurements: [row, { ...row, metric: "tables_built", value: "86", unit: "tables" }] });
+  const $ = renderCard({ measurements: [row, { ...row, metric: "built", value: "86", unit: "tables" }] });
   const recorded = ["Scope: workspace · Coverage: complete", "cumulative · Do not add to other views", "Source-reported value", "Captured 2026-09-01T00:00:00.000Z"];
   expect(recorded.filter(text => $(".card-front").text().includes(text))).toEqual([]);
   expect($(".card-back .usage-measurement-measurement").toArray().map(element => recorded.filter(text => $(element).text().includes(text)).length)).toEqual([recorded.length, recorded.length]);
-  expect($(".card-front .usage-measurement-measurement").text()).toBe("Rows enriched2140000Rows2023-03-01 to 2026-08-31 · UTCSynthetic sample. Not real account activity.");
+  expect($(".card-front .usage-measurement-measurement").text()).toBe("Enriched2,140,000Rows2023-03-01 to 2026-08-31 · UTCSynthetic sample. Not real account activity.");
+  expect($(".card-back .usage-measurement-value").toArray().map(value => $(value).text())).toEqual(["2,140,000", "86"]);
 });
 
 test("a hint names what the back holds in the footer, and describes the Details button with it", () => {
@@ -911,4 +912,12 @@ test("a card whose site's heading sits on a full-bleed colour marks itself for t
   })))("article");
   expect([render("clay", "clay.com").attr("data-band"), render("docker", "docker.com").attr("data-band"), render("clay", "clay.com", false).attr("data-band")]).toEqual(["", undefined, undefined]);
   expect(render("clay", "clay.com").attr("style")).toContain("--brand-card-band:#035d44;--brand-card-band-text:#ffffff");
+});
+
+const CLOUDFLARE_LAST_WEEK = 48_360;
+
+test("a card shown in full reads its activity number with thousands separators, never as raw digits", () => {
+  const card = { ...baseCard, activity: { ...activityEvidence, kind: "timeSeries" as const, label: "requests served", unit: "per week", points: [{ date: "2026-08-24", value: CLOUDFLARE_LAST_WEEK }] } };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, expandedActivity: true })));
+  expect($(".card-front .card-activity-preview > p strong").text()).toBe("48,360");
 });
