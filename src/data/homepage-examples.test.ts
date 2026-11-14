@@ -1,6 +1,9 @@
 import { expect, test } from "vitest";
 import { isHttpUrl } from "@/src/domain/http-url";
+import { productBrandSnapshotSchema } from "@/src/domain/product-brand";
 import { directoryEntry } from "@/src/domain/product-directory";
+import { listedUses, productUseLabels } from "@/src/domain/product-uses";
+import { activityModuleSchema } from "@/src/domain/public-profile";
 import { homepageExamples } from "./homepage-examples";
 
 const examples = homepageExamples();
@@ -31,8 +34,8 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
     const entry = directoryEntry(id)!;
     return { product: { name: entry.name, slug: entry.slug, domain: entry.domain, description: entry.description }, link: { type: "CANONICAL", url: entry.website, label: `Open ${entry.name}` }, category: entry.category };
   });
-  expect(examples.map(({ card }) => ({ product: { ...card.product, logoUrl: undefined }, link: card.primaryLink })))
-    .toEqual(fromDirectory.map(({ product, link }) => ({ product: { ...product, logoUrl: undefined }, link })));
+  expect(examples.map(({ card }) => ({ product: { ...card.product, brand: undefined }, link: card.primaryLink })))
+    .toEqual(fromDirectory.map(({ product, link }) => ({ product: { ...product, brand: undefined }, link })));
   expect(examples.every(({ card }) => isHttpUrl(card.primaryLink!.url))).toBe(true);
   expect(fromDirectory.filter(({ category }) => category === "CONSUMER")).toEqual([]);
   expect(examples.map(example => example.id)).not.toEqual(expect.arrayContaining(["notebooklm"]));
@@ -45,8 +48,59 @@ test("every headline and note is a short line under the card's limit", () => {
   expect(tooLong).toEqual([]);
 });
 
-test("only GitHub carries sample usage: its contribution calendar covers one year", () => {
-  expect(examples.filter(example => example.card.activity).map(example => example.id)).toEqual(["github"]);
+test("every example carries a sample chart labelled as illustrative, never as account data", () => {
+  expect(examples.map(({ id, card }) => [id, card.activity?.kind])).toEqual([
+    ["github", "contributionCalendar"],
+    ["claude-code", "codingActivity"],
+    ["firecrawl", "headlineMetrics"],
+    ["exa", "headlineMetrics"],
+    ["cloudflare", "headlineMetrics"],
+    ["porkbun", "headlineMetrics"],
+    ["spider", "headlineMetrics"],
+    ["docker", "headlineMetrics"],
+    ["open-places", "headlineMetrics"],
+    ["grok-bot", "headlineMetrics"],
+    ["elicit", "headlineMetrics"],
+    ["context-dev", "headlineMetrics"],
+    ["n8n", "headlineMetrics"],
+    ["clay", "headlineMetrics"],
+  ]);
+  const labels = new Set(examples.map(({ card }) => `${card.activity?.provenanceLabel} / ${card.activity?.freshness}`));
+  expect(labels).toEqual(new Set(["Illustrative sample, not account data / STALE"]));
+  expect(examples.filter(({ card }) => !activityModuleSchema.safeParse(card.activity).success).map(({ id }) => id)).toEqual([]);
+});
+
+test("every example says what it is used for, in two or three of its product's own listed uses", () => {
+  expect(examples.map(({ id, card }) => [id, productUseLabels(id, card.uses)])).toEqual([
+    ["github", ["host my code and its history", "review and merge pull requests", "run tests and deploys on every push"]],
+    ["claude-code", ["build features from a description", "find and fix bugs", "automate repetitive engineering work"]],
+    ["firecrawl", ["turn web pages into Markdown", "crawl whole sites"]],
+    ["exa", ["give my agents web search", "find companies and people that fit a description"]],
+    ["cloudflare", ["run DNS for my domains", "run code at the edge with Workers", "cache and protect my sites"]],
+    ["porkbun", ["register and renew domains", "manage DNS records"]],
+    ["spider", ["crawl sites quickly at volume", "feed web data to my agents"]],
+    ["docker", ["run databases and services locally", "package apps to run anywhere"]],
+    ["open-places", ["build lists of local businesses", "find businesses in one area or category"]],
+    ["grok-bot", ["hand off tasks to an agent", "research a topic for me"]],
+    ["elicit", ["find papers on a question", "pull data out of studies into a table"]],
+    ["context-dev", ["pull a company's logo, colors and fonts", "look up company details by domain"]],
+    ["n8n", ["run jobs on a schedule", "move data between systems"]],
+    ["clay", ["enrich lead and account lists", "build target account lists"]],
+  ]);
+  expect(examples.filter(({ id, card }) => listedUses(id, card.uses)?.picks.length !== card.uses?.picks.length).map(({ id }) => id)).toEqual([]);
+});
+
+test("every example with a committed brand carries it, matched to its own product", () => {
+  expect(examples.filter(({ card }) => card.product.brand).map(({ id }) => id)).toEqual([
+    "github", "firecrawl", "exa", "cloudflare", "porkbun", "spider", "docker", "open-places", "elicit", "context-dev", "n8n", "clay",
+  ]);
+  const mismatched = examples.filter(({ card }) => card.product.brand && (card.product.brand.productSlug !== card.product.slug
+    || card.product.brand.canonicalDomain !== card.product.domain || !productBrandSnapshotSchema.safeParse(card.product.brand).success));
+  expect(mismatched.map(({ id }) => id)).toEqual([]);
+  expect(examples.filter(({ card }) => card.product.logoUrl).map(({ id }) => id)).toEqual([]);
+});
+
+test("GitHub's sample contribution calendar covers one year", () => {
   const activity = examples[0].card.activity;
   if (activity?.kind !== "contributionCalendar") throw new Error("GitHub sample calendar missing");
   expect(activity.days).toHaveLength(DAYS_IN_YEAR);

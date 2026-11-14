@@ -1,4 +1,7 @@
+import { HOMEPAGE_BRANDS } from "@/src/data/homepage-brands";
+import sampleUsage from "@/src/data/homepage-sample-usage.json";
 import { directoryEntry } from "@/src/domain/product-directory";
+import type { ProductUses } from "@/src/domain/product-uses";
 import type { ActivityModule, PublicProfile } from "@/src/domain/public-profile";
 import { levelStatus, type RelationshipLevel } from "@/src/domain/relationship-level";
 
@@ -15,16 +18,33 @@ const DAYS_PER_WEEK = 7;
 const DAYS_IN_PERIOD = 365;
 const DAY_MS = 86_400_000;
 const MAX_LEVEL = 4;
+const SAMPLE = { capturedAt: "2026-09-01T00:00:00.000Z", freshness: "STALE", provenanceLabel: "Illustrative sample, not account data", attributionScope: "PERSONAL" } as const;
 const githubPeriod = { start: "2025-09-01", end: "2026-08-31" };
 const githubDays = Array.from({ length: DAYS_IN_PERIOD }, (_, index) => {
   const count = Number(COUNT_PATTERN[(index * PATTERN_STRIDE + Math.floor(index / DAYS_PER_WEEK)) % COUNT_PATTERN.length]);
   return { date: new Date(Date.parse(githubPeriod.start) + index * DAY_MS).toISOString().split("T")[0], count, level: Math.min(count, MAX_LEVEL) };
 });
 const githubActivity: ActivityModule = {
-  capturedAt: "2026-09-01T00:00:00.000Z", freshness: "STALE", provenanceLabel: "Illustrative sample, not account data",
-  period: githubPeriod, kind: "contributionCalendar", attributionScope: "PERSONAL",
+  ...SAMPLE, period: githubPeriod, kind: "contributionCalendar",
   total: githubDays.reduce((sum, day) => sum + day.count, 0), days: githubDays,
 };
+
+/** A paused or stopped product's sample sits in the months it was used; the rest cover August 2026. */
+const AUGUST_2026 = { start: "2026-08-01", end: "2026-08-31" };
+const CODING_DAYS = 31;
+const codingDays = githubDays.slice(-CODING_DAYS).map((day, index) => ({
+  ...day, date: new Date(Date.parse(AUGUST_2026.start) + index * DAY_MS).toISOString().split("T")[0],
+}));
+type Metric = Readonly<{ label: string; value: number }>;
+type SampleUsage = Readonly<{ primary: Metric; supporting: readonly Metric[]; period?: Readonly<{ start: string; end: string }> }>;
+const SAMPLE_USAGE: Readonly<Record<string, SampleUsage>> = sampleUsage;
+
+/** Coding tools count sessions; everything else shows totals for the month. */
+function sampleActivity(slug: string): ActivityModule {
+  const { primary, supporting, period = AUGUST_2026 } = SAMPLE_USAGE[slug];
+  const metrics = { ...SAMPLE, period, primary, supporting: [...supporting] };
+  return slug === "claude-code" ? { ...metrics, kind: "codingActivity", days: codingDays } : { ...metrics, kind: "headlineMetrics" };
+}
 
 type ExampleSource = Readonly<{
   slug: string;
@@ -33,7 +53,8 @@ type ExampleSource = Readonly<{
   since: string;
   headline: string;
   note: string;
-  logoUrl?: string;
+  uses: readonly string[];
+  /** GitHub keeps its contribution calendar; every other example reads homepage-sample-usage.json. */
   activity?: ActivityModule;
   caveat?: string;
   source?: HomepageExample["source"];
@@ -41,42 +62,82 @@ type ExampleSource = Readonly<{
 
 /**
  * A go-to-market engineer's stack as it changes. Only what a card owner would add lives here;
- * every name, domain and link comes from the directory. No usage numbers except GitHub's
- * sample calendar.
+ * every name, domain and link comes from the directory, and every brand from HOMEPAGE_BRANDS.
+ * Every number is an illustrative sample, labelled so on the card.
  */
 const EXAMPLES: readonly ExampleSource[] = [
   {
-    slug: "github", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.", logoUrl: "/brand/github/2026-09-21/favicon.svg",
-    note: "Contribution counts don't measure quality or hours.", activity: githubActivity,
+    slug: "github", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.",
+    note: "Contribution counts don't measure quality or hours.", uses: ["host-code", "review-pull-requests", "run-ci"], activity: githubActivity,
     caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
     source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
   },
-  { slug: "claude-code", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code." },
-  { slug: "firecrawl", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it." },
-  { slug: "exa", level: "WEEKLY", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news." },
-  { slug: "cloudflare", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it." },
-  { slug: "porkbun", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here." },
-  { slug: "spider", level: "OCCASIONAL", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it." },
-  { slug: "docker", level: "WEEKLY", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container." },
-  { slug: "open-places", level: "OCCASIONAL", since: "2026", headline: "Local business lists by category and city.", note: "I start local prospect lists here." },
-  { slug: "grok-bot", level: "TESTING", since: "2026", headline: "An agent with its own cloud computer.", note: "I'm testing it on research and outreach chores." },
-  { slug: "elicit", level: "TESTING", since: "2026", headline: "Reading research papers faster.", note: "I'm testing it for pulling claims from papers." },
-  { slug: "context-dev", level: "TESTING", since: "2026", headline: "Brand and company data from a domain.", note: "I'm testing it for logos and company details." },
-  { slug: "n8n", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "I ran my nightly enrichment jobs on it." },
-  { slug: "clay", level: "STOPPED", since: "2022", headline: "Enrichment tables, before I wrote code.", note: "I moved this work into my own scripts." },
+  {
+    slug: "claude-code", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code.",
+    uses: ["write-features", "fix-bugs", "automate-chores"],
+  },
+  {
+    slug: "firecrawl", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it.",
+    uses: ["scrape-pages", "crawl-sites"],
+  },
+  {
+    slug: "exa", level: "WEEKLY", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news.",
+    uses: ["search-for-agents", "find-companies"],
+  },
+  {
+    slug: "cloudflare", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
+    uses: ["manage-dns", "run-workers", "cache-and-protect"],
+  },
+  {
+    slug: "porkbun", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here.",
+    uses: ["register-domains", "manage-dns"],
+  },
+  {
+    slug: "spider", level: "OCCASIONAL", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it.",
+    uses: ["crawl-sites", "feed-agents"],
+  },
+  {
+    slug: "docker", level: "WEEKLY", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
+    uses: ["run-local-services", "package-apps"],
+  },
+  {
+    slug: "open-places", level: "OCCASIONAL", since: "2026", headline: "Local business lists by category and city.", note: "I start local prospect lists here.",
+    uses: ["build-business-lists", "target-by-area"],
+  },
+  {
+    slug: "grok-bot", level: "TESTING", since: "2026", headline: "An agent with its own cloud computer.", note: "I'm testing it on research and outreach chores.",
+    uses: ["delegate-tasks", "research-topics"],
+  },
+  {
+    slug: "elicit", level: "TESTING", since: "2026", headline: "Reading research papers faster.", note: "I'm testing it for pulling claims from papers.",
+    uses: ["find-papers", "extract-study-data"],
+  },
+  {
+    slug: "context-dev", level: "TESTING", since: "2026", headline: "Brand and company data from a domain.", note: "I'm testing it for logos and company details.",
+    uses: ["pull-brand-data", "enrich-companies"],
+  },
+  {
+    slug: "n8n", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "I ran my nightly enrichment jobs on it.",
+    uses: ["schedule-jobs", "move-data"],
+  },
+  {
+    slug: "clay", level: "STOPPED", since: "2022", headline: "Enrichment tables, before I wrote code.", note: "I moved this work into my own scripts.",
+    uses: ["enrich-leads", "build-lists"],
+  },
 ];
 
 export function homepageExamples(): HomepageExample[] {
   return EXAMPLES.map(example => {
     const entry = directoryEntry(example.slug);
     if (!entry) throw new Error(`Homepage example "${example.slug}" is not in the product directory.`);
+    const brand = HOMEPAGE_BRANDS[entry.slug];
+    const uses: ProductUses = { picks: [...example.uses] };
     return {
       id: entry.slug,
       card: {
-        product: { name: entry.name, slug: entry.slug, domain: entry.domain, description: entry.description, ...(example.logoUrl ? { logoUrl: example.logoUrl } : {}) },
+        product: { name: entry.name, slug: entry.slug, domain: entry.domain, description: entry.description, ...(brand ? { brand } : {}) },
         status: levelStatus(example.level), level: example.level, ...(example.goTo ? { goTo: true } : {}), headline: example.headline, note: example.note, startedAt: `${example.since}-01-01`,
-        primaryLink: { type: "CANONICAL", url: entry.website, label: `Open ${entry.name}` },
-        ...(example.activity ? { activity: example.activity } : {}),
+        uses, primaryLink: { type: "CANONICAL", url: entry.website, label: `Open ${entry.name}` }, activity: example.activity ?? sampleActivity(entry.slug),
       },
       ...(example.caveat ? { caveat: example.caveat } : {}),
       ...(example.source ? { source: example.source } : {}),
