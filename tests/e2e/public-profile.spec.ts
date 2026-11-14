@@ -31,7 +31,9 @@ test("visitor sees the approved public reference projection", async ({
   await expect(page.getByText(/Estimated cost:.*12\.34.*as of 26 Jul 2026/)).toBeVisible();
   const back = page.locator('.card-back:not([hidden])');
   await back.getByRole("button", { name: "How this was measured" }).click();
-  await expect(back.getByText("2026-07-20 to 2026-07-26", { exact: true })).toBeVisible();
+  // Exact to the day: plain dates, with the stored value in each <time datetime>.
+  await expect(back.getByText("20 Jul 2026 to 26 Jul 2026", { exact: true })).toBeVisible();
+  await expect(back.locator(".activity-meta time[datetime='2026-07-20']")).toHaveText("20 Jul 2026");
   await expect(
     page.getByRole("link", { name: "See Keegan on GitHub ↗", exact: true }),
   ).toBeVisible();
