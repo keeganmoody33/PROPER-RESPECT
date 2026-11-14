@@ -1,3 +1,4 @@
+import { oklchChroma } from "./oklab";
 import type { ProductBrandSnapshot } from "./product-brand";
 
 /**
@@ -26,6 +27,11 @@ const BORDER_MIXES = [0.22, 0.35, 0.5, 0.75, 1] as const;
 /** A square brand keeps a square card. */
 const RADIUS = { min: 0, max: 24 } as const;
 const WHITE = "#ffffff", BLACK = "#000000";
+/**
+ * OKLCH chroma at or under which a colour is a grey for the purpose of a brand's accent. Measured on the homepage brands:
+ * Spider's slate accent #94a3b8 is 0.035; the least colourful accent kept, Elicit's dark teal #083d44, is 0.053.
+ */
+const NEUTRAL_MAX_CHROMA = 0.045;
 
 const solid = (value: string | undefined) => (value && SOLID_HEX.test(value) ? value.toLowerCase() : undefined);
 const channels = (hex: string) => CHANNEL_STARTS.map(start => parseInt(hex.slice(start, start + CHANNEL_DIGITS), HEX_RADIX));
@@ -54,6 +60,28 @@ function derivedBorder(surface: string, text: string) {
   return mixes.find(candidate => contrast(candidate, surface) >= MIN_BORDER_CONTRAST) ?? text;
 }
 
+export type BrandAccent = { hex: string; source: "site accent" | "primary button" | "logo colour" | "site colour" };
+
+/**
+ * The colour that makes a card read as its brand. The site's accent when it has colour. A site can report a grey as its
+ * accent (Spider reports the slate of its secondary text); then the most colourful of its stored button fill and brand
+ * colours that a chart could draw in on `surface` (3:1), and failing that the grey accent as before.
+ */
+export function brandAccent(snapshot: ProductBrandSnapshot | undefined, surface: string): BrandAccent | undefined {
+  const accent = solid(snapshot?.styleguide?.colors.accent);
+  if (accent && oklchChroma(accent) > NEUTRAL_MAX_CHROMA) return { hex: accent, source: "site accent" };
+  const button = snapshot?.schemaVersion === 2 ? solid(snapshot.styleguide?.components?.buttonPrimary?.background) : undefined;
+  const palette = (snapshot?.colors ?? []).flatMap(({ hex, source }): BrandAccent[] => {
+    const color = solid(hex);
+    return color ? [{ hex: color, source: source === "logo" ? "logo colour" : "site colour" }] : [];
+  });
+  const candidates: BrandAccent[] = [...(button ? [{ hex: button, source: "primary button" as const }] : []), ...palette];
+  const vivid = candidates
+    .filter(candidate => oklchChroma(candidate.hex) > NEUTRAL_MAX_CHROMA && contrast(candidate.hex, surface) >= MIN_CHART_CONTRAST)
+    .reduce<BrandAccent | undefined>((best, candidate) => (!best || oklchChroma(candidate.hex) > oklchChroma(best.hex) ? candidate : best), undefined);
+  return vivid ?? (accent ? { hex: accent, source: "site accent" } : undefined);
+}
+
 /**
  * `surface` and `text` are the colours the card is already drawn in. With no usable brand values the
  * result still carries a border that shows, so every card has a defined edge.
@@ -63,7 +91,7 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   if (!cardSurface || !cardText) return {};
   const surface = cardSurface, text = cardText;
   const guide = snapshot?.schemaVersion === 2 ? snapshot.styleguide : undefined;
-  const parts = guide?.components, accent = solid(guide?.colors.accent);
+  const parts = guide?.components, accent = brandAccent(snapshot, surface)?.hex;
   const kit: BrandCardKit = {};
 
   const border = solid(parts?.card?.border);

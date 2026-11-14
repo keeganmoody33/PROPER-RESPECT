@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandCardKit, contrast } from "./brand-kit";
+import { brandAccent, brandCardKit, contrast } from "./brand-kit";
 import { normalizeProductBrand } from "./product-brand";
 import { HOMEPAGE_BRANDS } from "@/src/data/homepage-brands";
 
@@ -106,7 +106,8 @@ describe("brandCardKit", () => {
     }));
     expect(charts).toEqual({
       clay: "#3859f9", cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", elicit: "#083d44", exa: "#1f40ed",
-      firecrawl: "#ff4c00", github: "#0d6731", "open-places": "#3f5a2c", spider: "#94a3b8",
+      // Spider's site accent is slate, a grey; its bars take the green of its logo, as its site's highlights do.
+      firecrawl: "#ff4c00", github: "#0d6731", "open-places": "#3f5a2c", spider: "#24c45c",
       // n8n's pink is 1.5:1 on its card and Porkbun's coral 2.6:1, so their bars take the card's text colour.
       n8n: "#161616", porkbun: "#000000",
     });
@@ -116,5 +117,27 @@ describe("brandCardKit", () => {
   it("lets a square brand's card be square", () => {
     const square = stored({ background: "#0c0e13", text: "#f8fafc" }, { card: { borderRadius: "0px" } });
     expect(brandCardKit(square, "#0c0e13", "#f8fafc")["--brand-card-radius"]).toBe("0px");
+  });
+});
+
+describe("brandAccent", () => {
+  it("keeps a site accent with colour, and replaces a grey one with the brand's most colourful colour that shows", () => {
+    const accents = Object.fromEntries(Object.entries(HOMEPAGE_BRANDS).map(([slug, brand]) => [slug, brandAccent(brand, brand.styleguide!.colors.background!)]));
+    expect(accents).toEqual({
+      clay: { hex: "#3859f9", source: "site accent" }, cloudflare: { hex: "#ff5e1f", source: "site accent" },
+      "context-dev": { hex: "#2563eb", source: "site accent" }, docker: { hex: "#2560ff", source: "site accent" },
+      elicit: { hex: "#083d44", source: "site accent" }, exa: { hex: "#1f40ed", source: "site accent" },
+      firecrawl: { hex: "#ff4c00", source: "site accent" }, github: { hex: "#0d6731", source: "site accent" },
+      n8n: { hex: "#ffbcca", source: "site accent" }, "open-places": { hex: "#3f5a2c", source: "site accent" },
+      porkbun: { hex: "#ef7878", source: "site accent" },
+      // Slate #94a3b8 has an OKLCH chroma of 0.035; the logo's #24c45c (0.19) is the most colourful brand colour at 3:1 on the card.
+      spider: { hex: "#24c45c", source: "logo colour" },
+    });
+  });
+
+  it("keeps a grey accent when no brand colour has colour and shows on the card", () => {
+    const grey = stored({ accent: "#94a3b8", background: "#0c0e13", text: "#f8fafc" });
+    expect(brandAccent(grey, "#0c0e13")).toEqual({ hex: "#94a3b8", source: "site accent" });
+    expect(brandAccent(undefined, "#0c0e13")).toBeUndefined();
   });
 });

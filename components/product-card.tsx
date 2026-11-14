@@ -22,7 +22,7 @@ import { UsageChart, usageChartLog } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
-import { brandCardKit } from "@/src/domain/brand-kit";
+import { brandAccent, brandCardKit } from "@/src/domain/brand-kit";
 import { ownOriginImageUrl } from "@/src/domain/brand-image-url";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
 import {
@@ -34,6 +34,8 @@ import {
 } from "@/src/domain/verified-product-assets";
 
 type Card = PublicProfile["cards"][number];
+/** The surface an unbranded card is drawn on (globals.css --ink). */
+const DEFAULT_CARD_SURFACE = "#171713";
 
 function luminance(hex: string): number | undefined {
   if (!/^#[0-9a-f]{6}$/i.test(hex)) return undefined;
@@ -63,13 +65,15 @@ function brandAppearance(brand?: ProductBrandSnapshot) {
     // The card's edge and buttons follow the brand's own, by the fixed rules in brand-kit.
     Object.assign(style, brandCardKit(brand, roles.background, roles.text));
   }
-  const accent = roles?.accent && luminance(roles.accent);
+  // The same accent the card's chart is drawn in: the site's own, unless it reported a grey.
+  const accentHex = brandAccent(brand, readablePair && roles?.background ? roles.background : DEFAULT_CARD_SURFACE)?.hex;
+  const accent = accentHex && luminance(accentHex);
   // Default cards alternate between these two dark surfaces. An accent must
   // remain readable on both when no explicit background/text pair was supplied.
   const backgrounds = readablePair ? [background] : [luminance("#171713")!, luminance("#25251F")!];
-  if (typeof accent === "number" && roles?.accent
+  if (typeof accent === "number" && accentHex
     && backgrounds.every((value) => contrast(accent, value) >= 4.5)) {
-    style["--brand-card-accent"] = roles.accent;
+    style["--brand-card-accent"] = accentHex;
   }
   return { style, surface };
 }
