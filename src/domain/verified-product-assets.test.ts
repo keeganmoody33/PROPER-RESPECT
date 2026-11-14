@@ -79,11 +79,13 @@ describe("verified official product assets", () => {
     const $ = load(renderToStaticMarkup(createElement(ProductCard, {
       card: { product, status: "TESTING", headline: "", note: "Supplied owner note." }, index: 0, audience,
     })));
-    expect($(".card-title h2").text()).toBe("GitHub Copilot");
-    expect($(".product-logo").attr("data-logo-provider")).toBe("official-vendor");
-    expect($(".product-logo img").attr("src")).toBe(selectVerifiedProductLogo(assets, "dark")?.path);
-    expect($(".product-logo img").attr("width")).toBe("734");
-    expect($(".product-logo img").attr("height")).toBe("95");
+    // The front's name and logo; the back carries the same.
+    expect($(".card-front .card-title h2").text()).toBe("GitHub Copilot");
+    expect($(".card-back .card-title h2").text()).toBe("GitHub Copilot");
+    expect($(".card-front .product-logo").attr("data-logo-provider")).toBe("official-vendor");
+    expect($(".card-front .product-logo img").attr("src")).toBe(selectVerifiedProductLogo(assets, "dark")?.path);
+    expect($(".card-front .product-logo img").attr("width")).toBe("734");
+    expect($(".card-front .product-logo img").attr("height")).toBe("95");
     expect($("a[href='" + assets.manifestPath + "']")).toHaveLength(0);
     expect($(".card-brand-provenance")).toHaveLength(0);
     expect($(".card-headline").text()).toBe("Supplied owner note.");
