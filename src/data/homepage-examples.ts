@@ -180,9 +180,20 @@ const EXAMPLES: readonly ExampleSource[] = [
     caveat: "Its work-sample link opens Clay's public templates.", backHint: "Periods, sources and a work sample inside", tablePreview: CLAY_TABLE,
   },
   {
+    slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.",
+    note: "Contribution counts don't measure quality or hours.", uses: ["host-code", "review-pull-requests", "run-ci"], activity: githubActivity,
+    caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
+    source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
+  },
+  {
     slug: "cloudflare", featured: true, capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
     uses: ["manage-dns", "run-workers", "cache-and-protect"],
     cost: { amount: CLOUDFLARE_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
+  },
+  {
+    slug: "docker", featured: true, capability: "A list of linked work", level: "WEEKLY", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
+    uses: ["run-local-services", "package-apps"], activity: dockerActivity,
+    caveat: "The listed links go to public Docker pages, standing in for an owner's own repositories and images.",
   },
   {
     slug: "firecrawl", featured: true, capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it.",
@@ -190,13 +201,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     caveat: "A real card's referral link carries its owner's code. This sample's goes to Firecrawl's home page and credits nobody.",
   },
   {
-    slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.",
-    note: "Contribution counts don't measure quality or hours.", uses: ["host-code", "review-pull-requests", "run-ci"], activity: githubActivity,
-    caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
-    source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
-  },
-  {
-    slug: "n8n", featured: true, capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
+    slug: "n8n", capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
     uses: ["schedule-jobs", "move-data"],
   },
   {
@@ -216,11 +221,6 @@ const EXAMPLES: readonly ExampleSource[] = [
     slug: "spider", capability: "Affiliate link, disclosed", level: "OCCASIONAL", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it.",
     uses: ["crawl-sites", "feed-agents"], linkType: "AFFILIATE",
     caveat: "A real card's affiliate link carries its owner's code. This sample's goes to Spider's home page and credits nobody.",
-  },
-  {
-    slug: "docker", capability: "A list of linked work", level: "WEEKLY", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
-    uses: ["run-local-services", "package-apps"], activity: dockerActivity,
-    caveat: "The listed links go to public Docker pages, standing in for an owner's own repositories and images.",
   },
   {
     slug: "open-places", capability: "Used now and then", level: "OCCASIONAL", since: "2026", headline: "Local business lists by category and city.", note: "I start local prospect lists here.",

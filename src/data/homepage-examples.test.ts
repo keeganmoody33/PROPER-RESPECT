@@ -21,15 +21,15 @@ const CODING_DAYS = 31;
 test("the homepage shows a go-to-market engineering stack whose names and links come from the directory", () => {
   expect(examples.map(example => [example.card.product.name, example.card.level, example.card.status, example.card.goTo === true, example.card.startedAt?.slice(0, YEAR_DIGITS)])).toEqual([
     ["Clay", "DAILY", "ACTIVE", false, "2023"],
-    ["Cloudflare", "DAILY", "ACTIVE", true, "2020"],
-    ["Firecrawl", "WEEKLY", "ACTIVE", false, "2025"],
     ["GitHub", "DAILY", "ACTIVE", true, "2019"],
+    ["Cloudflare", "DAILY", "ACTIVE", true, "2020"],
+    ["Docker", "WEEKLY", "ACTIVE", false, "2020"],
+    ["Firecrawl", "WEEKLY", "ACTIVE", false, "2025"],
     ["n8n", "PAUSED", "ARCHIVED", false, "2024"],
     ["Claude Code", "DAILY", "ACTIVE", false, "2025"],
     ["Exa", "WEEKLY", "ACTIVE", false, "2025"],
     ["Porkbun", "OCCASIONAL", "ACTIVE", true, "2021"],
     ["Spider", "OCCASIONAL", "ACTIVE", false, "2026"],
-    ["Docker", "WEEKLY", "ACTIVE", false, "2020"],
     ["Open Places", "OCCASIONAL", "ACTIVE", false, "2026"],
     ["Grok Bot", "TESTING", "TESTING", false, "2026"],
     ["Elicit", "STOPPED", "ARCHIVED", false, "2026"],
@@ -55,15 +55,15 @@ const CLAY_MONTHLY_USD = 149;
 test("each example names the part of a card it shows, in a few words no other example uses", () => {
   expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
     ["clay", "Published usage numbers"],
-    ["cloudflare", "Go-to, with what it costs"],
-    ["firecrawl", "Referral link, disclosed"],
     ["github", "A year of contributions"],
+    ["cloudflare", "Go-to, with what it costs"],
+    ["docker", "A list of linked work"],
+    ["firecrawl", "Referral link, disclosed"],
     ["n8n", "Paused, and why"],
     ["claude-code", "Coding days"],
     ["exa", "A demo link on the back"],
     ["porkbun", "Running totals"],
     ["spider", "Affiliate link, disclosed"],
-    ["docker", "A list of linked work"],
     ["open-places", "Used now and then"],
     ["grok-bot", "Still testing"],
     ["elicit", "Stopped using, and why"],
@@ -75,9 +75,28 @@ test("each example names the part of a card it shows, in a few words no other ex
 
 test("five examples are featured, first, in the order the chooser shows them; the other nine wait behind More examples", () => {
   expect(examples.map(({ id, featured }) => [id, featured])).toEqual([
-    ["clay", true], ["cloudflare", true], ["firecrawl", true], ["github", true], ["n8n", true],
-    ["claude-code", false], ["exa", false], ["porkbun", false], ["spider", false], ["docker", false],
+    ["clay", true], ["github", true], ["cloudflare", true], ["docker", true], ["firecrawl", true],
+    ["n8n", false], ["claude-code", false], ["exa", false], ["porkbun", false], ["spider", false],
     ["open-places", false], ["grok-bot", false], ["elicit", false], ["context-dev", false],
+  ]);
+});
+
+/** What a card's front draws, which is what a visitor tells examples apart by: two time series can draw different things. */
+function frontDrawing({ card, tablePreview: table }: (typeof examples)[number]): string {
+  if (table) return "table";
+  const activity = card.activity;
+  if (activity?.kind === "timeSeries") return `${activity.unit} bars`;
+  return activity?.kind ?? "numbers";
+}
+
+test("the five featured fronts each draw something different, and between them show go-to, cost and a disclosed referral link", () => {
+  const featured = examples.filter(example => example.featured);
+  expect(featured.map(example => [example.id, frontDrawing(example), example.card.goTo === true, Boolean(example.card.cost), example.card.primaryLink?.type])).toEqual([
+    ["clay", "table", false, true, "CANONICAL"],
+    ["github", "contributionCalendar", true, false, "CANONICAL"],
+    ["cloudflare", "per day bars", true, true, "CANONICAL"],
+    ["docker", "artifactCollection", false, false, "CANONICAL"],
+    ["firecrawl", "per week bars", false, false, "REFERRAL"],
   ]);
 });
 
@@ -94,15 +113,15 @@ test("each example shows a different part of a card: its link, cost, work sample
   expect(examples.map(({ id, card }) => [id, card.primaryLink?.type, card.cost && `${card.cost.amount} ${card.cost.currency} ${card.cost.cadence} ${card.cost.basis}`,
     card.usageLink && `${usageLinkLabelText(card.usageLink.label)} / ${usageLinkHost(card.usageLink.url)}`, card.measurements?.length, card.activity?.kind])).toEqual([
     ["clay", "CANONICAL", "149 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", CLAY_MEASUREMENTS, undefined],
-    ["cloudflare", "CANONICAL", "5 USD MONTHLY OWNER_REPORTED", undefined, undefined, "timeSeries"],
-    ["firecrawl", "REFERRAL", undefined, undefined, undefined, "timeSeries"],
     ["github", "CANONICAL", undefined, undefined, undefined, "contributionCalendar"],
+    ["cloudflare", "CANONICAL", "5 USD MONTHLY OWNER_REPORTED", undefined, undefined, "timeSeries"],
+    ["docker", "CANONICAL", undefined, undefined, undefined, "artifactCollection"],
+    ["firecrawl", "REFERRAL", undefined, undefined, undefined, "timeSeries"],
     ["n8n", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["claude-code", "CANONICAL", undefined, undefined, undefined, "codingActivity"],
     ["exa", "CANONICAL", undefined, "Demo / exa.ai", undefined, "timeSeries"],
     ["porkbun", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
     ["spider", "AFFILIATE", undefined, undefined, undefined, "timeSeries"],
-    ["docker", "CANONICAL", undefined, undefined, undefined, "artifactCollection"],
     ["open-places", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["grok-bot", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
     ["elicit", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
@@ -251,15 +270,15 @@ test("Claude Code's sessions are the sum of the days it draws", () => {
 test("every example says what it is used for, in two or three of its product's own listed uses", () => {
   expect(examples.map(({ id, card }) => [id, productUseLabels(id, card.uses)])).toEqual([
     ["clay", ["enrich lead and account lists", "find contact details"]],
-    ["cloudflare", ["run DNS for my domains", "run code at the edge with Workers", "cache and protect my sites"]],
-    ["firecrawl", ["turn web pages into Markdown", "crawl whole sites"]],
     ["github", ["host my code and its history", "review and merge pull requests", "run tests and deploys on every push"]],
+    ["cloudflare", ["run DNS for my domains", "run code at the edge with Workers", "cache and protect my sites"]],
+    ["docker", ["run databases and services locally", "package apps to run anywhere"]],
+    ["firecrawl", ["turn web pages into Markdown", "crawl whole sites"]],
     ["n8n", ["run jobs on a schedule", "move data between systems"]],
     ["claude-code", ["build features from a description", "find and fix bugs", "automate repetitive engineering work"]],
     ["exa", ["give my agents web search", "find companies and people that fit a description"]],
     ["porkbun", ["register and renew domains", "manage DNS records"]],
     ["spider", ["crawl sites quickly at volume", "feed web data to my agents"]],
-    ["docker", ["run databases and services locally", "package apps to run anywhere"]],
     ["open-places", ["build lists of local businesses", "find businesses in one area or category"]],
     ["grok-bot", ["hand off tasks to an agent", "research a topic for me"]],
     ["elicit", ["find papers on a question", "pull data out of studies into a table"]],
@@ -270,7 +289,7 @@ test("every example says what it is used for, in two or three of its product's o
 
 test("every example with a committed brand carries it, matched to its own product", () => {
   expect(examples.filter(({ card }) => card.product.brand).map(({ id }) => id)).toEqual([
-    "clay", "cloudflare", "firecrawl", "github", "n8n", "exa", "porkbun", "spider", "docker", "open-places", "elicit", "context-dev",
+    "clay", "github", "cloudflare", "docker", "firecrawl", "n8n", "exa", "porkbun", "spider", "open-places", "elicit", "context-dev",
   ]);
   const mismatched = examples.filter(({ card }) => card.product.brand && (card.product.brand.productSlug !== card.product.slug
     || card.product.brand.canonicalDomain !== card.product.domain || !productBrandSnapshotSchema.safeParse(card.product.brand).success));

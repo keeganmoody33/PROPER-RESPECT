@@ -360,7 +360,7 @@ main {
   flex: 0 0 auto;
   flex-direction: column;
   gap: 0.3rem;
-  max-width: 5rem;
+  max-width: 6.5rem;
 }
 
 .card-link-disclosure {
@@ -370,8 +370,15 @@ main {
   line-height: 1.3;
 }
 
+/* A paid link says so under its arrow, as a tag a visitor reads before they press it. */
 .card-destination .card-link-disclosure {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  padding: 0.1rem 0.45rem;
   text-align: center;
+  white-space: nowrap;
 }
 
 .card-visit {

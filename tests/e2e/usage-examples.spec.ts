@@ -58,13 +58,13 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   for (const [name, text, labelCase, buttonCase] of [
     ["Clay", "Daily · since 2023", "none", "none"],
     ["Cloudflare", "Daily · since 2020", "uppercase", "none"],
+    ["Docker", "Weekly · since 2020", "none", "none"],
     ["Firecrawl", "Weekly · since 2025", "none", "none"],
     ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
     ["Claude Code", "Daily · since 2025", "uppercase", "uppercase"],
     ["Exa", "Weekly · since 2025", "none", "none"],
     ["Porkbun", "Occasionally · since 2021", "uppercase", "uppercase"],
     ["Spider", "Occasionally · since 2026", "uppercase", "uppercase"],
-    ["Docker", "Weekly · since 2020", "none", "none"],
     ["Open Places", "Occasionally · since 2026", "none", "none"],
     ["Grok Bot", "Testing · since 2026", "uppercase", "uppercase"],
     ["Elicit", "Stopped using · started 2026", "uppercase", "none"],
@@ -206,6 +206,7 @@ const NARROWEST_WIDTH = 320;
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
   for (const brand of BRANDED) {
     await carousel.getByRole("button", { name: brand.name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${brand.name} card` });
@@ -296,38 +297,38 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
   await expect(stage).toHaveAttribute("aria-live", "off");
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
   await carousel.hover();
   await expect(stage).toHaveAttribute("aria-live", "polite");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
   await page.mouse.move(0, 0);
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Details", exact: true }).focus();
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Docker card" })).toBeVisible();
   const toggle = carousel.getByRole("button", { name: /slideshow$/ });
   await toggle.focus();
   await expect(toggle).toHaveText("Pause slideshow");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Docker card" })).toBeVisible();
   await toggle.press("Enter");
   await expect(toggle).toHaveText("Play slideshow");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Docker card" })).toBeVisible();
   await toggle.press("Enter");
   await expect(toggle).toHaveText("Pause slideshow");
   await expect(toggle).toBeFocused();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "n8n card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Next example" }).focus();
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "n8n card" })).toBeVisible();
-  // Only the five featured examples take turns: after n8n it wraps to Clay, never on to the nine behind More examples.
+  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
+  // Only the five featured examples take turns: after Firecrawl it wraps to Clay, never on to the nine behind More examples.
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(8100);
   await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
@@ -344,7 +345,7 @@ test("with More examples open and nothing else picked, the slideshow still takes
   // Focus and the pointer leave the slideshow, so only the timer moves it.
   await page.locator("#homepage-content").focus();
   await page.mouse.move(0, 0);
-  for (const name of ["Cloudflare", "Firecrawl", "GitHub", "n8n", "Clay"]) {
+  for (const name of ["GitHub", "Cloudflare", "Docker", "Firecrawl", "Clay"]) {
     await page.clock.fastForward(8100);
     await expect(carousel.getByRole("article", { name: `${name} card` })).toBeVisible();
   }
@@ -368,7 +369,7 @@ test("the example chooser is one tab stop: arrows move, a press picks, and the p
   const github = chooser.getByRole("button", { name: "Clay", exact: true });
   const second = chooser.getByRole("button").nth(1);
   const third = chooser.getByRole("button").nth(2);
-  expect(await toggleNames(chooser)).toEqual(["Clay", "Cloudflare", "Firecrawl", "GitHub", "n8n"]);
+  expect(await toggleNames(chooser)).toEqual(["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl"]);
   await expect(github).toHaveAttribute("aria-pressed", "true");
   await github.focus();
   await page.keyboard.press("ArrowRight");
@@ -379,7 +380,7 @@ test("the example chooser is one tab stop: arrows move, a press picks, and the p
   await expect(second).toHaveAttribute("aria-pressed", "true");
   await expect(github).toHaveAttribute("aria-pressed", "false");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  await expect(carousel.getByRole("article")).toHaveAccessibleName("Cloudflare card");
+  await expect(carousel.getByRole("article")).toHaveAccessibleName("GitHub card");
   // Pressing the picked example again keeps it: one example is always shown.
   await page.keyboard.press("Enter");
   await expect(second).toHaveAttribute("aria-pressed", "true");
@@ -396,19 +397,19 @@ test("the example chooser is one tab stop: arrows move, a press picks, and the p
   // Opened, the nine join the same group: still one tab stop, and the arrow keys reach them from the last featured toggle.
   await more.press("Enter");
   await expect(chooser.getByRole("button")).toHaveCount(14);
-  await chooser.getByRole("button", { name: "n8n", exact: true }).focus();
+  await chooser.getByRole("button", { name: "Firecrawl", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
-  const claudeCode = chooser.getByRole("button", { name: "Claude Code", exact: true });
-  await expect(claudeCode).toBeFocused();
+  const n8n = chooser.getByRole("button", { name: "n8n", exact: true });
+  await expect(n8n).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(carousel.getByRole("article")).toHaveAccessibleName("Claude Code card");
+  await expect(carousel.getByRole("article")).toHaveAccessibleName("n8n card");
   await expect(carousel.getByText("6 / 14", { exact: true })).toBeVisible();
   await page.keyboard.press("Shift+Tab");
   await expect(chooser.locator(":focus")).toHaveCount(0);
   // Closing the nine while one of them is shown keeps it shown, and the slideshow's count keeps all fourteen.
   await more.click();
   await expect(chooser.getByRole("button")).toHaveCount(5);
-  await expect(carousel.getByRole("article")).toHaveAccessibleName("Claude Code card");
+  await expect(carousel.getByRole("article")).toHaveAccessibleName("n8n card");
   await expect(carousel.getByText("6 / 14", { exact: true })).toBeVisible();
 });
 
@@ -438,12 +439,11 @@ test("a hidden example asks for no brand font or logo until it is shown or next"
   });
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  // Clay's font, since it is shown, and Cloudflare's two fonts and wordmark, since it is next. Clay's reviewed app icon is this site's own file.
+  // Clay's font, since it is shown, and GitHub's font and logo, since it is next. Clay's reviewed app icon is this site's own file.
   expect([...assets].sort()).toEqual([
-    "/api/brand-fonts/16bb192b61c258c142e3e0d92fe74cbb625ab72b60d3031cbcca2bee0968b345.otf",
-    "/api/brand-fonts/408f046e22327dabd7d0c5a0c9ee443e7163e95ac699982fd1c9a4e577ede3ac.otf",
+    "/api/brand-fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
     "/api/brand-fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
-    "/api/brand-images/5019dab7-f07e-4e29-98bb-f8bb7b613877.svg",
+    "/api/brand-images/c625fdf9-bcc0-4e62-a4ea-6f385a71cd16.png",
   ]);
   assets.clear();
   const carousel = page.getByRole("region", { name: "Product usage examples" });
@@ -453,10 +453,10 @@ test("a hidden example asks for no brand font or logo until it is shown or next"
   expect([...assets]).toEqual([]);
   await carousel.getByRole("button", { name: "Spider", exact: true }).click();
   await page.waitForLoadState("networkidle");
-  // Spider's dark icon, and Docker's square light icon because it comes next.
+  // Spider's dark icon, and Open Places' icon because it comes next.
   expect([...assets].filter(path => path.startsWith("/api/brand-images/")).sort()).toEqual([
-    "/api/brand-images/01405b60-627c-4b60-9591-03c2a2896385.png",
     "/api/brand-images/0a17c0a1-46e0-4640-af37-2f633a3dedce.svg",
+    "/api/brand-images/d0d02048-61a8-4924-b673-caf59df86026.png",
   ]);
 });
 
@@ -476,7 +476,7 @@ test("a hidden example asks for no brand font or logo until it is shown or next"
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }));
 
-const FEATURED = ["Clay", "Cloudflare", "Firecrawl", "GitHub", "n8n"] as const;
+const FEATURED = ["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl"] as const;
 const COLLAPSED_CHOOSER_LIMIT = 100;
 
 test(`the chooser stays one short row at ${DESKTOP_WIDTH}px, so each featured card's footer is in the first screen`, async ({ page }) => {
@@ -576,4 +576,24 @@ test("the slideshow waits for the visitor to reach it before it moves on, then m
   await expect(current).toHaveText("Published usage numbers");
   await page.clock.runFor(TURN_MARGIN_MS * 2);
   await expect(current).not.toHaveText("Published usage numbers");
+});
+
+const MIN_TEXT_PX = 12;
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`Firecrawl's front says its link is a referral link, readably, under the link at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
+  const front = carousel.getByRole("article", { name: "Firecrawl card" }).locator(".card-front");
+  const link = front.getByRole("link", { name: "Open Firecrawl · Referral link (opens in a new tab)" });
+  const tag = front.locator(".card-link-disclosure");
+  await expect(tag).toHaveText("Referral link");
+  await expect(tag).toBeVisible();
+  const [arrow, label] = [(await link.boundingBox())!, (await tag.boundingBox())!];
+  const fontSize = await tag.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
+  expect(fontSize).toBeGreaterThanOrEqual(MIN_TEXT_PX);
+  // Right under the arrow, centred on it.
+  expect(label.y - (arrow.y + arrow.height)).toBeLessThan(MIN_TEXT_PX);
+  expect(Math.abs(label.x + label.width / 2 - (arrow.x + arrow.width / 2))).toBeLessThan(2);
 });
