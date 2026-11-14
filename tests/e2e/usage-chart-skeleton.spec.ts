@@ -109,7 +109,7 @@ for (const theme of ["light", "dark"] as const) {
     // The back doesn't draw the chart again.
     await card.getByRole("button", { name: "Details", exact: true }).click();
     await expect(card.locator(".card-back .usage-chart")).toHaveCount(0);
-    await expect(card.locator(".activity-meta")).toContainText("Snapshot recorded 2026-10-01");
+    await expect(card.locator(".activity-meta")).toContainText("Snapshot recorded 1 Oct 2026");
     await expect(card).not.toContainText(/score|rank|rating/i);
 
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
