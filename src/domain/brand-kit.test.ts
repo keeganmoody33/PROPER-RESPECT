@@ -46,7 +46,7 @@ describe("brandCardKit", () => {
     expect(kit["--brand-card-button-fill"]).toBe("#ff5e1f");
     expect(kit["--brand-card-button-text"]).toBe("#262626");
     expect(kit["--brand-card-button-radius"]).toBe("9999px");
-    expect(kit["--brand-card-radius"]).toBe("6px");
+    expect(kit["--brand-card-radius"]).toBe("4px");
     expect(kit).not.toHaveProperty("--brand-card-quiet-fill");
   });
 
@@ -111,5 +111,10 @@ describe("brandCardKit", () => {
       n8n: "#161616", porkbun: "#000000",
     });
     expect(brandCardKit(stored({ background: "#ffffff", text: "#111111" }), "#ffffff", "#111111")["--brand-card-chart"]).toBe("#111111");
+  });
+
+  it("lets a square brand's card be square", () => {
+    const square = stored({ background: "#0c0e13", text: "#f8fafc" }, { card: { borderRadius: "0px" } });
+    expect(brandCardKit(square, "#0c0e13", "#f8fafc")["--brand-card-radius"]).toBe("0px");
   });
 });

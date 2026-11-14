@@ -23,7 +23,8 @@ const MIN_CHART_CONTRAST = 3;
 const MIN_LABEL_CONTRAST = 4.5;
 /** How much of the text colour a derived border takes when the brand's own border is too faint. Tried lightest first; the last is the text colour itself. */
 const BORDER_MIXES = [0.22, 0.35, 0.5, 0.75, 1] as const;
-const RADIUS = { min: 6, max: 24 } as const;
+/** A square brand keeps a square card. */
+const RADIUS = { min: 0, max: 24 } as const;
 const WHITE = "#ffffff", BLACK = "#000000";
 
 const solid = (value: string | undefined) => (value && SOLID_HEX.test(value) ? value.toLowerCase() : undefined);
