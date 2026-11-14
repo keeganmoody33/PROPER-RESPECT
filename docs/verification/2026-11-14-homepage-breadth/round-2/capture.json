@@ -1,0 +1,61 @@
+{
+  "server": {
+    "port": "3217",
+    "pid": "68196",
+    "cwd": "/Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a",
+    "command": "next-server (v16.3.8)",
+    "commit": "0e47483c0c3b72cb43e9ff6de3c08c9790111fd3"
+  },
+  "results": [
+    {
+      "target": "chooser-1440",
+      "assertion": "Clay is second, after GitHub",
+      "observed": "GitHub, Clay, Claude Code"
+    },
+    {
+      "target": "clay-front-1440",
+      "assertion": "Enriched 2,140,000 Rows, unit said once",
+      "observed": "Enriched 2,140,000Rows "
+    },
+    {
+      "target": "clay-back-1440",
+      "assertion": "every row grouped: 2,140,000, 86, 48,500",
+      "observed": "2,140,000, 86, 48,500"
+    },
+    {
+      "target": "docker-front-1440",
+      "assertion": "3 artifacts, then three linked works",
+      "observed": "3\nartifacts / Sample Compose apps (awesome-compose) ↗ -> https://github.com/docker/awesome-compose | Official Postgres image ↗ -> https://hub.docker.com/_/postgres | Multi-stage build guide ↗ -> https://docs.docker.com/build/building/multi-stage/"
+    },
+    {
+      "target": "page-1440",
+      "assertion": "no sideways scroll",
+      "observed": "true"
+    },
+    {
+      "target": "chooser-390",
+      "assertion": "Clay is second, after GitHub",
+      "observed": "GitHub, Clay, Claude Code"
+    },
+    {
+      "target": "clay-front-390",
+      "assertion": "Enriched 2,140,000 Rows, unit said once",
+      "observed": "Enriched 2,140,000Rows "
+    },
+    {
+      "target": "clay-back-390",
+      "assertion": "every row grouped: 2,140,000, 86, 48,500",
+      "observed": "2,140,000, 86, 48,500"
+    },
+    {
+      "target": "docker-front-390",
+      "assertion": "3 artifacts, then three linked works",
+      "observed": "3\nartifacts / Sample Compose apps (awesome-compose) ↗ -> https://github.com/docker/awesome-compose | Official Postgres image ↗ -> https://hub.docker.com/_/postgres | Multi-stage build guide ↗ -> https://docs.docker.com/build/building/multi-stage/"
+    },
+    {
+      "target": "page-390",
+      "assertion": "no sideways scroll",
+      "observed": "true"
+    }
+  ]
+}
