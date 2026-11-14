@@ -48,6 +48,29 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
   expect(fromDirectory.filter(({ category }) => category === "SALES").map(({ product }) => product.slug)).toEqual(["clay"]);
 });
 
+const CAPABILITY_LIMIT = 28;
+
+test("each example names the part of a card it shows, in a few words no other example uses", () => {
+  expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
+    ["github", "A year of contributions"],
+    ["claude-code", "Coding days"],
+    ["firecrawl", "Referral link, disclosed"],
+    ["exa", "A demo link on the back"],
+    ["cloudflare", "Go-to, with what it costs"],
+    ["porkbun", "Running totals"],
+    ["spider", "Affiliate link, disclosed"],
+    ["docker", "A list of linked work"],
+    ["open-places", "Used now and then"],
+    ["grok-bot", "Still testing"],
+    ["elicit", "Stopped using, and why"],
+    ["context-dev", "Testing, week by week"],
+    ["n8n", "Paused, and why"],
+    ["clay", "Published usage numbers"],
+  ]);
+  expect(new Set(examples.map(({ capability }) => capability)).size).toBe(examples.length);
+  expect(examples.filter(({ capability }) => capability.length > CAPABILITY_LIMIT).map(({ id }) => id)).toEqual([]);
+});
+
 test("every headline and note is a short line under the card's limit", () => {
   const tooLong = examples.flatMap(({ card }) => [card.headline, card.note]).filter(text => !text || text.length >= LINE_LIMIT);
   expect(tooLong).toEqual([]);

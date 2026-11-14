@@ -36,26 +36,31 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   if (width === 1440) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
+  await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("A year of contributions");
   await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
   const slideBox = () => carousel.locator("[aria-roledescription=slide]").first().evaluate(element => element.parentElement!.getBoundingClientRect().height);
   const githubHeight = await slideBox();
   // The top line and button are typed as written; each card's measured site, or the house default, sets their case.
-  for (const [name, text, labelCase, buttonCase] of [
-    ["Claude Code", "Daily · since 2025", "uppercase", "uppercase"],
-    ["Firecrawl", "Weekly · since 2025", "none", "none"],
-    ["Exa", "Weekly · since 2025", "none", "none"],
-    ["Cloudflare", "Daily · since 2020", "uppercase", "none"],
-    ["Porkbun", "Occasionally · since 2021", "uppercase", "uppercase"],
-    ["Spider", "Occasionally · since 2026", "uppercase", "uppercase"],
-    ["Docker", "Weekly · since 2020", "none", "none"],
-    ["Open Places", "Occasionally · since 2026", "none", "none"],
-    ["Grok Bot", "Testing · since 2026", "uppercase", "uppercase"],
-    ["Elicit", "Stopped using · started 2026", "uppercase", "none"],
-    ["Context.dev", "Testing · since 2026", "none", "none"],
-    ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
-    ["Clay", "Daily · since 2023", "none", "none"],
+  for (const [name, text, labelCase, buttonCase, capability] of [
+    ["Claude Code", "Daily · since 2025", "uppercase", "uppercase", "Coding days"],
+    ["Firecrawl", "Weekly · since 2025", "none", "none", "Referral link, disclosed"],
+    ["Exa", "Weekly · since 2025", "none", "none", "A demo link on the back"],
+    ["Cloudflare", "Daily · since 2020", "uppercase", "none", "Go-to, with what it costs"],
+    ["Porkbun", "Occasionally · since 2021", "uppercase", "uppercase", "Running totals"],
+    ["Spider", "Occasionally · since 2026", "uppercase", "uppercase", "Affiliate link, disclosed"],
+    ["Docker", "Weekly · since 2020", "none", "none", "A list of linked work"],
+    ["Open Places", "Occasionally · since 2026", "none", "none", "Used now and then"],
+    ["Grok Bot", "Testing · since 2026", "uppercase", "uppercase", "Still testing"],
+    ["Elicit", "Stopped using · started 2026", "uppercase", "none", "Stopped using, and why"],
+    ["Context.dev", "Testing · since 2026", "none", "none", "Testing, week by week"],
+    ["n8n", "Paused · started 2024", "uppercase", "uppercase", "Paused, and why"],
+    ["Clay", "Daily · since 2023", "none", "none", "Published usage numbers"],
   ]) {
-    await carousel.getByRole("button", { name, exact: true }).click();
+    const toggle = carousel.getByRole("button", { name, exact: true });
+    // The chooser says what each example shows, as the toggle's description, so its name stays the product's.
+    await expect(toggle).toHaveAccessibleDescription(capability);
+    await toggle.click();
+    await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText(capability);
     const card = carousel.getByRole("article", { name: `${name} card` });
     await expect(card).toBeVisible();
     await expect(card).toContainText(text);
@@ -248,7 +253,7 @@ test("the example chooser is one tab stop: arrows move, a press picks, and the p
   await expect(second).toHaveAttribute("aria-pressed", "true");
   await expect(github).toHaveAttribute("aria-pressed", "false");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  await expect(carousel.getByRole("article")).toHaveAccessibleName(`${await second.textContent()} card`);
+  await expect(carousel.getByRole("article")).toHaveAccessibleName("Claude Code card");
   // Pressing the picked example again keeps it: one example is always shown.
   await page.keyboard.press("Enter");
   await expect(second).toHaveAttribute("aria-pressed", "true");

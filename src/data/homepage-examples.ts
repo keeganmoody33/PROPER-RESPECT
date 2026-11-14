@@ -11,6 +11,8 @@ import { levelStatus, type RelationshipLevel } from "@/src/domain/relationship-l
 
 export type HomepageExample = Readonly<{
   id: string;
+  /** The part of a card this example shows, named above it and in the chooser. */
+  capability: string;
   card: PublicProfile["cards"][number];
   /** What measuring the product's own site added to its brand. Presentation only, never part of the card's data. */
   site?: BrandSiteTraits;
@@ -101,6 +103,7 @@ const clayMeasurements: PublicMeasurement[] = [
 
 type ExampleSource = Readonly<{
   slug: string;
+  capability: string;
   level: RelationshipLevel;
   goTo?: true;
   since: string;
@@ -125,66 +128,66 @@ type ExampleSource = Readonly<{
  */
 const EXAMPLES: readonly ExampleSource[] = [
   {
-    slug: "github", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.",
+    slug: "github", capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.",
     note: "Contribution counts don't measure quality or hours.", uses: ["host-code", "review-pull-requests", "run-ci"], activity: githubActivity,
     caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
     source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
   },
   {
-    slug: "claude-code", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code.",
+    slug: "claude-code", capability: "Coding days", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code.",
     uses: ["write-features", "fix-bugs", "automate-chores"],
   },
   {
-    slug: "firecrawl", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it.",
+    slug: "firecrawl", capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it.",
     uses: ["scrape-pages", "crawl-sites"], linkType: "REFERRAL",
     caveat: "A real card's referral link carries its owner's code. This sample's goes to Firecrawl's home page and credits nobody.",
   },
   {
-    slug: "exa", level: "WEEKLY", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news.",
+    slug: "exa", capability: "A demo link on the back", level: "WEEKLY", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news.",
     uses: ["search-for-agents", "find-companies"], usageLink: { url: "https://exa.ai/search", label: "DEMO" },
     caveat: "The demo link goes to Exa's own public search page, standing in for an owner's recording.",
   },
   {
-    slug: "cloudflare", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
+    slug: "cloudflare", capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
     uses: ["manage-dns", "run-workers", "cache-and-protect"],
     cost: { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
   },
   {
-    slug: "porkbun", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here.",
+    slug: "porkbun", capability: "Running totals", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here.",
     uses: ["register-domains", "manage-dns"],
   },
   {
-    slug: "spider", level: "OCCASIONAL", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it.",
+    slug: "spider", capability: "Affiliate link, disclosed", level: "OCCASIONAL", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it.",
     uses: ["crawl-sites", "feed-agents"], linkType: "AFFILIATE",
     caveat: "A real card's affiliate link carries its owner's code. This sample's goes to Spider's home page and credits nobody.",
   },
   {
-    slug: "docker", level: "WEEKLY", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
+    slug: "docker", capability: "A list of linked work", level: "WEEKLY", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
     uses: ["run-local-services", "package-apps"], activity: dockerActivity,
     caveat: "The listed links go to public Docker pages, standing in for an owner's own repositories and images.",
   },
   {
-    slug: "open-places", level: "OCCASIONAL", since: "2026", headline: "Local business lists by category and city.", note: "I start local prospect lists here.",
+    slug: "open-places", capability: "Used now and then", level: "OCCASIONAL", since: "2026", headline: "Local business lists by category and city.", note: "I start local prospect lists here.",
     uses: ["build-business-lists", "target-by-area"],
   },
   {
-    slug: "grok-bot", level: "TESTING", since: "2026", headline: "An agent with its own cloud computer.", note: "I'm testing it on research and outreach chores.",
+    slug: "grok-bot", capability: "Still testing", level: "TESTING", since: "2026", headline: "An agent with its own cloud computer.", note: "I'm testing it on research and outreach chores.",
     uses: ["delegate-tasks", "research-topics"],
   },
   {
-    slug: "elicit", level: "STOPPED", since: "2026", headline: "Reading research papers faster.", note: "I stopped once my market study was done.",
+    slug: "elicit", capability: "Stopped using, and why", level: "STOPPED", since: "2026", headline: "Reading research papers faster.", note: "I stopped once my market study was done.",
     uses: ["find-papers", "extract-study-data"],
   },
   {
-    slug: "context-dev", level: "TESTING", since: "2026", headline: "Brand and company data from a domain.", note: "I'm testing it for logos and company details.",
+    slug: "context-dev", capability: "Testing, week by week", level: "TESTING", since: "2026", headline: "Brand and company data from a domain.", note: "I'm testing it for logos and company details.",
     uses: ["pull-brand-data", "enrich-companies"],
   },
   {
-    slug: "n8n", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
+    slug: "n8n", capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
     uses: ["schedule-jobs", "move-data"],
   },
   {
-    slug: "clay", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
+    slug: "clay", capability: "Published usage numbers", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
     uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
     cost: { amount: 149, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
     usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
@@ -201,6 +204,7 @@ export function homepageExamples(): HomepageExample[] {
     const activity = example.activity ?? sampleActivity(entry.slug);
     return {
       id: entry.slug,
+      capability: example.capability,
       card: {
         product: { name: entry.name, slug: entry.slug, domain: entry.domain, description: entry.description, ...(brand ? { brand } : {}) },
         status: levelStatus(example.level), level: example.level, ...(example.goTo ? { goTo: true } : {}), headline: example.headline, note: example.note, startedAt: `${example.since}-01-01`,

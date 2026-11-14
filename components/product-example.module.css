@@ -1,12 +1,15 @@
 .carousel { min-width: 0; }
-.label, .sample, .controls, .choices, .source { font: .65rem/1.6 var(--homepage-mono), monospace; }
+.label, .capability, .sample, .controls, .choices, .source { font: .65rem/1.6 var(--homepage-mono), monospace; }
 .label { margin: 0 0 1rem; }
 .label:last-child { margin: 1rem 0 0; }
 .choices { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
 .choices button, .controls button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--control-line); padding: .45rem .65rem; min-height: 36px; cursor: pointer; }
 .choices button[data-pressed] { background: var(--ink); border-color: var(--ink); color: var(--action-text); }
 .carousel button:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 3px; }
+.capability { margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .sample { margin: 0 0 .6rem; color: var(--sample-text); }
+.choices button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+.capabilityTag { font-size: .58rem; font-weight: 400; }
 .stage { display: grid; min-width: 0; }
 .slide { grid-area: 1 / 1; min-width: 0; }
 .slide[data-current="false"] { visibility: hidden; }
@@ -20,4 +23,4 @@
 .source { text-underline-offset: .2em; }
 .controls { display: flex; align-items: center; gap: .65rem; margin-top: 1.2rem; }
 .controls .play { margin-left: auto; }
-@media (max-width: 600px) { .choices { gap: .3rem; } .choices button { padding: .4rem .5rem; } }
+@media (max-width: 600px) { .choices { gap: .3rem; } .choices button { padding: .4rem .5rem; } .capabilityTag { display: none; } }

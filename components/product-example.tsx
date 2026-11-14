@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type FocusEvent } from "react";
+import { useEffect, useId, useState, useSyncExternalStore, type FocusEvent } from "react";
 import { Toggle, ToggleGroup } from "@ui-sdk/react/toggle";
 import { ProductCard } from "./product-card";
 import { isHttpUrl } from "@/src/domain/http-url";
@@ -30,6 +30,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const reducedMotion = useReducedMotion();
+  const chooserId = useId();
   const playing = choice === "playing" || (choice === "auto" && !reducedMotion);
   const advancing = playing && !hovered && !focused;
   // A slide fetches its brand fonts and logo once it is shown or next, so the page doesn't load every example's at once.
@@ -63,17 +64,21 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   return <section className={styles.carousel} aria-label="Product usage examples" aria-roledescription="carousel"
     onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setFocused(true)} onBlur={leave}>
     <p className={styles.label}>Inside a card / Illustrative examples</p>
-    {/* One tab stop; arrow keys move between examples and a press picks one. The current example stays pressed. */}
+    {/* One tab stop; arrow keys move between examples and a press picks one. The current example stays pressed.
+        Each toggle is named by its product and described by what it shows, so the visible second line isn't read twice. */}
     <ToggleGroup className={styles.choices} aria-label="Choose a product example" value={[examples[index].id]} deselectable={false}
       onValueChange={value => { const next = examples.findIndex(item => item.id === value[0]); if (next >= 0) select(next); }}>
       {/* Pressing the example already shown changes no value, so the pause is on the press itself. */}
-      {examples.map(item => <Toggle key={item.id} value={item.id} onClick={() => setChoice("paused")}>{item.card.product.name}</Toggle>)}
+      {examples.map(item => <Toggle key={item.id} value={item.id} onClick={() => setChoice("paused")} aria-describedby={`${chooserId}-${item.id}`}>
+        {item.card.product.name}<span id={`${chooserId}-${item.id}`} className={styles.capabilityTag} aria-hidden="true">{item.capability}</span>
+      </Toggle>)}
     </ToggleGroup>
     <div className={styles.stage} aria-live={advancing ? "off" : "polite"}>
       {examples.map((example, slideIndex) => {
         const current = slideIndex === index;
         return <div key={example.id} className={styles.slide} data-example={example.id} data-current={current} role="group" aria-roledescription="slide"
           aria-label={`${slideIndex + 1} of ${examples.length}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
+          <p className={styles.capability} data-capability>{example.capability}</p>
           <p className={styles.sample}>Sample data / No account connected</p>
           <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} />
           {example.caveat && <p className={styles.caveat}>{example.caveat}</p>}
