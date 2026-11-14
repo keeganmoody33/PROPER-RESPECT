@@ -9,8 +9,9 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("Published usage numbers");
   await expect(carousel.getByText("1 / 5", { exact: true })).toBeVisible();
+  // Opening the rest shows them; only picking one of them puts all fourteen in play.
   await openMoreExamples(carousel);
-  await expect(carousel.getByText("1 / 14", { exact: true })).toBeVisible();
+  await expect(carousel.getByText("1 / 5", { exact: true })).toBeVisible();
   await carousel.getByRole("button", { name: "GitHub", exact: true }).click();
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toContainText("contributions");
   const calendar = carousel.locator(".card-front .contribution-calendar");
@@ -326,6 +327,23 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await page.clock.fastForward(8100);
   await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
   await expect(carousel.locator("[aria-roledescription=slide]")).toHaveCount(5);
+});
+
+test("with More examples open and nothing else picked, the slideshow still takes turns among the five featured", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
+  await openMoreExamples(carousel);
+  await expect(carousel.locator("[aria-roledescription=slide]")).toHaveCount(14);
+  // Focus and the pointer leave the slideshow, so only the timer moves it.
+  await page.locator("#homepage-content").focus();
+  await page.mouse.move(0, 0);
+  for (const name of ["Cloudflare", "Firecrawl", "GitHub", "n8n", "Clay"]) {
+    await page.clock.fastForward(8100);
+    await expect(carousel.getByRole("article", { name: `${name} card` })).toBeVisible();
+  }
+  await expect(carousel.getByText("1 / 5", { exact: true })).toBeVisible();
 });
 
 test("slideshow never advances on its own for a visitor who prefers reduced motion", async ({ page }) => {

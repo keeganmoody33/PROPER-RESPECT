@@ -37,8 +37,12 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const chooserId = useId();
   const playing = choice === "playing" || (choice === "auto" && !reducedMotion);
   const advancing = playing && !hovered && !focused;
-  // The slideshow moves through the featured examples until the visitor opens the rest or is looking at one of them.
-  const inPlay = more || index >= featured.length ? ordered.length : featured.length;
+  // The slideshow and its count stay with the featured examples until the visitor picks one of the others; after that, all of them.
+  const [pickedOther, setPickedOther] = useState(false);
+  const othersInPlay = pickedOther || index >= featured.length;
+  if (othersInPlay && !pickedOther) setPickedOther(true);
+  const inPlay = othersInPlay ? ordered.length : featured.length;
+  const mounted = more || othersInPlay ? ordered.length : featured.length;
   // A slide fetches its brand fonts and logo once it is shown or next, so the page doesn't load every example's at once.
   const upcoming = (index + 1) % inPlay;
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([index, upcoming]));
@@ -85,10 +89,10 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
       <CollapsibleTrigger className={styles.moreTrigger}>More examples <span aria-hidden="true">{more ? "−" : "+"}</span></CollapsibleTrigger>
     </Collapsible>
     <div className={styles.stage} aria-live={advancing ? "off" : "polite"}>
-      {ordered.slice(0, inPlay).map((example, slideIndex) => {
+      {ordered.slice(0, mounted).map((example, slideIndex) => {
         const current = slideIndex === index;
         return <div key={example.id} className={styles.slide} data-example={example.id} data-current={current} role="group" aria-roledescription="slide"
-          aria-label={`${slideIndex + 1} of ${inPlay}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
+          aria-label={`${slideIndex + 1} of ${mounted}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
           <p className={styles.capability} data-capability>{example.capability}</p>
           <p className={styles.sample}>Sample data / No account connected</p>
           <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} backHint={example.backHint} tablePreview={example.tablePreview} />
