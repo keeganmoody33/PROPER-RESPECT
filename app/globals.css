@@ -1775,7 +1775,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 @media (max-width: 480px) {
   .product-card :is(.outbound-link, .evidence-link, .card-artifact-links a) {
     align-items: center;
+    column-gap: 0.5rem;
     display: flex;
+    flex-wrap: wrap;
     min-height: 44px;
     width: fit-content;
   }

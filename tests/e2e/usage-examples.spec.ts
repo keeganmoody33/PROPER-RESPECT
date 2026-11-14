@@ -650,6 +650,20 @@ test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a 
   // Taller, the back's two links still sit one under the other, not run together on one line.
   const [open, evidence] = await Promise.all([".outbound-link", ".evidence-link"].map(selector => docker.locator(`.card-back ${selector}`).boundingBox()));
   expect(evidence!.y).toBeGreaterThanOrEqual(open!.y + open!.height);
+  // A paid link's tag sits apart from its arrow: "Open Firecrawl ↗  Referral link", not "↗Referral link".
+  await docker.getByRole("button", { name: "Close details" }).click();
+  await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
+  const firecrawl = carousel.getByRole("article", { name: "Firecrawl card" });
+  await firecrawl.getByRole("button", { name: "Details", exact: true }).click();
+  const gap = await firecrawl.locator(".card-back .outbound-link").evaluate(link => {
+    const label = link.querySelector(".card-link-disclosure")!;
+    const tag = label.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(label.previousSibling!);
+    const words = range.getBoundingClientRect();
+    return tag.top >= words.bottom - 1 ? Infinity : tag.left - words.right;
+  });
+  expect(gap).toBeGreaterThanOrEqual(MIN_TEXT_PX / 2);
 });
 
 test(`at ${PHONE_WIDTH}px GitHub's calendar keeps its weekday labels and shows no month label cut at the edge`, async ({ page }) => {
