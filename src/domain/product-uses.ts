@@ -35,5 +35,5 @@ export function productUseLabels(productSlug: string, uses: ProductUses | undefi
   if (!uses) return [];
   const labels = productUseOptions(productSlug).filter(option => uses.picks.includes(option.id)).map(option => option.label);
   const other = uses.other?.trim();
-  return other ? [...labels, other] : labels;
+  return other && !labels.includes(other) ? [...labels, other] : labels;
 }

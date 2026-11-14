@@ -32,6 +32,7 @@ test("a product without listed choices offers none and accepts only the owner's 
 test("showing a card's uses drops unknown ids, follows the product's order and puts the owner's words last", () => {
   expect(productUseLabels("clay", { picks: ["sync-crm", "retired-choice", "enrich-leads"], other: "score inbound leads" }))
     .toEqual(["enrich lead and account lists", "keep my CRM records filled in", "score inbound leads"]);
+  expect(productUseLabels("clay", { picks: ["build-lists"], other: "build target account lists" })).toEqual(["build target account lists"]);
   expect(productUseLabels("wisprflow", { picks: ["enrich-leads"] })).toEqual([]);
   expect(productUseLabels("clay", undefined)).toEqual([]);
 });

@@ -6,6 +6,7 @@ import { costSchema, type Cost, type CostVisibility } from "./cost";
 import { usageLinkSchema, type UsageLink } from "./usage-links";
 import { productBrandSnapshotSchema } from "./product-brand";
 import { relationshipLevelSchema, type RelationshipLevel } from "./relationship-level";
+import { productUsesSchema } from "./product-uses";
 
 export const handleSchema = z
   .string()
@@ -166,6 +167,8 @@ export const publicProfileSchema = z.object({
       level: relationshipLevelSchema.optional().catch(undefined),
       goTo: z.boolean().optional(),
       headline: z.string(),
+      // Shown on the owner's private card only: projectPublicProfile never sets it.
+      uses: productUsesSchema.optional().catch(undefined),
       note: z.string(),
       startedAt: z.iso.date().optional(),
       activity: activityModuleSchema.optional(),

@@ -16,6 +16,7 @@ import { compactNumber } from "@/src/domain/format-activity-number";
 import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
 import { isHttpUrl } from "@/src/domain/http-url";
 import { cardStatusLabel, cardTopLine } from "@/src/domain/relationship-level";
+import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart, usageChartLog } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
@@ -428,6 +429,7 @@ export function ProductCard({
   const topLine = !brandPreview && relationshipConfirmed ? cardTopLine(card) : cardStatus;
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
   const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : "Relationship & evidence";
+  const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
   const notePlaceholder = relationshipConfirmed ? "Relationship note not supplied." : "Discovery note not supplied.";
   const [isFlipped, setIsFlipped] = useState(false);
   const cardId = useId();
@@ -504,6 +506,10 @@ export function ProductCard({
         <p className="card-headline">
           {brandPreview ? card.product.description : card.headline || card.note || notePlaceholder}
         </p>
+        {useLabels.length > 0 && <div className="card-uses-block">
+          <p className="card-uses-lead">I use it to</p>
+          <ul className="card-uses" aria-label="What I use it for">{useLabels.map(label => <li key={label}>{label}</li>)}</ul>
+        </div>}
 
         {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
         {!brandPreview && card.activity ? (
