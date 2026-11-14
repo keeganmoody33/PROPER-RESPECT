@@ -156,11 +156,11 @@ const FRONT_LINKS: Readonly<Record<string, readonly string[]>> = {
 const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Firecrawl: ["Weekly · Referral link", "Open Firecrawl ↗Referral link"],
   Exa: ["Weekly · Direct link", "Demo ↗exa.ai"],
-  Cloudflare: ["Owner-selected go-to", "Owner-reported cost: $5.00/month · as of 2026-09-01"],
-  Docker: ["Sample Compose apps (awesome-compose) ↗", "Official Postgres image ↗", "Multi-stage build guide ↗"],
+  Cloudflare: ["Owner-selected go-to", "Owner-reported cost: $5/month · as of 1 Sep 2026"],
+  Docker: ["Weekly · Direct link", "Illustrative sample, not account data · the owner's own use · Jan 2024 – Aug 2026 · last updated 1 Sep 2026"],
   n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
-  Clay: ["Daily · Direct link", "Owner-reported cost: $149.00/month · as of 2026-09-01", "Enriched38,400Rows", "Built86Tables", "Used48,500Credits", "See how I use it ↗clay.com",
-    "Synthetic sample. Not real account activity.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown."],
+  Clay: ["Daily · Direct link", "Owner-reported cost: $149/month · as of 1 Sep 2026", "38,400 rows enriched · Mar 2023 – Aug 2026 · workspace · sample, not account data",
+    "86 tables built · Mar 2023 – Aug 2026", "48,500 credits used · Sep 2025 – Aug 2026", "See how I use it ↗clay.com", "How this was measured"],
 };
 
 const DESKTOP_WIDTH = 1440;
@@ -214,13 +214,13 @@ const NARROWEST_WIDTH = 320;
     await expect(card).toHaveCSS("background-color", brand.background);
     const font = await card.locator(".card-headline").evaluate(element => getComputedStyle(element).fontFamily);
     expect(font.replaceAll('"', "").startsWith(`PRBrand-${brand.slug}-`)).toBe(true);
-    const logo = card.locator(".product-logo img");
+    const logo = card.locator(".card-front .product-logo img");
     await expect(logo).toBeVisible();
     await expect.poll(() => logo.evaluate(image => (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
     // A wordmark stands in for the visible name; either way the heading still names the product. Clay's reviewed app icon outranks its stored brand.
     await expect(card.getByRole("heading", { level: 2, name: brand.name, exact: true })).toHaveCount(1);
     const slot = { square: ".card-topline > .product-logo:not([data-logo-layout])", "app-icon": ".card-topline > .product-logo[data-logo-layout=app-icon]", wordmark: ".card-title .product-logo[data-logo-layout=wordmark]" };
-    await expect(card.locator(slot[brand.logo])).toBeVisible();
+    await expect(card.locator(".card-front").locator(slot[brand.logo])).toBeVisible();
     // n8n is paused, so its uses are in the past tense.
     const [lead, list] = brand.name === "n8n" ? ["I used it to", "What I used it for"] : ["I use it to", "What I use it for"];
     await expect(card.getByText(lead)).toBeVisible();
@@ -252,7 +252,7 @@ const NARROWEST_WIDTH = 320;
       continue;
     }
     // Every sample was captured on 2026-09-01: the front says when, in words, not "stale".
-    await expect(card.locator(".card-front [data-freshness]")).toHaveText(" · last updated Sep 2026");
+    await expect(card.locator(".card-front [data-freshness]")).toHaveText(" · last updated 1 Sep 2026");
     // What a visitor reads under the number; the screen-reader table of bars keeps each bar's exact dates.
     expect(await card.locator(".card-front .card-activity-preview > p").allInnerTexts()).not.toContainEqual(expect.stringMatching(/stale|observation|personal activity|UTC|\d{4}-\d{2}-\d{2}/));
   }

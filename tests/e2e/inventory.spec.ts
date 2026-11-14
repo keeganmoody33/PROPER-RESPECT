@@ -326,7 +326,8 @@ for (const width of [1280, 390]) test(`usage stays with its explicitly selected 
   await expect(group.locator(".product-card")).toHaveAttribute("data-side", "front");
   await expect(group.getByText("This record has a saved usage snapshot. Open Details to see its source and coverage.", { exact: true })).toBeVisible();
   await group.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(group.locator(".activity-hero strong")).toHaveText("7");
+  // The back says where the snapshot came from, without repeating the front's number.
+  await expect(group.locator(".card-back .activity-summary")).toContainText("Synthetic retained source · the owner's own use · Measurement period not supplied");
   await expect(group.locator(".activity-meta")).toContainText("Synthetic retained source");
   await expect(group.locator(".activity-meta")).toContainText("Measurement period not supplied");
   await expect(group.locator(".activity-meta")).toContainText("stale");

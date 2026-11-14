@@ -125,7 +125,8 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   const preview = page.getByRole("region", { name: "Your visitor’s view", exact: true });
   await expect(preview.getByText(shownExact, { exact: true }).first()).toBeVisible();
   await preview.getByRole("button", { name: "Details", exact: true }).click();
-  // The front's row of numbers shows them too; these are the back's full rows.
+  // The front's row of numbers shows them too; the back's full rows are folded under How this was measured.
+  await preview.locator(".card-back").getByRole("button", { name: "How this was measured", exact: true }).click();
   await expect(preview.locator(".card-back").getByText("Unknown", { exact: true })).toBeVisible();
   await expect(preview.locator(".card-back").getByText("0", { exact: true })).toBeVisible();
   for (const secret of ["private-account-alias", "private-source-alias", "private-owner-alias", "private-device-alias", "private-overlap"]) await expect(preview).not.toContainText(secret);

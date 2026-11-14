@@ -27,8 +27,11 @@ test("visitor sees the approved public reference projection", async ({
 
   const trigger = page.getByRole("button", { name: "Details" }).first();
   await trigger.click();
-  await expect(page.getByText("2026-07-20 to 2026-07-26", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Estimated cost:.*12\.34.*as of 2026-07-26/)).toBeVisible();
+  // The back says the cost and dates in plain words; the exact period is folded under How this was measured.
+  await expect(page.getByText(/Estimated cost:.*12\.34.*as of 26 Jul 2026/)).toBeVisible();
+  const back = page.locator('.card-back:not([hidden])');
+  await back.getByRole("button", { name: "How this was measured" }).click();
+  await expect(back.getByText("2026-07-20 to 2026-07-26", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("link", { name: "See Keegan on GitHub ↗", exact: true }),
   ).toBeVisible();

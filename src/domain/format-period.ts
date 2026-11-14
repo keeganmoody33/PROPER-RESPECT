@@ -9,6 +9,18 @@ function utcDate(value: string): Date | undefined {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value.slice(0, 10) ? date : undefined;
 }
 
+/** "1 Sep 2026", for a date or an instant, read in UTC; as written when it isn't a real date. */
+export function dayMonthYear(value: string): string {
+  const date = utcDate(value);
+  return date ? `${date.getUTCDate()} ${MONTH.format(date)} ${YEAR.format(date)}` : value;
+}
+
+/** "2023", for a date; as written when it isn't a real date. */
+export function yearOf(value: string): string {
+  const date = utcDate(value);
+  return date ? YEAR.format(date) : value;
+}
+
 /** "Aug 2026", for a date or an instant, read in UTC. */
 export function monthYear(value: string): string {
   const date = utcDate(value);
@@ -28,6 +40,6 @@ export function formatPeriod(start: string, end: string): string {
 /** What a card's front says about a snapshot that isn't fresh: when it was last updated, and whether the last refresh failed. */
 export function freshnessNote(freshness: ActivityModule["freshness"], capturedAt: string): string | undefined {
   if (freshness === "FRESH") return undefined;
-  const updated = `last updated ${monthYear(capturedAt)}`;
+  const updated = `last updated ${dayMonthYear(capturedAt)}`;
   return freshness === "ERROR" ? `${updated} · refresh failed` : updated;
 }

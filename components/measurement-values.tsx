@@ -80,6 +80,19 @@ function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] 
   </section>;
 }
 
+const SAMPLE_WORDS: Readonly<Record<PublicMeasurement["sample"], string>> = { synthetic: "sample, not account data", "owner-supplied": "owner-supplied", unknown: "origin unknown" };
+
+/** A card's back: each number on one plain line with its period, scope and whose it is; how each was recorded is in the back's disclosure. */
+export function MeasurementLines({ measurements }: { measurements: PublicMeasurement[] }) {
+  if (!measurements.length) return null;
+  return <ul className="usage-measurement-lines" aria-label="Reported usage measurements">
+    {measurements.map((row, index) => <li key={index}>
+      <strong>{row.value === null ? "Unknown" : groupedDecimal(row.value)} {countedThing(row)}</strong>
+      {` · ${measurementPeriodInWords(row.period)} · ${row.scope.toLowerCase()} · ${SAMPLE_WORDS[row.sample]}`}
+    </li>)}
+  </ul>;
+}
+
 export function PublicMeasurements({ measurements, compact = false }: { measurements: PublicMeasurement[]; compact?: boolean }) {
   if (!measurements.length) return null;
   if (compact) return <MeasurementStats measurements={measurements} />;

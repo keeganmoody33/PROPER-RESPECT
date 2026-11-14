@@ -89,15 +89,9 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   await expect(frontCalendar.locator('[data-date="2025-01-05"]')).toHaveCSS("grid-column-start", "2");
   await expect(frontCalendar.getByRole("img", { name: "2025-01-01: 1 contribution", exact: true })).toBeVisible();
   await calendarCard.getByRole("button", { name: "Details", exact: true }).click();
-  const calendar = calendarCard.locator(".card-back .activity-calendar");
-  await expect(calendar.locator("span")).toHaveCount(371);
-  expect(await calendar.evaluate(element => {
-    const bounds = element.getBoundingClientRect();
-    return Array.from(element.children).every(day => {
-      const cell = day.getBoundingClientRect();
-      return cell.width > 0 && cell.left >= bounds.left && cell.right <= bounds.right + 1;
-    });
-  })).toBe(true);
+  // The back doesn't draw the calendar again; it says where the counts came from.
+  await expect(calendarCard.locator(".card-back .activity-calendar")).toHaveCount(0);
+  await expect(calendarCard.locator(".card-back .activity-summary")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -180,7 +174,7 @@ for (const width of [320, 390, 1280]) test(`grouped private records fit and swit
     await expect(page.locator("#save-count")).toHaveText("0");
   };
   await expect(page.locator(".product-card")).toHaveCount(2);
-  await expect(copilot.locator(".card-title h2")).toHaveText("Copilot");
+  await expect(copilot.locator(".card-front .card-title h2")).toHaveText("Copilot");
   await expect(selector.locator("option")).toHaveCount(3);
   await page.screenshot({ path: testInfo.outputPath(`2026-09-19-record-selector-${width}.png`), fullPage: true, animations: "disabled" });
   const selectorBounds = (await selector.boundingBox())!;
@@ -262,7 +256,7 @@ for (const width of [320, 1280]) test(`contribution calendar preserves supplied 
   expect(Math.abs(cell!.width - cell!.height)).toBeLessThanOrEqual(1);
   expect(cell!.width).toBeLessThanOrEqual(12);
   await expect(front).toContainText("2 days have no supplied count");
-  await expect(front.locator("[data-freshness]")).toHaveText(" · last updated Sep 2026");
+  await expect(front.locator("[data-freshness]")).toHaveText(" · last updated 19 Sep 2026");
   await expect(front.locator('[data-date="2026-09-02"]')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole("button", { name: "Details", exact: true }).click();
@@ -284,8 +278,7 @@ for (const width of [320, 1280]) test(`contribution calendar retains missing per
   await page.setContent('<main id="root"></main>');
   await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
-  for (const side of [".card-front", ".card-back"]) {
-    if (side === ".card-back") await page.getByRole("button", { name: "Details", exact: true }).click();
+  for (const side of [".card-front"]) {
     const face = page.locator(side);
     const grid = face.locator(".activity-calendar");
     await expect(grid.getByRole("img")).toHaveCount(2);
@@ -307,4 +300,7 @@ for (const width of [320, 1280]) test(`contribution calendar retains missing per
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`2026-09-21-calendar-boundaries-${side.slice(1)}-${width}.png`), fullPage: true, animations: "disabled" });
   }
+  // The back doesn't draw the calendar again.
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(page.locator(".card-back .activity-calendar")).toHaveCount(0);
 });

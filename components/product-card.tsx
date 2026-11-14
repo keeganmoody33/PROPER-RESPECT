@@ -1,6 +1,7 @@
 "use client";
 
-import { PublicMeasurements } from "./measurement-values";
+import { MeasurementLines, PublicMeasurements } from "./measurement-values";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 
 import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import {
@@ -20,11 +21,11 @@ import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relati
 import { costDetail, costSummary } from "@/src/domain/cost";
 import { tablePreview as parseTablePreview, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
 import { useReducedMotion } from "./use-reduced-motion";
-import { formatPeriod, freshnessNote } from "@/src/domain/format-period";
+import { dayMonthYear, formatPeriod, freshnessNote, yearOf } from "@/src/domain/format-period";
 import { activityHeadline } from "@/src/domain/activity-headline";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
-import { UsageChart, usageChartLog } from "./usage-chart";
+import { UsageChart } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
@@ -333,161 +334,50 @@ function ActivityMeta({ activity }: { activity: ActivityModule }) {
   );
 }
 
-function ActivityView({ activity, pastUse }: { activity: ActivityModule; pastUse: boolean }) {
-  if (activity.kind === "contributionCalendar") {
-    return (
-      <div className="activity-module contribution-module">
-        <div className="activity-hero">
-          <strong>{compactNumber(activity.total)}</strong>
-          <span>contributions</span>
-        </div>
-        <ContributionCalendar activity={activity} />
-        {activity.memberSince && (
-          <p className="activity-caption">
-            Member since {activity.memberSince.slice(0, 4)}
-          </p>
-        )}
-        <ActivityMeta activity={activity} />
-      </div>
-    );
-  }
+/** Whose use an activity counts, in a visitor's words; the disclosure keeps the stored scope. */
+const SCOPE_WORDS: Readonly<Record<ActivityModule["attributionScope"], string>> = {
+  PERSONAL: "the owner's own use", REPOSITORY: "one repository", WORKSPACE: "a shared workspace", ORGANIZATION: "a whole organisation",
+};
 
-  if (activity.kind === "headlineMetrics") {
-    return (
-      <div className="activity-module">
-        <div className="activity-hero">
-          <strong>{compactNumber(activity.primary.value)}</strong>
-          <span>
-            {activity.primary.label}
-            {activity.primary.unit ? ` · ${activity.primary.unit}` : ""}
-          </span>
-        </div>
-        <div className="metric-row">
-          {activity.supporting.map((metric) => (
-            <div key={metric.label}>
-              <strong>{compactNumber(metric.value)}</strong>
-              <span>
-                {metric.label}
-                {metric.unit ? ` · ${metric.unit}` : ""}
-              </span>
-            </div>
-          ))}
-        </div>
-        <ActivityMeta activity={activity} />
-      </div>
-    );
-  }
+/** An activity's provenance on one plain line: where it came from, whose use, its period and how old it is. */
+function activitySummary(activity: ActivityModule): string {
+  const when = freshnessNote(activity.freshness, activity.capturedAt) ?? `recorded ${dayMonthYear(activity.capturedAt)}`;
+  const period = activity.period ? formatPeriod(activity.period.start, activity.period.end) : "Measurement period not supplied";
+  return [activity.provenanceLabel, SCOPE_WORDS[activity.attributionScope], period, when].join(" · ");
+}
 
-  if (activity.kind === "timeSeries") {
-    const latest = activity.points.at(-1);
-    const headline = activityHeadline(activity, pastUse);
-    return (
-      <div className="activity-module">
-        {latest && headline ? <>
-          <div className="activity-hero">
-            <strong>{compactNumber(headline.value)}</strong>
-            <span>{headline.label}</span>
-          </div>
-          <p className="activity-caption">Observed {latest.date}</p>
-          <UsageChart
-            points={activity.points}
-            label={activity.label}
-            unit={activity.unit}
-            log={usageChartLog({
-              source: activity.attributionScope,
-              period: activity.period,
-            })}
-          />
-        </> : <p className="activity-empty">No observations supplied</p>}
-        <ActivityMeta activity={activity} />
-      </div>
-    );
-  }
+function MetricRow({ metrics }: { metrics: readonly { label: string; value: number; unit?: string }[] }) {
+  if (!metrics.length) return null;
+  return <div className="metric-row">
+    {metrics.map(metric => <div key={metric.label}>
+      <strong>{compactNumber(metric.value)}</strong>
+      <span>{metric.label}{metric.unit ? ` · ${metric.unit}` : ""}</span>
+    </div>)}
+  </div>;
+}
 
-  if (activity.kind === "artifactCollection") {
-    return (
-      <div className="activity-module">
-        <div className="activity-hero">
-          <strong>{compactNumber(activity.total)}</strong>
-          <span>artifacts</span>
-        </div>
-        {activity.artifacts.length > 0 ? (
-          <ul className="artifact-list">
-            {activity.artifacts.map((artifact, index) => (
-              <li key={`${index}:${artifact.url}`}>
-                {isHttpUrl(artifact.url) ? (
-                  <a href={artifact.url} target="_blank" rel="noreferrer">
-                    {artifact.title} ↗
-                  </a>
-                ) : artifact.title}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="activity-empty">No artifacts selected</p>
-        )}
-        <ActivityMeta activity={activity} />
-      </div>
-    );
-  }
-
-  if (activity.kind === "reviewActivity") {
-    return (
-      <div className="activity-module">
-        <div className="metric-row metric-row-prominent">
-          <div>
-            <strong>{compactNumber(activity.reviews)}</strong>
-            <span>reviews</span>
-          </div>
-          <div>
-            <strong>{compactNumber(activity.bugsCaught)}</strong>
-            <span>bugs caught</span>
-          </div>
-        </div>
-        <div className="severity-row">
-          {activity.severity.map((severity) => (
-            <span key={severity.label}>
-              {severity.label} · {severity.count}
-            </span>
-          ))}
-        </div>
-        <ActivityMeta activity={activity} />
-      </div>
-    );
-  }
-
+/** What the back adds to the front's activity: never its chart or calendar again, only what the front leaves out. */
+function ActivityEvidence({ activity }: { activity: ActivityModule }) {
+  const empty = (activity.kind === "timeSeries" && !activity.points.length) || (activity.kind === "artifactCollection" && !activity.artifacts.length);
+  // The works the front doesn't link: past its first few, or without a web link.
+  const unlinked = activity.kind === "artifactCollection"
+    ? activity.artifacts.filter((artifact, index, all) => !isHttpUrl(artifact.url) || all.slice(0, index).filter(earlier => isHttpUrl(earlier.url)).length >= FRONT_ARTIFACT_LIMIT)
+    : [];
   return (
     <div className="activity-module">
-      <div className="activity-hero">
-        <strong>{compactNumber(activity.primary.value)}</strong>
-        <span>
-          {activity.primary.label}
-          {activity.primary.unit ? ` · ${activity.primary.unit}` : ""}
-        </span>
-      </div>
-      {activity.days && activity.days.length > 0 && (
-        <div className="activity-calendar" aria-label="Coding activity">
-          {activity.days.map((day) => (
-            <span
-              key={day.date}
-              data-level={day.level}
-              title={`${day.date}: ${day.count}`}
-            />
-          ))}
-        </div>
-      )}
-      <div className="metric-row">
-        {activity.supporting.map((metric) => (
-          <div key={metric.label}>
-            <strong>{compactNumber(metric.value)}</strong>
-            <span>
-              {metric.label}
-              {metric.unit ? ` · ${metric.unit}` : ""}
-            </span>
-          </div>
-        ))}
-      </div>
-      <ActivityMeta activity={activity} />
+      {empty && <p className="activity-empty">{activity.kind === "timeSeries" ? "No observations supplied" : "No artifacts selected"}</p>}
+      {(activity.kind === "headlineMetrics" || activity.kind === "codingActivity") && <MetricRow metrics={activity.supporting} />}
+      {activity.kind === "reviewActivity" && <>
+        <MetricRow metrics={[{ label: "bugs caught", value: activity.bugsCaught }]} />
+        <div className="severity-row">{activity.severity.map(severity => <span key={severity.label}>{severity.label} · {severity.count}</span>)}</div>
+      </>}
+      {activity.kind === "contributionCalendar" && activity.memberSince && <p className="activity-caption">Member since {yearOf(activity.memberSince)}</p>}
+      {unlinked.length > 0 && <ul className="artifact-list">
+        {unlinked.map((artifact, index) => <li key={`${index}:${artifact.url}`}>
+          {isHttpUrl(artifact.url) ? <a href={artifact.url} target="_blank" rel="noreferrer">{artifact.title} ↗</a> : artifact.title}
+        </li>)}
+      </ul>}
+      <p className="activity-summary">{activitySummary(activity)}</p>
     </div>
   );
 }
@@ -560,6 +450,9 @@ export function ProductCard({
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
   const notePlaceholder = relationshipConfirmed ? "Relationship note not supplied." : "Discovery note not supplied.";
   const [isFlipped, setIsFlipped] = useState(false);
+  // Turned over, a card keeps at least the height it had, so its back never makes the page under it jump up.
+  const [frontHeight, setFrontHeight] = useState<number>();
+  const articleRef = useRef<HTMLElement>(null);
   const cardId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const backHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -599,7 +492,8 @@ export function ProductCard({
   return (
     <article
       className="product-card"
-      style={{ ...appearance.style, ...(verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand)) }}
+      ref={articleRef}
+      style={{ ...appearance.style, ...(verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand)), ...(isFlipped && frontHeight ? { minHeight: frontHeight } : {}) }}
       data-surface={appearance.surface}
       data-band={appearance.style["--brand-card-band"] ? "" : undefined}
       data-verified-brand={verifiedAssets?.productSlug}
@@ -671,7 +565,10 @@ export function ProductCard({
             aria-expanded={isFlipped}
             aria-controls={`${cardId}-back`}
             aria-describedby={backHint && footerLabel === backHint ? `${cardId}-footer` : undefined}
-            onClick={() => setIsFlipped(true)}
+            onClick={() => {
+              setFrontHeight(articleRef.current?.offsetHeight);
+              setIsFlipped(true);
+            }}
           >
             Details <span aria-hidden="true">↶</span>
           </button>
@@ -685,8 +582,13 @@ export function ProductCard({
         aria-labelledby={`${cardId}-back-title`}
         hidden={!isFlipped}
       >
+        {/* The back is the same branded object: its logo and name as on the front. */}
         <div className="card-back-topline">
-          <h2 ref={backHeadingRef} id={`${cardId}-back-title`} tabIndex={-1}>{card.product.name}</h2>
+          {!wordmark && <ProductLogo logo={logo} mark={mark} onFailed={markFailed} />}
+          <div className="card-title">
+            <h2 ref={backHeadingRef} id={`${cardId}-back-title`} tabIndex={-1} className={wordmark ? "card-product-name" : undefined}>{card.product.name}</h2>
+            {wordmark && <ProductLogo logo={logo} mark={card.product.name} onFailed={markFailed} />}
+          </div>
           <button type="button" className="close-button" onClick={closeCard}>
             Close details
           </button>
@@ -701,17 +603,27 @@ export function ProductCard({
             {!relationshipConfirmed && <p>Needs your review</p>}
             {card.note ? <blockquote>{card.note}</blockquote> : <p>{notePlaceholder}</p>}
             <p className="relationship-date">
-              {!relationshipConfirmed ? "Relationship not confirmed" : card.startedAt ? <>Since <time dateTime={card.startedAt}>{card.startedAt}</time></> : "Start date not supplied"}
+              {!relationshipConfirmed ? "Relationship not confirmed" : card.startedAt ? `Since ${yearOf(card.startedAt)}` : "Start date not supplied"}
             </p>
           </>}
           <p>{card.product.description}</p>
           {!brandPreview && card.cost && <p>{costDetail(card.cost)}</p>}
           {!brandPreview && card.activity && <>
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
-            <ActivityView activity={card.activity} pastUse={pastUse} />
+            <ActivityEvidence activity={card.activity} />
           </>}
-          {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} /> : null}
+          {!brandPreview && card.measurements?.length ? <MeasurementLines measurements={card.measurements} /> : null}
           {ownerUsage && <PrivateUsageCardDetails usage={ownerUsage} />}
+          {/* Every provenance line stays, folded: exact dates, scope, status words and how each number was recorded. */}
+          {!brandPreview && <Collapsible className="card-provenance">
+            <CollapsibleTrigger className="card-provenance-trigger">How this was measured</CollapsibleTrigger>
+            <CollapsiblePanel className="card-provenance-panel" hiddenUntilFound>
+              {relationshipConfirmed && card.startedAt && <p>Relationship started <time dateTime={card.startedAt}>{card.startedAt}</time></p>}
+              {card.activity && <ActivityMeta activity={card.activity} />}
+              {card.measurements?.length ? <PublicMeasurements measurements={card.measurements} /> : null}
+              {!card.activity && !card.measurements?.length && <p>No activity or published numbers on this card.</p>}
+            </CollapsiblePanel>
+          </Collapsible>}
           {usageLink && <a
             className="usage-link"
             href={usageLink.url}

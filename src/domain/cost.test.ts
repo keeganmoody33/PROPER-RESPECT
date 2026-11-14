@@ -10,10 +10,11 @@ describe("how a cost reads on a card", () => {
     expect(costSummary({ ...monthly, amount: 0, basis: "RECEIPT", cadence: "ONE_TIME" })).toBe("Costs $0 one-time · from a receipt");
     expect(costSummary({ ...monthly, currency: "EUR", cadence: "UNKNOWN" })).toBe("Costs €5 (billing interval unknown) · owner-reported");
   });
-  it("keeps the full record on the back: basis, exact amount, as-of date and any period", () => {
-    expect(costDetail(monthly)).toBe("Owner-reported cost: $5.00/month · as of 2026-09-01");
+  it("keeps the full record on the back, in plain words: basis, amount with cents only when it has them, the day it was true and any period", () => {
+    expect(costDetail(monthly)).toBe("Owner-reported cost: $5/month · as of 1 Sep 2026");
+    expect(costDetail({ ...monthly, amount: 149.5 })).toBe("Owner-reported cost: $149.50/month · as of 1 Sep 2026");
     expect(costDetail({ ...monthly, basis: "RECEIPT", period: { start: "2026-08-01", end: "2026-08-31" } }))
-      .toBe("Receipt cost: $5.00/month · as of 2026-09-01 · 2026-08-01 to 2026-08-31");
+      .toBe("Receipt cost: $5/month · as of 1 Sep 2026 · 1 Aug 2026 to 31 Aug 2026");
   });
 });
 
