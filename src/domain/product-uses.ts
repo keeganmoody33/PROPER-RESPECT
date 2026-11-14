@@ -25,10 +25,16 @@ export function normalizeUses(productSlug: string, uses: ProductUses | undefined
   if (!uses) return { ok: true, uses: undefined };
   const options = productUseOptions(productSlug);
   if (!uses.picks.every(id => options.some(option => option.id === id))) return { ok: false, message: REFUSED_PICK };
-  const picks = options.filter(option => uses.picks.includes(option.id)).map(option => option.id);
+  return { ok: true, uses: listedUses(productSlug, uses) };
+}
+
+// What a card can show: picks the product still lists, in its order, and the owner's trimmed words.
+export function listedUses(productSlug: string, uses: ProductUses | undefined): ProductUses | undefined {
+  if (!uses) return undefined;
+  const picks = productUseOptions(productSlug).filter(option => uses.picks.includes(option.id)).map(option => option.id);
   const other = uses.other?.trim();
-  if (!picks.length && !other) return { ok: true, uses: undefined };
-  return { ok: true, uses: other ? { picks, other } : { picks } };
+  if (!picks.length && !other) return undefined;
+  return other ? { picks, other } : { picks };
 }
 
 export function productUseLabels(productSlug: string, uses: ProductUses | undefined): string[] {
