@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { inInventoryView, relationshipEditSchema } from "./inventory";
 import { RELATIONSHIP_LEVELS } from "./relationship-level";
+import { USE_OTHER_MAX, USE_PICKS_MAX } from "./product-uses";
 
 test("collection views overlap through recorded history and go-to stays explicitly owner-selected", () => {
   const item = { prop: { status: "ACTIVE" as const, visibility: "PRIVATE", goTo: true }, previousStatuses: ["TESTING"] };
@@ -53,4 +54,13 @@ test("a work link that isn't a URL gets the rule's message, not a TypeError", ()
   const result = relationshipEditSchema.safeParse({ status: "TESTING", goTo: false, headline: "", note: "", supportingUrl: "not a url" });
   expect(result.success).toBe(false);
   expect(result.error?.issues.map(issue => issue.message)).toContain("Use an HTTPS work sample or workflow link without credentials.");
+});
+
+test("an edit carries what the product does for the owner, within the stored caps", () => {
+  const edit = { status: "TESTING", goTo: false, headline: "", note: "" };
+  expect(relationshipEditSchema.parse({ ...edit, uses: { picks: ["enrich-leads"], other: "  score leads " } }).uses)
+    .toEqual({ picks: ["enrich-leads"], other: "score leads" });
+  expect(relationshipEditSchema.parse(edit).uses).toBeUndefined();
+  expect(relationshipEditSchema.safeParse({ ...edit, uses: { picks: [], other: "b".repeat(USE_OTHER_MAX + 1) } }).success).toBe(false);
+  expect(relationshipEditSchema.safeParse({ ...edit, uses: { picks: Array.from({ length: USE_PICKS_MAX + 1 }, (_, index) => `pick-${index}`) } }).success).toBe(false);
 });
