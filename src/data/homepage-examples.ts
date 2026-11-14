@@ -141,6 +141,13 @@ const EXAMPLES: readonly ExampleSource[] = [
     source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
   },
   {
+    slug: "clay", capability: "Published usage numbers", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
+    uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
+    cost: { amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
+    usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
+    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Cost, numbers and a work sample inside",
+  },
+  {
     slug: "claude-code", capability: "Coding days", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code.",
     uses: ["write-features", "fix-bugs", "automate-chores"],
   },
@@ -192,13 +199,6 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "n8n", capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
     uses: ["schedule-jobs", "move-data"],
-  },
-  {
-    slug: "clay", capability: "Published usage numbers", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
-    uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
-    cost: { amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
-    usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
-    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Cost, numbers and a work sample inside",
   },
 ];
 

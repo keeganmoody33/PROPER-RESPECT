@@ -21,6 +21,7 @@ const CODING_DAYS = 31;
 test("the homepage shows a go-to-market engineering stack whose names and links come from the directory", () => {
   expect(examples.map(example => [example.card.product.name, example.card.level, example.card.status, example.card.goTo === true, example.card.startedAt?.slice(0, YEAR_DIGITS)])).toEqual([
     ["GitHub", "DAILY", "ACTIVE", true, "2019"],
+    ["Clay", "DAILY", "ACTIVE", false, "2023"],
     ["Claude Code", "DAILY", "ACTIVE", false, "2025"],
     ["Firecrawl", "WEEKLY", "ACTIVE", false, "2025"],
     ["Exa", "WEEKLY", "ACTIVE", false, "2025"],
@@ -33,7 +34,6 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
     ["Elicit", "STOPPED", "ARCHIVED", false, "2026"],
     ["Context.dev", "TESTING", "TESTING", false, "2026"],
     ["n8n", "PAUSED", "ARCHIVED", false, "2024"],
-    ["Clay", "DAILY", "ACTIVE", false, "2023"],
   ]);
   const fromDirectory = examples.map(({ id }) => {
     const entry = directoryEntry(id)!;
@@ -59,6 +59,7 @@ const CONTEXT_DEV_LAST_WEEK = 76;
 test("each example names the part of a card it shows, in a few words no other example uses", () => {
   expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
     ["github", "A year of contributions"],
+    ["clay", "Published usage numbers"],
     ["claude-code", "Coding days"],
     ["firecrawl", "Referral link, disclosed"],
     ["exa", "A demo link on the back"],
@@ -71,7 +72,6 @@ test("each example names the part of a card it shows, in a few words no other ex
     ["elicit", "Stopped using, and why"],
     ["context-dev", "Testing, week by week"],
     ["n8n", "Paused, and why"],
-    ["clay", "Published usage numbers"],
   ]);
   expect(new Set(examples.map(({ capability }) => capability)).size).toBe(examples.length);
   expect(examples.filter(({ capability }) => capability.length > CAPABILITY_LIMIT).map(({ id }) => id)).toEqual([]);
@@ -90,6 +90,7 @@ test("each example shows a different part of a card: its link, cost, work sample
   expect(examples.map(({ id, card }) => [id, card.primaryLink?.type, card.cost && `${card.cost.amount} ${card.cost.currency} ${card.cost.cadence} ${card.cost.basis}`,
     card.usageLink && `${usageLinkLabelText(card.usageLink.label)} / ${usageLinkHost(card.usageLink.url)}`, card.measurements?.length, card.activity?.kind])).toEqual([
     ["github", "CANONICAL", undefined, undefined, undefined, "contributionCalendar"],
+    ["clay", "CANONICAL", "149 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", CLAY_MEASUREMENTS, undefined],
     ["claude-code", "CANONICAL", undefined, undefined, undefined, "codingActivity"],
     ["firecrawl", "REFERRAL", undefined, undefined, undefined, "timeSeries"],
     ["exa", "CANONICAL", undefined, "Demo / exa.ai", undefined, "timeSeries"],
@@ -102,7 +103,6 @@ test("each example shows a different part of a card: its link, cost, work sample
     ["elicit", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["context-dev", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["n8n", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
-    ["clay", "CANONICAL", "149 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", CLAY_MEASUREMENTS, undefined],
   ]);
   expect(examples.filter(({ card }) => !publicProfileSchema.shape.cards.element.safeParse(card).success).map(({ id }) => id)).toEqual([]);
 });
@@ -170,7 +170,7 @@ test("each weekly sample is twelve consecutive weeks, read per week, and its per
 });
 
 test("Claude Code's sessions are the sum of the days it draws", () => {
-  const activity = examples[1].card.activity;
+  const activity = examples.find(({ id }) => id === "claude-code")?.card.activity;
   if (activity?.kind !== "codingActivity" || !activity.days) throw new Error("Claude Code sample days missing");
   expect(activity.days).toHaveLength(CODING_DAYS);
   expect(activity.primary).toEqual({ label: "sessions", value: activity.days.reduce((sum, day) => sum + day.count, 0) });
@@ -180,6 +180,7 @@ test("Claude Code's sessions are the sum of the days it draws", () => {
 test("every example says what it is used for, in two or three of its product's own listed uses", () => {
   expect(examples.map(({ id, card }) => [id, productUseLabels(id, card.uses)])).toEqual([
     ["github", ["host my code and its history", "review and merge pull requests", "run tests and deploys on every push"]],
+    ["clay", ["enrich lead and account lists", "find contact details"]],
     ["claude-code", ["build features from a description", "find and fix bugs", "automate repetitive engineering work"]],
     ["firecrawl", ["turn web pages into Markdown", "crawl whole sites"]],
     ["exa", ["give my agents web search", "find companies and people that fit a description"]],
@@ -192,14 +193,13 @@ test("every example says what it is used for, in two or three of its product's o
     ["elicit", ["find papers on a question", "pull data out of studies into a table"]],
     ["context-dev", ["pull a company's logo, colors and fonts", "look up company details by domain"]],
     ["n8n", ["run jobs on a schedule", "move data between systems"]],
-    ["clay", ["enrich lead and account lists", "find contact details"]],
   ]);
   expect(examples.filter(({ id, card }) => listedUses(id, card.uses)?.picks.length !== card.uses?.picks.length).map(({ id }) => id)).toEqual([]);
 });
 
 test("every example with a committed brand carries it, matched to its own product", () => {
   expect(examples.filter(({ card }) => card.product.brand).map(({ id }) => id)).toEqual([
-    "github", "firecrawl", "exa", "cloudflare", "porkbun", "spider", "docker", "open-places", "elicit", "context-dev", "n8n", "clay",
+    "github", "clay", "firecrawl", "exa", "cloudflare", "porkbun", "spider", "docker", "open-places", "elicit", "context-dev", "n8n",
   ]);
   const mismatched = examples.filter(({ card }) => card.product.brand && (card.product.brand.productSlug !== card.product.slug
     || card.product.brand.canonicalDomain !== card.product.domain || !productBrandSnapshotSchema.safeParse(card.product.brand).success));

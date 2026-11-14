@@ -42,6 +42,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   const githubHeight = await slideBox();
   // The top line and button are typed as written; each card's measured site, or the house default, sets their case.
   for (const [name, text, labelCase, buttonCase] of [
+    ["Clay", "Daily · since 2023", "none", "none"],
     ["Claude Code", "Daily · since 2025", "uppercase", "uppercase"],
     ["Firecrawl", "Weekly · since 2025", "none", "none"],
     ["Exa", "Weekly · since 2025", "none", "none"],
@@ -54,7 +55,6 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     ["Elicit", "Stopped using · started 2026", "uppercase", "none"],
     ["Context.dev", "Testing · since 2026", "none", "none"],
     ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
-    ["Clay", "Daily · since 2023", "none", "none"],
   ]) {
     const toggle = carousel.getByRole("button", { name, exact: true });
     // The chooser says what each example shows, as the toggle's description, so its name stays the product's.
@@ -85,15 +85,16 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await carousel.getByRole("button", { name: "Next example" }).click();
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Previous example" }).click();
-  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "n8n card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Details", exact: true }).click();
   await expect(carousel.getByRole("button", { name: "Close details" })).toBeVisible();
-  await carousel.getByRole("button", { name: "n8n", exact: true }).click();
+  await carousel.getByRole("button", { name: "Clay", exact: true }).click();
   await expect(carousel.getByRole("button", { name: "Details", exact: true })).toBeVisible();
 });
 
 /** What each example shows, named above its card and as its chooser toggle's description. */
 const CAPABILITIES: Readonly<Record<string, string>> = {
+  Clay: "Published usage numbers",
   "Claude Code": "Coding days",
   Firecrawl: "Referral link, disclosed",
   Exa: "A demo link on the back",
@@ -106,7 +107,6 @@ const CAPABILITIES: Readonly<Record<string, string>> = {
   Elicit: "Stopped using, and why",
   "Context.dev": "Testing, week by week",
   n8n: "Paused, and why",
-  Clay: "Published usage numbers",
 };
 /** What a card discloses next to its outbound arrow, and what its back shows beyond the front: one capability per example. */
 const FRONT_DISCLOSURE: Readonly<Record<string, string>> = { Firecrawl: "Referral link", Spider: "Affiliate link" };
@@ -213,37 +213,37 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
   await expect(stage).toHaveAttribute("aria-live", "off");
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Claude Code card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
   await carousel.hover();
   await expect(stage).toHaveAttribute("aria-live", "polite");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Claude Code card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
   await page.mouse.move(0, 0);
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Claude Code card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Details", exact: true }).focus();
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Claude Code card" })).toBeVisible();
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
   const toggle = carousel.getByRole("button", { name: /slideshow$/ });
   await toggle.focus();
   await expect(toggle).toHaveText("Pause slideshow");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
   await toggle.press("Enter");
   await expect(toggle).toHaveText("Play slideshow");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
   await toggle.press("Enter");
   await expect(toggle).toHaveText("Pause slideshow");
   await expect(toggle).toBeFocused();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Next example" }).focus();
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Exa card" })).toBeVisible();
 });
 
 test("slideshow never advances on its own for a visitor who prefers reduced motion", async ({ page }) => {
@@ -273,7 +273,7 @@ test("the example chooser is one tab stop: arrows move, a press picks, and the p
   await expect(second).toHaveAttribute("aria-pressed", "true");
   await expect(github).toHaveAttribute("aria-pressed", "false");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  await expect(carousel.getByRole("article")).toHaveAccessibleName("Claude Code card");
+  await expect(carousel.getByRole("article")).toHaveAccessibleName("Clay card");
   // Pressing the picked example again keeps it: one example is always shown.
   await page.keyboard.press("Enter");
   await expect(second).toHaveAttribute("aria-pressed", "true");
@@ -312,9 +312,10 @@ test("a hidden example asks for no brand font or logo until it is shown or next"
   });
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  // GitHub is shown and Claude Code is next; Claude Code's verified assets are this site's own files.
+  // GitHub's font and logo, since it is shown, and Clay's font, since it is next. Clay's reviewed app icon is this site's own file.
   expect([...assets].sort()).toEqual([
     "/api/brand-fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+    "/api/brand-fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
     "/api/brand-images/c625fdf9-bcc0-4e62-a4ea-6f385a71cd16.png",
   ]);
   assets.clear();
