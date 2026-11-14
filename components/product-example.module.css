@@ -2,6 +2,7 @@
 .label, .capability, .sample, .controls, .chooser, .source { font: .75rem/1.6 var(--homepage-mono), monospace; }
 .label { margin: 0 0 1rem; }
 .label:last-child { margin: 1rem 0 0; }
+.shortLabel { display: none; }
 .header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .4rem 1rem; margin-bottom: 1rem; }
 .header .label { flex: 1 1 14rem; margin: 0; min-width: 0; }
 /* A fixed width for "1 / 5" and "14 / 14", so the arrows don't shift as the count grows. */
@@ -15,7 +16,11 @@
 .choices button[data-pressed] { background: var(--ink); border-color: var(--ink); color: var(--action-text); }
 .carousel button:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 3px; }
 .capability { margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-.sample { margin: 0 0 .6rem; color: var(--sample-text); }
+.sample { margin: 0; color: var(--sample-text); }
+/* What the example shows and that it is a sample, on one line where they fit. */
+.slideHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 1rem; margin-bottom: .6rem; }
+/* A last caveat's margin stays outside the slide, so the frame is as tall as the slide in a flex column too. */
+.slide > :last-child { margin-bottom: 0; }
 .moreTrigger { border-style: dashed; }
 .stage { min-width: 0; position: relative; }
 .slide { min-width: 0; }
@@ -34,3 +39,22 @@
 @media (max-width: 600px) { .chooser, .choices { gap: .3rem; } .choices button, .moreTrigger { padding: .4rem .5rem; } }
 /* A phone's tap targets: every chooser toggle and control at least 44px. */
 @media (max-width: 480px) { .choices button, .controls button, .moreTrigger { min-height: 44px; min-width: 44px; } }
+/* One column (homepage.module.css): a compact header, then the card, then the chooser, so the card is in a phone's first screen. */
+@media (max-width: 900px) {
+  .carousel { display: flex; flex-direction: column; }
+  .header { order: 0; margin-bottom: .25rem; align-items: center; flex-wrap: nowrap; }
+  .header .label { flex: 1 1 auto; }
+  .stage { order: 1; }
+  .chooser { order: 2; margin: 1rem 0 0; }
+  .carousel > .label:last-child { order: 3; }
+  .controls { gap: .4rem; flex-wrap: nowrap; }
+  .controls > span { min-width: 5ch; }
+}
+@media (max-width: 600px) {
+  /* The words stay in the button's name; on a phone it shows Play or Pause. */
+  .playWord, .longLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .shortLabel { display: inline; }
+  /* Each card's front carries its own Sample tag, so a phone drops the line that repeats it. */
+  .sample { display: none; }
+  .slideHead { margin-bottom: .4rem; }
+}

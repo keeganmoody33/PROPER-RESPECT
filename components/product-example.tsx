@@ -6,10 +6,12 @@ import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react
 import { ProductCard } from "./product-card";
 import { isHttpUrl } from "@/src/domain/http-url";
 import type { HomepageExample } from "@/src/data/homepage-examples";
-import { useReducedMotion } from "./use-reduced-motion";
+import { useMediaQuery, useReducedMotion } from "./use-reduced-motion";
 import styles from "./product-example.module.css";
 
 const ADVANCE_MS = 8000;
+/** The homepage's one-column layout (homepage.module.css), where the examples sit in the first screen under the heading. */
+const ONE_COLUMN = "(max-width: 900px)";
 
 /** "auto" follows the visitor's motion preference; a press of play or pause, or picking an example, is their own choice. */
 type PlayChoice = "auto" | "playing" | "paused";
@@ -36,11 +38,13 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const reducedMotion = useReducedMotion();
+  // In one column the slideshow is in view from the start, and each turn would move the copy under it, so it waits for play.
+  const oneColumn = useMediaQuery(ONE_COLUMN, true);
   const chooserId = useId();
   const stageRef = useRef<HTMLDivElement>(null);
   // Nobody watches a slideshow below the fold: it holds still until the visitor reaches it, and each arrival starts a whole turn.
   const inView = useInView(stageRef);
-  const playing = choice === "playing" || (choice === "auto" && !reducedMotion);
+  const playing = choice === "playing" || (choice === "auto" && !reducedMotion && !oneColumn);
   const advancing = playing && !hovered && !focused && inView;
   // The slideshow and its count stay with the featured examples until the visitor picks one of the others; after that, all of them.
   const [pickedOther, setPickedOther] = useState(false);
@@ -85,12 +89,12 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
     onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setFocused(true)} onBlur={leave}>
     {/* The controls sit above the chooser and the card, so they stay put while the frame below takes each card's own height. */}
     <div className={styles.header}>
-      <p className={styles.label}>Inside a card / Illustrative examples</p>
+      <p className={styles.label}><span className={styles.shortLabel} aria-hidden="true">Examples</span><span className={styles.longLabel}>Inside a card / Illustrative examples</span></p>
       <div className={styles.controls}>
         <button type="button" onClick={() => select(index - 1)} aria-label="Previous example">←</button>
         <span>{index + 1} / {inPlay}</span>
         <button type="button" onClick={() => select(index + 1)} aria-label="Next example">→</button>
-        <button type="button" className={styles.play} onClick={toggle}>{playing ? "Pause slideshow" : "Play slideshow"}</button>
+        <button type="button" className={styles.play} onClick={toggle}>{playing ? "Pause" : "Play"}<span className={styles.playWord}> slideshow</span></button>
       </div>
     </div>
     {/* One tab stop across every shown toggle; arrow keys move between examples and a press picks one. The current example stays pressed. */}
@@ -108,9 +112,11 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
         const current = slideIndex === index;
         return <div key={example.id} className={styles.slide} data-example={example.id} data-current={current} role="group" aria-roledescription="slide"
           aria-label={`${slideIndex + 1} of ${inPlay}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
-          <p className={styles.capability} data-capability>{example.capability}</p>
-          <p className={styles.sample}>Sample data / No account connected</p>
-          <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} shown={current && inView} backHint={example.backHint} tablePreview={example.tablePreview} />
+          <div className={styles.slideHead}>
+            <p className={styles.capability} data-capability>{example.capability}</p>
+            <p className={styles.sample}>Sample data / No account connected</p>
+          </div>
+          <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} shown={current && inView} backHint={example.backHint} tablePreview={example.tablePreview} sample />
           {example.caveat && <p className={styles.caveat}>{example.caveat}</p>}
           {example.source && isHttpUrl(example.source.href) && <a className={styles.source} href={example.source.href} target="_blank" rel="noreferrer">{example.source.label} ↗</a>}
         </div>;

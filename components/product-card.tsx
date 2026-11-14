@@ -416,6 +416,7 @@ export function ProductCard({
   backHint,
   tablePreview,
   shown = true,
+  sample = false,
 }: {
   card: Card;
   index: number;
@@ -438,6 +439,8 @@ export function ProductCard({
   tablePreview?: TablePreviewInput;
   /** Whether a visitor can see this card now; a table preview fills in only once it is. */
   shown?: boolean;
+  /** An invented example with no owner, as on the homepage: its front says Sample and its words never claim an owner. */
+  sample?: boolean;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -534,7 +537,8 @@ export function ProductCard({
         <div className="card-topline">
           {!wordmark && <ProductLogo logo={logo} mark={mark} onFailed={markFailed} />}
           <div className="card-title">
-            <p className="eyebrow">{topLine}</p>
+            {sample ? <div className="card-eyebrow-row"><p className="eyebrow">{topLine}</p><span className="card-sample-tag">Sample</span></div>
+              : <p className="eyebrow">{topLine}</p>}
             {/* A wordmark shows the name, so the heading keeps it for screen readers only. */}
             <h2 className={wordmark ? "card-product-name" : undefined}>{card.product.name}</h2>
             {wordmark && <ProductLogo logo={logo} mark={card.product.name} onFailed={markFailed} />}

@@ -22,6 +22,10 @@ export default function HomePage() {
           <div className={styles.intro}>
             <p className={styles.label}>A personal record of the tools you use.</p>
             <h1 id="homepage-title">Your tools.<br /><span>Your track record.</span></h1>
+          </div>
+          {/* Right after the heading, so a phone shows a card in its first screen; a wide screen puts it in the second column. */}
+          <div className={styles.example} id="example"><ProductExample examples={homepageExamples()} /></div>
+          <div className={styles.introRest}>
             <ul className={styles.facts}>
               {homepageProvenFacts.map(fact => <li key={fact}>{fact}</li>)}
             </ul>
@@ -31,7 +35,6 @@ export default function HomePage() {
             </div>
             <p className={styles.privacy}>Start with a private collection. Publishing is your choice.</p>
           </div>
-          <div className={styles.example} id="example"><ProductExample examples={homepageExamples()} /></div>
         </section>
         <section id="how-it-works" className={styles.journey} aria-labelledby="journey-title">
           <div className={styles.sectionHeading}>

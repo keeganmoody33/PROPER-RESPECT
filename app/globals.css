@@ -343,6 +343,28 @@ main {
   margin: 0 0 0.35rem;
 }
 
+/* An invented example says so beside its status line, on the card itself. */
+.card-eyebrow-row {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  margin: 0 0 0.35rem;
+}
+
+.card-eyebrow-row .eyebrow {
+  margin: 0;
+}
+
+.card-sample-tag {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 0 0.45rem;
+}
+
 .card-title h2,
 .card-back h2 {
   font-family: var(--brand-card-heading-font, var(--brand-card-body-font, Arial, Helvetica, sans-serif));

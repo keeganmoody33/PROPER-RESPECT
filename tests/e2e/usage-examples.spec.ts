@@ -480,7 +480,7 @@ test("a hidden example asks for no brand font or logo until it is shown or next"
 const FEATURED = ["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl"] as const;
 const COLLAPSED_CHOOSER_LIMIT = 100;
 
-test(`the chooser stays one short row at ${DESKTOP_WIDTH}px, so each featured card's footer is in the first screen`, async ({ page }) => {
+test(`the chooser stays one short row at ${DESKTOP_WIDTH}px, so each featured card is whole in the first screen`, async ({ page }) => {
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -498,8 +498,9 @@ test(`the chooser stays one short row at ${DESKTOP_WIDTH}px, so each featured ca
     await expect(card).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => scrollTo(0, 0));
-    const footerBottom = await card.locator(".card-footer").evaluate(element => element.getBoundingClientRect().bottom);
-    expect(footerBottom, name).toBeLessThanOrEqual(VIEWPORT_HEIGHT);
+    // The whole card, its footer and the padding under it included.
+    const cardBottom = await card.evaluate(element => element.getBoundingClientRect().bottom);
+    expect(cardBottom, name).toBeLessThanOrEqual(VIEWPORT_HEIGHT);
   }
 });
 
@@ -558,15 +559,17 @@ const ADVANCE_MS = 8000;
 const PHONE_HEIGHT = 844;
 /** Just short of a turn, then just past it. */
 const TURN_MARGIN_MS = 100;
+const SHORT_HEIGHT = 200;
 test("the slideshow waits for the visitor to reach it before it moves on, then moves on", async ({ page }) => {
   await page.clock.install();
-  await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
+  // A short window puts the slideshow below the fold even on a wide screen.
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: SHORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   const current = carousel.locator("[data-current=true] [data-capability]");
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
-  expect(await carousel.evaluate(element => element.getBoundingClientRect().top > innerHeight)).toBe(true);
+  expect(await carousel.locator("[data-current=true] article").evaluate(element => element.getBoundingClientRect().top > innerHeight)).toBe(true);
   // Longer than a slide's turn at the top of the page, with the slideshow below the fold.
   await page.clock.runFor(ADVANCE_MS * 2);
   await carousel.locator("[data-current=true] article").scrollIntoViewIfNeeded();
@@ -577,6 +580,44 @@ test("the slideshow waits for the visitor to reach it before it moves on, then m
   await expect(current).toHaveText("Published usage numbers");
   await page.clock.runFor(TURN_MARGIN_MS * 2);
   await expect(current).not.toHaveText("Published usage numbers");
+});
+
+/** The phone's first screen: the card starts by here, and its first number is above the fold. */
+const PHONE_CARD_TOP_PX = 450;
+test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right after the heading, and holds still`, async ({ page }) => {
+  await page.clock.install();
+  await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const card = carousel.getByRole("article", { name: "Clay card" });
+  await expect(card).toBeVisible();
+  const first = await card.evaluate(article => ({
+    top: article.getBoundingClientRect().top,
+    numberBottom: article.querySelector(".card-front .usage-measurement-stats strong")!.getBoundingClientRect().bottom,
+    scrolled: scrollY,
+  }));
+  expect(first.scrolled).toBe(0);
+  expect(first.top).toBeLessThanOrEqual(PHONE_CARD_TOP_PX);
+  // The card says it is a sample on its own front, so a cropped screenshot still says so.
+  await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
+  await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
+  expect(first.numberBottom).toBeLessThanOrEqual(PHONE_HEIGHT);
+  // In reading order the examples follow the heading, and the owner's copy and the call to action follow the examples.
+  const order = await page.evaluate(() => {
+    const [heading, examples] = ["#homepage-title", "#example"].map(selector => document.querySelector(selector)!);
+    const copy = [...document.querySelectorAll("main li")].find(item => item.textContent!.startsWith("A public profile"))!;
+    const start = [...document.querySelectorAll("main a")].find(link => link.textContent === "Start your collection")!;
+    const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return { headingThenExamples: before(heading, examples), examplesThenCopy: before(examples, copy), examplesThenStart: before(examples, start) };
+  });
+  expect(order).toEqual({ headingThenExamples: true, examplesThenCopy: true, examplesThenStart: true });
+  // On a phone the slideshow is in view from the start, so it waits for play rather than reflowing the copy under it.
+  await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
+  await page.clock.runFor(ADVANCE_MS * 2);
+  await expect(card).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 const MIN_TEXT_PX = 12;
