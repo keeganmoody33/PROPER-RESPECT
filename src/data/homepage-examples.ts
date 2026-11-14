@@ -85,8 +85,9 @@ function sampleActivity(slug: string): ActivityModule | undefined {
     // Counted from the days drawn beside them, so the numbers and the chart can't disagree.
     const sessions = days.reduce((sum, day) => sum + day.count, 0);
     const activeDays = days.filter(day => day.count > 0).length;
-    return { ...SAMPLE, period: { start: days[0].date, end: days.at(-1)!.date }, kind: "codingActivity", primary: { label: coding.label, value: sessions },
-      supporting: [...coding.supporting, { label: "Active days", value: activeDays }], days };
+    // The card is about coding days, so it leads with them; the sessions those days held come next.
+    return { ...SAMPLE, period: { start: days[0].date, end: days.at(-1)!.date }, kind: "codingActivity", primary: { label: "active days", value: activeDays },
+      supporting: [{ label: "Sessions", value: sessions }, ...coding.supporting], days };
   }
   const series = SAMPLE_USAGE.series[slug];
   if (series) {
@@ -201,7 +202,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     cost: { amount: CLOUDFLARE_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
   },
   {
-    slug: "docker", featured: true, capability: "A list of linked work", level: "WEEKLY", since: "2020", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
+    slug: "docker", featured: true, capability: "A list of linked work", level: "WEEKLY", since: "2024", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
     uses: ["run-local-services", "package-apps"], activity: dockerActivity,
     caveat: "The listed links go to public Docker pages, standing in for an owner's own repositories and images.",
   },

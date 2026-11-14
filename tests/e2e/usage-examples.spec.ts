@@ -59,7 +59,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   for (const [name, text, labelCase, buttonCase] of [
     ["Clay", "Daily · since 2023", "uppercase", "none"],
     ["Cloudflare", "Daily · since 2020", "none", "none"],
-    ["Docker", "Weekly · since 2020", "none", "none"],
+    ["Docker", "Weekly · since 2024", "none", "none"],
     ["Firecrawl", "Weekly · since 2025", "none", "none"],
     ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
     ["Claude Code", "Daily · since 2025", "uppercase", "uppercase"],
@@ -291,14 +291,15 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await page.clock.install();
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  const stage = carousel.locator("[aria-roledescription=slide]").first().locator("..");
+  const status = carousel.locator("[data-slide-status]");
   await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
-  await expect(stage).toHaveAttribute("aria-live", "off");
+  await expect(status).toHaveAttribute("aria-live", "off");
   await page.clock.fastForward(8100);
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
   await carousel.hover();
-  await expect(stage).toHaveAttribute("aria-live", "polite");
+  await expect(status).toHaveAttribute("aria-live", "polite");
+  await expect(status).toHaveText("2 of 5: GitHub");
   await page.clock.fastForward(16000);
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
   await page.mouse.move(0, 0);
@@ -605,7 +606,7 @@ test("the slideshow waits for the visitor to reach it before it moves on, then m
   await carousel.locator("[data-current=true] article").scrollIntoViewIfNeeded();
   await expect(current).toHaveText("Published usage numbers");
   // In view, it starts playing (its slides stop announcing themselves) and gets a whole turn before moving on.
-  await expect(carousel.locator("[aria-live]")).toHaveAttribute("aria-live", "off");
+  await expect(carousel.locator("[data-slide-status]")).toHaveAttribute("aria-live", "off");
   await page.clock.runFor(ADVANCE_MS - TURN_MARGIN_MS);
   await expect(current).toHaveText("Published usage numbers");
   await page.clock.runFor(TURN_MARGIN_MS * 2);
@@ -1000,4 +1001,56 @@ test("with motion allowed the card visibly turns over, in under 300ms; with redu
     if (motion === "reduce") expect(turn.name).toBe("none");
     else expect(turn).toEqual({ name: "card-turn-over", seconds: turn.seconds > 0 && turn.seconds <= 0.3 ? turn.seconds : NaN });
   }
+});
+
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`all fourteen fronts say Sample, set no text under 12px and draw bars that stand 3:1 off their backdrop at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const found: string[] = [];
+  for (const name of ALL_EXAMPLES) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await expect(card).toBeVisible();
+    await expect(card.locator(".card-front .card-sample-tag"), name).toHaveText("Sample");
+    const front = await card.evaluate(article => {
+      const luminance = (colour: string) => {
+        const scale = colour.startsWith("color(") ? 1 : 255;
+        const [red, green, blue] = colour.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(value => value / scale).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      };
+      const contrast = (first: string, second: string) => { const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a); return (light + 0.05) / (dark + 0.05); };
+      const backdrop = (start: Element) => {
+        for (let node: Element | null = start.parentElement; node; node = node.parentElement) {
+          const fill = getComputedStyle(node).backgroundColor;
+          if (fill !== "rgba(0, 0, 0, 0)" && fill !== "transparent") return fill;
+        }
+        return "rgb(255, 255, 255)";
+      };
+      const face = article.querySelector(".card-front")!;
+      const walker = document.createTreeWalker(face, NodeFilter.SHOW_TEXT);
+      const small: string[] = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const parent = node.parentElement!;
+        if (!node.textContent!.trim() || parent.closest(".visually-hidden") || !parent.getBoundingClientRect().width) continue;
+        if (parseFloat(getComputedStyle(parent).fontSize) < 12) small.push(node.textContent!.trim());
+      }
+      const bar = face.querySelector(".activity-bars > span:not([data-zero])");
+      return { small, barContrast: bar ? contrast(getComputedStyle(bar).backgroundColor, backdrop(bar)) : undefined };
+    });
+    found.push(...front.small.map(text => `${name}: ${text}`));
+    if (front.barContrast !== undefined && front.barContrast < 3) found.push(`${name}: bars ${front.barContrast.toFixed(2)}:1`);
+  }
+  expect(found).toEqual([]);
+});
+
+test(`at ${PHONE_WIDTH}px GitHub's source link under its card is a ${MIN_TAP_PX}px target`, async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "GitHub", exact: true }).click();
+  const link = carousel.getByRole("link", { name: "GitHub contribution definitions ↗" });
+  expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(MIN_TAP_PX);
 });

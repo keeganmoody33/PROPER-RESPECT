@@ -106,7 +106,9 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
       </ToggleGroup>
       <CollapsibleTrigger className={styles.moreTrigger}>More examples <span aria-hidden="true">{more ? "−" : "+"}</span></CollapsibleTrigger>
     </Collapsible>
-    <div ref={stageRef} className={styles.stage} aria-live={advancing ? "off" : "polite"}>
+    {/* A paused slideshow says which example is shown, by its label alone: never the card, whose table can run to dozens of rows. */}
+    <p className="visually-hidden" aria-live={advancing ? "off" : "polite"} data-slide-status>{`${index + 1} of ${inPlay}: ${ordered[index].card.product.name}`}</p>
+    <div ref={stageRef} className={styles.stage}>
       {ordered.map((example, slideIndex) => {
         if (slideIndex >= featured.length && !revealed.has(slideIndex)) return null;
         const current = slideIndex === index;

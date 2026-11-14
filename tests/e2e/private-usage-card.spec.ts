@@ -216,5 +216,8 @@ for (const product of [{ name: "Claude Code", slug: "claude-code", mark: "CC" },
     await expect(card.locator(".card-front .product-logo")).toHaveText(product.mark);
     await card.getByRole("button", { name: "Details", exact: true }).click();
     await expect(card.locator(".card-back h2")).toBeFocused();
+    // The back's logo falls back the same way: no broken image, the product's mark in its place.
+    await expect(card.locator(".card-back .product-logo img")).toHaveCount(0);
+    await expect(card.locator(".card-back .product-logo")).toHaveText(product.mark);
   });
 }

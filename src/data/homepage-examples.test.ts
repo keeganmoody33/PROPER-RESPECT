@@ -25,7 +25,8 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
     ["Clay", "DAILY", "ACTIVE", false, "2023"],
     ["GitHub", "DAILY", "ACTIVE", true, "2019"],
     ["Cloudflare", "DAILY", "ACTIVE", true, "2020"],
-    ["Docker", "WEEKLY", "ACTIVE", false, "2020"],
+    // Docker's sample links start in 2024, so its card does too.
+    ["Docker", "WEEKLY", "ACTIVE", false, "2024"],
     ["Firecrawl", "WEEKLY", "ACTIVE", false, "2025"],
     ["n8n", "PAUSED", "ARCHIVED", false, "2024"],
     ["Claude Code", "DAILY", "ACTIVE", false, "2025"],
@@ -262,20 +263,21 @@ test("running totals cover the years since the owner started, not one month", ()
   expect([porkbun.startedAt, porkbun.activity?.period]).toEqual(["2021-01-01", { start: "2021-03-01", end: "2026-08-31" }]);
 });
 
-test("every count a sample states beside its series is counted from that series: sessions are its sum, active days its days with a session", () => {
+test("every count a sample states beside its series is counted from that series: active days its days with a session, sessions its sum", () => {
   const coding = examples.flatMap(({ id, card }) => card.activity?.kind === "codingActivity" && card.activity.days ? [{ id, activity: card.activity, days: card.activity.days }] : []);
   expect(coding.map(({ id }) => id)).toEqual(["claude-code"]);
   for (const { id, activity, days } of coding) {
-    expect(activity.primary, id).toEqual({ label: "sessions", value: days.reduce((sum, day) => sum + day.count, 0) });
-    expect(activity.supporting.find(({ label }) => label === "Active days"), id).toEqual({ label: "Active days", value: days.filter(day => day.count > 0).length });
+    expect(activity.primary, id).toEqual({ label: "active days", value: days.filter(day => day.count > 0).length });
+    expect(activity.supporting.find(({ label }) => label === "Sessions"), id).toEqual({ label: "Sessions", value: days.reduce((sum, day) => sum + day.count, 0) });
   }
 });
 
-test("Claude Code's sessions are the sum of the days it draws", () => {
+test("Claude Code leads with the coding days it draws, and its sessions are their sum", () => {
   const activity = examples.find(({ id }) => id === "claude-code")?.card.activity;
   if (activity?.kind !== "codingActivity" || !activity.days) throw new Error("Claude Code sample days missing");
   expect(activity.days).toHaveLength(CODING_DAYS);
-  expect(activity.primary).toEqual({ label: "sessions", value: activity.days.reduce((sum, day) => sum + day.count, 0) });
+  expect(activity.primary).toEqual({ label: "active days", value: activity.days.filter(day => day.count > 0).length });
+  expect(activity.supporting[0]).toEqual({ label: "Sessions", value: activity.days.reduce((sum, day) => sum + day.count, 0) });
   expect(activity.period).toEqual({ start: "2026-08-01", end: "2026-08-31" });
 });
 
@@ -332,7 +334,7 @@ test("each example's card leads with a number that means something: a period's t
     ["docker", 3, "linked works"],
     ["firecrawl", 5520, "pages scraped over 12 weeks"],
     ["n8n", 341, "workflow runs a week at its peak"],
-    ["claude-code", 103, "sessions"],
+    ["claude-code", 24, "active days"],
     ["exa", 3690, "searches run over 12 weeks"],
     ["porkbun", 23, "domains registered"],
     ["spider", 26300, "pages crawled over 12 weeks"],

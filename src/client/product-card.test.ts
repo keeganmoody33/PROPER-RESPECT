@@ -1081,3 +1081,11 @@ test("the back is the same branded object, shorter: its logo and name, plain pro
   panel.remove();
   expect(back.text()).not.toMatch(/\d{4}-\d{2}-\d{2}|stale|observ/i);
 });
+
+test("a daily chart's screen-reader table has one Date column, since each bar is one day", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "timeSeries", label: "Requests served", unit: "per day", points: [{ date: "2026-08-01", value: 3 }, { date: "2026-08-02", value: 5 }] } });
+  const table = $(".card-front .usage-chart > .visually-hidden > table");
+  expect(table.find("tr").toArray().map(row => $(row).children().toArray().map(cell => $(cell).text()))).toEqual([
+    ["Date", "Value"], ["1 Aug 2026", "3 per day"], ["2 Aug 2026", "5 per day"],
+  ]);
+});

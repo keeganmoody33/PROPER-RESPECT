@@ -115,14 +115,17 @@ function barTitle(bar: ChartBar, unit?: string): string {
 
 /** The bars again as rows, for a screen reader: the chart itself is one image, and its dates and values live only in hover titles. */
 function BarTable({ bars, label, unit }: { bars: readonly ChartBar[]; label?: string; unit?: string }) {
+  const rows = bars.map(bar => ({ key: bar.start, ...barDays(bar, unit), value: barValue(bar, unit) }));
+  // Bars of one day each read as one date, not a From and a To that are the same.
+  const daily = rows.every(row => row.from === row.to);
   return (
     // A table grows to fit its cells whatever its width, so the 1px clip goes on a box around it.
     <div className="visually-hidden">
       <table>
         <caption>{label ?? "Activity"}, one row per bar</caption>
-        <thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Value</th></tr></thead>
+        <thead><tr>{daily ? <th scope="col">Date</th> : <><th scope="col">From</th><th scope="col">To</th></>}<th scope="col">Value</th></tr></thead>
         <tbody>
-          {bars.map(bar => { const { from, to } = barDays(bar, unit); return <tr key={bar.start}><td>{from}</td><td>{to}</td><td>{barValue(bar, unit)}</td></tr>; })}
+          {rows.map(row => <tr key={row.key}><td>{row.from}</td>{!daily && <td>{row.to}</td>}<td>{row.value}</td></tr>)}
         </tbody>
       </table>
     </div>
