@@ -553,18 +553,19 @@ main {
   text-transform: uppercase;
 }
 
+/* The bars share the chart's width, however many there are: the chart draws at most a month of bars and narrows its gaps past 16. */
 .activity-bars {
   align-items: end;
   display: flex;
-  gap: 4px;
+  gap: var(--bar-gap, 4px);
   height: 4rem;
   margin: 0;
 }
 
 .activity-bars span {
   background: var(--brand-card-chart, var(--brand-card-accent, currentColor));
-  flex: 1;
-  min-width: 4px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .visually-hidden {

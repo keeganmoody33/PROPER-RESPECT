@@ -59,6 +59,24 @@ test("supplied points stay on the resolved chart and keep their titles", () => {
   expect($(".activity-bars > span").attr("style")).toMatch(/--bar-height:\s*100%/);
 });
 
+const MONTH_OF_BARS = 31;
+const TWO_MONTHS_OF_DAYS = 62;
+const DAY_MS = 86_400_000;
+const QUIET_DAY = 3;
+const BUSY_DAY = 6;
+
+test("a series longer than a month draws a month of bars, each titled with its days' average, and narrows the gaps", () => {
+  const points = Array.from({ length: TWO_MONTHS_OF_DAYS }, (_, index) => ({
+    date: new Date(Date.parse("2026-07-01") + index * DAY_MS).toISOString().split("T")[0],
+    value: [QUIET_DAY, BUSY_DAY][index % [QUIET_DAY, BUSY_DAY].length],
+  }));
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, { label: "Sessions", unit: "sessions", points })));
+
+  expect($(".activity-bars > span")).toHaveLength(MONTH_OF_BARS);
+  expect($(".activity-bars > span").first().attr("title")).toBe("2026-07-01 to 2026-07-02: 4.5 sessions on average");
+  expect($(".activity-bars").attr("style")).toBe("--bar-gap:2px");
+});
+
 test("a loading chart does not inject placeholder metric values", () => {
   const $ = load(renderToStaticMarkup(createElement(UsageChart, {
     loading: true,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { chartBars } from "@/src/domain/chart-bars";
 
 export type UsageChartPoint = {
   date: string;
@@ -15,6 +16,11 @@ export type UsagePeriod = {
 
 const SKELETON_BAR_COUNT = 30;
 const BAR_STAGGER_MS = 18;
+/** Past this many bars the gaps narrow, so the bars keep most of the width. */
+const SPACIOUS_BAR_COUNT = 16;
+const SPACIOUS_GAP = "4px";
+const DENSE_GAP = "2px";
+const PERCENT = 100;
 
 export function coverageDays(period: UsagePeriod): number | undefined {
   const start = Date.parse(`${period.start}T00:00:00Z`);
@@ -124,9 +130,8 @@ export function UsageChart({
     return () => cancelAnimationFrame(frame);
   }, [resolved]);
 
-  const maximum = resolved && points
-    ? Math.max(...points.map((point) => point.value), 1)
-    : 1;
+  const bars = resolved && points ? chartBars(points) : [];
+  const maximum = Math.max(...bars.map((bar) => bar.value), 1);
   return (
     <div
       ref={ref}
@@ -137,15 +142,18 @@ export function UsageChart({
     >
       {showBlueprint && framed && <BlueprintDimensions size={size} />}
       {resolved && points ? (
-        <div className="activity-bars" role={label ? "img" : undefined} aria-label={label ? `${label} trend` : undefined}>
-          {points.map((point, index) => (
+        <div className="activity-bars" role={label ? "img" : undefined} aria-label={label ? `${label} trend` : undefined}
+          style={{ "--bar-gap": bars.length > SPACIOUS_BAR_COUNT ? DENSE_GAP : SPACIOUS_GAP } as CSSProperties}>
+          {bars.map((bar, index) => (
             <span
-              key={point.date}
+              key={bar.start}
               style={{
-                "--bar-height": `${Math.max(0, (point.value / maximum) * 100)}%`,
+                "--bar-height": `${Math.max(0, (bar.value / maximum) * PERCENT)}%`,
                 "--bar-delay": `${index * BAR_STAGGER_MS}ms`,
               } as CSSProperties}
-              title={`${point.date}: ${point.value}${unit ? ` ${unit}` : ""}`}
+              title={bar.points === 1
+                ? `${bar.start}: ${bar.value}${unit ? ` ${unit}` : ""}`
+                : `${bar.start} to ${bar.end}: ${Number(bar.value.toFixed(1))}${unit ? ` ${unit}` : ""} on average`}
             />
           ))}
         </div>

@@ -88,6 +88,8 @@ const BRANDED = [
   { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)", bars: undefined, logo: "app-icon" },
 ] as const;
 const WEEKS = 12;
+const CODING_DAYS = 31;
+const NARROWEST_WIDTH = 320;
 
 [DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`branded example cards wear their brand, say what they're used for and show a sample chart or metrics at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
@@ -271,3 +273,18 @@ test("a hidden example asks for no brand font or logo until it is shown or next"
     "/api/brand-images/0a17c0a1-46e0-4640-af37-2f633a3dedce.svg",
   ]);
 });
+
+[NARROWEST_WIDTH, PHONE_WIDTH].forEach(width => test(`Claude Code's ${CODING_DAYS} coding days fit its card at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "Claude Code", exact: true }).click();
+  const chart = carousel.getByRole("article", { name: "Claude Code card" }).locator(".card-front .activity-bars");
+  await expect(chart.locator("> span")).toHaveCount(CODING_DAYS);
+  expect(await chart.evaluate(element => ({
+    overflow: element.scrollWidth - element.clientWidth,
+    lastBarPastEdge: Math.max(0, Math.round(element.lastElementChild!.getBoundingClientRect().right - element.getBoundingClientRect().right)),
+  }))).toEqual({ overflow: 0, lastBarPastEdge: 0 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+}));
