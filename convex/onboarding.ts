@@ -24,6 +24,7 @@ import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { resolvePublishedCardPropIds } from "./publication";
 import { shareAllSelections } from "../src/domain/share-all";
+import { listedUses } from "../src/domain/product-uses";
 import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
 import {
   profileLinkValidator,
@@ -842,7 +843,10 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     throw new Error("This page is too large to publish. Share fewer cards or shorten long notes, then preview again.");
   }
   // Match public reading's current retained presentation, independently of evidence.
-  const displayCards = await Promise.all(profile.cards.map(async card => {
+  const displayCards = await Promise.all(profile.cards.map(async ({ uses: storedUses, ...rest }) => {
+    // Shown as the public reader shows them: a left-out card keeps its stored uses, and only the listed ones display.
+    const uses = listedUses(rest.product.slug, storedUses);
+    const card = uses ? { ...rest, uses } : rest;
     const product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", card.product.slug)).unique();
     if (!product || product.domain !== card.product.domain) return card;
     const brand = await retainedProductBrand(ctx, product);

@@ -450,6 +450,10 @@ test("a card left out of a later publish keeps the uses it was published with, e
   await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, {
     selections: [await selection(b, { primaryLink: { type: "CANONICAL", url: "https://shared.example", label: "Reconfirmed B" } })],
   }));
+  const reconfirm = { selections: [await selection(b, { primaryLink: { type: "CANONICAL", url: "https://shared.example", label: "Reconfirmed B" } })] };
+  // The preview the owner approves shows the left-out card as the public reader will: its listed pick, not nothing.
+  expect((await owner.query(api.onboarding.previewPublication, reconfirm)).profile.cards.map(card => card.uses))
+    .toEqual([{ picks: ["enrich-leads"] }, undefined]);
   const after = await published();
   expect(after.profile.cards[0]).toEqual(stored.cards[0]);
   expect((await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" }))?.cards.map(card => card.uses))
