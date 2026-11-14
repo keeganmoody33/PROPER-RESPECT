@@ -733,6 +733,19 @@ test.each([["CANONICAL", "Direct link"], ["AFFILIATE", "Affiliate link"], ["REFE
   },
 );
 
+test("published numbers say how they were recorded on the back, where every row is shown in full", () => {
+  const row = {
+    metric: "rows_enriched", value: "2140000", unit: "rows", period: { kind: "date", start: "2023-03-01", end: "2026-08-31", timezone: "UTC" },
+    scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE", capturedAt: "2026-09-01T00:00:00.000Z",
+    status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
+  } as const;
+  const $ = renderCard({ measurements: [row, { ...row, metric: "tables_built", value: "86", unit: "tables" }] });
+  const recorded = ["Scope: workspace · Coverage: complete", "cumulative · Do not add to other views", "Source-reported value", "Captured 2026-09-01T00:00:00.000Z"];
+  expect(recorded.filter(text => $(".card-front").text().includes(text))).toEqual([]);
+  expect($(".card-back .usage-measurement-measurement").toArray().map(element => recorded.filter(text => $(element).text().includes(text)).length)).toEqual([recorded.length, recorded.length]);
+  expect($(".card-front .usage-measurement-measurement").text()).toBe("Rows enriched2140000Rows2023-03-01 to 2026-08-31 · UTCSynthetic sample. Not real account activity.");
+});
+
 test("a canonical destination receives no invented affiliate disclosure", () => {
   const $ = renderCard();
   expect($(".card-link-disclosure")).toHaveLength(0);

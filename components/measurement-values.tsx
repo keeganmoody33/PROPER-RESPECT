@@ -10,26 +10,27 @@ export function measurementPeriod(period: VisibleMeasurement["period"]) {
   }
 }
 
-export function MeasurementValue({ measurement }: { measurement: VisibleMeasurement }) {
+/** Compact, on a card's front, keeps what the number means; how it was recorded stays on the back, which shows every row in full. */
+export function MeasurementValue({ measurement, compact = false }: { measurement: VisibleMeasurement; compact?: boolean }) {
   return <div className="usage-measurement-measurement">
     <span className="usage-measurement-label">{measurementLabel(measurement.metric)}</span>
     <strong className="usage-measurement-value">{measurement.value === null ? "Unknown" : measurement.value}</strong>
     <span className="usage-measurement-unit">{measurementLabel(measurement.unit)}</span>
     <p>{measurementPeriod(measurement.period)}</p>
-    <p>Scope: {measurement.scope.toLowerCase()} · Coverage: {measurement.coverage.toLowerCase()}</p>
-    <p>{measurement.temporality.toLowerCase()} · {measurement.aggregation === "NON_ADDITIVE" ? "Do not add to other views" : measurement.aggregation.toLowerCase()}</p>
+    {!compact && <p>Scope: {measurement.scope.toLowerCase()} · Coverage: {measurement.coverage.toLowerCase()}</p>}
+    {!compact && <p>{measurement.temporality.toLowerCase()} · {measurement.aggregation === "NON_ADDITIVE" ? "Do not add to other views" : measurement.aggregation.toLowerCase()}</p>}
     <p>{measurement.sample === "synthetic" ? "Synthetic sample. Not real account activity." : measurement.sample === "owner-supplied" ? "Owner-supplied sample" : "Sample origin unknown"}</p>
-    <p>{measurement.derivation === "CUMULATIVE_DIFFERENCE" ? "Derived difference between cumulative captures" : "Source-reported value"}</p>
+    {!compact && <p>{measurement.derivation === "CUMULATIVE_DIFFERENCE" ? "Derived difference between cumulative captures" : "Source-reported value"}</p>}
     {measurement.status === "baseline" && <p>Baseline only. This is not new activity in the interval.</p>}
     {measurement.status === "conflict" && <p>Conflicting evidence. Not eligible for sharing.</p>}
-    <p className="usage-measurement-capture">Captured <time dateTime={measurement.capturedAt}>{measurement.capturedAt}</time></p>
+    {!compact && <p className="usage-measurement-capture">Captured <time dateTime={measurement.capturedAt}>{measurement.capturedAt}</time></p>}
   </div>;
 }
 
 export function PublicMeasurements({ measurements, compact = false }: { measurements: PublicMeasurement[]; compact?: boolean }) {
   if (!measurements.length) return null;
   return <section className="usage-measurement-public" aria-label="Reported usage measurements">
-    {(compact ? measurements.slice(0, 1) : measurements).map((measurement, index) => <MeasurementValue key={index} measurement={measurement} />)}
+    {(compact ? measurements.slice(0, 1) : measurements).map((measurement, index) => <MeasurementValue key={index} measurement={measurement} compact={compact} />)}
     {compact && measurements.length > 1 && <p>{measurements.length - 1} more reported measurements in Details.</p>}
     <p className="usage-measurement-disclosure">Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.</p>
   </section>;
