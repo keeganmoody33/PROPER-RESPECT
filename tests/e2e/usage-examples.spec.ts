@@ -647,6 +647,9 @@ test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a 
   expect((await short(docker, ".card-front .card-artifact-links a")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
   await docker.getByRole("button", { name: "Details", exact: true }).click();
   expect((await short(docker, ".card-back :is(.outbound-link, .evidence-link)")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
+  // Taller, the back's two links still sit one under the other, not run together on one line.
+  const [open, evidence] = await Promise.all([".outbound-link", ".evidence-link"].map(selector => docker.locator(`.card-back ${selector}`).boundingBox()));
+  expect(evidence!.y).toBeGreaterThanOrEqual(open!.y + open!.height);
 });
 
 test(`at ${PHONE_WIDTH}px GitHub's calendar keeps its weekday labels and shows no month label cut at the edge`, async ({ page }) => {
