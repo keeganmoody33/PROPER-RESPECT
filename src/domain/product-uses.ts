@@ -29,10 +29,12 @@ export function normalizeUses(productSlug: string, uses: ProductUses | undefined
 }
 
 // What a card can show: picks the product still lists, in its order, and the owner's trimmed words.
+// Words longer than a save allows are left out, so the result always fits productUsesSchema.
 export function listedUses(productSlug: string, uses: ProductUses | undefined): ProductUses | undefined {
   if (!uses) return undefined;
   const picks = productUseOptions(productSlug).filter(option => uses.picks.includes(option.id)).map(option => option.id);
-  const other = uses.other?.trim();
+  const words = uses.other?.trim();
+  const other = words && words.length <= USE_OTHER_MAX ? words : undefined;
   if (!picks.length && !other) return undefined;
   return other ? { picks, other } : { picks };
 }

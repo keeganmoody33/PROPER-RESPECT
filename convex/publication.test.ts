@@ -467,8 +467,8 @@ test("reading a stored snapshot drops uses the product no longer lists and leave
     { ...first.profile.cards[1], uses: { picks: ["retired-choice"], other: " " } },
   ] } }));
   const page = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
-  // The reader filters ids only; the web reader's schema drops over-long words (src/data/get-public-profile.test.ts).
-  expect(page?.cards.map(card => card.uses)).toEqual([{ picks: ["sync-crm"], other: longOther }, undefined]);
+  // Words longer than a save allows are dropped on their own: the listed pick beside them still shows.
+  expect(page?.cards.map(card => card.uses)).toEqual([{ picks: ["sync-crm"] }, undefined]);
   expect(page?.cards.map(card => "uses" in card)).toEqual([true, false]);
   expect(page?.cards.map(card => card.headline)).toEqual(["Relationship 1", "Relationship 2"]);
 });

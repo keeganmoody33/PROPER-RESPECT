@@ -42,6 +42,7 @@ test("a published card keeps only the picks the product still lists, in its orde
     .toEqual({ picks: ["enrich-leads", "sync-crm"], other: "score inbound leads" });
   expect(listedUses("clay", { picks: ["build-lists"], other: "  " })).toEqual({ picks: ["build-lists"] });
   expect(listedUses("clay", { picks: ["retired-choice"], other: "score inbound leads" })).toEqual({ picks: [], other: "score inbound leads" });
+  expect(listedUses("clay", { picks: ["build-lists"], other: "b".repeat(USE_OTHER_MAX + 1) })).toEqual({ picks: ["build-lists"] });
 });
 
 test("a published card gets no uses when none of them is still listed", () => {
