@@ -24,63 +24,74 @@ export type HomepageExample = Readonly<{
   backHint?: string;
 }>;
 
-const COUNT_PATTERN = "0241062300471250321046203142";
-const PATTERN_STRIDE = 11;
 const DAYS_PER_WEEK = 7;
 const DAYS_IN_PERIOD = 365;
 const DAY_MS = 86_400_000;
-const MAX_LEVEL = 4;
 const SAMPLE = { capturedAt: "2026-09-01T00:00:00.000Z", freshness: "STALE", provenanceLabel: "Illustrative sample, not account data", attributionScope: "PERSONAL" } as const;
+const isoDate = (time: number) => new Date(time).toISOString().split("T")[0];
+
+/** A fixed pseudo-random number in [0, 1) for a seed (mulberry32), so the sample calendar is the same on every build. */
+function unitNoise(seed: number): number {
+  let t = (seed + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+/** GitHub's own bands: none, then a few, some, many and the most in a day. */
+const LEVEL_FLOORS = [1, 3, 6, 9] as const;
+const contributionLevel = (count: number) => LEVEL_FLOORS.filter(floor => count >= floor).length;
+
 const githubPeriod = { start: "2025-09-01", end: "2026-08-31" };
+const HOLIDAY = { start: "2025-12-22", end: "2026-01-04" };
+const WEEKEND_ACTIVE_SHARE = 0.25;
+const WEEKDAY_IDLE_SHARE = 0.1;
+const WEEKDAY_BASE = 6;
+/** A year that gets busier: weekdays carry the work, weekends are mostly empty, and two weeks over the new year are off. */
 const githubDays = Array.from({ length: DAYS_IN_PERIOD }, (_, index) => {
-  const count = Number(COUNT_PATTERN[(index * PATTERN_STRIDE + Math.floor(index / DAYS_PER_WEEK)) % COUNT_PATTERN.length]);
-  return { date: new Date(Date.parse(githubPeriod.start) + index * DAY_MS).toISOString().split("T")[0], count, level: Math.min(count, MAX_LEVEL) };
+  const time = Date.parse(githubPeriod.start) + index * DAY_MS;
+  const date = isoDate(time), weekday = new Date(time).getUTCDay() % 6 !== 0;
+  const [chance, size] = [unitNoise(index * 2), unitNoise(index * 2 + 1)];
+  const off = date >= HOLIDAY.start && date <= HOLIDAY.end;
+  const count = off ? 0 : weekday
+    ? (chance < WEEKDAY_IDLE_SHARE ? 0 : 1 + Math.floor(size * WEEKDAY_BASE * (1 + index / DAYS_IN_PERIOD)))
+    : (chance < WEEKEND_ACTIVE_SHARE ? 1 + Math.floor(size * 3) : 0);
+  return { date, count, level: contributionLevel(count) };
 });
 const githubActivity: ActivityModule = {
   ...SAMPLE, period: githubPeriod, kind: "contributionCalendar",
   total: githubDays.reduce((sum, day) => sum + day.count, 0), days: githubDays,
 };
 
-/** Coding sessions cover August 2026; a weekly series ends with the week of 2026-08-24 unless the product was paused earlier. */
-const AUGUST_2026 = { start: "2026-08-01", end: "2026-08-31" };
-const CODING_DAYS = 31;
-const codingDays = githubDays.slice(-CODING_DAYS).map((day, index) => ({
-  ...day, date: new Date(Date.parse(AUGUST_2026.start) + index * DAY_MS).toISOString().split("T")[0],
-}));
-const WEEKS = 12;
-const LAST_WEEK = "2026-08-24";
-/** How busy each week was against the product's peak. Each series starts at a different week of it, so no two charts look alike. */
-const WEEKLY_SHAPE = [0.55, 0.62, 0.58, 0.71, 0.66, 0.8, 0.74, 0.69, 0.86, 0.93, 0.81, 1] as const;
-const SHAPE_STRIDE = 5;
 type Metric = Readonly<{ label: string; value: number }>;
 type SampleUsage = Readonly<{
-  coding: Readonly<Record<string, Readonly<{ label: string; supporting: readonly Metric[] }>>>;
-  weekly: Readonly<Record<string, Readonly<{ label: string; peak: number; lastWeek?: string }>>>;
+  coding: Readonly<Record<string, Readonly<{ label: string; start: string; sessions: readonly number[]; supporting: readonly Metric[] }>>>;
+  /** One value per day or per week from start, written by hand to match the example's level and story. */
+  series: Readonly<Record<string, Readonly<{ label: string; unit: string; start: string; values: readonly number[] }>>>;
   totals: Readonly<Record<string, Readonly<{ primary: Metric; supporting: readonly Metric[]; period?: Readonly<{ start: string; end: string }> }>>>;
 }>;
 const SAMPLE_USAGE: SampleUsage = sampleUsage;
-const isoDate = (time: number) => new Date(time).toISOString().split("T")[0];
+const AUGUST_2026 = { start: "2026-08-01", end: "2026-08-31" };
+const STEP_DAYS: Readonly<Record<string, number>> = { "per day": 1, "per week": DAYS_PER_WEEK };
 
-/** A count per period draws as weekly bars, coding as sessions per day; only totals that have no honest series stay totals. */
+/** Coding draws sessions per day and a series draws its own values; only totals that have no honest series stay totals. */
 function sampleActivity(slug: string): ActivityModule | undefined {
   const coding = SAMPLE_USAGE.coding[slug];
   if (coding) {
+    const days = coding.sessions.map((count, index) => ({ date: isoDate(Date.parse(coding.start) + index * DAY_MS), count, level: contributionLevel(count) }));
     // Counted from the days drawn beside them, so the numbers and the chart can't disagree.
-    const sessions = codingDays.reduce((sum, day) => sum + day.count, 0);
-    const activeDays = codingDays.filter(day => day.count > 0).length;
-    return { ...SAMPLE, period: AUGUST_2026, kind: "codingActivity", primary: { label: coding.label, value: sessions },
-      supporting: [...coding.supporting, { label: "Active days", value: activeDays }], days: codingDays };
+    const sessions = days.reduce((sum, day) => sum + day.count, 0);
+    const activeDays = days.filter(day => day.count > 0).length;
+    return { ...SAMPLE, period: { start: days[0].date, end: days.at(-1)!.date }, kind: "codingActivity", primary: { label: coding.label, value: sessions },
+      supporting: [...coding.supporting, { label: "Active days", value: activeDays }], days };
   }
-  const weekly = SAMPLE_USAGE.weekly[slug];
-  if (weekly) {
-    const offset = (Object.keys(SAMPLE_USAGE.weekly).indexOf(slug) * SHAPE_STRIDE) % WEEKS;
-    const last = Date.parse(weekly.lastWeek ?? LAST_WEEK);
-    const points = WEEKLY_SHAPE.map((_, week) => ({
-      date: isoDate(last - (WEEKS - 1 - week) * DAYS_PER_WEEK * DAY_MS),
-      value: Math.round(weekly.peak * WEEKLY_SHAPE[(week + offset) % WEEKS]),
-    }));
-    const period = { start: points[0].date, end: isoDate(last + (DAYS_PER_WEEK - 1) * DAY_MS) };
-    return { ...SAMPLE, period, kind: "timeSeries", label: weekly.label, unit: "per week", points };
+  const series = SAMPLE_USAGE.series[slug];
+  if (series) {
+    const step = STEP_DAYS[series.unit];
+    if (!step) throw new Error(`Sample series "${slug}" has unit "${series.unit}", which isn't per day or per week.`);
+    const points = series.values.map((value, index) => ({ date: isoDate(Date.parse(series.start) + index * step * DAY_MS), value }));
+    const period = { start: points[0].date, end: isoDate(Date.parse(points.at(-1)!.date) + (step - 1) * DAY_MS) };
+    return { ...SAMPLE, period, kind: "timeSeries", label: series.label, unit: series.unit, points };
   }
   const totals = SAMPLE_USAGE.totals[slug];
   if (!totals) return undefined;

@@ -655,6 +655,12 @@ main {
   transform: scaleY(0);
 }
 
+/* A zero is a stub on the baseline, so an empty week reads as zero rather than as a missing one. */
+.usage-chart[data-state="resolved"] .activity-bars > span[data-zero] {
+  height: 2px;
+  opacity: 0.45;
+}
+
 .usage-chart-blueprint {
   position: absolute;
   inset: 0;

@@ -170,6 +170,7 @@ export function UsageChart({
           {bars.map((bar, index) => (
             <span
               key={bar.start}
+              data-zero={bar.value === 0 ? "" : undefined}
               style={{
                 "--bar-height": `${Math.max(0, (bar.value / maximum) * PERCENT)}%`,
                 "--bar-delay": `${index * BAR_STAGGER_MS}ms`,

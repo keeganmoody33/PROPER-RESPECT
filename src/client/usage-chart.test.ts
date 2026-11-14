@@ -127,3 +127,12 @@ test("the public profile loading fallback uses skeleton cards and the shared col
   expect($(".product-card-skeleton")).toHaveLength(3);
   expect($.text()).not.toMatch(/score|rank/i);
 });
+
+test("a zero bar is marked as zero, so it draws as a stub on the baseline instead of an empty gap", () => {
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, {
+    points: [{ date: "2026-08-03", value: 0 }, { date: "2026-08-10", value: 9200 }, { date: "2026-08-17", value: 0 }],
+    label: "pages crawled", unit: "per week",
+  })));
+  expect($(".activity-bars > span").map((_, bar) => $(bar).attr("data-zero") ?? "no").get()).toEqual(["", "no", ""]);
+  expect($(".visually-hidden td").map((_, cell) => $(cell).text()).get().filter((_, index) => index % 3 === 2)).toEqual(["0 per week", "9,200 per week", "0 per week"]);
+});

@@ -188,14 +188,14 @@ test(`every example card, front and back, passes axe at ${DESKTOP_WIDTH}px`, asy
 });
 
 // Each brand's own surface colour, from its committed snapshot; the default card is rgb(37, 37, 31) in Arial.
-// A weekly sample draws bars in the brand's accent; a total shows metrics.
+// A sample series draws its bars, one a week or one a day, in the brand's accent, or its text colour where no accent reads on its surface
+// (n8n); Clay publishes numbers instead.
 const BRANDED = [
-  { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)", bars: "rgb(255, 76, 0)", logo: "square" },
-  { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)", bars: "rgb(255, 94, 31)", logo: "wordmark" },
-  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: undefined, logo: "wordmark" },
+  { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)", bars: { count: 12, color: "rgb(255, 76, 0)" }, logo: "square" },
+  { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)", bars: { count: 31, color: "rgb(255, 94, 31)" }, logo: "wordmark" },
+  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: { count: 12, color: "rgb(22, 22, 22)" }, logo: "wordmark" },
   { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)", bars: undefined, logo: "app-icon" },
 ] as const;
-const WEEKS = 12;
 const CODING_DAYS = 31;
 const NARROWEST_WIDTH = 320;
 
@@ -223,11 +223,11 @@ const NARROWEST_WIDTH = 320;
     await expect(card.getByText(lead)).toBeVisible();
     expect(await card.getByRole("list", { name: list }).getByRole("listitem").count()).toBeGreaterThanOrEqual(2);
     if (brand.bars) {
-      const bars = card.locator(".card-front .activity-bars > span");
-      await expect(bars).toHaveCount(WEEKS);
-      await expect(bars.last()).toHaveCSS("background-color", brand.bars);
+      const bars = card.locator(".card-front .activity-bars > span:not([data-zero])");
+      await expect(card.locator(".card-front .activity-bars > span")).toHaveCount(brand.bars.count);
+      await expect(bars.last()).toHaveCSS("background-color", brand.bars.color);
       await expect(card.locator(".card-front .activity-bars")).toHaveAttribute("role", "img");
-    } else if (brand.name === "Clay") {
+    } else {
       // Clay publishes exact numbers instead: the first on the front, the rest behind Details.
       await expect(card.locator(".card-front .usage-measurement-measurement")).toHaveCount(1);
       await expect(card.locator(".card-front")).toContainText("2 more reported measurements in Details.");
@@ -236,8 +236,6 @@ const NARROWEST_WIDTH = 320;
       await expect(card.locator(".card-footer > span")).toHaveText("Numbers and a work sample inside");
       await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("Numbers and a work sample inside");
       continue;
-    } else {
-      await expect(card.locator(".card-front .activity-preview-metrics")).toBeVisible();
     }
     await expect(card).toContainText("stale");
   }
@@ -469,4 +467,18 @@ test(`the chooser stays one short row at ${DESKTOP_WIDTH}px, so each featured ca
     const footerBottom = await card.locator(".card-footer").evaluate(element => element.getBoundingClientRect().bottom);
     expect(footerBottom, name).toBeLessThanOrEqual(VIEWPORT_HEIGHT);
   }
+});
+
+test("an occasional card's empty weeks draw as stubs on the baseline, so a gap reads as zero", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  await carousel.getByRole("button", { name: "Spider", exact: true }).click();
+  const bars = carousel.getByRole("article", { name: "Spider card" }).locator(".card-front .activity-bars > span");
+  await expect(bars).toHaveCount(12);
+  const heights = await bars.evaluateAll(spans => spans.map(span => Math.round(span.getBoundingClientRect().height)));
+  expect(heights.filter(height => height === 2)).toHaveLength(9);
+  expect(Math.max(...heights)).toBeGreaterThan(40);
 });

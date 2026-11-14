@@ -10,10 +10,9 @@ import { homepageExamples } from "./homepage-examples";
 const examples = homepageExamples();
 const YEAR_DIGITS = 4;
 const DAYS_IN_YEAR = 365;
-// The same sample calendar the homepage has shown since 2026-09-21.
-const SAMPLE_CONTRIBUTIONS = 859;
+// The sample year: weekdays carry the work, weekends are mostly empty, two weeks over the new year are off.
+const SAMPLE_CONTRIBUTIONS = 1121;
 const LINE_LIMIT = 60;
-const WEEKS = 12;
 const DAYS_PER_WEEK = 7;
 const DAY_MS = 86_400_000;
 const CODING_DAYS = 31;
@@ -51,10 +50,6 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
 const CAPABILITY_LIMIT = 28;
 const CLAY_MEASUREMENTS = 3;
 const CLAY_MONTHLY_USD = 149;
-// Each weekly series' last week, after Docker's series left the sample file and moved the shape offsets after it.
-const OPEN_PLACES_LAST_WEEK = 552;
-const ELICIT_LAST_WEEK = 25;
-const CONTEXT_DEV_LAST_WEEK = 76;
 
 test("each example names the part of a card it shows, in a few words no other example uses", () => {
   expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
@@ -101,7 +96,7 @@ test("each example shows a different part of a card: its link, cost, work sample
     ["cloudflare", "CANONICAL", "5 USD MONTHLY OWNER_REPORTED", undefined, undefined, "timeSeries"],
     ["firecrawl", "REFERRAL", undefined, undefined, undefined, "timeSeries"],
     ["github", "CANONICAL", undefined, undefined, undefined, "contributionCalendar"],
-    ["n8n", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
+    ["n8n", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["claude-code", "CANONICAL", undefined, undefined, undefined, "codingActivity"],
     ["exa", "CANONICAL", undefined, "Demo / exa.ai", undefined, "timeSeries"],
     ["porkbun", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
@@ -156,25 +151,62 @@ test("a stopped and a paused example each say why in their note", () => {
   ]);
 });
 
-test("each weekly sample is twelve consecutive weeks, read per week, and its period covers exactly those weeks", () => {
+test("each sample series is drawn as written, one point a day or a week, and its period covers exactly those points", () => {
   const series = examples.flatMap(({ id, card }) => card.activity?.kind === "timeSeries" ? [{ id, activity: card.activity }] : []);
-  expect(series.map(({ id, activity }) => [id, activity.label, activity.unit, activity.points.at(-1)?.value])).toEqual([
-    ["cloudflare", "requests served", "per week", 48360],
-    ["firecrawl", "pages scraped", "per week", 1100],
-    ["exa", "searches run", "per week", 277],
-    ["spider", "pages crawled", "per week", 8120],
-    ["open-places", "businesses exported", "per week", OPEN_PLACES_LAST_WEEK],
-    ["elicit", "papers screened", "per week", ELICIT_LAST_WEEK],
-    ["context-dev", "domains looked up", "per week", CONTEXT_DEV_LAST_WEEK],
+  expect(series.map(({ id, activity }) => [id, activity.label, activity.unit, activity.points.length, activity.period, activity.points.at(-1)?.value])).toEqual([
+    ["cloudflare", "requests served", "per day", 31, { start: "2026-08-01", end: "2026-08-31" }, 7940],
+    ["firecrawl", "pages scraped", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 1100],
+    ["n8n", "workflow runs", "per week", 12, { start: "2025-01-13", end: "2025-04-06" }, 0],
+    ["exa", "searches run", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 360],
+    ["spider", "pages crawled", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 3100],
+    ["open-places", "businesses exported", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 85],
+    ["elicit", "papers screened", "per week", 12, { start: "2026-01-05", end: "2026-03-29" }, 0],
+    ["context-dev", "domains looked up", "per week", 6, { start: "2026-07-20", end: "2026-08-30" }, 22],
   ]);
-  for (const { id, activity } of series) {
-    expect(activity.points, id).toHaveLength(WEEKS);
-    const gaps = activity.points.slice(1).map((point, index) => (Date.parse(point.date) - Date.parse(activity.points[index].date)) / DAY_MS);
-    expect(new Set(gaps), id).toEqual(new Set([DAYS_PER_WEEK]));
-    expect(activity.period, id).toEqual({ start: activity.points[0].date, end: new Date(Date.parse(activity.points.at(-1)!.date) + (DAYS_PER_WEEK - 1) * DAY_MS).toISOString().slice(0, 10) });
-  }
-  expect(series.find(({ id }) => id === "elicit")?.activity.period).toEqual({ start: "2026-01-05", end: "2026-03-29" });
-  expect(series.find(({ id }) => id === "firecrawl")?.activity.period).toEqual({ start: "2026-06-08", end: "2026-08-30" });
+  const steps = series.map(({ id, activity }) => [id, [...new Set(activity.points.slice(1).map((point, index) => (Date.parse(point.date) - Date.parse(activity.points[index].date)) / DAY_MS))]]);
+  expect(steps).toEqual(series.map(({ id, activity }) => [id, [activity.unit === "per day" ? 1 : DAYS_PER_WEEK]]));
+});
+
+/** A series' values as shares of its own peak, to two places: its shape, whatever its scale. */
+const shape = (values: readonly number[]) => values.map(value => (value / Math.max(...values)).toFixed(2)).join(" ");
+const values = (id: string) => {
+  const activity = examples.find(example => example.id === id)?.card.activity;
+  if (activity?.kind === "timeSeries") return activity.points.map(point => point.value);
+  if (activity?.kind === "codingActivity") return (activity.days ?? []).map(day => day.count);
+  throw new Error(`${id} draws no series`);
+};
+const ISO_WEEKEND = new Set([0, 6]);
+const weekendShare = (id: string) => {
+  const activity = examples.find(example => example.id === id)?.card.activity;
+  const days = activity?.kind === "timeSeries" ? activity.points.map(({ date, value }) => ({ date, value }))
+    : activity?.kind === "codingActivity" ? (activity.days ?? []).map(({ date, count }) => ({ date, value: count })) : [];
+  const mean = (weekend: boolean) => {
+    const chosen = days.filter(({ date }) => ISO_WEEKEND.has(new Date(`${date}T00:00:00Z`).getUTCDay()) === weekend);
+    return chosen.reduce((sum, { value }) => sum + value, 0) / chosen.length;
+  };
+  return mean(true) / mean(false);
+};
+const SERIES_IDS = ["cloudflare", "firecrawl", "n8n", "claude-code", "exa", "spider", "open-places", "elicit", "context-dev"];
+
+test("no two sample charts share a shape, and each shape tells its example's story", () => {
+  expect(new Set(SERIES_IDS.map(id => shape(values(id)))).size).toBe(SERIES_IDS.length);
+  // Daily: dense, with weekends well below weekdays.
+  expect(SERIES_IDS.filter(id => ["cloudflare", "claude-code"].includes(id)).map(id => weekendShare(id) < 0.5)).toEqual([true, true]);
+  // Occasional: most weeks empty, a few spikes.
+  expect(["spider", "open-places"].map(id => values(id).filter(value => value === 0).length)).toEqual([9, 9]);
+  // Weekly: something every week.
+  expect(values("exa").every(value => value > 0)).toBe(true);
+  // Firecrawl grows; Elicit tails off to nothing; n8n runs steadily, then stops at the pause.
+  expect(values("firecrawl").at(-1)! / values("firecrawl")[0]).toBeGreaterThan(5);
+  expect(values("elicit").slice(-2)).toEqual([0, 0]);
+  expect(values("n8n").slice(-2)).toEqual([0, 0]);
+  // Still testing: a short, patchy run.
+  expect([values("context-dev").length, values("context-dev").filter(value => value === 0).length]).toEqual([6, 2]);
+});
+
+test("running totals cover the years since the owner started, not one month", () => {
+  const porkbun = examples.find(({ id }) => id === "porkbun")!.card;
+  expect([porkbun.startedAt, porkbun.activity?.period]).toEqual(["2021-01-01", { start: "2021-03-01", end: "2026-08-31" }]);
 });
 
 test("every count a sample states beside its series is counted from that series: sessions are its sum, active days its days with a session", () => {
@@ -229,7 +261,8 @@ test("GitHub's sample contribution calendar covers one year", () => {
   const activity = github.card.activity;
   if (activity?.kind !== "contributionCalendar") throw new Error("GitHub sample calendar missing");
   expect(activity.days).toHaveLength(DAYS_IN_YEAR);
-  expect(activity.days[0]).toEqual({ date: "2025-09-01", count: 0, level: 0 });
+  expect(activity.days[0]).toEqual({ date: "2025-09-01", count: 4, level: 2 });
+  expect(activity.days.filter(day => day.date >= "2025-12-22" && day.date <= "2026-01-04").map(day => day.count)).toEqual(Array(14).fill(0));
   expect(activity.days.at(-1)?.date).toBe("2026-08-31");
   expect(activity.total).toBe(SAMPLE_CONTRIBUTIONS);
   expect(activity.days.reduce((sum, day) => sum + day.count, 0)).toBe(SAMPLE_CONTRIBUTIONS);
