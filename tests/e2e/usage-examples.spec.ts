@@ -52,8 +52,9 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("A year of contributions");
   await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
-  const slideBox = () => carousel.locator("[aria-roledescription=slide]").first().evaluate(element => element.parentElement!.getBoundingClientRect().height);
-  const githubHeight = await slideBox();
+  // The controls sit above the card, so picking another example never moves them.
+  const controlsTop = () => carousel.getByRole("button", { name: "Next example" }).evaluate(element => element.getBoundingClientRect().top + scrollY);
+  const githubControls = await controlsTop();
   // The top line and button are typed as written; each card's measured site, or the house default, sets their case.
   for (const [name, text, labelCase, buttonCase] of [
     ["Clay", "Daily · since 2023", "none", "none"],
@@ -82,7 +83,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     await expect(card.locator(".card-button")).toHaveCSS("text-transform", buttonCase);
     await expect(card).not.toContainText("contributions");
     await expect(carousel.locator("[data-current=true]")).toContainText("Sample data / No account connected");
-    expect(await slideBox()).toBe(githubHeight);
+    expect(await controlsTop()).toBe(githubControls);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-${name.toLowerCase().replaceAll(" ", "-")}-${width}.png`) });
     await expect(card.locator(".card-front .card-link-disclosure")).toHaveText(FRONT_DISCLOSURE[name] ?? []);
@@ -263,10 +264,8 @@ const NARROWEST_WIDTH = 320;
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  // The nine others mount when the visitor asks for them, so the frame is measured with all fourteen in it.
   await openMoreExamples(carousel);
   const stage = carousel.locator("[aria-roledescription=slide]").first().locator("..");
-  const stageHeight = (await stage.boundingBox())!.height;
   for (const name of ["GitHub", "Clay", "Claude Code", "Firecrawl", "Docker", "Grok Bot"]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });
@@ -283,8 +282,9 @@ const NARROWEST_WIDTH = 320;
       }).filter(excess => excess > 0);
     });
     expect(overflows).toEqual([]);
-    // The card fits its content; the slideshow around it did not move.
-    expect((await stage.boundingBox())!.height).toBe(stageHeight);
+    // The frame is as tall as the shown slide: no empty band under a short card.
+    const [stageHeight, slideHeight] = [(await stage.boundingBox())!.height, (await carousel.locator("[data-current=true]").boundingBox())!.height];
+    expect(Math.abs(stageHeight - slideHeight)).toBeLessThan(1);
   }
 }));
 
@@ -341,7 +341,8 @@ test("with More examples open and nothing else picked, the slideshow still takes
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
   await openMoreExamples(carousel);
-  await expect(carousel.locator("[aria-roledescription=slide]")).toHaveCount(14);
+  // Opening the list mounts none of the nine: each mounts when it is picked or next.
+  await expect(carousel.locator("[aria-roledescription=slide]")).toHaveCount(5);
   // Focus and the pointer leave the slideshow, so only the timer moves it.
   await page.locator("#homepage-content").focus();
   await page.mouse.move(0, 0);
@@ -627,4 +628,59 @@ test("no card face says a raw date or a status word, in its text, titles or labe
     found.push(...texts.flatMap(text => text.split("\n")).filter(line => JARGON.test(line)).map(line => `${name}: ${line}`));
   }
   expect(found).toEqual([]);
+});
+
+const MIN_TAP_PX = 44;
+test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a ${MIN_TAP_PX}px target`, async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const short = async (scope: Locator, selector: string) => (await scope.locator(selector).evaluateAll(elements => elements
+    .filter(element => element.getBoundingClientRect().width > 0)
+    .map(element => ({ text: element.textContent!.trim().slice(0, 24), height: Math.round(element.getBoundingClientRect().height), width: Math.round(element.getBoundingClientRect().width) }))))
+    .filter(({ height, width }) => height < MIN_TAP_PX || width < MIN_TAP_PX);
+  expect(await short(carousel, ":scope > div button")).toEqual([]);
+  await carousel.getByRole("button", { name: "Docker", exact: true }).click();
+  const docker = carousel.getByRole("article", { name: "Docker card" });
+  expect((await short(docker, ".card-front .card-artifact-links a")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
+  await docker.getByRole("button", { name: "Details", exact: true }).click();
+  expect((await short(docker, ".card-back :is(.outbound-link, .evidence-link)")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
+});
+
+test(`at ${PHONE_WIDTH}px GitHub's calendar keeps its weekday labels and shows no month label cut at the edge`, async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "GitHub", exact: true }).click();
+  const calendar = carousel.getByRole("article", { name: "GitHub card" }).locator(".card-front .contribution-scroll");
+  await expect(calendar).toBeVisible();
+  const view = () => calendar.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    const weekdays = element.querySelector(".contribution-weekdays")!.getBoundingClientRect();
+    const months = [...element.querySelectorAll<HTMLElement>(".contribution-months span")].filter(label => getComputedStyle(label).visibility !== "hidden");
+    return {
+      weekdaysInView: weekdays.left >= box.left - 1 && weekdays.width > 0,
+      cutLabels: months.filter(label => label.getBoundingClientRect().left < weekdays.right - 1).map(label => label.textContent),
+    };
+  });
+  // Opened at the newest week, and again after scrolling back part of the way.
+  await expect.poll(view).toEqual({ weekdaysInView: true, cutLabels: [] });
+  await calendar.evaluate(element => { element.scrollLeft -= 37; });
+  await expect.poll(view).toEqual({ weekdaysInView: true, cutLabels: [] });
+});
+
+test("opening More examples mounts none of the nine; each mounts when it is picked or comes next", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const slides = carousel.locator("[aria-roledescription=slide]");
+  await openMoreExamples(carousel);
+  await expect(slides).toHaveCount(FEATURED.length);
+  await carousel.getByRole("button", { name: "Spider", exact: true }).click();
+  // Spider, and Open Places because it comes next.
+  expect(await slides.evaluateAll(elements => elements.map(element => element.getAttribute("data-example")))).toEqual(["clay", "github", "cloudflare", "docker", "firecrawl", "spider", "open-places"]);
+  await expect(slides.filter({ has: page.getByRole("article", { name: "Spider card" }) })).toHaveAttribute("aria-label", "10 of 14: Spider");
 });

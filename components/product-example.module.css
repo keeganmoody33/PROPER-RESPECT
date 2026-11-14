@@ -1,7 +1,12 @@
 .carousel { min-width: 0; }
-.label, .capability, .sample, .controls, .chooser, .source { font: .65rem/1.6 var(--homepage-mono), monospace; }
+.label, .capability, .sample, .controls, .chooser, .source { font: .75rem/1.6 var(--homepage-mono), monospace; }
 .label { margin: 0 0 1rem; }
 .label:last-child { margin: 1rem 0 0; }
+.header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .4rem 1rem; margin-bottom: 1rem; }
+.header .label { flex: 1 1 14rem; margin: 0; min-width: 0; }
+/* A fixed width for "1 / 5" and "14 / 14", so the arrows don't shift as the count grows. */
+.controls { flex: none; flex-wrap: wrap; max-width: 100%; }
+.controls > span { min-width: 7ch; text-align: center; }
 .chooser { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .4rem; margin-bottom: 1.2rem; }
 .choices { display: flex; flex-wrap: wrap; gap: .4rem; }
 /* The rest of the toggles join the group's own row, so the group stays one set of arrow-key stops. */
@@ -12,9 +17,11 @@
 .capability { margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .sample { margin: 0 0 .6rem; color: var(--sample-text); }
 .moreTrigger { border-style: dashed; }
-.stage { display: grid; min-width: 0; }
-.slide { grid-area: 1 / 1; min-width: 0; }
-.slide[data-current="false"] { visibility: hidden; }
+.stage { min-width: 0; position: relative; }
+.slide { min-width: 0; }
+/* Only the shown slide takes space, so the frame is as tall as its card: no empty band under a short one.
+   The others stay laid out at no height, so the next one's brand fonts load before it is shown. */
+.slide[data-current="false"] { height: 0; inset: 0 0 auto; overflow: hidden; position: absolute; visibility: hidden; }
 .slide :global(.product-card) { width: 100%; margin: 0; animation: none; }
 .slide :global(.card-activity-preview > p:first-child strong) { font-size: 2rem; line-height: 1.1; }
 .slide :global(.card-activity-preview > p:first-child) { display: flex; flex-direction: column; gap: .3rem; }
@@ -23,6 +30,7 @@
 .slide :global(.activity-preview-metrics dd) { font-size: 1.1rem; margin: .15rem 0 0; font-weight: 600; }
 .caveat { font-size: .78rem; line-height: 1.6; margin: 1rem 0 .5rem; }
 .source { text-underline-offset: .2em; }
-.controls { display: flex; align-items: center; gap: .65rem; margin-top: 1.2rem; }
-.controls .play { margin-left: auto; }
+.controls { display: flex; align-items: center; gap: .65rem; }
 @media (max-width: 600px) { .chooser, .choices { gap: .3rem; } .choices button, .moreTrigger { padding: .4rem .5rem; } }
+/* A phone's tap targets: every chooser toggle and control at least 44px. */
+@media (max-width: 480px) { .choices button, .controls button, .moreTrigger { min-height: 44px; min-width: 44px; } }

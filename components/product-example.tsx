@@ -47,8 +47,8 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const othersInPlay = pickedOther || index >= featured.length;
   if (othersInPlay && !pickedOther) setPickedOther(true);
   const inPlay = othersInPlay ? ordered.length : featured.length;
-  const mounted = more || othersInPlay ? ordered.length : featured.length;
   // A slide fetches its brand fonts and logo once it is shown or next, so the page doesn't load every example's at once.
+  // The featured slides are always mounted; another mounts once it is picked or next, not when More examples opens.
   const upcoming = (index + 1) % inPlay;
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([index, upcoming]));
   if (!revealed.has(index) || !revealed.has(upcoming)) setRevealed(new Set([...revealed, index, upcoming]));
@@ -83,7 +83,16 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
 
   return <section className={styles.carousel} aria-label="Product usage examples" aria-roledescription="carousel"
     onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setFocused(true)} onBlur={leave}>
-    <p className={styles.label}>Inside a card / Illustrative examples</p>
+    {/* The controls sit above the chooser and the card, so they stay put while the frame below takes each card's own height. */}
+    <div className={styles.header}>
+      <p className={styles.label}>Inside a card / Illustrative examples</p>
+      <div className={styles.controls}>
+        <button type="button" onClick={() => select(index - 1)} aria-label="Previous example">←</button>
+        <span>{index + 1} / {inPlay}</span>
+        <button type="button" onClick={() => select(index + 1)} aria-label="Next example">→</button>
+        <button type="button" className={styles.play} onClick={toggle}>{playing ? "Pause slideshow" : "Play slideshow"}</button>
+      </div>
+    </div>
     {/* One tab stop across every shown toggle; arrow keys move between examples and a press picks one. The current example stays pressed. */}
     <Collapsible className={styles.chooser} open={more} onOpenChange={setMore}>
       <ToggleGroup className={styles.choices} aria-label="Choose a product example" value={[ordered[index].id]} deselectable={false}
@@ -94,10 +103,11 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
       <CollapsibleTrigger className={styles.moreTrigger}>More examples <span aria-hidden="true">{more ? "−" : "+"}</span></CollapsibleTrigger>
     </Collapsible>
     <div ref={stageRef} className={styles.stage} aria-live={advancing ? "off" : "polite"}>
-      {ordered.slice(0, mounted).map((example, slideIndex) => {
+      {ordered.map((example, slideIndex) => {
+        if (slideIndex >= featured.length && !revealed.has(slideIndex)) return null;
         const current = slideIndex === index;
         return <div key={example.id} className={styles.slide} data-example={example.id} data-current={current} role="group" aria-roledescription="slide"
-          aria-label={`${slideIndex + 1} of ${mounted}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
+          aria-label={`${slideIndex + 1} of ${inPlay}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
           <p className={styles.capability} data-capability>{example.capability}</p>
           <p className={styles.sample}>Sample data / No account connected</p>
           <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} shown={current && inView} backHint={example.backHint} tablePreview={example.tablePreview} />
@@ -105,12 +115,6 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
           {example.source && isHttpUrl(example.source.href) && <a className={styles.source} href={example.source.href} target="_blank" rel="noreferrer">{example.source.label} ↗</a>}
         </div>;
       })}
-    </div>
-    <div className={styles.controls}>
-      <button type="button" onClick={() => select(index - 1)} aria-label="Previous example">←</button>
-      <span>{index + 1} / {inPlay}</span>
-      <button type="button" onClick={() => select(index + 1)} aria-label="Next example">→</button>
-      <button type="button" className={styles.play} onClick={toggle}>{playing ? "Pause slideshow" : "Play slideshow"}</button>
     </div>
     <p className={styles.label}>Keep your usage private. Choose what to share.</p>
   </section>;

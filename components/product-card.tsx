@@ -167,19 +167,31 @@ function activitySeries(activity: ActivityModule) {
   return undefined;
 }
 
-/** Scrolls a calendar wider than its card to the newest week, once, the first time it has a width (a back face has none until opened). */
+/** Hides a month label the scroll has cut at the left edge, behind the weekday column, so a cut "Feb" never reads as "b". */
+function markClippedMonths(element: HTMLElement) {
+  const edge = (element.querySelector(".contribution-weekdays")?.getBoundingClientRect().right ?? element.getBoundingClientRect().left);
+  element.querySelectorAll<HTMLElement>(".contribution-months span").forEach(label => {
+    label.toggleAttribute("data-clipped", label.getBoundingClientRect().left < edge - 1);
+  });
+}
+
+/** Scrolls a calendar wider than its card to the newest week, once, the first time it has a width (a slide has none until shown). */
 function useNewestWeekInView() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const element = ref.current;
     if (!element || typeof ResizeObserver === "undefined") return;
+    const onScroll = () => markClippedMonths(element);
+    element.addEventListener("scroll", onScroll, { passive: true });
+    let scrolled = false;
     const observer = new ResizeObserver(() => {
       if (!element.clientWidth) return;
-      element.scrollLeft = element.scrollWidth;
-      observer.disconnect();
+      if (!scrolled) element.scrollLeft = element.scrollWidth;
+      scrolled = true;
+      markClippedMonths(element);
     });
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); element.removeEventListener("scroll", onScroll); };
   }, []);
   return ref;
 }

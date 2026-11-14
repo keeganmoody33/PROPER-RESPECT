@@ -1615,20 +1615,24 @@ main {
 
 /* Contribution calendars retain GitHub's activity palette inside the product card. */
 /* Cells shrink from GitHub's 10px with 3px gaps to fit every week inside the card, down to 7px with 2px gaps; below that the calendar scrolls, opened at the newest week.
-   46px is the weekday column, its gap and the end padding of .contribution-calendar-layout. */
+   50px is the weekday column, its gap and the end padding of .contribution-calendar-layout. */
 .contribution-calendar { container-type: inline-size; min-width: 0; }
 .contribution-scroll {
-  --contribution-pitch: calc((100cqi - 46px) / var(--contribution-weeks, 53));
+  --contribution-pitch: calc((100cqi - 50px) / var(--contribution-weeks, 53));
   --contribution-cell: clamp(7px, round(down, calc(var(--contribution-pitch) - 2px), 1px), 10px);
   --contribution-gap: clamp(2px, round(down, calc(var(--contribution-pitch) - var(--contribution-cell)), 1px), 3px);
 }
 .contribution-scroll { max-width: 100%; overflow-x: auto; padding: 0 0 .4rem; scrollbar-width: thin; scrollbar-color: #6e7681 #0d1117; color-scheme: dark; }
 .contribution-scroll:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.contribution-calendar-layout { display: grid; grid-template-columns: 26px max-content; grid-template-rows: 16px auto; gap: 4px 6px; width: max-content; padding-right: 14px; }
-.contribution-months { grid-column: 2; display: grid; gap: var(--contribution-gap); font-size: 10px; line-height: 16px; }
+.contribution-calendar-layout { display: grid; grid-template-columns: 30px max-content; grid-template-rows: 16px auto; gap: 4px 6px; width: max-content; padding-right: 14px; }
+.contribution-months { grid-column: 2; display: grid; gap: var(--contribution-gap); font-size: 12px; line-height: 16px; }
+/* A month label the scroll has cut at the card's edge is hidden rather than read as "b" for "Feb". */
+.contribution-months span[data-clipped] { visibility: hidden; }
 .contribution-months span { grid-row: 1; white-space: nowrap; }
-.contribution-weekdays { grid-row: 2; display: grid; grid-template-rows: repeat(7, var(--contribution-cell)); gap: var(--contribution-gap); font-size: 9px; line-height: var(--contribution-cell); }
-.contribution-weekdays span { align-self: center; }
+/* The weekday labels stay at the left edge while a narrow card's year scrolls under them. */
+.contribution-weekdays { grid-row: 2; display: grid; grid-template-rows: repeat(7, var(--contribution-cell)); gap: var(--contribution-gap); font-size: 12px; line-height: var(--contribution-cell);
+  background: var(--brand-card-background, var(--ink)); left: 0; margin-right: -6px; padding-right: 6px; position: sticky; z-index: 1; }
+.contribution-weekdays span { align-self: center; white-space: nowrap; }
 .contribution-grid { grid-column: 2; grid-row: 2; display: grid; gap: var(--contribution-gap); grid-template-rows: repeat(7, var(--contribution-cell)); margin-top: 0; }
 .contribution-grid span { background: #161b22; border: 1px solid #30363d; width: var(--contribution-cell); height: var(--contribution-cell); border-radius: 2px; }
 .contribution-grid span[data-level="1"], .contribution-legend i[data-level="1"] { background: #0e4429; }
@@ -1642,14 +1646,14 @@ main {
 .product-card[data-surface="light"] :is(.contribution-grid span, .contribution-legend i)[data-level="2"] { background: #40c463; }
 .product-card[data-surface="light"] :is(.contribution-grid span, .contribution-legend i)[data-level="3"] { background: #30a14e; }
 .product-card[data-surface="light"] :is(.contribution-grid span, .contribution-legend i)[data-level="4"] { background: #216e39; }
-.contribution-range, .contribution-gap { font-size: 0.65rem; line-height: 1.5; margin: 0.4rem 0 0; }
+.contribution-range, .contribution-gap { font-size: 0.75rem; line-height: 1.5; margin: 0.4rem 0 0; }
 
 .profile-links-fields { min-width: 0; }
 .profile-links-fields input { min-width: 0; }
 .profile-links-fields .profile-link-choice { flex-direction: row; align-items: center; }
 .profile-links-fields input[type="radio"] { width: auto; flex: 0 0 auto; padding: 0; }
 
-.contribution-legend { display: flex; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.6rem; margin-top: 0.4rem; }
+.contribution-legend { display: flex; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.75rem; margin-top: 0.4rem; }
 .contribution-legend i { display: block; width: 0.45rem; height: 0.45rem; border-radius: 1px; border: 1px solid #30363d; background: #161b22; }
 
 .site-mark { display: inline-flex; flex: 0 0 auto; background: currentColor; mask: url("/brand/homepage/PR-mark-black.png") center / contain no-repeat; }
@@ -1719,9 +1723,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .usage-measurement-stats li { display: flex; flex-direction: column; min-width: 0; }
 .usage-measurement-stats strong { font-size: clamp(1.05rem, 2.4vw, 1.5rem); font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
 .usage-measurement-stats span { font-size: .8rem; line-height: 1.3; }
-.usage-measurement-stats small { font-size: .7rem; line-height: 1.4; opacity: .75; }
-.usage-measurement-stats .usage-measurement-sample { align-self: flex-start; border: 1px solid currentColor; border-radius: .25rem; font-size: .7rem; font-style: normal; font-weight: 650; line-height: 1.3; margin-top: .2rem; padding: 0 .3rem; }
-.usage-measurement-public .usage-measurement-note { font-size: .72rem; margin: .5rem 0 0; opacity: .8; }
+.usage-measurement-stats small { font-size: .75rem; line-height: 1.4; opacity: .75; }
+.usage-measurement-stats .usage-measurement-sample { align-self: flex-start; border: 1px solid currentColor; border-radius: .25rem; font-size: .75rem; font-style: normal; font-weight: 650; line-height: 1.3; margin-top: .2rem; padding: 0 .3rem; }
+.usage-measurement-public .usage-measurement-note { font-size: .75rem; margin: .5rem 0 0; opacity: .8; }
 
 /* A few rows of a table the product makes. It scrolls inside its own box on a narrow card, with the first column kept in view. */
 /* The table fits its card rather than scrolling: fixed columns, long cells cut short (their full text is still read out), and on a narrow card the droppable columns left out. */
@@ -1761,3 +1765,17 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .usage-measurement-choice { display: flex; align-items: flex-start; gap: .6rem; padding: .5rem; border: 1px solid var(--border, #999); border-radius: .4rem; min-width: 0; }
 .usage-measurement-choice input { width: auto; margin-top: 1rem; flex: 0 0 auto; }
 .usage-measurement-choice .usage-measurement-measurement { padding-top: .25rem; }
+
+/* No card text under 12px: the small labels, buttons and tags that were 11.2-11.5px. */
+.product-card :is(.eyebrow, .status-row, .activity-meta, .card-button, .close-button, .card-link-disclosure, .activity-hero span, .metric-row span, .severity-row span) {
+  font-size: 0.75rem;
+}
+
+/* A phone's tap targets: the back's links and the front's linked works are at least 44px tall. */
+@media (max-width: 480px) {
+  .product-card :is(.outbound-link, .evidence-link, .card-artifact-links a) {
+    align-items: center;
+    display: inline-flex;
+    min-height: 44px;
+  }
+}
