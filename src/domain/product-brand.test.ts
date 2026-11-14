@@ -161,6 +161,26 @@ describe("retained product brand presentation", () => {
     expect(selectProductBrandLogo(snapshot, "light")).toEqual({ logo: logo("unknown", 719, 59), layout: "wordmark" });
   });
 
+  it("keeps an unclassified, narrow or unmeasured logo in the square slot beside the name, ahead of the other surface's", () => {
+    const snapshot = normalizeProductBrand(input, responses);
+    const logo = (type: "logo" | "unknown", size?: string) => {
+      const [width, height] = size ? size.split("x").map(Number) : [];
+      return { url: `https://assets.example.com/${type}-${size ?? "unmeasured"}.svg`, mode: "light" as const, type, width, height };
+    };
+    const otherSurface = { url: "https://assets.example.com/dark-icon.svg", mode: "dark" as const, type: "icon" as const };
+    const choices = [logo("unknown", "512x512"), logo("unknown", "400x100"), logo("logo", "38x30"), logo("logo")].map(candidate => {
+      snapshot.logos = [otherSurface, candidate];
+      const choice = selectProductBrandLogo(snapshot, "light");
+      return `${choice?.layout} ${choice?.logo.url}`;
+    });
+    expect(choices).toEqual([
+      "square https://assets.example.com/unknown-512x512.svg",
+      "square https://assets.example.com/unknown-400x100.svg",
+      "square https://assets.example.com/logo-38x30.svg",
+      "square https://assets.example.com/logo-unmeasured.svg",
+    ]);
+  });
+
   it("falls back to a logo made for the other surface only in the square slot, where it gets its own backing", () => {
     const snapshot = normalizeProductBrand(input, responses);
     const logo = (mode: "light" | "dark", type: "icon" | "logo") => ({ url: `https://assets.example.com/${mode}-${type}.svg`, mode, type, width: 100, height: 100 });

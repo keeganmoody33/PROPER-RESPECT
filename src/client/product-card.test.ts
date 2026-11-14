@@ -543,7 +543,7 @@ test("a card nobody can see yet keeps its brand's layout but fetches none of its
   expect($(".product-card").attr("style") ?? "").toContain("--brand-card-body-font:");
   expect($("style")).toHaveLength(0);
   expect($("img")).toHaveLength(0);
-  expect($(".product-logo").text()).toBe("Example Product");
+  expect($(".product-logo").text()).toBe("EP");
 });
 
 test("a mismatched identity cannot load another product's retained fonts", () => {
@@ -814,8 +814,13 @@ test("bars take the card's chart colour, then its accent, then its text", () => 
   expect(readFileSync("app/globals.css", "utf8")).toContain("background: var(--brand-card-chart, var(--brand-card-accent, currentColor));");
 });
 
+const WORDMARK_WIDTH = 400;
+const WORDMARK_HEIGHT = 100;
+const lightSurface = { mode: "light" as const, colors: { background: "#FFFFFF", text: "#111111" } };
+
 test("a brand with only a wordmark for its surface draws it in place of the name, and keeps the name for screen readers", () => {
-  const $ = renderCard({ product: { ...baseCard.product, brand: { ...brand, styleguide: { mode: "light", colors: { background: "#FFFFFF", text: "#111111" } } } } });
+  const logos = brand.logos.map(logo => ({ ...logo, width: WORDMARK_WIDTH, height: WORDMARK_HEIGHT }));
+  const $ = renderCard({ product: { ...baseCard.product, brand: { ...brand, logos, styleguide: lightSurface } } });
 
   expect($(".card-topline > .product-logo")).toHaveLength(0);
   expect($(".card-title .product-logo").attr("data-logo-layout")).toBe("wordmark");
@@ -823,6 +828,15 @@ test("a brand with only a wordmark for its surface draws it in place of the name
   expect($(".card-title .product-logo img").attr("src")).toBe("https://example.com/light.svg");
   expect($(".card-title h2").attr("class")).toBe("card-product-name");
   expect($(".card-title h2").text()).toBe("Example Product");
+});
+
+test("a logo the provider didn't classify sits in the square slot beside the visible name, however wide", () => {
+  const logos = brand.logos.map(logo => ({ ...logo, type: "unknown" as const, width: WORDMARK_WIDTH, height: WORDMARK_HEIGHT }));
+  const $ = renderCard({ product: { ...baseCard.product, brand: { ...brand, logos, styleguide: lightSurface } } });
+
+  expect($(".card-topline > .product-logo img").attr("src")).toBe("https://example.com/light.svg");
+  expect($(".card-title .product-logo")).toHaveLength(0);
+  expect($(".card-title h2").attr("class")).toBeUndefined();
 });
 
 test("an icon for the card's surface sits in the square slot beside the visible name", () => {

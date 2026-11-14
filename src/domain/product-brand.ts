@@ -117,6 +117,8 @@ export type ProductBrandLogoChoice = { logo: ProductBrandLogo; layout: "square" 
 const SQUARE_TOLERANCE = 0.2;
 /** Wider than this, a wordmark is too short to read at the card title's height. */
 const MAX_WORDMARK_ASPECT = 6;
+/** Narrower than this, a lockup is a symbol or a stacked mark, not a line of type that can stand in for the name. */
+const MIN_WORDMARK_ASPECT = 2;
 const aspect = (logo: ProductBrandLogo) => (logo.width && logo.height ? logo.width / logo.height : undefined);
 const isSquare = (logo: ProductBrandLogo) => Math.abs((aspect(logo) ?? Infinity) - 1) <= SQUARE_TOLERANCE;
 /** Square icons first, then in the order the modes are listed, then as stored. */
@@ -133,15 +135,19 @@ function readableWordmark(logos: readonly ProductBrandLogo[]) {
 }
 /**
  * A logo's mode is the surface it was made for; "unknown" ones (often on their own background) suit either.
- * An icon for this surface takes the square slot. Failing that a wordmark for it replaces the product's name.
- * Only then does a logo made for the other surface appear, and only in the square, which gives it its own backing.
+ * An icon for this surface takes the square slot. Failing that, a wordmark for it replaces the product's name, but only
+ * a logo the provider classified as one and that is measured wide enough to read as a line of type. Any other logo for
+ * this surface sits in the square beside the name. Only then does a logo made for the other surface appear, and only in
+ * the square, which gives it its own backing.
  */
 export function selectProductBrandLogo(snapshot: Pick<ProductBrandSnapshot, "logos">, surface: "light" | "dark"): ProductBrandLogoChoice | undefined {
   const usable = [surface, "unknown"] as const, opposite = surface === "dark" ? "light" : "dark";
   const icon = rankedIcons(snapshot.logos, usable)[0];
   if (icon) return { logo: icon, layout: "square" };
-  const wordmark = readableWordmark(snapshot.logos.filter((logo) => logo.type !== "icon" && (usable as readonly string[]).includes(logo.mode)));
+  const forSurface = snapshot.logos.filter((logo) => logo.type !== "icon" && (usable as readonly string[]).includes(logo.mode));
+  const wordmark = readableWordmark(forSurface.filter((logo) => logo.type === "logo" && (aspect(logo) ?? 0) >= MIN_WORDMARK_ASPECT));
   if (wordmark) return { logo: wordmark, layout: "wordmark" };
+  if (forSurface.length) return { logo: forSurface[0], layout: "square" };
   const fallback = rankedIcons(snapshot.logos, [opposite])[0] ?? snapshot.logos.find((logo) => logo.mode === opposite);
   return fallback ? { logo: fallback, layout: "square" } : undefined;
 }
