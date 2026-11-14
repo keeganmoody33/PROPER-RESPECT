@@ -1851,6 +1851,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .card-table-preview [data-state="empty"] { color: color-mix(in srgb, var(--brand-card-text, currentColor) 62%, var(--brand-card-background, #fff)); }
 @container (max-width: 27.5rem) {
   .card-table-preview:not([data-full]) [data-droppable] { display: none; }
+  /* The back keeps every column, so on a narrow card its table scrolls inside this box rather than breaking words. */
+  .card-table-preview[data-full] table { min-width: 30rem; }
+  .card-table-preview[data-full] :is(th, td) { overflow-wrap: normal; }
   .card-table-preview :is(th, td) { padding: .4rem .35rem; }
   .card-table-preview tr > :first-child { padding-left: 1.6rem; }
   .card-table-preview tr > :first-child::before { width: 1.2rem; }

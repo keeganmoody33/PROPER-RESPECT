@@ -569,6 +569,30 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's 
     highlighted: ["Quillon"], headerWeight: "400", slab: true });
 });
 
+for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's full table on the back keeps every word whole at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  await card.getByRole("button", { name: "Details" }).click();
+  const box = page.locator(".card-back:not([hidden])").getByRole("region", { name: CLAY_CAPTION });
+  await expect(box).toBeVisible();
+  const split = await box.evaluate(element => [...element.querySelectorAll("th, td")].flatMap(cell => {
+    const text = cell.firstChild;
+    if (!text || text.nodeType !== Node.TEXT_NODE) return [];
+    // A word laid out on more than one line was broken inside itself.
+    return [...(text.textContent ?? "").matchAll(/\S+/g)].filter(word => {
+      const range = document.createRange();
+      range.setStart(text, word.index);
+      range.setEnd(text, word.index + word[0].length);
+      return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size > 1;
+    }).map(word => word[0]);
+  }));
+  expect(split).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 const FILL_IN_WAIT_MS = 1000;
 for (const motion of ["no-preference", "reduce"] as const) test(`Clay's running row ${motion === "reduce" ? "shows its filled-in end state at once, without motion," : "fills in once"} when motion is ${motion}`, async ({ page }) => {
   await page.clock.install();
