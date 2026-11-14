@@ -945,3 +945,17 @@ test("an artifact collection's front names its count and links up to three of it
   ]);
   expect(["Run a script", "Inline page", "File mirror", "Signed-in image", "Fourth good link"].filter(title => front.text().includes(title))).toEqual([]);
 });
+
+const BUSY_WEEK = 48_360;
+
+test("a chart's bars are also a table a screen reader can read, outside the chart's image", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "timeSeries", label: "Requests served", unit: "per week", points: [{ date: "2026-08-17", value: 45 }, { date: "2026-08-24", value: BUSY_WEEK }] } });
+  const table = $(".card-front .usage-chart > .visually-hidden > table");
+  expect(table.find("caption").text()).toBe("Requests served, one row per bar");
+  expect(table.find("tr").toArray().map(row => $(row).children().toArray().map(cell => $(cell).text()))).toEqual([
+    ["From", "To", "Value"],
+    ["2026-08-17", "2026-08-17", "45 per week"],
+    ["2026-08-24", "2026-08-24", "48,360 per week"],
+  ]);
+  expect($(".card-front .activity-bars table")).toHaveLength(0);
+});

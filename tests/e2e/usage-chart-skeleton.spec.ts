@@ -150,6 +150,10 @@ PHONE_WIDTHS.forEach(width => test(`a 90-day series fits a ${width}px card as ${
   }));
   await expect(card.locator(".card-front .activity-bars > span")).toHaveCount(MAX_BARS);
   expect(await fits(".card-front")).toEqual({ overflow: 0, lastBarPastEdge: 0 });
+  // A screen reader reads the same bars as rows, with the dates and averages the chart keeps in hover titles.
+  const rows = card.locator(".card-front").getByRole("table", { name: "Sessions, one row per bar" }).getByRole("row");
+  await expect(rows).toHaveCount(MAX_BARS + 1);
+  await expect(rows.nth(1).getByRole("cell")).toHaveText(["2026-07-03", "2026-07-04", "18 sessions on average"]);
   await card.getByRole("button", { name: "Details", exact: true }).click();
   await expect(card.locator(".card-back .activity-bars > span")).toHaveCount(MAX_BARS);
   expect(await fits(".card-back")).toEqual({ overflow: 0, lastBarPastEdge: 0 });

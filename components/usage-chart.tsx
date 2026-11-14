@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { chartBars } from "@/src/domain/chart-bars";
+import { chartBars, type ChartBar } from "@/src/domain/chart-bars";
+import { fullNumber } from "@/src/domain/format-activity-number";
 
 export type UsageChartPoint = {
   date: string;
@@ -94,6 +95,28 @@ export function MeasuredBlueprint({
   );
 }
 
+/** A bar's value as a person reads it: one point as recorded, a run of points as their average to one decimal place. */
+function barValue(bar: ChartBar, unit?: string): string {
+  const shown = bar.points === 1 ? fullNumber(bar.value) : fullNumber(Number(bar.value.toFixed(1)));
+  return `${shown}${unit ? ` ${unit}` : ""}${bar.points === 1 ? "" : " on average"}`;
+}
+
+/** The bars again as rows, for a screen reader: the chart itself is one image, and its dates and values live only in hover titles. */
+function BarTable({ bars, label, unit }: { bars: readonly ChartBar[]; label?: string; unit?: string }) {
+  return (
+    // A table grows to fit its cells whatever its width, so the 1px clip goes on a box around it.
+    <div className="visually-hidden">
+      <table>
+        <caption>{label ?? "Activity"}, one row per bar</caption>
+        <thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Value</th></tr></thead>
+        <tbody>
+          {bars.map(bar => <tr key={bar.start}><td>{bar.start}</td><td>{bar.end}</td><td>{barValue(bar, unit)}</td></tr>)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function SkeletonBars() {
   return (
     <div className="usage-chart-skeleton-bars" aria-hidden="true">
@@ -160,6 +183,7 @@ export function UsageChart({
       ) : (
         <SkeletonBars />
       )}
+      {resolved && <BarTable bars={bars} label={label} unit={unit} />}
       {resolved && !ready && (
         <div className="usage-chart-blueprint" aria-hidden="true">
           <SkeletonBars />
