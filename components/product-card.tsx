@@ -261,7 +261,7 @@ function headlineLength(text: string): "short" | "medium" | "long" {
 /** How long a shown table waits before its running row fills in, so the visitor sees it pending first. */
 const FILL_IN_DELAY_MS = 600;
 
-/** Once, a moment after the card is shown, unless the visitor asked for less motion: then the running row stays as it is. */
+/** Once, a moment after the card is shown; a visitor who asked for less motion sees the filled-in table straight away. */
 function useFilledIn(shown: boolean): boolean {
   const reducedMotion = useReducedMotion();
   const [filledIn, setFilledIn] = useState(false);
@@ -270,14 +270,22 @@ function useFilledIn(shown: boolean): boolean {
     const timer = window.setTimeout(() => setFilledIn(true), FILL_IN_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [shown, reducedMotion, filledIn]);
-  return filledIn;
+  return filledIn || reducedMotion;
 }
 
 const columnMarks = (column: TablePreviewColumn) => ({ "data-droppable": column.droppable ? "" : undefined });
 
+/** An address may break after its @ and before its last dot, so a narrow column wraps it in whole parts rather than mid-word. */
+function cellText(text: string) {
+  const [at, dot] = [text.indexOf("@"), text.lastIndexOf(".")];
+  if (at <= 0) return text;
+  if (dot <= at) return <>{text.slice(0, at + 1)}<wbr />{text.slice(at + 1)}</>;
+  return <>{text.slice(0, at + 1)}<wbr />{text.slice(at + 1, dot)}<wbr />{text.slice(dot)}</>;
+}
+
 /**
- * A few rows of a table the product makes, drawn as a real table: a row number in the gutter, enriched columns' headers tinted,
- * and on a narrow card the droppable columns left out so the rest fit, long cells cut short with their full text still read out.
+ * A few rows of a table the product makes, drawn as a real table: a row number in the gutter, the row filled in last highlighted,
+ * and on a narrow card the droppable columns left out so the rest fit, long cells wrapping rather than cut short.
  */
 function TablePreviewBlock({ preview, shown }: { preview: TablePreview; shown: boolean }) {
   const captionId = useId();
@@ -289,12 +297,12 @@ function TablePreviewBlock({ preview, shown }: { preview: TablePreview; shown: b
         <caption id={captionId}>{preview.caption}</caption>
         <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined} {...columnMarks(column)}>{column.label}</th>)}</tr></thead>
         <tbody>
-          {preview.rows.map((row, rowIndex) => <tr key={rowIndex}>
+          {preview.rows.map((row, rowIndex) => <tr key={rowIndex} data-latest={row.some(cell => cell.fillsIn) ? "" : undefined}>
             {row.map((cell, column) => {
               const { text, state } = cellShown(cell);
               return column === 0
-                ? <th key={column} scope="row" data-state={state} {...columnMarks(preview.columns[column])}>{text}</th>
-                : <td key={column} data-state={state} {...columnMarks(preview.columns[column])}>{text}</td>;
+                ? <th key={column} scope="row" data-state={state} {...columnMarks(preview.columns[column])}>{cellText(text)}</th>
+                : <td key={column} data-state={state} {...columnMarks(preview.columns[column])}>{cellText(text)}</td>;
             })}
           </tr>)}
         </tbody>

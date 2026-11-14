@@ -52,7 +52,6 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
 
 const CAPABILITY_LIMIT = 28;
 const CLAY_MEASUREMENTS = 3;
-const CLAY_MONTHLY_USD = 149;
 
 test("each example names the part of a card it shows, in a few words no other example uses", () => {
   expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
@@ -114,7 +113,7 @@ test("every headline and note is a short line under the card's limit", () => {
 test("each example shows a different part of a card: its link, cost, work sample, published numbers and kind of activity", () => {
   expect(examples.map(({ id, card }) => [id, card.primaryLink?.type, card.cost && `${card.cost.amount} ${card.cost.currency} ${card.cost.cadence} ${card.cost.basis}`,
     card.usageLink && `${usageLinkLabelText(card.usageLink.label)} / ${usageLinkHost(card.usageLink.url)}`, card.measurements?.length, card.activity?.kind])).toEqual([
-    ["clay", "CANONICAL", "149 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", CLAY_MEASUREMENTS, undefined],
+    ["clay", "CANONICAL", "167 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", CLAY_MEASUREMENTS, undefined],
     ["github", "CANONICAL", undefined, undefined, undefined, "contributionCalendar"],
     ["cloudflare", "CANONICAL", "5 USD MONTHLY OWNER_REPORTED", undefined, undefined, "timeSeries"],
     ["docker", "CANONICAL", undefined, undefined, undefined, "artifactCollection"],
@@ -140,37 +139,48 @@ test("every sample is labelled illustrative, never account data: activity as a s
   expect(new Set(examples.flatMap(({ card }) => card.measurements ?? []).map(row => row.sample))).toEqual(new Set(["synthetic"]));
 });
 
-test("Clay publishes three exact numbers over a stated period, each named once: rows enriched since 2023, not rows enriched in rows", () => {
+/**
+ * Clay's Launch plan as clay.com/pricing showed it on 14 Nov 2026, billed annually: 180,000 actions a year ($54/mo) and
+ * 30,000 data credits a year ($113/mo), $167/mo together.
+ */
+const CLAY_LAUNCH = { monthlyUsd: 167, actionsUsd: 54, dataCreditsUsd: 113, dataCreditsPerYear: 30_000 } as const;
+const SAMPLE_YEAR = "2025-09-01 to 2026-08-31";
+
+test("Clay's three numbers and its price fit one plan over one stated year: a daily user's rows, tables and data credits on Launch", () => {
   const clay = examples.find(({ id }) => id === "clay")!.card;
   expect(clay.measurements?.map(row => [row.metric, row.value, row.unit, row.period.kind === "date" ? `${row.period.start} to ${row.period.end}` : row.period.kind]))
     .toEqual([
-      ["enriched", "38400", "rows", "2023-03-01 to 2026-08-31"],
-      ["built", "86", "tables", "2023-03-01 to 2026-08-31"],
-      ["used", "48500", "credits", "2025-09-01 to 2026-08-31"],
+      ["enriched", "11800", "rows", SAMPLE_YEAR],
+      ["built", "52", "tables", SAMPLE_YEAR],
+      ["used", "27600", "data_credits", SAMPLE_YEAR],
     ]);
-  expect(clay.cost).toEqual({ amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" });
+  expect(clay.cost).toEqual({ amount: CLAY_LAUNCH.monthlyUsd, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01", period: { start: "2025-09-01", end: "2026-08-31" } });
+  expect(CLAY_LAUNCH.actionsUsd + CLAY_LAUNCH.dataCreditsUsd).toBe(CLAY_LAUNCH.monthlyUsd);
   expect(clay.usageLink).toEqual({ url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" });
   expect(clay.note).toBe("Lists that took a week of spreadsheets take an hour.");
-  // Enriching a row costs at least a credit, and the credits cover only the last year of the rows' three.
-  const [rows, , credits] = clay.measurements!.map(row => Number(row.value));
+  const [rows, tables, credits] = clay.measurements!.map(row => Number(row.value));
+  // A found address costs at least a data credit, the year's credits fit the plan's, and a daily user builds about a table a week.
   expect(credits).toBeGreaterThanOrEqual(rows);
+  expect(credits).toBeLessThanOrEqual(CLAY_LAUNCH.dataCreditsPerYear);
+  expect(tables).toBeGreaterThanOrEqual(26);
 });
 
-test("only Clay's front shows a table: a few invented rows on reserved .example domains, within the preview's caps", () => {
+test("only Clay's front shows a table: a lead list from a signal, with a provider waterfall and an AI column, on reserved .example domains", () => {
   expect(examples.filter(({ tablePreview: table }) => table).map(({ id }) => id)).toEqual(["clay"]);
   const table = tablePreview(examples.find(({ id }) => id === "clay")!.tablePreview)!;
-  expect([table.columns, table.rows.length, table.rows.map(row => row[3].text)]).toEqual([
-    [
-      { label: "Company", droppable: false, enriched: false }, { label: "Domain", droppable: true, enriched: false },
-      { label: "Work email", droppable: false, enriched: true }, { label: "Status", droppable: false, enriched: true },
-    ],
-    5, ["Enriched", "Enriched", "Running", "Enriched", "No match"],
+  expect(table.caption).toBe("Lead list · from a job-change signal · invented sample rows");
+  expect([table.columns.map(column => [column.label, column.droppable, column.enriched]), table.rows.length]).toEqual([
+    [["Company", false, false], ["Work email", false, true], ["Found by", true, true], ["AI: signal", false, true]],
+    5,
   ]);
-  // The one row still running fills in once, with an address like the others.
+  // No real provider is named: the waterfall's results are generic labels.
+  expect(new Set(table.rows.map(row => row[2].fillsIn?.text ?? row[2].text))).toEqual(new Set(["Provider A", "Provider B", "2nd provider", "No provider"]));
+  // One row still running, which fills in; one with no match.
   expect(table.rows.flatMap(row => row.flatMap(cell => cell.fillsIn ? [`${cell.text} -> ${cell.fillsIn.text}`] : []))).toEqual([
-    "Finding… -> d.reyes@quillon.example", "Running -> Enriched",
+    "Finding… -> mo@quillon.example", "Running -> 2nd provider", "Running -> New VP Sales",
   ]);
-  const addresses = table.rows.flatMap(row => row.flatMap(cell => [cell.text, ...(cell.fillsIn ? [cell.fillsIn.text] : [])])).filter(text => /\.[a-z]+$/.test(text));
+  expect(table.rows.filter(row => row[1].state === "empty").map(row => row[0].text)).toEqual(["Marrow"]);
+  const addresses = table.rows.flatMap(row => row.flatMap(cell => [cell.text, ...(cell.fillsIn ? [cell.fillsIn.text] : [])])).filter(text => text.includes("@"));
   expect(addresses.filter(text => !text.endsWith(".example"))).toEqual([]);
 });
 

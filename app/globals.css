@@ -1751,33 +1751,55 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 
 /* A few rows of a table the product makes. It scrolls inside its own box on a narrow card, with the first column kept in view. */
 /* The table fits its card rather than scrolling: fixed columns, long cells cut short (their full text is still read out), and on a narrow card the droppable columns left out. */
-.card-table-preview { border: 1px solid var(--card-line); border-radius: var(--brand-card-button-radius, .45rem); container-type: inline-size; max-width: 100%; min-width: 0; overflow-x: auto; }
+/*
+ * A table the product makes, drawn the way clay.com draws its own: a near-white grid on a tinted slab, a title bar, hairline rules
+ * between rows and columns, regular-weight text in a muted tone, a row-number gutter, and the row filled in last tinted edge to edge.
+ * Cells wrap rather than cut short; a narrow card leaves out the droppable column.
+ */
+.card-table-preview {
+  --table-ink: color-mix(in srgb, var(--brand-card-text, currentColor) 74%, var(--brand-card-background, #fff));
+  --table-rule: color-mix(in srgb, var(--brand-card-button-fill, var(--brand-card-text, currentColor)) 14%, color-mix(in srgb, var(--brand-card-text, currentColor) 7%, var(--brand-card-background, #fff)));
+  --table-panel: color-mix(in srgb, var(--brand-card-background, #fff) 97%, var(--brand-card-text, currentColor));
+  background: var(--brand-card-panel, color-mix(in srgb, var(--brand-card-button-fill, var(--brand-card-text, currentColor)) 16%, var(--brand-card-background, #fff)));
+  border-radius: var(--brand-card-panel-radius, 20px);
+  container-type: inline-size;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  padding: .6rem;
+}
 .card-table-preview:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.card-table-preview table { border-collapse: collapse; counter-reset: preview-row; font-size: .75rem; line-height: 1.35; table-layout: fixed; width: 100%; }
-.card-table-preview caption { caption-side: top; font-size: .75rem; font-weight: 650; padding: .45rem .6rem; text-align: left; }
-.card-table-preview :is(th, td) { border-top: 1px solid var(--card-line); overflow: hidden; padding: .4rem .5rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.card-table-preview thead th { font-size: .75rem; font-weight: 600; }
-.card-table-preview thead th:first-child { width: 30%; }
-.card-table-preview thead th:last-child { width: 5.5rem; }
-/* A grid's row numbers, in a gutter beside the row's name; drawn, not read out. */
-.card-table-preview tr > :first-child::before { content: ""; display: inline-block; font-variant-numeric: tabular-nums; font-weight: 400; margin-right: .35rem; opacity: .75; width: 1.1rem; }
+.card-table-preview table { background: var(--brand-card-background, #fff); border: 1px solid var(--table-rule); border-collapse: separate; border-radius: .6rem; border-spacing: 0; color: var(--table-ink); counter-reset: preview-row; font-size: .75rem; line-height: 1.35; overflow: hidden; table-layout: fixed; width: 100%; }
+.card-table-preview caption { background: var(--brand-card-background, #fff); border: 1px solid var(--table-rule); border-bottom: 0; border-radius: .6rem .6rem 0 0; caption-side: top; color: var(--brand-card-text, currentColor); font-size: .8rem; font-weight: 600; padding: .4rem .7rem; text-align: left; }
+.card-table-preview caption + thead th:first-child { border-top-left-radius: 0; }
+.card-table-preview :is(th, td) { border-left: 1px solid var(--table-rule); border-top: 1px solid var(--table-rule); font-weight: 400; overflow-wrap: break-word; padding: .32rem .5rem; text-align: left; vertical-align: top; }
+.card-table-preview tr > :first-child { border-left: 0; padding-left: 2rem; position: relative; }
+.card-table-preview thead th { background: var(--table-panel); }
+.card-table-preview thead th:first-child { width: 26%; }
+.card-table-preview thead th:nth-child(2) { width: 32%; }
+/* The row-number gutter, its own ruled column inside the first cell; drawn, not read out. */
+.card-table-preview tr > :first-child::before { align-items: flex-start; border-right: 1px solid var(--table-rule); bottom: 0; content: "" / ""; display: flex; font-variant-numeric: tabular-nums; justify-content: center; left: 0; padding-top: .32rem; position: absolute; top: 0; width: 1.5rem; }
 .card-table-preview tbody tr { counter-increment: preview-row; }
 .card-table-preview tbody tr > :first-child::before { content: counter(preview-row) / ""; }
-/* A column the product fills in has its header tinted in the brand's colour, the way an enrichment grid marks it. */
-.card-table-preview thead th[data-enriched] { background: color-mix(in srgb, var(--brand-card-band, currentColor) 16%, var(--brand-card-background, var(--ink))); }
-.card-table-preview tbody th { background: var(--brand-card-background, var(--ink)); font-weight: 600; }
-.card-table-preview [data-state="filled"] { background: color-mix(in srgb, var(--brand-card-band, currentColor) 9%, var(--brand-card-background, var(--ink))); }
-.card-table-preview td[data-state="filled"]:last-child { color: var(--brand-card-band, inherit); font-weight: 650; }
-.card-table-preview [data-state="pending"] { font-style: italic; opacity: .6; }
-.card-table-preview [data-state="empty"] { opacity: .5; }
+.card-table-preview tbody tr[data-latest] > * { background: color-mix(in srgb, var(--brand-card-button-fill, var(--brand-card-text, currentColor)) 30%, var(--brand-card-background, #fff)); color: var(--brand-card-text, currentColor); }
+.card-table-preview [data-state="pending"] { font-style: italic; }
+.card-table-preview [data-state="empty"] { color: color-mix(in srgb, var(--brand-card-text, currentColor) 62%, var(--brand-card-background, #fff)); }
 @container (max-width: 27.5rem) {
   .card-table-preview [data-droppable] { display: none; }
   .card-table-preview :is(th, td) { padding: .4rem .35rem; }
-  .card-table-preview tr > :first-child::before { margin-right: .2rem; width: .8rem; }
-  .card-table-preview thead th:first-child { width: 34%; }
-  .card-table-preview thead th:last-child { width: 4.75rem; }
+  .card-table-preview tr > :first-child { padding-left: 1.6rem; }
+  .card-table-preview tr > :first-child::before { width: 1.2rem; }
+  .card-table-preview thead th:first-child { width: 33%; }
+  .card-table-preview thead th:nth-child(2) { width: 40%; }
 }
-@media (prefers-reduced-motion: no-preference) { .card-table-preview :is(th, td) { transition: background-color .4s ease, color .4s ease, opacity .4s ease; } }
+@container (max-width: 15rem) {
+  .card-table-preview :is(th, td) { padding-inline: .3rem; }
+  .card-table-preview tr > :first-child { padding-left: 1.3rem; }
+  .card-table-preview tr > :first-child::before { width: 1rem; }
+  .card-table-preview thead th:first-child { width: 41%; }
+  .card-table-preview thead th:nth-child(2) { width: 35%; }
+}
+@media (prefers-reduced-motion: no-preference) { .card-table-preview :is(th, td) { transition: background-color .4s ease, color .4s ease; } }
 .usage-measurement-panel { padding: 1.25rem 0; min-width: 0; }
 .usage-measurement-sources { display: grid; gap: 1rem; }
 .usage-measurement-source { border: 1px solid var(--border, #999); border-radius: .5rem; padding: 1rem; min-width: 0; }

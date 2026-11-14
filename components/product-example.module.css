@@ -8,7 +8,7 @@
 /* A fixed width for "1 / 5" and "14 / 14", so the arrows don't shift as the count grows. */
 .controls { flex: none; flex-wrap: wrap; max-width: 100%; }
 .controls > span { min-width: 7ch; text-align: center; }
-.chooser { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .4rem; margin-bottom: 1.2rem; }
+.chooser { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .4rem; margin-bottom: .9rem; }
 .choices { display: flex; flex-wrap: wrap; gap: .4rem; }
 /* The rest of the toggles join the group's own row, so the group stays one set of arrow-key stops. */
 .more { display: contents; }

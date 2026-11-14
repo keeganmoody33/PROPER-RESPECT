@@ -110,23 +110,31 @@ const dockerArtifacts = [
 const dockerActivity: ActivityModule = {
   ...SAMPLE, period: { start: "2024-01-01", end: "2026-08-31" }, kind: "artifactCollection", total: dockerArtifacts.length, artifacts: dockerArtifacts,
 };
-/** Owner-reported monthly prices: Cloudflare's Workers Paid plan and a Clay starter plan. */
+/** Owner-reported monthly prices: Cloudflare's Workers Paid plan. */
 const CLOUDFLARE_MONTHLY_USD = 5;
-const CLAY_MONTHLY_USD = 149;
+/**
+ * Clay's Launch plan as clay.com/pricing showed it on 14 Nov 2026, billed annually: $54/mo for 180,000 actions a year and
+ * $113/mo for 30,000 data credits a year. The sample's year of use stays inside both.
+ */
+const CLAY_LAUNCH_MONTHLY_USD = 167;
+const SAMPLE_YEAR = { start: "2025-09-01", end: "2026-08-31" } as const;
 
-/** A Clay table as it fills in, with invented companies on reserved .example domains: no real company, person or address. */
+/**
+ * A Clay table the way clay.com draws its own: a lead list from a signal, an address found by a waterfall of providers,
+ * and one AI column. Invented companies on reserved .example domains, and generic provider names: no real company, person or vendor.
+ */
 const filled = (text: string) => ({ text, state: "filled" as const });
 const CLAY_TABLE: TablePreviewInput = {
-  caption: "Lead list · invented sample rows",
-  // Clay fills in the email and status; a phone-wide card leaves out the domain so those two stay in view.
-  columns: ["Company", { label: "Domain", droppable: true }, { label: "Work email", enriched: true }, { label: "Status", enriched: true }],
+  caption: "Lead list · from a job-change signal · invented sample rows",
+  // A phone-wide card leaves out which provider found the address, so the address and the AI column stay in view.
+  columns: ["Company", { label: "Work email", enriched: true }, { label: "Found by", enriched: true, droppable: true }, { label: "AI: signal", enriched: true }],
   rows: [
-    [{ text: "Northwind Labs" }, { text: "northwindlabs.example" }, filled("a.lindqvist@northwindlabs.example"), filled("Enriched")],
-    [{ text: "Blue Heron Freight" }, { text: "blueheron.example" }, filled("m.okafor@blueheron.example"), filled("Enriched")],
-    [{ text: "Quillon Health" }, { text: "quillon.example" }, { text: "Finding…", state: "pending", fillsIn: filled("d.reyes@quillon.example") },
-      { text: "Running", state: "pending", fillsIn: filled("Enriched") }],
-    [{ text: "Tessel Robotics" }, { text: "tessel.example" }, filled("r.amari@tessel.example"), filled("Enriched")],
-    [{ text: "Marrow & Pine" }, { text: "marrowpine.example" }, { text: "Not found", state: "empty" }, { text: "No match", state: "empty" }],
+    [{ text: "Nimbus" }, filled("ana@nimbus.example"), filled("Provider A"), filled("Hiring SDRs")],
+    [{ text: "Heron" }, filled("li@heron.example"), filled("Provider B"), filled("Series B")],
+    [{ text: "Quillon" }, { text: "Finding…", state: "pending", fillsIn: filled("mo@quillon.example") },
+      { text: "Running", state: "pending", fillsIn: filled("2nd provider") }, { text: "Running", state: "pending", fillsIn: filled("New VP Sales") }],
+    [{ text: "Tessel" }, filled("raj@tessel.example"), filled("Provider A"), filled("No signal")],
+    [{ text: "Marrow" }, { text: "No match", state: "empty" }, { text: "No provider", state: "empty" }, filled("Series A")],
   ],
 };
 
@@ -135,11 +143,12 @@ const CLAY_MEASURED = {
   capturedAt: SAMPLE.capturedAt, status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
   scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE",
 } as const;
-const SINCE_2023 = { kind: "date", start: "2023-03-01", end: "2026-08-31", timezone: "UTC" } as const;
+const CLAY_YEAR = { kind: "date", ...SAMPLE_YEAR, timezone: "UTC" } as const;
+/** A daily user's year on Launch: about 45 rows a working day, a table a week, and data credits inside the plan's 30,000. */
 const clayMeasurements: PublicMeasurement[] = [
-  { ...CLAY_MEASURED, metric: "enriched", value: "38400", unit: "rows", period: SINCE_2023 },
-  { ...CLAY_MEASURED, metric: "built", value: "86", unit: "tables", period: SINCE_2023 },
-  { ...CLAY_MEASURED, metric: "used", value: "48500", unit: "credits", period: { kind: "date", start: "2025-09-01", end: "2026-08-31", timezone: "UTC" } },
+  { ...CLAY_MEASURED, metric: "enriched", value: "11800", unit: "rows", period: CLAY_YEAR },
+  { ...CLAY_MEASURED, metric: "built", value: "52", unit: "tables", period: CLAY_YEAR },
+  { ...CLAY_MEASURED, metric: "used", value: "27600", unit: "data_credits", period: CLAY_YEAR },
 ];
 
 type ExampleSource = Readonly<{
@@ -175,7 +184,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "clay", featured: true, capability: "Published usage numbers", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
     uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
-    cost: { amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
+    cost: { amount: CLAY_LAUNCH_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01", period: SAMPLE_YEAR },
     usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
     caveat: "Its work-sample link opens Clay's public templates.", backHint: "Periods, sources and a work sample inside", tablePreview: CLAY_TABLE,
   },

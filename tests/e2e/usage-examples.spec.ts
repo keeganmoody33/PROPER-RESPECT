@@ -142,7 +142,7 @@ const CAPABILITIES: Readonly<Record<string, string>> = {
 };
 /** What each label promises, said on the card's front: its cost, why it was paused or stopped, and where its demo is. */
 const FRONT_TEXT: Readonly<Record<string, readonly string[]>> = {
-  Clay: ["Costs $149/month · sample"],
+  Clay: ["Costs $167/month · sample"],
   Cloudflare: ["Costs $5/month · sample", "Owner-selected go-to"],
   Exa: ["A demo link inside"],
   n8n: ["Paused while my nightly jobs move to plain cron.", "I used it to"],
@@ -160,8 +160,8 @@ const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Cloudflare: ["Owner-selected go-to", "Sample cost: $5/month · as of 1 Sep 2026"],
   Docker: ["Weekly · Direct link", "Illustrative sample, not account data · the owner's own use · Jan 2024 – Aug 2026 · last updated 1 Sep 2026"],
   n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
-  Clay: ["Daily · Direct link", "Sample cost: $149/month · as of 1 Sep 2026", "38,400 rows enriched · Mar 2023 – Aug 2026 · workspace · sample, not account data",
-    "86 tables built · Mar 2023 – Aug 2026", "48,500 credits used · Sep 2025 – Aug 2026", "See how I use it ↗clay.com", "How this was measured"],
+  Clay: ["Daily · Direct link", "Sample cost: $167/month · as of 1 Sep 2026 · 1 Sep 2025 to 31 Aug 2026", "11,800 rows enriched · Sep 2025 – Aug 2026 · workspace · sample, not account data",
+    "52 tables built · Sep 2025 – Aug 2026", "27,600 data credits used · Sep 2025 – Aug 2026", "See how I use it ↗clay.com", "How this was measured"],
 };
 
 const DESKTOP_WIDTH = 1440;
@@ -233,15 +233,15 @@ const NARROWEST_WIDTH = 320;
       await expect(card.locator(".card-front .activity-bars")).toHaveAttribute("role", "img");
     } else {
       // Clay shows the product: a few rows of a table filling in, then its three published numbers in one row.
-      const table = card.getByRole("table", { name: "Lead list · invented sample rows" });
+      const table = card.getByRole("table", { name: "Lead list · from a job-change signal · invented sample rows" });
       await expect(table).toBeVisible();
-      // A phone-wide card leaves out the domain, so the address and status Clay fills in stay in view.
-      await expect(table.getByRole("columnheader")).toHaveText(width === DESKTOP_WIDTH ? ["Company", "Domain", "Work email", "Status"] : ["Company", "Work email", "Status"]);
-      await expect(table.getByRole("rowheader")).toHaveText(["Northwind Labs", "Blue Heron Freight", "Quillon Health", "Tessel Robotics", "Marrow & Pine"]);
+      // A phone-wide card leaves out which provider found the address, so the address and the AI column stay in view.
+      await expect(table.getByRole("columnheader")).toHaveText(width === DESKTOP_WIDTH ? ["Company", "Work email", "Found by", "AI: signal"] : ["Company", "Work email", "AI: signal"]);
+      await expect(table.getByRole("rowheader")).toHaveText(["Nimbus", "Heron", "Quillon", "Tessel", "Marrow"]);
+      // One period for all three numbers, said once beside them.
       const stats = card.locator(".card-front .usage-measurement-stats li");
-      await expect(stats).toHaveText([
-        "38,400rows enrichedMar 2023 – Aug 2026", "86tables builtMar 2023 – Aug 2026", "48,500credits usedSep 2025 – Aug 2026",
-      ]);
+      await expect(stats).toHaveText(["11,800rows enriched", "52tables built", "27,600data credits used"]);
+      await expect(card.locator(".card-front .usage-measurement-note")).toHaveText("Sep 2025 – Aug 2026 · Sample numbers · how each was measured is in Details");
       // The numbers the capability names come first, above the table they come from.
       const [statsBottom, tableTop] = [await stats.first().evaluate(item => item.getBoundingClientRect().bottom), await table.evaluate(item => item.getBoundingClientRect().top)];
       expect(statsBottom).toBeLessThan(tableTop);
@@ -523,36 +523,67 @@ test("an occasional card's empty weeks draw as stubs on the baseline, so a gap r
   expect(stubs).toEqual(stubs.map(() => ({ opacity: "1", colour: barColour })));
 });
 
-for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits its card at ${width}px, with an enriched cell in view`, async ({ page }) => {
+const CLAY_CAPTION = "Lead list · from a job-change signal · invented sample rows";
+const MIN_CONTRAST = 4.5;
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits its card at ${width}px with no cell cut short, on a slab like clay.com's`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
   const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
-  const box = card.getByRole("region", { name: "Lead list · invented sample rows" });
+  const box = card.getByRole("region", { name: CLAY_CAPTION });
   await expect(box).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  const fit = await box.evaluate(element => {
+  const fit = await box.evaluate((element, minContrast) => {
+    // A computed colour is rgb() in 0-255, or color(srgb …) in 0-1 where color-mix() made it.
+    const luminance = (colour: string) => {
+      const scale = colour.startsWith("color(") ? 1 : 255;
+      const [red, green, blue] = colour.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(value => value / scale).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const contrast = (first: string, second: string) => {
+      const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+      return (light + 0.05) / (dark + 0.05);
+    };
+    /** The first opaque background behind an element: its own, or an ancestor's. */
+    const backdrop = (start: Element) => {
+      for (let node: Element | null = start; node; node = node.parentElement) {
+        const fill = getComputedStyle(node).backgroundColor;
+        if (fill !== "rgba(0, 0, 0, 0)" && fill !== "transparent") return fill;
+      }
+      return "rgb(255, 255, 255)";
+    };
+    const cells = [...element.querySelectorAll("th, td")].filter(cell => cell.getBoundingClientRect().width > 0);
+    const cut = cells.filter(cell => cell.scrollWidth > cell.clientWidth).map(cell => cell.textContent);
+    const faint = cells.filter(cell => contrast(getComputedStyle(cell).color, backdrop(cell)) < minContrast).map(cell => cell.textContent);
+    const small = cells.filter(cell => parseFloat(getComputedStyle(cell).fontSize) < 12).map(cell => cell.textContent);
     const bounds = element.closest("article")!.getBoundingClientRect();
-    const enriched = [...element.querySelectorAll("td")].find(cell => cell.textContent === "Enriched")!.getBoundingClientRect();
-    return { scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, enrichedInCard: enriched.left >= bounds.left && enriched.right <= bounds.right };
-  });
-  expect(fit).toEqual({ scrollWidth: fit.clientWidth, clientWidth: fit.clientWidth, enrichedInCard: true });
-  // A cut-short address keeps its full text for a screen reader.
-  await expect(box.getByRole("cell", { name: "a.lindqvist@northwindlabs.example" })).toHaveCount(1);
+    const table = element.querySelector("table")!.getBoundingClientRect();
+    const highlighted = [...element.querySelectorAll("tbody tr[data-latest]")].map(row => row.querySelector("th")!.textContent);
+    const headerWeight = getComputedStyle(element.querySelector("thead th")!).fontWeight;
+    return { cut, faint, small, wrapperScrolls: element.scrollWidth > element.clientWidth, inCard: table.left >= bounds.left && table.right <= bounds.right,
+      columns: element.querySelectorAll("thead th").length - [...element.querySelectorAll("thead th")].filter(th => !th.getBoundingClientRect().width).length,
+      highlighted, headerWeight, slab: getComputedStyle(element).backgroundColor !== getComputedStyle(element.closest("article")!).backgroundColor };
+  }, MIN_CONTRAST);
+  expect(fit).toEqual({ cut: [], faint: [], small: [], wrapperScrolls: false, inCard: true, columns: width === DESKTOP_WIDTH ? 4 : 3,
+    highlighted: ["Quillon"], headerWeight: "400", slab: true });
 });
 
 const FILL_IN_WAIT_MS = 1000;
-for (const motion of ["no-preference", "reduce"] as const) test(`Clay's running row ${motion === "reduce" ? "stays running, without motion," : "fills in once"} when motion is ${motion}`, async ({ page }) => {
+for (const motion of ["no-preference", "reduce"] as const) test(`Clay's running row ${motion === "reduce" ? "shows its filled-in end state at once, without motion," : "fills in once"} when motion is ${motion}`, async ({ page }) => {
   await page.clock.install();
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: motion });
   await page.goto("/");
-  const row = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" }).getByRole("row", { name: /Quillon Health/ });
+  const row = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" }).getByRole("row", { name: /Quillon/ });
+  const filled = ["mo@quillon.example", "2nd provider", "New VP Sales"];
+  if (motion === "reduce") {
+    await expect(row.getByRole("cell")).toHaveText(filled);
+    return;
+  }
   await expect(row).toContainText("Running");
   await page.clock.runFor(FILL_IN_WAIT_MS);
-  const [address, status] = motion === "reduce" ? ["Finding…", "Running"] : ["d.reyes@quillon.example", "Enriched"];
-  await expect(row.getByRole("cell")).toHaveText(["quillon.example", address, status]);
+  await expect(row.getByRole("cell")).toHaveText(filled);
 });
 
 const ADVANCE_MS = 8000;

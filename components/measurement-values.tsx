@@ -63,7 +63,11 @@ function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] 
   const shown = measurements.slice(0, FRONT_MEASUREMENT_LIMIT);
   const more = measurements.length - shown.length;
   const mixed = shown.some(row => row.sample === "synthetic") && shown.some(row => row.sample !== "synthetic");
+  const periods = shown.map(row => measurementPeriodInWords(row.period));
+  // One period shared by every shown number is said once, ahead of the note, not under each number.
+  const shared = periods.every(period => period === periods[0]) ? periods[0] : undefined;
   const note = [
+    ...(shared ? [shared] : []),
     shownOrigin(shown),
     ...(measurements.some(row => row.status === "baseline") ? ["includes a baseline, which is not new activity"] : []),
     more > 0 ? `${more} more and how each was measured are in Details` : "how each was measured is in Details",
@@ -73,7 +77,7 @@ function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] 
       {shown.map((row, index) => <li key={index}>
         <strong>{row.value === null ? "Unknown" : groupedDecimal(row.value)}</strong>
         <span>{countedThing(row)}</span>
-        <small>{measurementPeriodInWords(row.period)}</small>
+        {!shared && <small>{periods[index]}</small>}
         {mixed && row.sample === "synthetic" && <em className="usage-measurement-sample">Sample</em>}
       </li>)}
     </ul>

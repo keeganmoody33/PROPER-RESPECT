@@ -6,7 +6,9 @@ const valid = { caption: "Lead list", columns: ["Company", "Status"], rows: [[ce
 const plainColumn = (label: string) => ({ label, droppable: false, enriched: false });
 
 test("a table preview is a caption, a few named columns and short rows of short cells", () => {
-  expect(TABLE_PREVIEW_LIMITS).toEqual({ columns: 4, rows: 6, text: 40 });
+  expect(TABLE_PREVIEW_LIMITS).toEqual({ columns: 4, rows: 6, text: 40, caption: 80 });
+  // A caption can say where the list came from, past a cell's length.
+  expect(tablePreview({ ...valid, caption: "Lead list · from a job-change signal · invented sample rows" })?.caption).toBe("Lead list · from a job-change signal · invented sample rows");
   expect(tablePreview(valid)).toEqual({ ...valid, columns: [plainColumn("Company"), plainColumn("Status")] });
 });
 
@@ -31,6 +33,7 @@ test("anything past the caps, a ragged row or an empty cell is refused rather th
     { ...valid, rows: [[cell(""), cell("b")]] },
     { ...valid, rows: [[cell("a"), { text: "b", state: "glowing" }]] },
     { ...valid, caption: "" },
+    { ...valid, caption: "x".repeat(81) },
     { ...valid, columns: [{ label: "" }, "Status"] },
     { ...valid, rows: [[cell("a"), { text: "b", state: "pending", fillsIn: { text: "", state: "filled" } }]] },
   ];

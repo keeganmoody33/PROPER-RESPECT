@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-/** A preview stays a glance: a few columns, a few rows, short cells. */
-export const TABLE_PREVIEW_LIMITS = { columns: 4, rows: 6, text: 40 } as const;
+/** A preview stays a glance: a few columns, a few rows, short cells, and a caption that can say where the list came from. */
+export const TABLE_PREVIEW_LIMITS = { columns: 4, rows: 6, text: 40, caption: 80 } as const;
 
 const text = z.string().min(1).max(TABLE_PREVIEW_LIMITS.text);
 /** What a pending cell shows once it has filled in: a value found, or nothing found. */
@@ -18,7 +18,7 @@ const columnSchema = z.union([
 ]);
 
 const tablePreviewSchema = z.object({
-  caption: text,
+  caption: z.string().min(1).max(TABLE_PREVIEW_LIMITS.caption),
   columns: z.array(columnSchema).min(1).max(TABLE_PREVIEW_LIMITS.columns).readonly(),
   rows: z.array(z.array(cellSchema).readonly()).min(1).max(TABLE_PREVIEW_LIMITS.rows).readonly(),
 }).refine(table => table.rows.every(row => row.length === table.columns.length), "Every row needs one cell per column.");
