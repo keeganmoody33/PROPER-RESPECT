@@ -55,7 +55,7 @@ test("supplied points stay on the resolved chart and keep their titles", () => {
   expect($(".activity-bars").attr("aria-label")).toBe("Minutes recorded trend");
   expect($(".activity-bars").attr("role")).toBe("img");
   expect($(".activity-bars > span")).toHaveLength(1);
-  expect($(".activity-bars > span").attr("title")).toBe("2026-09-15: 45 min");
+  expect($(".activity-bars > span").attr("title")).toBe("15 Sep 2026: 45 min");
   expect($(".activity-bars > span").attr("style")).toMatch(/--bar-height:\s*100%/);
 });
 
@@ -73,7 +73,7 @@ test("a series longer than a month draws a month of bars, each titled with its d
   const $ = load(renderToStaticMarkup(createElement(UsageChart, { label: "Sessions", unit: "sessions", points })));
 
   expect($(".activity-bars > span")).toHaveLength(MONTH_OF_BARS);
-  expect($(".activity-bars > span").first().attr("title")).toBe("2026-07-01 to 2026-07-02: 4.5 sessions on average");
+  expect($(".activity-bars > span").first().attr("title")).toBe("1 Jul 2026 to 2 Jul 2026: 4.5 sessions on average");
   expect($(".activity-bars").attr("style")).toBe("--bar-gap:2px");
 });
 
@@ -135,4 +135,10 @@ test("a zero bar is marked as zero, so it draws as a stub on the baseline instea
   })));
   expect($(".activity-bars > span").map((_, bar) => $(bar).attr("data-zero") ?? "no").get()).toEqual(["", "no", ""]);
   expect($(".visually-hidden td").map((_, cell) => $(cell).text()).get().filter((_, index) => index % 3 === 2)).toEqual(["0 per week", "9,200 per week", "0 per week"]);
+});
+
+test("a bar's title and table row read in plain dates and grouped numbers", () => {
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, { points: [{ date: "2026-08-01", value: 2840 }], label: "requests served", unit: "per day" })));
+  expect($(".activity-bars > span").attr("title")).toBe("1 Aug 2026: 2,840 per day");
+  expect($(".visually-hidden tbody td").toArray().map(cell => $(cell).text())).toEqual(["1 Aug 2026", "1 Aug 2026", "2,840 per day"]);
 });

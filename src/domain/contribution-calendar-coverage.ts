@@ -1,4 +1,5 @@
 import type { ActivityModule } from "./public-profile";
+import { dayMonthYear } from "./format-period";
 
 type Contributions = Extract<ActivityModule, { kind: "contributionCalendar" }>;
 
@@ -17,7 +18,7 @@ export function contributionCalendarCoverage(activity: Contributions) {
   const last = (enclosingPeriod ? periodEnd : lastSupplied).getTime();
   const missingDays = Math.round((last - first.getTime()) / 86_400_000) + 1 - new Set(days.map(day => day.date)).size;
   const suppliedRange = !activity.period || activity.period.start !== days[0].date || activity.period.end !== days.at(-1)!.date
-    ? `Daily counts: ${days[0].date} – ${days.at(-1)!.date}` : undefined;
+    ? `Daily counts: ${dayMonthYear(days[0].date)} – ${dayMonthYear(days.at(-1)!.date)}` : undefined;
   const gapNote = missingDays > 0
     ? `${missingDays} ${missingDays === 1 ? "day has" : "days have"} no supplied count; blank spaces are not zero activity.` : undefined;
   return { days, first, last, suppliedRange, gapNote };

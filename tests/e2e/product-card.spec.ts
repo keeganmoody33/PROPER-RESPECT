@@ -87,7 +87,7 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   await expect(frontCalendar.getByRole("img")).toHaveCount(371);
   await expect(frontCalendar.locator('[data-date="2025-01-01"]')).toHaveCSS("grid-row-start", "4");
   await expect(frontCalendar.locator('[data-date="2025-01-05"]')).toHaveCSS("grid-column-start", "2");
-  await expect(frontCalendar.getByRole("img", { name: "2025-01-01: 1 contribution", exact: true })).toBeVisible();
+  await expect(frontCalendar.getByRole("img", { name: "1 Jan 2025: 1 contribution", exact: true })).toBeVisible();
   await calendarCard.getByRole("button", { name: "Details", exact: true }).click();
   // The back doesn't draw the calendar again; it says where the counts came from.
   await expect(calendarCard.locator(".card-back .activity-calendar")).toHaveCount(0);
@@ -249,9 +249,9 @@ for (const width of [320, 1280]) test(`contribution calendar preserves supplied 
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
   const front = page.locator(".card-front");
   await expect(front.getByRole("img")).toHaveCount(2);
-  await expect(front.getByRole("img", { name: "2026-09-01: 0 contributions" })).toHaveAttribute("data-level", "0");
-  await expect(front.getByRole("img", { name: "2026-09-04: 4 contributions" })).toHaveCSS("grid-row-start", "6");
-  const cell = await front.getByRole("img", { name: "2026-09-04: 4 contributions" }).boundingBox();
+  await expect(front.getByRole("img", { name: "1 Sep 2026: 0 contributions" })).toHaveAttribute("data-level", "0");
+  await expect(front.getByRole("img", { name: "4 Sep 2026: 4 contributions" })).toHaveCSS("grid-row-start", "6");
+  const cell = await front.getByRole("img", { name: "4 Sep 2026: 4 contributions" }).boundingBox();
   expect(cell).not.toBeNull();
   expect(Math.abs(cell!.width - cell!.height)).toBeLessThanOrEqual(1);
   expect(cell!.width).toBeLessThanOrEqual(12);
@@ -282,10 +282,10 @@ for (const width of [320, 1280]) test(`contribution calendar retains missing per
     const face = page.locator(side);
     const grid = face.locator(".activity-calendar");
     await expect(grid.getByRole("img")).toHaveCount(2);
-    await expect(grid.getByRole("img", { name: "2026-09-15: 0 contributions" })).toHaveCSS("grid-column-start", "3");
-    await expect(grid.getByRole("img", { name: "2026-09-25: 4 contributions" })).toHaveCSS("grid-column-start", "4");
+    await expect(grid.getByRole("img", { name: "15 Sep 2026: 0 contributions" })).toHaveCSS("grid-column-start", "3");
+    await expect(grid.getByRole("img", { name: "25 Sep 2026: 4 contributions" })).toHaveCSS("grid-column-start", "4");
     await expect(face).toContainText("28 days have no supplied count; blank spaces are not zero activity.");
-    await expect(face).toContainText("Daily counts: 2026-09-15 – 2026-09-25");
+    await expect(face).toContainText("Daily counts: 15 Sep 2026 – 25 Sep 2026");
     await expect(grid.locator('[data-date="2026-09-01"], [data-date="2026-09-30"]')).toHaveCount(0);
     const geometry = await grid.evaluate(element => {
       const computed = getComputedStyle(element);

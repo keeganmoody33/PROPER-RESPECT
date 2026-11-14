@@ -49,7 +49,7 @@ test("every other kind leads with its own total, whatever the card's level", () 
     { value: 37, label: "contributions" },
     { value: 23, label: "domains registered" },
     { value: 120, label: "sessions · this month" },
-    { value: 3, label: "artifacts" },
+    { value: 3, label: "linked works" },
     { value: 17, label: "reviews" },
   ]);
 });

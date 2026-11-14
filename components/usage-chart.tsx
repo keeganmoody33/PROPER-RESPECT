@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { chartBars, type ChartBar } from "@/src/domain/chart-bars";
 import { fullNumber } from "@/src/domain/format-activity-number";
+import { dayMonthYear } from "@/src/domain/format-period";
+import { cadenceEnd, seriesCadence } from "@/src/domain/activity-headline";
 
 export type UsageChartPoint = {
   date: string;
@@ -101,6 +103,16 @@ function barValue(bar: ChartBar, unit?: string): string {
   return `${shown}${unit ? ` ${unit}` : ""}${bar.points === 1 ? "" : " on average"}`;
 }
 
+/** The days a bar covers, in plain dates: a weekly point covers its seven days. */
+function barDays(bar: ChartBar, unit?: string): { from: string; to: string } {
+  return { from: dayMonthYear(bar.start), to: dayMonthYear(cadenceEnd(bar.end, seriesCadence(unit))) };
+}
+
+function barTitle(bar: ChartBar, unit?: string): string {
+  const { from, to } = barDays(bar, unit);
+  return `${from === to ? from : `${from} to ${to}`}: ${barValue(bar, unit)}`;
+}
+
 /** The bars again as rows, for a screen reader: the chart itself is one image, and its dates and values live only in hover titles. */
 function BarTable({ bars, label, unit }: { bars: readonly ChartBar[]; label?: string; unit?: string }) {
   return (
@@ -110,7 +122,7 @@ function BarTable({ bars, label, unit }: { bars: readonly ChartBar[]; label?: st
         <caption>{label ?? "Activity"}, one row per bar</caption>
         <thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Value</th></tr></thead>
         <tbody>
-          {bars.map(bar => <tr key={bar.start}><td>{bar.start}</td><td>{bar.end}</td><td>{barValue(bar, unit)}</td></tr>)}
+          {bars.map(bar => { const { from, to } = barDays(bar, unit); return <tr key={bar.start}><td>{from}</td><td>{to}</td><td>{barValue(bar, unit)}</td></tr>; })}
         </tbody>
       </table>
     </div>
@@ -175,9 +187,7 @@ export function UsageChart({
                 "--bar-height": `${Math.max(0, (bar.value / maximum) * PERCENT)}%`,
                 "--bar-delay": `${index * BAR_STAGGER_MS}ms`,
               } as CSSProperties}
-              title={bar.points === 1
-                ? `${bar.start}: ${bar.value}${unit ? ` ${unit}` : ""}`
-                : `${bar.start} to ${bar.end}: ${Number(bar.value.toFixed(1))}${unit ? ` ${unit}` : ""} on average`}
+              title={barTitle(bar, unit)}
             />
           ))}
         </div>

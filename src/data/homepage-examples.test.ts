@@ -319,7 +319,7 @@ test("each example's card leads with a number that means something: a period's t
   })).toEqual([
     ["github", 1121, "contributions"],
     ["cloudflare", 187870, "requests served over 31 days"],
-    ["docker", 3, "artifacts"],
+    ["docker", 3, "linked works"],
     ["firecrawl", 5520, "pages scraped over 12 weeks"],
     ["n8n", 341, "workflow runs a week at its peak"],
     ["claude-code", 103, "sessions"],

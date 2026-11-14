@@ -597,3 +597,34 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`Firecrawl's front says i
   expect(label.y - (arrow.y + arrow.height)).toBeLessThan(MIN_TEXT_PX);
   expect(Math.abs(label.x + label.width / 2 - (arrow.x + arrow.width / 2))).toBeLessThan(2);
 });
+
+const ALL_EXAMPLES = ["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl", "n8n", "Claude Code", "Exa", "Porkbun", "Spider", "Open Places", "Grok Bot", "Elicit", "Context.dev"] as const;
+/** Words a visitor shouldn't have to decode: a raw ISO date, a status word, "observation", "artifact". https://regex101.com/?regex=%5Cd%7B4%7D-%5Cd%7B2%7D-%5Cd%7B2%7D%7Cstale%7Cobserv%7Cartifact&flags=i&testString=Observed%202026-08-31%0Alast%20updated%201%20Sep%202026 */
+const JARGON = /\d{4}-\d{2}-\d{2}|stale|observ|artifact/i;
+test("no card face says a raw date or a status word, in its text, titles or labels, outside How this was measured", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const found: string[] = [];
+  for (const name of ALL_EXAMPLES) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    const scan = (side: string) => card.evaluate((article, face) => {
+      const root = article.querySelector(face)!;
+      // A closed disclosure is where exact records are allowed; its panel is hidden, so it adds no innerText.
+      const attributes = [...root.querySelectorAll("[title], [aria-label]")].filter(element => !element.closest("[data-slot=collapsible-panel][hidden]"))
+        .flatMap(element => [element.getAttribute("title"), element.getAttribute("aria-label")].filter((value): value is string => Boolean(value)));
+      return [(root as HTMLElement).innerText, ...attributes];
+    }, side);
+    const texts = [...await scan(".card-front"), ...await (async () => {
+      await card.getByRole("button", { name: "Details", exact: true }).click();
+      const back = await scan(".card-back");
+      await card.getByRole("button", { name: "Close details" }).click();
+      return back;
+    })()];
+    found.push(...texts.flatMap(text => text.split("\n")).filter(line => JARGON.test(line)).map(line => `${name}: ${line}`));
+  }
+  expect(found).toEqual([]);
+});

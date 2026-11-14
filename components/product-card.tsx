@@ -211,7 +211,7 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
           <div className="activity-calendar contribution-grid" role="group" aria-label="Daily contributions, Sunday to Saturday in each column" style={columns}>
             {days.map(day => {
               const date = new Date(`${day.date}T00:00:00Z`);
-              const label = `${day.date}: ${day.count} ${day.count === 1 ? "contribution" : "contributions"}`;
+              const label = `${dayMonthYear(day.date)}: ${fullNumber(day.count)} ${day.count === 1 ? "contribution" : "contributions"}`;
               return <span key={day.date} role="img" aria-label={label} title={label} data-date={day.date} data-level={day.level}
                 style={{ gridColumn: Math.floor((date.getTime() - firstSunday) / (7 * 86_400_000)) + 1, gridRow: date.getUTCDay() + 1 }} />;
             })}
@@ -296,7 +296,7 @@ function ActivityPreview({ activity, pastUse, unreviewed = false, expanded = fal
     <div className="card-activity-preview">
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
       <p>
-        {metric === undefined ? "No observations supplied" : <>
+        {metric === undefined ? "No data points supplied" : <>
           <strong>{expanded ? fullNumber(metric.value) : compactNumber(metric.value)}</strong>{" "}
           {metric.label}
         </>}
@@ -365,7 +365,7 @@ function ActivityEvidence({ activity }: { activity: ActivityModule }) {
     : [];
   return (
     <div className="activity-module">
-      {empty && <p className="activity-empty">{activity.kind === "timeSeries" ? "No observations supplied" : "No artifacts selected"}</p>}
+      {empty && <p className="activity-empty">{activity.kind === "timeSeries" ? "No data points supplied" : "No linked works selected"}</p>}
       {(activity.kind === "headlineMetrics" || activity.kind === "codingActivity") && <MetricRow metrics={activity.supporting} />}
       {activity.kind === "reviewActivity" && <>
         <MetricRow metrics={[{ label: "bugs caught", value: activity.bugsCaught }]} />

@@ -103,7 +103,7 @@ it("keeps sparse daily coverage and no-period boundaries identical to the card",
     if (projected.kind !== "contributionCalendar") throw new Error("Unexpected projection");
     const text = load(renderToStaticMarkup(createElement(ProductCard, { card: source.cards[0], index: 0 }))).text();
     expect(projected.coverageNote).toBe(`${period ? "3 days have" : "1 day has"} no supplied count; blank spaces are not zero activity.`);
-    expect(projected.suppliedRange).toBe("Daily counts: 2026-09-02 – 2026-09-04");
+    expect(projected.suppliedRange).toBe("Daily counts: 2 Sep 2026 – 4 Sep 2026");
     expect(text).toContain(projected.coverageNote);
     expect(text).toContain(projected.suppliedRange);
   }
@@ -113,10 +113,10 @@ it("omits unrendered labels and units from an empty time series", () => {
   const source = profile({ ...common, kind: "timeSeries", label: "HIDDEN_EMPTY_LABEL", unit: "HIDDEN_EMPTY_UNIT", points: [] });
   const projected = projectVisiblePublicProfile(source);
   const text = load(renderToStaticMarkup(createElement(ProductCard, { card: source.cards[0], index: 0 }))).text();
-  expect(text).toContain("No observations supplied");
+  expect(text).toContain("No data points supplied");
   expect(text).not.toMatch(/HIDDEN_EMPTY_/);
   expect(JSON.stringify(projected)).not.toMatch(/HIDDEN_EMPTY_/);
-  expect(projected.cards[0].activity).toMatchObject({ kind: "timeSeries", points: [], emptyNote: "No observations supplied" });
+  expect(projected.cards[0].activity).toMatchObject({ kind: "timeSeries", points: [], emptyNote: "No data points supplied" });
 });
 
 it("carries what a card's product does for its owner as the words visitors read, and nothing when none is listed", () => {
@@ -155,7 +155,7 @@ describe("link schemes", () => {
       { title: "Bad artifact", url }, { title: "Published article", url: "https://example.com/article" },
     ] });
     const result = projectVisiblePublicProfile(source);
-    expect(result.cards[0].activity).toMatchObject({ kind: "artifactCollection", total: { label: "artifacts", displayValue: "2" },
+    expect(result.cards[0].activity).toMatchObject({ kind: "artifactCollection", total: { label: "linked works", displayValue: "2" },
       artifacts: [{ title: "Published article", url: "https://example.com/article" }] });
     expect(JSON.stringify(result)).not.toContain(url);
   });

@@ -13,6 +13,17 @@ export function seriesCadence(unit: string | undefined): Cadence | undefined {
   return unit === undefined ? undefined : COUNT_PER_PERIOD[unit.trim().toLowerCase()];
 }
 
+const DAY_MS = 86_400_000;
+const DAYS_IN_WEEK = 7;
+
+/** The last day a point counts: the day itself, the week's seventh day, or the month's last day. */
+export function cadenceEnd(date: string, cadence: Cadence | undefined): string {
+  const start = new Date(`${date}T00:00:00Z`);
+  if (!cadence || cadence === "day" || !Number.isFinite(start.getTime())) return date;
+  const end = cadence === "week" ? new Date(start.getTime() + (DAYS_IN_WEEK - 1) * DAY_MS) : new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0));
+  return end.toISOString().slice(0, 10);
+}
+
 /** A card's biggest number and the words after it, which say what kind of number it is. */
 export type ActivityHeadline = Readonly<{ value: number; label: string }>;
 
@@ -39,7 +50,7 @@ export function activityHeadline(activity: ActivityModule, pastUse: boolean): Ac
     case "headlineMetrics":
     case "codingActivity": return { value: activity.primary.value, label: withUnit(activity.primary.label, activity.primary.unit) };
     case "timeSeries": return seriesHeadline(activity, pastUse);
-    case "artifactCollection": return { value: activity.total, label: "artifacts" };
+    case "artifactCollection": return { value: activity.total, label: activity.total === 1 ? "linked work" : "linked works" };
     case "reviewActivity": return { value: activity.reviews, label: "reviews" };
   }
 }

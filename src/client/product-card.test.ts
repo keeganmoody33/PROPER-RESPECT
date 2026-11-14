@@ -471,8 +471,8 @@ test.each(activityExamples)("$kind keeps the complete supplied activity and prov
 test("an empty time series does not turn missing observations into zero activity", () => {
   const $ = renderCard({ activity: { ...activityEvidence, kind: "timeSeries", label: "Minutes recorded", points: [] } });
 
-  expect($(".card-activity-preview").text()).toContain("No observations supplied");
-  expect($(".card-back .activity-module").text()).toContain("No observations supplied");
+  expect($(".card-activity-preview").text()).toContain("No data points supplied");
+  expect($(".card-back .activity-module").text()).toContain("No data points supplied");
   expect($(".activity-hero strong")).toHaveLength(0);
   expect($(".activity-bars")).toHaveLength(0);
 });
@@ -497,7 +497,7 @@ test("a supplied time series draws its bars on the front, and the back says wher
   });
 
   expect($(".card-front .activity-bars > span")).toHaveLength(1);
-  expect($(".card-front .activity-bars > span").attr("title")).toBe("2026-09-15: 45 min");
+  expect($(".card-front .activity-bars > span").attr("title")).toBe("15 Sep 2026: 45 min");
   expect($(".card-front .activity-bars").attr("role")).toBe("img");
   expect($(".card-front .activity-bars").attr("aria-label")).toBe("Minutes recorded trend");
   expect($(".card-front .card-activity-preview strong").text()).toBe("45");
@@ -634,8 +634,8 @@ test("a contribution calendar renders only supplied days and never relabels cont
   for (const side of [".card-front"]) {
     const days = $(`${side} .activity-calendar span`);
     expect(days).toHaveLength(1);
-    expect(days.attr("title")).toBe("2026-09-15: 3 contributions");
-    expect(days.attr("aria-label")).toBe("2026-09-15: 3 contributions");
+    expect(days.attr("title")).toBe("15 Sep 2026: 3 contributions");
+    expect(days.attr("aria-label")).toBe("15 Sep 2026: 3 contributions");
     expect(days.attr("data-date")).toBe("2026-09-15");
   }
   expect($(".card-front .card-activity-preview > p").first().text()).toBe("37 contributions");
@@ -658,7 +658,7 @@ test.each([
     expect($(`${side} .activity-calendar span`)).toHaveLength(21);
     expect($(`${side} .activity-calendar`).attr("style")).toContain(`repeat(${weeks}, var(--contribution-cell))`);
     expect($(`${side} .contribution-gap`).text()).toBe(`${missing} days have no supplied count; blank spaces are not zero activity.`);
-    expect($(`${side} .contribution-range`).text()).toBe("Daily counts: 2026-09-05 – 2026-09-25");
+    expect($(`${side} .contribution-range`).text()).toBe("Daily counts: 5 Sep 2026 – 25 Sep 2026");
     expect($(`${side} [data-date="2026-09-01"], ${side} [data-date="2026-09-30"]`)).toHaveLength(0);
   }
 });
@@ -689,7 +689,7 @@ test.each([
     expect($(`${side} .activity-calendar`).attr("style")).toContain("repeat(1, var(--contribution-cell))");
     expect($(`${side} [data-date="2026-09-15"]`).attr("style")).toContain("grid-column:1");
     expect($(`${side} .contribution-gap`).text()).toContain("1 day has no supplied count");
-    expect($(`${side} .contribution-range`).text()).toBe("Daily counts: 2026-09-15 – 2026-09-17");
+    expect($(`${side} .contribution-range`).text()).toBe("Daily counts: 15 Sep 2026 – 17 Sep 2026");
   }
 });
 
@@ -915,7 +915,7 @@ test("coding activity with days draws one bar per day on the front; without days
   const coding = { ...activityEvidence, kind: "codingActivity" as const, primary: { label: "Sessions", value: 8 }, supporting: [] };
   const $ = renderCard({ activity: { ...coding, days } });
 
-  expect($(".card-front .activity-bars > span").toArray().map(bar => $(bar).attr("title"))).toEqual(["2026-09-14: 2", "2026-09-15: 6"]);
+  expect($(".card-front .activity-bars > span").toArray().map(bar => $(bar).attr("title"))).toEqual(["14 Sep 2026: 2", "15 Sep 2026: 6"]);
   expect($(".card-front .activity-bars").attr("aria-label")).toBe("Coding activity trend");
   expect($(".card-front .card-activity-preview strong").text()).toBe("8");
   expect(renderCard({ activity: coding })(".card-front .activity-bars")).toHaveLength(0);
@@ -1026,7 +1026,7 @@ const FRONT_ARTIFACTS = [
 test("an artifact collection's front names its count and links up to three of its works, dropping a bad link quietly", () => {
   const $ = renderCard({ activity: { ...activityEvidence, kind: "artifactCollection", total: FRONT_ARTIFACTS.length, artifacts: FRONT_ARTIFACTS } });
   const front = $(".card-front .card-activity-preview");
-  expect(front.children("p").first().text()).toBe("8 artifacts");
+  expect(front.children("p").first().text()).toBe("8 linked works");
   expect(front.find(".card-artifact-links a").toArray().map(link => [$(link).text(), $(link).attr("href"), $(link).attr("target"), $(link).attr("rel")])).toEqual([
     ["Compose apps ↗", "https://example.com/compose", "_blank", "noopener noreferrer"],
     ["Postgres image ↗", "https://example.com/postgres", "_blank", "noopener noreferrer"],
@@ -1043,8 +1043,9 @@ test("a chart's bars are also a table a screen reader can read, outside the char
   expect(table.find("caption").text()).toBe("Requests served, one row per bar");
   expect(table.find("tr").toArray().map(row => $(row).children().toArray().map(cell => $(cell).text()))).toEqual([
     ["From", "To", "Value"],
-    ["2026-08-17", "2026-08-17", "45 per week"],
-    ["2026-08-24", "2026-08-24", "48,360 per week"],
+    // A weekly bar runs from its first day to its seventh, in plain dates.
+    ["17 Aug 2026", "23 Aug 2026", "45 per week"],
+    ["24 Aug 2026", "30 Aug 2026", "48,360 per week"],
   ]);
   expect($(".card-front .activity-bars table")).toHaveLength(0);
 });

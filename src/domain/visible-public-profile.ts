@@ -92,12 +92,12 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
     case "timeSeries": return {
       ...meta, kind: activity.kind, ...(activity.points.length ? { label: activity.label, ...(activity.unit ? { unit: activity.unit } : {}) } : {}),
       points: activity.points.map(point => ({ date: point.date, value: point.value })),
-      ...(activity.points.length === 0 ? { emptyNote: "No observations supplied" } : {}),
+      ...(activity.points.length === 0 ? { emptyNote: "No data points supplied" } : {}),
     };
     case "artifactCollection": {
       const artifacts = activity.artifacts.filter(artifact => isHttpUrl(artifact.url));
       return {
-        ...meta, kind: activity.kind, total: metric({ label: "artifacts", value: activity.total }),
+        ...meta, kind: activity.kind, total: metric({ label: activity.total === 1 ? "linked work" : "linked works", value: activity.total }),
         artifacts: artifacts.map(artifact => ({ title: artifact.title, url: artifact.url })),
         ...(artifacts.length === 0 ? { emptyNote: "No artifacts selected" } : {}),
       };

@@ -105,12 +105,10 @@ for (const theme of ["light", "dark"] as const) {
     // Layout height, so the card's turn-in animation doesn't skew it.
     expect(await front.locator(".usage-chart").evaluate(chart => (chart as HTMLElement).offsetHeight)).toBe(64);
     await expect(front.locator(".usage-chart-log, .blueprint-dim")).toHaveCount(0);
+    await expect(front.locator(".usage-chart")).toHaveAttribute("data-ready", "true");
+    // The back doesn't draw the chart again.
     await card.getByRole("button", { name: "Details", exact: true }).click();
-    const back = card.locator(".card-back");
-    const bars = back.locator(".activity-bars > span");
-    await expect(bars).toHaveCount(30);
-    await expect(back.locator(".usage-chart")).toHaveAttribute("data-state", "resolved");
-    await expect(back.locator(".usage-chart")).toHaveAttribute("data-ready", "true");
+    await expect(card.locator(".card-back .usage-chart")).toHaveCount(0);
     await expect(card.locator(".activity-meta")).toContainText("Snapshot recorded 2026-10-01");
     await expect(card).not.toContainText(/score|rank|rating/i);
 
@@ -129,17 +127,15 @@ test("reduced motion swaps the blueprint for bars without a grow animation", asy
   await mount(page, "dark");
 
   const card = page.locator(".product-card").first();
-  await expect(card.locator(".card-front .activity-bars > span").first()).toHaveCSS("animation-name", "none");
-  await card.getByRole("button", { name: "Details", exact: true }).click();
-  const chart = card.locator(".card-back .usage-chart");
+  const chart = card.locator(".card-front .usage-chart");
   await expect(chart).toHaveAttribute("data-ready", "true");
-  const bars = card.locator(".card-back .activity-bars > span");
+  const bars = card.locator(".card-front .activity-bars > span");
   await expect(bars).toHaveCount(30);
   await expect(bars.first()).toHaveCSS("animation-name", "none");
   await expect(card.locator(".usage-chart-blueprint")).toHaveCount(0);
 });
 
-PHONE_WIDTHS.forEach(width => test(`a 90-day series fits a ${width}px card as ${MAX_BARS} bars on both faces`, async ({ page }) => {
+PHONE_WIDTHS.forEach(width => test(`a 90-day series fits a ${width}px card as ${MAX_BARS} bars`, async ({ page }) => {
   await page.setViewportSize({ width, height: PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mount(page, "dark", bundle(quarter));
@@ -153,9 +149,8 @@ PHONE_WIDTHS.forEach(width => test(`a 90-day series fits a ${width}px card as ${
   // A screen reader reads the same bars as rows, with the dates and averages the chart keeps in hover titles.
   const rows = card.locator(".card-front").getByRole("table", { name: "Sessions, one row per bar" }).getByRole("row");
   await expect(rows).toHaveCount(MAX_BARS + 1);
-  await expect(rows.nth(1).getByRole("cell")).toHaveText(["2026-07-03", "2026-07-04", "18 sessions on average"]);
+  await expect(rows.nth(1).getByRole("cell")).toHaveText(["3 Jul 2026", "4 Jul 2026", "18 sessions on average"]);
   await card.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(card.locator(".card-back .activity-bars > span")).toHaveCount(MAX_BARS);
-  expect(await fits(".card-back")).toEqual({ overflow: 0, lastBarPastEdge: 0 });
+  await expect(card.locator(".card-back .activity-bars")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }));
