@@ -347,9 +347,10 @@ async function pairs() {
     if (!existsSync(sitePath) || !existsSync(cardPath)) continue;
     const site = await sharp(sitePath).resize({ width: PAIR_SITE_WIDTH[width] }).toBuffer({ resolveWithObject: true });
     const cardImage = await sharp(cardPath).toBuffer({ resolveWithObject: true });
+    const cardCommit = JSON.parse(readFileSync(join(ROOT, label, "card", `${brand.slug}.json`), "utf8")).commit;
     const height = Math.max(site.info.height, cardImage.info.height) + PAIR_LABEL;
     const total = site.info.width + PAIR_GAP + cardImage.info.width;
-    const caption = `<svg width="${total}" height="${PAIR_LABEL}"><text x="4" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#fff">${brand.name} site (${brand.url}) at ${width}px</text><text x="${site.info.width + PAIR_GAP + 4}" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#fff">card @ ${commit.slice(0, 7)}</text></svg>`;
+    const caption = `<svg width="${total}" height="${PAIR_LABEL}"><text x="4" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#fff">${brand.name} site (${brand.url}) at ${width}px</text><text x="${site.info.width + PAIR_GAP + 4}" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#fff">card @ ${cardCommit.slice(0, 7)}</text></svg>`;
     await sharp({ create: { width: total, height, channels: 4, background: BACKDROP } })
       .composite([{ input: Buffer.from(caption), top: 0, left: 0 }, { input: site.data, top: PAIR_LABEL, left: 0 }, { input: cardImage.data, top: PAIR_LABEL, left: site.info.width + PAIR_GAP }])
       .png({ compressionLevel: 9, palette: true }).toFile(join(ROOT, label, "pairs", `${brand.slug}-${width}.png`));
