@@ -35,6 +35,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     expect(await page.evaluate(() => window.scrollX)).toBe(0);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (width === 1440) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
   await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
   const slideBox = () => carousel.locator("[aria-roledescription=slide]").first().evaluate(element => element.parentElement!.getBoundingClientRect().height);
   const githubHeight = await slideBox();
@@ -78,23 +79,60 @@ const DESKTOP_WIDTH = 1440;
 const PHONE_WIDTH = 390;
 const VIEWPORT_HEIGHT = 1000;
 
-[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`an example card with nothing to chart closes up around its content at ${width}px`, async ({ page }) => {
+// Each brand's own surface colour, from its committed snapshot; the default card is rgb(37, 37, 31) in Arial.
+const BRANDED = [
+  { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)" },
+  { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)" },
+  { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)" },
+] as const;
+
+[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`branded example cards wear their brand, say what they're used for and show a sample chart at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  for (const brand of BRANDED) {
+    await carousel.getByRole("button", { name: brand.name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${brand.name} card` });
+    await expect(card).toBeVisible();
+    await expect(card).toHaveCSS("background-color", brand.background);
+    const font = await card.locator(".card-headline").evaluate(element => getComputedStyle(element).fontFamily);
+    expect(font.replaceAll('"', "").startsWith(`PRBrand-${brand.slug}-`)).toBe(true);
+    const logo = card.locator(".product-logo img");
+    await expect(logo).toBeVisible();
+    await expect.poll(() => logo.evaluate(image => (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
+    await expect(card.getByText("I use it to")).toBeVisible();
+    expect(await card.getByRole("list", { name: "What I use it for" }).getByRole("listitem").count()).toBeGreaterThanOrEqual(2);
+    await expect(card.locator(".card-front .activity-preview-metrics")).toBeVisible();
+    await expect(card).toContainText("stale");
+  }
+}));
+
+[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`every example card closes up around its content at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   const stage = carousel.locator("[aria-roledescription=slide]").first().locator("..");
   const stageHeight = (await stage.boundingBox())!.height;
-  await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
-  const card = carousel.getByRole("article", { name: "Firecrawl card" });
-  await expect(card).toBeVisible();
-  const headline = (await card.locator(".card-headline").boundingBox())!;
-  const footer = (await card.locator(".card-footer").boundingBox())!;
-  // The footer follows the sentence at the card's own row spacing, with no held-open space between them.
-  const ROW_SPACING_LIMIT = 24;
-  expect(footer.y - (headline.y + headline.height)).toBeLessThan(ROW_SPACING_LIMIT);
-  // The card got shorter; the slideshow around it did not move.
-  expect((await stage.boundingBox())!.height).toBe(stageHeight);
+  for (const name of ["GitHub", "Claude Code", "Firecrawl", "Grok Bot", "Clay"]) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await expect(card).toBeVisible();
+    // Consecutive parts of the front sit at the front's own row spacing plus their margins: nothing holds space open.
+    const overflows = await card.locator(".card-front").evaluate(front => {
+      const rowGap = parseFloat(getComputedStyle(front).rowGap);
+      const parts = [...front.children];
+      return parts.slice(1).map((part, index) => {
+        const previous = parts[index];
+        const allowed = rowGap + parseFloat(getComputedStyle(previous).marginBottom) + parseFloat(getComputedStyle(part).marginTop) + 1;
+        return part.getBoundingClientRect().top - previous.getBoundingClientRect().bottom - allowed;
+      }).filter(excess => excess > 0);
+    });
+    expect(overflows).toEqual([]);
+    // The card fits its content; the slideshow around it did not move.
+    expect((await stage.boundingBox())!.height).toBe(stageHeight);
+  }
 }));
 
 test("slideshow advances on its own quietly, pauses on hover and focus, and stops when asked", async ({ page }) => {
