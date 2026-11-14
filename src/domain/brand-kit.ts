@@ -10,7 +10,7 @@ import { productBrandFontFamilyKey, type ProductBrandSnapshot } from "./product-
 export type BrandCardKit = Partial<Record<
   "--brand-card-border" | "--brand-card-radius" | "--brand-card-button-fill" | "--brand-card-button-text" | "--brand-card-button-radius"
   | "--brand-card-button-weight" | "--brand-card-button-border" | "--brand-card-button-font" | "--brand-card-button-case" | "--brand-card-button-tracking"
-  | "--brand-card-label-font" | "--brand-card-label-case" | "--brand-card-label-tracking"
+  | "--brand-card-label-font" | "--brand-card-label-case" | "--brand-card-label-tracking" | "--brand-card-band" | "--brand-card-band-text"
   | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
@@ -168,6 +168,13 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   if (measured?.labelFont) kit["--brand-card-label-font"] = measuredFace(measured.labelFont.value, guide);
   if (measured?.labelCase) kit["--brand-card-label-case"] = CSS_CASE[measured.labelCase.value];
   if (measured?.labelTrackingEm) kit["--brand-card-label-tracking"] = `${measured.labelTrackingEm.value}em`;
+
+  // A site whose heading sits on a full-bleed colour shows that colour as a band across the card's top, not as its whole surface.
+  const hero = measured?.hero?.value;
+  if (hero?.kind === "colour") {
+    kit["--brand-card-band"] = hero.hex;
+    kit["--brand-card-band-text"] = readableOn(hero.hex, undefined, text);
+  }
 
   kit["--brand-card-chart"] = brandMark(snapshot, surface, MIN_CHART_CONTRAST, site) ?? text;
 

@@ -121,3 +121,16 @@ describe("the small labels", () => {
     });
   });
 });
+
+describe("the hero band", () => {
+  it("is drawn only for a site whose first heading sits on a full-bleed colour, in that colour with a label that reads on it", () => {
+    const bands = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).flatMap(slug => {
+      const { "--brand-card-band": band, "--brand-card-band-text": label } = kit(slug);
+      return band ? [[slug, [band, label]]] : [];
+    }));
+    // Clay's heading sits on its green hero section; black on it is 2.6:1, so its label is white.
+    // Cloudflare's sits on a 99%-wide orange panel, where its #262626 text is 5.1:1.
+    // Docker's dark hero panel is 81% of the width, so it is no band.
+    expect(bands).toEqual({ clay: ["#035d44", "#ffffff"], cloudflare: ["#ff5e1f", "#262626"] });
+  });
+});

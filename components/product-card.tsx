@@ -512,6 +512,7 @@ export function ProductCard({
       className="product-card"
       style={{ ...appearance.style, ...(verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand)) }}
       data-surface={appearance.surface}
+      data-band={appearance.style["--brand-card-band"] ? "" : undefined}
       data-verified-brand={verifiedAssets?.productSlug}
       data-brand-revision={verifiedAssets?.revision}
       data-side={isFlipped ? "back" : "front"}

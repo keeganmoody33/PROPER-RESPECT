@@ -872,3 +872,12 @@ test("a measured site's signature colour reaches the card's link glyph", async (
   expect(style(HOMEPAGE_SITE_TRAITS.spider)).toContain("--brand-card-accent:#3bde77");
   expect(style()).toContain("--brand-card-accent:#24c45c");
 });
+
+test("a card whose site's heading sits on a full-bleed colour marks itself for the hero band; others do not", async () => {
+  const { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } = await import("../data/homepage-brands");
+  const render = (slug: string, domain: string, withSite = true) => load(renderToStaticMarkup(createElement(ProductCard, {
+    card: { ...baseCard, product: { name: slug, slug, domain, description: "Example.", brand: HOMEPAGE_BRANDS[slug] } }, index: 0, siteTraits: withSite ? HOMEPAGE_SITE_TRAITS[slug] : undefined,
+  })))("article");
+  expect([render("clay", "clay.com").attr("data-band"), render("docker", "docker.com").attr("data-band"), render("clay", "clay.com", false).attr("data-band")]).toEqual(["", undefined, undefined]);
+  expect(render("clay", "clay.com").attr("style")).toContain("--brand-card-band:#035d44;--brand-card-band-text:#ffffff");
+});

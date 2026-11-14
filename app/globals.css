@@ -237,6 +237,14 @@ main {
   text-transform: none;
 }
 
+/* A site whose heading sits on a full-bleed colour: the card's headline sits on a band of it, the logo row stays on the surface. */
+.product-card[data-band] .card-headline {
+  background: var(--brand-card-band);
+  color: var(--brand-card-band-text);
+  margin: 0 -1rem;
+  padding: 0.9rem 1rem;
+}
+
 .product-logo {
   align-items: center;
   background-color: var(--signal);
