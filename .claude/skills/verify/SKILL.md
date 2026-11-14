@@ -13,7 +13,7 @@ The owner's standing rule for visual work: compare against the brand's real site
 
 - Run the helpers and Playwright with the Bash sandbox off. `lsof`, `pgrep` and Chromium are blocked inside it.
 - Pick a free port of your own. Never 3000 (the Playwright suite) or 3211 (the card-fixture preview in `.claude/launch.json`).
-- One dev server per checkout. Two share `.next` and corrupt each other. `launch.sh` refuses a second one.
+- One dev server per checkout. Two share `.next` and corrupt each other. `launch.sh` refuses a second one, and Next refuses one too: `npx playwright test` fails with "Process from config.webServer was not able to start" while a `launch.sh` server runs here. Run `teardown.sh` before the e2e suite.
 - Check free disk (`df -h /private/tmp`). A dev server's `.next` grows past 700 MB. Delete only this checkout's `.next`, never anything outside it.
 
 ## Launch
@@ -71,9 +71,19 @@ const floors = await page.evaluate((selector) => {
     .map(el => ({ name: (el.getAttribute("aria-label") || el.textContent).trim().slice(0, 40), h: el.getBoundingClientRect().height }))
     .filter(t => innerWidth <= 480 && t.h < 44);
   const cut = shown.filter(el => el.scrollWidth > el.clientWidth + 1).map(el => el.textContent.trim().slice(0, 40));
-  return { sidewaysScroll: document.documentElement.scrollWidth > innerWidth, cardTop: card.getBoundingClientRect().top + scrollY, small, targets, cut };
+  // A word laid out on two lines was broken inside itself ("Pro vide r A"); `cut` does not catch that.
+  const split = shown.flatMap(el => [...el.childNodes].filter(n => n.nodeType === 3).flatMap(text =>
+    [...text.textContent.matchAll(/\S+/g)].filter(word => {
+      const range = document.createRange();
+      range.setStart(text, word.index); range.setEnd(text, word.index + word[0].length);
+      return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size > 1;
+    }).map(word => word[0])));
+  const box = card.getBoundingClientRect();
+  return { sidewaysScroll: document.documentElement.scrollWidth > innerWidth, cardTop: box.top + scrollY, cardBottom: box.bottom + scrollY, small, targets, cut, split };
 }, '[data-current="true"] .product-card');
 ```
+
+Run it on both faces: flip with "Details" and measure again. The back holds content the front does not, such as Clay's full table.
 
 Contrast: text at least 4.5:1, chart bars and fills at least 3:1. Read colours with `getComputedStyle` and compute the ratio; the card's own derivation lives in `src/domain/brand-kit.ts`.
 
