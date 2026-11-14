@@ -369,6 +369,14 @@ test("deleting an original asks first, can be cancelled, and removes only that o
   await expect(page.getByRole("button", { name: "Delete original", exact: true })).toHaveCount(0);
 });
 
+test("a product with no listed uses asks the question with only the owner's own line", async ({ page }) => {
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByText("Review this discovery", { exact: true }).click();
+  const question = page.getByRole("group", { name: "What does Example Tool do for you?", exact: true });
+  await expect(question.getByLabel("Something else", { exact: true })).toBeVisible();
+  await expect(question.getByRole("checkbox")).toHaveCount(0);
+});
+
 for (const width of [1280, 390]) for (const theme of ["light", "dark"]) test(`an owner says what a product does for them and sees it on their private card at ${width}px in ${theme}`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto("/evidence-fixture/inventory");

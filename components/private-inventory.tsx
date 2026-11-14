@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { Checkbox, CheckboxGroup, CheckboxIndicator } from "@ui-sdk/react/checkbox";
+import { Checkbox, CheckboxIndicator } from "@ui-sdk/react/checkbox";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
@@ -48,16 +48,16 @@ function History({ propId }: { propId: Id<"props"> }) {
 }
 
 function UsesQuestion({ productName, productSlug, uses }: { productName: string; productSlug: string; uses?: ProductUses }) {
-  const legendId = useId();
   const options = productUseOptions(productSlug);
+  // The fieldset is the group, so the checkboxes sit in it directly: a group inside it would announce the question twice.
   return <fieldset className={styles.uses}>
-    <legend id={legendId}>What does {productName} do for you?</legend>
-    {!!options.length && <CheckboxGroup name="usePicks" aria-labelledby={legendId} defaultValue={uses?.picks ?? []} className={styles.useChoices}>
+    <legend>What does {productName} do for you?</legend>
+    {!!options.length && <div className={styles.useChoices}>
       {options.map(option => <label key={option.id} className={styles.toggle}>
-        <Checkbox value={option.id} className={styles.useCheckbox}><CheckboxIndicator aria-hidden="true">✓</CheckboxIndicator></Checkbox>
+        <Checkbox name="usePicks" value={option.id} defaultChecked={uses?.picks.includes(option.id) ?? false} className={styles.useCheckbox}><CheckboxIndicator aria-hidden="true">✓</CheckboxIndicator></Checkbox>
         {option.label}
       </label>)}
-    </CheckboxGroup>}
+    </div>}
     <label>Something else<input name="useOther" maxLength={USE_OTHER_MAX} defaultValue={uses?.other ?? ""} /></label>
   </fieldset>;
 }
