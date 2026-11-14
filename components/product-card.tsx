@@ -145,6 +145,15 @@ function activityHighlight(activity: ActivityModule) {
   }
 }
 
+/** The points a card's front draws as bars: a time series as supplied, coding activity one bar per recorded day. */
+function activitySeries(activity: ActivityModule) {
+  if (activity.kind === "timeSeries" && activity.points.length) return { points: activity.points, label: activity.label, unit: activity.unit };
+  if (activity.kind === "codingActivity" && activity.days?.length) {
+    return { points: activity.days.map(day => ({ date: day.date, value: day.count })), label: "Coding activity" };
+  }
+  return undefined;
+}
+
 function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
   const coverage = contributionCalendarCoverage(activity);
   if (!coverage) return <p className="activity-empty">No daily contribution counts supplied</p>;
@@ -186,6 +195,7 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
 
 function ActivityPreview({ activity, unreviewed = false, expanded = false }: { activity: ActivityModule; unreviewed?: boolean; expanded?: boolean }) {
   const metric = activityHighlight(activity);
+  const series = activitySeries(activity);
   return (
     <div className="card-activity-preview">
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
@@ -197,6 +207,7 @@ function ActivityPreview({ activity, unreviewed = false, expanded = false }: { a
         </>}
       </p>
       {activity.kind === "contributionCalendar" && <ContributionCalendar activity={activity} />}
+      {series && <UsageChart {...series} framed={false} />}
       {expanded && (activity.kind === "headlineMetrics" || activity.kind === "codingActivity") && <dl className="activity-preview-metrics">
         {activity.supporting.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{compactNumber(metric.value)}{metric.unit ? ` ${metric.unit}` : ""}</dd></div>)}
       </dl>}

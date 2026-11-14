@@ -412,6 +412,11 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
+/* The front's chart is the bars alone: no blueprint frame or log to hold room for. */
+.card-activity-preview .usage-chart {
+  min-height: 0;
+}
+
 .card-activity-coverage {
   font-size: 0.75rem;
   line-height: 1.5;
@@ -548,7 +553,7 @@ main {
 }
 
 .activity-bars span {
-  background: var(--brand-card-accent, currentColor);
+  background: var(--brand-card-chart, var(--brand-card-accent, currentColor));
   flex: 1;
   min-width: 4px;
 }

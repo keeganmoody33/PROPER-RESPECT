@@ -137,7 +137,7 @@ export function UsageChart({
     >
       {showBlueprint && framed && <BlueprintDimensions size={size} />}
       {resolved && points ? (
-        <div className="activity-bars" aria-label={label ? `${label} trend` : undefined}>
+        <div className="activity-bars" role={label ? "img" : undefined} aria-label={label ? `${label} trend` : undefined}>
           {points.map((point, index) => (
             <span
               key={point.date}

@@ -53,6 +53,7 @@ test("supplied points stay on the resolved chart and keep their titles", () => {
 
   expect($(".usage-chart").attr("data-state")).toBe("resolved");
   expect($(".activity-bars").attr("aria-label")).toBe("Minutes recorded trend");
+  expect($(".activity-bars").attr("role")).toBe("img");
   expect($(".activity-bars > span")).toHaveLength(1);
   expect($(".activity-bars > span").attr("title")).toBe("2026-09-15: 45 min");
   expect($(".activity-bars > span").attr("style")).toMatch(/--bar-height:\s*100%/);

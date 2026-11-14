@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { brandCardKit, contrast } from "./brand-kit";
 import { normalizeProductBrand } from "./product-brand";
+import { HOMEPAGE_BRANDS } from "@/src/data/homepage-brands";
 
 /** A stored snapshot for a product whose site has these colours and component styles. */
 function stored(colors: Record<string, string>, components?: unknown) {
@@ -34,6 +35,8 @@ describe("brandCardKit", () => {
       // White on this orange is 3.3:1, too low for the button's small text, so the label is the card's text colour.
       "--brand-card-button-fill": "#ff4c00", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450",
       "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff",
+      // The accent is 3.2:1 on the card: too faint for text, enough for bars.
+      "--brand-card-chart": "#ff4c00",
     });
   });
 
@@ -85,13 +88,28 @@ describe("brandCardKit", () => {
   it("keeps the default outlined button for a brand stored before button values were kept, even with an accent", () => {
     // Until the hourly re-fetch reaches it, such a brand has an accent and no components.
     const legacy = stored({ accent: "#123456", background: "#ffffff", text: "#111111" });
-    expect(Object.keys(brandCardKit(legacy, "#ffffff", "#111111"))).toEqual(["--brand-card-border"]);
+    expect(Object.keys(brandCardKit(legacy, "#ffffff", "#111111"))).toEqual(["--brand-card-border", "--brand-card-chart"]);
   });
 
   it("leaves buttons alone when the brand has nothing that shows, and does nothing without solid card colours", () => {
     const plain = stored({ background: "#ffffff", text: "#111111" });
-    expect(Object.keys(brandCardKit(plain, "#ffffff", "#111111"))).toEqual(["--brand-card-border"]);
+    expect(Object.keys(brandCardKit(plain, "#ffffff", "#111111"))).toEqual(["--brand-card-border", "--brand-card-chart"]);
     expect(brandCardKit(firecrawl, "rgba(0,0,0,0)", "#262626")).toEqual({});
     expect(brandCardKit(firecrawl, "#f9f9f9", "#26262680")).toEqual({});
+  });
+
+  it("draws a chart in the brand's accent when its bars show on the card, and in the card's text colour when they would not", () => {
+    // Bars are marks, not text: they need 3:1 against the card (WCAG 1.4.11).
+    const charts = Object.fromEntries(Object.entries(HOMEPAGE_BRANDS).map(([slug, brand]) => {
+      const { background, text } = brand.styleguide!.colors;
+      return [slug, brandCardKit(brand, background!, text!)["--brand-card-chart"]];
+    }));
+    expect(charts).toEqual({
+      clay: "#3859f9", cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", elicit: "#083d44", exa: "#1f40ed",
+      firecrawl: "#ff4c00", github: "#0d6731", "open-places": "#3f5a2c", spider: "#94a3b8",
+      // n8n's pink is 1.5:1 on its card and Porkbun's coral 2.6:1, so their bars take the card's text colour.
+      n8n: "#161616", porkbun: "#000000",
+    });
+    expect(brandCardKit(stored({ background: "#ffffff", text: "#111111" }), "#ffffff", "#111111")["--brand-card-chart"]).toBe("#111111");
   });
 });

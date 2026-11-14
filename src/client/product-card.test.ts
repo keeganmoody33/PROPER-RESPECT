@@ -481,7 +481,7 @@ test("a recorded zero remains distinct from an empty time series", () => {
   expect($(".card-back .activity-hero strong").text()).toBe("0");
 });
 
-test("a supplied time series keeps its bars and a coverage log without a score", () => {
+test("a supplied time series draws its bars on the front and keeps them with a coverage log on the back, without a score", () => {
   const $ = renderCard({
     activity: {
       ...activityEvidence,
@@ -492,7 +492,13 @@ test("a supplied time series keeps its bars and a coverage log without a score",
     },
   });
 
-  expect($(".card-front .activity-bars")).toHaveLength(0);
+  expect($(".card-front .activity-bars > span")).toHaveLength(1);
+  expect($(".card-front .activity-bars > span").attr("title")).toBe("2026-09-15: 45 min");
+  expect($(".card-front .activity-bars").attr("role")).toBe("img");
+  expect($(".card-front .activity-bars").attr("aria-label")).toBe("Minutes recorded trend");
+  expect($(".card-front .card-activity-preview strong").text()).toBe("45");
+  expect($(".card-front .card-activity-coverage").text()).toContain("2026-09-01 to 2026-09-15");
+  expect($(".card-front .usage-chart-log, .card-front .blueprint-dim")).toHaveLength(0);
   expect($(".card-back .activity-bars > span")).toHaveLength(1);
   expect($(".card-back .activity-bars > span").attr("title")).toBe("2026-09-15: 45 min");
   expect($(".card-back .usage-chart-log").text()).toBe("PERSONAL · 15D");
@@ -781,4 +787,19 @@ test("a card names the surface its brand draws, so its contribution calendar can
   expect(surface({ ...baseCard.product, brand: light })).toBe("light");
   expect(surface({ ...baseCard.product, brand: dark })).toBe("dark");
   expect(surface(baseCard.product)).toBe("dark");
+});
+
+test("coding activity with days draws one bar per day on the front; without days the front has no chart", () => {
+  const days = [{ date: "2026-09-14", count: 2, level: 1 }, { date: "2026-09-15", count: 6, level: 4 }];
+  const coding = { ...activityEvidence, kind: "codingActivity" as const, primary: { label: "Sessions", value: 8 }, supporting: [] };
+  const $ = renderCard({ activity: { ...coding, days } });
+
+  expect($(".card-front .activity-bars > span").toArray().map(bar => $(bar).attr("title"))).toEqual(["2026-09-14: 2", "2026-09-15: 6"]);
+  expect($(".card-front .activity-bars").attr("aria-label")).toBe("Coding activity trend");
+  expect($(".card-front .card-activity-preview strong").text()).toBe("8");
+  expect(renderCard({ activity: coding })(".card-front .activity-bars")).toHaveLength(0);
+});
+
+test("bars take the card's chart colour, then its accent, then its text", () => {
+  expect(readFileSync("app/globals.css", "utf8")).toContain("background: var(--brand-card-chart, var(--brand-card-accent, currentColor));");
 });

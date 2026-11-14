@@ -79,11 +79,18 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".product-card-skeleton .usage-chart-log")).not.toHaveText(/^(?:0|—|–)$/);
 
     const card = page.locator(".product-card").first();
+    const front = card.locator(".card-front");
+    await expect(front.getByRole("img", { name: "Sessions trend" })).toBeVisible();
+    await expect(front.locator(".activity-bars > span")).toHaveCount(30);
+    // Layout height, so the card's turn-in animation doesn't skew it.
+    expect(await front.locator(".usage-chart").evaluate(chart => (chart as HTMLElement).offsetHeight)).toBe(64);
+    await expect(front.locator(".usage-chart-log, .blueprint-dim")).toHaveCount(0);
     await card.getByRole("button", { name: "Details", exact: true }).click();
-    const bars = card.locator(".activity-bars > span");
+    const back = card.locator(".card-back");
+    const bars = back.locator(".activity-bars > span");
     await expect(bars).toHaveCount(30);
-    await expect(card.locator(".usage-chart")).toHaveAttribute("data-state", "resolved");
-    await expect(card.locator(".usage-chart")).toHaveAttribute("data-ready", "true");
+    await expect(back.locator(".usage-chart")).toHaveAttribute("data-state", "resolved");
+    await expect(back.locator(".usage-chart")).toHaveAttribute("data-ready", "true");
     await expect(card.locator(".activity-meta")).toContainText("Snapshot recorded 2026-10-01");
     await expect(card).not.toContainText(/score|rank|rating/i);
 
@@ -102,10 +109,11 @@ test("reduced motion swaps the blueprint for bars without a grow animation", asy
   await mount(page, "dark");
 
   const card = page.locator(".product-card").first();
+  await expect(card.locator(".card-front .activity-bars > span").first()).toHaveCSS("animation-name", "none");
   await card.getByRole("button", { name: "Details", exact: true }).click();
-  const chart = card.locator(".usage-chart");
+  const chart = card.locator(".card-back .usage-chart");
   await expect(chart).toHaveAttribute("data-ready", "true");
-  const bars = card.locator(".activity-bars > span");
+  const bars = card.locator(".card-back .activity-bars > span");
   await expect(bars).toHaveCount(30);
   await expect(bars.first()).toHaveCSS("animation-name", "none");
   await expect(card.locator(".usage-chart-blueprint")).toHaveCount(0);

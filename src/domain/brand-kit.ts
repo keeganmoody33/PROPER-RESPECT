@@ -6,7 +6,7 @@ import type { ProductBrandSnapshot } from "./product-brand";
  */
 export type BrandCardKit = Partial<Record<
   "--brand-card-border" | "--brand-card-radius" | "--brand-card-button-fill" | "--brand-card-button-text" | "--brand-card-button-radius"
-  | "--brand-card-button-weight" | "--brand-card-quiet-fill" | "--brand-card-quiet-text", string>>;
+  | "--brand-card-button-weight" | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -17,6 +17,8 @@ const CONTRAST_PAD = 0.05, CHANNEL_MAX = 255, HEX_RADIX = 16;
 const CHANNEL_STARTS = [1, 3, 5] as const, CHANNEL_DIGITS = 2;
 /** A border must show against the card, and a filled button must stand off it. */
 const MIN_BORDER_CONTRAST = 1.3, MIN_FILL_CONTRAST = 1.5, MIN_QUIET_FILL_CONTRAST = 1.04;
+/** A chart's bars are marks, not text, so they need the 3:1 WCAG asks of graphics (1.4.11): more than a fill, less than a label. */
+const MIN_CHART_CONTRAST = 3;
 /** The card's button text is small (0.7rem), so its label needs the contrast WCAG asks of body text. */
 const MIN_LABEL_CONTRAST = 4.5;
 /** How much of the text colour a derived border takes when the brand's own border is too faint. Tried lightest first; the last is the text colour itself. */
@@ -78,6 +80,8 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   }
   if (primary?.radiusPx !== undefined) kit["--brand-card-button-radius"] = `${primary.radiusPx}px`;
   if (primary?.weight !== undefined) kit["--brand-card-button-weight"] = String(primary.weight);
+
+  kit["--brand-card-chart"] = accent && contrast(accent, surface) >= MIN_CHART_CONTRAST ? accent : text;
 
   const quiet = parts?.buttonSecondary, quietFill = solid(quiet?.background);
   if (quietFill && quietFill !== fill && contrast(quietFill, surface) >= MIN_QUIET_FILL_CONTRAST) {
