@@ -233,6 +233,13 @@ main {
   visibility: hidden;
 }
 
+/* A face turning toward the viewer briefly projects past the card's edge; clipped there, it never makes the page scroll sideways.
+   The margin keeps focus outlines (2px at a 3px offset) visible. */
+.product-card {
+  overflow: clip;
+  overflow-clip-margin: 6px;
+}
+
 @keyframes card-turn-over {
   from { transform: rotateY(-90deg); }
   to { transform: rotateY(0); }
