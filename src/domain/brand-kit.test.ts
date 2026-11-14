@@ -118,6 +118,13 @@ describe("brandCardKit", () => {
     const square = stored({ background: "#0c0e13", text: "#f8fafc" }, { card: { borderRadius: "0px" } });
     expect(brandCardKit(square, "#0c0e13", "#f8fafc")["--brand-card-radius"]).toBe("0px");
   });
+
+  it("fills the button from the site's other stored button when the first has no fill that shows", () => {
+    // GitHub's first stored button is an outline; its green sign-up button is stored second.
+    const kit = brandCardKit(HOMEPAGE_BRANDS.github, "#ffffff", "#000000");
+    expect(kit).toMatchObject({ "--brand-card-button-fill": "#08872b", "--brand-card-button-text": "#ffffff" });
+    expect(kit).not.toHaveProperty("--brand-card-quiet-fill");
+  });
 });
 
 describe("brandAccent", () => {

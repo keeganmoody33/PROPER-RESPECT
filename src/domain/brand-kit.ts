@@ -99,13 +99,20 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   if (parts?.card?.radiusPx !== undefined) kit["--brand-card-radius"] = `${Math.min(RADIUS.max, Math.max(RADIUS.min, parts.card.radiusPx))}px`;
 
   // The stored "primary" is whichever button came first on the product's site. On a coloured hero that can be
-  // a white button, which would vanish on the card; then the brand's accent carries the button in the same shape.
-  const primary = parts?.buttonPrimary, pulledFill = solid(primary?.background);
+  // a white button, which would vanish on the card, and it can be an outline with no fill (GitHub's). Then the
+  // site's other stored button carries the card's button, then the brand's accent, in the primary's shape.
+  const primary = parts?.buttonPrimary, secondary = parts?.buttonSecondary;
+  const fills = [
+    { fill: solid(primary?.background), label: solid(primary?.text) },
+    { fill: solid(secondary?.background), label: solid(secondary?.text) },
+    { fill: accent, label: undefined },
+  ];
   // With no stored button at all (a brand fetched before buttons were kept), the card keeps its default outlined button.
-  const fill = !primary ? undefined : pulledFill && contrast(pulledFill, surface) >= MIN_FILL_CONTRAST ? pulledFill : accent && contrast(accent, surface) >= MIN_FILL_CONTRAST ? accent : undefined;
+  const chosen = primary ? fills.find(({ fill }) => fill && contrast(fill, surface) >= MIN_FILL_CONTRAST) : undefined;
+  const fill = chosen?.fill;
   if (fill) {
     kit["--brand-card-button-fill"] = fill;
-    kit["--brand-card-button-text"] = readableOn(fill, fill === pulledFill ? solid(primary?.text) : undefined, text);
+    kit["--brand-card-button-text"] = readableOn(fill, chosen.label, text);
   }
   if (primary?.radiusPx !== undefined) kit["--brand-card-button-radius"] = `${primary.radiusPx}px`;
   if (primary?.weight !== undefined) kit["--brand-card-button-weight"] = String(primary.weight);
