@@ -332,3 +332,61 @@ test("a status-only save after a level clears the level, so the two never disagr
     return { level: prop?.level, status: prop?.status };
   })).toEqual({ level: undefined, status: "ARCHIVED" });
 });
+
+const exportRelationships = makeFunctionReference<"query">("inventory:exportRelationships");
+
+async function fixtureWithUses() {
+  const setup = await fixture();
+  await setup.t.run(ctx => ctx.db.patch(setup.productId, { slug: "clay", name: "Clay", domain: "clay.com" }));
+  return setup;
+}
+
+test("saving what a product does for the owner stores its listed uses in order, in history and in the owner's export", async () => {
+  const { t, owner, propId } = await fixtureWithUses();
+  const input = { propId, expectedVersion: 0, operationId: "uses", status: "ACTIVE", goTo: false, headline: "", note: "",
+    uses: { picks: ["sync-crm", "enrich-leads", "sync-crm"], other: "  score inbound leads " } };
+  expect(await owner.mutation(save, input)).toEqual({ version: 1, duplicate: false });
+  expect(await owner.mutation(save, input)).toEqual({ version: 1, duplicate: true });
+  const stored = { picks: ["enrich-leads", "sync-crm"], other: "score inbound leads" };
+  expect((await t.run(ctx => ctx.db.get(propId)))?.uses).toEqual(stored);
+  const events = await owner.query(history, { propId, paginationOpts: { numItems: 20, cursor: null } });
+  expect(events.page.map((event: { after: { uses?: unknown } }) => event.after.uses)).toEqual([stored]);
+  const exported = await owner.query(exportRelationships, firstPage);
+  expect(exported.page[0].uses).toEqual(stored);
+  expect(exported.page[0].history[0].after.uses).toEqual(stored);
+});
+
+test("a use the product doesn't list is refused with a message and nothing is saved", async () => {
+  const { t, owner, propId } = await fixtureWithUses();
+  await expect(owner.mutation(save, { propId, expectedVersion: 0, operationId: "unlisted", status: "ACTIVE", goTo: false, headline: "", note: "",
+    uses: { picks: ["write-features"] } })).rejects.toThrow("Choose from the listed uses.");
+  expect(await t.run(async ctx => {
+    const prop = await ctx.db.get(propId);
+    return { uses: prop?.uses, version: prop?.relationshipVersion, events: (await ctx.db.query("relationshipEvents").collect()).length };
+  })).toEqual({ uses: undefined, version: undefined, events: 0 });
+});
+
+test("saving with no uses removes the stored ones and keeps them in history", async () => {
+  const { t, owner, propId } = await fixtureWithUses();
+  const base = { propId, status: "ACTIVE", goTo: false, headline: "", note: "" };
+  await owner.mutation(save, { ...base, expectedVersion: 0, operationId: "set", uses: { picks: ["build-lists"] } });
+  await owner.mutation(save, { ...base, expectedVersion: 1, operationId: "blank", uses: { picks: [], other: "  " } });
+  expect((await t.run(ctx => ctx.db.get(propId)))?.uses).toBeUndefined();
+  await owner.mutation(save, { ...base, expectedVersion: 2, operationId: "set-again", uses: { picks: ["find-contacts"] } });
+  await owner.mutation(save, { ...base, expectedVersion: 3, operationId: "omitted" });
+  expect((await t.run(ctx => ctx.db.get(propId)))?.uses).toBeUndefined();
+  const events = await owner.query(history, { propId, paginationOpts: { numItems: 20, cursor: null } });
+  expect(events.page.map((event: { before: { uses?: unknown } }) => event.before.uses))
+    .toEqual([{ picks: ["find-contacts"] }, undefined, { picks: ["build-lists"] }, undefined]);
+});
+
+test("a privately saved use never reaches the published card", async () => {
+  const { t, owner, propId } = await fixtureWithUses();
+  const publish = makeFunctionReference<"mutation">("onboarding:publishSelected");
+  await owner.mutation(save, { propId, expectedVersion: 0, operationId: "uses", status: "ACTIVE", goTo: false, headline: "Approved headline", note: "",
+    uses: { picks: ["enrich-leads"], other: "score inbound leads" } });
+  const selection = { propId, expectedRelationshipVersion: 1, publish: true, status: "ACTIVE", headline: "Approved headline", note: "", primaryLink: { type: "CANONICAL", url: "https://clay.com", label: "Visit" }, autoRefresh: false };
+  await owner.mutation(publish, await reviewedPublication(owner, { selections: [selection] }));
+  const cards = (await t.run(ctx => ctx.db.query("publishedProfiles").collect()))[0].profile.cards;
+  expect(cards.map(card => [card.product.slug, card.headline, "uses" in card])).toEqual([["clay", "Approved headline", false]]);
+});
