@@ -216,6 +216,24 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
   );
 }
 
+/** How many of a collection's works the front links; the back lists them all. */
+const FRONT_ARTIFACT_LIMIT = 3;
+
+/** The first few works with a web link. A work whose link isn't http or https stays off the front. */
+function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kind: "artifactCollection" }>["artifacts"] }) {
+  const linked = artifacts.filter(artifact => isHttpUrl(artifact.url)).slice(0, FRONT_ARTIFACT_LIMIT);
+  if (!linked.length) return null;
+  return (
+    <ul className="card-artifact-links">
+      {linked.map((artifact, index) => (
+        <li key={`${index}:${artifact.url}`}>
+          <a href={artifact.url} target="_blank" rel="noopener noreferrer">{artifact.title} ↗</a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ActivityPreview({ activity, unreviewed = false, expanded = false }: { activity: ActivityModule; unreviewed?: boolean; expanded?: boolean }) {
   const metric = activityHighlight(activity);
   const series = activitySeries(activity);
@@ -230,6 +248,7 @@ function ActivityPreview({ activity, unreviewed = false, expanded = false }: { a
         </>}
       </p>
       {activity.kind === "contributionCalendar" && <ContributionCalendar activity={activity} />}
+      {activity.kind === "artifactCollection" && <ArtifactLinks artifacts={activity.artifacts} />}
       {series && <UsageChart {...series} framed={false} />}
       {expanded && (activity.kind === "headlineMetrics" || activity.kind === "codingActivity") && <dl className="activity-preview-metrics">
         {activity.supporting.map(metric => <div key={metric.label}><dt>{metric.label}</dt><dd>{compactNumber(metric.value)}{metric.unit ? ` ${metric.unit}` : ""}</dd></div>)}

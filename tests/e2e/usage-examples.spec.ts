@@ -110,6 +110,10 @@ const CAPABILITIES: Readonly<Record<string, string>> = {
 };
 /** What a card discloses next to its outbound arrow, and what its back shows beyond the front: one capability per example. */
 const FRONT_DISCLOSURE: Readonly<Record<string, string>> = { Firecrawl: "Referral link", Spider: "Affiliate link" };
+/** The linked work a card's front lists: only Docker's sample collects any. */
+const FRONT_LINKS: Readonly<Record<string, readonly string[]>> = {
+  Docker: ["Sample Compose apps (awesome-compose) ↗", "Official Postgres image ↗", "Multi-stage build guide ↗"],
+};
 const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Firecrawl: ["Weekly · Referral link", "Open Firecrawl ↗Referral link"],
   Exa: ["Weekly · Direct link", "Demo ↗exa.ai"],
@@ -184,10 +188,11 @@ const NARROWEST_WIDTH = 320;
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   const stage = carousel.locator("[aria-roledescription=slide]").first().locator("..");
   const stageHeight = (await stage.boundingBox())!.height;
-  for (const name of ["GitHub", "Claude Code", "Firecrawl", "Grok Bot", "Clay"]) {
+  for (const name of ["GitHub", "Clay", "Claude Code", "Firecrawl", "Docker", "Grok Bot"]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });
     await expect(card).toBeVisible();
+    await expect(card.locator(".card-front .card-artifact-links a")).toHaveText(FRONT_LINKS[name] ?? []);
     // Consecutive parts of the front sit at the front's own row spacing plus their margins: nothing holds space open.
     const overflows = await card.locator(".card-front").evaluate(front => {
       const rowGap = parseFloat(getComputedStyle(front).rowGap);

@@ -442,6 +442,19 @@ main {
   font-variant-numeric: tabular-nums;
 }
 
+.card-artifact-links {
+  display: grid;
+  gap: 0.2rem;
+  list-style: none;
+  margin: 0.35rem 0;
+  padding: 0;
+}
+
+.card-artifact-links a {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 /* The front's chart is the bars alone: no blueprint frame or log to hold room for. */
 .card-activity-preview .usage-chart {
   min-height: 0;

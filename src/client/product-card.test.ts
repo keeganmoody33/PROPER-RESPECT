@@ -921,3 +921,27 @@ test("a card shown in full reads its activity number with thousands separators, 
   const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, expandedActivity: true })));
   expect($(".card-front .card-activity-preview > p strong").text()).toBe("48,360");
 });
+
+/** The R03 bad links beside good ones: more good links than the front has room for. */
+const FRONT_ARTIFACTS = [
+  { title: "Run a script", url: "javascript:alert(1)" },
+  { title: "Compose apps", url: "https://example.com/compose" },
+  { title: "Inline page", url: "data:text/html,x" },
+  { title: "File mirror", url: "ftp://example.com/mirror" },
+  { title: "Signed-in image", url: "https://user:pass@example.com/image" },
+  { title: "Postgres image", url: "https://example.com/postgres" },
+  { title: "Build guide", url: "http://example.com/build" },
+  { title: "Fourth good link", url: "https://example.com/fourth" },
+];
+
+test("an artifact collection's front names its count and links up to three of its works, dropping a bad link quietly", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "artifactCollection", total: FRONT_ARTIFACTS.length, artifacts: FRONT_ARTIFACTS } });
+  const front = $(".card-front .card-activity-preview");
+  expect(front.children("p").first().text()).toBe("8 artifacts");
+  expect(front.find(".card-artifact-links a").toArray().map(link => [$(link).text(), $(link).attr("href"), $(link).attr("target"), $(link).attr("rel")])).toEqual([
+    ["Compose apps ↗", "https://example.com/compose", "_blank", "noopener noreferrer"],
+    ["Postgres image ↗", "https://example.com/postgres", "_blank", "noopener noreferrer"],
+    ["Build guide ↗", "http://example.com/build", "_blank", "noopener noreferrer"],
+  ]);
+  expect(["Run a script", "Inline page", "File mirror", "Signed-in image", "Fourth good link"].filter(title => front.text().includes(title))).toEqual([]);
+});
