@@ -416,6 +416,7 @@ export function ProductCard({
   viewerSignedIn = false,
   profileHandle,
   onGiveProps,
+  deferBrandAssets = false,
 }: {
   card: Card;
   index: number;
@@ -428,6 +429,8 @@ export function ProductCard({
   viewerSignedIn?: boolean;
   profileHandle?: string;
   onGiveProps?: (handle: string, productSlug: string) => Promise<void>;
+  /** Lays the card out without fetching its brand fonts or logo, for a card nobody can see yet. */
+  deferBrandAssets?: boolean;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -463,7 +466,8 @@ export function ProductCard({
   const appearance = brandAppearance(brand);
   const verifiedAssets = verifiedProductAssets(card.product);
   const [failedLogoUrls, setFailedLogoUrls] = useState<string[]>([]);
-  const logo = cardLogo({ brand, verifiedAssets, icon: officialProductIcon(card.product), logoUrl: card.product.logoUrl, surface: appearance.surface, failed: failedLogoUrls });
+  const chosenLogo = cardLogo({ brand, verifiedAssets, icon: officialProductIcon(card.product), logoUrl: card.product.logoUrl, surface: appearance.surface, failed: failedLogoUrls });
+  const logo = deferBrandAssets ? { ...chosenLogo, url: undefined } : chosenLogo;
   const wordmark = logo.layout === "wordmark";
   const markFailed = (url: string) => setFailedLogoUrls(urls => urls.includes(url) ? urls : [...urls, url]);
   const mark = card.product.name
@@ -503,7 +507,7 @@ export function ProductCard({
         }
       }}
     >
-      {verifiedAssets
+      {deferBrandAssets ? null : verifiedAssets
         ? <style data-verified-product-fonts={verifiedAssets.productSlug}>{verifiedProductFontFaces(verifiedAssets)}</style>
         : <ProductBrandFonts snapshot={brand} />}
       <div className="card-front" aria-hidden={isFlipped} inert={isFlipped}>

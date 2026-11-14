@@ -536,6 +536,16 @@ test("a matching retained font is scoped to the card and leaves its relationship
   expect($(".card-headline").text()).toBe(baseCard.headline);
 });
 
+test("a card nobody can see yet keeps its brand's layout but fetches none of its fonts or logo", () => {
+  const card = { ...baseCard, product: { ...baseCard.product, brand: fontBrand } };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, deferBrandAssets: true })));
+
+  expect($(".product-card").attr("style") ?? "").toContain("--brand-card-body-font:");
+  expect($("style")).toHaveLength(0);
+  expect($("img")).toHaveLength(0);
+  expect($(".product-logo").text()).toBe("Example Product");
+});
+
 test("a mismatched identity cannot load another product's retained fonts", () => {
   const $ = renderCard({ product: { ...baseCard.product, brand: { ...fontBrand, canonicalDomain: "another.example.com" } } });
 

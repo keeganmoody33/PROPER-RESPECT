@@ -247,3 +247,27 @@ test("pressing the example already shown stops the slideshow for good", async ({
   await page.clock.fastForward(24000);
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
 });
+
+test("a hidden example asks for no brand font or logo until it is shown or next", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const assets = new Set<string>();
+  page.on("request", request => {
+    const { pathname } = new URL(request.url());
+    if (pathname.startsWith("/api/brand-")) assets.add(pathname);
+  });
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  // GitHub is shown and Claude Code is next; Claude Code's verified assets are this site's own files.
+  expect([...assets].sort()).toEqual([
+    "/api/brand-fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+    "/api/brand-images/c625fdf9-bcc0-4e62-a4ea-6f385a71cd16.png",
+  ]);
+  assets.clear();
+  await page.getByRole("region", { name: "Product usage examples" }).getByRole("button", { name: "Spider", exact: true }).click();
+  await page.waitForLoadState("networkidle");
+  // Spider's dark icon, and Docker's square light icon because it comes next.
+  expect([...assets].filter(path => path.startsWith("/api/brand-images/")).sort()).toEqual([
+    "/api/brand-images/01405b60-627c-4b60-9591-03c2a2896385.png",
+    "/api/brand-images/0a17c0a1-46e0-4640-af37-2f633a3dedce.svg",
+  ]);
+});

@@ -32,6 +32,10 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const reducedMotion = useReducedMotion();
   const playing = choice === "playing" || (choice === "auto" && !reducedMotion);
   const advancing = playing && !hovered && !focused;
+  // A slide fetches its brand fonts and logo once it is shown or next, so the page doesn't load every example's at once.
+  const upcoming = (index + 1) % examples.length;
+  const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([index, upcoming]));
+  if (!revealed.has(index) || !revealed.has(upcoming)) setRevealed(new Set([...revealed, index, upcoming]));
 
   useEffect(() => {
     if (!advancing) return;
@@ -71,7 +75,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
         return <div key={example.id} className={styles.slide} data-example={example.id} data-current={current} role="group" aria-roledescription="slide"
           aria-label={`${slideIndex + 1} of ${examples.length}: ${example.card.product.name}`} aria-hidden={!current} inert={!current}>
           <p className={styles.sample}>Sample data / No account connected</p>
-          <ProductCard card={example.card} index={slideIndex} goTo={example.card.goTo} expandedActivity />
+          <ProductCard card={example.card} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} />
           {example.caveat && <p className={styles.caveat}>{example.caveat}</p>}
           {example.source && isHttpUrl(example.source.href) && <a className={styles.source} href={example.source.href} target="_blank" rel="noreferrer">{example.source.label} ↗</a>}
         </div>;
