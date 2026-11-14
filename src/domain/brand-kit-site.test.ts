@@ -7,6 +7,8 @@ function kit(slug: string, withSite = true) {
   const brand = HOMEPAGE_BRANDS[slug], { background, text } = brand.styleguide!.colors;
   return brandCardKit(brand, background!, text!, withSite ? HOMEPAGE_SITE_TRAITS[slug] : undefined);
 }
+/** The link glyph is text, so it needs 4.5:1. */
+const TEXT_CONTRAST = 4.5;
 const kits = (key: string) => Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, kit(slug)[key as keyof ReturnType<typeof kit>]]));
 
 describe("a brand without a site file", () => {
@@ -95,7 +97,7 @@ describe("the signature colour", () => {
   it("colours the link glyph only where it reads as text, 4.5:1", () => {
     const glyph = (slug: string) => {
       const brand = HOMEPAGE_BRANDS[slug];
-      return brandMark(brand, brand.styleguide!.colors.background!, 4.5, HOMEPAGE_SITE_TRAITS[slug]);
+      return brandMark(brand, brand.styleguide!.colors.background!, TEXT_CONTRAST, HOMEPAGE_SITE_TRAITS[slug]);
     };
     expect([glyph("spider"), glyph("elicit"), glyph("github"), glyph("clay"), glyph("n8n"), glyph("firecrawl")]).toEqual(["#3bde77", "#026370", "#08872b", "#035d44", undefined, undefined]);
   });

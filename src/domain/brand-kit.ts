@@ -30,7 +30,7 @@ const MIN_LABEL_CONTRAST = 4.5;
 const BORDER_MIXES = [0.22, 0.35, 0.5, 0.75, 1] as const;
 /** A square brand keeps a square card. */
 const RADIUS = { min: 0, max: 24 } as const;
-/** A pill on the site stays a pill on the card's shorter button. */
+/** A pill on the site stays a pill on the card's shorter button: any radius over half its height. */
 const PILL_RADIUS = "999px";
 const WHITE = "#ffffff", BLACK = "#000000";
 /**
@@ -80,7 +80,7 @@ function derivedBorder(surface: string, text: string) {
 }
 
 /** The card's stack for a measured family: the brand face the card already loads when it is that family, else a system face of its kind. */
-function measuredFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { schemaVersion: 2 }>["styleguide"]) {
+function measuredFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { fontLinks: unknown }>["styleguide"]) {
   const key = font.family && productBrandFontFamilyKey(font.family);
   const loaded = (["body", "heading"] as const).find(role => {
     const family = guide?.typography?.[role]?.family ?? (role === "body" ? guide?.bodyFamily : guide?.headingFamily);

@@ -465,7 +465,8 @@ export function ProductCard({
   // value never becomes a link.
   const usageLink = !brandPreview && card.usageLink && usageLinkSchema.safeParse(card.usageLink).success ? card.usageLink : undefined;
   // Typed as written; the card's CSS sets the case, from the product's measured site or the house default.
-  const cardStatus = brandPreview ? "Brand preview" : relationshipConfirmed ? cardStatusLabel(card) : "Private discovery";
+  const relationshipStatus = relationshipConfirmed ? cardStatusLabel(card) : "Private discovery";
+  const cardStatus = brandPreview ? "Brand preview" : relationshipStatus;
   const topLine = !brandPreview && relationshipConfirmed ? cardTopLine(card) : cardStatus;
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
   const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : "Relationship & evidence";

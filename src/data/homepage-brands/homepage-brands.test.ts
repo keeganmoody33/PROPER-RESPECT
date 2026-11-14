@@ -7,6 +7,8 @@ import { directoryEntry } from "@/src/domain/product-directory";
 import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "./index";
 
 const DIRECTORY = join(process.cwd(), "src/data/homepage-brands");
+/** The width every site was measured at. */
+const DESKTOP_WIDTH = 1440;
 const files = readdirSync(DIRECTORY).filter(name => name.endsWith(".json") && !name.endsWith(".site.json")).sort();
 const siteFiles = readdirSync(DIRECTORY).filter(name => name.endsWith(".site.json")).sort();
 
@@ -61,7 +63,7 @@ test("every brand but Porkbun has a measured site file, loaded by the index; Por
 
 test("each site file measured the root of its own brand's domain at desktop width", () => {
   const wrong = Object.entries(HOMEPAGE_SITE_TRAITS).filter(([slug, site]) => site.productSlug !== slug || site.canonicalDomain !== HOMEPAGE_BRANDS[slug].canonicalDomain
-    || site.url !== `https://${HOMEPAGE_BRANDS[slug].canonicalDomain}/` || site.viewport.width !== 1440);
+    || site.url !== `https://${HOMEPAGE_BRANDS[slug].canonicalDomain}/` || site.viewport.width !== DESKTOP_WIDTH);
   expect(wrong.map(([slug]) => slug)).toEqual([]);
   expect(HOMEPAGE_SITE_TRAITS.spider.traits.signature).toEqual({ value: "#3bde77", from: "heading highlight" });
   expect(HOMEPAGE_SITE_TRAITS.clay.traits.hero).toEqual({ value: { kind: "colour", hex: "#035d44" }, from: "backdrop behind the first heading" });
