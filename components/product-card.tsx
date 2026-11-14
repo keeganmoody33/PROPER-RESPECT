@@ -3,7 +3,7 @@
 import { MeasurementLines, PublicMeasurements } from "./measurement-values";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import {
   selectProductBrandLogo,
   type ProductBrandSnapshot,
@@ -196,6 +196,14 @@ function useNewestWeekInView() {
   return ref;
 }
 
+/** The calendar in one line for a screen reader: its total, how many days had any, and its busiest day. */
+function calendarSummary(days: readonly { date: string; count: number }[]): string {
+  const total = days.reduce((sum, day) => sum + day.count, 0);
+  const busiest = days.reduce((best, day) => (day.count > best.count ? day : best), days[0]);
+  return `${fullNumber(total)} contributions from ${dayMonthYear(days[0].date)} to ${dayMonthYear(days.at(-1)!.date)}, on ${days.filter(day => day.count > 0).length} of ${days.length} days; `
+    + `the most in a day was ${fullNumber(busiest.count)}, on ${dayMonthYear(busiest.date)}.`;
+}
+
 function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
   const scrollRef = useNewestWeekInView();
   const coverage = contributionCalendarCoverage(activity);
@@ -220,17 +228,18 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
           <div className="contribution-weekdays" aria-hidden="true">
             {["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => <span key={index}>{label}</span>)}
           </div>
-          <div className="activity-calendar contribution-grid" role="group" aria-label="Daily contributions, Sunday to Saturday in each column" style={columns}>
+          <div className="activity-calendar contribution-grid" aria-hidden="true" style={columns}>
             {days.map(day => {
               const date = new Date(`${day.date}T00:00:00Z`);
               const label = `${dayMonthYear(day.date)}: ${fullNumber(day.count)} ${day.count === 1 ? "contribution" : "contributions"}`;
-              return <span key={day.date} role="img" aria-label={label} title={label} data-date={day.date} data-level={day.level}
+              return <span key={day.date} title={label} data-date={day.date} data-level={day.level}
                 style={{ gridColumn: Math.floor((date.getTime() - firstSunday) / (7 * 86_400_000)) + 1, gridRow: date.getUTCDay() + 1 }} />;
             })}
           </div>
         </div>
       </div>
-      <div className="contribution-legend" aria-hidden="true">Less {[0, 1, 2, 3, 4].map(level => <i key={level} data-level={level} />)} More</div>
+      <p className="visually-hidden">{calendarSummary(days)}</p>
+      <div className="contribution-legend" aria-hidden="true"><span className="contribution-scroll-hint">← Scroll for earlier months</span>Less {[0, 1, 2, 3, 4].map(level => <i key={level} data-level={level} />)} More</div>
       {suppliedRange && <p className="contribution-range">{suppliedRange}</p>}
       {gapNote && <p className="contribution-gap">{gapNote}</p>}
     </div>
@@ -261,16 +270,20 @@ function headlineLength(text: string): "short" | "medium" | "long" {
 /** How long a shown table waits before its running row fills in, so the visitor sees it pending first. */
 const FILL_IN_DELAY_MS = 600;
 
-/** Once, a moment after the card is shown; a visitor who asked for less motion sees the filled-in table straight away. */
+const noSubscription = () => () => undefined;
+
+/** Once, a moment after the card is shown; a visitor who asked for less motion sees the filled-in table as soon as the page runs. */
 function useFilledIn(shown: boolean): boolean {
   const reducedMotion = useReducedMotion();
+  // The server can't know the preference, so it draws the row pending; the browser decides.
+  const inBrowser = useSyncExternalStore(noSubscription, () => true, () => false);
   const [filledIn, setFilledIn] = useState(false);
   useEffect(() => {
     if (!shown || reducedMotion || filledIn) return;
     const timer = window.setTimeout(() => setFilledIn(true), FILL_IN_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [shown, reducedMotion, filledIn]);
-  return filledIn || reducedMotion;
+  return filledIn || (reducedMotion && inBrowser);
 }
 
 const columnMarks = (column: TablePreviewColumn) => ({ "data-droppable": column.droppable ? "" : undefined });
@@ -529,6 +542,7 @@ export function ProductCard({
       style={{ ...appearance.style, ...(verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand)), ...(isFlipped && frontHeight ? { minHeight: frontHeight } : {}) }}
       data-surface={appearance.surface}
       data-band={appearance.style["--brand-card-band"] ? "" : undefined}
+      data-panel={appearance.style["--brand-card-panel"] ? "" : undefined}
       data-verified-brand={verifiedAssets?.productSlug}
       data-brand-revision={verifiedAssets?.revision}
       data-side={isFlipped ? "back" : "front"}

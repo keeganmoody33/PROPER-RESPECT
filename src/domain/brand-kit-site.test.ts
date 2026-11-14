@@ -34,10 +34,12 @@ describe("a brand without a site file", () => {
 describe("corners", () => {
   it("take the site's measured panel and button corners, square included, with a pill kept a pill", () => {
     expect(kits("--brand-card-radius")).toEqual({
-      // Clay's 48px, Context.dev's 25.2px and n8n's 34px panels are held to the card's 24px most.
-      clay: "24px", "context-dev": "24px", n8n: "24px", docker: "0px", spider: "0px", exa: "6px", firecrawl: "20px", github: "8px", "open-places": "18px",
-      // No bordered panel was measured on Cloudflare's or Elicit's first screen, and Porkbun has no site file: the stored radius stays.
-      cloudflare: "4px", elicit: "8px", porkbun: "8px",
+      // Context.dev's 25.2px and n8n's 34px panels are held to the card's 24px most. The five featured are the most common
+      // radius of their boxed or shadowed panels 220px+ wide, measured 2026-11-14: Clay 23px, Cloudflare square, GitHub 6px.
+      clay: "23px", "context-dev": "24px", n8n: "24px", docker: "0px", spider: "0px", exa: "6px", firecrawl: "20px", github: "6px", "open-places": "18px",
+      cloudflare: "0px",
+      // No bordered panel was measured on Elicit's first screen, and Porkbun has no site file: the stored radius stays.
+      elicit: "8px", porkbun: "8px",
     });
     expect(kits("--brand-card-button-radius")).toEqual({
       clay: "12px", "context-dev": "999px", n8n: "999px", docker: "8px", spider: "0px", exa: "4px", firecrawl: "10px", github: "6px", "open-places": "999px",
@@ -107,19 +109,20 @@ describe("the small labels", () => {
   it("take the site's small-label type, case and letter-spacing", () => {
     const mono = 'ui-monospace, "SF Mono", Menlo, monospace', body = "var(--brand-card-body-font)";
     expect(kits("--brand-card-label-font")).toEqual({
-      spider: mono, n8n: mono,
-      clay: body, "context-dev": body, docker: body, exa: body, firecrawl: body, github: body, "open-places": body,
-      // No small labels were measured on Cloudflare's or Elicit's first screen.
-      cloudflare: undefined, elicit: undefined, porkbun: undefined,
+      // Monospace where 10%+ of the small text outside the header is: Cloudflare, Docker and Firecrawl; GitHub's 6% is not.
+      spider: mono, n8n: mono, cloudflare: mono, docker: mono, firecrawl: mono,
+      clay: body, "context-dev": body, exa: body, github: body, "open-places": body,
+      elicit: undefined, porkbun: undefined,
     });
     expect(kits("--brand-card-label-case")).toEqual({
-      spider: "uppercase", n8n: "uppercase",
-      clay: "none", "context-dev": "none", docker: "none", exa: "none", firecrawl: "none", github: "none", "open-places": "none",
-      cloudflare: undefined, elicit: undefined, porkbun: undefined,
+      spider: "uppercase", n8n: "uppercase", clay: "uppercase",
+      "context-dev": "none", docker: "none", exa: "none", firecrawl: "none", github: "none", "open-places": "none", cloudflare: "none",
+      // Elicit's site was measured but no label case: as typed, not the house uppercase. Porkbun has no site file.
+      elicit: "none", porkbun: undefined,
     });
     expect(kits("--brand-card-label-tracking")).toEqual({
-      spider: "0.14em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "-0.011em", exa: "-0.02em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
-      cloudflare: undefined, elicit: undefined, porkbun: undefined,
+      spider: "0.14em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "0em", exa: "-0.02em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
+      cloudflare: "0em", elicit: undefined, porkbun: undefined,
     });
   });
 });
@@ -132,7 +135,7 @@ describe("the hero band", () => {
     }));
     // Clay's heading sits on its green hero section; black on it is 2.6:1, so its label is white.
     // Cloudflare's sits on a 99%-wide orange panel, where its #262626 text is 5.1:1.
-    // Docker's dark hero panel is 81% of the width, so it is no band.
-    expect(bands).toEqual({ clay: ["#035d44", "#ffffff"], cloudflare: ["#ff5e1f", "#262626"] });
+    // Docker's dark hero panel is 81% of the width, inside its ruled page frame: a band.
+    expect(bands).toEqual({ clay: ["#035d44", "#ffffff"], cloudflare: ["#ff5e1f", "#262626"], docker: ["#0f1117", "#ffffff"] });
   });
 });

@@ -57,8 +57,8 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   const githubControls = await controlsTop();
   // The top line and button are typed as written; each card's measured site, or the house default, sets their case.
   for (const [name, text, labelCase, buttonCase] of [
-    ["Clay", "Daily · since 2023", "none", "none"],
-    ["Cloudflare", "Daily · since 2020", "uppercase", "none"],
+    ["Clay", "Daily · since 2023", "uppercase", "none"],
+    ["Cloudflare", "Daily · since 2020", "none", "none"],
     ["Docker", "Weekly · since 2020", "none", "none"],
     ["Firecrawl", "Weekly · since 2025", "none", "none"],
     ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
@@ -68,7 +68,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     ["Spider", "Occasionally · since 2026", "uppercase", "uppercase"],
     ["Open Places", "Occasionally · since 2026", "none", "none"],
     ["Grok Bot", "Testing · since 2026", "uppercase", "uppercase"],
-    ["Elicit", "Stopped using · started 2026", "uppercase", "none"],
+    ["Elicit", "Stopped using · started 2026", "none", "none"],
     ["Context.dev", "Testing · since 2026", "none", "none"],
   ]) {
     const toggle = carousel.getByRole("button", { name, exact: true });
@@ -782,7 +782,7 @@ const FEATURED_LOOK = [
   { name: "Clay", slug: "clay", surface: "rgb(255, 255, 255)", band: "rgb(3, 93, 68)", draws: "table" },
   { name: "GitHub", slug: "github", surface: "rgb(255, 255, 255)", band: null, draws: "calendar" },
   { name: "Cloudflare", slug: "cloudflare", surface: "rgb(255, 255, 255)", band: "rgb(255, 94, 31)", draws: "per day bars" },
-  { name: "Docker", slug: "docker", surface: "rgb(249, 250, 251)", band: null, draws: "linked works" },
+  { name: "Docker", slug: "docker", surface: "rgb(249, 250, 251)", band: "rgb(15, 17, 23)", draws: "linked works" },
   { name: "Firecrawl", slug: "firecrawl", surface: "rgb(249, 249, 249)", band: null, draws: "per week bars" },
 ] as const;
 const MAX_FACE_DIFFERENCE_PX = 80;
@@ -855,4 +855,56 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
   })));
   // No two featured fronts draw the same thing.
   expect(new Set(looks.map(({ draws }) => draws)).size).toBe(FEATURED_LOOK.length);
+});
+
+/** What each featured card takes from its measured site beyond the kit: case, number face, second surface. */
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the featured cards carry their sites' measured feel at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const feel = async (name: string) => {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await expect(card).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    return card.evaluate(article => {
+      const style = (selector: string) => { const element = article.querySelector(selector); return element ? getComputedStyle(element) : undefined; };
+      return {
+        eyebrowCase: style(".card-front .eyebrow")!.textTransform,
+        numberFont: style(".card-front .card-activity-preview > p:first-child strong, .card-front .usage-measurement-stats strong")!.fontFamily.split(",")[0].replaceAll('"', ""),
+        numberColour: style(".card-front .card-activity-preview > p:first-child strong, .card-front .usage-measurement-stats strong")!.color,
+        panel: style(".card-front :is(.card-table-preview, .contribution-calendar, .card-artifact-links, .usage-chart)")!.backgroundColor,
+      };
+    });
+  };
+  const looks: Record<string, Awaited<ReturnType<typeof feel>>> = {};
+  for (const name of FEATURED) looks[name] = await feel(name);
+  // Cloudflare's site sets no text in capitals, so its labels stay as typed; Clay's small labels are capitals.
+  expect([looks.Cloudflare.eyebrowCase, looks.Clay.eyebrowCase]).toEqual(["none", "uppercase"]);
+  // GitHub's biggest number is green monospace, as on github.com.
+  expect([looks.GitHub.numberFont, looks.GitHub.numberColour]).toEqual(["ui-monospace", "rgb(8, 135, 43)"]);
+  // Clay's table on its warm grey slab; Docker's linked work on its dark terminal panel.
+  expect([looks.Clay.panel, looks.Docker.panel]).toEqual(["rgb(244, 243, 240)", "rgb(14, 18, 23)"]);
+});
+
+test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone that it scrolls, and reads as one summary line", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "GitHub", exact: true }).click();
+  const calendar = carousel.getByRole("article", { name: "GitHub card" }).locator(".card-front .contribution-calendar");
+  const cells = await calendar.evaluate(element => {
+    const [first, second] = [element.querySelector('[data-date="2025-09-01"]')!, element.querySelector('[data-date="2025-09-02"]')!].map(cell => cell.getBoundingClientRect());
+    return { size: Math.round(first.width), gap: Math.round(second.top - first.bottom), radius: getComputedStyle(element.querySelector("[data-date]")!).borderRadius,
+      scrolls: element.querySelector(".contribution-scroll")!.scrollWidth > element.querySelector(".contribution-scroll")!.clientWidth };
+  });
+  expect(cells).toEqual({ size: 8, gap: 2, radius: "2px", scrolls: false });
+  // One line for a screen reader, not 365 images.
+  await expect(calendar.getByRole("img")).toHaveCount(0);
+  await expect(calendar.locator(".visually-hidden")).toHaveText(/^\d[\d,]* contributions from 1 Sep 2025 to 31 Aug 2026, on \d+ of 365 days; the most in a day was \d+, on \d+ \w+ \d{4}\.$/);
+  await expect(calendar.getByText("Scroll for earlier months")).toBeHidden();
+  await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
+  await expect(calendar.getByText("Scroll for earlier months")).toBeVisible();
 });

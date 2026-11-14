@@ -635,7 +635,8 @@ test("a contribution calendar renders only supplied days and never relabels cont
     const days = $(`${side} .activity-calendar span`);
     expect(days).toHaveLength(1);
     expect(days.attr("title")).toBe("15 Sep 2026: 3 contributions");
-    expect(days.attr("aria-label")).toBe("15 Sep 2026: 3 contributions");
+    // The days are drawn for sight; a screen reader gets the calendar's one-line summary instead.
+    expect($(`${side} .contribution-calendar .visually-hidden`).text()).toBe("3 contributions from 15 Sep 2026 to 15 Sep 2026, on 1 of 1 days; the most in a day was 3, on 15 Sep 2026.");
     expect(days.attr("data-date")).toBe("2026-09-15");
   }
   expect($(".card-front .card-activity-preview > p").first().text()).toBe("37 contributions");
@@ -755,10 +756,11 @@ test("published numbers say how they were recorded on the back, where every row 
   expect($(".card-back .usage-measurement-measurement").toArray().map(element => recorded.filter(text => $(element).text().includes(text)).length)).toEqual([recorded.length, recorded.length]);
   // The front is one row of numbers, each named by what it counts; the disclosures and exact periods are on the back.
   expect($(".card-front .usage-measurement-stats li").map((_, item) => $(item).text()).get()).toEqual([
-    "2,140,000rows enrichedMar 2023 – Aug 2026", "86tables builtMar 2023 – Aug 2026",
+    "2,140,000rows enriched", "86tables built",
   ]);
   expect($(".card-front .usage-measurement-public").text()).not.toMatch(/Synthetic sample|Owner-supplied evidence|more reported measurements/);
-  expect($(".card-front .usage-measurement-note").text()).toBe("Sample numbers · how each was measured is in Details");
+  // One period for both numbers, said once at the head of the note.
+  expect($(".card-front .usage-measurement-note").text()).toBe("Mar 2023 – Aug 2026 · Sample numbers · how each was measured is in Details");
   expect($(".card-back .usage-measurement-measurement").first().text()).toContain("2023-03-01 to 2026-08-31 · UTC");
   expect($(".card-back").text()).toContain("Synthetic sample. Not real account activity.");
   expect($(".card-back").text()).toContain("Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.");
@@ -989,7 +991,7 @@ test("a card whose site's heading sits on a full-bleed colour marks itself for t
   const render = (slug: string, domain: string, withSite = true) => load(renderToStaticMarkup(createElement(ProductCard, {
     card: { ...baseCard, product: { name: slug, slug, domain, description: "Example.", brand: HOMEPAGE_BRANDS[slug] } }, index: 0, siteTraits: withSite ? HOMEPAGE_SITE_TRAITS[slug] : undefined,
   })))("article");
-  expect([render("clay", "clay.com").attr("data-band"), render("docker", "docker.com").attr("data-band"), render("clay", "clay.com", false).attr("data-band")]).toEqual(["", undefined, undefined]);
+  expect([render("clay", "clay.com").attr("data-band"), render("docker", "docker.com").attr("data-band"), render("clay", "clay.com", false).attr("data-band")]).toEqual(["", "", undefined]);
   expect(render("clay", "clay.com").attr("style")).toContain("--brand-card-band:#035d44;--brand-card-band-text:#ffffff");
 });
 

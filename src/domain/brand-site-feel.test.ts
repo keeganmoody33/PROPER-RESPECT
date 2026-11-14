@@ -1,0 +1,82 @@
+import { describe, expect, it } from "vitest";
+import { brandSiteTraitsFromMeasurement, type BrandSiteTraits, type SiteMeasurement } from "./brand-site-traits";
+import { brandCardKit } from "./brand-kit";
+import { contrast } from "./brand-kit";
+
+const DESKTOP_WIDTH = 1440, DESKTOP_HEIGHT = 900;
+const VIEWPORT = { width: DESKTOP_WIDTH, height: DESKTOP_HEIGHT } as const;
+/** Shares of the viewport, or of the backdrop's frame, a heading's backdrop spans. */
+const JUST_OVER_FULL = 0.81, NARROW = 0.6, MOST_OF_FRAME = 0.95, PART_OF_FRAME = 0.7;
+const META = { productSlug: "example", canonicalDomain: "example.com", measuredAt: "2026-11-14T18:00:00.000Z", url: "https://example.com/", viewport: VIEWPORT };
+const site = (raw: SiteMeasurement): BrandSiteTraits => brandSiteTraitsFromMeasurement(META, raw);
+const WHITE = "#ffffff", INK = "#1f2328";
+const kit = (raw: SiteMeasurement) => brandCardKit(undefined, WHITE, INK, site(raw));
+/** A grid pitch in pixels, as a site's background-size states it. */
+const GRID_PITCH_PX = 10;
+const TERMINAL_RADIUS_PX = 10;
+/** Bars are marks: 3:1 against what they are drawn on. */
+const MARK_CONTRAST = 3;
+
+describe("the brand's feel, as measured traits", () => {
+  it("stores the biggest number's face and colour, the second surface, its pattern, a dark inverse panel, the page's rule and its muted text", () => {
+    expect(site({
+      number: { font: { family: "Mona Sans Mono", generic: "monospace" }, colour: "#08872B" },
+      panelFill: "#f2f5f3",
+      surfacePattern: { kind: "grid", pitchPx: GRID_PITCH_PX, line: "#e2e6e3" },
+      inversePanel: { fill: "#0e1217", text: "#e6ebf2", border: "#363941", radiusPx: TERMINAL_RADIUS_PX },
+      rule: { style: "dashed", hex: "#f0f0f0" },
+      mutedText: "#58635b",
+    }).traits).toEqual({
+      numberFont: { value: { family: "Mona Sans Mono", generic: "monospace" }, from: "largest number" },
+      numberColour: { value: "#08872b", from: "largest number" },
+      panelFill: { value: "#f2f5f3", from: "second large surface" },
+      surfacePattern: { value: { kind: "grid", pitchPx: GRID_PITCH_PX, line: "#e2e6e3" }, from: "second large surface" },
+      inversePanel: { value: { fill: "#0e1217", text: "#e6ebf2", border: "#363941", radiusPx: TERMINAL_RADIUS_PX }, from: "dark panel" },
+      rule: { value: { style: "dashed", hex: "#f0f0f0" }, from: "most common border" },
+      mutedText: { value: "#58635b", from: "secondary text on the page background" },
+    });
+  });
+
+  it("drops a value that is not a plain colour, a known pattern or a number in range, alone", () => {
+    expect(site({
+      number: { font: { family: "x;y", generic: "fantasy" }, colour: "red" }, panelFill: "url(a)",
+      surfacePattern: { kind: "stripes", pitchPx: GRID_PITCH_PX, line: "#e2e6e3" }, rule: { style: "groove", hex: "#000000" }, mutedText: "#zzzzzz",
+    }).traits).toEqual({});
+  });
+
+  it("calls a heading's backdrop full-bleed at 80% of the viewport, or of the frame it sits in", () => {
+    expect(site({ hero: { hex: "#0f1117", widthShare: JUST_OVER_FULL, kind: "colour" } }).traits.hero?.value).toEqual({ kind: "colour", hex: "#0f1117" });
+    expect(site({ hero: { hex: "#0f1117", widthShare: NARROW, frameShare: MOST_OF_FRAME, kind: "colour" } }).traits.hero?.value).toEqual({ kind: "colour", hex: "#0f1117" });
+    expect(site({ hero: { hex: "#0f1117", widthShare: NARROW, frameShare: PART_OF_FRAME, kind: "colour" } }).traits.hero?.value).toEqual({ kind: "none" });
+  });
+});
+
+describe("what a card makes of the feel", () => {
+  it("leaves a measured site's labels as typed when no case was measured; a card with no site keeps the house default", () => {
+    expect(kit({ surface: WHITE })["--brand-card-label-case"]).toBe("none");
+    expect(brandCardKit(undefined, WHITE, INK)["--brand-card-label-case"]).toBeUndefined();
+  });
+
+  it("sets the hero number in the site's number face, and in its colour only where that colour reaches 3:1", () => {
+    const github = kit({ number: { font: { generic: "monospace" }, colour: "#08872b" } });
+    expect([github["--brand-card-number-font"], github["--brand-card-number-colour"]]).toEqual(['ui-monospace, "SF Mono", Menlo, monospace', "#08872b"]);
+    expect(kit({ number: { colour: "#f5f5f5" } })["--brand-card-number-colour"]).toBeUndefined();
+  });
+
+  it("puts the second surface, its grid and the page's rule behind and between the card's data", () => {
+    const github = kit({ panelFill: "#f2f5f3", surfacePattern: { kind: "grid", pitchPx: GRID_PITCH_PX, line: "#e2e6e3" }, rule: { style: "solid", hex: "#d2d9d4" } });
+    expect([github["--brand-card-panel"], github["--brand-card-pattern-line"], github["--brand-card-pattern-pitch"], github["--brand-card-rule"], github["--brand-card-rule-style"]])
+      .toEqual(["#f2f5f3", "#e2e6e3", "10px", "#d2d9d4", "solid"]);
+  });
+
+  it("draws a dark inverse panel with its own text and border, and bars in a mark that passes on that fill", () => {
+    const docker = brandCardKit(undefined, WHITE, INK, site({ inversePanel: { fill: "#0e1217", text: "#e6ebf2", border: "#363941", radiusPx: TERMINAL_RADIUS_PX }, signatureCandidates: [{ hex: "#1d63ed", from: "primary call-to-action" }] }));
+    expect([docker["--brand-card-panel"], docker["--brand-card-panel-text"], docker["--brand-card-panel-border"], docker["--brand-card-panel-radius"]]).toEqual(["#0e1217", "#e6ebf2", "#363941", "10px"]);
+    expect(contrast(docker["--brand-card-panel-chart"]!, "#0e1217")).toBeGreaterThanOrEqual(MARK_CONTRAST);
+  });
+
+  it("uses the site's muted text for captions only where it reads at 4.5:1 on the card", () => {
+    expect(kit({ mutedText: "#58635b" })["--brand-card-muted"]).toBe("#58635b");
+    expect(kit({ mutedText: "#aaaaaa" })["--brand-card-muted"]).toBeUndefined();
+  });
+});

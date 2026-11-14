@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "github",
   "canonicalDomain": "github.com",
-  "measuredAt": "2026-11-14T12:33:40.998Z",
+  "measuredAt": "2026-11-14T21:02:36.915Z",
   "url": "https://github.com/",
   "viewport": {
     "width": 1440,
@@ -75,7 +75,7 @@
       "from": "secondary call-to-action"
     },
     "panelRadiusPx": {
-      "value": 8,
+      "value": 6,
       "from": "bordered panels"
     },
     "signature": {
@@ -87,6 +87,24 @@
         "kind": "none"
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Mona Sans Mono",
+        "generic": "monospace"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#08872b",
+      "from": "largest number"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#d2d9d4"
+      },
+      "from": "most common border"
     }
   }
 }

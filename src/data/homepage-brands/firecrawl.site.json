@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "firecrawl",
   "canonicalDomain": "firecrawl.dev",
-  "measuredAt": "2026-11-14T12:33:34.242Z",
+  "measuredAt": "2026-11-14T21:02:25.410Z",
   "url": "https://firecrawl.dev/",
   "viewport": {
     "width": 1440,
@@ -33,8 +33,8 @@
     },
     "labelFont": {
       "value": {
-        "family": "suisse",
-        "generic": "sans-serif"
+        "family": "GeistMono",
+        "generic": "monospace"
       },
       "from": "small labels"
     },
@@ -76,6 +76,28 @@
         "kind": "none"
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "suisse",
+        "generic": "sans-serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#ff4d00",
+      "from": "largest number"
+    },
+    "panelFill": {
+      "value": "#ffffff",
+      "from": "second large surface"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#ededed"
+      },
+      "from": "most common border"
     }
   }
 }

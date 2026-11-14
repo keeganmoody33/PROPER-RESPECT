@@ -48,6 +48,11 @@ const heroSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("none") }).strict(),
 ]);
 const SIGNATURE_SOURCES = ["primary call-to-action", "heading highlight", "hero", "logo"] as const;
+/** The largest a surface pattern's cell can be and still read as a pattern on a card. */
+const MAX_PATTERN_PITCH_PX = 64;
+const patternSchema = z.object({ kind: z.enum(["grid", "dots"]), pitchPx: z.number().int().min(2).max(MAX_PATTERN_PITCH_PX), line: hexSchema }).strict();
+const inversePanelSchema = z.object({ fill: hexSchema, text: hexSchema, border: hexSchema.optional(), radiusPx: pxSchema.optional() }).strict();
+const ruleSchema = z.object({ style: z.enum(["solid", "dashed"]), hex: hexSchema }).strict();
 const located = <Value extends z.ZodType, From extends readonly [string, ...string[]]>(value: Value, from: From) =>
   z.object({ value, from: z.enum(from) }).strict();
 
@@ -64,6 +69,13 @@ const traitsSchema = z.object({
   panelRadiusPx: located(pxSchema, ["bordered panels"]).optional(),
   signature: located(hexSchema, SIGNATURE_SOURCES).optional(),
   hero: located(heroSchema, ["backdrop behind the first heading"]).optional(),
+  numberFont: located(fontSchema, ["largest number"]).optional(),
+  numberColour: located(hexSchema, ["largest number"]).optional(),
+  panelFill: located(hexSchema, ["second large surface"]).optional(),
+  surfacePattern: located(patternSchema, ["second large surface"]).optional(),
+  inversePanel: located(inversePanelSchema, ["dark panel"]).optional(),
+  rule: located(ruleSchema, ["most common border"]).optional(),
+  mutedText: located(hexSchema, ["secondary text on the page background"]).optional(),
 }).strict();
 
 export const brandSiteTraitsSchema = z.object({
@@ -92,7 +104,14 @@ export type SiteMeasurement = {
   labels?: { font?: RawFont; case?: unknown; trackingEm?: unknown };
   primaryButton?: RawButton; secondaryButton?: RawButton; panelRadiusPx?: unknown;
   signatureCandidates?: readonly { hex?: unknown; from?: unknown }[];
-  hero?: { hex?: unknown; fullBleed?: unknown; kind?: unknown };
+  /** A backdrop's width as a share of the viewport, and of the frame it sits in; or `fullBleed` from an older capture. */
+  hero?: { hex?: unknown; fullBleed?: unknown; widthShare?: unknown; frameShare?: unknown; kind?: unknown };
+  number?: { font?: RawFont; colour?: unknown };
+  panelFill?: unknown;
+  surfacePattern?: { kind?: unknown; pitchPx?: unknown; line?: unknown };
+  inversePanel?: { fill?: unknown; text?: unknown; border?: unknown; radiusPx?: unknown };
+  rule?: { style?: unknown; hex?: unknown };
+  mutedText?: unknown;
 };
 export type SiteMeasurementMeta = Pick<BrandSiteTraits, "productSlug" | "canonicalDomain" | "measuredAt" | "url" | "viewport">;
 
@@ -125,10 +144,13 @@ function button(raw: RawButton | undefined): SiteButton | undefined {
   });
   return Object.keys(value).length ? value : undefined;
 }
+/** A heading's backdrop is full-bleed at this share of the viewport, or of the frame it sits in (a ruled page column, say). */
+export const FULL_BLEED_SHARE = 0.8;
+const spans = (share: unknown) => typeof share === "number" && share >= FULL_BLEED_SHARE;
 function hero(raw: SiteMeasurement["hero"]): SiteHero | undefined {
   if (!raw) return undefined;
   const backdrop = hex(raw.hex);
-  if (!backdrop || raw.fullBleed !== true) return { kind: "none" };
+  if (!backdrop || !(raw.fullBleed === true || spans(raw.widthShare) || spans(raw.frameShare))) return { kind: "none" };
   return raw.kind === "colour" || raw.kind === "image" ? { kind: raw.kind, hex: backdrop } : undefined;
 }
 const at = <Value, From extends string>(value: Value | undefined, from: From) => (value === undefined ? undefined : { value, from });
@@ -163,6 +185,13 @@ export function brandSiteTraitsFromMeasurement(meta: SiteMeasurementMeta, raw: S
     panelRadiusPx: at(kept(pxSchema, rounded(raw.panelRadiusPx, PX_PLACES)), "bordered panels"),
     signature: signature && { value: signature.hex, from: signature.from },
     hero: at(heroValue, "backdrop behind the first heading"),
+    numberFont: at(font(raw.number?.font), "largest number"),
+    numberColour: at(hex(raw.number?.colour), "largest number"),
+    panelFill: at(hex(raw.panelFill), "second large surface"),
+    surfacePattern: at(kept(patternSchema, raw.surfacePattern && { ...raw.surfacePattern, line: typeof raw.surfacePattern.line === "string" ? raw.surfacePattern.line.toLowerCase() : raw.surfacePattern.line }), "second large surface"),
+    inversePanel: at(kept(inversePanelSchema, raw.inversePanel && defined({ fill: hex(raw.inversePanel.fill), text: hex(raw.inversePanel.text), border: hex(raw.inversePanel.border), radiusPx: kept(pxSchema, rounded(raw.inversePanel.radiusPx, PX_PLACES)) })), "dark panel"),
+    rule: at(kept(ruleSchema, raw.rule && { style: raw.rule.style, hex: hex(raw.rule.hex) }), "most common border"),
+    mutedText: at(hex(raw.mutedText), "secondary text on the page background"),
   });
   return brandSiteTraitsSchema.parse({ schemaVersion: BRAND_SITE_TRAITS_VERSION, ...meta, traits });
 }

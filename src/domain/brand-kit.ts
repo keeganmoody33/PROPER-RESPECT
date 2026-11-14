@@ -11,7 +11,10 @@ export type BrandCardKit = Partial<Record<
   "--brand-card-border" | "--brand-card-radius" | "--brand-card-button-fill" | "--brand-card-button-text" | "--brand-card-button-radius"
   | "--brand-card-button-weight" | "--brand-card-button-border" | "--brand-card-button-font" | "--brand-card-button-case" | "--brand-card-button-tracking"
   | "--brand-card-label-font" | "--brand-card-label-case" | "--brand-card-label-tracking" | "--brand-card-band" | "--brand-card-band-text"
-  | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart", string>>;
+  | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart"
+  | "--brand-card-number-font" | "--brand-card-number-colour" | "--brand-card-panel" | "--brand-card-panel-text" | "--brand-card-panel-border"
+  | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
+  | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -166,7 +169,8 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   if (measuredButton?.trackingEm !== undefined) kit["--brand-card-button-tracking"] = `${measuredButton.trackingEm}em`;
 
   if (measured?.labelFont) kit["--brand-card-label-font"] = measuredFace(measured.labelFont.value, guide);
-  if (measured?.labelCase) kit["--brand-card-label-case"] = CSS_CASE[measured.labelCase.value];
+  // A measured site's labels with no measured case stay as typed: the house uppercase is the house's, not the brand's.
+  if (measured) kit["--brand-card-label-case"] = CSS_CASE[measured.labelCase?.value ?? "as typed"];
   if (measured?.labelTrackingEm) kit["--brand-card-label-tracking"] = `${measured.labelTrackingEm.value}em`;
 
   // A site whose heading sits on a full-bleed colour shows that colour as a band across the card's top, not as its whole surface.
@@ -178,10 +182,56 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
 
   kit["--brand-card-chart"] = brandMark(snapshot, surface, MIN_CHART_CONTRAST, site) ?? text;
 
+  Object.assign(kit, siteFeel(snapshot, surface, text, guide, site));
+
   const quiet = parts?.buttonSecondary, quietFill = solid(quiet?.background);
   if (quietFill && quietFill !== fill && contrast(quietFill, surface) >= MIN_QUIET_FILL_CONTRAST) {
     kit["--brand-card-quiet-fill"] = quietFill;
     kit["--brand-card-quiet-text"] = readableOn(quietFill, solid(quiet?.text), text);
   }
+  return kit;
+}
+
+/** A large number is at least 24px, where WCAG asks 3:1 of its colour. */
+const MIN_LARGE_TEXT_CONTRAST = 3;
+/** The card's mark candidates on an inverse panel: the site's signature, the provider's accent, then the panel's own text. */
+function markOn(fill: string, candidates: readonly (string | undefined)[]) {
+  return candidates.find((hex): hex is string => hex !== undefined && contrast(hex, fill) >= MIN_CHART_CONTRAST);
+}
+
+/**
+ * What a site's feel adds beyond its kit: the face and colour of its big numbers, the second surface its data sits on (a light
+ * fill, a ruled grid or a dark inverse panel), the rule between things and its secondary text. Each colour keeps the card's floors.
+ */
+function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, text: string,
+  guide: Extract<ProductBrandSnapshot, { fontLinks: unknown }>["styleguide"] | undefined, site: BrandSiteTraits | undefined): BrandCardKit {
+  const traits = site?.traits;
+  if (!traits) return {};
+  const kit: BrandCardKit = {};
+  if (traits.numberFont) kit["--brand-card-number-font"] = measuredFace(traits.numberFont.value, guide);
+  const number = traits.numberColour?.value;
+  if (number && contrast(number, surface) >= MIN_LARGE_TEXT_CONTRAST) kit["--brand-card-number-colour"] = number;
+  const inverse = traits.inversePanel?.value;
+  if (inverse && contrast(inverse.text, inverse.fill) >= MIN_LABEL_CONTRAST) {
+    kit["--brand-card-panel"] = inverse.fill;
+    kit["--brand-card-panel-text"] = inverse.text;
+    if (inverse.border) kit["--brand-card-panel-border"] = inverse.border;
+    if (inverse.radiusPx !== undefined) kit["--brand-card-panel-radius"] = `${Math.min(RADIUS.max, inverse.radiusPx)}px`;
+    kit["--brand-card-panel-chart"] = markOn(inverse.fill, [traits.signature?.value, brandAccent(snapshot, inverse.fill)?.hex, inverse.text])!;
+  } else if (traits.panelFill && contrast(text, traits.panelFill.value) >= MIN_LABEL_CONTRAST) {
+    kit["--brand-card-panel"] = traits.panelFill.value;
+  }
+  const pattern = traits.surfacePattern?.value;
+  if (pattern && !inverse) {
+    kit["--brand-card-pattern-line"] = pattern.line;
+    kit["--brand-card-pattern-pitch"] = `${pattern.pitchPx}px`;
+  }
+  // Decorative: the rule sits between things that already read apart, never as the only mark of a meaning.
+  if (traits.rule) {
+    kit["--brand-card-rule"] = traits.rule.value.hex;
+    kit["--brand-card-rule-style"] = traits.rule.value.style;
+  }
+  const muted = traits.mutedText?.value;
+  if (muted && contrast(muted, surface) >= MIN_LABEL_CONTRAST) kit["--brand-card-muted"] = muted;
   return kit;
 }

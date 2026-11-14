@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "cloudflare",
   "canonicalDomain": "cloudflare.com",
-  "measuredAt": "2026-11-14T12:33:00.577Z",
+  "measuredAt": "2026-11-14T21:02:05.243Z",
   "url": "https://cloudflare.com/",
   "viewport": {
     "width": 1440,
@@ -26,6 +26,21 @@
         "generic": "sans-serif"
       },
       "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "Apercu Mono Pro",
+        "generic": "monospace"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "as typed",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0,
+      "from": "small labels"
     },
     "primaryButton": {
       "value": {
@@ -61,6 +76,10 @@
       },
       "from": "secondary call-to-action"
     },
+    "panelRadiusPx": {
+      "value": 0,
+      "from": "bordered panels"
+    },
     "signature": {
       "value": "#ff5f08",
       "from": "logo"
@@ -71,6 +90,24 @@
         "hex": "#ff5e1f"
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "STK Bureau Sans",
+        "generic": "sans-serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#262626",
+      "from": "largest number"
+    },
+    "rule": {
+      "value": {
+        "style": "dashed",
+        "hex": "#f0f0f0"
+      },
+      "from": "most common border"
     }
   }
 }

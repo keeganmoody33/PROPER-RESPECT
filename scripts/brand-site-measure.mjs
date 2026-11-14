@@ -13,10 +13,10 @@ const DECLINE_TIMEOUT_MS = 3_000;
 const AFTER_DECLINE_MS = 500;
 /** Below this OKLCH chroma a colour is a grey for the purpose of picking a site's accent. */
 export const NEUTRAL_CHROMA = 0.04;
-/** A site "uses monospace, uppercase labels" when at least this share of its small labels are. */
-export const LABEL_SHARE = 0.3;
-/** A backdrop at least this share of the viewport wide is full-bleed. */
-const FULL_BLEED_SHARE = 0.9;
+/** A site's labels are monospace when at least this share of its small text leaves are: GitHub's 14% are, Clay's 0% are not. */
+export const LABEL_MONO_SHARE = 0.1;
+/** A backdrop at least this share of the viewport, or of the frame it sits in, wide is full-bleed (brand-site-traits decides from the shares). */
+const FULL_BLEED_SHARE = 0.8;
 /** The hero is a colour when at least this share of the pixels beside its heading are that colour (OKLab within 0.05, the fidelity tolerance). */
 const HERO_COLOUR_SHARE = 0.5;
 const HERO_COLOUR_DISTANCE = 0.05;
@@ -96,8 +96,14 @@ export const PAGE_HELPERS = () => {
  * Runs in the page: the raw traits of a product's own site, each with how it was located. `traits` feed the fidelity
  * check; `site` is the raw input the homepage pull turns into a stored site-traits file.
  */
-export function measureSite({ labelShare, neutralChroma }) {
+export function measureSite({ labelMonoShare, neutralChroma }) {
   const f = window.__fidelity, all = selector => [...document.querySelectorAll(selector)].filter(f.visible);
+  // Anywhere on the page, not only the first screen: drawn, with a size, and not hidden.
+  const rendered = selector => [...document.querySelectorAll(selector)].filter(element => {
+    const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+    return box.width > 0 && box.height > 0 && style.visibility !== "hidden" && style.display !== "none" && Number(style.opacity) > 0.05;
+  });
+  const mode = values => [...values.reduce((counts, value) => counts.set(value, (counts.get(value) ?? 0) + 1), new Map())].sort((a, b) => b[1] - a[1])[0]?.[0];
   const traits = {}, notes = {}, site = {};
   const set = (name, value, method) => { traits[name] = value === undefined ? { untested: method } : { value, method }; };
   const opaque = element => { for (let node = element; node; node = node.parentElement) { const color = f.color(getComputedStyle(node).backgroundColor); if (!color.transparent) return { ...color, node }; } return undefined; };
@@ -203,41 +209,115 @@ export function measureSite({ labelShare, neutralChroma }) {
     const behind = opaque(heading), box = heading.getBoundingClientRect();
     const own = behind && behind.node !== document.body && behind.node !== document.documentElement && behind.hex !== pageBackground;
     const area = own ? behind.node.getBoundingClientRect() : undefined;
+    // The frame a backdrop sits in: its nearest ancestor ruled at the side (a bordered page column), else its parent.
+    let frame = own ? behind.node.parentElement : undefined;
+    for (let node = frame; node && node !== document.body; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (parseFloat(style.borderLeftWidth) >= 1 && !f.color(style.borderLeftColor).transparent) { frame = node; break; }
+    }
+    const frameWidth = frame?.getBoundingClientRect().width;
     site.hero = own
-      ? { hex: behind.hex, widthShare: Math.round((area.width / innerWidth) * 1000) / 1000, heading: { x: box.left, y: box.top, width: box.width, height: box.height } }
+      ? { hex: behind.hex, widthShare: Math.round((area.width / innerWidth) * 1000) / 1000, frameShare: frameWidth ? Math.round((area.width / frameWidth) * 1000) / 1000 : 0,
+        heading: { x: box.left, y: box.top, width: box.width, height: box.height } }
       : { hex: undefined, widthShare: 0 };
   }
 
-  const radii = elements => elements.map(element => f.radius(element).px).sort((a, b) => a - b);
-  const panels = all("div, section, article, aside, li, form, input, textarea, select").filter(element => {
+  // Panels: boxes 220px+ wide (under 90% of the width, not buttons) with a visible border or a shadow, anywhere on the page.
+  const panels = rendered("div, section, article, aside, li, form, pre, figure").filter(element => {
     const box = element.getBoundingClientRect(), style = getComputedStyle(element);
-    if (box.width * box.height < 4000 || box.width > innerWidth * 0.9 || candidates.some(candidate => candidate.element === element)) return false;
-    const border = f.color(style.borderTopColor), fill = f.color(style.backgroundColor);
-    return (parseFloat(style.borderTopWidth) >= 1 && border.hex && border.hex !== pageBackground) || (fill.hex && fill.hex !== pageBackground);
+    if (box.width < 220 || box.height < 80 || box.width > innerWidth * 0.9 || candidates.some(candidate => candidate.element === element)) return false;
+    // Ruled on all four sides, or shadowed: a box, not a divider line under a section.
+    const boxed = ["Top", "Right", "Bottom", "Left"].every(side => parseFloat(style[`border${side}Width`]) >= 1 && f.color(style[`border${side}Color`]).hex !== pageBackground);
+    return boxed || style.boxShadow !== "none";
   });
-  const panelRadii = radii(panels);
+  const panelRadii = panels.map(element => Math.round(f.radius(element).px));
   if (panelRadii.length) {
-    const median = panelRadii[Math.floor(panelRadii.length / 2)];
-    set("panelRadius", { px: median }, `median border-top-left-radius of ${panelRadii.length} visible bordered or filled boxes (4000px²+, under 90% of the width, not buttons)`);
-    site.panelRadiusPx = median;
-  } else set("panelRadius", undefined, "no bordered or filled box in the first viewport");
+    const modal = mode(panelRadii);
+    set("panelRadius", { px: modal }, `most common border-top-left-radius of ${panelRadii.length} bordered or shadowed boxes 220px+ wide (under 90% of the width, not buttons)`);
+    site.panelRadiusPx = modal;
+  } else set("panelRadius", undefined, "no bordered or shadowed box 220px+ wide on the page");
   notes.panelRadii = panelRadii;
 
-  const labels = all("a, span, p, li, button, div, small, label").filter(element => {
-    const own = [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent.trim()).join(" ").trim();
+  // The largest number on the page: a text leaf that is a figure ("1,000+", "$5", "99.9%"), at its biggest font size.
+  // https://regex101.com/?regex=%5E%5B%24%E2%82%AC%C2%A3%5D%3F%5Cd%5B%5Cd%2C.%5D*%5Cs%3F%5B%25%2BkKmMbBx%C3%97%5D*%24&testString=100M%2B%0A%245%0A99.9%25%0Aplan%202
+  const FIGURE = /^[$€£]?\d[\d,.]*\s?[%+kKmMbBx×]*$/;
+  const figures = rendered("span, p, div, strong, b, h1, h2, h3, h4, dt, dd, td").filter(element => FIGURE.test(ownText(element)));
+  const biggest = figures.reduce((best, element) => (!best || parseFloat(getComputedStyle(element).fontSize) > parseFloat(getComputedStyle(best).fontSize) ? element : best), undefined);
+  if (biggest) {
+    const style = getComputedStyle(biggest), family = f.family(style.fontFamily);
+    site.number = { font: { family: family.name, generic: f.monospace(style.fontFamily, style.fontWeight) ? "monospace" : family.generic }, colour: f.color(style.color).hex };
+    notes.number = { text: ownText(biggest), size: style.fontSize, weight: style.fontWeight };
+  }
+
+  // The second surface: of the large boxes (220x120px+) filled in something other than the page and the hero, the fill
+  // covering the most area. A fill the page's text can't be read on is a dark inverse panel, with its own text colour.
+  const heroHex = site.hero?.hex;
+  const fills = new Map();
+  for (const element of rendered("div, section, article, aside, pre, figure, main")) {
+    const box = element.getBoundingClientRect();
+    if (box.width < 220 || box.height < 120 || box.width > innerWidth * 0.98) continue;
+    const fill = f.color(getComputedStyle(element).backgroundColor).hex;
+    // A surface is near-neutral (an orange block is a colour, not where data sits) and visibly off the page (1.05:1, so white on #f9fafb is not one).
+    if (!fill || fill === heroHex || f.chroma(fill) >= neutralChroma || f.contrast(fill, pageBackground) < 1.05) continue;
+    const entry = fills.get(fill) ?? { area: 0, element };
+    entry.area += box.width * box.height;
+    fills.set(fill, entry);
+  }
+  const [secondFill, second] = [...fills].sort((a, b) => b[1].area - a[1].area)[0] ?? [];
+  const pageText = textColor ?? f.color(getComputedStyle(document.body).color).hex;
+  if (secondFill && pageText && f.contrast(pageText, secondFill) < 4.5) {
+    const style = getComputedStyle(second.element);
+    const border = parseFloat(style.borderTopWidth) >= 1 ? f.color(style.borderTopColor).hex : undefined;
+    // Its text: of the colours its text is set in, the one that reads best on it, since a muted prompt is not the panel's text.
+    const inks = [...second.element.querySelectorAll("*")].filter(element => ownText(element)).map(element => f.color(getComputedStyle(element).color).hex).filter(Boolean);
+    const ink = inks.reduce((best, hex) => (!best || f.contrast(hex, secondFill) > f.contrast(best, secondFill) ? hex : best), undefined);
+    site.inversePanel = { fill: secondFill, text: ink, border, radiusPx: f.radius(second.element).px };
+  } else if (secondFill) site.panelFill = secondFill;
+  notes.secondSurfaces = [...fills].map(([hex, entry]) => [hex, Math.round(entry.area)]).slice(0, 8);
+
+  // A ruled pattern a box draws as repeating CSS gradients: lines (linear) or dots (radial), at the background-size pitch.
+  const patterned = rendered("body, div, section, main, article").map(element => ({ element, style: getComputedStyle(element) }))
+    .filter(({ style }) => /gradient/.test(style.backgroundImage) && /^\d+(\.\d+)?px/.test(style.backgroundSize))
+    .sort((a, b) => b.element.getBoundingClientRect().width * b.element.getBoundingClientRect().height - a.element.getBoundingClientRect().width * a.element.getBoundingClientRect().height)[0];
+  if (patterned) {
+    const colour = patterned.style.backgroundImage.match(/rgba?\([^)]+\)|#[0-9a-f]{3,8}/i)?.[0];
+    site.surfacePattern = { kind: patterned.style.backgroundImage.includes("radial") ? "dots" : "grid", pitchPx: Math.round(parseFloat(patterned.style.backgroundSize)), line: colour && f.color(colour).hex };
+  }
+
+  // The page's rule: the most common visible border, by style and colour.
+  const rules = rendered("div, section, article, aside, li, hr, table, td, th, header, footer, nav, a, span, button").flatMap(element => {
+    const style = getComputedStyle(element);
+    return ["Top", "Bottom"].filter(side => parseFloat(style[`border${side}Width`]) >= 1 && ["solid", "dashed"].includes(style[`border${side}Style`]))
+      .map(side => ({ style: style[`border${side}Style`], hex: f.color(style[`border${side}Color`]).hex })).filter(rule => rule.hex && rule.hex !== pageBackground);
+  });
+  const commonRule = mode(rules.map(rule => `${rule.style} ${rule.hex}`));
+  if (commonRule) { const [style, hex] = commonRule.split(" "); site.rule = { style, hex }; }
+
+  // The secondary text colour: of the others carrying 20+ characters on the page background, the one carrying the most that still reads (4.5:1).
+  site.mutedText = [...onSurface].filter(([hex, characters]) => hex !== textColor && characters >= 20 && f.contrast(hex, pageBackground) >= 4.5)
+    .sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  // Small text leaves anywhere on the page: elements with 2-30 characters of their own text at 14px or smaller.
+  const labels = rendered("a, span, p, li, button, div, small, label, dt, dd, code, strong, em, h4, h5, h6, td, th").filter(element => {
+    const own = ownText(element);
     return own.length >= 2 && own.length <= 30 && parseFloat(getComputedStyle(element).fontSize) <= 14;
   });
   if (labels.length) {
     const monospaced = labels.filter(element => f.monospace(getComputedStyle(element).fontFamily, getComputedStyle(element).fontWeight));
-    const upper = labels.filter(element => f.textCase(element) === "uppercase");
-    const method = `${labels.length} visible elements with 2-30 characters of their own text at 14px or smaller`;
-    const mono = monospaced.length / labels.length >= labelShare, labelCase = upper.length / labels.length >= labelShare ? "uppercase" : "as written";
-    // The letter-spacing of the labels set in the case the site's labels are counted as.
-    const trackings = labels.filter(element => f.textCase(element) === labelCase).map(element => f.tracking(element)).sort((a, b) => a - b);
+    const method = `${labels.length} elements with 2-30 characters of their own text at 14px or smaller`;
+    // Counted outside the header and nav, whose menu is one component rather than the site's labels.
+    const body = labels.filter(element => !inChrome(element)), bodyMono = monospaced.filter(element => !inChrome(element));
+    const mono = bodyMono.length / Math.max(1, body.length) >= labelMonoShare;
+    // The commonest small-label style among the leaves that are labels, not links or menu items: its case decides.
+    const plain = labels.filter(element => !inChrome(element) && !element.closest("a, button, [role=button]"));
+    const styleOf = element => `${f.textCase(element)}|${f.tracking(element) >= 0.05 ? "tracked" : "untracked"}`;
+    const commonest = mode((plain.length ? plain : labels).map(styleOf)) ?? "as written|untracked";
+    const labelCase = commonest.startsWith("uppercase") ? "uppercase" : "as written";
+    const trackings = (plain.length ? plain : labels).filter(element => styleOf(element) === commonest).map(element => f.tracking(element)).sort((a, b) => a - b);
     const tracking = trackings[Math.floor(trackings.length / 2)];
-    set("labelMono", mono, `${method}: ${monospaced.length} monospace by equal glyph widths (share >= ${labelShare})`);
-    set("labelCase", labelCase, `${method}: ${upper.length} uppercase (share >= ${labelShare})`);
-    set("labelTracking", tracking, `${method}: median letter-spacing / font-size of the ${labelCase === "uppercase" ? "uppercase ones" : "ones as written"}`);
+    set("labelMono", mono, `${method}: ${bodyMono.length} of the ${body.length} outside header/nav monospace by equal glyph widths (share >= ${labelMonoShare})`);
+    set("labelCase", labelCase, `${method}: the commonest case and tracking among the ${plain.length} outside links, buttons and header/nav is "${commonest}"`);
+    set("labelTracking", tracking, `${method}: median letter-spacing / font-size of the commonest style`);
     // The family most of the labels are set in: among the monospace ones when the labels count as monospace.
     const counted = (mono ? monospaced : labels).map(element => f.family(getComputedStyle(element).fontFamily))
       .reduce((counts, family) => counts.set(family.name, { family, count: (counts.get(family.name)?.count ?? 0) + 1 }), new Map());
@@ -294,12 +374,12 @@ export async function captureSite(browser, brand, directory) {
       const screenshot = await page.screenshot({ path: join(directory, `${brand.slug}-${viewport.width}.png`) });
       if (viewport === DESKTOP && !capture.blocked) {
         await page.evaluate(PAGE_HELPERS);
-        const measured = await page.evaluate(measureSite, { labelShare: LABEL_SHARE, neutralChroma: NEUTRAL_CHROMA });
+        const measured = await page.evaluate(measureSite, { labelMonoShare: LABEL_MONO_SHARE, neutralChroma: NEUTRAL_CHROMA });
         capture.traits = measured.traits;
         capture.notes = measured.notes;
         capture.site = measured.site;
         const hero = measured.site.hero;
-        if (hero?.hex && hero.widthShare >= FULL_BLEED_SHARE) Object.assign(hero, { fullBleed: true }, await heroKind(screenshot, hero));
+        if (hero?.hex && (hero.widthShare >= FULL_BLEED_SHARE || hero.frameShare >= FULL_BLEED_SHARE)) Object.assign(hero, await heroKind(screenshot, hero));
         const accent = pickAccent(measured.notes.accentCandidates);
         capture.traits.accent = accent
           ? { value: { hex: accent.hex, source: accent.source }, method: `most chromatic colour (OKLCH chroma ${accent.chroma.toFixed(3)}, greys under ${NEUTRAL_CHROMA} excluded) among the primary call-to-action fill, visible link text (not the browser's default link blue or purple), h1 descendants in another colour and inline-svg logo paint` }

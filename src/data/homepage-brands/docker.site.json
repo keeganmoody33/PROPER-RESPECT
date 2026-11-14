@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "docker",
   "canonicalDomain": "docker.com",
-  "measuredAt": "2026-11-14T12:33:12.902Z",
+  "measuredAt": "2026-11-14T21:03:16.599Z",
   "url": "https://docker.com/",
   "viewport": {
     "width": 1440,
@@ -29,8 +29,8 @@
     },
     "labelFont": {
       "value": {
-        "family": "Inter",
-        "generic": "sans-serif"
+        "family": "ui-monospace",
+        "generic": "monospace"
       },
       "from": "small labels"
     },
@@ -39,7 +39,7 @@
       "from": "small labels"
     },
     "labelTrackingEm": {
-      "value": -0.011,
+      "value": 0,
       "from": "small labels"
     },
     "primaryButton": {
@@ -88,9 +88,36 @@
     },
     "hero": {
       "value": {
-        "kind": "none"
+        "kind": "colour",
+        "hex": "#0f1117"
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Repro",
+        "generic": "sans-serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#000000",
+      "from": "largest number"
+    },
+    "inversePanel": {
+      "value": {
+        "fill": "#0e1217",
+        "text": "#d6dce6",
+        "radiusPx": 14
+      },
+      "from": "dark panel"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#c8cfda"
+      },
+      "from": "most common border"
     }
   }
 }

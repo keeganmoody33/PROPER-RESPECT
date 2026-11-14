@@ -1637,23 +1637,23 @@ main {
 
 /* Contribution calendars retain GitHub's activity palette inside the product card. */
 /* Cells shrink from GitHub's 10px with 3px gaps to fit every week inside the card, down to 7px with 2px gaps; below that the calendar scrolls, opened at the newest week.
-   50px is the weekday column, its gap and the end padding of .contribution-calendar-layout. */
+   27px is the weekday column and its gap, less a pixel of slack: at 1440 a 558px card fits 53 weeks of 8px days with 2px gaps. */
 .contribution-calendar { container-type: inline-size; min-width: 0; }
 .contribution-scroll {
-  --contribution-pitch: calc((100cqi - 50px) / var(--contribution-weeks, 53));
+  --contribution-pitch: calc((100cqi - 27px) / var(--contribution-weeks, 53));
   --contribution-cell: clamp(7px, round(down, calc(var(--contribution-pitch) - 2px), 1px), 10px);
   --contribution-gap: clamp(2px, round(down, calc(var(--contribution-pitch) - var(--contribution-cell)), 1px), 3px);
 }
 .contribution-scroll { max-width: 100%; overflow-x: auto; padding: 0 0 .4rem; scrollbar-width: thin; scrollbar-color: #6e7681 #0d1117; color-scheme: dark; }
 .contribution-scroll:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.contribution-calendar-layout { display: grid; grid-template-columns: 30px max-content; grid-template-rows: 16px auto; gap: 4px 6px; width: max-content; padding-right: 14px; }
+.contribution-calendar-layout { display: grid; grid-template-columns: 24px max-content; grid-template-rows: 16px auto; gap: 4px; width: max-content; }
 .contribution-months { grid-column: 2; display: grid; gap: var(--contribution-gap); font-size: 12px; line-height: 16px; }
 /* A month label the scroll has cut at the card's edge is hidden rather than read as "b" for "Feb". */
 .contribution-months span[data-clipped] { visibility: hidden; }
 .contribution-months span { grid-row: 1; white-space: nowrap; }
 /* The weekday labels stay at the left edge while a narrow card's year scrolls under them. */
 .contribution-weekdays { grid-row: 2; display: grid; grid-template-rows: repeat(7, var(--contribution-cell)); gap: var(--contribution-gap); font-size: 12px; line-height: var(--contribution-cell);
-  background: var(--brand-card-background, var(--ink)); left: 0; margin-right: -6px; padding-right: 6px; position: sticky; z-index: 1; }
+  background: var(--brand-card-panel, var(--brand-card-background, var(--ink))); left: 0; margin-right: -4px; padding-right: 4px; position: sticky; z-index: 1; }
 .contribution-weekdays span { align-self: center; white-space: nowrap; }
 .contribution-grid { grid-column: 2; grid-row: 2; display: grid; gap: var(--contribution-gap); grid-template-rows: repeat(7, var(--contribution-cell)); margin-top: 0; }
 .contribution-grid span { background: #161b22; border: 1px solid #30363d; width: var(--contribution-cell); height: var(--contribution-cell); border-radius: 2px; }
@@ -1676,6 +1676,9 @@ main {
 .profile-links-fields input[type="radio"] { width: auto; flex: 0 0 auto; padding: 0; }
 
 .contribution-legend { display: flex; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.75rem; margin-top: 0.4rem; }
+/* Shown only where the year is wider than the card, so a phone says the calendar scrolls, not just a screen reader. */
+.contribution-scroll-hint { display: none; margin-right: auto; }
+@container (max-width: 505px) { .contribution-scroll-hint { display: inline; } }
 .contribution-legend i { display: block; width: 0.45rem; height: 0.45rem; border-radius: 1px; border: 1px solid #30363d; background: #161b22; }
 
 .site-mark { display: inline-flex; flex: 0 0 auto; background: currentColor; mask: url("/brand/homepage/PR-mark-black.png") center / contain no-repeat; }
@@ -1826,3 +1829,29 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
     width: fit-content;
   }
 }
+
+/*
+ * A measured site's feel, beyond its kit (brand-kit siteFeel): its big numbers in its number face and colour, its second surface
+ * (a light fill, or a dark inverse panel with its own text, border and marks) behind the card's data, its rule between parts and
+ * its secondary text for captions. Each variable is set only where it keeps the card's contrast floors.
+ */
+.product-card :is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong) {
+  color: var(--brand-card-number-colour, inherit);
+  font-family: var(--brand-card-number-font, inherit);
+}
+.product-card[data-panel] .card-front :is(.contribution-calendar, .card-artifact-links, .card-activity-preview .usage-chart) {
+  background-color: var(--brand-card-panel);
+  border: 1px solid var(--brand-card-panel-border, transparent);
+  border-radius: var(--brand-card-panel-radius, min(var(--brand-card-radius, 12px), 14px));
+  color: var(--brand-card-panel-text, inherit);
+  padding: .7rem .75rem;
+}
+.product-card[data-panel] .card-front .card-artifact-links a { color: inherit; }
+.product-card[data-panel] .card-front .activity-bars span { background: var(--brand-card-panel-chart, var(--brand-card-chart, var(--brand-card-accent, currentColor))); }
+.product-card .card-front :is(.contribution-calendar, .card-activity-preview .usage-chart) {
+  background-image: linear-gradient(var(--brand-card-pattern-line, transparent) 1px, transparent 1px), linear-gradient(90deg, var(--brand-card-pattern-line, transparent) 1px, transparent 1px);
+  background-size: var(--brand-card-pattern-pitch, 10px) var(--brand-card-pattern-pitch, 10px);
+}
+.product-card .card-footer { border-top: 1px var(--brand-card-rule-style, solid) var(--brand-card-rule, var(--card-line)); }
+.product-card :is(.card-activity-coverage, .usage-measurement-note, .contribution-range) { color: var(--brand-card-muted, inherit); }
+.product-card .card-table-preview { --table-ink: var(--brand-card-muted, color-mix(in srgb, var(--brand-card-text, currentColor) 74%, var(--brand-card-background, #fff))); }
