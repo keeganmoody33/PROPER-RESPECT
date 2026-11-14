@@ -988,6 +988,16 @@ test("a card whose site's heading sits on a full-bleed colour marks itself for t
   expect(render("clay", "clay.com").attr("style")).toContain("--brand-card-band:#035d44;--brand-card-band-text:#ffffff");
 });
 
+test("a time series leads with its period's total, or its peak once the card is paused, on the front and the back alike", () => {
+  const weekly = { ...activityEvidence, kind: "timeSeries" as const, label: "workflow runs", unit: "per week", points: [312, 341, 0].map((value, index) => ({ date: `2026-08-0${index + 1}`, value })) };
+  const hero = (card: Partial<typeof baseCard>) => {
+    const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, ...card }, index: 0, expandedActivity: true })));
+    return [$(".card-front .card-activity-preview > p").first().text(), $(".card-back .activity-hero").text()];
+  };
+  expect(hero({ activity: weekly })).toEqual(["653 workflow runs over 3 weeks", "653workflow runs over 3 weeks"]);
+  expect(hero({ activity: weekly, level: "PAUSED", status: "ARCHIVED" })).toEqual(["341 workflow runs a week at its peak", "341workflow runs a week at its peak"]);
+});
+
 const CLOUDFLARE_LAST_WEEK = 48_360;
 
 test("a card shown in full reads its activity number with thousands separators, never as raw digits", () => {

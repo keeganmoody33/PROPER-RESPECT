@@ -6,6 +6,8 @@ import { listedUses, productUseLabels } from "@/src/domain/product-uses";
 import { activityModuleSchema, publicProfileSchema } from "@/src/domain/public-profile";
 import { usageLinkHost, usageLinkLabelText } from "@/src/domain/usage-links";
 import { tablePreview } from "@/src/domain/table-preview";
+import { activityHeadline } from "@/src/domain/activity-headline";
+import { noLongerInUse } from "@/src/domain/relationship-level";
 import { homepageExamples } from "./homepage-examples";
 
 const examples = homepageExamples();
@@ -308,4 +310,25 @@ test("GitHub's sample contribution calendar covers one year", () => {
   expect(activity.total).toBe(SAMPLE_CONTRIBUTIONS);
   expect(activity.days.reduce((sum, day) => sum + day.count, 0)).toBe(SAMPLE_CONTRIBUTIONS);
   expect(github.source?.href).toBe("https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference");
+});
+
+test("each example's card leads with a number that means something: a period's total, or the peak of one paused or stopped, never a zero", () => {
+  expect(examples.flatMap(({ id, card }) => {
+    const headline = card.activity && activityHeadline(card.activity, noLongerInUse(card));
+    return headline ? [[id, headline.value, headline.label]] : [];
+  })).toEqual([
+    ["github", 1121, "contributions"],
+    ["cloudflare", 187870, "requests served over 31 days"],
+    ["docker", 3, "artifacts"],
+    ["firecrawl", 5520, "pages scraped over 12 weeks"],
+    ["n8n", 341, "workflow runs a week at its peak"],
+    ["claude-code", 103, "sessions"],
+    ["exa", 3690, "searches run over 12 weeks"],
+    ["porkbun", 23, "domains registered"],
+    ["spider", 26300, "pages crawled over 12 weeks"],
+    ["open-places", 545, "businesses exported over 12 weeks"],
+    ["grok-bot", 12, "tasks handed off"],
+    ["elicit", 45, "papers screened a week at its peak"],
+    ["context-dev", 76, "domains looked up over 6 weeks"],
+  ]);
 });

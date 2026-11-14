@@ -21,6 +21,7 @@ import { costDetail, costSummary } from "@/src/domain/cost";
 import { tablePreview as parseTablePreview, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
 import { useReducedMotion } from "./use-reduced-motion";
 import { formatPeriod, freshnessNote } from "@/src/domain/format-period";
+import { activityHeadline } from "@/src/domain/activity-headline";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart, usageChartLog } from "./usage-chart";
@@ -156,22 +157,6 @@ function ProductLogo({ logo, mark, onFailed }: { logo: CardLogo; mark: string; o
   );
 }
 
-function activityHighlight(activity: ActivityModule) {
-  switch (activity.kind) {
-    case "contributionCalendar":
-      return { value: activity.total, label: "contributions" };
-    case "headlineMetrics":
-    case "codingActivity":
-      return activity.primary;
-    case "timeSeries":
-      return { value: activity.points.at(-1)?.value, label: activity.label, unit: activity.unit };
-    case "artifactCollection":
-      return { value: activity.total, label: "artifacts" };
-    case "reviewActivity":
-      return { value: activity.reviews, label: "reviews" };
-  }
-}
-
 /** The points a card's front draws as bars: a time series as supplied, coding activity one bar per recorded day. */
 function activitySeries(activity: ActivityModule) {
   if (activity.kind === "timeSeries" && activity.points.length) return { points: activity.points, label: activity.label, unit: activity.unit };
@@ -302,17 +287,17 @@ function TablePreviewBlock({ preview, shown }: { preview: TablePreview; shown: b
   );
 }
 
-function ActivityPreview({ activity, unreviewed = false, expanded = false }: { activity: ActivityModule; unreviewed?: boolean; expanded?: boolean }) {
-  const metric = activityHighlight(activity);
+function ActivityPreview({ activity, pastUse, unreviewed = false, expanded = false }: { activity: ActivityModule; pastUse: boolean; unreviewed?: boolean; expanded?: boolean }) {
+  const metric = activityHeadline(activity, pastUse);
   const series = activitySeries(activity);
   const freshness = freshnessNote(activity.freshness, activity.capturedAt);
   return (
     <div className="card-activity-preview">
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
       <p>
-        {metric.value === undefined ? "No observations supplied" : <>
+        {metric === undefined ? "No observations supplied" : <>
           <strong>{expanded ? fullNumber(metric.value) : compactNumber(metric.value)}</strong>{" "}
-          {metric.label}{metric.unit ? ` · ${metric.unit}` : ""}
+          {metric.label}
         </>}
       </p>
       {activity.kind === "contributionCalendar" && <ContributionCalendar activity={activity} />}
@@ -348,7 +333,7 @@ function ActivityMeta({ activity }: { activity: ActivityModule }) {
   );
 }
 
-function ActivityView({ activity }: { activity: ActivityModule }) {
+function ActivityView({ activity, pastUse }: { activity: ActivityModule; pastUse: boolean }) {
   if (activity.kind === "contributionCalendar") {
     return (
       <div className="activity-module contribution-module">
@@ -395,12 +380,13 @@ function ActivityView({ activity }: { activity: ActivityModule }) {
 
   if (activity.kind === "timeSeries") {
     const latest = activity.points.at(-1);
+    const headline = activityHeadline(activity, pastUse);
     return (
       <div className="activity-module">
-        {latest ? <>
+        {latest && headline ? <>
           <div className="activity-hero">
-            <strong>{compactNumber(latest.value)}</strong>
-            <span>{activity.label}{activity.unit ? ` · ${activity.unit}` : ""}</span>
+            <strong>{compactNumber(headline.value)}</strong>
+            <span>{headline.label}</span>
           </div>
           <p className="activity-caption">Observed {latest.date}</p>
           <UsageChart
@@ -667,7 +653,7 @@ export function ProductCard({
         {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
         {table && <TablePreviewBlock preview={table} shown={shown} />}
         {!brandPreview && card.activity ? (
-          <ActivityPreview activity={card.activity} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />
+          <ActivityPreview activity={card.activity} pastUse={pastUse} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />
         ) : (brandPreview || (audience === "owner" && !ownerUsage && !card.measurements?.length)) ? (
           <p className="activity-placeholder">
             {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}
@@ -722,7 +708,7 @@ export function ProductCard({
           {!brandPreview && card.cost && <p>{costDetail(card.cost)}</p>}
           {!brandPreview && card.activity && <>
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
-            <ActivityView activity={card.activity} />
+            <ActivityView activity={card.activity} pastUse={pastUse} />
           </>}
           {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} /> : null}
           {ownerUsage && <PrivateUsageCardDetails usage={ownerUsage} />}
