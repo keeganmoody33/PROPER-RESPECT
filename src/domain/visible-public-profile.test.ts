@@ -119,6 +119,19 @@ it("omits unrendered labels and units from an empty time series", () => {
   expect(projected.cards[0].activity).toMatchObject({ kind: "timeSeries", points: [], emptyNote: "No observations supplied" });
 });
 
+it("carries what a card's product does for its owner as the words visitors read, and nothing when none is listed", () => {
+  const base = profile();
+  const clay = { ...base.cards[0], product: { ...base.cards[0].product, slug: "clay" } };
+  const withUses = { ...base, cards: [
+    { ...clay, uses: { picks: ["sync-crm", "retired-choice", "enrich-leads"], other: "score inbound leads" } },
+    { ...clay, uses: { picks: ["retired-choice"] } },
+    clay,
+  ] };
+  const cards = projectVisiblePublicProfile(withUses).cards;
+  expect(cards[0].uses).toEqual(["enrich lead and account lists", "keep my CRM records filled in", "score inbound leads"]);
+  expect(cards.map(card => "uses" in card)).toEqual([true, false, false]);
+});
+
 it("carries a card's work-sample link as its visible label and URL, and drops a stored link that isn't https", () => {
   const url = "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002";
   const base = profile();
