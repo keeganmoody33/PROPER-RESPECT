@@ -16,7 +16,10 @@ const COUNT_PER_PERIOD: Readonly<Record<string, Cadence>> = {
 
 /** The period each point counts, when its unit says so. */
 export function seriesCadence(unit: string | undefined): Cadence | undefined {
-  return unit === undefined ? undefined : COUNT_PER_PERIOD[unit.trim().toLowerCase()];
+  if (unit === undefined) return undefined;
+  const key = unit.trim().toLowerCase();
+  // Own keys only: "constructor" or "__proto__" must not find an inherited property.
+  return Object.hasOwn(COUNT_PER_PERIOD, key) ? COUNT_PER_PERIOD[key] : undefined;
 }
 
 const DAY_MS = 86_400_000;

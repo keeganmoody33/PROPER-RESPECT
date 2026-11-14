@@ -16,7 +16,7 @@ test("a count per day, week or month adds up, read from one whole-string table i
   expect(["per day", "Per Week", " per month ", "daily", "WEEKLY", "Monthly", "/day", "/Week", "/month"].map(seriesCadence)).toEqual([
     "day", "week", "month", "day", "week", "month", "day", "week", "month",
   ]);
-  expect(["min", "records", "sessions", "per hour", "%", "per day average", "requests per day", "dailyish", "/days", undefined].map(seriesCadence)).toEqual(Array(10).fill(undefined));
+  expect(["min", "records", "sessions", "per hour", "%", "per day average", "requests per day", "dailyish", "/days", "constructor", "__proto__", "toString", "hasOwnProperty", undefined].map(seriesCadence)).toEqual(Array(14).fill(undefined));
 });
 
 test("a count per period leads with its total over the points it covers", () => {
