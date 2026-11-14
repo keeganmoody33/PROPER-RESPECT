@@ -464,7 +464,8 @@ export function ProductCard({
   // The owner's work-sample link, checked again here so a stored non-https
   // value never becomes a link.
   const usageLink = !brandPreview && card.usageLink && usageLinkSchema.safeParse(card.usageLink).success ? card.usageLink : undefined;
-  const cardStatus = brandPreview ? "BRAND PREVIEW" : relationshipConfirmed ? cardStatusLabel(card).toUpperCase() : "PRIVATE DISCOVERY";
+  // Typed as written; the card's CSS sets the case, from the product's measured site or the house default.
+  const cardStatus = brandPreview ? "Brand preview" : relationshipConfirmed ? cardStatusLabel(card) : "Private discovery";
   const topLine = !brandPreview && relationshipConfirmed ? cardTopLine(card) : cardStatus;
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
   const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : "Relationship & evidence";

@@ -109,7 +109,7 @@ test("the back of a card links to how evidence works; a brand preview doesn't", 
 
 test("a brand preview makes no owner relationship or activity claim", () => {
   const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, displayMode: "brand-preview" })));
-  expect($(".card-title .eyebrow").text()).toBe("BRAND PREVIEW");
+  expect($(".card-title .eyebrow").text()).toBe("Brand preview");
   expect($(".activity-placeholder").text()).toBe("No personal activity is included in this brand preview.");
   expect($.text()).not.toContain(baseCard.headline);
 });
@@ -144,7 +144,7 @@ test.each(["headlineMetrics", "codingActivity"] as const)(
   },
 );
 
-test.each([["ACTIVE", "USING"], ["TESTING", "TESTING"], ["ARCHIVED", "USED BEFORE"]] as const)(
+test.each([["ACTIVE", "Using"], ["TESTING", "Testing"], ["ARCHIVED", "Used before"]] as const)(
   "%s without a level or start date falls back to %s and implies no duration",
   (status, words) => {
     const $ = renderCard({ status });
@@ -159,7 +159,7 @@ test("uses a retained brand logo for the actual dark card surface without changi
 
   expect($(".product-logo img").attr("src")).toBe("https://example.com/dark.svg");
   expect($(".product-logo").attr("data-logo-mode")).toBe("dark");
-  expect($(".card-title .eyebrow").text()).toBe("TESTING");
+  expect($(".card-title .eyebrow").text()).toBe("Testing");
   expect($(".activity-placeholder")).toHaveLength(0);
   expect($(".card-headline").text()).toBe(baseCard.headline);
   expect($(".product-card").attr("style") ?? "").not.toContain("#FF0000");
@@ -330,7 +330,7 @@ test("missing optional brand fields remain inspectable without making the card i
   expect($(".brand-receipts").text()).toContain("styleguide: error · HTTP 503");
 });
 
-test.each([["ACTIVE", "USING · SINCE 2024"], ["TESTING", "TESTING · SINCE 2024"], ["ARCHIVED", "USED BEFORE · STARTED 2024"]] as const)(
+test.each([["ACTIVE", "Using · since 2024"], ["TESTING", "Testing · since 2024"], ["ARCHIVED", "Used before · started 2024"]] as const)(
   "%s without a level retains the supplied relationship start year",
   (status, topLine) => {
     const $ = renderCard({ status, startedAt: "2024-06-03" });
@@ -340,13 +340,13 @@ test.each([["ACTIVE", "USING · SINCE 2024"], ["TESTING", "TESTING · SINCE 2024
 );
 
 test.each([
-  ["TRIED_NOT_ADOPTED", "ARCHIVED", "TRIED, DIDN'T ADOPT"],
-  ["STOPPED", "ARCHIVED", "STOPPED USING · STARTED 2022"],
-  ["PAUSED", "ARCHIVED", "PAUSED · STARTED 2022"],
-  ["OCCASIONAL", "ACTIVE", "OCCASIONALLY · SINCE 2022"],
-  ["TESTING", "TESTING", "TESTING · SINCE 2022"],
-  ["WEEKLY", "ACTIVE", "WEEKLY · SINCE 2022"],
-  ["DAILY", "ACTIVE", "DAILY · SINCE 2022"],
+  ["TRIED_NOT_ADOPTED", "ARCHIVED", "Tried, didn't adopt"],
+  ["STOPPED", "ARCHIVED", "Stopped using · started 2022"],
+  ["PAUSED", "ARCHIVED", "Paused · started 2022"],
+  ["OCCASIONAL", "ACTIVE", "Occasionally · since 2022"],
+  ["TESTING", "TESTING", "Testing · since 2022"],
+  ["WEEKLY", "ACTIVE", "Weekly · since 2022"],
+  ["DAILY", "ACTIVE", "Daily · since 2022"],
 ] as const)("level %s shows its own label on the top line", (level, status, line) => {
   const $ = renderCard({ status, level, startedAt: "2022-04-05" });
 
@@ -359,7 +359,7 @@ test("a go-to card keeps its go-to badge whatever its level", () => {
     card: { ...baseCard, status: "ACTIVE", level: "OCCASIONAL", startedAt: "2023-01-01" }, index: 0, goTo: true,
   })));
 
-  expect($(".card-title .eyebrow").text()).toBe("OCCASIONALLY · SINCE 2023");
+  expect($(".card-title .eyebrow").text()).toBe("Occasionally · since 2023");
   expect($(".card-footer .card-go-to").text()).toBe("Owner-selected go-to");
   expect($(".card-back .card-go-to").text()).toBe("Owner-selected go-to");
 });
@@ -393,7 +393,7 @@ for (const audience of ["owner", "visitor"] as const) {
     expect(meta.text()).toContain("Snapshot recorded 2026-09-18");
     expect(meta.text()).toContain("2026-09-01 to 2026-09-15");
     expect(meta.text()).toContain(activity.provenanceLabel);
-    expect($(".status-row").text()).toContain("USED BEFORE");
+    expect($(".status-row").text()).toContain("Used before");
     expect($(".product-card").text()).not.toContain("ARCHIVED");
   });
 }
@@ -404,7 +404,7 @@ test.each(["STALE", "ERROR"] as const)("%s keeps its warning alongside the retai
   expect($(".card-front [data-freshness]").text()).toContain(freshness.toLowerCase());
   expect($(".activity-meta [data-freshness]").text()).toBe(freshness.toLowerCase());
   expect($(".activity-meta").text()).toContain("Snapshot recorded 2026-09-18");
-  expect($(".status-row").text()).toContain("TESTING");
+  expect($(".status-row").text()).toContain("Testing");
 });
 
 test("the compact front leads with the owner relationship and leaves full evidence on its reverse", () => {
@@ -559,13 +559,13 @@ test.each(["ACTIVE", "TESTING", "ARCHIVED"] as const)(
     const card = { ...baseCard, status, startedAt: "2024-06-03" };
     const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, relationshipConfirmed: false, goTo: true })));
 
-    expect($(".card-title .eyebrow").text()).toBe("PRIVATE DISCOVERY");
+    expect($(".card-title .eyebrow").text()).toBe("Private discovery");
     expect($(".card-footer > span").text()).toBe("Needs your review");
-    expect($(".card-back .status-row").text()).toContain("PRIVATE DISCOVERY");
+    expect($(".card-back .status-row").text()).toContain("Private discovery");
     expect($(".card-back .relationship-date").text()).toBe("Relationship not confirmed");
-    expect($.text()).not.toContain(status);
+    expect($.text().toLowerCase()).not.toContain(status.toLowerCase());
     expect($.text()).not.toContain("2024-06-03");
-    expect($.text()).not.toContain("SINCE");
+    expect($.text()).not.toContain("since");
     expect($.text()).not.toContain("Owner-selected go-to");
   },
 );
@@ -589,11 +589,11 @@ test("the go-to designation requires an explicit prop for a confirmed relationsh
     card: baseCard, index: 0, relationshipConfirmed: true, goTo: true,
   })));
 
-  expect($(".card-title .eyebrow").text()).toBe("TESTING");
+  expect($(".card-title .eyebrow").text()).toBe("Testing");
   expect($(".card-footer > span").text()).toBe("Owner-selected go-to");
   expect($.text()).not.toContain("Unreviewed evidence");
   const ordinary = renderCard();
-  expect(ordinary(".card-title .eyebrow").text()).toBe("TESTING");
+  expect(ordinary(".card-title .eyebrow").text()).toBe("Testing");
   expect(ordinary(".card-footer > span").text()).toBe("Relationship & evidence");
 });
 
@@ -603,9 +603,9 @@ test("brand preview suppresses private discovery and go-to state", () => {
     displayMode: "brand-preview", relationshipConfirmed: false, goTo: true,
   })));
 
-  expect($(".card-title .eyebrow").text()).toBe("BRAND PREVIEW");
+  expect($(".card-title .eyebrow").text()).toBe("Brand preview");
   expect($(".card-footer > span").text()).toBe("Brand identity");
-  expect($.text()).not.toContain("PRIVATE DISCOVERY");
+  expect($.text()).not.toContain("Private discovery");
   expect($.text()).not.toContain("Needs your review");
   expect($.text()).not.toContain("Owner-selected go-to");
   expect($.text()).not.toContain("Unreviewed evidence");

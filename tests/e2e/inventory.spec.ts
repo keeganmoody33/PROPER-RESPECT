@@ -133,7 +133,7 @@ for (const width of [1280, 390]) test(`observed date remains an editable private
   await expect(date).toHaveValue("2024-06-03");
   await expect(operations).toHaveText("");
   await expect(page.getByLabel("Synthetic saved start date")).toHaveText("Unknown");
-  await expect(page.getByText("PRIVATE DISCOVERY", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Private discovery", { exact: true }).first()).toBeVisible();
   await page.getByRole("region", { name: "Example Tool in your collection", exact: true }).screenshot({ path: testInfo.outputPath(`2026-10-06-observed-date-${width}.png`) });
   await date.fill("2024-05-20");
   await page.getByLabel("How it fits").selectOption("WEEKLY");
@@ -187,7 +187,7 @@ test("an observed-date action is locked during save and a newer saved version cl
 for (const width of [1280, 390]) test(`private collection interaction and reversible card at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto("/evidence-fixture/inventory");
-  await expect(page.getByText("PRIVATE DISCOVERY", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Private discovery", { exact: true }).first()).toBeVisible();
   await page.getByText("Review this discovery", { exact: true }).click();
   await expect(page.getByLabel("How it fits")).toHaveValue("");
   await page.getByLabel("How it fits").selectOption("TESTING");

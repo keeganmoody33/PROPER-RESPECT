@@ -153,7 +153,7 @@ test("the editor offers the seven levels; a card saved before levels shows no le
   expect($('input[name="goTo"]').attr("checked")).toBeDefined();
   expect($.text().toLowerCase()).not.toContain("archiv");
   const view = load(renderToStaticMarkup(createElement(PrivateInventoryView, { data: { cards: [older], hasMore: false }, onSave: vi.fn(), onImport: vi.fn() })));
-  expect(view(".card-title .eyebrow").text()).toBe("USED BEFORE");
+  expect(view(".card-title .eyebrow").text()).toBe("Used before");
   expect(view("nav button").map((_, node) => view(node).text()).get()).toContain("Used before");
   expect(view.text().toLowerCase()).not.toContain("archiv");
 });
@@ -166,6 +166,6 @@ test("a card with a level shows it selected with its definition, beside an uncha
   expect($(`#${select.attr("aria-describedby")}`).text()).toBe("I reach for it less than once a week, when a job needs it.");
   expect($('input[name="goTo"]').attr("checked")).toBeDefined();
   const view = load(renderToStaticMarkup(createElement(PrivateInventoryView, { data: { cards: [leveled], hasMore: false }, onSave: vi.fn(), onImport: vi.fn() })));
-  expect(view(".card-title .eyebrow").text()).toBe("OCCASIONALLY · SINCE 2023");
+  expect(view(".card-title .eyebrow").text()).toBe("Occasionally · since 2023");
   expect(view(".card-footer .card-go-to").text()).toBe("Owner-selected go-to");
 });

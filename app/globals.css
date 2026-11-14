@@ -187,11 +187,13 @@ main {
 .product-card :is(.eyebrow, .status-row) {
   font-family: var(--brand-card-label-font);
   letter-spacing: var(--brand-card-label-tracking, var(--brand-card-body-tracking, normal));
+  text-transform: var(--brand-card-label-case, uppercase);
 }
 
 .product-card :is(.card-footer > span, .card-uses li) {
   font-family: var(--brand-card-label-font);
   letter-spacing: var(--brand-card-label-tracking);
+  text-transform: var(--brand-card-label-case);
 }
 
 .product-card:nth-child(4n + 2),
@@ -915,6 +917,7 @@ main {
   font-family: var(--brand-card-button-font, inherit);
   font-weight: var(--brand-card-button-weight, 700);
   letter-spacing: var(--brand-card-button-tracking, var(--brand-card-body-tracking, normal));
+  text-transform: var(--brand-card-button-case, uppercase);
 }
 
 .product-card .card-button:hover,

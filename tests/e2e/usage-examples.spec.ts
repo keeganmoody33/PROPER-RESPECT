@@ -39,25 +39,28 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
   const slideBox = () => carousel.locator("[aria-roledescription=slide]").first().evaluate(element => element.parentElement!.getBoundingClientRect().height);
   const githubHeight = await slideBox();
-  for (const [name, text] of [
-    ["Claude Code", "DAILY · SINCE 2025"],
-    ["Firecrawl", "WEEKLY · SINCE 2025"],
-    ["Exa", "WEEKLY · SINCE 2025"],
-    ["Cloudflare", "DAILY · SINCE 2020"],
-    ["Porkbun", "OCCASIONALLY · SINCE 2021"],
-    ["Spider", "OCCASIONALLY · SINCE 2026"],
-    ["Docker", "WEEKLY · SINCE 2020"],
-    ["Open Places", "OCCASIONALLY · SINCE 2026"],
-    ["Grok Bot", "TESTING · SINCE 2026"],
-    ["Elicit", "TESTING · SINCE 2026"],
-    ["Context.dev", "TESTING · SINCE 2026"],
-    ["n8n", "PAUSED · STARTED 2024"],
-    ["Clay", "STOPPED USING · STARTED 2022"],
+  // The top line and button are typed as written; each card's measured site, or the house default, sets their case.
+  for (const [name, text, labelCase, buttonCase] of [
+    ["Claude Code", "Daily · since 2025", "uppercase", "uppercase"],
+    ["Firecrawl", "Weekly · since 2025", "none", "none"],
+    ["Exa", "Weekly · since 2025", "none", "none"],
+    ["Cloudflare", "Daily · since 2020", "uppercase", "none"],
+    ["Porkbun", "Occasionally · since 2021", "uppercase", "uppercase"],
+    ["Spider", "Occasionally · since 2026", "uppercase", "uppercase"],
+    ["Docker", "Weekly · since 2020", "none", "none"],
+    ["Open Places", "Occasionally · since 2026", "none", "none"],
+    ["Grok Bot", "Testing · since 2026", "uppercase", "uppercase"],
+    ["Elicit", "Testing · since 2026", "uppercase", "none"],
+    ["Context.dev", "Testing · since 2026", "none", "none"],
+    ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
+    ["Clay", "Stopped using · started 2022", "none", "none"],
   ]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });
     await expect(card).toBeVisible();
     await expect(card).toContainText(text);
+    await expect(card.locator(".card-title .eyebrow")).toHaveCSS("text-transform", labelCase);
+    await expect(card.locator(".card-button")).toHaveCSS("text-transform", buttonCase);
     await expect(card).not.toContainText("contributions");
     await expect(carousel.locator("[data-current=true]")).toContainText("Sample data / No account connected");
     expect(await slideBox()).toBe(githubHeight);

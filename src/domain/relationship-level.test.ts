@@ -52,11 +52,11 @@ describe("relationship levels", () => {
   });
 
   it("writes the card top line with a since-year, except for a tool never adopted", () => {
-    expect(cardTopLine({ status: "ACTIVE", level: "DAILY", startedAt: "2021-03-04" })).toBe("DAILY · SINCE 2021");
-    expect(cardTopLine({ status: "ARCHIVED", level: "STOPPED", startedAt: "2022-01-01" })).toBe("STOPPED USING · STARTED 2022");
-    expect(cardTopLine({ status: "ARCHIVED", level: "TRIED_NOT_ADOPTED", startedAt: "2024-01-01" })).toBe("TRIED, DIDN'T ADOPT");
-    expect(cardTopLine({ status: "ARCHIVED", startedAt: "2020-05-05" })).toBe("USED BEFORE · STARTED 2020");
-    expect(cardTopLine({ status: "ACTIVE" })).toBe("USING");
+    expect(cardTopLine({ status: "ACTIVE", level: "DAILY", startedAt: "2021-03-04" })).toBe("Daily · since 2021");
+    expect(cardTopLine({ status: "ARCHIVED", level: "STOPPED", startedAt: "2022-01-01" })).toBe("Stopped using · started 2022");
+    expect(cardTopLine({ status: "ARCHIVED", level: "TRIED_NOT_ADOPTED", startedAt: "2024-01-01" })).toBe("Tried, didn't adopt");
+    expect(cardTopLine({ status: "ARCHIVED", startedAt: "2020-05-05" })).toBe("Used before · started 2020");
+    expect(cardTopLine({ status: "ACTIVE" })).toBe("Using");
   });
 
   it("tells agents every level with its definition and the fallbacks", () => {
