@@ -23,6 +23,7 @@ import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usag
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
 import { brandCardKit } from "@/src/domain/brand-kit";
+import { ownOriginImageUrl } from "@/src/domain/brand-image-url";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
 import {
   verifiedProductAssets,
@@ -125,7 +126,7 @@ function ProductLogo({ logo, mark, onFailed }: { logo: CardLogo; mark: string; o
           ref={element => {
             if (element?.complete && element.naturalWidth === 0) onFailed(url);
           }}
-          src={url}
+          src={ownOriginImageUrl(url)}
           alt=""
           width={logo.width}
           height={logo.height}

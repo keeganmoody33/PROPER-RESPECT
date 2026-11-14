@@ -7,14 +7,11 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   const external: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   const brandAssets: string[] = [];
-  // The example cards draw each brand from its snapshot: logos the provider hosts, and Google-hosted typefaces as a profile card loads them.
-  // Nothing else leaves the site.
-  const BRAND_ASSET_HOSTS = { "media.brand.dev": "image", "fonts.gstatic.com": "font" } as Record<string, string>;
+  // The example cards' logos and typefaces come through this site's own routes, so nothing leaves it.
   page.on("request", request => {
-    const { hostname } = new URL(request.url());
-    if (hostname.match(/^(127\.0\.0\.1|localhost)$/)) return;
-    if (BRAND_ASSET_HOSTS[hostname] === request.resourceType()) brandAssets.push(request.url());
-    else external.push(request.url());
+    const { hostname, pathname } = new URL(request.url());
+    if (!hostname.match(/^(127\.0\.0\.1|localhost)$/)) external.push(request.url());
+    else if (pathname.startsWith("/api/brand-")) brandAssets.push(pathname);
   });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
@@ -47,7 +44,7 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toHaveAttribute("href", "/app/collection");
   await expect(page.getByRole("link", { name: "View Keegan’s shared collection" })).toHaveAttribute("href", "/lecturesfrom");
   expect(external).toEqual([]);
-  expect(brandAssets.some(url => url.startsWith("https://media.brand.dev/"))).toBe(true);
+  expect(brandAssets.some(path => path.startsWith("/api/brand-images/"))).toBe(true);
   expect(errors).toEqual([]);
   if (width === 1440) expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByRole("heading", { level: 1 }).click();

@@ -824,3 +824,10 @@ test("an icon for the card's surface sits in the square slot beside the visible 
   expect($(".card-title .product-logo")).toHaveLength(0);
   expect($(".card-title h2").attr("class")).toBeUndefined();
 });
+
+test("a logo the brand provider hosts loads from this site, and other logos load from where they are", () => {
+  const hosted = { url: "https://media.brand.dev/f895934e-e887-4c7d-ab99-3f7ae465499f.png", mode: "unknown" as const, type: "icon" as const, width: 144, height: 144 };
+  const branded = renderCard({ product: { ...baseCard.product, brand: { ...brand, logos: [hosted] } } });
+  expect(branded(".product-logo img").attr("src")).toBe("/api/brand-images/f895934e-e887-4c7d-ab99-3f7ae465499f.png");
+  expect(renderCard({ product: { ...baseCard.product, brand } })(".product-logo img").attr("src")).toBe("https://example.com/dark.svg");
+});

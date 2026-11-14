@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { serveBrandFont } from "./brand-font-route";
+import type { AssetFetcher } from "./brand-asset-route";
+import { serveBrandFont, serveGoogleFont } from "./brand-font-route";
 
 const FILE = `${"a1".repeat(32)}.woff2`;
 const font = (bytes: number, init: ResponseInit = {}) => new Response(new Uint8Array(bytes), { headers: { "content-type": "font/woff2", "set-cookie": "x=1", "content-length": String(bytes) }, ...init });
@@ -55,5 +56,29 @@ describe("serveBrandFont", () => {
   it("does not cache a failure for a year", async () => {
     const response = await serveBrandFont(FILE, async () => new Response("no", { status: 500 }));
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("serveGoogleFont", () => {
+  it("serves one Google font file from this origin, cacheable forever because its path is versioned", async () => {
+    const fetcher = vi.fn<AssetFetcher>(async url => (url ? font(800) : font(0)));
+    const response = await serveGoogleFont("roboto", "v51", "abc_D-9.ttf", fetcher);
+    expect(fetcher.mock.calls.map(([url, init]) => [url, init.redirect, init.credentials])).toEqual([["https://fonts.gstatic.com/s/roboto/v51/abc_D-9.ttf", "error", "omit"]]);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("font/ttf");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("refuses any other host, path or file type without fetching, so it is no open proxy", async () => {
+    const fetcher = vi.fn(async (url: string) => (url ? font(10) : font(0)));
+    for (const [family, version, file] of [["roboto", "v51", "abc.woff2"], ["..", "v51", "abc.ttf"], ["roboto", "v51", "../../../evil.example/x.ttf"], ["roboto", "latest", "abc.ttf"]]) {
+      expect((await serveGoogleFont(family, version, file, fetcher)).status, `${family}/${version}/${file}`).toBe(404);
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("refuses a font file larger than a card should load", async () => {
+    expect((await serveGoogleFont("notocoloremoji", "v50", "abc.ttf", async () => font(3 * 1024 * 1024 + 1))).status).toBe(502);
   });
 });
