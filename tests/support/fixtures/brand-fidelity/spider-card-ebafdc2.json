@@ -1,0 +1,100 @@
+{
+ "slug": "spider",
+ "name": "Spider",
+ "url": "http://127.0.0.1:3100",
+ "capturedAt": "2026-11-14T11:53:47.889Z",
+ "commit": "006257531b7936415ed32194941f95547756b4cc",
+ "traits": {
+  "surface": {
+   "value": {
+    "hex": "#0c0e13"
+   },
+   "method": "card background-color"
+  },
+  "text": {
+   "value": {
+    "hex": "#f8fafc"
+   },
+   "method": "card color"
+  },
+  "headingFamily": {
+   "value": {
+    "family": "Fraunces Variable",
+    "generic": "serif"
+   },
+   "method": "font-family"
+  },
+  "bodyFamily": {
+   "value": {
+    "family": "Inter Variable",
+    "generic": "sans-serif"
+   },
+   "method": "font-family"
+  },
+  "buttonFill": {
+   "value": {
+    "hex": "#f8fafc"
+   },
+   "method": ".card-button background-color"
+  },
+  "buttonText": {
+   "value": {
+    "hex": "#0c0e13"
+   },
+   "method": ".card-button color"
+  },
+  "buttonRadius": {
+   "value": {
+    "px": 0,
+    "heightPx": 44
+   },
+   "method": ".card-button border-top-left-radius"
+  },
+  "buttonFamily": {
+   "value": {
+    "family": "Inter Variable",
+    "generic": "sans-serif"
+   },
+   "method": "font-family"
+  },
+  "buttonCase": {
+   "value": "uppercase",
+   "method": ".card-button text-transform"
+  },
+  "buttonTracking": {
+   "value": 0,
+   "method": ".card-button letter-spacing / font-size"
+  },
+  "accent": {
+   "value": {
+    "hex": "#94a3b8"
+   },
+   "method": "chart mark background-color"
+  },
+  "panelRadius": {
+   "value": {
+    "px": 8
+   },
+   "method": "card border-top-left-radius"
+  },
+  "chipRadius": {
+   "value": {
+    "px": 0,
+    "heightPx": 25
+   },
+   "method": ".card-uses li border-top-left-radius"
+  },
+  "labelMono": {
+   "value": false,
+   "method": ".card-title .eyebrow monospace by equal glyph widths"
+  },
+  "labelCase": {
+   "value": "uppercase",
+   "method": ".card-title .eyebrow text-transform"
+  },
+  "labelTracking": {
+   "value": 0,
+   "method": ".card-title .eyebrow letter-spacing / font-size"
+  }
+ }
+}

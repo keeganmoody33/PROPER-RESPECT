@@ -1,0 +1,95 @@
+{
+ "slug": "spider",
+ "name": "Spider",
+ "url": "https://spider.cloud/",
+ "capturedAt": "2026-11-14T11:52:32.547Z",
+ "traits": {
+  "surface": {
+   "value": {
+    "hex": "#0c0e13"
+   },
+   "method": "background-color of <body>, else <html>"
+  },
+  "text": {
+   "value": {
+    "hex": "#94a3b8"
+   },
+   "method": "colour of the first visible <p> with 20+ characters outside header/nav, else the first div/span with 20+ characters of its own text outside headings, links and header/nav"
+  },
+  "bodyFamily": {
+   "value": {
+    "family": "Inter Variable",
+    "generic": "sans-serif"
+   },
+   "method": "font-family of the first visible <p> with 20+ characters outside header/nav, else the first div/span with 20+ characters of its own text outside headings, links and header/nav"
+  },
+  "headingFamily": {
+   "value": {
+    "family": "Fraunces Variable",
+    "generic": "serif"
+   },
+   "method": "font-family of the first visible <h1>"
+  },
+  "buttonFill": {
+   "value": {
+    "hex": "#f8fafc"
+   },
+   "method": "visible link/button 60-500px wide, 28-90px tall, 2-40 characters, with a fill unlike the surface behind it, outside header/nav when any is; among those, coloured fills (OKLCH chroma >= 0.04) before greys, then the one standing off its nearest opaque ancestor most (WCAG contrast): background-color (\"GET STARTED FREE\")"
+  },
+  "buttonText": {
+   "value": {
+    "hex": "#0c0e13"
+   },
+   "method": "visible link/button 60-500px wide, 28-90px tall, 2-40 characters, with a fill unlike the surface behind it, outside header/nav when any is; among those, coloured fills (OKLCH chroma >= 0.04) before greys, then the one standing off its nearest opaque ancestor most (WCAG contrast): color of the element holding its label text"
+  },
+  "buttonRadius": {
+   "value": {
+    "px": 0,
+    "heightPx": 48
+   },
+   "method": "visible link/button 60-500px wide, 28-90px tall, 2-40 characters, with a fill unlike the surface behind it, outside header/nav when any is; among those, coloured fills (OKLCH chroma >= 0.04) before greys, then the one standing off its nearest opaque ancestor most (WCAG contrast): border-top-left-radius"
+  },
+  "buttonFamily": {
+   "value": {
+    "family": "Berkeley",
+    "generic": "monospace"
+   },
+   "method": "visible link/button 60-500px wide, 28-90px tall, 2-40 characters, with a fill unlike the surface behind it, outside header/nav when any is; among those, coloured fills (OKLCH chroma >= 0.04) before greys, then the one standing off its nearest opaque ancestor most (WCAG contrast): font-family (monospace by equal glyph widths)"
+  },
+  "buttonCase": {
+   "value": "uppercase",
+   "method": "visible link/button 60-500px wide, 28-90px tall, 2-40 characters, with a fill unlike the surface behind it, outside header/nav when any is; among those, coloured fills (OKLCH chroma >= 0.04) before greys, then the one standing off its nearest opaque ancestor most (WCAG contrast): text-transform, or the label written in capitals"
+  },
+  "buttonTracking": {
+   "value": 0.14,
+   "method": "visible link/button 60-500px wide, 28-90px tall, 2-40 characters, with a fill unlike the surface behind it, outside header/nav when any is; among those, coloured fills (OKLCH chroma >= 0.04) before greys, then the one standing off its nearest opaque ancestor most (WCAG contrast): letter-spacing / font-size"
+  },
+  "panelRadius": {
+   "value": {
+    "px": 0
+   },
+   "method": "median border-top-left-radius of 1 visible bordered or filled boxes (4000px\u00b2+, under 90% of the width, not buttons)"
+  },
+  "labelMono": {
+   "value": true,
+   "method": "17 visible elements with 2-30 characters of their own text at 14px or smaller: 17 monospace by equal glyph widths (share >= 0.3)"
+  },
+  "labelCase": {
+   "value": "uppercase",
+   "method": "17 visible elements with 2-30 characters of their own text at 14px or smaller: 13 uppercase (share >= 0.3)"
+  },
+  "labelTracking": {
+   "value": 0.14,
+   "method": "17 visible elements with 2-30 characters of their own text at 14px or smaller: median letter-spacing / font-size of the uppercase ones"
+  },
+  "accent": {
+   "value": {
+    "hex": "#3bde77",
+    "source": "highlighted heading text"
+   },
+   "method": "most chromatic colour (OKLCH chroma 0.195, greys under 0.04 excluded) among the primary call-to-action fill, visible link text, h1 descendants in another colour and inline-svg logo paint"
+  }
+ },
+ "cookieDeclined": true,
+ "finalUrl": "https://spider.cloud/"
+}
