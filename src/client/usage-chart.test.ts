@@ -140,5 +140,6 @@ test("a zero bar is marked as zero, so it draws as a stub on the baseline instea
 test("a bar's title and table row read in plain dates and grouped numbers", () => {
   const $ = load(renderToStaticMarkup(createElement(UsageChart, { points: [{ date: "2026-08-01", value: 2840 }], label: "requests served", unit: "per day" })));
   expect($(".activity-bars > span").attr("title")).toBe("1 Aug 2026: 2,840 per day");
-  expect($(".visually-hidden tbody td").toArray().map(cell => $(cell).text())).toEqual(["1 Aug 2026", "1 Aug 2026", "2,840 per day"]);
+  // A one-day bar is one date, not a From and a To that are the same.
+  expect($(".visually-hidden tbody td").toArray().map(cell => $(cell).text())).toEqual(["1 Aug 2026", "2,840 per day"]);
 });

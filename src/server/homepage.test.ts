@@ -9,13 +9,15 @@ const statements = [
   "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
 ];
 
-it("keeps the three proven statements on the first screen", () => {
+it("keeps the three proven statements in the first section, right after the examples that follow the heading", () => {
   const html = renderToStaticMarkup(HomePage());
-  const start = html.indexOf('id="homepage-title"');
-  const end = html.indexOf('id="example"');
-  expect(start).toBeGreaterThanOrEqual(0);
-  expect(end).toBeGreaterThan(start);
-  const first = html.slice(start, end);
+  const [title, examples, next] = ['id="homepage-title"', 'id="example"', 'id="how-it-works"'].map(marker => html.indexOf(marker));
+  expect(title).toBeGreaterThanOrEqual(0);
+  expect(examples).toBeGreaterThan(title);
+  expect(next).toBeGreaterThan(examples);
+  // The owner's copy, from its first statement to the end of the first section: the example cards come before it.
+  const first = html.slice(html.indexOf(statements[0].slice(0, 20)), next);
+  expect(html.indexOf(statements[0].slice(0, 20))).toBeGreaterThan(examples);
   for (const statement of statements) expect(first).toContain(statement);
   expect(first).not.toMatch(/Wispr|Clay|token spend|live site|already shows|finds affiliate|find affiliate/i);
 });

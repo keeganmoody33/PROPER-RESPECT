@@ -1,3 +1,4 @@
+import { dayMonthYear } from "./format-period";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { load } from "cheerio";
@@ -38,7 +39,8 @@ for (const activity of activities) it(`projects only visible ${activity.kind} va
   const projected = result.cards[0].activity!;
   expect(projected).toMatchObject({ capturedOn: "2026-09-21", freshness: "STALE", attributionScope: "WORKSPACE", provenanceLabel: common.provenanceLabel, period: { start: "2026-09-01", end: "2026-09-21" } });
   expect(text).toContain(projected.provenanceLabel);
-  expect(text).toContain(projected.capturedOn);
+  // The card says the captured day in plain words; its exact value is the <time> element's datetime.
+  expect(text).toContain(dayMonthYear(projected.capturedOn));
   function checkDisplayedValues(value: unknown): void {
     if (!value || typeof value !== "object") return;
     for (const [key, child] of Object.entries(value)) {
