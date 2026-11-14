@@ -1448,6 +1448,13 @@ main {
 .contribution-grid span[data-level="2"], .contribution-legend i[data-level="2"] { background: #006d32; }
 .contribution-grid span[data-level="3"], .contribution-legend i[data-level="3"] { background: #26a641; }
 .contribution-grid span[data-level="4"], .contribution-legend i[data-level="4"] { background: #39d353; }
+/* On a light brand surface the calendar takes GitHub's light palette, so an empty day stays the faintest cell. */
+.product-card[data-surface="light"] .contribution-scroll { scrollbar-color: #8c959f #ffffff; color-scheme: light; }
+.product-card[data-surface="light"] :is(.contribution-grid span, .contribution-legend i) { background: #ebedf0; border-color: #d0d7de; }
+.product-card[data-surface="light"] :is(.contribution-grid span, .contribution-legend i)[data-level="1"] { background: #9be9a8; }
+.product-card[data-surface="light"] :is(.contribution-grid span, .contribution-legend i)[data-level="2"] { background: #40c463; }
+.product-card[data-surface="light"] :is(.contribution-grid span, .contribution-legend i)[data-level="3"] { background: #30a14e; }
+.product-card[data-surface="light"] :is(.contribution-grid span, .contribution-legend i)[data-level="4"] { background: #216e39; }
 .contribution-range, .contribution-gap { font-size: 0.65rem; line-height: 1.5; margin: 0.4rem 0 0; }
 
 .profile-links-fields { min-width: 0; }

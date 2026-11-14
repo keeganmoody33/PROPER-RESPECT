@@ -10,17 +10,12 @@
 .stage { display: grid; min-width: 0; }
 .slide { grid-area: 1 / 1; min-width: 0; }
 .slide[data-current="false"] { visibility: hidden; }
-.slide :global(.product-card) { width: 100%; margin: 0; animation: none; border-radius: 10px; }
-.slide[data-example="github"] :global(.product-logo) { background: #fff; }
+.slide :global(.product-card) { width: 100%; margin: 0; animation: none; }
 .slide :global(.card-activity-preview > p:first-child strong) { font-size: 2rem; line-height: 1.1; }
 .slide :global(.card-activity-preview > p:first-child) { display: flex; flex-direction: column; gap: .3rem; }
 .slide :global(.activity-preview-metrics) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; margin: 1rem 0; }
 .slide :global(.activity-preview-metrics dt) { font-size: .7rem; }
 .slide :global(.activity-preview-metrics dd) { font-size: 1.1rem; margin: .15rem 0 0; font-weight: 600; }
-.slide[data-example="github"] { --brand-card-background: #0d1117; --brand-card-text: #e6edf3; --brand-card-heading-font: -apple-system, "Segoe UI", Helvetica, sans-serif; --brand-card-body-font: -apple-system, "Segoe UI", Helvetica, sans-serif; }
-.slide[data-example="clay"] { --brand-card-background: #f7f5ef; --brand-card-text: #25241f; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: Arial, sans-serif; --card-line: #d4d1c7; }
-.slide[data-example="claude-code"] { --brand-card-background: #292724; --brand-card-text: #f5f0e8; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: ui-monospace, monospace; }
-.slide[data-example="clay"] :global(.product-card) { border: 1px solid #d4d1c7; }
 .caveat { font-size: .78rem; line-height: 1.6; margin: 1rem 0 .5rem; }
 .source { text-underline-offset: .2em; }
 .controls { display: flex; align-items: center; gap: .65rem; margin-top: 1.2rem; }

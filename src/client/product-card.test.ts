@@ -773,3 +773,12 @@ test("a card without known uses, or a brand preview, shows no uses", () => {
   expect(preview(".card-uses").length).toBe(0);
   expect(preview.text()).not.toContain("I use it to");
 });
+
+test("a card names the surface its brand draws, so its contribution calendar can follow it", () => {
+  const light = { ...brand, styleguide: { mode: "light" as const, colors: { background: "#ffffff", text: "#111111" } } };
+  const dark = { ...brand, styleguide: { mode: "dark" as const, colors: { background: "#0c0e13", text: "#f8fafc" } } };
+  const surface = (product: Card["product"]) => renderCard({ product }).root().find("article.product-card").attr("data-surface");
+  expect(surface({ ...baseCard.product, brand: light })).toBe("light");
+  expect(surface({ ...baseCard.product, brand: dark })).toBe("dark");
+  expect(surface(baseCard.product)).toBe("dark");
+});
