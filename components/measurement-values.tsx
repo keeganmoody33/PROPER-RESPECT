@@ -1,6 +1,7 @@
 import type { Measurement, PublicMeasurement } from "@/src/domain/measurements";
 import { groupedDecimal } from "@/src/domain/format-activity-number";
 import { formatPeriod } from "@/src/domain/format-period";
+import { hasWord } from "@/src/domain/activity-headline";
 
 type VisibleMeasurement = Pick<Measurement, "metric" | "value" | "unit" | "period" | "scope" | "coverage" | "temporality" | "aggregation" | "capturedAt" | "status" | "sample" | "derivation">;
 export const measurementLabel = (metric: string) => metric.replaceAll("_", " ").replace(/^./, first => first.toUpperCase());
@@ -47,7 +48,7 @@ const FRONT_MEASUREMENT_LIMIT = 3;
 /** What a number counts, in a few words: "rows enriched" for a metric and its unit, "input tokens" where the metric already names the unit. */
 function countedThing(measurement: PublicMeasurement): string {
   const [metric, unit] = [measurement.metric, measurement.unit].map(word => word.replaceAll("_", " ").toLowerCase());
-  return metric.includes(unit) ? metric : `${unit} ${metric}`;
+  return hasWord(metric, unit) ? metric : `${unit} ${metric}`;
 }
 
 /** Whose the shown numbers are, decided on the rows a visitor sees: Details labels every row it holds. */
@@ -88,7 +89,7 @@ export function MeasurementLines({ measurements }: { measurements: PublicMeasure
   return <ul className="usage-measurement-lines" aria-label="Reported usage measurements">
     {measurements.map((row, index) => <li key={index}>
       <strong>{row.value === null ? "Unknown" : groupedDecimal(row.value)} {countedThing(row)}</strong>
-      {` · ${measurementPeriodInWords(row.period)} · ${row.scope.toLowerCase()} · ${SAMPLE_WORDS[row.sample]}`}
+      {` · ${measurementPeriodInWords(row.period)} · ${row.scope.toLowerCase()} · ${SAMPLE_WORDS[row.sample]}${row.status === "baseline" ? " · baseline, not new activity" : ""}`}
     </li>)}
   </ul>;
 }

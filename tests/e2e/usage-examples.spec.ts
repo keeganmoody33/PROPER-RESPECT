@@ -142,8 +142,8 @@ const CAPABILITIES: Readonly<Record<string, string>> = {
 };
 /** What each label promises, said on the card's front: its cost, why it was paused or stopped, and where its demo is. */
 const FRONT_TEXT: Readonly<Record<string, readonly string[]>> = {
-  Clay: ["Costs $149/month · owner-reported"],
-  Cloudflare: ["Costs $5/month · owner-reported", "Owner-selected go-to"],
+  Clay: ["Costs $149/month · sample"],
+  Cloudflare: ["Costs $5/month · sample", "Owner-selected go-to"],
   Exa: ["A demo link inside"],
   n8n: ["Paused while my nightly jobs move to plain cron.", "I used it to"],
   Elicit: ["I stopped once my market study was done.", "I used it to"],
@@ -157,10 +157,10 @@ const FRONT_LINKS: Readonly<Record<string, readonly string[]>> = {
 const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Firecrawl: ["Weekly · Referral link", "Open Firecrawl ↗Referral link"],
   Exa: ["Weekly · Direct link", "Demo ↗exa.ai"],
-  Cloudflare: ["Owner-selected go-to", "Owner-reported cost: $5/month · as of 1 Sep 2026"],
+  Cloudflare: ["Owner-selected go-to", "Sample cost: $5/month · as of 1 Sep 2026"],
   Docker: ["Weekly · Direct link", "Illustrative sample, not account data · the owner's own use · Jan 2024 – Aug 2026 · last updated 1 Sep 2026"],
   n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
-  Clay: ["Daily · Direct link", "Owner-reported cost: $149/month · as of 1 Sep 2026", "38,400 rows enriched · Mar 2023 – Aug 2026 · workspace · sample, not account data",
+  Clay: ["Daily · Direct link", "Sample cost: $149/month · as of 1 Sep 2026", "38,400 rows enriched · Mar 2023 – Aug 2026 · workspace · sample, not account data",
     "86 tables built · Mar 2023 – Aug 2026", "48,500 credits used · Sep 2025 – Aug 2026", "See how I use it ↗clay.com", "How this was measured"],
 };
 

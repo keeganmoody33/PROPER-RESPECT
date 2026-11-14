@@ -10,6 +10,16 @@ describe("how a cost reads on a card", () => {
     expect(costSummary({ ...monthly, amount: 0, basis: "RECEIPT", cadence: "ONE_TIME" })).toBe("Costs $0 one-time · from a receipt");
     expect(costSummary({ ...monthly, currency: "EUR", cadence: "UNKNOWN" })).toBe("Costs €5 (billing interval unknown) · owner-reported");
   });
+  it("says on the front how old a price is once it is more than six months older than the card's latest record, or today", () => {
+    const old = { ...monthly, asOf: "2025-12-15" };
+    expect(costSummary(old, { latest: "2026-09-01" })).toBe("Costs $5/month · owner-reported · as of Dec 2025");
+    expect(costSummary({ ...monthly, asOf: "2026-03-02" }, { latest: "2026-09-01" })).toBe("Costs $5/month · owner-reported");
+    expect(costSummary(old, { latest: "2026-06-01" })).toBe("Costs $5/month · owner-reported");
+  });
+  it("calls an invented example's price a sample, front and back, since no owner reported it", () => {
+    expect(costSummary(monthly, { latest: "2026-09-01", sample: true })).toBe("Costs $5/month · sample");
+    expect(costDetail(monthly, { sample: true })).toBe("Sample cost: $5/month · as of 1 Sep 2026");
+  });
   it("keeps the full record on the back, in plain words: basis, amount with cents only when it has them, the day it was true and any period", () => {
     expect(costDetail(monthly)).toBe("Owner-reported cost: $5/month · as of 1 Sep 2026");
     expect(costDetail({ ...monthly, amount: 149.5 })).toBe("Owner-reported cost: $149.50/month · as of 1 Sep 2026");

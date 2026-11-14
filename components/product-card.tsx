@@ -22,7 +22,7 @@ import { costDetail, costSummary } from "@/src/domain/cost";
 import { tablePreview as parseTablePreview, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
 import { useReducedMotion } from "./use-reduced-motion";
 import { dayMonthYear, formatPeriod, freshnessNote, yearOf } from "@/src/domain/format-period";
-import { activityHeadline } from "@/src/domain/activity-headline";
+import { activityHeadline, FRONT_ARTIFACT_LIMIT } from "@/src/domain/activity-headline";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart } from "./usage-chart";
@@ -237,9 +237,6 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
   );
 }
 
-/** How many of a collection's works the front links; the back lists them all. */
-const FRONT_ARTIFACT_LIMIT = 3;
-
 /** The first few works with a web link. A work whose link isn't http or https stays off the front. */
 function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kind: "artifactCollection" }>["artifacts"] }) {
   const linked = artifacts.filter(artifact => isHttpUrl(artifact.url)).slice(0, FRONT_ARTIFACT_LIMIT);
@@ -398,6 +395,12 @@ function ActivityEvidence({ activity }: { activity: ActivityModule }) {
       <p className="activity-summary">{activitySummary(activity)}</p>
     </div>
   );
+}
+
+/** The card's newest dated record, its activity or a published number, or today when it has neither: what a price's age is read against. */
+function latestRecord(card: Card): string {
+  const dates = [card.activity?.capturedAt, ...(card.measurements ?? []).map(row => row.capturedAt)].filter((date): date is string => Boolean(date));
+  return dates.sort().at(-1) ?? new Date().toISOString();
 }
 
 export function ProductCard({
@@ -575,7 +578,7 @@ export function ProductCard({
           </p>
         ) : null}
         {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
-        {!brandPreview && card.cost && <p className="card-cost">{costSummary(card.cost)}</p>}
+        {!brandPreview && card.cost && <p className="card-cost">{costSummary(card.cost, { latest: latestRecord(card), sample })}</p>}
 
         <div className="card-footer">
           <span id={`${cardId}-footer`} className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
@@ -628,7 +631,7 @@ export function ProductCard({
             </p>
           </>}
           <p>{card.product.description}</p>
-          {!brandPreview && card.cost && <p>{costDetail(card.cost)}</p>}
+          {!brandPreview && card.cost && <p>{costDetail(card.cost, { sample })}</p>}
           {!brandPreview && card.activity && <>
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
             <ActivityEvidence activity={card.activity} />

@@ -27,12 +27,23 @@ export function monthYear(value: string): string {
   return date ? `${MONTH.format(date)} ${YEAR.format(date)}` : value;
 }
 
-/** A period as a visitor reads it: "Aug 2026", "Jun–Aug 2026" or "Mar 2023 – Aug 2026". */
+const DAY_MS = 86_400_000;
+/** Shorter than this, counted inclusively, a period reads as its days: two days at the end of August are not "Aug 2026". */
+const DAYS_FOR_MONTHS = 28;
+
+/** A period as a visitor reads it: "30–31 Aug 2026" under four weeks, else "Aug 2026", "Jun–Aug 2026" or "Mar 2023 – Aug 2026". */
 export function formatPeriod(start: string, end: string): string {
   const [first, last] = [utcDate(start), utcDate(end)];
   if (!first || !last) return `${start} to ${end}`;
   const [startMonth, endMonth] = [MONTH.format(first), MONTH.format(last)];
   const [startYear, endYear] = [YEAR.format(first), YEAR.format(last)];
+  const days = Math.round((Date.UTC(last.getUTCFullYear(), last.getUTCMonth(), last.getUTCDate()) - Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), first.getUTCDate())) / DAY_MS) + 1;
+  if (days < DAYS_FOR_MONTHS) {
+    if (days <= 1) return dayMonthYear(end);
+    if (startYear !== endYear) return `${dayMonthYear(start)} – ${dayMonthYear(end)}`;
+    if (startMonth !== endMonth) return `${first.getUTCDate()} ${startMonth} – ${dayMonthYear(end)}`;
+    return `${first.getUTCDate()}–${dayMonthYear(end)}`;
+  }
   if (startYear !== endYear) return `${startMonth} ${startYear} – ${endMonth} ${endYear}`;
   return startMonth === endMonth ? `${endMonth} ${endYear}` : `${startMonth}–${endMonth} ${endYear}`;
 }

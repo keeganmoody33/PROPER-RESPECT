@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { PublicMeasurements } from "@/components/measurement-values";
+import { MeasurementLines, PublicMeasurements } from "@/components/measurement-values";
 import { parseMeasurementImport, projectMeasurement, reviewMeasurementImports } from "@/src/domain/measurements";
 
 function projected(value: string | null) {
@@ -45,7 +45,7 @@ describe("exact public measurement rendering", () => {
     // https://regex101.com/?regex=%3C%5B%5E%3E%5D%2B%3E&testString=%3Cp%3E2%2C140%2C000%3C%2Fstrong%3E
     const text = html.replace(/<[^>]+>/g, "|").split("|").filter(Boolean);
     expect(text).toEqual([
-      "2,140,000", "input tokens", "Sep 2001", "Sample", "86", "input tokens", "Sep 2001",
+      "2,140,000", "input tokens", "9 Sep 2001", "Sample", "86", "input tokens", "9 Sep 2001",
       "Rows marked Sample are invented, not account activity; the rest are owner-reported, not verified · includes a baseline, which is not new activity · how each was measured is in Details",
     ]);
   });
@@ -57,11 +57,21 @@ describe("exact public measurement rendering", () => {
       .replace(/<[^>]+>/g, "|").split("|").filter(Boolean);
     // Three sample rows shown and an owner's row left to Details: the shown numbers are all samples.
     expect(front([sample, sample, sample, projected("7")])).toEqual([
-      "5", "input tokens", "Sep 2001", "5", "input tokens", "Sep 2001", "5", "input tokens", "Sep 2001",
+      "5", "input tokens", "9 Sep 2001", "5", "input tokens", "9 Sep 2001", "5", "input tokens", "9 Sep 2001",
       "Sample numbers · 1 more and how each was measured are in Details",
     ]);
     // Owner's rows shown and a sample left to Details: no sample is on the front, and Details labels it.
     expect(front([projected("7"), projected("7"), projected("7"), sample]).at(-1)).toBe("Owner-reported, not verified · 1 more and how each was measured are in Details");
   });
 
+  it("names the unit unless the metric already says it as a whole word, and says baseline on the back's plain line too", () => {
+    const row = (metric: string, unit: string) => ({ ...projected("2"), metric, unit });
+    const front = renderToStaticMarkup(createElement(PublicMeasurements, { measurements: [row("response_time", "s"), row("input_tokens", "tokens"), row("enriched", "rows")], compact: true }));
+    expect(front).toContain("<span>s response time</span>");
+    expect(front).toContain("<span>input tokens</span>");
+    expect(front).toContain("<span>rows enriched</span>");
+    const back = renderToStaticMarkup(createElement(MeasurementLines, { measurements: [{ ...row("input_tokens", "tokens"), status: "baseline" }] }));
+    expect(back).toContain("baseline, not new activity");
+  });
 });
+

@@ -419,7 +419,7 @@ test("the compact front leads with the owner relationship and leaves full eviden
   expect(front.text().indexOf(baseCard.headline)).toBeLessThan(front.text().indexOf("120"));
   expect(front.find(".metric-row, .activity-calendar, .activity-bars, .activity-meta")).toHaveLength(0);
   expect(front.find(".card-activity-preview").text()).toContain("120");
-  expect(front.find(".card-activity-coverage").text()).toBe("Sep 2026 · last updated 18 Sep 2026");
+  expect(front.find(".card-activity-coverage").text()).toBe("1–15 Sep 2026 · last updated 18 Sep 2026");
   expect($(".card-back").text()).toContain(baseCard.note);
 });
 
@@ -507,7 +507,7 @@ test("a supplied time series draws its bars on the front, and the back says wher
   expect($(".card-front .usage-chart-log, .card-front .blueprint-dim")).toHaveLength(0);
   // The back doesn't draw the chart again: it says where the series came from, in one plain line, without a score.
   expect($(".card-back .activity-bars, .card-back .usage-chart")).toHaveLength(0);
-  expect($(".card-back .activity-summary").text()).toBe("Synthetic owner-approved evidence · the owner's own use · Sep 2026 · last updated 18 Sep 2026");
+  expect($(".card-back .activity-summary").text()).toBe("Synthetic owner-approved evidence · the owner's own use · 1–15 Sep 2026 · last updated 18 Sep 2026");
   expect($(".card-back").text()).not.toMatch(/score|rank/i);
 });
 
@@ -584,7 +584,7 @@ test("unconfirmed discoveries keep supplied measurements and provenance visibly 
 
   expect($(".card-activity-preview").text()).toContain("Unreviewed evidence");
   expect($(".card-activity-preview strong").text()).toBe("120");
-  expect($(".card-activity-coverage").text()).toBe("Sep 2026 · last updated 18 Sep 2026");
+  expect($(".card-activity-coverage").text()).toBe("1–15 Sep 2026 · last updated 18 Sep 2026");
   expect($(".card-back .activity-meta").text()).toContain("2026-09-01 to 2026-09-15");
   expect($(".card-back").text()).toContain("Unreviewed evidence");
   expect($(".card-back .activity-meta").text()).toContain(activity.provenanceLabel);
@@ -994,7 +994,7 @@ test("a card whose site's heading sits on a full-bleed colour marks itself for t
 });
 
 test("a time series leads with its period's total, or its peak once the card is paused, on the front only", () => {
-  const weekly = { ...activityEvidence, kind: "timeSeries" as const, label: "workflow runs", unit: "per week", points: [312, 341, 0].map((value, index) => ({ date: `2026-08-0${index + 1}`, value })) };
+  const weekly = { ...activityEvidence, kind: "timeSeries" as const, label: "workflow runs", unit: "per week", points: [312, 341, 0].map((value, index) => ({ date: `2026-08-${String(3 + index * 7).padStart(2, "0")}`, value })) };
   const hero = (card: Partial<typeof baseCard>) => {
     const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, ...card }, index: 0, expandedActivity: true })));
     return [$(".card-front .card-activity-preview > p").first().text(), $(".card-back .activity-hero").text()];
@@ -1026,7 +1026,8 @@ const FRONT_ARTIFACTS = [
 test("an artifact collection's front names its count and links up to three of its works, dropping a bad link quietly", () => {
   const $ = renderCard({ activity: { ...activityEvidence, kind: "artifactCollection", total: FRONT_ARTIFACTS.length, artifacts: FRONT_ARTIFACTS } });
   const front = $(".card-front .card-activity-preview");
-  expect(front.children("p").first().text()).toBe("8 linked works");
+  // Eight stored, three linked on the front: the count says how many it shows.
+  expect(front.children("p").first().text()).toBe("8 linked works · 3 shown");
   expect(front.find(".card-artifact-links a").toArray().map(link => [$(link).text(), $(link).attr("href"), $(link).attr("target"), $(link).attr("rel")])).toEqual([
     ["Compose apps ↗", "https://example.com/compose", "_blank", "noopener noreferrer"],
     ["Postgres image ↗", "https://example.com/postgres", "_blank", "noopener noreferrer"],
