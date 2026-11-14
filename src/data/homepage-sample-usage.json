@@ -7,15 +7,13 @@
     "exa": { "label": "searches run", "peak": 420 },
     "cloudflare": { "label": "requests served", "peak": 52000 },
     "spider": { "label": "pages crawled", "peak": 14000 },
-    "docker": { "label": "images built", "peak": 12 },
     "open-places": { "label": "businesses exported", "peak": 800 },
-    "elicit": { "label": "papers screened", "peak": 45 },
-    "context-dev": { "label": "domains looked up", "peak": 95 },
-    "n8n": { "label": "workflow runs", "peak": 260, "lastWeek": "2025-03-24" }
+    "elicit": { "label": "papers screened", "peak": 45, "lastWeek": "2026-03-23" },
+    "context-dev": { "label": "domains looked up", "peak": 95 }
   },
   "totals": {
     "porkbun": { "primary": { "label": "domains registered", "value": 11 }, "supporting": [{ "label": "Renewals", "value": 9 }, { "label": "Email forwards", "value": 5 }] },
     "grok-bot": { "primary": { "label": "tasks handed off", "value": 12 }, "supporting": [{ "label": "Tasks finished", "value": 9 }] },
-    "clay": { "primary": { "label": "rows enriched", "value": 15000 }, "supporting": [{ "label": "Tables", "value": 12 }], "period": { "start": "2023-05-01", "end": "2023-05-31" } }
+    "n8n": { "primary": { "label": "workflow runs", "value": 2140 }, "supporting": [{ "label": "Workflows", "value": 14 }, { "label": "Failed runs", "value": 37 }], "period": { "start": "2024-04-01", "end": "2025-03-31" } }
   }
 }

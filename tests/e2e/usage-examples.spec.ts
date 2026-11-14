@@ -50,10 +50,10 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     ["Docker", "Weekly · since 2020", "none", "none"],
     ["Open Places", "Occasionally · since 2026", "none", "none"],
     ["Grok Bot", "Testing · since 2026", "uppercase", "uppercase"],
-    ["Elicit", "Testing · since 2026", "uppercase", "none"],
+    ["Elicit", "Stopped using · started 2026", "uppercase", "none"],
     ["Context.dev", "Testing · since 2026", "none", "none"],
     ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
-    ["Clay", "Stopped using · started 2022", "none", "none"],
+    ["Clay", "Daily · since 2023", "none", "none"],
   ]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });
@@ -67,6 +67,14 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     if (width === 1440) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
     await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-${name.toLowerCase().replaceAll(" ", "-")}-${width}.png`) });
+    await expect(card.locator(".card-front .card-link-disclosure")).toHaveText(FRONT_DISCLOSURE[name] ?? []);
+    const back = BACK_TEXT[name];
+    if (!back) continue;
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(card.locator(".card-back .status-row")).not.toContainText(/CANONICAL|AFFILIATE|REFERRAL|INVITE/);
+    for (const text of back) await expect(card.locator(".card-back")).toContainText(text);
+    if (width === 1440) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
+    await card.getByRole("button", { name: "Close details" }).click();
   }
   await carousel.getByRole("button", { name: "Next example" }).click();
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
@@ -78,16 +86,27 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await expect(carousel.getByRole("button", { name: "Details", exact: true })).toBeVisible();
 });
 
+/** What a card discloses next to its outbound arrow, and what its back shows beyond the front: one capability per example. */
+const FRONT_DISCLOSURE: Readonly<Record<string, string>> = { Firecrawl: "Referral link", Spider: "Affiliate link" };
+const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
+  Firecrawl: ["Weekly · Referral link", "Open Firecrawl ↗Referral link"],
+  Exa: ["Weekly · Direct link", "Demo ↗exa.ai"],
+  Cloudflare: ["Owner-selected go-to", "Owner-reported cost: $5.00/month · as of 2026-09-01"],
+  Docker: ["Sample Compose apps (awesome-compose) ↗", "Official Postgres image ↗", "Multi-stage build guide ↗"],
+  n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
+  Clay: ["Daily · Direct link", "Owner-reported cost: $149.00/month · as of 2026-09-01", "Rows enriched2140000", "Tables built86", "Credits used48500", "See how I use it ↗clay.com"],
+};
+
 const DESKTOP_WIDTH = 1440;
 const PHONE_WIDTH = 390;
 const VIEWPORT_HEIGHT = 1000;
 
 // Each brand's own surface colour, from its committed snapshot; the default card is rgb(37, 37, 31) in Arial.
-// A weekly sample draws bars in the brand's accent, or in the card's text colour when the accent is too faint (n8n); a total shows metrics.
+// A weekly sample draws bars in the brand's accent; a total shows metrics.
 const BRANDED = [
   { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)", bars: "rgb(255, 76, 0)", logo: "square" },
   { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)", bars: "rgb(255, 94, 31)", logo: "wordmark" },
-  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: "rgb(22, 22, 22)", logo: "wordmark" },
+  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: undefined, logo: "wordmark" },
   { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)", bars: undefined, logo: "app-icon" },
 ] as const;
 const WEEKS = 12;
@@ -120,6 +139,12 @@ const NARROWEST_WIDTH = 320;
       await expect(bars).toHaveCount(WEEKS);
       await expect(bars.last()).toHaveCSS("background-color", brand.bars);
       await expect(card.locator(".card-front .activity-bars")).toHaveAttribute("role", "img");
+    } else if (brand.name === "Clay") {
+      // Clay publishes exact numbers instead: the first on the front, the rest behind Details.
+      await expect(card.locator(".card-front .usage-measurement-measurement")).toHaveCount(1);
+      await expect(card.locator(".card-front")).toContainText("2 more reported measurements in Details.");
+      await expect(card.locator(".card-front")).toContainText("Synthetic sample. Not real account activity.");
+      continue;
     } else {
       await expect(card.locator(".card-front .activity-preview-metrics")).toBeVisible();
     }
