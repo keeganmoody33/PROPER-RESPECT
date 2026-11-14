@@ -23,8 +23,23 @@ for (const width of [1440, 460, 390, 320]) test(`Origins and branded footer rema
   await expect(page.getByRole("heading", { name: "What it means here" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "The language we borrow" })).toHaveCount(0);
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+  // The homepage's canonical link leaves with the homepage: a page never keeps two.
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/about/origins");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+const QUICK_VISITS = 3;
+
+test("a visitor who leaves the homepage at once lands on a page with one canonical link", async ({ page }) => {
+  for (let visit = 0; visit < QUICK_VISITS; visit++) {
+    await page.goto("/");
+    await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Origins", exact: true }).click();
+    await expect(page).toHaveURL(/\/about\/origins$/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Giving credit its context");
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/about/origins");
+  }
 });
 
 test("Origins nesting preserves existing public handle routes", async ({ page, request }) => {
