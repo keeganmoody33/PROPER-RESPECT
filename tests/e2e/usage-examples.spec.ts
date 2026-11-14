@@ -86,7 +86,7 @@ const BRANDED = [
   { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)" },
 ] as const;
 
-[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`branded example cards wear their brand, say what they're used for and show a sample chart at ${width}px`, async ({ page }) => {
+[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`branded example cards wear their brand, say what they're used for and show sample metrics at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
