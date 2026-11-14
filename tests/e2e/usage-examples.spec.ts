@@ -74,6 +74,29 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await expect(carousel.getByRole("button", { name: "Details", exact: true })).toBeVisible();
 });
 
+const DESKTOP_WIDTH = 1440;
+const PHONE_WIDTH = 390;
+const VIEWPORT_HEIGHT = 1000;
+
+[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`an example card with nothing to chart closes up around its content at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const stage = carousel.locator("[aria-roledescription=slide]").first().locator("..");
+  const stageHeight = (await stage.boundingBox())!.height;
+  await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
+  const card = carousel.getByRole("article", { name: "Firecrawl card" });
+  await expect(card).toBeVisible();
+  const headline = (await card.locator(".card-headline").boundingBox())!;
+  const footer = (await card.locator(".card-footer").boundingBox())!;
+  // The footer follows the sentence at the card's own row spacing, with no held-open space between them.
+  const ROW_SPACING_LIMIT = 24;
+  expect(footer.y - (headline.y + headline.height)).toBeLessThan(ROW_SPACING_LIMIT);
+  // The card got shorter; the slideshow around it did not move.
+  expect((await stage.boundingBox())!.height).toBe(stageHeight);
+}));
+
 test("slideshow advances on its own quietly, pauses on hover and focus, and stops when asked", async ({ page }) => {
   await page.clock.install();
   await page.goto("/");
