@@ -49,6 +49,12 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
 });
 
 const CAPABILITY_LIMIT = 28;
+const CLAY_MEASUREMENTS = 3;
+const CLAY_MONTHLY_USD = 149;
+// Each weekly series' last week, after Docker's series left the sample file and moved the shape offsets after it.
+const OPEN_PLACES_LAST_WEEK = 552;
+const ELICIT_LAST_WEEK = 25;
+const CONTEXT_DEV_LAST_WEEK = 76;
 
 test("each example names the part of a card it shows, in a few words no other example uses", () => {
   expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
@@ -96,7 +102,7 @@ test("each example shows a different part of a card: its link, cost, work sample
     ["elicit", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["context-dev", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["n8n", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
-    ["clay", "CANONICAL", "149 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", 3, undefined],
+    ["clay", "CANONICAL", "149 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", CLAY_MEASUREMENTS, undefined],
   ]);
   expect(examples.filter(({ card }) => !publicProfileSchema.shape.cards.element.safeParse(card).success).map(({ id }) => id)).toEqual([]);
 });
@@ -117,7 +123,7 @@ test("Clay publishes three exact numbers over a stated period, in the spirit of 
       ["tables_built", "86", "tables", "2023-03-01 to 2026-08-31"],
       ["credits_used", "48500", "credits", "2025-09-01 to 2026-08-31"],
     ]);
-  expect(clay.cost).toEqual({ amount: 149, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" });
+  expect(clay.cost).toEqual({ amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" });
   expect(clay.usageLink).toEqual({ url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" });
   expect(clay.note).toBe("Lists that took a week of spreadsheets take an hour.");
 });
@@ -149,9 +155,9 @@ test("each weekly sample is twelve consecutive weeks, read per week, and its per
     ["exa", "searches run", "per week", 277],
     ["cloudflare", "requests served", "per week", 48360],
     ["spider", "pages crawled", "per week", 8120],
-    ["open-places", "businesses exported", "per week", 552],
-    ["elicit", "papers screened", "per week", 25],
-    ["context-dev", "domains looked up", "per week", 76],
+    ["open-places", "businesses exported", "per week", OPEN_PLACES_LAST_WEEK],
+    ["elicit", "papers screened", "per week", ELICIT_LAST_WEEK],
+    ["context-dev", "domains looked up", "per week", CONTEXT_DEV_LAST_WEEK],
   ]);
   for (const { id, activity } of series) {
     expect(activity.points, id).toHaveLength(WEEKS);

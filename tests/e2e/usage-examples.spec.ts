@@ -41,26 +41,26 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   const slideBox = () => carousel.locator("[aria-roledescription=slide]").first().evaluate(element => element.parentElement!.getBoundingClientRect().height);
   const githubHeight = await slideBox();
   // The top line and button are typed as written; each card's measured site, or the house default, sets their case.
-  for (const [name, text, labelCase, buttonCase, capability] of [
-    ["Claude Code", "Daily · since 2025", "uppercase", "uppercase", "Coding days"],
-    ["Firecrawl", "Weekly · since 2025", "none", "none", "Referral link, disclosed"],
-    ["Exa", "Weekly · since 2025", "none", "none", "A demo link on the back"],
-    ["Cloudflare", "Daily · since 2020", "uppercase", "none", "Go-to, with what it costs"],
-    ["Porkbun", "Occasionally · since 2021", "uppercase", "uppercase", "Running totals"],
-    ["Spider", "Occasionally · since 2026", "uppercase", "uppercase", "Affiliate link, disclosed"],
-    ["Docker", "Weekly · since 2020", "none", "none", "A list of linked work"],
-    ["Open Places", "Occasionally · since 2026", "none", "none", "Used now and then"],
-    ["Grok Bot", "Testing · since 2026", "uppercase", "uppercase", "Still testing"],
-    ["Elicit", "Stopped using · started 2026", "uppercase", "none", "Stopped using, and why"],
-    ["Context.dev", "Testing · since 2026", "none", "none", "Testing, week by week"],
-    ["n8n", "Paused · started 2024", "uppercase", "uppercase", "Paused, and why"],
-    ["Clay", "Daily · since 2023", "none", "none", "Published usage numbers"],
+  for (const [name, text, labelCase, buttonCase] of [
+    ["Claude Code", "Daily · since 2025", "uppercase", "uppercase"],
+    ["Firecrawl", "Weekly · since 2025", "none", "none"],
+    ["Exa", "Weekly · since 2025", "none", "none"],
+    ["Cloudflare", "Daily · since 2020", "uppercase", "none"],
+    ["Porkbun", "Occasionally · since 2021", "uppercase", "uppercase"],
+    ["Spider", "Occasionally · since 2026", "uppercase", "uppercase"],
+    ["Docker", "Weekly · since 2020", "none", "none"],
+    ["Open Places", "Occasionally · since 2026", "none", "none"],
+    ["Grok Bot", "Testing · since 2026", "uppercase", "uppercase"],
+    ["Elicit", "Stopped using · started 2026", "uppercase", "none"],
+    ["Context.dev", "Testing · since 2026", "none", "none"],
+    ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
+    ["Clay", "Daily · since 2023", "none", "none"],
   ]) {
     const toggle = carousel.getByRole("button", { name, exact: true });
     // The chooser says what each example shows, as the toggle's description, so its name stays the product's.
-    await expect(toggle).toHaveAccessibleDescription(capability);
+    await expect(toggle).toHaveAccessibleDescription(CAPABILITIES[name]);
     await toggle.click();
-    await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText(capability);
+    await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText(CAPABILITIES[name]);
     const card = carousel.getByRole("article", { name: `${name} card` });
     await expect(card).toBeVisible();
     await expect(card).toContainText(text);
@@ -76,9 +76,10 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     const back = BACK_TEXT[name];
     if (!back) continue;
     await card.getByRole("button", { name: "Details", exact: true }).click();
+    // A stored link type: matches "CANONICAL", not "Direct link". https://regex101.com/?regex=CANONICAL%7CAFFILIATE%7CREFERRAL%7CINVITE&testString=Weekly%20%C2%B7%20Direct%20link%0ACANONICAL
     await expect(card.locator(".card-back .status-row")).not.toContainText(/CANONICAL|AFFILIATE|REFERRAL|INVITE/);
-    for (const text of back) await expect(card.locator(".card-back")).toContainText(text);
-    if (width === 1440) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
+    await Promise.all(back.map(text => expect(card.locator(".card-back")).toContainText(text)));
+    if (width === DESKTOP_WIDTH) expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
     await card.getByRole("button", { name: "Close details" }).click();
   }
   await carousel.getByRole("button", { name: "Next example" }).click();
@@ -91,6 +92,22 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await expect(carousel.getByRole("button", { name: "Details", exact: true })).toBeVisible();
 });
 
+/** What each example shows, named above its card and as its chooser toggle's description. */
+const CAPABILITIES: Readonly<Record<string, string>> = {
+  "Claude Code": "Coding days",
+  Firecrawl: "Referral link, disclosed",
+  Exa: "A demo link on the back",
+  Cloudflare: "Go-to, with what it costs",
+  Porkbun: "Running totals",
+  Spider: "Affiliate link, disclosed",
+  Docker: "A list of linked work",
+  "Open Places": "Used now and then",
+  "Grok Bot": "Still testing",
+  Elicit: "Stopped using, and why",
+  "Context.dev": "Testing, week by week",
+  n8n: "Paused, and why",
+  Clay: "Published usage numbers",
+};
 /** What a card discloses next to its outbound arrow, and what its back shows beyond the front: one capability per example. */
 const FRONT_DISCLOSURE: Readonly<Record<string, string>> = { Firecrawl: "Referral link", Spider: "Affiliate link" };
 const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {

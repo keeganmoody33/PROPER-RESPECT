@@ -472,7 +472,8 @@ export function ProductCard({
   const cardStatus = brandPreview ? "Brand preview" : relationshipStatus;
   const topLine = !brandPreview && relationshipConfirmed ? cardTopLine(card) : cardStatus;
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
-  const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : backHint ?? "Relationship & evidence";
+  const footerLabel = ([[brandPreview, "Brand identity"], [!relationshipConfirmed, "Needs your review"], [ownerGoTo, "Owner-selected go-to"]] as const)
+    .find(([applies]) => applies)?.[1] ?? backHint ?? "Relationship & evidence";
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
   const notePlaceholder = relationshipConfirmed ? "Relationship note not supplied." : "Discovery note not supplied.";
   const [isFlipped, setIsFlipped] = useState(false);

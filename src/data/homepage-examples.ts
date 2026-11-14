@@ -83,13 +83,17 @@ function sampleActivity(slug: string): ActivityModule | undefined {
   return { ...SAMPLE, period, kind: "headlineMetrics", primary, supporting: [...supporting] };
 }
 
+const dockerArtifacts = [
+  { title: "Sample Compose apps (awesome-compose)", url: "https://github.com/docker/awesome-compose" },
+  { title: "Official Postgres image", url: "https://hub.docker.com/_/postgres" },
+  { title: "Multi-stage build guide", url: "https://docs.docker.com/build/building/multi-stage/" },
+];
 const dockerActivity: ActivityModule = {
-  ...SAMPLE, period: { start: "2024-01-01", end: "2026-08-31" }, kind: "artifactCollection", total: 3, artifacts: [
-    { title: "Sample Compose apps (awesome-compose)", url: "https://github.com/docker/awesome-compose" },
-    { title: "Official Postgres image", url: "https://hub.docker.com/_/postgres" },
-    { title: "Multi-stage build guide", url: "https://docs.docker.com/build/building/multi-stage/" },
-  ],
+  ...SAMPLE, period: { start: "2024-01-01", end: "2026-08-31" }, kind: "artifactCollection", total: dockerArtifacts.length, artifacts: dockerArtifacts,
 };
+/** Owner-reported monthly prices: Cloudflare's Workers Paid plan and a Clay starter plan. */
+const CLOUDFLARE_MONTHLY_USD = 5;
+const CLAY_MONTHLY_USD = 149;
 
 /** Exact numbers an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. */
 const CLAY_MEASURED = {
@@ -153,7 +157,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "cloudflare", capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
     uses: ["manage-dns", "run-workers", "cache-and-protect"],
-    cost: { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
+    cost: { amount: CLOUDFLARE_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
   },
   {
     slug: "porkbun", capability: "Running totals", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here.",
@@ -192,7 +196,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "clay", capability: "Published usage numbers", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
     uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
-    cost: { amount: 149, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
+    cost: { amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
     usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
     caveat: "Its work-sample link opens Clay's public templates.", backHint: "Cost, numbers and a work sample inside",
   },
