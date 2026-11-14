@@ -334,6 +334,7 @@ test("a status-only save after a level clears the level, so the two never disagr
 });
 
 const exportRelationships = makeFunctionReference<"query">("inventory:exportRelationships");
+const historyPage = { paginationOpts: { numItems: 25, cursor: null } };
 
 async function fixtureWithUses() {
   const setup = await fixture();
@@ -349,7 +350,7 @@ test("saving what a product does for the owner stores its listed uses in order, 
   expect(await owner.mutation(save, input)).toEqual({ version: 1, duplicate: true });
   const stored = { picks: ["enrich-leads", "sync-crm"], other: "score inbound leads" };
   expect((await t.run(ctx => ctx.db.get(propId)))?.uses).toEqual(stored);
-  const events = await owner.query(history, { propId, paginationOpts: { numItems: 20, cursor: null } });
+  const events = await owner.query(history, { propId, ...historyPage });
   expect(events.page.map((event: { after: { uses?: unknown } }) => event.after.uses)).toEqual([stored]);
   const exported = await owner.query(exportRelationships, firstPage);
   expect(exported.page[0].uses).toEqual(stored);
@@ -375,7 +376,7 @@ test("saving with no uses removes the stored ones and keeps them in history", as
   await owner.mutation(save, { ...base, expectedVersion: 2, operationId: "set-again", uses: { picks: ["find-contacts"] } });
   await owner.mutation(save, { ...base, expectedVersion: 3, operationId: "omitted" });
   expect((await t.run(ctx => ctx.db.get(propId)))?.uses).toBeUndefined();
-  const events = await owner.query(history, { propId, paginationOpts: { numItems: 20, cursor: null } });
+  const events = await owner.query(history, { propId, ...historyPage });
   expect(events.page.map((event: { before: { uses?: unknown } }) => event.before.uses))
     .toEqual([{ picks: ["find-contacts"] }, undefined, { picks: ["build-lists"] }, undefined]);
 });

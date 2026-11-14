@@ -52,7 +52,7 @@ function UsesQuestion({ productName, productSlug, uses }: { productName: string;
   const options = productUseOptions(productSlug);
   return <fieldset className={styles.uses}>
     <legend id={legendId}>What does {productName} do for you?</legend>
-    {options.length > 0 && <CheckboxGroup name="usePicks" aria-labelledby={legendId} defaultValue={uses?.picks ?? []} className={styles.useChoices}>
+    {!!options.length && <CheckboxGroup name="usePicks" aria-labelledby={legendId} defaultValue={uses?.picks ?? []} className={styles.useChoices}>
       {options.map(option => <label key={option.id} className={styles.toggle}>
         <Checkbox value={option.id} className={styles.useCheckbox}><CheckboxIndicator aria-hidden="true">✓</CheckboxIndicator></Checkbox>
         {option.label}

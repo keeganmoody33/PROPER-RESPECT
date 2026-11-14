@@ -506,7 +506,7 @@ export function ProductCard({
         <p className="card-headline">
           {brandPreview ? card.product.description : card.headline || card.note || notePlaceholder}
         </p>
-        {useLabels.length > 0 && <div className="card-uses-block">
+        {!!useLabels.length && <div className="card-uses-block">
           <p className="card-uses-lead">I use it to</p>
           <ul className="card-uses" aria-label="What I use it for">{useLabels.map(label => <li key={label}>{label}</li>)}</ul>
         </div>}
