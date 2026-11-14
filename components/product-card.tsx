@@ -73,56 +73,64 @@ function brandAppearance(brand?: ProductBrandSnapshot) {
   return { style, surface };
 }
 
-function ProductLogo({
-  brand,
-  verifiedAssets,
-  icon,
-  logoUrl,
-  mark,
-  surface,
-}: {
+type CardLogo = {
+  url?: string;
+  width?: number;
+  height?: number;
+  mode?: string;
+  provider?: string;
+  /** "wordmark" replaces the visible product name; "app-icon" fills the square slot edge to edge. */
+  layout?: "app-icon" | "wordmark";
+};
+
+/** The one image a card's logo slot shows, skipping any that failed to load. Verified assets win, then a reviewed app icon, then the stored brand. */
+function cardLogo({ brand, verifiedAssets, icon, logoUrl, surface, failed }: {
   brand?: ProductBrandSnapshot;
   verifiedAssets?: VerifiedProductAssets;
   icon?: ProductIcon;
   logoUrl?: string;
-  mark: string;
   surface: "light" | "dark";
-}) {
-  const [failedUrls, setFailedUrls] = useState<string[]>([]);
-  const verifiedLogo = verifiedAssets && selectVerifiedProductLogo(verifiedAssets, surface, failedUrls);
-  const appIcon = icon && !failedUrls.includes(icon.path) ? icon : undefined;
-  const logo = !verifiedAssets && !icon && brand ? selectProductBrandLogo({
-    logos: brand.logos.filter((candidate) => !failedUrls.includes(candidate.url)),
-  }, surface) : undefined;
-  const imageUrl = verifiedAssets ? verifiedLogo?.path
-    : icon ? appIcon?.path
-    : logo?.url ?? (logoUrl && !failedUrls.includes(logoUrl) ? logoUrl : undefined);
-  function markFailed() {
-    if (imageUrl) setFailedUrls(urls => urls.includes(imageUrl) ? urls : [...urls, imageUrl]);
+  failed: readonly string[];
+}): CardLogo {
+  if (verifiedAssets) {
+    const logo = selectVerifiedProductLogo(verifiedAssets, surface, failed);
+    return { url: logo?.path, width: logo?.width, height: logo?.height, mode: logo?.mode, provider: logo && verifiedAssets.provider, layout: "wordmark" };
   }
+  if (icon) {
+    return failed.includes(icon.path) ? {}
+      : { url: icon.path, width: icon.width, height: icon.height, mode: "surface" in icon ? icon.surface : undefined, provider: "official-vendor", layout: "app-icon" };
+  }
+  const choice = brand && selectProductBrandLogo({ logos: brand.logos.filter(candidate => !failed.includes(candidate.url)) }, surface);
+  if (choice) {
+    return { url: choice.logo.url, width: choice.logo.width, height: choice.logo.height, mode: choice.logo.mode, provider: brand.provider, layout: choice.layout === "wordmark" ? "wordmark" : undefined };
+  }
+  return logoUrl && !failed.includes(logoUrl) ? { url: logoUrl } : {};
+}
 
+function ProductLogo({ logo, mark, onFailed }: { logo: CardLogo; mark: string; onFailed: (url: string) => void }) {
+  const { url } = logo;
   return (
     <span
       className="product-logo"
-      data-logo-layout={verifiedAssets ? "wordmark" : appIcon ? "app-icon" : undefined}
-      data-logo-mode={verifiedLogo?.mode ?? (appIcon && "surface" in appIcon ? appIcon.surface : logo?.mode)}
-      data-logo-provider={appIcon ? "official-vendor" : verifiedLogo ? verifiedAssets?.provider : logo ? brand?.provider : undefined}
+      data-logo-layout={logo.layout}
+      data-logo-mode={logo.mode}
+      data-logo-provider={logo.provider}
       aria-hidden="true"
     >
-      {imageUrl ? (
+      {url ? (
         // Retained provider assets may use any verified asset host. Native images
         // preserve onError fallback without a remote image-loader allowlist.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           ref={element => {
-            if (element?.complete && element.naturalWidth === 0) markFailed();
+            if (element?.complete && element.naturalWidth === 0) onFailed(url);
           }}
-          src={imageUrl}
+          src={url}
           alt=""
-          width={verifiedLogo?.width ?? appIcon?.width}
-          height={verifiedLogo?.height ?? appIcon?.height}
+          width={logo.width}
+          height={logo.height}
           referrerPolicy="no-referrer"
-          onError={markFailed}
+          onError={() => onFailed(url)}
         />
       ) : mark}
     </span>
@@ -453,6 +461,10 @@ export function ProductCard({
     : undefined;
   const appearance = brandAppearance(brand);
   const verifiedAssets = verifiedProductAssets(card.product);
+  const [failedLogoUrls, setFailedLogoUrls] = useState<string[]>([]);
+  const logo = cardLogo({ brand, verifiedAssets, icon: officialProductIcon(card.product), logoUrl: card.product.logoUrl, surface: appearance.surface, failed: failedLogoUrls });
+  const wordmark = logo.layout === "wordmark";
+  const markFailed = (url: string) => setFailedLogoUrls(urls => urls.includes(url) ? urls : [...urls, url]);
   const mark = card.product.name
     .split(/\s+/)
     .map((word) => word[0])
@@ -495,11 +507,12 @@ export function ProductCard({
         : <ProductBrandFonts snapshot={brand} />}
       <div className="card-front" aria-hidden={isFlipped} inert={isFlipped}>
         <div className="card-topline">
-          {!verifiedAssets && <ProductLogo brand={brand} icon={officialProductIcon(card.product)} logoUrl={card.product.logoUrl} mark={mark} surface={appearance.surface} />}
+          {!wordmark && <ProductLogo logo={logo} mark={mark} onFailed={markFailed} />}
           <div className="card-title">
             <p className="eyebrow">{topLine}</p>
-            <h2 className={verifiedAssets ? "card-product-name" : undefined}>{card.product.name}</h2>
-            {verifiedAssets && <ProductLogo verifiedAssets={verifiedAssets} mark={card.product.name} surface={appearance.surface} />}
+            {/* A wordmark shows the name, so the heading keeps it for screen readers only. */}
+            <h2 className={wordmark ? "card-product-name" : undefined}>{card.product.name}</h2>
+            {wordmark && <ProductLogo logo={logo} mark={card.product.name} onFailed={markFailed} />}
           </div>
           {webLink && <div className="card-destination"><a
             className="card-visit"

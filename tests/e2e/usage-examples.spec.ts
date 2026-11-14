@@ -82,10 +82,10 @@ const VIEWPORT_HEIGHT = 1000;
 // Each brand's own surface colour, from its committed snapshot; the default card is rgb(37, 37, 31) in Arial.
 // A weekly sample draws bars in the brand's accent, or in the card's text colour when the accent is too faint (n8n); a total shows metrics.
 const BRANDED = [
-  { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)", bars: "rgb(255, 76, 0)" },
-  { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)", bars: "rgb(255, 94, 31)" },
-  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: "rgb(22, 22, 22)" },
-  { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)", bars: undefined },
+  { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)", bars: "rgb(255, 76, 0)", logo: "square" },
+  { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)", bars: "rgb(255, 94, 31)", logo: "wordmark" },
+  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: "rgb(22, 22, 22)", logo: "wordmark" },
+  { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)", bars: undefined, logo: "app-icon" },
 ] as const;
 const WEEKS = 12;
 
@@ -104,6 +104,10 @@ const WEEKS = 12;
     const logo = card.locator(".product-logo img");
     await expect(logo).toBeVisible();
     await expect.poll(() => logo.evaluate(image => (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
+    // A wordmark stands in for the visible name; either way the heading still names the product. Clay's reviewed app icon outranks its stored brand.
+    await expect(card.getByRole("heading", { level: 2, name: brand.name, exact: true })).toHaveCount(1);
+    const slot = { square: ".card-topline > .product-logo:not([data-logo-layout])", "app-icon": ".card-topline > .product-logo[data-logo-layout=app-icon]", wordmark: ".card-title .product-logo[data-logo-layout=wordmark]" };
+    await expect(card.locator(slot[brand.logo])).toBeVisible();
     await expect(card.getByText("I use it to")).toBeVisible();
     expect(await card.getByRole("list", { name: "What I use it for" }).getByRole("listitem").count()).toBeGreaterThanOrEqual(2);
     if (brand.bars) {

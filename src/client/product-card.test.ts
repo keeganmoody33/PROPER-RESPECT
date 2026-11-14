@@ -803,3 +803,24 @@ test("coding activity with days draws one bar per day on the front; without days
 test("bars take the card's chart colour, then its accent, then its text", () => {
   expect(readFileSync("app/globals.css", "utf8")).toContain("background: var(--brand-card-chart, var(--brand-card-accent, currentColor));");
 });
+
+test("a brand with only a wordmark for its surface draws it in place of the name, and keeps the name for screen readers", () => {
+  const $ = renderCard({ product: { ...baseCard.product, brand: { ...brand, styleguide: { mode: "light", colors: { background: "#FFFFFF", text: "#111111" } } } } });
+
+  expect($(".card-topline > .product-logo")).toHaveLength(0);
+  expect($(".card-title .product-logo").attr("data-logo-layout")).toBe("wordmark");
+  expect($(".card-title .product-logo").attr("aria-hidden")).toBe("true");
+  expect($(".card-title .product-logo img").attr("src")).toBe("https://example.com/light.svg");
+  expect($(".card-title h2").attr("class")).toBe("card-product-name");
+  expect($(".card-title h2").text()).toBe("Example Product");
+});
+
+test("an icon for the card's surface sits in the square slot beside the visible name", () => {
+  const icon = { url: "https://example.com/icon.svg", mode: "unknown" as const, type: "icon" as const, width: 64, height: 64 };
+  const $ = renderCard({ product: { ...baseCard.product, brand: { ...brand, logos: [...brand.logos, icon], styleguide: { mode: "light", colors: { background: "#FFFFFF", text: "#111111" } } } } });
+
+  expect($(".card-topline > .product-logo img").attr("src")).toBe("https://example.com/icon.svg");
+  expect($(".card-topline > .product-logo").attr("data-logo-layout")).toBeUndefined();
+  expect($(".card-title .product-logo")).toHaveLength(0);
+  expect($(".card-title h2").attr("class")).toBeUndefined();
+});

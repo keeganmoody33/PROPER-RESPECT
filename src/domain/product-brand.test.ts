@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { brandTitleNamesProduct, normalizeProductBrand, productBrandSnapshotSchema, selectProductBrandLogo } from "./product-brand";
 import wisprReceipt from "../../docs/verification/fixtures/2026-09-17-context-brands/wisprflow.json";
 import githubReceipt from "../../docs/verification/fixtures/2026-09-17-context-brands/github.json";
+import { HOMEPAGE_BRANDS } from "@/src/data/homepage-brands";
+
+const MEDIA_HOST = "https://media.brand.dev/";
+const UUID_PREFIX = 8;
 
 const input = {
   productSlug: "wispr-flow", canonicalDomain: "wisprflow.ai",
@@ -135,24 +139,59 @@ describe("retained product brand presentation", () => {
     expect(snapshot.styleguide).toBeUndefined();
   });
 
-  it("selects matching then unknown then opposite-mode logos, preferring compact icons", () => {
+  it("puts an icon made for the card's surface, or for any surface, in the square slot, preferring a square one", () => {
     const snapshot = normalizeProductBrand(input, responses);
-    const item = snapshot.logos[0];
-    snapshot.logos = [
-      { ...item, mode: "light", type: "icon", url: "https://assets.example.com/light.svg" },
-      { ...item, mode: "dark", type: "logo", url: "https://assets.example.com/dark-wordmark.svg" },
-      { ...item, mode: "unknown", type: "icon", url: "https://assets.example.com/unknown.svg" },
-      item,
-    ];
-    expect(selectProductBrandLogo(snapshot, "dark")).toEqual(item);
-    snapshot.logos.pop();
-    expect(selectProductBrandLogo(snapshot, "dark")?.type).toBe("logo");
-    snapshot.logos.splice(1, 1);
-    expect(selectProductBrandLogo(snapshot, "dark")?.mode).toBe("unknown");
-    snapshot.logos.pop();
-    expect(selectProductBrandLogo(snapshot, "dark")?.mode).toBe("light");
+    const logo = (mode: "light" | "dark" | "unknown", type: "icon" | "logo", width: number, height: number) =>
+      ({ url: `https://assets.example.com/${mode}-${type}-${width}x${height}.svg`, mode, type, width, height });
+    snapshot.logos = [logo("light", "logo", 400, 100), logo("light", "icon", 372, 256), logo("unknown", "icon", 512, 512), logo("dark", "icon", 512, 512)];
+    expect(selectProductBrandLogo(snapshot, "light")).toEqual({ logo: logo("unknown", "icon", 512, 512), layout: "square" });
+    snapshot.logos = [logo("unknown", "icon", 512, 512), logo("light", "icon", 128, 128)];
+    expect(selectProductBrandLogo(snapshot, "light")).toEqual({ logo: logo("light", "icon", 128, 128), layout: "square" });
+    snapshot.logos = [logo("light", "icon", 372, 256)];
+    expect(selectProductBrandLogo(snapshot, "light")).toEqual({ logo: logo("light", "icon", 372, 256), layout: "square" });
+  });
+
+  it("draws the fullest wordmark that still reads at the title's height when no icon suits the surface", () => {
+    const snapshot = normalizeProductBrand(input, responses);
+    const logo = (mode: "light" | "dark" | "unknown", width: number, height: number) =>
+      ({ url: `https://assets.example.com/${mode}-${width}x${height}.svg`, mode, type: "logo" as const, width, height });
+    snapshot.logos = [logo("light", 120, 48), logo("light", 32, 14), logo("light", 240, 48), logo("light", 719, 59), { ...logo("dark", 1, 1), type: "icon" as const }];
+    expect(selectProductBrandLogo(snapshot, "light")).toEqual({ logo: logo("light", 240, 48), layout: "wordmark" });
+    snapshot.logos = [logo("unknown", 719, 59), logo("unknown", 900, 60)];
+    expect(selectProductBrandLogo(snapshot, "light")).toEqual({ logo: logo("unknown", 719, 59), layout: "wordmark" });
+  });
+
+  it("falls back to a logo made for the other surface only in the square slot, where it gets its own backing", () => {
+    const snapshot = normalizeProductBrand(input, responses);
+    const logo = (mode: "light" | "dark", type: "icon" | "logo") => ({ url: `https://assets.example.com/${mode}-${type}.svg`, mode, type, width: 100, height: 100 });
+    snapshot.logos = [logo("dark", "logo"), logo("dark", "icon")];
+    expect(selectProductBrandLogo(snapshot, "light")).toEqual({ logo: logo("dark", "icon"), layout: "square" });
+    snapshot.logos = [logo("light", "logo")];
+    expect(selectProductBrandLogo(snapshot, "dark")).toEqual({ logo: logo("light", "logo"), layout: "square" });
     snapshot.logos = [];
     expect(selectProductBrandLogo(snapshot, "dark")).toBeUndefined();
+  });
+
+  it("chooses each homepage brand's logo and layout from its committed snapshot", () => {
+    const chosen = Object.fromEntries(Object.entries(HOMEPAGE_BRANDS).map(([slug, brand]) => {
+      const background = brand.styleguide?.colors.background;
+      const choice = selectProductBrandLogo(brand, background === "#0c0e13" ? "dark" : "light");
+      return [slug, `${choice?.layout} ${choice?.logo.mode} ${choice?.logo.type} ${choice?.logo.url.slice(MEDIA_HOST.length, MEDIA_HOST.length + UUID_PREFIX)}`];
+    }));
+    expect(chosen).toEqual({
+      clay: "square dark icon 1263c04e",
+      cloudflare: "wordmark light logo 5019dab7",
+      "context-dev": "square unknown icon 2bae46d7",
+      docker: "square light icon 01405b60",
+      elicit: "square light icon 105442cc",
+      exa: "square unknown icon 64377483",
+      firecrawl: "square unknown icon f895934e",
+      github: "square light icon c625fdf9",
+      n8n: "wordmark light logo f234c3d6",
+      "open-places": "square light icon d0d02048",
+      porkbun: "square dark icon 419c73f1",
+      spider: "square dark icon 0a17c0a1",
+    });
   });
 
   it("drops malformed optional brand fields and preserves the useful partial snapshot", () => {

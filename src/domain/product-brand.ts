@@ -111,14 +111,39 @@ export const productBrandRetrievalSchema = productBrandSnapshotV1Schema.pick({ p
 export type ProductBrandSnapshot = z.infer<typeof productBrandSnapshotSchema>;
 export type ContextBrandResponses = { brand: unknown; fonts?: unknown; styleguide?: unknown };
 export type ProductBrandReceipt = ProductBrandSnapshot["receipts"][number];
-/** Logo mode describes its intended surface; callers can back an opposite-mode fallback. */
-export function selectProductBrandLogo(snapshot: Pick<ProductBrandSnapshot, "logos">, surface: "light" | "dark") {
-  for (const candidateMode of [surface, "unknown", surface === "dark" ? "light" : "dark"]) {
-    const candidates = snapshot.logos.filter((logo) => logo.mode === candidateMode);
-    const selected = candidates.find((logo) => logo.type === "icon") ?? candidates.find((logo) => logo.type === "logo") ?? candidates[0];
-    if (selected) return selected;
-  }
-  return undefined;
+type ProductBrandLogo = ProductBrandSnapshot["logos"][number];
+export type ProductBrandLogoChoice = { logo: ProductBrandLogo; layout: "square" | "wordmark" };
+/** An icon within this much of square fills the slot; a wider one is drawn smaller in it. */
+const SQUARE_TOLERANCE = 0.2;
+/** Wider than this, a wordmark is too short to read at the card title's height. */
+const MAX_WORDMARK_ASPECT = 6;
+const aspect = (logo: ProductBrandLogo) => (logo.width && logo.height ? logo.width / logo.height : undefined);
+const isSquare = (logo: ProductBrandLogo) => Math.abs((aspect(logo) ?? Infinity) - 1) <= SQUARE_TOLERANCE;
+/** Square icons first, then in the order the modes are listed, then as stored. */
+function rankedIcons(logos: readonly ProductBrandLogo[], modes: readonly ProductBrandLogo["mode"][]) {
+  return logos.filter((logo) => logo.type === "icon" && modes.includes(logo.mode))
+    .sort((a, b) => Number(isSquare(b)) - Number(isSquare(a)) || modes.indexOf(a.mode) - modes.indexOf(b.mode));
+}
+/** The fullest lockup that still reads at the title's height; when every one is wider than that, the least wide. */
+function readableWordmark(logos: readonly ProductBrandLogo[]) {
+  const fitting = logos.filter((logo) => (aspect(logo) ?? Infinity) <= MAX_WORDMARK_ASPECT);
+  if (fitting.length) return fitting.reduce((best, logo) => (aspect(logo)! > aspect(best)! ? logo : best));
+  const measured = logos.filter((logo) => aspect(logo) !== undefined);
+  return measured.length ? measured.reduce((best, logo) => (aspect(logo)! < aspect(best)! ? logo : best)) : logos[0];
+}
+/**
+ * A logo's mode is the surface it was made for; "unknown" ones (often on their own background) suit either.
+ * An icon for this surface takes the square slot. Failing that a wordmark for it replaces the product's name.
+ * Only then does a logo made for the other surface appear, and only in the square, which gives it its own backing.
+ */
+export function selectProductBrandLogo(snapshot: Pick<ProductBrandSnapshot, "logos">, surface: "light" | "dark"): ProductBrandLogoChoice | undefined {
+  const usable = [surface, "unknown"] as const, opposite = surface === "dark" ? "light" : "dark";
+  const icon = rankedIcons(snapshot.logos, usable)[0];
+  if (icon) return { logo: icon, layout: "square" };
+  const wordmark = readableWordmark(snapshot.logos.filter((logo) => logo.type !== "icon" && (usable as readonly string[]).includes(logo.mode)));
+  if (wordmark) return { logo: wordmark, layout: "wordmark" };
+  const fallback = rankedIcons(snapshot.logos, [opposite])[0] ?? snapshot.logos.find((logo) => logo.mode === opposite);
+  return fallback ? { logo: fallback, layout: "square" } : undefined;
 }
 type SnapshotInput = Pick<ProductBrandSnapshot, "productSlug" | "canonicalDomain" | "retrievalId" | "retrievedAt" | "responseHash"> & { receipts?: ProductBrandReceipt[] };
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
