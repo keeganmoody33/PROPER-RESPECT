@@ -4,6 +4,7 @@ import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
 import { usageLinkLabelText, usageLinkSchema } from "./usage-links";
 import { isHttpUrl } from "./http-url.ts";
+import { linkDisclosure } from "./link-type.ts";
 import { cardStatusLabel, type RelationshipLevel } from "./relationship-level.ts";
 import { productUseLabels } from "./product-uses.ts";
 
@@ -142,8 +143,7 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
       } } : {}),
       ...(card.primaryLink && isHttpUrl(card.primaryLink.url) ? { primaryLink: {
         type: card.primaryLink.type, label: card.primaryLink.label, url: card.primaryLink.url,
-        ...(card.primaryLink.type === "AFFILIATE" ? { disclosure: "Affiliate link" }
-          : card.primaryLink.type === "REFERRAL" ? { disclosure: "Referral link" } : {}),
+        ...(linkDisclosure(card.primaryLink.type) ? { disclosure: linkDisclosure(card.primaryLink.type) } : {}),
       } } : {}),
       ...(card.usageLink && usageLinkSchema.safeParse(card.usageLink).success
         ? { usageLink: { label: usageLinkLabelText(card.usageLink.label), url: card.usageLink.url } } : {}),

@@ -725,6 +725,14 @@ test.each(["AFFILIATE", "REFERRAL"] as const)("%s destinations remain visibly di
   }
 });
 
+test.each([["CANONICAL", "Direct link"], ["AFFILIATE", "Affiliate link"], ["REFERRAL", "Referral link"], ["INVITE", "Invite link"]] as const)(
+  "the back names a %s link as %s, apart from the level",
+  (type, words) => {
+    const $ = renderCard({ level: "STOPPED", status: "ARCHIVED", primaryLink: { type, url: "https://example.com/owner-selected", label: "Visit Example Product" } });
+    expect($(".card-back .status-row").text()).toBe(`Stopped using · ${words}`);
+  },
+);
+
 test("a canonical destination receives no invented affiliate disclosure", () => {
   const $ = renderCard();
   expect($(".card-link-disclosure")).toHaveLength(0);

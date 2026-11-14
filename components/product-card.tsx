@@ -15,6 +15,7 @@ import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar
 import { compactNumber } from "@/src/domain/format-activity-number";
 import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
 import { isHttpUrl } from "@/src/domain/http-url";
+import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
 import { cardStatusLabel, cardTopLine } from "@/src/domain/relationship-level";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
@@ -456,9 +457,8 @@ export function ProductCard({
     && parsedUsage.data.productSlug === card.product.slug
     && card.product.domain === (parsedUsage.data.productSlug === "claude-code" ? "claude.com" : "openai.com")
     ? parsedUsage.data : undefined;
-  const linkDisclosure = card.primaryLink?.type === "AFFILIATE" ? "Affiliate link"
-    : card.primaryLink?.type === "REFERRAL" ? "Referral link" : undefined;
-  const linkRel = linkDisclosure ? "noopener noreferrer sponsored" : "noopener noreferrer";
+  const disclosure = card.primaryLink && linkDisclosure(card.primaryLink.type);
+  const linkRel = disclosure ? "noopener noreferrer sponsored" : "noopener noreferrer";
   // Only an http or https destination becomes a link; any other keeps its label as plain text.
   const webLink = card.primaryLink && isHttpUrl(card.primaryLink.url) ? card.primaryLink : undefined;
   // The owner's work-sample link, checked again here so a stored non-https
@@ -544,11 +544,11 @@ export function ProductCard({
             href={webLink.url}
             target="_blank"
             rel={linkRel}
-            aria-label={`${webLink.label}${linkDisclosure ? ` · ${linkDisclosure}` : ""} (opens in a new tab)`}
+            aria-label={`${webLink.label}${disclosure ? ` · ${disclosure}` : ""} (opens in a new tab)`}
           >
             ↗
-          </a>{linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}
-          {viewerSignedIn && linkDisclosure && <button type="button" className="card-props-action" onClick={() => {
+          </a>{disclosure && <span className="card-link-disclosure">{disclosure}</span>}
+          {viewerSignedIn && disclosure && <button type="button" className="card-props-action" onClick={() => {
             if (onGiveProps && profileHandle) void onGiveProps(profileHandle, card.product.slug);
           }}>Give props</button>}</div>}
         </div>
@@ -602,7 +602,7 @@ export function ProductCard({
         <div className="card-back-content" role="group" aria-label="Card evidence">
           <div className="status-row">
             <span>{cardStatus}</span>
-            {card.primaryLink && <span>{card.primaryLink.type}</span>}
+            {card.primaryLink && <> · <span>{linkTypeLabel(card.primaryLink.type)}</span></>}
           </div>
           {!brandPreview && <>
             {ownerGoTo && <p className="card-go-to">Owner-selected go-to</p>}
@@ -663,7 +663,7 @@ export function ProductCard({
             target="_blank"
           >
             {webLink.label} ↗
-            {linkDisclosure && <span className="card-link-disclosure">{linkDisclosure}</span>}
+            {disclosure && <span className="card-link-disclosure">{disclosure}</span>}
           </a> : card.primaryLink && <span className="outbound-link">{card.primaryLink.label}</span>}
           {/* The card also renders without a Next.js router (standalone bundles), so a plain link. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}

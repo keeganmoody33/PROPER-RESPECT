@@ -1,10 +1,11 @@
 import { isHttpUrl } from "./http-url";
+import { linkDisclosure, type LinkDisclosure } from "./link-type";
 import type { PublicProfile } from "./public-profile";
 
 export type LinkPropCredit = {
   productName: string;
   productSlug: string;
-  disclosure: "Affiliate link" | "Referral link";
+  disclosure: LinkDisclosure;
   url: string;
   count: number;
 };
@@ -13,11 +14,12 @@ export type LinkPropCredit = {
 export function creditFromStoredLink(card: PublicProfile["cards"][number], count = 1): LinkPropCredit | undefined {
   const link = card.primaryLink;
   if (!link || count < 1 || !isHttpUrl(link.url)) return undefined;
-  if (link.type !== "AFFILIATE" && link.type !== "REFERRAL") return undefined;
+  const disclosure = linkDisclosure(link.type);
+  if (!disclosure) return undefined;
   return {
     productName: card.product.name,
     productSlug: card.product.slug,
-    disclosure: link.type === "AFFILIATE" ? "Affiliate link" : "Referral link",
+    disclosure,
     url: link.url,
     count,
   };
