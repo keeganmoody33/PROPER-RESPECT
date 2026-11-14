@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isHttpsUrl } from "./http-url.ts";
+import { productUsesSchema } from "./product-uses.ts";
 import { levelMatchesStatus, relationshipLevelSchema } from "./relationship-level.ts";
 
 const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
@@ -12,6 +13,7 @@ export const relationshipEditSchema = z.object({
   level: relationshipLevelSchema.optional(),
   goTo: z.boolean(),
   headline: z.string().trim().max(240),
+  uses: productUsesSchema.optional(),
   note: z.string().trim().max(4000),
   startedAt: optionalDate,
   // Zod still runs this refine after a failed url check, so it must not throw.

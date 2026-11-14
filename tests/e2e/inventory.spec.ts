@@ -368,3 +368,47 @@ test("deleting an original asks first, can be cancelled, and removes only that o
   await expect(page.getByText("Retained snapshot original", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete original", exact: true })).toHaveCount(0);
 });
+
+test("a product with no listed uses asks the question with only the owner's own line", async ({ page }) => {
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByText("Review this discovery", { exact: true }).click();
+  const question = page.getByRole("group", { name: "What does Example Tool do for you?", exact: true });
+  await expect(question.getByLabel("Something else", { exact: true })).toBeVisible();
+  await expect(question.getByRole("checkbox")).toHaveCount(0);
+});
+
+for (const width of [1280, 390]) for (const theme of ["light", "dark"]) test(`an owner says what a product does for them and sees it on their private card at ${width}px in ${theme}`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("banner").getByRole("combobox", { name: "Appearance", exact: true }).selectOption(theme);
+  await page.getByRole("button", { name: "Load Clay fixture", exact: true }).click();
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await page.getByLabel("How it fits").selectOption("WEEKLY");
+  await expect(page.getByText("What does Clay do for you?", { exact: true })).toBeVisible();
+  const crm = page.getByRole("checkbox", { name: "keep my CRM records filled in", exact: true });
+  const enrich = page.getByRole("checkbox", { name: "enrich lead and account lists", exact: true });
+  const other = page.getByLabel("Something else", { exact: true });
+  await crm.check();
+  await enrich.check();
+  await other.fill("score inbound leads");
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  const front = page.locator(".card-front");
+  const uses = front.getByRole("list", { name: "What I use it for", exact: true });
+  await expect(front.getByText("I use it to", { exact: true })).toBeVisible();
+  await expect(uses.getByRole("listitem")).toHaveText(["enrich lead and account lists", "keep my CRM records filled in", "score inbound leads"]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  const collection = page.getByRole("region", { name: "Clay in your collection", exact: true });
+  await collection.screenshot({ path: testInfo.outputPath(`2026-11-13-uses-${width}-${theme}.png`) });
+  await expect(crm).toBeChecked();
+  await expect(enrich).toBeChecked();
+  await expect(other).toHaveValue("score inbound leads");
+  await crm.uncheck();
+  await enrich.uncheck();
+  await other.fill("");
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(uses).toHaveCount(0);
+  await expect(front.getByText("I use it to", { exact: true })).toHaveCount(0);
+  await expect(crm).not.toBeChecked();
+});

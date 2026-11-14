@@ -45,6 +45,12 @@ const groupedGitHub: InventoryData = {
   })),
 };
 
+const clay: InventoryData = { hasMore: false, cards: [{
+  ...initial.cards[0],
+  product: { ...initial.cards[0].product, name: "Clay", slug: "clay", domain: "clay.com" },
+  prop: { ...initial.cards[0].prop, _id: "synthetic-clay" as Id<"props"> },
+}] };
+
 export function InventoryFixture() {
   const [data, setData] = useState(initial);
   const [evidence, setEvidence] = useState<InventoryEvidence>([]);
@@ -80,7 +86,7 @@ export function InventoryFixture() {
     const version = args.expectedVersion + 1;
     const next: InventoryData = { ...data, cards: data.cards.map(item => item.prop._id !== args.propId ? item : ({ ...item,
       previousStatuses: item.prop.confirmedAt ? [item.prop.status] : [],
-      prop: { ...item.prop, status: args.status, level: args.level, goTo: args.goTo, headline: args.headline, note: args.note,
+      prop: { ...item.prop, status: args.status, level: args.level, goTo: args.goTo, headline: args.headline, uses: args.uses, note: args.note,
         startedAt: args.startedAt, supportingUrl: args.supportingUrl, relationshipVersion: version,
         activityEvidenceId: args.clearActivity ? undefined : args.activityEvidenceId ?? item.prop.activityEvidenceId,
         activity: args.clearActivity ? undefined : evidence.find(source => source.id === args.activityEvidenceId)?.suggestedActivity ?? item.prop.activity,
@@ -115,9 +121,10 @@ export function InventoryFixture() {
     <button type="button" onClick={() => setFocused(true)}>Open focused relationship</button>
     <button type="button" onClick={() => setComparison(true)}>Show card outside collection</button>
     {comparison && <div role="group" aria-label="Card outside collection"><span aria-hidden="true" /><ProductCard audience="owner" index={0} relationshipConfirmed={false}
-      card={{ product: initial.cards[0].product, status: initial.cards[0].prop.status, headline: initial.cards[0].prop.headline, note: initial.cards[0].prop.note,
+      card={{ product: initial.cards[0].product, status: initial.cards[0].prop.status, headline: initial.cards[0].prop.headline, uses: initial.cards[0].prop.uses, note: initial.cards[0].prop.note,
         primaryLink: privateCardPrimaryLink({ product: initial.cards[0].product, links: [], associatedEvidence: [] }) }} /></div>}
     <button type="button" onClick={() => setData(groupedGitHub)}>Load grouped GitHub fixture</button>
+    <button type="button" onClick={() => setData(clay)}>Load Clay fixture</button>
     <button type="button" onClick={() => { loseNextResponse.current = true; }}>Simulate one lost save response</button>
     <button type="button" onClick={() => { holdNextResponse.current = true; }}>Hold next save response</button>
     {heldSave && <button type="button" onClick={heldSave}>Finish held save</button>}

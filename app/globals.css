@@ -365,6 +365,37 @@ main {
   overflow-wrap: anywhere;
 }
 
+.card-uses-block {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.card-uses-lead {
+  font-size: 0.8rem;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.card-uses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.card-uses li {
+  border: 1px solid var(--card-line);
+  border-radius: var(--brand-card-button-radius, 0.45rem);
+  color: inherit;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  padding: 0.2rem 0.5rem;
+}
+
 .card-activity-preview {
   border-top: 1px solid var(--card-line);
   font-size: 0.85rem;

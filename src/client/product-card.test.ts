@@ -750,3 +750,26 @@ test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "h
   expect($(".artifact-list").text()).toContain("Bad artifact");
   expect($(".artifact-list a").filter((_, element) => $(element).attr("href") === "https://example.com/good")).toHaveLength(1);
 });
+
+test("the front lists what the product does for the owner after the headline, in the product's order", () => {
+  const $ = renderCard({ product: { ...baseCard.product, slug: "clay" }, uses: { picks: ["sync-crm", "retired-choice", "enrich-leads"], other: "score inbound leads" } });
+  const uses = $(".card-front .card-uses");
+  expect(uses.attr("aria-label")).toBe("What I use it for");
+  expect(uses.prev().text()).toBe("I use it to");
+  expect(uses.find("li").map((_, item) => $(item).text()).get())
+    .toEqual(["enrich lead and account lists", "keep my CRM records filled in", "score inbound leads"]);
+  expect(uses.parent().prev().hasClass("card-headline")).toBe(true);
+  expect($(".card-back .card-uses").length).toBe(0);
+});
+
+test("a card without known uses, or a brand preview, shows no uses", () => {
+  const clay = { ...baseCard.product, slug: "clay" };
+  expect(renderCard({ product: clay })(".card-uses").length).toBe(0);
+  expect(renderCard({ product: clay, uses: { picks: ["retired-choice"] } })(".card-uses").length).toBe(0);
+  expect(renderCard({ product: clay, uses: { picks: [], other: "   " } })(".card-uses").length).toBe(0);
+  const preview = load(renderToStaticMarkup(createElement(ProductCard, {
+    card: { ...baseCard, product: clay, uses: { picks: ["enrich-leads"] } }, index: 0, displayMode: "brand-preview",
+  })));
+  expect(preview(".card-uses").length).toBe(0);
+  expect(preview.text()).not.toContain("I use it to");
+});

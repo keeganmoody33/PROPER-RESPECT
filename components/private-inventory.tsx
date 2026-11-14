@@ -1,12 +1,14 @@
 "use client";
 
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { Checkbox, CheckboxIndicator } from "@ui-sdk/react/checkbox";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
+import { productUseOptions, USE_OTHER_MAX, type ProductUses } from "@/src/domain/product-uses";
 import { cardStatusLabel, isRelationshipLevel, levelDefinition, levelStatus, RELATIONSHIP_LEVELS } from "@/src/domain/relationship-level";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
@@ -45,6 +47,21 @@ function History({ propId }: { propId: Id<"props"> }) {
   </div>;
 }
 
+function UsesQuestion({ productName, productSlug, uses }: { productName: string; productSlug: string; uses?: ProductUses }) {
+  const options = productUseOptions(productSlug);
+  // The fieldset is the group, so the checkboxes sit in it directly: a group inside it would announce the question twice.
+  return <fieldset className={styles.uses}>
+    <legend>What does {productName} do for you?</legend>
+    {!!options.length && <div className={styles.useChoices}>
+      {options.map(option => <label key={option.id} className={styles.toggle}>
+        <Checkbox name="usePicks" value={option.id} defaultChecked={uses?.picks.includes(option.id) ?? false} className={styles.useCheckbox}><CheckboxIndicator aria-hidden="true">✓</CheckboxIndicator></Checkbox>
+        {option.label}
+      </label>)}
+    </div>}
+    <label>Something else<input name="useOther" maxLength={USE_OTHER_MAX} defaultValue={uses?.other ?? ""} /></label>
+  </fieldset>;
+}
+
 function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChange, dateNotice, supportingContext, saveNotice }: {
   item: Item; evidence: InventoryEvidence; onSave: (input: SaveInput) => Promise<SaveResult>;
   startedAt: string; onStartDateChange: (value: string) => void; dateNotice: string;
@@ -64,10 +81,13 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
     setBusy(true);
     setMessage({ version, text: "" });
     const activityChoice = String(form.get("activityEvidenceId") ?? "");
+    const usePicks = form.getAll("usePicks").map(String);
+    const useOther = String(form.get("useOther") ?? "").trim();
     const fields = {
       propId: item.prop._id, expectedVersion: item.prop.relationshipVersion ?? 0,
       level: currentLevel, status: levelStatus(currentLevel), goTo: form.get("goTo") === "on",
       headline: String(form.get("headline") ?? ""), note: String(form.get("note") ?? ""),
+      uses: usePicks.length || useOther ? { picks: usePicks, ...(useOther ? { other: useOther } : {}) } : undefined,
       startedAt: String(form.get("startedAt") ?? "") || undefined,
       supportingUrl: String(form.get("supportingUrl") ?? "") || undefined,
       activityEvidenceId: (activityChoice === "__remove__" ? undefined : activityChoice || undefined) as Id<"rawEvidence"> | undefined,
@@ -98,6 +118,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       <p id={`${formId}-level`} className={styles.hint}>{isRelationshipLevel(currentLevel) ? levelDefinition(currentLevel) : "Pick the level that matches how you use it now."}</p>
       <p className={styles.hint}>You choose the level and the go-to mark. Activity never sets either. Earlier choices stay in history.</p>
       <label>What it helps you do (optional)<input name="headline" maxLength={240} defaultValue={confirmed ? item.prop.headline : ""} /></label>
+      <UsesQuestion productName={item.product.name} productSlug={item.product.slug} uses={item.prop.uses} />
       <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
       <label className={styles.dateField}><span>Started using (optional)</span><input name="startedAt" type="date" aria-label="Started using (optional)" value={startedAt} onChange={event => onStartDateChange(event.target.value)} />
@@ -251,7 +272,7 @@ export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focus
 
 function InventoryCard({ item, index, expandedActivity = false }: { item: Item; index: number; expandedActivity?: boolean }) {
   return <ProductCard audience="owner" index={index} expandedActivity={expandedActivity} relationshipConfirmed={isRelationshipConfirmed(item.prop)} goTo={item.prop.goTo} card={{
-    product: item.product, status: item.prop.status, level: item.prop.level, headline: item.prop.headline, note: item.prop.note,
+    product: item.product, status: item.prop.status, level: item.prop.level, headline: item.prop.headline, uses: item.prop.uses, note: item.prop.note,
     startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
     primaryLink: privateCardPrimaryLink({
       product: item.product,
