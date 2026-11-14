@@ -85,8 +85,8 @@ test("five examples are featured, first, in the order the chooser shows them; th
   ]);
 });
 
-test("only Clay's card says what is behind Details, since its back holds the most", () => {
-  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "Cost, numbers and a work sample inside"]]);
+test("Clay's and Exa's cards say what is behind Details: Clay's back holds the most, and Exa's holds the demo its label names", () => {
+  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "Numbers and a work sample inside"], ["exa", "A demo link inside"]]);
 });
 
 test("every headline and note is a short line under the card's limit", () => {

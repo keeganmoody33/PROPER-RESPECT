@@ -76,6 +76,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-${name.toLowerCase().replaceAll(" ", "-")}-${width}.png`) });
     await expect(card.locator(".card-front .card-link-disclosure")).toHaveText(FRONT_DISCLOSURE[name] ?? []);
+    await Promise.all((FRONT_TEXT[name] ?? []).map(text => expect(card.locator(".card-front")).toContainText(text)));
     const back = BACK_TEXT[name];
     if (!back) continue;
     await card.getByRole("button", { name: "Details", exact: true }).click();
@@ -127,6 +128,14 @@ const CAPABILITIES: Readonly<Record<string, string>> = {
   Elicit: "Stopped using, and why",
   "Context.dev": "Testing, week by week",
   n8n: "Paused, and why",
+};
+/** What each label promises, said on the card's front: its cost, why it was paused or stopped, and where its demo is. */
+const FRONT_TEXT: Readonly<Record<string, readonly string[]>> = {
+  Clay: ["Costs $149/month · owner-reported"],
+  Cloudflare: ["Costs $5/month · owner-reported", "Owner-selected go-to"],
+  Exa: ["A demo link inside"],
+  n8n: ["Paused while my nightly jobs move to plain cron.", "I used it to"],
+  Elicit: ["I stopped once my market study was done.", "I used it to"],
 };
 /** What a card discloses next to its outbound arrow, and what its back shows beyond the front: one capability per example. */
 const FRONT_DISCLOSURE: Readonly<Record<string, string>> = { Firecrawl: "Referral link", Spider: "Affiliate link" };
@@ -200,8 +209,10 @@ const NARROWEST_WIDTH = 320;
     await expect(card.getByRole("heading", { level: 2, name: brand.name, exact: true })).toHaveCount(1);
     const slot = { square: ".card-topline > .product-logo:not([data-logo-layout])", "app-icon": ".card-topline > .product-logo[data-logo-layout=app-icon]", wordmark: ".card-title .product-logo[data-logo-layout=wordmark]" };
     await expect(card.locator(slot[brand.logo])).toBeVisible();
-    await expect(card.getByText("I use it to")).toBeVisible();
-    expect(await card.getByRole("list", { name: "What I use it for" }).getByRole("listitem").count()).toBeGreaterThanOrEqual(2);
+    // n8n is paused, so its uses are in the past tense.
+    const [lead, list] = brand.name === "n8n" ? ["I used it to", "What I used it for"] : ["I use it to", "What I use it for"];
+    await expect(card.getByText(lead)).toBeVisible();
+    expect(await card.getByRole("list", { name: list }).getByRole("listitem").count()).toBeGreaterThanOrEqual(2);
     if (brand.bars) {
       const bars = card.locator(".card-front .activity-bars > span");
       await expect(bars).toHaveCount(WEEKS);
@@ -213,8 +224,8 @@ const NARROWEST_WIDTH = 320;
       await expect(card.locator(".card-front")).toContainText("2 more reported measurements in Details.");
       await expect(card.locator(".card-front")).toContainText("Synthetic sample. Not real account activity.");
       // Its footer says what is behind Details, and the button carries the same words.
-      await expect(card.locator(".card-footer > span")).toHaveText("Cost, numbers and a work sample inside");
-      await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("Cost, numbers and a work sample inside");
+      await expect(card.locator(".card-footer > span")).toHaveText("Numbers and a work sample inside");
+      await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("Numbers and a work sample inside");
       continue;
     } else {
       await expect(card.locator(".card-front .activity-preview-metrics")).toBeVisible();

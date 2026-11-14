@@ -16,7 +16,8 @@ import { compactNumber, fullNumber } from "@/src/domain/format-activity-number";
 import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
 import { isHttpUrl } from "@/src/domain/http-url";
 import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
-import { cardStatusLabel, cardTopLine } from "@/src/domain/relationship-level";
+import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relationship-level";
+import { costDetail, costSummary } from "@/src/domain/cost";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart, usageChartLog } from "./usage-chart";
@@ -494,6 +495,9 @@ export function ProductCard({
   const footerLabel = ([[brandPreview, "Brand identity"], [!relationshipConfirmed, "Needs your review"], [ownerGoTo, "Owner-selected go-to"]] as const)
     .find(([applies]) => applies)?.[1] ?? backHint ?? "Relationship & evidence";
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
+  const pastUse = noLongerInUse(card);
+  // A paused or stopped card's note is why, so its front says it under the headline.
+  const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
   const notePlaceholder = relationshipConfirmed ? "Relationship note not supplied." : "Discovery note not supplied.";
   const [isFlipped, setIsFlipped] = useState(false);
   const cardId = useId();
@@ -579,9 +583,10 @@ export function ProductCard({
         <p className="card-headline">
           {brandPreview ? card.product.description : card.headline || card.note || notePlaceholder}
         </p>
+        {reason && <p className="card-reason">{reason}</p>}
         {!!useLabels.length && <div className="card-uses-block">
-          <p className="card-uses-lead">I use it to</p>
-          <ul className="card-uses" aria-label="What I use it for">{useLabels.map(label => <li key={label}>{label}</li>)}</ul>
+          <p className="card-uses-lead">{pastUse ? "I used it to" : "I use it to"}</p>
+          <ul className="card-uses" aria-label={pastUse ? "What I used it for" : "What I use it for"}>{useLabels.map(label => <li key={label}>{label}</li>)}</ul>
         </div>}
 
         {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
@@ -593,6 +598,7 @@ export function ProductCard({
           </p>
         ) : null}
         {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
+        {!brandPreview && card.cost && <p className="card-cost">{costSummary(card.cost)}</p>}
 
         <div className="card-footer">
           <span id={`${cardId}-footer`} className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
@@ -637,14 +643,7 @@ export function ProductCard({
             </p>
           </>}
           <p>{card.product.description}</p>
-          {!brandPreview && card.cost && (
-            <p>
-              {card.cost.basis === "ESTIMATE" ? "Estimated cost" : card.cost.basis === "RECEIPT" ? "Receipt cost" : "Owner-reported cost"}: {new Intl.NumberFormat("en", { style: "currency", currency: card.cost.currency }).format(card.cost.amount)}
-              {card.cost.cadence === "MONTHLY" ? "/month" : card.cost.cadence === "ANNUAL" ? "/year" : card.cost.cadence === "ONE_TIME" ? " one-time" : " (billing interval unknown)"}
-              {" · as of "}{card.cost.asOf}
-              {card.cost.period && ` · ${card.cost.period.start} to ${card.cost.period.end}`}
-            </p>
-          )}
+          {!brandPreview && card.cost && <p>{costDetail(card.cost)}</p>}
           {!brandPreview && card.activity && <>
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
             <ActivityView activity={card.activity} />

@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   cardStatusLabel, cardTopLine, DEFAULT_STACK_LEVEL, isRelationshipLevel, levelDefinition, levelLabel,
-  levelMatchesStatus, levelStatus, RELATIONSHIP_LEVELS, relationshipLevelSchema, relationshipLevelsRule,
+  levelMatchesStatus, levelStatus, noLongerInUse, RELATIONSHIP_LEVELS, relationshipLevelSchema, relationshipLevelsRule,
 } from "./relationship-level";
 
 describe("relationship levels", () => {
+  it("knows a paused or stopped tool, or one only marked as used before, is no longer in use; a tool never adopted never was", () => {
+    expect(RELATIONSHIP_LEVELS.map(level => [level.key, noLongerInUse({ level: level.key, status: level.status })])).toEqual([
+      ["TRIED_NOT_ADOPTED", false], ["STOPPED", true], ["PAUSED", true], ["OCCASIONAL", false], ["TESTING", false], ["WEEKLY", false], ["DAILY", false],
+    ]);
+    expect([noLongerInUse({ status: "ARCHIVED" }), noLongerInUse({ status: "ACTIVE" }), noLongerInUse({ status: "TESTING" })]).toEqual([true, false, false]);
+  });
+
   it("lists seven levels cold to hot with their labels, definitions and implied status", () => {
     expect(RELATIONSHIP_LEVELS.map(level => [level.key, level.label, level.definition, level.status])).toEqual([
       ["TRIED_NOT_ADOPTED", "Tried, didn't adopt", "I tried it and decided not to use it.", "ARCHIVED"],

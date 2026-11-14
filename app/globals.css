@@ -395,6 +395,20 @@ main {
   overflow-wrap: anywhere;
 }
 
+.card-reason {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.card-cost {
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.4;
+  margin: 0;
+}
+
 .card-uses-block {
   display: grid;
   gap: 0.3rem;

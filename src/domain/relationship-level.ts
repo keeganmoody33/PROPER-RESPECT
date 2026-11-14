@@ -72,6 +72,11 @@ export const relationshipLevelsRule = "The relationship words on a card are the 
   + `A card without a level says ${STATUS_FALLBACK_LABELS.ACTIVE}, ${STATUS_FALLBACK_LABELS.TESTING} or ${STATUS_FALLBACK_LABELS.ARCHIVED}. `
   + "The order is not a score or a ranking, and go-to is a separate mark.";
 
+/** Paused or stopped, or with no level and only marked as used before. A tool never adopted was never in use. */
+export function noLongerInUse(card: { status: RelationshipStatus; level?: RelationshipLevel }): boolean {
+  return card.level ? card.level === "PAUSED" || card.level === "STOPPED" : card.status === "ARCHIVED";
+}
+
 const YEAR_LENGTH = 4;
 
 /**

@@ -143,7 +143,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
     cost: { amount: CLAY_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
     usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
-    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Cost, numbers and a work sample inside",
+    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Numbers and a work sample inside",
   },
   {
     slug: "cloudflare", featured: true, capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
@@ -172,7 +172,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "exa", capability: "A demo link on the back", level: "WEEKLY", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news.",
     uses: ["search-for-agents", "find-companies"], usageLink: { url: "https://exa.ai/search", label: "DEMO" },
-    caveat: "The demo link goes to Exa's own public search page, standing in for an owner's recording.",
+    caveat: "The demo link goes to Exa's own public search page, standing in for an owner's recording.", backHint: "A demo link inside",
   },
   {
     slug: "porkbun", capability: "Running totals", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here.",

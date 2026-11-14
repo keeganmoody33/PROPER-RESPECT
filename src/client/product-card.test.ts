@@ -748,9 +748,9 @@ test("published numbers say how they were recorded on the back, where every row 
 });
 
 test("a hint names what the back holds in the footer, and describes the Details button with it", () => {
-  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, backHint: "Cost, numbers and a work sample inside" })));
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, backHint: "Numbers and a work sample inside" })));
   const hint = $(".card-footer > span");
-  expect(hint.text()).toBe("Cost, numbers and a work sample inside");
+  expect(hint.text()).toBe("Numbers and a work sample inside");
   expect($(".card-button").attr("aria-describedby")).toBe(hint.attr("id"));
   const plain = renderCard();
   expect(plain(".card-footer > span").text()).toBe("Relationship & evidence");
@@ -808,6 +808,32 @@ test("the front lists what the product does for the owner after the headline, in
     .toEqual(["enrich lead and account lists", "keep my CRM records filled in", "score inbound leads"]);
   expect(uses.parent().prev().hasClass("card-headline")).toBe(true);
   expect($(".card-back .card-uses").length).toBe(0);
+});
+
+test.each([
+  ["PAUSED", "ARCHIVED", "I used it to", "What I used it for"],
+  ["STOPPED", "ARCHIVED", "I used it to", "What I used it for"],
+  ["TRIED_NOT_ADOPTED", "ARCHIVED", "I use it to", "What I use it for"],
+  ["DAILY", "ACTIVE", "I use it to", "What I use it for"],
+] as const)("a %s card's uses read in the right tense", (level, status, lead, label) => {
+  const $ = renderCard({ level, status, product: { ...baseCard.product, slug: "clay" }, uses: { picks: ["enrich-leads"] } });
+  expect([$(".card-uses-lead").text(), $(".card-uses").attr("aria-label")]).toEqual([lead, label]);
+});
+
+test("a paused or stopped card says why on its front, under the headline; a card still in use keeps its note on the back", () => {
+  const paused = renderCard({ level: "PAUSED", status: "ARCHIVED", note: "Paused while my nightly jobs move to plain cron." });
+  expect(paused(".card-front .card-headline + .card-reason").text()).toBe("Paused while my nightly jobs move to plain cron.");
+  expect(paused(".card-back blockquote").text()).toBe("Paused while my nightly jobs move to plain cron.");
+  expect(renderCard({ level: "DAILY", status: "ACTIVE" })(".card-front .card-reason")).toHaveLength(0);
+  expect(renderCard({ level: "STOPPED", status: "ARCHIVED", note: baseCard.headline })(".card-front .card-reason")).toHaveLength(0);
+});
+
+test("a published cost shows on the front in a few words, with the full record kept on the back", () => {
+  const $ = renderCard({ cost: { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" } });
+  expect($(".card-front .card-cost").text()).toBe("Costs $5/month · owner-reported");
+  expect($(".card-front .card-cost").next().hasClass("card-footer")).toBe(true);
+  expect($(".card-back").text()).toContain("Owner-reported cost: $5.00/month · as of 2026-09-01");
+  expect(renderCard()(".card-cost")).toHaveLength(0);
 });
 
 test("a card without known uses, or a brand preview, shows no uses", () => {
