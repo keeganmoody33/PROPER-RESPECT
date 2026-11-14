@@ -684,3 +684,86 @@ test("opening More examples mounts none of the nine; each mounts when it is pick
   expect(await slides.evaluateAll(elements => elements.map(element => element.getAttribute("data-example")))).toEqual(["clay", "github", "cloudflare", "docker", "firecrawl", "spider", "open-places"]);
   await expect(slides.filter({ has: page.getByRole("article", { name: "Spider card" }) })).toHaveAttribute("aria-label", "10 of 14: Spider");
 });
+
+/**
+ * The look of the five featured cards, held by geometry and computed style rather than pixel baselines, which differ between
+ * macOS and CI's Linux: each one's brand surface, band and heading face, what its front draws, its biggest number, its sizes.
+ */
+const FEATURED_LOOK = [
+  { name: "Clay", slug: "clay", surface: "rgb(255, 255, 255)", band: "rgb(3, 93, 68)", draws: "table" },
+  { name: "GitHub", slug: "github", surface: "rgb(255, 255, 255)", band: null, draws: "calendar" },
+  { name: "Cloudflare", slug: "cloudflare", surface: "rgb(255, 255, 255)", band: "rgb(255, 94, 31)", draws: "per day bars" },
+  { name: "Docker", slug: "docker", surface: "rgb(249, 250, 251)", band: null, draws: "linked works" },
+  { name: "Firecrawl", slug: "firecrawl", surface: "rgb(249, 249, 249)", band: null, draws: "per week bars" },
+] as const;
+const MAX_FACE_DIFFERENCE_PX = 80;
+const MIN_BAND_CONTRAST = 4.5;
+
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards hold their look at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const looks = [];
+  for (const look of FEATURED_LOOK) {
+    await carousel.getByRole("button", { name: look.name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${look.name} card` });
+    await expect(card).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const front = await card.evaluate((article, minTap) => {
+      const luminance = (colour: string) => {
+        const [red, green, blue] = colour.match(/\d+/g)!.slice(0, 3).map(Number).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      };
+      const contrast = (first: string, second: string) => {
+        const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+        return (light + 0.05) / (dark + 0.05);
+      };
+      const face = article.querySelector<HTMLElement>(".card-front")!;
+      const headline = getComputedStyle(face.querySelector(".card-headline")!);
+      const bars = [...face.querySelectorAll(".activity-bars > span")];
+      const draws = face.querySelector(".card-table-preview") ? "table" : face.querySelector(".contribution-calendar") ? "calendar"
+        : face.querySelector(".card-artifact-links") ? "linked works" : bars.length ? `${bars[0].getAttribute("title")!.match(/per (day|week)/)![0]} bars` : "nothing";
+      // Every bit of visible text on the front, at its rendered size; the screen-reader table is not drawn.
+      const walker = document.createTreeWalker(face, NodeFilter.SHOW_TEXT);
+      const sizes: number[] = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const parent = node.parentElement!;
+        if (!node.textContent!.trim() || parent.closest(".visually-hidden") || !parent.getBoundingClientRect().width) continue;
+        sizes.push(parseFloat(getComputedStyle(parent).fontSize));
+      }
+      const numbers = [...face.querySelectorAll(".card-activity-preview > p:first-child strong, .usage-measurement-stats strong")].map(number => Number(number.textContent!.replaceAll(",", "")));
+      const targets = [...face.querySelectorAll("a, button")].map(target => target.getBoundingClientRect()).filter(box => box.width && box.height < minTap).length;
+      return {
+        surface: getComputedStyle(article).backgroundColor, band: article.hasAttribute("data-band") ? headline.backgroundColor : null,
+        bandContrast: article.hasAttribute("data-band") ? contrast(headline.color, headline.backgroundColor) : null,
+        headlineFace: headline.fontFamily.split(",")[0].replaceAll('"', ""), nameFace: getComputedStyle(face.querySelector("h2")!).fontFamily.split(",")[0].replaceAll('"', ""),
+        draws, smallestText: Math.min(...sizes), biggestNumber: Math.max(...numbers), shortTargets: targets,
+        height: article.getBoundingClientRect().height,
+      };
+    }, MIN_TAP_PX);
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    const back = await card.evaluate(article => {
+      const box = article.getBoundingClientRect();
+      const content = [...article.querySelectorAll(".card-back-content > *")].at(-1)!.getBoundingClientRect();
+      return { height: box.height, contentBottom: content.bottom - box.top, logo: Boolean(article.querySelector(".card-back-topline .product-logo")) };
+    });
+    await card.getByRole("button", { name: "Close details" }).click();
+    looks.push({
+      name: look.name, surface: front.surface, band: front.band, draws: front.draws,
+      faces: front.headlineFace.startsWith(`PRBrand-${look.slug}-`) && front.headlineFace.endsWith("-heading") && front.nameFace === front.headlineFace,
+      bandReadable: front.bandContrast === null || front.bandContrast >= MIN_BAND_CONTRAST,
+      textAtLeast12: front.smallestText >= MIN_TEXT_PX, leadsWithZero: front.biggestNumber === 0,
+      // The card keeps its size turned over, and its back's content ends within the target of the front's height.
+      faceDifference: Math.abs(back.height - front.height) <= MAX_FACE_DIFFERENCE_PX && back.contentBottom <= front.height + MAX_FACE_DIFFERENCE_PX,
+      backLogo: back.logo, shortTargets: width === PHONE_WIDTH ? front.shortTargets : 0,
+    });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), look.name).toBe(true);
+  }
+  expect(looks).toEqual(FEATURED_LOOK.map(look => ({
+    name: look.name, surface: look.surface, band: look.band, draws: look.draws, faces: true, bandReadable: true,
+    textAtLeast12: true, leadsWithZero: false, faceDifference: true, backLogo: true, shortTargets: 0,
+  })));
+  // No two featured fronts draw the same thing.
+  expect(new Set(looks.map(({ draws }) => draws)).size).toBe(FEATURED_LOOK.length);
+});
