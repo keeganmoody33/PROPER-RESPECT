@@ -1,0 +1,8 @@
+{
+  "port": "3100",
+  "pid": "21732",
+  "cwd": "<worktree>",
+  "command": "next-server (v16.3.8)",
+  "commit": "d9b4864ee3a6afad4b0d2278c7309a7f4e93231a",
+  "uncommittedChanges": "M next-env.d.ts\n M scripts/brand-fidelity.mjs"
+}

@@ -1,0 +1,128 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 <worktree>
+
+ ❯ src/domain/brand-kit.test.ts (13 tests | 6 failed) 8ms
+     × gives the button the brand's accent when the stored one would vanish on the card 2ms
+     × draws a chart in the brand's accent when its bars show on the card, and in the card's text colour when they would not 1ms
+     × lets a square brand's card be square 0ms
+     × fills the button from the site's other stored button when the first has no fill that shows 1ms
+     × keeps a site accent with colour, and replaces a grey one with the brand's most colourful colour that shows 0ms
+     × keeps a grey accent when no brand colour has colour and shows on the card 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/domain/brand-kit.test.ts > brandCardKit > gives the button the brand's accent when the stored one would vanish on the card
+AssertionError: expected '6px' to be '4px' // Object.is equality
+
+Expected: "4px"
+Received: "6px"
+
+ ❯ src/domain/brand-kit.test.ts:49:40
+     47|     expect(kit["--brand-card-button-text"]).toBe("#262626");
+     48|     expect(kit["--brand-card-button-radius"]).toBe("9999px");
+     49|     expect(kit["--brand-card-radius"]).toBe("4px");
+       |                                        ^
+     50|     expect(kit).not.toHaveProperty("--brand-card-quiet-fill");
+     51|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/domain/brand-kit.test.ts > brandCardKit > draws a chart in the brand's accent when its bars show on the card, and in the card's text colour when they would not
+AssertionError: expected { clay: '#3859f9', …(11) } to deeply equal { clay: '#3859f9', …(11) }
+
+- Expected
++ Received
+
+@@ -8,7 +8,7 @@
+    "firecrawl": "#ff4c00",
+    "github": "#0d6731",
+    "n8n": "#161616",
+    "open-places": "#3f5a2c",
+    "porkbun": "#000000",
+-   "spider": "#24c45c",
++   "spider": "#94a3b8",
+  }
+
+ ❯ src/domain/brand-kit.test.ts:107:20
+    105|       return [slug, brandCardKit(brand, background!, text!)["--brand-c…
+    106|     }));
+    107|     expect(charts).toEqual({
+       |                    ^
+    108|       clay: "#3859f9", cloudflare: "#ff5e1f", "context-dev": "#2563eb"…
+    109|       // Spider's site accent is slate, a grey; its bars take the gree…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  src/domain/brand-kit.test.ts > brandCardKit > lets a square brand's card be square
+AssertionError: expected '6px' to be '0px' // Object.is equality
+
+Expected: "0px"
+Received: "6px"
+
+ ❯ src/domain/brand-kit.test.ts:119:79
+    117|   it("lets a square brand's card be square", () => {
+    118|     const square = stored({ background: "#0c0e13", text: "#f8fafc" }, …
+    119|     expect(brandCardKit(square, "#0c0e13", "#f8fafc")["--brand-card-ra…
+       |                                                                               ^
+    120|   });
+    121|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  src/domain/brand-kit.test.ts > brandCardKit > fills the button from the site's other stored button when the first has no fill that shows
+AssertionError: expected { …(9) } to match object { …(2) }
+(7 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "--brand-card-button-fill": "#08872b",
++   "--brand-card-button-fill": "#0d6731",
+    "--brand-card-button-text": "#ffffff",
+  }
+
+ ❯ src/domain/brand-kit.test.ts:125:17
+    123|     // GitHub's first stored button is an outline; its green sign-up b…
+    124|     const kit = brandCardKit(HOMEPAGE_BRANDS.github, "#ffffff", "#0000…
+    125|     expect(kit).toMatchObject({ "--brand-card-button-fill": "#08872b",…
+       |                 ^
+    126|     expect(kit).not.toHaveProperty("--brand-card-quiet-fill");
+    127|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  src/domain/brand-kit.test.ts > brandAccent > keeps a site accent with colour, and replaces a grey one with the brand's most colourful colour that shows
+TypeError: brandAccent is not a function
+ ❯ src/domain/brand-kit.test.ts:132:102
+    130| describe("brandAccent", () => {
+    131|   it("keeps a site accent with colour, and replaces a grey one with th…
+    132|     const accents = Object.fromEntries(Object.entries(HOMEPAGE_BRANDS)…
+       |                                                                                                      ^
+    133|     expect(accents).toEqual({
+    134|       clay: { hex: "#3859f9", source: "site accent" }, cloudflare: { h…
+ ❯ src/domain/brand-kit.test.ts:132:72
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  src/domain/brand-kit.test.ts > brandAccent > keeps a grey accent when no brand colour has colour and shows on the card
+TypeError: brandAccent is not a function
+ ❯ src/domain/brand-kit.test.ts:147:12
+    145|   it("keeps a grey accent when no brand colour has colour and shows on…
+    146|     const grey = stored({ accent: "#94a3b8", background: "#0c0e13", te…
+    147|     expect(brandAccent(grey, "#0c0e13")).toEqual({ hex: "#94a3b8", sou…
+       |            ^
+    148|     expect(brandAccent(undefined, "#0c0e13")).toBeUndefined();
+    149|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 7 passed (13)
+   Start at  06:56:37
+   Duration  185ms (transform 49ms, setup 0ms, import 102ms, tests 8ms, environment 0ms)
+
