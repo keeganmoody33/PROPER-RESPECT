@@ -22,6 +22,13 @@ test("the preview reminds the owner what a work-sample link shows, without promi
   expect(text).toContain("nothing private, like other people’s contact details");
 });
 
+test("the visitor's view shows what each product does for the owner before anything is published", () => {
+  const $ = preview([{ ...card, uses: { picks: ["sync-crm", "enrich-leads"], other: "score inbound leads" } }]);
+  expect($(".card-uses-lead").text()).toBe("I use it to");
+  expect($('ul[aria-label="What I use it for"] li').map((_, item) => $(item).text()).get())
+    .toEqual(["enrich lead and account lists", "keep my CRM records filled in", "score inbound leads"]);
+});
+
 test("the preview says nothing about links when no card has one", () => {
   expect(preview([card]).text()).not.toContain("sharing settings");
 });

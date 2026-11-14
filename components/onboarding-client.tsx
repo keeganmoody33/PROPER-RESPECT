@@ -584,6 +584,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                       status: card.prop.status,
                       level: card.prop.level,
                       headline: card.prop.headline,
+                      uses: card.prop.uses,
                       note: card.prop.note,
                       startedAt: card.prop.startedAt,
                       activity: card.prop.activity,
