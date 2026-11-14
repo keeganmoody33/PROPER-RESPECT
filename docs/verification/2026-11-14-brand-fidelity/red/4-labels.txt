@@ -1,0 +1,57 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a
+
+ ❯ src/domain/brand-kit-site.test.ts (7 tests | 1 failed) 8ms
+     × take the site's small-label type, case and letter-spacing 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/domain/brand-kit-site.test.ts > the small labels > take the site's small-label type, case and letter-spacing
+AssertionError: expected { clay: undefined, …(11) } to deeply equal { …(12) }
+
+- Expected
++ Received
+
+  {
+-   "clay": "var(--brand-card-body-font)",
++   "clay": undefined,
+    "cloudflare": undefined,
+-   "context-dev": "var(--brand-card-body-font)",
+-   "docker": "var(--brand-card-body-font)",
++   "context-dev": undefined,
++   "docker": undefined,
+    "elicit": undefined,
+-   "exa": "var(--brand-card-body-font)",
+-   "firecrawl": "var(--brand-card-body-font)",
+-   "github": "var(--brand-card-body-font)",
+-   "n8n": "ui-monospace, \"SF Mono\", Menlo, monospace",
+-   "open-places": "var(--brand-card-body-font)",
++   "exa": undefined,
++   "firecrawl": undefined,
++   "github": undefined,
++   "n8n": undefined,
++   "open-places": undefined,
+    "porkbun": undefined,
+-   "spider": "ui-monospace, \"SF Mono\", Menlo, monospace",
++   "spider": undefined,
+  }
+
+ ❯ src/domain/brand-kit-site.test.ts:107:45
+    105|   it("take the site's small-label type, case and letter-spacing", () =…
+    106|     const mono = 'ui-monospace, "SF Mono", Menlo, monospace', body = "…
+    107|     expect(kits("--brand-card-label-font")).toEqual({
+       |                                             ^
+    108|       spider: mono, n8n: mono,
+    109|       clay: body, "context-dev": body, docker: body, exa: body, firecr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  07:41:26
+   Duration  151ms (transform 52ms, setup 0ms, import 89ms, tests 8ms, environment 0ms)
+

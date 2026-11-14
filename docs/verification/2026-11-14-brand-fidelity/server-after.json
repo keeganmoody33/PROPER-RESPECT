@@ -1,8 +1,13 @@
 {
-  "port": "3100",
-  "pid": "21732",
-  "cwd": "<worktree>",
+  "port": "3219",
+  "pid": "30058",
+  "cwd": "/Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a",
   "command": "next-server (v16.3.8)",
-  "commit": "d9b4864ee3a6afad4b0d2278c7309a7f4e93231a",
-  "uncommittedChanges": "M next-env.d.ts\n M scripts/brand-fidelity.mjs"
+  "commit": "caa54ea64ebf01c80605f13bb29b5d3854d681a6",
+  "uncommittedChanges": "none",
+  "build": {
+    "commit": "caa54ea64ebf01c80605f13bb29b5d3854d681a6",
+    "uncommittedChanges": "none",
+    "builtAt": "2026-11-14T12:47:01.588Z"
+  }
 }
