@@ -50,12 +50,20 @@ function countedThing(measurement: PublicMeasurement): string {
   return metric.includes(unit) ? metric : `${unit} ${metric}`;
 }
 
+/** Whose the shown numbers are, decided on the rows a visitor sees: Details labels every row it holds. */
+function shownOrigin(shown: readonly PublicMeasurement[]): string {
+  const samples = shown.filter(row => row.sample === "synthetic").length;
+  if (samples === shown.length) return "Sample numbers";
+  return samples ? "Rows marked Sample are invented, not account activity; the rest are owner-reported, not verified" : "Owner-reported, not verified";
+}
+
 /** A card's front: the numbers in one row, then one line saying whose they are; how each was recorded stays on the back. */
 function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] }) {
   const shown = measurements.slice(0, FRONT_MEASUREMENT_LIMIT);
   const more = measurements.length - shown.length;
+  const mixed = shown.some(row => row.sample === "synthetic") && shown.some(row => row.sample !== "synthetic");
   const note = [
-    measurements.every(row => row.sample === "synthetic") ? "Sample numbers" : "Owner-reported, not verified",
+    shownOrigin(shown),
     ...(measurements.some(row => row.status === "baseline") ? ["includes a baseline, which is not new activity"] : []),
     more > 0 ? `${more} more and how each was measured are in Details` : "how each was measured is in Details",
   ].join(" · ");
@@ -65,6 +73,7 @@ function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] 
         <strong>{row.value === null ? "Unknown" : groupedDecimal(row.value)}</strong>
         <span>{countedThing(row)}</span>
         <small>{measurementPeriodInWords(row.period)}</small>
+        {mixed && row.sample === "synthetic" && <em className="usage-measurement-sample">Sample</em>}
       </li>)}
     </ul>
     <p className="usage-measurement-note">{note}</p>
