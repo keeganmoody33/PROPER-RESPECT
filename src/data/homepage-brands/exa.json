@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "exa",
+  "canonicalDomain": "exa.ai",
+  "retrievalId": "fcf264ca-4648-4e0d-805c-30f506e12f23",
+  "retrievedAt": "2026-11-14T09:55:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/fa6ce5e1-6ab5-4484-b61d-227aa20fc4d9.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 413,
+      "height": 129
+    },
+    {
+      "url": "https://media.brand.dev/64377483-2ccb-4635-ae0a-9f9cd125d64a.png",
+      "mode": "unknown",
+      "type": "icon",
+      "width": 148,
+      "height": 148
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#1f40ed",
+      "name": "Palatinate Blue",
+      "source": "site"
+    },
+    {
+      "hex": "#040404",
+      "name": "Armor Wash",
+      "source": "logo"
+    },
+    {
+      "hex": "#7c8cec",
+      "name": "Lavender Blue Shadow",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#1f40ed",
+      "background": "#ffffff",
+      "text": "#000000"
+    },
+    "headingFamily": "Arizona",
+    "bodyFamily": "ABCDiatype",
+    "typography": {
+      "heading": {
+        "family": "Arizona",
+        "fallbacks": [
+          "Arizona",
+          "Georgia",
+          "serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 63,
+        "lineHeight": 1.2063492063492063,
+        "letterSpacingEm": -0.030095238095238095
+      },
+      "body": {
+        "family": "ABCDiatype",
+        "fallbacks": [
+          "ABCDiatype",
+          "Trebuchet MS",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 18.4,
+        "lineHeight": 1.4000000000000001,
+        "letterSpacingEm": -0.02
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#ffffff",
+        "text": "#101321",
+        "border": "#1013211f",
+        "radiusPx": 4,
+        "paddingPx": 27.2
+      },
+      "buttonPrimary": {
+        "background": "#000000",
+        "text": "#ffffff",
+        "border": "#e5e7eb",
+        "radiusPx": 4,
+        "paddingPx": 13,
+        "weight": 500
+      },
+      "buttonSecondary": {
+        "background": "#1f40ed",
+        "text": "#000000",
+        "border": "#e5e7eb",
+        "radiusPx": 0,
+        "paddingPx": 13,
+        "weight": 500
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "fcf264ca-4648-4e0d-805c-30f506e12f23"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "b9f28853-c851-4bd4-a470-e3f8c6edb717",
+      "partial": true
+    }
+  ],
+  "responseHash": "daab0b5c7d5c2f717bec1fff4326d7bf37b253609d5381c9440c47071650fbb2",
+  "fontLinks": [
+    {
+      "family": "Arizona",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/bfd73b8a7499e5ae0be79f7945236d0410573db65847f00e74997aaaecd3fe0c.woff2",
+          "weight": 300,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/9d70282cd7716cc78d9b6cfbb3cc6b26b2b99cd9257793204501da41cb41766e.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/05243e6a8af3949f7d1eddcc749b3fb96ee8b1545c39784e4d916bcc4df9af26.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/c722c5cab8b77930dbec380d7456e84f0fdb388c40cb3c23031d9f7e5ce43e26.woff2",
+          "weight": 600,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/c722c5cab8b77930dbec380d7456e84f0fdb388c40cb3c23031d9f7e5ce43e26.woff2",
+          "weight": 700,
+          "format": "woff2"
+        }
+      ]
+    },
+    {
+      "family": "ABCDiatype",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/bd617c937947c8745ac7177dba6f1da7e9265f323dbc207306d7cb6524682915.woff2",
+          "weight": 300,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/a673720520b4f0397f94838fe63e6008a08f4a818b21ff48ac66c50121cbf800.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/bdcca7f0c53eb39245571e8f324d038201f6d8b6604f13e327507f3b0c02bf89.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/72425c423f8f95522cf83806bba0983c7c551b0ab54540ac4b479ea49bf8b1b2.woff2",
+          "weight": 700,
+          "format": "woff2"
+        }
+      ]
+    }
+  ]
+}

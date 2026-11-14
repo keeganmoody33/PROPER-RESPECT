@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "docker",
+  "canonicalDomain": "docker.com",
+  "retrievalId": "3b6748fa-d6b2-4836-b617-f0e62fc7f350",
+  "retrievedAt": "2026-11-14T10:04:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/f7fd83ea-cb3a-4ae2-a2ad-0b3c800ba33e.svg",
+      "mode": "dark",
+      "type": "logo",
+      "width": 54,
+      "height": 16
+    },
+    {
+      "url": "https://media.brand.dev/01405b60-627c-4b60-9591-03c2a2896385.png",
+      "mode": "light",
+      "type": "icon",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "url": "https://media.brand.dev/54e22e93-7214-4534-9cd3-4e8b9a914596.png",
+      "mode": "light",
+      "type": "icon",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "url": "https://media.brand.dev/c8a7ec14-6c4c-43f7-b529-758e0862cec0.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 38,
+      "height": 30
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#2560ff",
+      "name": "YInMn Blue",
+      "source": "site"
+    },
+    {
+      "hex": "#040404",
+      "name": "Armor Wash",
+      "source": "logo"
+    },
+    {
+      "hex": "#e0717f",
+      "name": "Natural Candy Pink",
+      "source": "logo"
+    },
+    {
+      "hex": "#f2af92",
+      "name": "Apricot Spring",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#2560ff",
+      "background": "#f9fafb",
+      "text": "#2c333f"
+    },
+    "headingFamily": "Repro",
+    "bodyFamily": "Inter",
+    "typography": {
+      "heading": {
+        "family": "Repro",
+        "fallbacks": [
+          "Repro",
+          "Helvetica",
+          "Arial",
+          "sans-serif"
+        ],
+        "weight": 500,
+        "fontSizePx": 64,
+        "lineHeight": 1.05,
+        "letterSpacingEm": -0.03
+      },
+      "body": {
+        "family": "Inter",
+        "fallbacks": [
+          "Inter",
+          "Helvetica",
+          "Arial",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 14.5,
+        "lineHeight": 1.55,
+        "letterSpacingEm": -0.013793103448275864
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#ffffff",
+        "text": "#0b1220",
+        "border": "#e7eaef",
+        "radiusPx": 18,
+        "paddingPx": 28
+      },
+      "buttonPrimary": {
+        "background": "#2560ff",
+        "text": "#ffffff",
+        "border": "#000000",
+        "radiusPx": 8,
+        "paddingPx": 12,
+        "weight": 500
+      },
+      "buttonSecondary": {
+        "background": "#ffffff",
+        "text": "#000000",
+        "border": "#000000",
+        "radiusPx": 8,
+        "paddingPx": 12,
+        "weight": 500
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "3b6748fa-d6b2-4836-b617-f0e62fc7f350"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "7abb3c20-cbc4-4056-9d25-7763652e4cbb",
+      "partial": true
+    }
+  ],
+  "responseHash": "5fc4128c190a763b87727ce56c1ef1a3ebc8c5ca47cb20635600a081feeb51fa",
+  "fontLinks": [
+    {
+      "family": "Repro",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/23cbae18cb91d7937a6af2aeeff972afa11e068b6182ff0d2376135c4fea4504.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/80f7d8418da078fd932fa58a56d1edf1d595657964922cf72610c0e0078c2c1c.woff2",
+          "weight": 700,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/2d8b63ef12a7b6e3bec7858e5be4496a56f19d47574fe077bd4853edf7a3de8f.woff2",
+          "weight": 800,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/5e0d88484489397e2e5135e26c6660529c8f6513ba698c3b0bbc320e17b9a507.woff2",
+          "weight": 900,
+          "format": "woff2"
+        }
+      ]
+    },
+    {
+      "family": "Inter",
+      "source": "styleguide",
+      "type": "google",
+      "category": "sans-serif",
+      "files": [
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyeMZhrib2Bg-4.ttf",
+          "weight": 100,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuDyfMZhrib2Bg-4.ttf",
+          "weight": 200,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuOKfMZhrib2Bg-4.ttf",
+          "weight": 300,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf",
+          "weight": 400,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZhrib2Bg-4.ttf",
+          "weight": 500,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZhrib2Bg-4.ttf",
+          "weight": 600,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZhrib2Bg-4.ttf",
+          "weight": 700,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuDyYMZhrib2Bg-4.ttf",
+          "weight": 800,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuBWYMZhrib2Bg-4.ttf",
+          "weight": 900,
+          "format": "truetype"
+        }
+      ]
+    }
+  ]
+}

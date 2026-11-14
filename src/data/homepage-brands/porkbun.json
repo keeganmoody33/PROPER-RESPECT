@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "porkbun",
+  "canonicalDomain": "porkbun.com",
+  "retrievalId": "fc23f289-318f-40ad-890a-7ba15025ac79",
+  "retrievedAt": "2026-11-14T09:59:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/419c73f1-c8ad-4740-8428-e8fd99c43b34.svg",
+      "mode": "dark",
+      "type": "icon",
+      "width": 144,
+      "height": 144
+    },
+    {
+      "url": "https://media.brand.dev/898d857f-9245-4a95-ba7e-68ec9bb0ccd3.png",
+      "mode": "dark",
+      "type": "icon",
+      "width": 512,
+      "height": 512
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#ef7878",
+      "name": "Salmon Poké Bowl",
+      "source": "site"
+    },
+    {
+      "hex": "#f9dcdb",
+      "name": "Powdered Blush",
+      "source": "site"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#ef7878",
+      "background": "#fef9f9",
+      "text": "#000000"
+    },
+    "headingFamily": "Open Sans",
+    "bodyFamily": "Open Sans",
+    "typography": {
+      "heading": {
+        "family": "Open Sans",
+        "fallbacks": [
+          "Open Sans",
+          "sans-serif"
+        ],
+        "weight": 500,
+        "fontSizePx": 36,
+        "lineHeight": 1.1,
+        "letterSpacingEm": 0
+      },
+      "body": {
+        "family": "Open Sans",
+        "fallbacks": [
+          "Open Sans",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 14,
+        "lineHeight": 1.4285714285714286,
+        "letterSpacingEm": 0
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#fef9f9",
+        "text": "#000000",
+        "border": "#e5e7eb",
+        "radiusPx": 8,
+        "paddingPx": 16
+      },
+      "buttonPrimary": {
+        "background": "#ffffff",
+        "text": "#222222",
+        "border": "#ef7878",
+        "radiusPx": 3,
+        "paddingPx": 6,
+        "weight": 400
+      },
+      "buttonSecondary": {
+        "background": "#ffffff",
+        "text": "#222222",
+        "border": "#ef7878",
+        "radiusPx": 3,
+        "paddingPx": 6,
+        "weight": 400
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "fc23f289-318f-40ad-890a-7ba15025ac79"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "957f232a-0e22-48c0-9c2f-61ceeab795e2"
+    }
+  ],
+  "responseHash": "223e65d0eef9f6c19cc29de0d089ef1cdf44e0c3eea299e6422f6bd80d717845",
+  "fontLinks": [
+    {
+      "family": "Open Sans",
+      "source": "styleguide",
+      "type": "google",
+      "category": "sans-serif",
+      "files": [
+        {
+          "url": "https://fonts.gstatic.com/s/opensans/v44/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsiH0C4nY1M2xLER.ttf",
+          "weight": 300,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/opensans/v44/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0C4nY1M2xLER.ttf",
+          "weight": 400,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/opensans/v44/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjr0C4nY1M2xLER.ttf",
+          "weight": 500,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/opensans/v44/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsgH1y4nY1M2xLER.ttf",
+          "weight": 600,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/opensans/v44/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsg-1y4nY1M2xLER.ttf",
+          "weight": 700,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/opensans/v44/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgshZ1y4nY1M2xLER.ttf",
+          "weight": 800,
+          "format": "truetype"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "github",
+  "canonicalDomain": "github.com",
+  "retrievalId": "dea77589-d83b-4748-af71-8e51fc651cdb",
+  "retrievedAt": "2026-11-14T10:17:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/3b0c65ee-7044-4a6b-9d77-bf8c1e59e2fa.png",
+      "mode": "dark",
+      "type": "icon",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "url": "https://media.brand.dev/c625fdf9-bcc0-4e62-a4ea-6f385a71cd16.png",
+      "mode": "light",
+      "type": "icon",
+      "width": 128,
+      "height": 128
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#5fed83",
+      "name": "Grotesque Green",
+      "source": "site"
+    },
+    {
+      "hex": "#1e2327",
+      "name": "Noble Black",
+      "source": "site"
+    },
+    {
+      "hex": "#6a6a6d",
+      "name": "Liberty Bell Grey",
+      "source": "logo"
+    },
+    {
+      "hex": "#ebeaea",
+      "name": "Plaster",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#0d6731",
+      "background": "#ffffff",
+      "text": "#000000"
+    },
+    "headingFamily": "Mona Sans",
+    "bodyFamily": "Mona Sans",
+    "typography": {
+      "heading": {
+        "family": "Mona Sans",
+        "fallbacks": [
+          "Mona Sans",
+          "MonaSansFallback",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Helvetica",
+          "Arial",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji"
+        ],
+        "weight": 440,
+        "fontSizePx": 56,
+        "lineHeight": 1.1,
+        "letterSpacingEm": 0
+      },
+      "body": {
+        "family": "Mona Sans",
+        "fallbacks": [
+          "Mona Sans",
+          "MonaSansFallback",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Helvetica",
+          "Arial",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji"
+        ],
+        "weight": 400,
+        "fontSizePx": 16,
+        "lineHeight": 1.6875,
+        "letterSpacingEm": 0.01125
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#ffffff",
+        "text": "#000000",
+        "border": "#e5e7eb",
+        "radiusPx": 8,
+        "paddingPx": 16
+      },
+      "buttonPrimary": {
+        "text": "#000000",
+        "border": "#d2d9d4",
+        "radiusPx": 6,
+        "paddingPx": 6,
+        "weight": 500
+      },
+      "buttonSecondary": {
+        "background": "#08872b",
+        "text": "#ffffff",
+        "radiusPx": 6,
+        "paddingPx": 6,
+        "weight": 500
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "dea77589-d83b-4748-af71-8e51fc651cdb"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "296bdfd2-2f7c-4c4d-b646-c6b211d1b73b",
+      "partial": true
+    }
+  ],
+  "responseHash": "4a15b5631727ca313bd4c6aad1405099e421888f44f4c40864cf3a2ba1fabd68",
+  "fontLinks": [
+    {
+      "family": "Mona Sans",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+          "weight": 200,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+          "weight": 300,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+          "weight": 600,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+          "weight": 700,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+          "weight": 800,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
+          "weight": 900,
+          "format": "woff2"
+        }
+      ]
+    }
+  ]
+}

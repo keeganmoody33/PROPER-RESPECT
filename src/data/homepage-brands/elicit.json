@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "elicit",
+  "canonicalDomain": "elicit.com",
+  "retrievalId": "6e2972b8-f81d-4785-a54a-8ffd018a57fd",
+  "retrievedAt": "2026-11-14T10:09:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/105442cc-6552-4e6f-8b2d-6268eb13c024.png",
+      "mode": "light",
+      "type": "icon",
+      "width": 128,
+      "height": 128
+    },
+    {
+      "url": "https://media.brand.dev/6341baf7-dead-47e6-b23a-542b9a313cfd.png",
+      "mode": "unknown",
+      "type": "icon",
+      "width": 180,
+      "height": 180
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#055364",
+      "name": "Plunge",
+      "source": "logo"
+    },
+    {
+      "hex": "#7cacb4",
+      "name": "Buoyancy",
+      "source": "logo"
+    },
+    {
+      "hex": "#cbdbdf",
+      "name": "Reflection Pool",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#083d44",
+      "background": "#fcfcf8",
+      "text": "#000000"
+    },
+    "headingFamily": "Martina Plantijn Regular",
+    "bodyFamily": "Special Gothic Variable",
+    "typography": {
+      "heading": {
+        "family": "Martina Plantijn Regular",
+        "fallbacks": [
+          "Martina Plantijn Regular",
+          "Martina Plantijn Regular Placeholder",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 64,
+        "lineHeight": 1.2,
+        "letterSpacingEm": -0.02
+      },
+      "body": {
+        "family": "Special Gothic Variable",
+        "fallbacks": [
+          "Special Gothic Variable",
+          "Special Gothic Variable Placeholder",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 17.6,
+        "lineHeight": 1.4999999999999998,
+        "letterSpacingEm": 0.008522727272727272
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#fcfcf8",
+        "text": "#000000",
+        "border": "#e5e7eb",
+        "radiusPx": 8,
+        "paddingPx": 16
+      },
+      "buttonPrimary": {
+        "background": "#083d44",
+        "text": "#0000ee",
+        "border": "#083d44",
+        "radiusPx": 8,
+        "paddingPx": 6,
+        "weight": 400
+      },
+      "buttonSecondary": {
+        "text": "#000000",
+        "border": "#000000",
+        "radiusPx": 4,
+        "paddingPx": 6,
+        "weight": 400
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "6e2972b8-f81d-4785-a54a-8ffd018a57fd"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "d58b63df-3a88-4d3e-9b12-db8a4b0df5ae",
+      "partial": true
+    }
+  ],
+  "responseHash": "e25b59aae24d8ce23903d41133138067a86b2f080cdafe25a7d2a6c12506927f",
+  "fontLinks": [
+    {
+      "family": "Martina Plantijn Regular",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/4bdae757061773359c9c86a5f1c9a5754b8999ab926bfdf89923a36cbf9aed8a.woff2",
+          "weight": 400,
+          "format": "woff2"
+        }
+      ]
+    },
+    {
+      "family": "Special Gothic Variable",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/2ba924c1bb9da65e902c1360cafcc7c28b2aaf6428d08b773777701409d93852.woff2",
+          "weight": 400,
+          "format": "woff2"
+        }
+      ]
+    }
+  ]
+}

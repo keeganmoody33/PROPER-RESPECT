@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "firecrawl",
+  "canonicalDomain": "firecrawl.dev",
+  "retrievalId": "34eb5ecc-fe10-4e94-857e-4ccf65d3197b",
+  "retrievedAt": "2026-11-14T09:50:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/f895934e-e887-4c7d-ab99-3f7ae465499f.png",
+      "mode": "unknown",
+      "type": "icon",
+      "width": 144,
+      "height": 144
+    },
+    {
+      "url": "https://media.brand.dev/2435ff86-2091-4cc7-9835-2f275392c6d4.png",
+      "mode": "unknown",
+      "type": "icon",
+      "width": 144,
+      "height": 144
+    },
+    {
+      "url": "https://media.brand.dev/10f3cec4-689a-4dca-aaba-e231d8bd7de5.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 79,
+      "height": 15
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#ff4c00",
+      "name": "Phaser Beam",
+      "source": "site"
+    },
+    {
+      "hex": "#fc9f8b",
+      "name": "Tangerine Cream",
+      "source": "logo"
+    },
+    {
+      "hex": "#040404",
+      "name": "Armor Wash",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#ff4c00",
+      "background": "#f9f9f9",
+      "text": "#262626"
+    },
+    "headingFamily": "suisse",
+    "bodyFamily": "suisse",
+    "typography": {
+      "heading": {
+        "family": "suisse",
+        "fallbacks": [
+          "suisse",
+          "suisse Fallback",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+          "Segoe UI Symbol",
+          "Noto Color Emoji"
+        ],
+        "weight": 500,
+        "fontSizePx": 60,
+        "lineHeight": 1.0666666666666667,
+        "letterSpacingEm": -0.005
+      },
+      "body": {
+        "family": "suisse",
+        "fallbacks": [
+          "suisse",
+          "suisse Fallback",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+          "Segoe UI Symbol",
+          "Noto Color Emoji"
+        ],
+        "weight": 400,
+        "fontSizePx": 16,
+        "lineHeight": 1.5,
+        "letterSpacingEm": 0
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#f9f9f9",
+        "text": "#262626",
+        "border": "#e5e7eb",
+        "radiusPx": 8,
+        "paddingPx": 16
+      },
+      "buttonPrimary": {
+        "background": "#ff4c00",
+        "text": "#ffffff",
+        "border": "#e5e7eb",
+        "radiusPx": 20,
+        "paddingPx": 8,
+        "weight": 450
+      },
+      "buttonSecondary": {
+        "background": "#000000",
+        "text": "#ffffff",
+        "border": "#e5e7eb",
+        "radiusPx": 20,
+        "paddingPx": 8,
+        "weight": 450
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "34eb5ecc-fe10-4e94-857e-4ccf65d3197b"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "08249db8-20b3-49b5-aeb3-ec68e44e8fcc",
+      "partial": true
+    }
+  ],
+  "responseHash": "2a03e4fe1f8035e3470d09aabdb2d03d0cb7bc9727ae500d3a68d9e73bc3a72a",
+  "fontLinks": [
+    {
+      "family": "suisse",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/88ce7a843d4275e5a7df14591f3a70a711620ed4c1a8d4393af76ce2dc61b41d.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/260e5cc30eb6ddfe3474dc2f80fb890419cfba26e1978d79bade8615e46b18f1.woff2",
+          "weight": 450,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/5449c9500e43d17cb6d3ab82acfb2da411498f06c1b03914b878cd3141bdd381.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/b3686b8dd9773068a552549bd570f98e5c92ae7169751bb422b129d177b3f351.woff2",
+          "weight": 600,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/a0f49d7feddce8bc0ccac3942f55a65558ba84d2720cff2c31b7bf9c5788e2fb.woff2",
+          "weight": 700,
+          "format": "woff2"
+        }
+      ]
+    },
+    {
+      "family": "Roboto",
+      "source": "styleguide",
+      "type": "google",
+      "category": "sans-serif",
+      "files": [
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmTggvWl0Qn.ttf",
+          "weight": 100,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuZEbWmTggvWl0Qn.ttf",
+          "weight": 200,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuaabWmTggvWl0Qn.ttf",
+          "weight": 300,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbWmTggvWl0Qn.ttf",
+          "weight": 400,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWub2bWmTggvWl0Qn.ttf",
+          "weight": 500,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYaammTggvWl0Qn.ttf",
+          "weight": 600,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYjammTggvWl0Qn.ttf",
+          "weight": 700,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuZEammTggvWl0Qn.ttf",
+          "weight": 800,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuZtammTggvWl0Qn.ttf",
+          "weight": 900,
+          "format": "truetype"
+        }
+      ]
+    },
+    {
+      "family": "Noto Color Emoji",
+      "source": "styleguide",
+      "type": "google",
+      "category": "sans-serif",
+      "files": [
+        {
+          "url": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFab5s79iz64w.ttf",
+          "weight": 400,
+          "format": "truetype"
+        }
+      ]
+    }
+  ]
+}
