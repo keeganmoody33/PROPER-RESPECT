@@ -149,6 +149,9 @@ const NARROWEST_WIDTH = 320;
       await expect(card.locator(".card-front .usage-measurement-measurement")).toHaveCount(1);
       await expect(card.locator(".card-front")).toContainText("2 more reported measurements in Details.");
       await expect(card.locator(".card-front")).toContainText("Synthetic sample. Not real account activity.");
+      // Its footer says what is behind Details, and the button carries the same words.
+      await expect(card.locator(".card-footer > span")).toHaveText("Cost, numbers and a work sample inside");
+      await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("Cost, numbers and a work sample inside");
       continue;
     } else {
       await expect(card.locator(".card-front .activity-preview-metrics")).toBeVisible();

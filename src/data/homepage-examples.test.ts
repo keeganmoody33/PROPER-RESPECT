@@ -71,6 +71,10 @@ test("each example names the part of a card it shows, in a few words no other ex
   expect(examples.filter(({ capability }) => capability.length > CAPABILITY_LIMIT).map(({ id }) => id)).toEqual([]);
 });
 
+test("only Clay's card says what is behind Details, since its back holds the most", () => {
+  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "Cost, numbers and a work sample inside"]]);
+});
+
 test("every headline and note is a short line under the card's limit", () => {
   const tooLong = examples.flatMap(({ card }) => [card.headline, card.note]).filter(text => !text || text.length >= LINE_LIMIT);
   expect(tooLong).toEqual([]);

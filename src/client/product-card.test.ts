@@ -746,6 +746,16 @@ test("published numbers say how they were recorded on the back, where every row 
   expect($(".card-front .usage-measurement-measurement").text()).toBe("Rows enriched2140000Rows2023-03-01 to 2026-08-31 · UTCSynthetic sample. Not real account activity.");
 });
 
+test("a hint names what the back holds in the footer, and describes the Details button with it", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, backHint: "Cost, numbers and a work sample inside" })));
+  const hint = $(".card-footer > span");
+  expect(hint.text()).toBe("Cost, numbers and a work sample inside");
+  expect($(".card-button").attr("aria-describedby")).toBe(hint.attr("id"));
+  const plain = renderCard();
+  expect(plain(".card-footer > span").text()).toBe("Relationship & evidence");
+  expect(plain(".card-button").attr("aria-describedby")).toBeUndefined();
+});
+
 test("a canonical destination receives no invented affiliate disclosure", () => {
   const $ = renderCard();
   expect($(".card-link-disclosure")).toHaveLength(0);

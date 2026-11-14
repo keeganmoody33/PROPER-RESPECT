@@ -18,6 +18,8 @@ export type HomepageExample = Readonly<{
   site?: BrandSiteTraits;
   caveat?: string;
   source?: Readonly<{ href: string; label: string }>;
+  /** What the card's back holds, said on its front. */
+  backHint?: string;
 }>;
 
 const COUNT_PATTERN = "0241062300471250321046203142";
@@ -119,6 +121,7 @@ type ExampleSource = Readonly<{
   measurements?: PublicMeasurement[];
   caveat?: string;
   source?: HomepageExample["source"];
+  backHint?: string;
 }>;
 
 /**
@@ -191,7 +194,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
     cost: { amount: 149, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
     usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
-    caveat: "Its work-sample link opens Clay's public templates.",
+    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Cost, numbers and a work sample inside",
   },
 ];
 
@@ -216,6 +219,7 @@ export function homepageExamples(): HomepageExample[] {
       },
       ...(site ? { site } : {}),
       ...(example.caveat ? { caveat: example.caveat } : {}),
+      ...(example.backHint ? { backHint: example.backHint } : {}),
       ...(example.source ? { source: example.source } : {}),
     };
   });

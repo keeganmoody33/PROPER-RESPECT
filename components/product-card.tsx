@@ -432,6 +432,7 @@ export function ProductCard({
   onGiveProps,
   deferBrandAssets = false,
   siteTraits,
+  backHint,
 }: {
   card: Card;
   index: number;
@@ -448,6 +449,8 @@ export function ProductCard({
   deferBrandAssets?: boolean;
   /** What measuring the product's own site added to its brand. Used only beside that same brand. */
   siteTraits?: BrandSiteTraits;
+  /** Says what the back holds, in the footer, for a visitor who might never press Details. */
+  backHint?: string;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -469,7 +472,7 @@ export function ProductCard({
   const cardStatus = brandPreview ? "Brand preview" : relationshipStatus;
   const topLine = !brandPreview && relationshipConfirmed ? cardTopLine(card) : cardStatus;
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
-  const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : "Relationship & evidence";
+  const footerLabel = brandPreview ? "Brand identity" : !relationshipConfirmed ? "Needs your review" : ownerGoTo ? "Owner-selected go-to" : backHint ?? "Relationship & evidence";
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
   const notePlaceholder = relationshipConfirmed ? "Relationship note not supplied." : "Discovery note not supplied.";
   const [isFlipped, setIsFlipped] = useState(false);
@@ -572,13 +575,14 @@ export function ProductCard({
         {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
 
         <div className="card-footer">
-          <span className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
+          <span id={`${cardId}-footer`} className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
           <button
             ref={triggerRef}
             type="button"
             className="card-button"
             aria-expanded={isFlipped}
             aria-controls={`${cardId}-back`}
+            aria-describedby={backHint && footerLabel === backHint ? `${cardId}-footer` : undefined}
             onClick={() => setIsFlipped(true)}
           >
             Details <span aria-hidden="true">↶</span>
