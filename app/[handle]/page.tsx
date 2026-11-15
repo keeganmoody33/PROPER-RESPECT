@@ -67,6 +67,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const viewer = await signedInViewer();
   const viewerSignedIn = viewer !== null;
   const linkProps = await propsForViewer(profile.handle, viewer?.token);
+  // The request's day, so a snapshot's and a price's age read the same in the server's HTML and the visitor's browser.
+  const today = new Date().toISOString().slice(0, 10);
 
   // No app/[handle]/loading.tsx and no in-page Suspense here: either one
   // around this await would stream HTTP 200 before notFound() can set 404.
@@ -102,6 +104,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 goTo={card.goTo}
                 viewerSignedIn={viewerSignedIn}
                 profileHandle={profile.handle}
+                today={today}
                 onGiveProps={viewerSignedIn ? giveStoredLinkProp : undefined}
               />
             ))}
