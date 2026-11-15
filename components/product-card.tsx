@@ -19,7 +19,7 @@ import { isHttpUrl } from "@/src/domain/http-url";
 import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
 import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relationship-level";
 import { costDetail, costSummary } from "@/src/domain/cost";
-import { tablePreview as parseTablePreview, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
+import { tablePreview as parseTablePreview, type TableColumnKind, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
 import { useReducedMotion } from "./use-reduced-motion";
 import { dayMonthYear, formatPeriod, freshnessNote, monthYear as monthYearOf, yearOf } from "@/src/domain/format-period";
 import { activityHeadline, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
@@ -296,6 +296,41 @@ function cellText(text: string) {
   return <>{text.slice(0, at + 1)}<wbr />{text.slice(at + 1, dot)}<wbr />{text.slice(dot)}</>;
 }
 
+/** A column kind's glyph, drawn in its header the way an enrichment table marks what each column holds. 16-unit strokes in the text colour. */
+const COLUMN_GLYPHS: Readonly<Record<TableColumnKind, string>> = {
+  text: "M3 4h10M8 4v9",
+  email: "M2.5 4.5h11v8h-11zM3 5l5 4 5-4",
+  waterfall: "M2 3.5h12M4 7.5h8M6 11.5h4",
+  ai: "M8 2l1.4 4.6L14 8l-4.6 1.4L8 14l-1.4-4.6L2 8l4.6-1.4z",
+  formula: "M11 2.5c-2 0-2.6 1-3 3l-1.6 7c-.4 1.6-1 2-2.4 2M5 7h5",
+};
+function ColumnGlyph({ kind }: { kind: TableColumnKind }) {
+  return <svg className="table-glyph" data-kind={kind} viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d={COLUMN_GLYPHS[kind]} /></svg>;
+}
+
+type WaterfallStep = "missed" | "answered" | "asking" | "unasked";
+/** Each provider of a waterfall in turn: the ones before the step missed, the step answered (or is being asked), the rest not asked. Nothing found: all missed. */
+function waterfallSteps({ step, of }: NonNullable<TablePreviewCell["waterfall"]>, state: TablePreviewCell["state"]): WaterfallStep[] {
+  return Array.from({ length: of }, (_, index): WaterfallStep => {
+    if (state === "empty" || index + 1 < step) return "missed";
+    if (index + 1 > step) return "unasked";
+    return state === "pending" ? "asking" : "answered";
+  });
+}
+function waterfallWords({ step, of }: NonNullable<TablePreviewCell["waterfall"]>, state: TablePreviewCell["state"]) {
+  if (state === "empty") return `, none of ${of} providers answered`;
+  return state === "pending" ? `, asking provider ${step} of ${of}` : `, provider ${step} of ${of} answered`;
+}
+
+/** A waterfall cell: its run status as a pill, then a mark for each provider it tries in turn. */
+function WaterfallCell({ text, state, waterfall }: Pick<TablePreviewCell, "text" | "state" | "waterfall">) {
+  return <>
+    <span className="table-pill" data-state={state}>{text}</span>
+    {waterfall && <><span className="table-steps" aria-hidden="true">{waterfallSteps(waterfall, state).map((step, index) => <i key={index} data-step={step} />)}</span>
+      <span className="visually-hidden">{waterfallWords(waterfall, state)}</span></>}
+  </>;
+}
+
 /**
  * A few rows of a table the product makes, drawn as a real table: a row number in the gutter, the row filled in last highlighted,
  * and on a narrow card the droppable columns left out so the rest fit, long cells wrapping rather than cut short.
@@ -304,22 +339,26 @@ function TablePreviewBlock({ preview, shown, full = false }: { preview: TablePre
   const captionId = useId();
   const filledIn = useFilledIn(shown);
   const cellShown = (cell: TablePreviewCell) => filledIn && cell.fillsIn ? cell.fillsIn : cell;
+  const rows = full ? preview.rows : preview.rows.slice(0, preview.frontRows);
   return (
     <div className="card-table-preview" role="region" tabIndex={0} aria-labelledby={captionId} data-full={full ? "" : undefined}>
       <table>
         <caption id={captionId}>{preview.caption}</caption>
-        <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined} {...columnMarks(column)}>{column.label}</th>)}</tr></thead>
+        <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined} {...columnMarks(column)}>
+          {"kind" in column && column.kind && <ColumnGlyph kind={column.kind} />}{column.label}</th>)}</tr></thead>
         <tbody>
-          {preview.rows.map((row, rowIndex) => <tr key={rowIndex} data-latest={row.some(cell => cell.fillsIn) ? "" : undefined}>
+          {rows.map((row, rowIndex) => <tr key={rowIndex} data-latest={row.some(cell => cell.fillsIn) ? "" : undefined}>
             {row.map((cell, column) => {
-              const { text, state } = cellShown(cell);
+              const shownCell = cellShown(cell), kind = preview.columns[column];
+              const content = "kind" in kind && kind.kind === "waterfall" ? <WaterfallCell {...shownCell} /> : cellText(shownCell.text);
               return column === 0
-                ? <th key={column} scope="row" data-state={state} {...columnMarks(preview.columns[column])}>{cellText(text)}</th>
-                : <td key={column} data-state={state} {...columnMarks(preview.columns[column])}>{cellText(text)}</td>;
+                ? <th key={column} scope="row" data-state={shownCell.state} {...columnMarks(kind)}>{content}</th>
+                : <td key={column} data-state={shownCell.state} {...columnMarks(kind)}>{content}</td>;
             })}
           </tr>)}
         </tbody>
       </table>
+      {preview.totalRows && <p className="card-table-count">{[`${rows.length} of ${fullNumber(preview.totalRows)} rows`, preview.rowNote].filter(Boolean).join(" · ")}</p>}
     </div>
   );
 }

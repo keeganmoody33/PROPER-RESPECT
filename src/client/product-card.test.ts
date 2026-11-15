@@ -797,6 +797,38 @@ test("a table preview draws as a real table on the front: a caption, column head
   expect($(".card-back .card-table-preview").attr("data-full")).toBe("");
 });
 
+const waterfallLeads = {
+  caption: "Lead list, sample rows",
+  columns: [{ label: "Company", kind: "text" }, { label: "Work email", kind: "email", enriched: true }, { label: "Email waterfall", kind: "waterfall", enriched: true }],
+  rows: [
+    [{ text: "Nimbus" }, { text: "ana@nimbus.example", state: "filled" }, { text: "Enriched", state: "filled", waterfall: { step: 2, of: 3 } }],
+    [{ text: "Quillon" }, { text: "Finding…", state: "pending" }, { text: "Running", state: "pending", waterfall: { step: 1, of: 3 }, fillsIn: { text: "Enriched", state: "filled", waterfall: { step: 3, of: 3 } } }],
+    [{ text: "Marrow" }, { text: "No match", state: "empty" }, { text: "No match", state: "empty", waterfall: { step: 3, of: 3 } }],
+  ],
+  frontRows: 2, totalRows: 214, rowNote: "2.3 credits a row",
+} as const;
+
+test("a table shows its column kinds as glyphs, a waterfall as a status pill and its providers in turn, and how much of the table it is", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: waterfallLeads })));
+  const front = $(".card-front .card-table-preview"), back = $(".card-back .card-table-preview");
+  // Each kind's glyph sits in its header, hidden from screen readers, which hear the label.
+  expect(front.find("thead th").map((_, cell) => `${$(cell).find("svg[aria-hidden=true]").attr("data-kind") ?? "-"}:${$(cell).text()}`).get())
+    .toEqual(["text:Company", "email:Work email", "waterfall:Email waterfall"]);
+  // A waterfall cell: its run status as a pill, a mark per provider (missed, answered, not asked), and the same in words for a screen reader.
+  const waterfall = (cell: Parameters<typeof $>[0]) => {
+    const pill = $(cell).find(".table-pill");
+    return `${pill.attr("data-state")}:${pill.text()}:${$(cell).find(".table-steps i").map((_, step) => $(step).attr("data-step")).get().join(",")}:${$(cell).find(".visually-hidden").text()}`;
+  };
+  expect(back.find("tbody td:last-child").map((_, cell) => waterfall(cell)).get()).toEqual([
+    "filled:Enriched:missed,answered,unasked:, provider 2 of 3 answered",
+    "pending:Running:asking,unasked,unasked:, asking provider 1 of 3",
+    "empty:No match:missed,missed,missed:, none of 3 providers answered",
+  ]);
+  // The front shows its first rows, the back all of them; each says how much of the whole table that is.
+  expect([front.find("tbody tr").length, back.find("tbody tr").length]).toEqual([2, 3]);
+  expect([front.find(".card-table-count").text(), back.find(".card-table-count").text()]).toEqual(["2 of 214 rows · 2.3 credits a row", "3 of 214 rows · 2.3 credits a row"]);
+});
+
 test("a table preview past its caps, or on a brand preview, is not drawn", () => {
   const tooWide = { ...leads, columns: ["A", "B", "C", "D", "E"], rows: [["a", "b", "c", "d", "e"].map(text => ({ text }))] };
   expect(load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: tooWide })))(".card-table-preview")).toHaveLength(0);

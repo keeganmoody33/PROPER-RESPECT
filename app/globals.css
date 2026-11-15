@@ -1857,17 +1857,30 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .card-table-preview :is(th, td) { padding: .4rem .35rem; }
   .card-table-preview tr > :first-child { padding-left: 1.6rem; }
   .card-table-preview tr > :first-child::before { width: 1.2rem; }
-  .card-table-preview thead th:first-child { width: 33%; }
-  .card-table-preview thead th:nth-child(2) { width: 40%; }
+  .card-table-preview thead th:first-child { width: 32%; }
+  .card-table-preview thead th:nth-child(2) { width: 34%; }
+  .card-table-preview:not([data-full]) .table-glyph { display: block; margin-bottom: .15rem; }
 }
 @container (max-width: 15rem) {
-  .card-table-preview :is(th, td) { padding-inline: .3rem; }
-  .card-table-preview tr > :first-child { padding-left: 1.3rem; }
-  .card-table-preview tr > :first-child::before { width: 1rem; }
-  .card-table-preview thead th:first-child { width: 41%; }
+  /* The narrowest front gives its row numbers' gutter to the cells, so a company and a run-status pill stay whole. */
+  .card-table-preview :is(th, td) { padding-inline: .25rem; }
+  .card-table-preview:not([data-full]) tr > :first-child { padding-left: .25rem; }
+  .card-table-preview:not([data-full]) tr > :first-child::before { display: none; }
+  .card-table-preview thead th:first-child { width: 31%; }
   .card-table-preview thead th:nth-child(2) { width: 35%; }
 }
 @media (prefers-reduced-motion: no-preference) { .card-table-preview :is(th, td) { transition: background-color .4s ease, color .4s ease; } }
+/* A column's kind as a glyph before its label; a waterfall cell's run status as a pill in the brand's colours, then a mark per provider. */
+.card-table-preview .table-glyph { fill: none; height: .75rem; margin: 0 .3rem -.1rem 0; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; width: .75rem; }
+.card-table-preview .table-pill { border: 1px solid currentColor; border-radius: 999px; display: inline-block; font-size: .75rem; line-height: 1.3; padding: 0 .35rem; white-space: nowrap; }
+.card-table-preview .table-pill[data-state="filled"] { background: var(--brand-card-button-fill, transparent); border-color: var(--brand-card-button-fill, currentColor); color: var(--brand-card-button-text, inherit); }
+.card-table-preview .table-pill[data-state="pending"] { background: var(--brand-card-band, transparent); border-color: var(--brand-card-band, currentColor); color: var(--brand-card-band-text, inherit); font-style: normal; }
+.card-table-preview .table-steps { display: inline-flex; gap: .2rem; margin-left: .3rem; vertical-align: middle; }
+.card-table-preview .table-steps i { border: 1.5px solid var(--brand-card-chart, currentColor); border-radius: 50%; height: .45rem; width: .45rem; }
+.card-table-preview .table-steps i[data-step="answered"] { background: var(--brand-card-chart, currentColor); }
+.card-table-preview .table-steps i[data-step="missed"] { border-color: var(--table-ink, currentColor); }
+.card-table-preview .table-steps i[data-step="unasked"] { border-style: dotted; border-color: var(--table-ink, currentColor); }
+.card-table-preview .card-table-count { color: var(--table-ink, inherit); font-size: .75rem; margin: .4rem .25rem 0; }
 .usage-measurement-panel { padding: 1.25rem 0; min-width: 0; }
 .usage-measurement-sources { display: grid; gap: 1rem; }
 .usage-measurement-source { border: 1px solid var(--border, #999); border-radius: .5rem; padding: 1rem; min-width: 0; }
