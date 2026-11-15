@@ -347,6 +347,25 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await expect(carousel.locator("[aria-roledescription=slide]")).toHaveCount(5);
 });
 
+test("an open back holds the slideshow, wherever focus and the pointer go, until it is closed", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const clay = carousel.getByRole("article", { name: "Clay card" });
+  await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
+  await clay.getByRole("button", { name: "Details", exact: true }).click();
+  await page.mouse.move(0, 0);
+  await page.locator("#homepage-content").focus();
+  await page.clock.fastForward(17_000);
+  await expect(clay.getByRole("button", { name: "Close details" })).toBeVisible();
+  await expect(carousel.locator("[data-slide-status]")).toHaveText("1 of 5: Clay");
+  await clay.getByRole("button", { name: "Close details" }).click();
+  await page.mouse.move(0, 0);
+  await page.locator("#homepage-content").focus();
+  await page.clock.fastForward(8100);
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+});
+
 test("with More examples open and nothing else picked, the slideshow still takes turns among the five featured", async ({ page }) => {
   await page.clock.install();
   await page.goto("/");

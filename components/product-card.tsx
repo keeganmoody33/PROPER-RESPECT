@@ -519,6 +519,7 @@ export function ProductCard({
   sample = false,
   countsPerPeriod = false,
   today: readOn,
+  onTurn,
 }: {
   card: Card;
   index: number;
@@ -547,6 +548,8 @@ export function ProductCard({
   countsPerPeriod?: boolean;
   /** The day the card is read (yyyy-mm-dd), which a snapshot's and a price's age are judged against. Defaults to now. */
   today?: string;
+  /** Told each time the card turns, with whether its back now shows. */
+  onTurn?: (backShown: boolean) => void;
 }) {
   const brandPreview = displayMode === "brand-preview";
   // An invented sample keeps its own wording and never ages.
@@ -639,8 +642,13 @@ export function ProductCard({
     return () => observer.disconnect();
   }, []);
 
+  function turn(backShown: boolean) {
+    setIsFlipped(backShown);
+    onTurn?.(backShown);
+  }
+
   function closeCard() {
-    setIsFlipped(false);
+    turn(false);
   }
 
   return (
@@ -719,7 +727,7 @@ export function ProductCard({
             aria-expanded={isFlipped}
             aria-controls={`${cardId}-back`}
             aria-describedby={backHint && footerLabel === backHint ? `${cardId}-footer` : undefined}
-            onClick={() => setIsFlipped(true)}
+            onClick={() => turn(true)}
           >
             Details <span aria-hidden="true">↶</span>
           </button>

@@ -46,7 +46,10 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const seen = useInView(stageRef);
   const inView = seen === true;
   const playing = choice === "playing" || (choice === "auto" && !reducedMotion && !oneColumn);
-  const advancing = playing && !hovered && !focused && inView;
+  // A back the visitor opened holds the slideshow, wherever focus or the pointer goes, until they close it.
+  const [openBack, setOpenBack] = useState<string>();
+  const backOpen = openBack === ordered[index].id;
+  const advancing = playing && !hovered && !focused && inView && !backOpen;
   // The slideshow and its count stay with the featured examples until the visitor picks one of the others; after that, all of them.
   const [pickedOther, setPickedOther] = useState(false);
   const othersInPlay = pickedOther || index >= featured.length;
@@ -135,7 +138,8 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
             <p className={styles.capability} data-capability>{example.capability}</p>
             <p className={styles.sample}>Sample data / No account connected</p>
           </div>
-          <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} shown={current && inView} backHint={example.backHint} tablePreview={example.tablePreview} countsPerPeriod={example.countsPerPeriod} sample />
+          <ProductCard card={example.card} siteTraits={example.site} index={slideIndex} goTo={example.card.goTo} expandedActivity deferBrandAssets={!revealed.has(slideIndex)} shown={current && inView} backHint={example.backHint} tablePreview={example.tablePreview} countsPerPeriod={example.countsPerPeriod} sample
+            onTurn={backShown => setOpenBack(open => backShown ? example.id : open === example.id ? undefined : open)} />
           {example.caveat && <p className={styles.caveat}>{example.caveat}</p>}
           {example.source && isHttpUrl(example.source.href) && <a className={styles.source} href={example.source.href} target="_blank" rel="noreferrer">{example.source.label} ↗</a>}
         </div>;
