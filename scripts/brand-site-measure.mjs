@@ -231,14 +231,15 @@ export function measureSite({ labelMonoShare, neutralChroma }) {
     return boxed || style.boxShadow !== "none";
   });
   const panelRadii = panels.map(element => Math.round(f.radius(element).px));
+  // Each panel's corner and area: the site's panel corner is the one most of the panels' area is drawn with (brand-site-traits keeps the same rule).
+  site.panels = panels.map((element, index) => { const box = element.getBoundingClientRect(); return { px: panelRadii[index], area: Math.round(box.width * box.height) }; });
   if (panelRadii.length) {
-    const modal = mode(panelRadii);
-    set("panelRadius", { px: modal }, `most common border-top-left-radius of ${panelRadii.length} bordered or shadowed boxes 220px+ wide (under 90% of the width, not buttons)`);
-    site.panelRadiusPx = modal;
+    const areas = site.panels.reduce((tally, panel) => tally.set(panel.px, (tally.get(panel.px) ?? 0) + panel.area), new Map());
+    const widest = [...areas].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+    set("panelRadius", { px: widest }, `the border-top-left-radius covering the most area among ${panelRadii.length} bordered or shadowed boxes 220px+ wide (under 90% of the width, not buttons)`);
+    site.panelRadiusPx = widest;
   } else set("panelRadius", undefined, "no bordered or shadowed box 220px+ wide on the page");
   notes.panelRadii = panelRadii;
-  // Each panel's corner and area, so brand-site-traits can take the corner most of the panels' area is drawn with.
-  site.panels = panels.map((element, index) => { const box = element.getBoundingClientRect(); return { px: panelRadii[index], area: Math.round(box.width * box.height) }; });
 
   // Tall 1px vertical lines in the first screen (a page ruled into columns): each border's x position and colour.
   site.verticalRules = all("div, section, main, article, aside, header, footer").flatMap(element => {
