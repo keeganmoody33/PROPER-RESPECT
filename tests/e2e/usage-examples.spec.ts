@@ -1140,6 +1140,22 @@ test("the work-sample link on Clay's back lights up in Clay's lime on hover, not
   await expect(link).toHaveCSS("color", "rgb(0, 0, 0)");
 });
 
+test("Clay's Details and Close details keep Clay's lime and black on hover, not the card's black", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const clay = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  const details = clay.getByRole("button", { name: "Details", exact: true });
+  await details.hover();
+  await expect(details).toHaveCSS("background-color", "rgb(203, 216, 16)");
+  await expect(details).toHaveCSS("color", "rgb(0, 0, 0)");
+  await details.click();
+  const close = clay.getByRole("button", { name: "Close details" });
+  await close.hover();
+  await expect(close).toHaveCSS("background-color", "rgb(203, 216, 16)");
+  await expect(close).toHaveCSS("color", "rgb(0, 0, 0)");
+});
+
 const MAX_FLIP_SCROLL_PX = 20;
 for (const name of ["Clay", "GitHub", "Cloudflare"]) test(`at ${PHONE_WIDTH}px turning ${name}'s card while it is in view moves neither the page nor the card`, async ({ page }) => {
   await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });

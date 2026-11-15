@@ -1214,13 +1214,14 @@ main {
   text-transform: var(--brand-card-button-case, uppercase);
 }
 
+/* Hovered or focused, a branded button keeps the brand's own fill and label, as its site's controls do; an unbranded one inverts. */
 .product-card .card-button:hover,
 .product-card .card-button:focus-visible,
 .product-card .close-button:hover,
 .product-card .close-button:focus-visible {
-  background: var(--brand-card-text, var(--paper));
-  border-color: var(--brand-card-text, var(--paper));
-  color: var(--brand-card-background, var(--ink));
+  background: var(--brand-card-button-fill, var(--brand-card-text, var(--paper)));
+  border-color: var(--brand-card-button-border, var(--brand-card-button-fill, var(--brand-card-text, var(--paper))));
+  color: var(--brand-card-button-text, var(--brand-card-background, var(--ink)));
 }
 
 .product-card :is(a, button, summary, [tabindex]):focus-visible {
