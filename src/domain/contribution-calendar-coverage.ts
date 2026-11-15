@@ -5,7 +5,8 @@ type Contributions = Extract<ActivityModule, { kind: "contributionCalendar" }>;
 
 export function contributionCalendarCoverage(activity: Contributions) {
   if (activity.days.length === 0) return undefined;
-  const days = [...activity.days].sort((a, b) => a.date.localeCompare(b.date));
+  // One day per date, as the grid draws one cell for it: a repeated date's later entry wins, as the newer record.
+  const days = [...new Map(activity.days.map(day => [day.date, day])).values()].sort((a, b) => a.date.localeCompare(b.date));
   const firstSupplied = new Date(`${days[0].date}T00:00:00Z`);
   const lastSupplied = new Date(`${days.at(-1)!.date}T00:00:00Z`);
   const periodStart = new Date(`${activity.period?.start}T00:00:00Z`);

@@ -85,7 +85,7 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
       return {
       ...meta, kind: activity.kind, total: metric(total), ...(reported ? { reportedTotal: metric(reported) } : {}),
       ...(activity.memberSince ? { memberSinceYear: activity.memberSince.slice(0, 4) } : {}),
-      days: days([...activity.days].sort((a, b) => a.date.localeCompare(b.date))),
+      days: days(coverage?.days ?? []),
       ...(coverage?.gapNote ? { coverageNote: coverage.gapNote } : {}),
       ...(coverage?.suppliedRange ? { suppliedRange: coverage.suppliedRange } : {}),
       ...(activity.days.length === 0 ? { emptyNote: "No daily contribution counts supplied" } : {}),
