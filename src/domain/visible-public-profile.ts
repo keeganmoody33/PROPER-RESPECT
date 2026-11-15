@@ -8,6 +8,7 @@ import { linkDisclosure } from "./link-type.ts";
 import { cardStatusLabel, type RelationshipLevel } from "./relationship-level.ts";
 import { productUseLabels } from "./product-uses.ts";
 import { activityHeadline, linkedWorksCount } from "./activity-headline.ts";
+import { byDate } from "./chart-bars.ts";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;
@@ -66,8 +67,9 @@ export type VisiblePublicProfile = Readonly<{
 function metric(value: Readonly<{ label: string; value: number; unit?: string }>): VisibleMetric {
   return { label: value.label, displayValue: compactNumber(value.value), ...(value.unit ? { unit: value.unit } : {}) };
 }
+/** One count a date in date order, as the card's chart draws them. */
 function days(values: readonly VisibleDay[]): readonly VisibleDay[] {
-  return values.map(day => ({ date: day.date, count: day.count }));
+  return byDate(values.map(day => ({ date: day.date, value: day.count }))).map(point => ({ date: point.date, count: point.value }));
 }
 function visibleActivity(activity: ActivityModule): VisibleActivity {
   const meta: VisibleActivityMeta = {
@@ -92,11 +94,13 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
       };
     }
     case "headlineMetrics": return { ...meta, kind: activity.kind, primary: metric(activity.primary), supporting: activity.supporting.map(metric) };
-    case "timeSeries": return {
-      ...meta, kind: activity.kind, ...(activity.points.length ? { label: activity.label, ...(activity.unit ? { unit: activity.unit } : {}) } : {}),
-      points: activity.points.map(point => ({ date: point.date, value: point.value })),
-      ...(activity.points.length === 0 ? { emptyNote: "No data points supplied" } : {}),
-    };
+    case "timeSeries": {
+      const points = byDate(activity.points);
+      return {
+        ...meta, kind: activity.kind, ...(points.length ? { label: activity.label, ...(activity.unit ? { unit: activity.unit } : {}) } : {}),
+        points, ...(points.length === 0 ? { emptyNote: "No data points supplied" } : {}),
+      };
+    }
     case "artifactCollection": {
       const artifacts = activity.artifacts.filter(artifact => isHttpUrl(artifact.url));
       const count = linkedWorksCount(activity);

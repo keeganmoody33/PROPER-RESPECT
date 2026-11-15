@@ -203,3 +203,12 @@ it("never tells agents fewer linked works than it lists", () => {
   const source = profile({ ...common, kind: "artifactCollection", total: 0, artifacts: [{ title: "Published article", url: "https://example.com/article" }] });
   expect(projectVisiblePublicProfile(source).cards[0].activity).toMatchObject({ total: { label: "linked work", displayValue: "1" } });
 });
+
+it("gives agents one point a date in date order, the history the card's chart draws", () => {
+  const points = [{ date: "2026-09-02", value: 999 }, { date: "2026-09-01", value: 3 }, { date: "2026-09-02", value: 4 }];
+  const series = projectVisiblePublicProfile(profile({ ...common, kind: "timeSeries", label: "Runs", points })).cards[0].activity;
+  expect(series).toMatchObject({ kind: "timeSeries", points: [{ date: "2026-09-01", value: 3 }, { date: "2026-09-02", value: 4 }] });
+  const days = [{ date: "2026-09-02", count: 999, level: 4 }, { date: "2026-09-01", count: 3, level: 1 }, { date: "2026-09-02", count: 4, level: 2 }];
+  const coding = projectVisiblePublicProfile(profile({ ...common, kind: "codingActivity", primary: { label: "Sessions", value: 2 }, supporting: [], days })).cards[0].activity;
+  expect(coding).toMatchObject({ kind: "codingActivity", days: [{ date: "2026-09-01", count: 3 }, { date: "2026-09-02", count: 4 }] });
+});
