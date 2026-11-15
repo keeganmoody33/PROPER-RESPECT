@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "clay",
   "canonicalDomain": "clay.com",
-  "measuredAt": "2026-11-14T21:01:55.025Z",
+  "measuredAt": "2026-11-15T00:16:53.540Z",
   "url": "https://clay.com/",
   "viewport": {
     "width": 1440,
@@ -35,7 +35,7 @@
       "from": "small labels"
     },
     "labelCase": {
-      "value": "uppercase",
+      "value": "as typed",
       "from": "small labels"
     },
     "labelTrackingEm": {
@@ -77,7 +77,7 @@
       "from": "secondary call-to-action"
     },
     "panelRadiusPx": {
-      "value": 23,
+      "value": 48,
       "from": "bordered panels"
     },
     "signature": {
@@ -87,7 +87,8 @@
     "hero": {
       "value": {
         "kind": "colour",
-        "hex": "#035d44"
+        "hex": "#035d44",
+        "radiusPx": 0
       },
       "from": "backdrop behind the first heading"
     },

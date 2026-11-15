@@ -66,5 +66,6 @@ test("each site file measured the root of its own brand's domain at desktop widt
     || site.url !== `https://${HOMEPAGE_BRANDS[slug].canonicalDomain}/` || site.viewport.width !== DESKTOP_WIDTH);
   expect(wrong.map(([slug]) => slug)).toEqual([]);
   expect(HOMEPAGE_SITE_TRAITS.spider.traits.signature).toEqual({ value: "#3bde77", from: "heading highlight" });
-  expect(HOMEPAGE_SITE_TRAITS.clay.traits.hero).toEqual({ value: { kind: "colour", hex: "#035d44" }, from: "backdrop behind the first heading" });
+  // Clay's green hero runs flush to the page edge: a square slab.
+  expect(HOMEPAGE_SITE_TRAITS.clay.traits.hero).toEqual({ value: { kind: "colour", hex: "#035d44", radiusPx: 0 }, from: "backdrop behind the first heading" });
 });

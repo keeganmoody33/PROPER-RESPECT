@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "cloudflare",
   "canonicalDomain": "cloudflare.com",
-  "measuredAt": "2026-11-14T21:02:05.243Z",
+  "measuredAt": "2026-11-15T00:17:02.063Z",
   "url": "https://cloudflare.com/",
   "viewport": {
     "width": 1440,
@@ -26,21 +26,6 @@
         "generic": "sans-serif"
       },
       "from": "first paragraph"
-    },
-    "labelFont": {
-      "value": {
-        "family": "Apercu Mono Pro",
-        "generic": "monospace"
-      },
-      "from": "small labels"
-    },
-    "labelCase": {
-      "value": "as typed",
-      "from": "small labels"
-    },
-    "labelTrackingEm": {
-      "value": 0,
-      "from": "small labels"
     },
     "primaryButton": {
       "value": {
@@ -87,7 +72,8 @@
     "hero": {
       "value": {
         "kind": "colour",
-        "hex": "#ff5e1f"
+        "hex": "#ff5e1f",
+        "radiusPx": 16
       },
       "from": "backdrop behind the first heading"
     },

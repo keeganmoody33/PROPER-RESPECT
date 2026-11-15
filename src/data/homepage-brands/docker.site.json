@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "docker",
   "canonicalDomain": "docker.com",
-  "measuredAt": "2026-11-14T21:03:16.599Z",
+  "measuredAt": "2026-11-15T00:17:08.384Z",
   "url": "https://docker.com/",
   "viewport": {
     "width": 1440,
@@ -29,8 +29,8 @@
     },
     "labelFont": {
       "value": {
-        "family": "ui-monospace",
-        "generic": "monospace"
+        "family": "Inter",
+        "generic": "sans-serif"
       },
       "from": "small labels"
     },
@@ -39,7 +39,7 @@
       "from": "small labels"
     },
     "labelTrackingEm": {
-      "value": 0,
+      "value": -0.011,
       "from": "small labels"
     },
     "primaryButton": {
@@ -79,7 +79,7 @@
       "from": "secondary call-to-action"
     },
     "panelRadiusPx": {
-      "value": 0,
+      "value": 18,
       "from": "bordered panels"
     },
     "signature": {
@@ -89,7 +89,8 @@
     "hero": {
       "value": {
         "kind": "colour",
-        "hex": "#0f1117"
+        "hex": "#0f1117",
+        "radiusPx": 0
       },
       "from": "backdrop behind the first heading"
     },

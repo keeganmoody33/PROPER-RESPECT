@@ -72,3 +72,37 @@ test("a stored file must name the root of its own canonical domain and nothing e
   expect(brandSiteTraitsSchema.safeParse({ ...file, traits: { css: "color: red" } }).success).toBe(false);
   expect(brandSiteTraitsSchema.safeParse(file).success).toBe(true);
 });
+
+/** Cloudflare's orange hero is a rounded slab inset from the page edge; Clay's runs flush. */
+const INSET_HERO_RADIUS_PX = 12;
+test("a colour hero keeps the radius of its slab, so an inset, rounded hero reads apart from a flush one", () => {
+  const traits = (hero: SiteMeasurement["hero"]) => brandSiteTraitsFromMeasurement(META, { hero }).traits.hero?.value;
+  expect(traits({ hex: "#ff5e1f", widthShare: 0.989, kind: "colour", radiusPx: INSET_HERO_RADIUS_PX })).toEqual({ kind: "colour", hex: "#ff5e1f", radiusPx: INSET_HERO_RADIUS_PX });
+  expect(traits({ hex: "#035d44", widthShare: 1, kind: "colour", radiusPx: 0 })).toEqual({ kind: "colour", hex: "#035d44", radiusPx: 0 });
+  expect(traits({ hex: "#035d44", widthShare: 1, kind: "colour", radiusPx: NEGATIVE_RADIUS_PX })).toEqual({ kind: "colour", hex: "#035d44" });
+});
+
+/** Panel areas in square pixels: many small square-cornered boxes, and fewer big rounded cards. */
+const SMALL_BOX_AREA = 30_000, CARD_AREA = 90_000, DOCKER_CARD_RADIUS_PX = 18, DOCKER_TILE_RADIUS_PX = 10;
+test("a site's panel radius is the one its panels cover the most area with, so a few big cards outweigh many small boxes", () => {
+  const radius = (raw: SiteMeasurement) => brandSiteTraitsFromMeasurement(META, raw).traits.panelRadiusPx?.value;
+  expect(radius({ panels: [
+    ...Array.from({ length: 6 }, () => ({ px: 0, area: SMALL_BOX_AREA })),
+    ...Array.from({ length: 3 }, () => ({ px: DOCKER_CARD_RADIUS_PX, area: CARD_AREA })),
+    { px: DOCKER_TILE_RADIUS_PX, area: SMALL_BOX_AREA },
+  ] })).toBe(DOCKER_CARD_RADIUS_PX);
+  // An older capture with only the modal radius keeps it.
+  expect(radius({ panelRadiusPx: 0 })).toBe(0);
+});
+
+/** Firecrawl's page is ruled into 101px columns by tall 1px lines in #ededed, from x = 63 to 1377. */
+const FIRECRAWL_RULES = [63, 164, 265, 366, 1074, 1175, 1276, 1377] as const;
+const FIRECRAWL_PITCH_PX = 101;
+test("a page ruled into even columns by tall lines stores that grid as its surface pattern", () => {
+  const pattern = (raw: SiteMeasurement) => brandSiteTraitsFromMeasurement(META, raw).traits.surfacePattern;
+  const rules = FIRECRAWL_RULES.map(x => ({ x, hex: "#EDEDED" }));
+  expect(pattern({ verticalRules: rules })).toEqual({ value: { kind: "grid", pitchPx: FIRECRAWL_PITCH_PX, line: "#ededed" }, from: "ruled columns" });
+  // Two lines framing a column are a frame, not a grid; a gradient pattern, where there is one, wins.
+  expect(pattern({ verticalRules: [{ x: 164, hex: "#ededed" }, { x: 1276, hex: "#ededed" }] })).toBeUndefined();
+  expect(pattern({ verticalRules: rules, surfacePattern: { kind: "dots", pitchPx: 8, line: "#dddddd" } })?.from).toBe("second large surface");
+});
