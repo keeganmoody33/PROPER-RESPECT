@@ -4,7 +4,7 @@ import { publicSiteOrigin } from "./public-site";
 import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
 export const repositoryUrl = "https://github.com/keeganmoody33/PROPER-RESPECT";
-export const homepageUpdatedAt = "2026-11-12T00:00:00.000Z";
+export const homepageUpdatedAt = "2026-11-15T00:00:00.000Z";
 
 export function creatorBusinessIdentity() {
   return {
@@ -65,11 +65,12 @@ export function publicSiteGuide() {
 
 export type PublicSiteGuide = ReturnType<typeof publicSiteGuide>;
 
-export const homepageProvenFacts = [
-  "A public profile can show a retained measurement you published, including how much, and withholds an amount you did not publish.",
-  "More than one mailbox can be connected. Disconnect stops recording from that mailbox. A retained aggregate of personal and former-employer accounts can stay visible when you record it as public, with the stored label and no email address.",
-  "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
-] as const;
+/** What a published profile can hold, proven by tests: said word for word on the privacy and terms pages and in the agent guide. */
+export const publicProfileFacts = {
+  publishedAmount: "A public profile can show a retained measurement you published, including how much, and withholds an amount you did not publish.",
+  mailboxes: "More than one mailbox can be connected. Disconnect stops recording from that mailbox. A retained aggregate of personal and former-employer accounts can stay visible when you record it as public, with the stored label and no email address.",
+  disclosedLinks: "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
+} as const;
 
 /** The homepage's three steps, shared word for word by the page and its Markdown mirror. */
 export const homepageSteps = [
@@ -84,7 +85,7 @@ export function homepageMarkdown() {
 
 Your tools. Your track record.
 
-${homepageProvenFacts.join("\n\n")}
+A personal record of the tools you use.
 
 ${productIdentity().description}
 

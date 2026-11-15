@@ -151,6 +151,5 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
         </div>;
       })}
     </div>
-    <p className={styles.label}>Keep your usage private. Choose what to share.</p>
   </section>;
 }

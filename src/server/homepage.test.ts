@@ -1,5 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, it } from "vitest";
+import { load } from "cheerio";
+import { expect, it, vi } from "vitest";
+import { trustDocuments, trustMarkdown } from "./trust-pages";
 import HomePage from "@/app/page";
 import { homepageMarkdown } from "./agent-discovery";
 
@@ -9,25 +11,27 @@ const statements = [
   "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
 ];
 
-it("keeps the three proven statements in the first section, right after the examples that follow the heading", () => {
-  const html = renderToStaticMarkup(HomePage());
-  const [title, examples, next] = ['id="homepage-title"', 'id="example"', 'id="how-it-works"'].map(marker => html.indexOf(marker));
-  expect(title).toBeGreaterThanOrEqual(0);
-  expect(examples).toBeGreaterThan(title);
-  expect(next).toBeGreaterThan(examples);
-  // The owner's copy, from its first statement to the end of the first section: the example cards come before it.
-  const first = html.slice(html.indexOf(statements[0].slice(0, 20)), next);
-  expect(html.indexOf(statements[0].slice(0, 20))).toBeGreaterThan(examples);
-  for (const statement of statements) expect(first).toContain(statement);
-  expect(first).not.toMatch(/Wispr|Clay|token spend|live site|already shows|finds affiliate|find affiliate/i);
+it("the hero has no copy: outside the examples it says what the site is, its headline and two actions, and nothing else", () => {
+  const $ = load(renderToStaticMarkup(HomePage()));
+  const hero = $("section[aria-labelledby=homepage-title]").clone();
+  hero.find("#example").remove();
+  const lines = hero.find("p, h1, a, li").toArray().filter(element => !$(element).find("p, h1, a, li").length).map(element => $(element).text().trim());
+  expect(lines).toEqual(["A personal record of the tools you use.", "Your tools.Your track record.", "Start your collection", "View Keegan’s shared collection"]);
+  // The examples carry no line of their own below the card either.
+  expect($("#example").text()).not.toMatch(/Keep your usage private|Choose what to share/);
 });
 
-it("keeps the same three statements in the homepage markdown", () => {
+it("keeps the facts the hero dropped on the pages they belong to, and leaves them out of the homepage and its markdown", () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
+  const html = renderToStaticMarkup(HomePage());
   const markdown = homepageMarkdown();
-  const opening = markdown.slice(0, markdown.indexOf("## How it works"));
-  expect(opening).not.toBe(markdown);
-  for (const statement of statements) expect(opening).toContain(statement);
-  expect(opening).not.toMatch(/Wispr|Clay|token spend|live site|already shows|finds affiliate|find affiliate/i);
+  expect(statements.filter(statement => html.includes(statement) || markdown.includes(statement))).toEqual([]);
+  const paragraphs = (slug: "privacy" | "terms", heading: string) => trustDocuments[slug].sections.find(section => section.heading === heading)!.paragraphs;
+  expect(paragraphs("privacy", "What becomes public")).toContain(statements[0]);
+  expect(paragraphs("privacy", "Disconnecting and deleting are different")).toContain(statements[1]);
+  expect(paragraphs("terms", "Disclose affiliate and referral links")).toContain(statements[2]);
+  for (const [slug, statement] of [["privacy", statements[0]], ["privacy", statements[1]], ["terms", statements[2]]] as const) expect(trustMarkdown(slug)).toContain(statement);
+  vi.unstubAllEnvs();
 });
 
 const steps = [

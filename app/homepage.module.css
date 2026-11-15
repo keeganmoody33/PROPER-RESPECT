@@ -8,12 +8,10 @@
 .hero { grid-template-rows: auto 1fr; grid-template-areas: "intro example" "rest example"; }
 .intro { grid-area: intro; }
 .example { grid-area: example; }
-.introRest { grid-area: rest; }
+.introRest { grid-area: rest; margin-top: 1.8rem; }
 .label { font-size: .68rem; line-height: 1.6; margin: 0 0 1.8rem; }
 .intro h1 { font-size: clamp(3.5rem, 5.8vw, 6.4rem); font-weight: 900; letter-spacing: -.055em; line-height: .94; text-transform: uppercase; margin: 0; }
 .intro h1 span { color: var(--home-red); }
-.facts { max-width: 46ch; margin: 1.8rem 0; padding: 0; list-style: none; display: grid; gap: .85rem; }
-.facts li { margin: 0; font-size: 1.05rem; line-height: 1.65; }
 .actions { display: flex; align-items: flex-start; gap: 1rem; flex-direction: column; }
 .primary { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; padding: .9rem 1.3rem; border: 1.5px solid var(--ink); font-weight: 700; text-decoration: none; }
 .primary { background: var(--ink); color: var(--action-text); }
@@ -48,20 +46,20 @@
 @media (max-width: 900px) {
   .hero, .respectInner { grid-template-columns: 1fr; }
   .hero { grid-template-rows: none; grid-template-areas: "intro" "example" "rest"; row-gap: 1.25rem; }
+  .introRest { margin-top: 0; }
   .intro h1 { font-size: clamp(3.35rem, 9vw, 6rem); }
-  .facts { max-width: 52ch; }
   .figure { max-width: 760px; }
   .sectionHeading { flex-direction: column; align-items: flex-start; }
   .sectionHeading > p { max-width: 45ch; }
 }
-/* A phone's first screen leads with the heading and the card: the heading on two or three short lines, the card close under it,
-   and the line about the record after the card, so the card's numbers and table start above the examples row. */
+/* A phone's first screen says what the site is, then the heading on two or three short lines, then the card close under it,
+   so the card's number starts above the examples row. */
 @media (max-width: 600px) {
-  .hero { padding-top: .75rem; grid-template-areas: "title" "example" "tagline" "rest"; row-gap: .6rem; }
+  .hero { padding-top: .75rem; grid-template-areas: "tagline" "title" "example" "rest"; row-gap: .45rem; }
   .intro { display: contents; }
   .intro h1 { grid-area: title; }
   .label { font-size: .62rem; }
-  .intro .label { grid-area: tagline; margin: .15rem 0 0; }
+  .intro .label { grid-area: tagline; margin: 0; }
   .hero .example { padding: .5rem; }
   .intro h1 { font-size: clamp(1.6rem, 7.4vw, 2.4rem); letter-spacing: -.03em; word-spacing: .08em; }
   .actions, .primary { width: 100%; }

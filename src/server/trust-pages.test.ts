@@ -76,8 +76,8 @@ it.each(["HTML", "Markdown"] as const)("discloses the same aggregate tally scope
   expect(text).toMatch(/requests, not unique people or use of a listed product/);
   expect(text).toMatch(/static assets, API requests, prefetches, prerenders and client-side data fetches/);
   expect(text).toMatch(/dropped.*unavailable/);
-  expect(html("time").attr("datetime")).toBe("2026-10-06");
-  expect(markdown).toContain("Updated 2026-10-06");
+  expect(html("time").attr("datetime")).toBe("2026-11-15");
+  expect(markdown).toContain("Updated 2026-11-15");
   expect(html.text()).toContain("PostHog");
   expect(markdown).toContain("PostHog");
   expect(trustMetadata("privacy").description).toContain("aggregate request tally");
@@ -92,5 +92,5 @@ it("distinguishes isolated Searchable public visits from PostHog without promisi
   expect(markdown).toContain("Signed-in, sign-in, sign-up and onboarding routes are excluded");
   expect(markdown).toContain("does not measure referrals from AI services");
   expect(markdown).toContain("PostHog");
-  expect(trustDocuments.privacy.updatedAt).toBe("2026-10-06");
+  expect(trustDocuments.privacy.updatedAt).toBe("2026-11-15");
 });
