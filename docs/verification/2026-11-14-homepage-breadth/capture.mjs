@@ -27,6 +27,15 @@ function serverProof() {
   return { port, pid, cwd, command, commit, build: built };
 }
 
+/** Every example's name: the featured ones, then those behind More examples, which the chooser holds only once it opens. */
+async function everyExample(carousel, chooser) {
+  const featured = await chooser.getByRole("button").count();
+  await carousel.getByRole("button", { name: "More examples" }).click();
+  await carousel.locator("[aria-expanded=true]", { hasText: "More examples" }).waitFor();
+  await chooser.getByRole("button").nth(featured).waitFor();
+  return chooser.getByRole("button").evaluateAll(buttons => buttons.map(button => button.firstChild?.textContent ?? ""));
+}
+
 const proof = serverProof();
 writeFileSync(join(out, "server.json"), `${JSON.stringify(proof, null, 2)}\n`);
 const browser = await chromium.launch();
@@ -36,7 +45,9 @@ try {
     const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: "reduce" });
     await page.goto(base);
     const carousel = page.getByRole("region", { name: "Product usage examples" });
-    const names = await page.getByRole("group", { name: "Choose a product example" }).getByRole("button").evaluateAll(buttons => buttons.map(button => button.firstChild?.textContent ?? ""));
+    const chooser = page.getByRole("group", { name: "Choose a product example" });
+    const chooserHeight = await chooser.evaluate(element => element.getBoundingClientRect().height);
+    const names = await everyExample(carousel, chooser);
     const rows = [];
     for (const [index, name] of names.entries()) {
       await carousel.getByRole("button", { name, exact: true }).click();
@@ -70,7 +81,7 @@ try {
       }
       rows.push({ name, ...measured, back });
     }
-    report.widths[width] = { chooserHeight: await page.getByRole("group", { name: "Choose a product example" }).evaluate(element => element.getBoundingClientRect().height), rows };
+    report.widths[width] = { chooserHeight, rows };
     await page.close();
   }
 } finally { await browser.close(); }
