@@ -1,6 +1,6 @@
 # Repository Guidelines
 
-Updated: 2026-10-27.
+Updated: 2026-11-15.
 
 ## Active remediation program
 
@@ -38,7 +38,8 @@ branch and PR per task. That also applies:
   `remediate/<ID>-*` branch already names it. Either one means another writer
   holds the task.
 - **Review.** It never reviews or clears its own PRs. A reviewer other than
-  Claude (today Copilot) reviews them, and the owner merges while the
+  Claude reviews them: today Codex, asked with an `@codex review` comment on
+  each new head (owner decision, 2026-11-15). The owner merges while the
   autopilot is off.
 - **Autopilot.** Its task PRs carry the `needs-owner` label, so a re-enabled
   autopilot doesn't send them to Codex to fix.
@@ -99,7 +100,7 @@ filed for something false or stale on a public page. This is the one exception
 to "Devin reports" below. The PR names its issue, follows every other rule in
 this file, and carries the `needs-owner` label. Other writers treat its branch as
 held by the truth check and don't build on it. A
-reviewer other than Devin (Copilot or Claude) reviews it, and the owner merges.
+reviewer other than Devin (Codex or Claude) reviews it, and the owner merges.
 Devin never merges, never pushes to another writer's branch, and gains no
 authority to release, deploy, change production configuration, read providers,
 or edit or publish the owner's collection.
