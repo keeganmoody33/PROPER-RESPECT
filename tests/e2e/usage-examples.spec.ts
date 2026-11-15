@@ -751,7 +751,9 @@ test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a 
   const docker = carousel.getByRole("article", { name: "Docker card" });
   expect((await short(docker, ".card-front .card-artifact-links a")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
   await docker.getByRole("button", { name: "Details", exact: true }).click();
-  expect((await short(docker, ".card-back :is(.outbound-link, .evidence-link)")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
+  // Every link on the back: each linked work, the work sample, the product's site and How evidence works.
+  expect((await short(docker, ".card-back a")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
+  expect(await docker.locator(".card-back .artifact-list a").count()).toBe(3);
   // Taller, the back's two links still sit one under the other, not run together on one line.
   const [open, evidence] = await Promise.all([".outbound-link", ".evidence-link"].map(selector => docker.locator(`.card-back ${selector}`).boundingBox()));
   expect(evidence!.y).toBeGreaterThanOrEqual(open!.y + open!.height);
@@ -938,7 +940,7 @@ test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone 
   expect(cells).toEqual({ size: 8, gap: 2, radius: "2px", scrolls: false });
   // One line for a screen reader, not 365 images.
   await expect(calendar.getByRole("img")).toHaveCount(0);
-  await expect(calendar.locator(".visually-hidden")).toHaveText(/^\d[\d,]* contributions from 1 Sep 2025 to 31 Aug 2026, on \d+ of 365 days; the most in a day was \d+, on \d+ \w+ \d{4}\.$/);
+  await expect(calendar.locator(".contribution-summary")).toHaveText(/^\d[\d,]* contributions from 1 Sep 2025 to 31 Aug 2026, on \d+ of 365 days; the most in a day was \d+, on \d+ \w+ \d{4}\.$/);
   await expect(calendar.getByText("Scroll for earlier months")).toBeHidden();
   await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
   await expect(calendar.getByText("Scroll for earlier months")).toBeVisible();
@@ -1006,6 +1008,32 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
   await docker.getByRole("button", { name: "Details", exact: true }).click();
   await expect(docker.locator(".card-back .artifact-list li")).toHaveCount(3);
   await expect(docker.locator(".card-back .artifact-list li").first()).toContainText("Compose stacks");
+});
+
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`no back of the fourteen leaves an empty band over ${MAX_BACK_GAP_PX}px between its lines or under them at ${width}px`, async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const bands: Record<string, number> = {};
+  for (const name of ALL_EXAMPLES) {
+    await carousel.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    // The widest stretch of the back with nothing on it: between two of its lines, or under the last one.
+    bands[name] = await card.evaluate(article => {
+      const lines = [...article.querySelectorAll(".card-back-topline, .card-back-content > *")].filter(element => element.checkVisibility())
+        .map(element => element.getBoundingClientRect()).sort((a, b) => a.top - b.top);
+      const style = getComputedStyle(article);
+      const floor = article.getBoundingClientRect().bottom - parseFloat(style.paddingBottom) - parseFloat(style.borderBottomWidth);
+      return Math.round(Math.max(...lines.map((line, index) => (index + 1 < lines.length ? lines[index + 1].top : floor) - line.bottom)));
+    });
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+  expect(Object.entries(bands).filter(([, band]) => band > MAX_BACK_GAP_PX)).toEqual([]);
 });
 
 test("a sample's How this was measured speaks in plain dates, keeps the exact value in the markup, and claims no source or coverage", async ({ page }) => {

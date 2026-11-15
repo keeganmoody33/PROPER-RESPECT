@@ -12,7 +12,7 @@ import type {
   ActivityModule,
   PublicProfile,
 } from "@/src/domain/public-profile";
-import { contributionCalendarCoverage } from "@/src/domain/contribution-calendar-coverage";
+import { contributionCalendarCoverage, monthlyTotals } from "@/src/domain/contribution-calendar-coverage";
 import { compactNumber, fullNumber } from "@/src/domain/format-activity-number";
 import { usageLinkHost, usageLinkLabelText, usageLinkSchema } from "@/src/domain/usage-links";
 import { isHttpUrl } from "@/src/domain/http-url";
@@ -238,7 +238,17 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
           </div>
         </div>
       </div>
-      <p className="visually-hidden">{calendarSummary(days)}</p>
+      <p className="visually-hidden contribution-summary">{calendarSummary(days)}</p>
+      {/* The months again as rows, for a screen reader: the calendar's cells are drawn for sight only. */}
+      <div className="visually-hidden">
+        <table>
+          <caption>Contributions each month</caption>
+          <thead><tr><th scope="col">Month</th><th scope="col">Contributions</th><th scope="col">Days with any</th></tr></thead>
+          <tbody>{monthlyTotals(days).map(month => <tr key={month.month}>
+            <th scope="row">{monthYearOf(`${month.month}-01`)}</th><td>{fullNumber(month.total)}</td><td>{month.activeDays} of {month.days}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
       <div className="contribution-legend" aria-hidden="true"><span className="contribution-scroll-hint">← Scroll for earlier months</span>Less {[0, 1, 2, 3, 4].map(level => <i key={level} data-level={level} />)} More</div>
       {suppliedRange && <p className="contribution-range">{suppliedRange}</p>}
       {gapNote && <p className="contribution-gap">{gapNote}</p>}
@@ -375,6 +385,32 @@ const POINT_WORDS: Readonly<Record<"day" | "week" | "month" | "level", (date: st
   level: date => dayMonthYear(date),
 };
 
+/** A calendar's months, each with its contributions: what the front's cells add up to, which they can't show as numbers. */
+function MonthValues({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
+  const coverage = contributionCalendarCoverage(activity);
+  if (!coverage) return null;
+  return <>
+    <p className="card-back-values-caption">Contributions each month</p>
+    <ol className="card-back-values" aria-label="Contributions each month">
+      {monthlyTotals(coverage.days).map(month => <li key={month.month}><span>{monthYearOf(`${month.month}-01`)}</span><strong>{fullNumber(month.total)}</strong></li>)}
+    </ol>
+  </>;
+}
+
+const DAYS_IN_WEEK = 7;
+
+/** Coding bars' days, a week at a time from the first: how many had any activity. Days are counted, so no unnamed count is added up. */
+function WeekActiveDays({ days }: { days: readonly { date: string; count: number }[] }) {
+  const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
+  const weeks = Array.from({ length: Math.ceil(sorted.length / DAYS_IN_WEEK) }, (_, index) => sorted.slice(index * DAYS_IN_WEEK, (index + 1) * DAYS_IN_WEEK));
+  return <>
+    <p className="card-back-values-caption">Active days each week, from the day it starts</p>
+    <ol className="card-back-values" aria-label="Active days each week">
+      {weeks.map(week => <li key={week[0].date}><span>{dayMonth(week[0].date)}</span><strong>{week.filter(day => day.count > 0).length} of {week.length}</strong></li>)}
+    </ol>
+  </>;
+}
+
 /** A series' every value, in a compact list the front's bars can't show as numbers. */
 function SeriesValues({ activity }: { activity: Extract<ActivityModule, { kind: "timeSeries" }> }) {
   const series = normalizeSeries(activity.points, activity.unit);
@@ -443,11 +479,18 @@ function ActivityEvidence({ activity, today }: { activity: ActivityModule; today
       </>}
       {activity.kind === "contributionCalendar" && activity.memberSince && <p className="activity-caption">Member since {yearOf(activity.memberSince)}</p>}
       {activity.kind === "timeSeries" && <SeriesValues activity={activity} />}
+      {activity.kind === "contributionCalendar" && <MonthValues activity={activity} />}
+      {activity.kind === "codingActivity" && activity.days?.length ? <WeekActiveDays days={activity.days} /> : null}
       {works.length > 0 && <ul className="artifact-list">
-        {works.map((artifact, index) => <li key={`${index}:${artifact.url}`}>
-          {isHttpUrl(artifact.url) ? <a href={artifact.url} target="_blank" rel="noreferrer"><WholeWords text={artifact.title} /> ↗</a> : <WholeWords text={artifact.title} />}
-          {artifact.label && <span className="artifact-description">{artifact.label}</span>}
-        </li>)}
+        {/* A linked work's line about it sits inside its link, so the two make one tap target. */}
+        {works.map((artifact, index) => {
+          const description = artifact.label && <span className="artifact-description">{artifact.label}</span>;
+          return <li key={`${index}:${artifact.url}`}>
+            {isHttpUrl(artifact.url)
+              ? <a href={artifact.url} target="_blank" rel="noreferrer"><span><WholeWords text={artifact.title} /> ↗</span>{description}</a>
+              : <><WholeWords text={artifact.title} />{description}</>}
+          </li>;
+        })}
       </ul>}
       <p className="activity-summary">{activitySummary(activity, today)}</p>
     </div>

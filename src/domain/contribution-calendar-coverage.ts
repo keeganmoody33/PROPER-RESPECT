@@ -23,3 +23,15 @@ export function contributionCalendarCoverage(activity: Contributions) {
     ? `${missingDays} ${missingDays === 1 ? "day has" : "days have"} no supplied count; blank spaces are not zero activity.` : undefined;
   return { days, first, last, suppliedRange, gapNote };
 }
+
+export type MonthTotal = Readonly<{ month: string; total: number; activeDays: number; days: number }>;
+
+/** The days' counts added up per calendar month ("2026-08"), in date order, with how many of each month's days had any. */
+export function monthlyTotals(days: readonly Readonly<{ date: string; count: number }>[]): MonthTotal[] {
+  const months = new Map<string, { total: number; activeDays: number; days: number }>();
+  for (const day of [...days].sort((a, b) => a.date.localeCompare(b.date))) {
+    const month = months.get(day.date.slice(0, 7)) ?? { total: 0, activeDays: 0, days: 0 };
+    months.set(day.date.slice(0, 7), { total: month.total + day.count, activeDays: month.activeDays + (day.count > 0 ? 1 : 0), days: month.days + 1 });
+  }
+  return [...months].map(([month, totals]) => ({ month, ...totals }));
+}

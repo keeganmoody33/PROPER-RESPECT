@@ -636,7 +636,7 @@ test("a contribution calendar renders only supplied days and never relabels cont
     expect(days).toHaveLength(1);
     expect(days.attr("title")).toBe("15 Sep 2026: 3 contributions");
     // The days are drawn for sight; a screen reader gets the calendar's one-line summary instead.
-    expect($(`${side} .contribution-calendar .visually-hidden`).text()).toBe("3 contributions from 15 Sep 2026 to 15 Sep 2026, on 1 of 1 days; the most in a day was 3, on 15 Sep 2026.");
+    expect($(`${side} .contribution-calendar .contribution-summary`).text()).toBe("3 contributions from 15 Sep 2026 to 15 Sep 2026, on 1 of 1 days; the most in a day was 3, on 15 Sep 2026.");
     expect(days.attr("data-date")).toBe("2026-09-15");
   }
   // It leads with the one day it draws; the stored 37 disagrees, so it stands apart, named as reported.
@@ -1120,4 +1120,23 @@ test("a hyphenated word on a card never breaks at its hyphen: \"go-to-market\" a
   expect($(".card-back .whole-word").map((_, word) => $(word).text()).get()).toEqual(["go-to-market", "(awesome-compose)"]);
   expect($(".card-front .card-artifact-links .whole-word").text()).toBe("(awesome-compose)");
   expect($(".card-front .card-artifact-links a").text()).toBe("Sample apps (awesome-compose) ↗");
+});
+
+test("a calendar's back lists each month's contributions, and its front gives a screen reader the same months as a table", () => {
+  const days = [{ date: "2026-07-30", count: 3, level: 2 }, { date: "2026-07-31", count: 0, level: 0 }, { date: "2026-08-01", count: 5, level: 3 }];
+  const $ = renderCard({ activity: { ...activityEvidence, period: { start: "2026-07-30", end: "2026-08-01" }, kind: "contributionCalendar", total: 8, days } });
+  expect($(".card-back .card-back-values-caption").text()).toBe("Contributions each month");
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["Jul 20263", "Aug 20265"]);
+  const table = $(".card-front .contribution-calendar .visually-hidden table");
+  expect(table.find("caption").text()).toBe("Contributions each month");
+  expect(table.find("thead th").map((_, cell) => $(cell).text()).get()).toEqual(["Month", "Contributions", "Days with any"]);
+  expect(table.find("tbody tr").map((_, row) => $(row).find("th[scope=row], td").map((__, cell) => $(cell).text()).get().join("|")).get())
+    .toEqual(["Jul 2026|3|1 of 2", "Aug 2026|5|1 of 1"]);
+});
+
+test("coding activity's back lists the active days in each week its bars cover, counting days rather than adding up an unnamed count", () => {
+  const days = Array.from({ length: 9 }, (_, index) => ({ date: `2026-08-${String(index + 1).padStart(2, "0")}`, count: index % 3 === 0 ? 0 : 4, level: 2 }));
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "codingActivity", primary: { label: "active days", value: 6 }, supporting: [], days } });
+  expect($(".card-back .card-back-values-caption").text()).toBe("Active days each week, from the day it starts");
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["1 Aug4 of 7", "8 Aug2 of 2"]);
 });

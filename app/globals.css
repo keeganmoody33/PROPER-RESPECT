@@ -881,9 +881,18 @@ main {
   padding: 0;
 }
 
+/* A linked work and its line make one target at least 44px tall. */
 .artifact-list a {
+  display: flex;
+  flex-direction: column;
   font-size: 0.85rem;
   font-weight: 700;
+  justify-content: center;
+  min-height: 2.75rem;
+}
+
+.artifact-list a .artifact-description {
+  font-weight: 400;
 }
 
 .activity-meta {
@@ -959,15 +968,13 @@ main {
   min-width: 0;
 }
 
-/* The back's content fills the card: its links sit on the card's bottom edge, and any spare height sits above them, not under them. */
+/* The back's content fills the card: its links sit on the card's bottom edge, and any spare height is shared between its lines,
+   so no one stretch of it stands empty. */
 .card-back-content {
   display: flex;
   flex: 1;
   flex-direction: column;
-}
-
-.product-card .card-back-content > :is(.usage-link, .outbound-link) {
-  margin-top: auto;
+  justify-content: space-between;
 }
 
 .product-card .card-back-content > .usage-link ~ .outbound-link {
@@ -1146,7 +1153,7 @@ main {
   border-left: 2px solid var(--brand-card-accent, currentColor);
   font-size: 1rem;
   line-height: 1.5;
-  margin: 1rem 0;
+  margin: 0.4rem 0 0;
   padding-left: 0.8rem;
   white-space: pre-wrap;
 }
