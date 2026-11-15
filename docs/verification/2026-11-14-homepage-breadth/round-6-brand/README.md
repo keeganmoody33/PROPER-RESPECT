@@ -22,7 +22,7 @@ The script's automatic assertions: 67 passed, 4 failed, 9 untested. The four fai
 | Clay's body sits on its warm grey `#f4f3f0`, the table a white inset panel | `clay-*.png` | passed | Body `rgb(244, 243, 240)`; table panel white with a visible rule. |
 | Clay's chips and footer in sentence case | `clay-*.png` | passed | "enrich lead and account lists", "Periods, sources and a work sample inside". The eyebrow "Daily · since 2023" is as typed too: the first-screen labels measure as typed. |
 | Clay's rule shows on the card | `clay-*.png` | passed | `#f0f8ff` (1.03:1 on white) gives way to a border mixed from the text. |
-| Clay's table shows skill with Clay: column glyphs, a waterfall, run-status pills, rows tied to the numbers | `clay-*.png` | passed | Glyphs for text, email, waterfall and AI; lime "Enriched" pills with a mark per provider (answered, missed, not asked); "4 of 214 rows · 2.3 credits a row" (27,600 / 11,800). |
+| Clay's table shows skill with Clay: column glyphs, a waterfall, run-status pills, rows tied to the numbers | `clay-*.png` | passed | Glyphs for text, email, waterfall and AI; lime "Enriched" pills with a mark per provider (answered, missed, not asked); "4 of 214 rows · 2.3 credits a row this year" (27,600 / 11,800). |
 | Clay's card bottom ≤ 1000 at 1440×1000, no cut cell or split word at 1440/390/320 | not in the pairs | passed | Card bottom 968 at 1440 (measured); the e2e table tests pass at all three widths. |
 | GitHub's figures in a served face with tabular figures | `github-1440.png` | passed | "1,121" in GitHub's served Mona Sans heading face, no gap around the comma. |
 | GitHub's calendar framed in the site's 1px `#d2d9d4` rule | `github-*.png` | passed | Framed panel; days stay 8px at 1440. |
@@ -62,6 +62,16 @@ the card's big "3" is plain black, as docker.com's largest number is. Next: noth
 button. Reads wrong: the button label is dark where the site's is white (the floor holds), and the bracketed mono labels
 and orange crosshairs are missing. The script fails the button label colour. Next: measure bracketed small labels as a
 label style; the eyebrow is in a system mono because the card does not serve Geist Mono.
+
+## What the pairs do not show
+
+The pairs are fronts only. The backs were checked by the usage-examples e2e spec and by eye at 1440 and 390: Clay's and
+Docker's backs carry the slab as their header only, with the owner's note ruled in the slab colour rather than banded again,
+and Clay's back adds the fifth row (Marrow, no match) to the front's four.
+
+The verify skill's floors snippet lists Clay's waterfall words for screen readers (", provider 2 of 3 answered") as "cut".
+They sit in the `.visually-hidden` pattern, the same as GitHub's calendar summary and Cloudflare's hidden name beside its
+wordmark; nothing a visitor sees is cut.
 
 ## Measurement notes
 

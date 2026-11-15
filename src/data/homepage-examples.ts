@@ -149,7 +149,7 @@ const CLAY_TABLE: TablePreviewInput = {
   ],
   frontRows: CLAY_FRONT_ROWS, totalRows: CLAY_TABLE_ROWS,
   // The year's data credits over its rows enriched (clayMeasurements below): 27,600 / 11,800.
-  rowNote: "2.3 credits a row",
+  rowNote: "2.3 credits a row this year",
 };
 
 /** Exact numbers an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. Each metric is a verb, since its unit already names what was counted. */

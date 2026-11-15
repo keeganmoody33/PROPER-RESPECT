@@ -238,7 +238,7 @@ const NARROWEST_WIDTH = 320;
       await expect(table.getByRole("columnheader")).toHaveText(width === DESKTOP_WIDTH ? ["Company", "Work email", "Waterfall", "AI: signal"] : ["Company", "Work email", "Waterfall"]);
       // The front shows four of the table's rows, and says how much of the whole table they are.
       await expect(table.getByRole("rowheader")).toHaveText(["Nimbus", "Heron", "Quillon", "Tessel"]);
-      await expect(card.locator(".card-front .card-table-count")).toHaveText("4 of 214 rows · 2.3 credits a row");
+      await expect(card.locator(".card-front .card-table-count")).toHaveText("4 of 214 rows · 2.3 credits a row this year");
       // One period for all three numbers, said once beside them.
       const stats = card.locator(".card-front .usage-measurement-stats li");
       await expect(stats).toHaveText(["11,800rows enriched", "52tables built", "27,600data credits used"]);
@@ -979,6 +979,21 @@ test("a flush hero's slab covers the header, an inset hero rounds the card, and 
   expect([looks.Cloudflare.radius, looks.Docker.radius]).toEqual(["16px", "18px"]);
   // Firecrawl's orange 5,520 is 3.2:1 on its #f9f9f9: allowed only because it is drawn at 24px or more.
   expect(Object.fromEntries(FEATURED.map(name => [name, looks[name].numbersRead]))).toEqual(Object.fromEntries(FEATURED.map(name => [name, true])));
+});
+
+test("a slab card's back keeps one slab at its top: its note under the header is not banded in the slab colour again", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  for (const name of ["Clay", "Docker"]) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    const [topline, note] = await card.evaluate(article => [".card-back-topline", ".card-back blockquote"].map(selector => getComputedStyle(article.querySelector(selector)!).backgroundColor));
+    expect(note, name).not.toBe(topline);
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
 });
 
 test("the work-sample link on Clay's back lights up in Clay's lime on hover, not the card's black", async ({ page }) => {

@@ -187,7 +187,7 @@ test("only Clay's front shows a table: a lead list from a signal, a provider wat
   // The rows are a few of the whole table, and its credits a row are the year's: 27,600 data credits over 11,800 rows enriched.
   const clay = examples.find(({ id }) => id === "clay")!.card;
   const [rows, , credits] = clay.measurements!.map(row => Number(row.value));
-  expect([table.totalRows, table.rowNote]).toEqual([214, `${(credits / rows).toFixed(1)} credits a row`]);
+  expect([table.totalRows, table.rowNote]).toEqual([214, `${(credits / rows).toFixed(1)} credits a row this year`]);
 });
 
 test("Docker lists three things as links to public pages, and every outbound link on every example is https", () => {
