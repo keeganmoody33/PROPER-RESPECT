@@ -324,11 +324,11 @@ function TablePreviewBlock({ preview, shown, full = false }: { preview: TablePre
   );
 }
 
-function ActivityPreview({ activity, pastUse, unreviewed = false, expanded = false, countsPerPeriod = false }: { activity: ActivityModule; pastUse: boolean; unreviewed?: boolean; expanded?: boolean; countsPerPeriod?: boolean }) {
+function ActivityPreview({ activity, pastUse, today, unreviewed = false, expanded = false, countsPerPeriod = false }: { activity: ActivityModule; pastUse: boolean; today?: string; unreviewed?: boolean; expanded?: boolean; countsPerPeriod?: boolean }) {
   const metric = activityHeadline(activity, pastUse, { countsPerPeriod });
   const number = (value: number) => expanded ? fullNumber(value) : compactNumber(value);
   const series = activitySeries(activity);
-  const freshness = freshnessNote(activity.freshness, activity.capturedAt);
+  const freshness = freshnessNote(activity.freshness, activity.capturedAt, { today });
   return (
     <div className="card-activity-preview">
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
@@ -404,8 +404,8 @@ const SCOPE_WORDS: Readonly<Record<ActivityModule["attributionScope"], string>> 
 };
 
 /** An activity's provenance on one plain line: where it came from, whose use, its period and how old it is. */
-function activitySummary(activity: ActivityModule): string {
-  const when = freshnessNote(activity.freshness, activity.capturedAt) ?? `recorded ${dayMonthYear(activity.capturedAt)}`;
+function activitySummary(activity: ActivityModule, today?: string): string {
+  const when = freshnessNote(activity.freshness, activity.capturedAt, { today }) ?? `recorded ${dayMonthYear(activity.capturedAt)}`;
   const period = activity.period ? formatPeriod(activity.period.start, activity.period.end) : "Measurement period not supplied";
   return [activity.provenanceLabel, SCOPE_WORDS[activity.attributionScope], period, when].join(" · ");
 }
@@ -421,7 +421,7 @@ function MetricRow({ metrics }: { metrics: readonly { label: string; value: numb
 }
 
 /** What the back adds to the front's activity: never its chart or calendar again, only what the front leaves out. */
-function ActivityEvidence({ activity }: { activity: ActivityModule }) {
+function ActivityEvidence({ activity, today }: { activity: ActivityModule; today?: string }) {
   const empty = (activity.kind === "timeSeries" && !activity.points.length) || (activity.kind === "artifactCollection" && !activity.artifacts.length);
   // Every work, each with the owner's line about it: the front links only the first few, by title.
   const works = activity.kind === "artifactCollection" ? activity.artifacts : [];
@@ -441,15 +441,9 @@ function ActivityEvidence({ activity }: { activity: ActivityModule }) {
           {artifact.label && <span className="artifact-description">{artifact.label}</span>}
         </li>)}
       </ul>}
-      <p className="activity-summary">{activitySummary(activity)}</p>
+      <p className="activity-summary">{activitySummary(activity, today)}</p>
     </div>
   );
-}
-
-/** The card's newest dated record, its activity or a published number, or today when it has neither: what a price's age is read against. */
-function latestRecord(card: Card): string {
-  const dates = [card.activity?.capturedAt, ...(card.measurements ?? []).map(row => row.capturedAt)].filter((date): date is string => Boolean(date));
-  return dates.sort().at(-1) ?? new Date().toISOString();
 }
 
 export function ProductCard({
@@ -470,6 +464,7 @@ export function ProductCard({
   shown = true,
   sample = false,
   countsPerPeriod = false,
+  today: readOn,
 }: {
   card: Card;
   index: number;
@@ -496,8 +491,12 @@ export function ProductCard({
   sample?: boolean;
   /** The series' points each count their own period, so they add up. Presentation only: nothing a card stores can say so. */
   countsPerPeriod?: boolean;
+  /** The day the card is read (yyyy-mm-dd), which a snapshot's and a price's age are judged against. Defaults to now. */
+  today?: string;
 }) {
   const brandPreview = displayMode === "brand-preview";
+  // An invented sample keeps its own wording and never ages.
+  const today = sample ? undefined : readOn ?? new Date().toISOString().slice(0, 10);
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
     ? privateUsageCardSchema.safeParse(privateUsage)
     : undefined;
@@ -522,6 +521,7 @@ export function ProductCard({
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
   const table = brandPreview ? undefined : parseTablePreview(tablePreview);
   const pastUse = noLongerInUse(card);
+  const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
   const notePlaceholder = relationshipConfirmed ? "Relationship note not supplied." : "Discovery note not supplied.";
@@ -639,14 +639,14 @@ export function ProductCard({
         {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
         {table && <TablePreviewBlock preview={table} shown={shown} />}
         {!brandPreview && card.activity ? (
-          <ActivityPreview activity={card.activity} pastUse={pastUse} unreviewed={!relationshipConfirmed} expanded={expandedActivity} countsPerPeriod={countsPerPeriod} />
+          <ActivityPreview activity={card.activity} pastUse={pastUse} today={today} unreviewed={!relationshipConfirmed} expanded={expandedActivity} countsPerPeriod={countsPerPeriod} />
         ) : (brandPreview || (audience === "owner" && !ownerUsage && !card.measurements?.length)) ? (
           <p className="activity-placeholder">
             {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}
           </p>
         ) : null}
         {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
-        {!brandPreview && card.cost && <p className="card-cost">{costSummary(card.cost, { latest: latestRecord(card), sample })}</p>}
+        {cost && <p className="card-cost">{cost}</p>}
 
         <div className="card-footer">
           <span id={`${cardId}-footer`} className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
@@ -696,10 +696,10 @@ export function ProductCard({
             </p>
           </>}
           <p>{card.product.description}</p>
-          {!brandPreview && card.cost && <p>{costDetail(card.cost, { sample })}</p>}
+          {!brandPreview && card.cost && <p>{costDetail(card.cost, { today, sample })}</p>}
           {!brandPreview && card.activity && <>
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
-            <ActivityEvidence activity={card.activity} />
+            <ActivityEvidence activity={card.activity} today={today} />
           </>}
           {/* Past the few the front shows; the front's own are in How this was measured, each with how it was recorded. */}
           {!brandPreview && card.measurements && card.measurements.length > FRONT_MEASUREMENT_LIMIT ? <MeasurementLines measurements={card.measurements.slice(FRONT_MEASUREMENT_LIMIT)} /> : null}

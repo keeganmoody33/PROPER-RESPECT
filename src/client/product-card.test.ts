@@ -1093,3 +1093,15 @@ test("a daily chart's screen-reader table has one Date column, since each bar is
     ["Date", "Value"], ["1 Aug 2026", "3 per day"], ["2 Aug 2026", "5 per day"],
   ]);
 });
+
+test("a card read today ages a fresh snapshot past 30 days, and never shows a price dated after today as current", () => {
+  const card = { ...baseCard, activity: { ...activityEvidence, freshness: "FRESH" as const, capturedAt: "2026-07-26T18:00:00.000Z", kind: "headlineMetrics" as const, primary: { label: "words", value: 12 }, supporting: [] },
+    cost: { amount: 5, currency: "USD", cadence: "MONTHLY" as const, basis: "OWNER_REPORTED" as const, asOf: "2027-01-01" } };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, today: "2026-11-14" })));
+  expect($(".card-front .card-activity-coverage").text()).toBe("1–15 Sep 2026 · last updated 26 Jul 2026");
+  expect($(".card-front .card-cost")).toHaveLength(0);
+  expect($(".card-back").text()).toContain("Owner-reported cost: $5/month · dated 1 Jan 2027, after today");
+  // A day inside the 30 keeps a fresh snapshot quiet.
+  const recent = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, today: "2026-08-01" })));
+  expect(recent(".card-front .card-activity-coverage").text()).toBe("1–15 Sep 2026");
+});

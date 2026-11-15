@@ -28,6 +28,8 @@ test("visitor sees the approved public reference projection", async ({
   const githubFront = page.locator(".product-card", { has: page.getByRole("heading", { name: "GitHub" }) }).locator(".card-front");
   await expect(githubFront.locator(".card-activity-preview > p").first()).toHaveText("22 contributions");
   await expect(githubFront.locator(".card-activity-reported")).toHaveCount(0);
+  // Stored as fresh on 26 Jul 2026, and more than 30 days old now, so it says when it was last updated.
+  await expect(githubFront.locator(".card-activity-coverage")).toHaveText("20–26 Jul 2026 · last updated 26 Jul 2026");
 
   const trigger = page.getByRole("button", { name: "Details" }).first();
   await trigger.click();

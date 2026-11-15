@@ -37,3 +37,16 @@ test("a period under 28 days reads as its days, not as a whole month", () => {
   expect(formatPeriod("2026-08-02", "2026-08-28")).toBe("2–28 Aug 2026");
   expect(formatPeriod("2026-08-02", "2026-08-29")).toBe("Aug 2026");
 });
+
+test("a fresh snapshot ages: past 30 days before today it says when it was last updated", () => {
+  const captured = "2026-07-26T18:00:00.000Z";
+  expect(freshnessNote("FRESH", captured, { today: "2026-08-25" })).toBeUndefined();
+  expect(freshnessNote("FRESH", captured, { today: "2026-08-26" })).toBe("last updated 26 Jul 2026");
+  expect(freshnessNote("FRESH", captured, { today: "2027-07-26" })).toBe("last updated 26 Jul 2026");
+  expect(freshnessNote("STALE", captured, { today: "2026-07-27" })).toBe("last updated 26 Jul 2026");
+});
+
+test("a reversed period reads with its ends in order, never as one day", () => {
+  expect(formatPeriod("2026-08-05", "2026-08-01")).toBe("1–5 Aug 2026");
+  expect(formatPeriod("2026-08-31", "2026-06-01")).toBe("Jun–Aug 2026");
+});

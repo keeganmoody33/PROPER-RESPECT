@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { fullNumber, groupedDecimal } from "./format-activity-number";
+import { compactNumber, fullNumber, groupedDecimal } from "./format-activity-number";
 
 test("a published exact decimal reads with thousands separators and keeps every digit", () => {
   expect(groupedDecimal("2140000")).toBe("2,140,000");
@@ -21,4 +21,8 @@ test("an activity number shown in full reads with thousands separators", () => {
   expect(fullNumber(N8N_RUNS)).toBe("2,140");
   expect(fullNumber(WITH_FRACTION)).toBe("1,234.5");
   expect(fullNumber(PORKBUN_DOMAINS)).toBe("11");
+});
+
+test("a number below one keeps enough digits to say what it is, never rounding to zero", () => {
+  expect([0.004, 0.25, -0.004, 0.000123, 0, 1.25, 12_345].map(compactNumber)).toEqual(["0.004", "0.25", "-0.004", "0.00012", "0", "1.3", "12.3K"]);
 });

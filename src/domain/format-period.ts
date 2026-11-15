@@ -32,9 +32,11 @@ const DAY_MS = 86_400_000;
 const DAYS_FOR_MONTHS = 28;
 
 /** A period as a visitor reads it: "30–31 Aug 2026" under four weeks, else "Aug 2026", "Jun–Aug 2026" or "Mar 2023 – Aug 2026". */
-export function formatPeriod(start: string, end: string): string {
-  const [first, last] = [utcDate(start), utcDate(end)];
-  if (!first || !last) return `${start} to ${end}`;
+export function formatPeriod(from: string, to: string): string {
+  // A period stored backwards reads with its ends in order, not as the one day it would otherwise collapse to.
+  if (!utcDate(from) || !utcDate(to)) return `${from} to ${to}`;
+  const [start, end] = to < from ? [to, from] : [from, to];
+  const [first, last] = [utcDate(start)!, utcDate(end)!];
   const [startMonth, endMonth] = [MONTH.format(first), MONTH.format(last)];
   const [startYear, endYear] = [YEAR.format(first), YEAR.format(last)];
   const days = Math.round((Date.UTC(last.getUTCFullYear(), last.getUTCMonth(), last.getUTCDate()) - Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), first.getUTCDate())) / DAY_MS) + 1;
@@ -48,9 +50,17 @@ export function formatPeriod(start: string, end: string): string {
   return startMonth === endMonth ? `${endMonth} ${endYear}` : `${startMonth}–${endMonth} ${endYear}`;
 }
 
-/** What a card's front says about a snapshot that isn't fresh: when it was last updated, and whether the last refresh failed. */
-export function freshnessNote(freshness: ActivityModule["freshness"], capturedAt: string): string | undefined {
-  if (freshness === "FRESH") return undefined;
+/** A snapshot stored as fresh stops reading as current this many days after it was captured. */
+const FRESH_FOR_DAYS = 30;
+
+/**
+ * What a card's front says about a snapshot that isn't fresh: when it was last updated, and whether the last refresh failed.
+ * Fresh is the word stored at capture, so more than 30 days before `today` (a calendar date) it says its age too.
+ */
+export function freshnessNote(freshness: ActivityModule["freshness"], capturedAt: string, { today }: { today?: string } = {}): string | undefined {
+  const captured = utcDate(capturedAt.slice(0, 10));
+  const aged = today !== undefined && captured !== undefined && Date.parse(`${today.slice(0, 10)}T00:00:00Z`) - captured.getTime() > FRESH_FOR_DAYS * DAY_MS;
+  if (freshness === "FRESH" && !aged) return undefined;
   const updated = `last updated ${dayMonthYear(capturedAt)}`;
   return freshness === "ERROR" ? `${updated} · refresh failed` : updated;
 }
