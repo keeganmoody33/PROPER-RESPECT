@@ -1174,8 +1174,11 @@ test("coding activity's back lists the active days in each week its bars cover, 
   const days = Array.from({ length: 9 }, (_, index) => ({ date: `2026-08-${String(index + 1).padStart(2, "0")}`, count: index % 3 === 0 ? 0 : 4, level: 2 }));
   const $ = renderCard({ activity: { ...activityEvidence, kind: "codingActivity", primary: { label: "active days", value: 6 }, supporting: [], days } });
   expect($(".card-back .card-back-values-caption").text()).toBe("Active days each week, from the day it starts");
-  // The last week is two days long, and says so.
-  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["1 Aug4 of 7", "8–9 Aug 20262 of 2"]);
+  // The last week is two days long, and says so, without the year its neighbours leave out too.
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["1 Aug4 of 7", "8–9 Aug2 of 2"]);
+  const across = Array.from({ length: 10 }, (_, index) => ({ date: new Date(Date.UTC(2026, 7, 23 + index)).toISOString().slice(0, 10), count: 1, level: 1 }));
+  const turn = renderCard({ activity: { ...activityEvidence, kind: "codingActivity", primary: { label: "active days", value: 10 }, supporting: [], days: across } });
+  expect(turn(".card-back .card-back-values li").map((_, item) => turn(item).text()).get()).toEqual(["23 Aug7 of 7", "30 Aug–1 Sep3 of 3"]);
 });
 
 test("a calendar's month label has room for its name: it spans up to three weeks, never past the calendar's last week", () => {

@@ -457,6 +457,12 @@ function MonthValues({ activity }: { activity: Extract<ActivityModule, { kind: "
 
 const DAYS_IN_WEEK = 7;
 
+/** "29–31 Aug", or "30 Aug–1 Sep": a short week's days without the year, which the card's period already says. */
+function dayRange(first: string, last: string): string {
+  const [from, to] = [dayMonth(first), dayMonth(last)];
+  return from.split(" ")[1] === to.split(" ")[1] ? `${from.split(" ")[0]}–${to}` : `${from}–${to}`;
+}
+
 /** Coding bars' days, a week at a time from the first: how many had any activity. Days are counted, so no unnamed count is added up. */
 function WeekActiveDays({ days }: { days: readonly { date: string; count: number }[] }) {
   const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date));
@@ -466,7 +472,7 @@ function WeekActiveDays({ days }: { days: readonly { date: string; count: number
     <ol className="card-back-values" aria-label="Active days each week">
       {/* A week shorter than seven days is named by the days it has. */}
       {weeks.map(week => <li key={week[0].date}>
-        <span>{week.length === DAYS_IN_WEEK ? dayMonth(week[0].date) : formatPeriod(week[0].date, week.at(-1)!.date)}</span>
+        <span>{week.length === DAYS_IN_WEEK ? dayMonth(week[0].date) : dayRange(week[0].date, week.at(-1)!.date)}</span>
         <strong>{week.filter(day => day.count > 0).length} of {week.length}</strong>
       </li>)}
     </ol>

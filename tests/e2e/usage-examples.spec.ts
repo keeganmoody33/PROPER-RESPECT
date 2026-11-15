@@ -745,6 +745,45 @@ test(`every control on both faces of all fourteen cards shows a focus ring that 
   expect(faint).toEqual([]);
 });
 
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`nothing on either face of all fourteen cards reaches past its card's sides at ${width}px`, async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const outside = (card: Locator, name: string, face: "front" | "back") => card.evaluate((article, [label, side]) => {
+    const edge = article.getBoundingClientRect();
+    const faceElement = article.querySelector(side === "front" ? ".card-front" : ".card-back")!;
+    return [...faceElement.querySelectorAll("*")].flatMap(element => {
+      const box = element.getBoundingClientRect();
+      // A visually hidden copy is a 1px clipped box, read by a screen reader and never seen.
+      if (box.width <= 1 || box.height <= 1 || getComputedStyle(element).visibility === "hidden") return [];
+      let [left, right] = [box.left, box.right];
+      // What a scrolling or clipping box inside the card cuts off (the Clay table's, the calendar's) is not seen past the card.
+      for (let node = element.parentElement; node && node !== article; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.overflowX !== "visible" || style.clipPath !== "none") { const clip = node.getBoundingClientRect(); left = Math.max(left, clip.left); right = Math.min(right, clip.right); }
+      }
+      if (right <= left) return [];
+      const past = Math.max(edge.left - left, right - edge.right);
+      return past > 0.5 ? [`${label} ${side} <${element.tagName.toLowerCase()} class="${element.getAttribute("class") ?? ""}"> "${(element.textContent ?? "").trim().slice(0, 30)}" ${Math.round(past)}px past`] : [];
+    });
+  }, [name, face] as const);
+  const past: string[] = [];
+  for (const name of ALL_EXAMPLES) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    past.push(...await outside(card, name, "front"));
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
+    past.push(...await outside(card, name, "back"));
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+  expect(past).toEqual([]);
+});
+
 /** A touch's turn: a whole turn and a margin, well short of a second turn. */
 const TOUCH_TURN_MS = 8500;
 test(`on a ${PHONE_WIDTH}px touch screen one tap on Play moves the slideshow on within a turn`, async ({ browser }, testInfo) => {

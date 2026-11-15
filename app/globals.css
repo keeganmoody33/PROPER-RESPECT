@@ -1033,10 +1033,12 @@ main {
   columns: 6 3.6rem;
 }
 
+/* A pair wider than its column puts its value under its label rather than past the card's edge. */
 .card-back-values li {
   break-inside: avoid;
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
   justify-content: space-between;
   overflow-wrap: normal;
   white-space: nowrap;
