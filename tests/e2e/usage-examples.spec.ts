@@ -760,9 +760,10 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px the held
   // Only the card's last 60px at the screen's top.
   await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().bottom - 60));
   const chooser = carousel.getByRole("group", { name: "Choose a product example" });
+  // The browser reports the card leaving the hold zone a frame or so after the scroll.
+  await expect.poll(async () => (await chooser.boundingBox())!.y).toBeLessThan(PHONE_HEIGHT / 2);
   const [rowBox, cardBox] = [(await chooser.boundingBox())!, (await card.boundingBox())!];
   expect(rowBox.y).toBeGreaterThanOrEqual(cardBox.y + cardBox.height);
-  expect(rowBox.y + rowBox.height).toBeLessThan(PHONE_HEIGHT / 2);
   const start = page.getByRole("link", { name: "Start your collection", exact: true }).first();
   await start.scrollIntoViewIfNeeded();
   // The row never covers the call to action: a real click lands on it.
