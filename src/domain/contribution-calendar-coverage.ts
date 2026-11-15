@@ -25,14 +25,18 @@ export function contributionCalendarCoverage(activity: Contributions) {
   return { days, first, last, suppliedRange, gapNote };
 }
 
-export type MonthTotal = Readonly<{ month: string; total: number; activeDays: number; days: number }>;
+export type MonthTotal = Readonly<{ month: string; total: number; activeDays: number; days: number; first: string; last: string }>;
 
-/** The days' counts added up per calendar month ("2026-08"), in date order, with how many of each month's days had any. */
+/**
+ * The days' counts added up per calendar month ("2026-08"), in date order, with how many of each month's drawn days had any
+ * and the first and last day drawn, so a month covered only in part can be named by those days.
+ */
 export function monthlyTotals(days: readonly Readonly<{ date: string; count: number }>[]): MonthTotal[] {
-  const months = new Map<string, { total: number; activeDays: number; days: number }>();
+  const months = new Map<string, MonthTotal>();
   for (const day of [...days].sort((a, b) => a.date.localeCompare(b.date))) {
-    const month = months.get(day.date.slice(0, 7)) ?? { total: 0, activeDays: 0, days: 0 };
-    months.set(day.date.slice(0, 7), { total: month.total + day.count, activeDays: month.activeDays + (day.count > 0 ? 1 : 0), days: month.days + 1 });
+    const month = day.date.slice(0, 7);
+    const sofar = months.get(month) ?? { month, total: 0, activeDays: 0, days: 0, first: day.date, last: day.date };
+    months.set(month, { ...sofar, total: sofar.total + day.count, activeDays: sofar.activeDays + (day.count > 0 ? 1 : 0), days: sofar.days + 1, last: day.date });
   }
-  return [...months].map(([month, totals]) => ({ month, ...totals }));
+  return [...months.values()];
 }

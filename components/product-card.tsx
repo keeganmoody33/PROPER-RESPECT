@@ -247,9 +247,9 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
       <div className="visually-hidden">
         <table>
           <caption>Contributions each month</caption>
-          <thead><tr><th scope="col">Month</th><th scope="col">Contributions</th><th scope="col">Days with any</th></tr></thead>
+          <thead><tr><th scope="col">Month</th><th scope="col">Contributions</th><th scope="col">Days with any, of the days drawn</th></tr></thead>
           <tbody>{monthlyTotals(days).map(month => <tr key={month.month}>
-            <th scope="row">{monthYearOf(`${month.month}-01`)}</th><td>{fullNumber(month.total)}</td><td>{month.activeDays} of {month.days}</td>
+            <th scope="row">{formatPeriod(month.first, month.last)}</th><td>{fullNumber(month.total)}</td><td>{month.activeDays} of {month.days}</td>
           </tr>)}</tbody>
         </table>
       </div>
@@ -398,9 +398,11 @@ function MonthValues({ activity }: { activity: Extract<ActivityModule, { kind: "
   return <>
     <p className="card-back-values-caption">Contributions each month</p>
     <ol className="card-back-values" aria-label="Contributions each month">
-      {months.map(month => <li key={month.month}><span>{monthYearOf(`${month.month}-01`)}</span><strong>{fullNumber(month.total)}</strong></li>)}
+      {months.map(month => <li key={month.month}><span>{formatPeriod(month.first, month.last)}</span><strong>{fullNumber(month.total)}</strong></li>)}
     </ol>
-    <p className="card-back-busiest">The busiest month was {monthYearOf(`${busiest.month}-01`)}, with {fullNumber(busiest.total)} {busiest.total === 1 ? "contribution" : "contributions"} on {busiest.activeDays} of its {busiest.days} days.</p>
+    {months.length > 1 && <p className="card-back-busiest">
+      Most contributions: {formatPeriod(busiest.first, busiest.last)}, with {fullNumber(busiest.total)}, on {busiest.activeDays} of {busiest.days} {busiest.days === 1 ? "day" : "days"} drawn.
+    </p>}
   </>;
 }
 
@@ -413,7 +415,11 @@ function WeekActiveDays({ days }: { days: readonly { date: string; count: number
   return <>
     <p className="card-back-values-caption">Active days each week, from the day it starts</p>
     <ol className="card-back-values" aria-label="Active days each week">
-      {weeks.map(week => <li key={week[0].date}><span>{dayMonth(week[0].date)}</span><strong>{week.filter(day => day.count > 0).length} of {week.length}</strong></li>)}
+      {/* A week shorter than seven days is named by the days it has. */}
+      {weeks.map(week => <li key={week[0].date}>
+        <span>{week.length === DAYS_IN_WEEK ? dayMonth(week[0].date) : formatPeriod(week[0].date, week.at(-1)!.date)}</span>
+        <strong>{week.filter(day => day.count > 0).length} of {week.length}</strong>
+      </li>)}
     </ol>
   </>;
 }
