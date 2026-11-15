@@ -569,26 +569,35 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's 
     highlighted: ["Quillon"], headerWeight: "400", slab: true });
 });
 
-for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's full table on the back keeps every word whole at ${width}px`, async ({ page }) => {
-  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await page.evaluate(() => document.fonts.ready);
-  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
-  await card.getByRole("button", { name: "Details" }).click();
-  const box = page.locator(".card-back:not([hidden])").getByRole("region", { name: CLAY_CAPTION });
-  await expect(box).toBeVisible();
-  const split = await box.evaluate(element => [...element.querySelectorAll("th, td")].flatMap(cell => {
-    const text = cell.firstChild;
-    if (!text || text.nodeType !== Node.TEXT_NODE) return [];
-    // A word laid out on more than one line was broken inside itself.
-    return [...(text.textContent ?? "").matchAll(/\S+/g)].filter(word => {
+/** Each word or number in a face's text that the layout breaks across lines ("1,1 / 00"), by name and face. */
+async function splitWords(card: Locator, face: "front" | "back") {
+  return card.locator(`.card-${face}`).evaluate(element => [...element.querySelectorAll("*")]
+    .filter(node => node.checkVisibility() && [...node.childNodes].some(child => child.nodeType === Node.TEXT_NODE && child.textContent!.trim()))
+    .flatMap(node => [...node.childNodes].filter(child => child.nodeType === Node.TEXT_NODE).flatMap(text => [...text.textContent!.matchAll(/\S+/g)].filter(word => {
       const range = document.createRange();
       range.setStart(text, word.index);
       range.setEnd(text, word.index + word[0].length);
       return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size > 1;
-    }).map(word => word[0]);
-  }));
+    }).map(word => word[0]))));
+}
+
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`every word and number on both faces of all fourteen cards stays whole at ${width}px`, async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const split: string[] = [];
+  for (const name of ALL_EXAMPLES) {
+    await carousel.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    split.push(...(await splitWords(card, "front")).map(word => `${name} front: ${word}`));
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    split.push(...(await splitWords(card, "back")).map(word => `${name} back: ${word}`));
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
   expect(split).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

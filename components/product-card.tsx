@@ -246,6 +246,11 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
   );
 }
 
+/** Text whose hyphenated words ("go-to-market") never break at a hyphen: each sits whole on one line. */
+function WholeWords({ text }: { text: string }) {
+  return <>{text.split(/(\S+-\S+)/).map((part, index) => index % 2 ? <span key={index} className="whole-word">{part}</span> : part)}</>;
+}
+
 /** The first few works with a web link. A work whose link isn't http or https stays off the front. */
 function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kind: "artifactCollection" }>["artifacts"] }) {
   const linked = artifacts.filter(artifact => isHttpUrl(artifact.url)).slice(0, FRONT_ARTIFACT_LIMIT);
@@ -254,7 +259,7 @@ function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kin
     <ul className="card-artifact-links">
       {linked.map((artifact, index) => (
         <li key={`${index}:${artifact.url}`}>
-          <a href={artifact.url} target="_blank" rel="noopener noreferrer">{artifact.title} ↗</a>
+          <a href={artifact.url} target="_blank" rel="noopener noreferrer"><WholeWords text={artifact.title} /> ↗</a>
         </li>
       ))}
     </ul>
@@ -362,10 +367,10 @@ export function PlainDate({ value }: { value: string }) {
 /** "1 Aug", for a date: its day and month, the year being the card's period's. */
 const dayMonth = (date: string) => dayMonthYear(date).split(" ").slice(0, 2).join(" ");
 
-/** How a point's period reads on the back: "1 Aug" for a day, "Week of 3 Aug", "Aug 2026", or the date for a level. */
+/** How a point's period reads on the back: "1 Aug" for a day or a week's first day, "Aug 2026", or the date for a level. */
 const POINT_WORDS: Readonly<Record<"day" | "week" | "month" | "level", (date: string) => string>> = {
   day: date => dayMonth(date),
-  week: date => `Week of ${dayMonth(date)}`,
+  week: date => dayMonth(date),
   month: date => monthYearOf(date),
   level: date => dayMonthYear(date),
 };
@@ -375,9 +380,12 @@ function SeriesValues({ activity }: { activity: Extract<ActivityModule, { kind: 
   const series = normalizeSeries(activity.points, activity.unit);
   if (!series.points.length) return null;
   const words = POINT_WORDS[series.cadence ?? "level"];
-  return <ol className="card-back-values" aria-label={`${activity.label}, ${series.cadence ? `each ${series.cadence}` : "by date"}`}>
-    {series.points.map(point => <li key={point.date}><span>{words(point.date)}</span><strong>{fullNumber(point.value)}</strong></li>)}
-  </ol>;
+  return <>
+    {series.cadence === "week" && <p className="card-back-values-caption">Each week, from the day it starts</p>}
+    <ol className="card-back-values" aria-label={`${activity.label}, ${series.cadence ? `each ${series.cadence}` : "by date"}`}>
+      {series.points.map(point => <li key={point.date}><span>{words(point.date)}</span><strong>{fullNumber(point.value)}</strong></li>)}
+    </ol>
+  </>;
 }
 
 function ActivityMeta({ activity }: { activity: ActivityModule }) {
@@ -437,7 +445,7 @@ function ActivityEvidence({ activity, today }: { activity: ActivityModule; today
       {activity.kind === "timeSeries" && <SeriesValues activity={activity} />}
       {works.length > 0 && <ul className="artifact-list">
         {works.map((artifact, index) => <li key={`${index}:${artifact.url}`}>
-          {isHttpUrl(artifact.url) ? <a href={artifact.url} target="_blank" rel="noreferrer">{artifact.title} ↗</a> : artifact.title}
+          {isHttpUrl(artifact.url) ? <a href={artifact.url} target="_blank" rel="noreferrer"><WholeWords text={artifact.title} /> ↗</a> : <WholeWords text={artifact.title} />}
           {artifact.label && <span className="artifact-description">{artifact.label}</span>}
         </li>)}
       </ul>}
@@ -695,7 +703,7 @@ export function ProductCard({
               {!relationshipConfirmed ? "Relationship not confirmed" : card.startedAt ? `Since ${yearOf(card.startedAt)}` : "Start date not supplied"}
             </p>
           </>}
-          <p>{card.product.description}</p>
+          <p><WholeWords text={card.product.description} /></p>
           {!brandPreview && card.cost && <p>{costDetail(card.cost, { today, sample })}</p>}
           {!brandPreview && card.activity && <>
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}

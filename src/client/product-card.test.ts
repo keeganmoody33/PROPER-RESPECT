@@ -1105,3 +1105,19 @@ test("a card read today ages a fresh snapshot past 30 days, and never shows a pr
   const recent = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, today: "2026-08-01" })));
   expect(recent(".card-front .card-activity-coverage").text()).toBe("1–15 Sep 2026");
 });
+
+test("a weekly series' back lists each week by its first day under one caption, so a narrow card fits more columns", () => {
+  const weekly = { ...activityEvidence, kind: "timeSeries" as const, label: "pages scraped", unit: "per week", points: [{ date: "2026-08-17", value: 880 }, { date: "2026-08-24", value: 1100 }] };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, activity: weekly }, index: 0 })));
+  expect($(".card-back .card-back-values-caption").text()).toBe("Each week, from the day it starts");
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["17 Aug880", "24 Aug1,100"]);
+});
+
+test("a hyphenated word on a card never breaks at its hyphen: \"go-to-market\" and \"(awesome-compose)\" each stay on one line", () => {
+  const card = { ...baseCard, product: { ...baseCard.product, description: "A go-to-market tool." },
+    activity: { ...activityEvidence, kind: "artifactCollection" as const, total: 1, artifacts: [{ title: "Sample apps (awesome-compose)", url: "https://example.com/a" }] } };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0 })));
+  expect($(".card-back .whole-word").map((_, word) => $(word).text()).get()).toEqual(["go-to-market", "(awesome-compose)"]);
+  expect($(".card-front .card-artifact-links .whole-word").text()).toBe("(awesome-compose)");
+  expect($(".card-front .card-artifact-links a").text()).toBe("Sample apps (awesome-compose) ↗");
+});

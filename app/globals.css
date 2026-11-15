@@ -920,8 +920,15 @@ main {
   padding-top: 0.65rem;
 }
 
+/* The label wraps between words, never inside one ("go-/to"); short of room, Details moves under it. */
+.card-footer {
+  flex-wrap: wrap;
+}
+
 .card-footer > span {
+  flex: 1 1 9.5rem;
   font-size: 0.75rem;
+  overflow-wrap: normal;
 }
 
 .card-button,
@@ -971,9 +978,10 @@ main {
   margin-bottom: 0;
 }
 
-/* A series' every value, in columns: the numbers the front's bars stand for. */
+/* A series' every value, in columns: the numbers the front's bars stand for. A pair never breaks inside a date or a number,
+   so a narrow card takes fewer columns rather than splitting "1,100" across two lines. */
 .card-back-values {
-  columns: 4 4.2rem;
+  columns: 6 5.4rem;
   column-gap: 0.9rem;
   font-size: 0.75rem;
   line-height: 1.5;
@@ -987,6 +995,17 @@ main {
   display: flex;
   gap: 0.5rem;
   justify-content: space-between;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.product-card .whole-word {
+  white-space: nowrap;
+}
+
+.card-back-values-caption {
+  font-size: 0.75rem;
+  line-height: 1.5;
 }
 
 .card-back-values strong {
@@ -1013,8 +1032,17 @@ main {
   padding-bottom: 0.75rem;
 }
 
-.card-back-topline .card-title {
-  flex: 1;
+/* The name keeps its words whole on both faces: short of room beside the logo, the link or Close details moves to its own line. */
+.product-card :is(.card-topline, .card-back-topline) {
+  flex-wrap: wrap;
+}
+
+.product-card :is(.card-topline, .card-back-topline) > .card-title {
+  flex: 1 1 min-content;
+}
+
+.product-card .card-title :is(h2, .eyebrow, .card-sample-tag) {
+  overflow-wrap: normal;
 }
 
 .card-back-topline h2 {
@@ -1738,7 +1766,7 @@ main {
 .profile-links-fields .profile-link-choice { flex-direction: row; align-items: center; }
 .profile-links-fields input[type="radio"] { width: auto; flex: 0 0 auto; padding: 0; }
 
-.contribution-legend { display: flex; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.75rem; margin-top: 0.4rem; }
+.contribution-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.75rem; margin-top: 0.4rem; white-space: nowrap; }
 /* Shown only where the year is wider than the card, so a phone says the calendar scrolls, not just a screen reader. */
 .contribution-scroll-hint { display: none; margin-right: auto; }
 @container (max-width: 505px) { .contribution-scroll-hint { display: inline; } }
