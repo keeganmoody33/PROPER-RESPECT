@@ -145,3 +145,22 @@ test("a bar's title and table row read in plain dates and grouped numbers", () =
   // A one-day bar is one date, not a From and a To that are the same.
   expect($(".visually-hidden tbody tr").children().toArray().map(cell => [cell.tagName, $(cell).text()])).toEqual([["th", "1 Aug 2026"], ["td", "2,840 per day"]]);
 });
+
+const barHeights = ($: ReturnType<typeof load>) => $(".activity-bars > span").map((_, bar) => $(bar).attr("style")!.match(/--bar-height:\s*([\d.]+)%/)![1]).get().map(Number);
+
+test("a series of values all below one scales to its own largest value, so its bars stand tall", () => {
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, {
+    points: [0.001, 0.002, 0.004].map((value, index) => ({ date: `2026-08-0${index + 1}`, value })), label: "latency", unit: "s per day",
+  })));
+  expect(barHeights($)).toEqual([25, 50, 100]);
+});
+
+test("a value below zero draws as a stub on the baseline, and the table says so", () => {
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, {
+    points: [{ date: "2026-08-03", value: -3 }, { date: "2026-08-10", value: 6 }], label: "net signups", unit: "per week",
+  })));
+  expect($(".activity-bars > span").map((_, bar) => $(bar).attr("data-below-zero") ?? "no").get()).toEqual(["", "no"]);
+  expect(barHeights($)).toEqual([0, 100]);
+  expect($(".visually-hidden caption").text()).toBe("net signups, one row per bar. A value below zero is drawn as a stub on the baseline.");
+  expect($(".visually-hidden tbody tr").first().children().last().text()).toBe("-3 per week");
+});

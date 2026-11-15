@@ -122,7 +122,7 @@ function BarTable({ bars, label, unit }: { bars: readonly ChartBar[]; label?: st
     // A table grows to fit its cells whatever its width, so the 1px clip goes on a box around it.
     <div className="visually-hidden">
       <table>
-        <caption>{label ?? "Activity"}, one row per bar</caption>
+        <caption>{label ?? "Activity"}, one row per bar{bars.some(bar => bar.value < 0) ? ". A value below zero is drawn as a stub on the baseline." : ""}</caption>
         <thead><tr>{daily ? <th scope="col">Date</th> : <><th scope="col">From</th><th scope="col">To</th></>}<th scope="col">Value</th></tr></thead>
         <tbody>
           {rows.map(row => <tr key={row.key}><th scope="row">{row.from}</th>{!daily && <td>{row.to}</td>}<td>{row.value}</td></tr>)}
@@ -169,7 +169,8 @@ export function UsageChart({
   }, [resolved]);
 
   const bars = resolved && points ? chartBars(points) : [];
-  const maximum = Math.max(...bars.map((bar) => bar.value), 1);
+  // The bars scale to the largest value above zero, however small; a series with none draws only stubs.
+  const maximum = Math.max(...bars.map((bar) => bar.value), 0) || 1;
   return (
     <div
       ref={ref}
@@ -186,6 +187,7 @@ export function UsageChart({
             <span
               key={bar.start}
               data-zero={bar.value === 0 ? "" : undefined}
+              data-below-zero={bar.value < 0 ? "" : undefined}
               style={{
                 "--bar-height": `${Math.max(0, (bar.value / maximum) * PERCENT)}%`,
                 "--bar-delay": `${index * BAR_STAGGER_MS}ms`,
