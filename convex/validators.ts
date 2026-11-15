@@ -226,6 +226,7 @@ export const publicProfileValidator = v.object({
       goTo: v.optional(v.boolean()),
       headline: v.string(),
       uses: v.optional(productUsesValidator),
+      credit: v.optional(propsCreditValidator),
       note: v.string(),
       startedAt: v.optional(v.string()),
       activity: v.optional(activityModuleValidator),

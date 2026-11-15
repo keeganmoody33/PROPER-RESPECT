@@ -138,6 +138,16 @@ test("share-all publishes each card's saved uses, the same as publishing it alon
   expect(page?.cards.map(card => [card.product.name, card.uses])).toEqual([["Clay", expected[0]], ["GitHub", undefined]]);
 });
 
+test("share-all publishes each card's saved credit, the same as publishing it alone", async () => {
+  const f = await fixture();
+  await f.addProp({ credit: { platform: "OTHER", handle: "a teammate", platformName: "Slack" } }, { slug: "clay", name: "Clay", domain: "clay.com" });
+  await f.addProp({ credit: { platform: "SUBSTACK", handle: "janedoe" } }, { slug: "github", name: "GitHub", domain: "github.com" });
+  const expected = [{ platform: "OTHER", handle: "a teammate", platformName: "Slack" }, { platform: "SUBSTACK", handle: "janedoe" }];
+  expect((await publishAll(f.owner)).profile.cards.map(card => card.credit)).toEqual(expected);
+  const page = await f.t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(page?.cards.map(card => [card.product.name, card.credit])).toEqual([["Clay", expected[0]], ["GitHub", expected[1]]]);
+});
+
 test("share-all never publishes a saved public cost, and keeps the saved amount", async () => {
   const f = await fixture();
   const priced = await f.addProp({ cost, costVisibility: "PUBLIC" });

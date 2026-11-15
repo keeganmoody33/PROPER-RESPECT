@@ -88,3 +88,16 @@ test("a stored card whose uses the reader can't accept loses only those uses, no
   expect(profile?.cards.map(entry => entry.uses)).toEqual([undefined, undefined, listed.uses]);
   expect(profile?.cards.map(entry => entry.headline)).toEqual(["Enrichment tables", "Enrichment tables", "Enrichment tables"]);
 });
+
+test("a stored card whose credit no longer fits its platform loses only that credit, not the page", async () => {
+  vi.stubEnv("PROPER_RESPECT_E2E_REFERENCE", "0");
+  const card = { product: { name: "Clay", slug: "clay", domain: "clay.com", description: "" }, status: "ACTIVE", headline: "Enrichment tables", note: "" };
+  // R03's bad-URL set as stored handles, beside one good credit.
+  const tampered = ["javascript:alert(1)", "data:text/html,x", "ftp://x.com/jack", "https://user:pass@x.com/jack"].map(handle => ({ ...card, credit: { platform: "X", handle } }));
+  const good = { ...card, credit: { platform: "PROPER_RESPECT", handle: "lecturesfrom", linked: true } };
+  fetchQuery.mockResolvedValueOnce({ handle: "owner", displayName: "Owner", bio: "", cards: [...tampered, { ...card, credit: "jack" }, good] });
+
+  const profile = await getPublicProfile("owner");
+  expect(profile?.cards.map(entry => entry.credit)).toEqual([undefined, undefined, undefined, undefined, undefined, good.credit]);
+  expect(profile?.cards.map(entry => entry.headline)).toEqual(Array(6).fill("Enrichment tables"));
+});

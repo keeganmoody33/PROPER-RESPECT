@@ -8,6 +8,7 @@ import { productBrandSnapshotSchema } from "./product-brand";
 import { relationshipLevelSchema, type RelationshipLevel } from "./relationship-level";
 import { listedUses, productUsesSchema, type ProductUses } from "./product-uses";
 import { handleSchema } from "./handle.ts";
+import { listedCredit, propsCreditSchema, type PropsCredit } from "./props-credit.ts";
 
 export { handleSchema };
 
@@ -165,6 +166,8 @@ export const publicProfileSchema = z.object({
       headline: z.string(),
       // What the product does for the owner. Uses this reader can't accept are dropped, not a reason to refuse the page.
       uses: productUsesSchema.optional().catch(undefined),
+      // Who put the owner on the product. A credit that no longer fits its platform's rule is dropped, not a reason to refuse the page.
+      credit: propsCreditSchema.optional().catch(undefined),
       note: z.string(),
       startedAt: z.iso.date().optional(),
       activity: activityModuleSchema.optional(),
@@ -209,6 +212,7 @@ export type CuratedProp = {
   goTo?: boolean;
   headline: string;
   uses?: ProductUses;
+  credit?: PropsCredit;
   note: string;
   startedAt?: string;
   activity?: ActivityModule;
@@ -241,6 +245,7 @@ export function projectPublicProfile(input: {
         goTo: prop.goTo,
         headline: prop.headline,
         uses: listedUses(prop.product.slug, prop.uses),
+        credit: listedCredit(prop.credit),
         note: prop.note,
         startedAt: prop.startedAt,
         activity: withHttpArtifacts(prop.activity),

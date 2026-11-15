@@ -477,6 +477,68 @@ test("reading a stored snapshot drops uses the product no longer lists and leave
   expect(page?.cards.map(card => card.headline)).toEqual(["Relationship 1", "Relationship 2"]);
 });
 
+// R03's bad-URL set, as handles a stored credit could carry, beside one good credit.
+const TAMPERED_HANDLES = ["javascript:alert(1)", "data:text/html,x", "ftp://x.com/jack", "https://user:pass@x.com/jack"];
+const publishProfileFor = (t: TestConvex<typeof schema>, handle: string) => t.run(ctx => ctx.db.insert("publishedProfiles", {
+  handle, revision: 1, publishedAt: capturedAt, profile: { handle, displayName: "Friend", bio: "", cards: [] },
+}));
+
+test("a selected card goes out with the credit its owner saved, and both readers return it", async () => {
+  const { t, owner, propIds: [a], selection, published } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(a, { credit: { platform: "X", handle: "jack" } }));
+  const credit = { platform: "X", handle: "jack" };
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [await selection(a)] });
+  expect(preview.profile.cards.map(card => card.credit)).toEqual([credit]);
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a)] }));
+  expect((await published()).profile.cards.map(card => card.credit)).toEqual([credit]);
+  const pages = await Promise.all([api.publicProfiles.getByHandleV2, api.publicProfiles.getByHandle].map(reader => t.query(reader, { handle: "owner" })));
+  expect(pages.map(page => page?.cards.map(card => card.credit))).toEqual([[credit], [credit]]);
+});
+
+test("a Proper Respect credit links only when its handle names a published profile when the card is published", async () => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture();
+  await publishProfileFor(t, "friend");
+  await t.run(async ctx => {
+    await ctx.db.patch(a, { credit: { platform: "PROPER_RESPECT", handle: "friend" } });
+    await ctx.db.patch(b, { credit: { platform: "PROPER_RESPECT", handle: "nobody", linked: true } });
+  });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  expect((await published()).profile.cards.map(card => card.credit)).toEqual([
+    { platform: "PROPER_RESPECT", handle: "friend", linked: true },
+    { platform: "PROPER_RESPECT", handle: "nobody" },
+  ]);
+});
+
+test("a saved credit that no longer fits its platform's rule stops the publish with a message, and nothing goes out", async () => {
+  const { t, owner, propIds: [a], selection } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(a, { credit: { platform: "X", handle: TAMPERED_HANDLES[0] } }));
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a)] }))
+    .rejects.toThrow("Who put you on Shared Tool no longer fits X's handle rule. Edit it in your collection, then preview again.");
+  expect(await t.run(ctx => ctx.db.query("publishedProfiles").collect())).toEqual([]);
+});
+
+test("a card left out of a later publish keeps the credit it was published with, exactly as stored", async () => {
+  const { t, owner, propIds: [a, b], selection, published } = await fixture();
+  await t.run(ctx => ctx.db.patch(a, { credit: { platform: "GITHUB", handle: "keeganmoody33" } }));
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: [await selection(a), await selection(b)] }));
+  await t.run(ctx => ctx.db.patch(a, { credit: { platform: "X", handle: "jack" } }));
+  const reconfirm = { selections: [await selection(b, { primaryLink: { type: "CANONICAL", url: "https://shared.example", label: "Reconfirmed B" } })] };
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, reconfirm));
+  expect((await published()).profile.cards.map(card => card.credit)).toEqual([{ platform: "GITHUB", handle: "keeganmoody33" }, undefined]);
+});
+
+test("reading a stored snapshot drops a credit that no longer fits and leaves the other cards as they were", async () => {
+  const { t, owner, selection, published } = await fixture(TAMPERED_HANDLES.length + 1);
+  const propIds = await t.run(async ctx => (await ctx.db.query("props").collect()).filter(prop => prop.headline.startsWith("Relationship")).map(prop => prop._id));
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: await Promise.all(propIds.map(id => selection(id))) }));
+  const first = await published();
+  const credits = [...TAMPERED_HANDLES.map(handle => ({ platform: "X", handle })), { platform: "X", handle: "jack" }];
+  await t.run(ctx => ctx.db.patch(first._id, { profile: { ...first.profile, cards: first.profile.cards.map((card, index) => ({ ...card, credit: credits[index] })) } }));
+  const page = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(page?.cards.map(card => card.credit)).toEqual([...TAMPERED_HANDLES.map(() => undefined), { platform: "X", handle: "jack" }]);
+  expect(page?.cards.map(card => card.headline)).toEqual(credits.map((_, index) => `Relationship ${index + 1}`));
+});
+
 test("publishing a work-sample link needs the saved https link and a listed label", async () => {
   const { t, owner, propIds: [a], selection } = await fixture(1);
   await t.run(ctx => ctx.db.patch(a, { supportingUrl: LOOM_LINK }));

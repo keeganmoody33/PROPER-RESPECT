@@ -40,6 +40,12 @@ describe("projectPublicProfile", () => {
     expect(cards.map(card => card.uses)).toEqual([{ picks: ["host-code", "run-ci"], other: "keep a record of shipped work" }, undefined, undefined]);
     expect(projectPublicProfileV1({ ...user, cards }).cards[0].uses).toEqual({ picks: ["host-code", "run-ci"], other: "keep a record of shipped work" });
   });
+  it("copies a credit that fits its platform's rule, and leaves off one that doesn't", () => {
+    const user = { handle: "example", displayName: "Example", bio: "" };
+    const tampered = { platform: "X", handle: "javascript:alert(1)" } as unknown as CuratedProp["credit"];
+    const props: CuratedProp[] = [{ ...baseProp, credit: { platform: "X", handle: "jack" } }, { ...baseProp, credit: tampered }, baseProp];
+    expect(projectPublicProfile({ user, props }).cards.map(card => card.credit)).toEqual([{ platform: "X", handle: "jack" }, undefined, undefined]);
+  });
   it("keeps costs private by default and supports all-public, all-private, and per-card choices", () => {
     const cost = { amount: 12.34, currency: "USD", cadence: "MONTHLY" as const, basis: "RECEIPT" as const, asOf: "2026-09-01" };
     const user = { handle: "example", displayName: "Example", bio: "" };
