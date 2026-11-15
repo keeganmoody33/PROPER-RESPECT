@@ -14,7 +14,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { brandSiteTraitsFromMeasurement } from "../src/domain/brand-site-traits.ts";
-import { DESKTOP } from "./brand-site-measure.mjs";
+import { DESKTOP, pageTexture } from "./brand-site-measure.mjs";
 import { oklabDistance } from "../src/domain/oklab.ts";
 
 const BRANDS = resolve("src/data/homepage-brands");
@@ -88,6 +88,11 @@ for (const snapshot of snapshots) {
     continue;
   }
   await logoInks(snapshot, capture, join(SAVED, `${slug}.json`));
+  // A capture from before the margins were read for a texture reads them from its own saved screenshot, offline.
+  if (capture.site.texture === undefined && existsSync(join(SAVED, `${slug}-1440.png`))) {
+    capture.site.texture = (await pageTexture(join(SAVED, `${slug}-1440.png`), capture.site.surface)) ?? null;
+    writeFileSync(join(SAVED, `${slug}.json`), `${JSON.stringify(capture, null, 2)}\n`);
+  }
   const traits = brandSiteTraitsFromMeasurement({
     productSlug: slug, canonicalDomain: snapshot.canonicalDomain, measuredAt: capture.capturedAt, url: capture.url, viewport: capture.viewport ?? DESKTOP,
   }, capture.site);

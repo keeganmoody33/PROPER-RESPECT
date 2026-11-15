@@ -2054,7 +2054,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .product-card[data-panel] .card-front .card-artifact-links a { color: inherit; }
 .product-card[data-panel] .card-front .activity-bars span { background: var(--brand-card-panel-chart, var(--brand-card-chart, var(--brand-card-accent, currentColor))); }
 .product-card .card-front :is(.contribution-calendar, .card-activity-preview .usage-chart) {
-  background-image: linear-gradient(var(--brand-card-pattern-line, transparent) 1px, transparent 1px), linear-gradient(90deg, var(--brand-card-pattern-line, transparent) 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--brand-card-pattern-dot, transparent) 1px, transparent 1.5px),
+    linear-gradient(var(--brand-card-pattern-line, transparent) 1px, transparent 1px), linear-gradient(90deg, var(--brand-card-pattern-line, transparent) 1px, transparent 1px);
   background-size: var(--brand-card-pattern-pitch, 10px) var(--brand-card-pattern-pitch, 10px);
 }
 /* The back's values are the front's chart in numbers, in the front's number colour where it reads on their panel. */

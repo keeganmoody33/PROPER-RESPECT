@@ -19,7 +19,7 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
   | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font"
   | "--brand-card-slab" | "--brand-card-slab-body" | "--brand-card-band-large-text" | "--brand-card-logo-tile"
-  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text" | "--brand-card-chart-tint" | "--brand-card-number-backdrop" | "--brand-card-value-colour", string>>;
+  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text" | "--brand-card-chart-tint" | "--brand-card-number-backdrop" | "--brand-card-value-colour" | "--brand-card-pattern-dot", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -320,7 +320,7 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
   }
   const pattern = traits.surfacePattern?.value;
   if (pattern && !inverse) {
-    kit["--brand-card-pattern-line"] = pattern.line;
+    kit[pattern.kind === "dots" ? "--brand-card-pattern-dot" : "--brand-card-pattern-line"] = pattern.line;
     kit["--brand-card-pattern-pitch"] = `${pattern.pitchPx}px`;
   }
   // Decorative: the rule sits between things that already read apart, never as the only mark of a meaning. Too faint to see, it gives way.

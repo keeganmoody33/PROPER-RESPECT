@@ -90,7 +90,7 @@ const traitsSchema = z.object({
   /** What each of the brand's stored logo files is drawn in, measured from the files the snapshot names. */
   logoInks: located(z.array(logoInksSchema).max(MAX_LOGOS), ["stored logos"]).optional(),
   panelFill: located(hexSchema, ["second large surface"]).optional(),
-  surfacePattern: located(patternSchema, ["second large surface", "ruled columns"]).optional(),
+  surfacePattern: located(patternSchema, ["second large surface", "ruled columns", "page margins"]).optional(),
   inversePanel: located(inversePanelSchema, ["dark panel"]).optional(),
   rule: located(ruleSchema, ["most common border"]).optional(),
   mutedText: located(hexSchema, ["secondary text on the page background"]).optional(),
@@ -139,6 +139,8 @@ export type SiteMeasurement = {
   panelFill?: unknown;
   /** `firstScreen` false: the pattern was found only below the first screen. */
   surfacePattern?: { kind?: unknown; pitchPx?: unknown; line?: unknown; firstScreen?: unknown };
+  /** A dot texture read off the first screen's margins in the screenshot, or null where none was found. */
+  texture?: { kind?: unknown; pitchPx?: unknown; line?: unknown } | null;
   inversePanel?: { fill?: unknown; text?: unknown; border?: unknown; radiusPx?: unknown };
   fills?: readonly { hex?: unknown; areaPx?: unknown }[];
   /** Borders by style, colour and whether they edge a control or the layout; an older capture has only `rule`. */
@@ -225,7 +227,9 @@ function surfacePattern(raw: SiteMeasurement) {
   const drawn = firstScreen === false ? undefined : kept(patternSchema, raw.surfacePattern && { ...measured, line: typeof measured.line === "string" ? measured.line.toLowerCase() : measured.line });
   if (drawn) return { value: drawn, from: "second large surface" as const };
   const ruled = ruledColumns(raw.verticalRules);
-  return ruled && { value: ruled, from: "ruled columns" as const };
+  if (ruled) return { value: ruled, from: "ruled columns" as const };
+  const texture = raw.texture && kept(patternSchema, { ...raw.texture, line: typeof raw.texture.line === "string" ? raw.texture.line.toLowerCase() : raw.texture.line });
+  return texture ? { value: texture, from: "page margins" as const } : undefined;
 }
 const finite = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : undefined);
 

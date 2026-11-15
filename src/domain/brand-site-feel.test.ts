@@ -166,3 +166,10 @@ describe("the big number and the back's values", () => {
   });
 });
 
+
+describe("a dot pattern", () => {
+  it("is drawn as dots, not grid lines", () => {
+    const n8n = kit({ texture: { kind: "dots", pitchPx: 18, line: "#d9d9d9" } });
+    expect([n8n["--brand-card-pattern-dot"], n8n["--brand-card-pattern-line"], n8n["--brand-card-pattern-pitch"]]).toEqual(["#d9d9d9", undefined, "18px"]);
+  });
+});

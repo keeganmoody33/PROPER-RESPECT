@@ -187,3 +187,12 @@ test("each stored logo's inks are kept by its kind and size, so a card can tell 
     { ...WORDMARK, inks: [{ hex: "#000000", share: 1 }] },
   ], from: "stored logos" });
 });
+
+/** n8n's first screen, measured 2026-11-15 from its screenshot: grey dots every 18px on its margins, drawn as no CSS gradient. */
+const N8N_MARGIN_PITCH_PX = 18, GRID_PITCH = 10;
+test("a dot texture read off the first screen's margins is the surface pattern where no gradient or ruled grid was found", () => {
+  const texture = { kind: "dots", pitchPx: N8N_MARGIN_PITCH_PX, line: "#D9D9D9" };
+  expect(brandSiteTraitsFromMeasurement(META, { texture }).traits.surfacePattern).toEqual({ value: { kind: "dots", pitchPx: N8N_MARGIN_PITCH_PX, line: "#d9d9d9" }, from: "page margins" });
+  expect(brandSiteTraitsFromMeasurement(META, { texture, surfacePattern: { kind: "grid", pitchPx: GRID_PITCH, line: "#ededed", firstScreen: true } }).traits.surfacePattern?.from).toBe("second large surface");
+  expect(brandSiteTraitsFromMeasurement(META, { texture: null }).traits.surfacePattern).toBeUndefined();
+});

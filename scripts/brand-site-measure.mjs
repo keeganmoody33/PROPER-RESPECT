@@ -390,6 +390,46 @@ const hexOf = (red, green, blue) => `#${[red, green, blue].map(value => value.to
  * Whether a full-bleed backdrop reads as a colour or as an image, from the screenshot: the share of pixels in the
  * heading's band of the page, beside the heading itself, that are the backdrop's colour.
  */
+/** A pixel this far from the page in OKLab is ink. A texture inks this share of the margins: more is an image or a block, less is blank. */
+const TEXTURE_INK_DISTANCE = 0.03, TEXTURE_MIN_SHARE = 0.003, TEXTURE_MAX_SHARE = 0.3;
+/** The margins read: this wide at each side of the first screen, below the header. */
+const TEXTURE_MARGIN_PX = 180, TEXTURE_EDGE_PX = 8, TEXTURE_TOP_PX = 120, TEXTURE_BOTTOM_PX = 20;
+/** A run of ink this short is a dot; dots are a texture when most runs are, at one pitch most gaps between them share. */
+const MAX_DOT_PX = 5, MIN_DOT_SHARE = 0.8, MIN_PITCH_PX = 4, MAX_PITCH_PX = 64, MIN_PITCH_SHARE = 0.35, MIN_PITCH_GAPS = 20;
+
+/**
+ * A dot texture printed on the page's margins in the first screen (n8n's grey dots, Context.dev's blue ones), read from the
+ * screenshot because sites draw it as an image or a canvas as often as a CSS gradient: its pitch and its commonest ink.
+ */
+export async function pageTexture(screenshot, surface) {
+  const { data, info } = await sharp(screenshot).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const bands = [[TEXTURE_EDGE_PX, TEXTURE_EDGE_PX + TEXTURE_MARGIN_PX], [info.width - TEXTURE_EDGE_PX - TEXTURE_MARGIN_PX, info.width - TEXTURE_EDGE_PX]];
+  const inks = new Map(), gaps = new Map();
+  let pixels = 0, inked = 0, runs = 0, dots = 0;
+  for (let y = TEXTURE_TOP_PX; y < info.height - TEXTURE_BOTTOM_PX; y++) for (const [from, to] of bands) {
+    let runStart, lastStart;
+    for (let x = from; x <= to; x++) {
+      const at = (y * info.width + x) * RGB_CHANNELS, hex = x < to ? hexOf(data[at], data[at + 1], data[at + 2]) : surface;
+      const ink = x < to && oklabDistance(hex, surface) > TEXTURE_INK_DISTANCE;
+      if (x < to) { pixels++; if (ink) { inked++; inks.set(hex, (inks.get(hex) ?? 0) + 1); } }
+      if (ink && runStart === undefined) runStart = x;
+      if (!ink && runStart !== undefined) {
+        runs++;
+        if (x - runStart <= MAX_DOT_PX) dots++;
+        if (lastStart !== undefined) gaps.set(runStart - lastStart, (gaps.get(runStart - lastStart) ?? 0) + 1);
+        lastStart = runStart; runStart = undefined;
+      }
+    }
+  }
+  const share = pixels ? inked / pixels : 0;
+  if (share < TEXTURE_MIN_SHARE || share > TEXTURE_MAX_SHARE || !runs || dots / runs < MIN_DOT_SHARE) return undefined;
+  const counted = [...gaps].filter(([gap]) => gap >= MIN_PITCH_PX && gap <= MAX_PITCH_PX);
+  const [pitchPx, count] = counted.sort((a, b) => b[1] - a[1])[0] ?? [];
+  const total = [...gaps.values()].reduce((sum, value) => sum + value, 0);
+  if (!pitchPx || count < MIN_PITCH_GAPS || count / total < MIN_PITCH_SHARE) return undefined;
+  return { kind: "dots", pitchPx, line: [...inks].sort((a, b) => b[1] - a[1])[0][0] };
+}
+
 async function heroKind(screenshot, hero) {
   const { data, info } = await sharp(screenshot).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const top = Math.max(0, Math.round(hero.heading.y)), bottom = Math.min(info.height, Math.round(hero.heading.y + hero.heading.height));
@@ -428,6 +468,7 @@ export async function captureSite(browser, brand, directory) {
         capture.site = measured.site;
         const hero = measured.site.hero;
         if (hero?.hex && (hero.widthShare >= FULL_BLEED_SHARE || hero.frameShare >= FULL_BLEED_SHARE)) Object.assign(hero, await heroKind(screenshot, hero));
+        capture.site.texture = (await pageTexture(screenshot, measured.site.surface)) ?? null;
         const accent = pickAccent(measured.notes.accentCandidates);
         capture.traits.accent = accent
           ? { value: { hex: accent.hex, source: accent.source }, method: `most chromatic colour (OKLCH chroma ${accent.chroma.toFixed(3)}, greys under ${NEUTRAL_CHROMA} excluded) among the primary call-to-action fill, visible link text (not the browser's default link blue or purple), h1 descendants in another colour and inline-svg logo paint` }

@@ -164,6 +164,14 @@
       "value": "#f0f0f0",
       "from": "second large surface"
     },
+    "surfacePattern": {
+      "value": {
+        "kind": "dots",
+        "pitchPx": 18,
+        "line": "#d9d9d9"
+      },
+      "from": "page margins"
+    },
     "rule": {
       "value": {
         "style": "solid",
