@@ -6,7 +6,7 @@
       "type": "skill-md",
       "description": "Read an owner-published Proper Respect profile and interpret its shared tool relationships and usage evidence when the user supplies a public profile URL.",
       "url": "/agent-plugins/proper-respect/skills/read-public-profile/SKILL.md",
-      "digest": "sha256:73255bbbe63c9cb82b56b53cbcbe94408499f1e6001a26d9403016ac618751df"
+      "digest": "sha256:f331ed3b3fc09d70470aaee458cb5566e88ab2f0fb75940995455529321bdd9a"
     }
   ]
 }

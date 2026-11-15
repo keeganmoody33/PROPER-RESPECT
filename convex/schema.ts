@@ -420,6 +420,8 @@ export default defineSchema({
     createdAt: v.string(),
   }).index("by_handle", ["handle"]),
 
+  // Retired 2026-11-15 with the "Give props" button: nothing writes or reads this table. It stays defined because
+  // production may hold rows; dropping it is a separate owner decision.
   linkCredits: defineTable({
     handle: v.string(),
     productSlug: v.string(),

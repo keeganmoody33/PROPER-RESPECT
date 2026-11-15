@@ -524,9 +524,6 @@ export function ProductCard({
   audience = "visitor",
   expandedActivity = false,
   privateUsage,
-  viewerSignedIn = false,
-  profileHandle,
-  onGiveProps,
   deferBrandAssets = false,
   siteTraits,
   backHint,
@@ -544,9 +541,6 @@ export function ProductCard({
   audience?: "owner" | "visitor";
   expandedActivity?: boolean;
   privateUsage?: PrivateUsageCard;
-  viewerSignedIn?: boolean;
-  profileHandle?: string;
-  onGiveProps?: (handle: string, productSlug: string) => Promise<void>;
   /** Lays the card out without fetching its brand fonts or logo, for a card nobody can see yet. */
   deferBrandAssets?: boolean;
   /** What measuring the product's own site added to its brand. Used only beside that same brand. */
@@ -726,10 +720,7 @@ export function ProductCard({
             aria-label={`${webLink.label}${disclosure ? ` · ${disclosure}` : ""} (opens in a new tab)`}
           >
             ↗
-          </a>{disclosure && <span className="card-link-disclosure">{disclosure}</span>}
-          {viewerSignedIn && disclosure && <button type="button" className="card-props-action" onClick={() => {
-            if (onGiveProps && profileHandle) void onGiveProps(profileHandle, card.product.slug);
-          }}>Give props</button>}</div>}
+          </a>{disclosure && <span className="card-link-disclosure">{disclosure}</span>}</div>}
         </div>
 
         <p className="card-headline" data-length={headlineLength(headlineText)}><HeadlineText text={headlineText} accent={brandPreview ? undefined : headlineAccent} colour={accentColour} /></p>

@@ -1,14 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
 import { PublicProfileWebMcp } from "@/components/public-profile-webmcp";
-import { ProfileLinkProps } from "@/components/profile-link-props";
 import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
 import { ProfileName, ProfileLinks } from "@/components/profile-identity";
 import { RetainedMailboxAggregate } from "@/components/retained-mailbox-aggregate";
-import { convexAuthToken } from "@/src/domain/convex-auth-token";
-import { getLinkProps } from "@/src/data/get-link-props";
-import type { LinkPropCredit } from "@/src/domain/link-prop";
 import type { Metadata } from "next";
-import { giveStoredLinkProp } from "./give-link-prop";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
@@ -20,26 +14,6 @@ import styles from "./profile.module.css";
 type ProfilePageProps = {
   params: Promise<{ handle: string }>;
 };
-
-async function signedInViewer() {
-  try {
-    const session = await auth();
-    if (!session.userId) return null;
-    const token = await convexAuthToken(session);
-    return token ? { token } : null;
-  } catch {
-    return null;
-  }
-}
-
-async function propsForViewer(handle: string, token: string | undefined): Promise<LinkPropCredit[]> {
-  if (!token) return [];
-  try {
-    return await getLinkProps(handle, token);
-  } catch {
-    return [];
-  }
-}
 
 export async function generateMetadata({
   params,
@@ -64,9 +38,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   if (!profile) notFound();
   if (profile.handle !== rawHandle) permanentRedirect(`/${profile.handle}`);
   const retainedSources = await getPublicMailboxAggregate(profile.handle);
-  const viewer = await signedInViewer();
-  const viewerSignedIn = viewer !== null;
-  const linkProps = await propsForViewer(profile.handle, viewer?.token);
   // The request's day, so a snapshot's and a price's age read the same in the server's HTML and the visitor's browser.
   const today = new Date().toISOString().slice(0, 10);
 
@@ -102,15 +73,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 card={card}
                 index={index}
                 goTo={card.goTo}
-                viewerSignedIn={viewerSignedIn}
-                profileHandle={profile.handle}
                 today={today}
-                onGiveProps={viewerSignedIn ? giveStoredLinkProp : undefined}
               />
             ))}
           </div>
         )}
-        <ProfileLinkProps credits={linkProps} viewerSignedIn={viewerSignedIn} />
       </section>
 
       <RetainedMailboxAggregate sources={retainedSources} />

@@ -69,7 +69,7 @@ export type PublicSiteGuide = ReturnType<typeof publicSiteGuide>;
 export const publicProfileFacts = {
   publishedAmount: "A public profile can show a retained measurement you published, including how much, and withholds an amount you did not publish.",
   mailboxes: "More than one mailbox can be connected. Disconnect stops recording from that mailbox. A retained aggregate of personal and former-employer accounts can stay visible when you record it as public, with the stored label and no email address.",
-  disclosedLinks: "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
+  disclosedLinks: "A stored affiliate or referral link is disclosed on the card.",
 } as const;
 
 /** The homepage's three steps, shared word for word by the page and its Markdown mirror. */
