@@ -679,6 +679,24 @@ test("the slideshow waits for the visitor to reach it before it moves on, then m
   await expect(current).not.toHaveText("Published usage numbers");
 });
 
+test("a screen reader finds one heading per card: the face it shows, never the hidden one's", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  for (const name of FEATURED) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    const headings = card.getByRole("heading", { level: 2 });
+    await expect(headings).toHaveCount(1);
+    expect(await headings.evaluate(heading => Boolean(heading.closest(".card-front")))).toBe(true);
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(headings).toHaveCount(1);
+    expect(await headings.evaluate(heading => Boolean(heading.closest(".card-back")))).toBe(true);
+    expect((await card.ariaSnapshot()).match(/- heading /g)).toHaveLength(1);
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+});
+
 /** A touch's turn: a whole turn and a margin, well short of a second turn. */
 const TOUCH_TURN_MS = 8500;
 test(`on a ${PHONE_WIDTH}px touch screen one tap on Play moves the slideshow on within a turn`, async ({ browser }, testInfo) => {
