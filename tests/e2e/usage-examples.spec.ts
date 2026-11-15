@@ -820,8 +820,9 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   }));
   expect(first.scrolled).toBe(0);
   expect(first.top).toBeLessThanOrEqual(PHONE_CARD_TOP_PX);
-  const row = (await carousel.getByRole("group", { name: "Choose a product example" }).boundingBox())!;
-  expect(first.rowBottom).toBeLessThanOrEqual(row.y);
+  // The row's visible top edge is its bar's ruled border, just above the toggles.
+  const barTop = await carousel.getByRole("group", { name: "Choose a product example" }).evaluate(group => group.parentElement!.getBoundingClientRect().top);
+  expect(first.rowBottom).toBeLessThanOrEqual(barTop);
   // The card says it is a sample on its own front, so a cropped screenshot still says so.
   await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
   await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
@@ -850,9 +851,9 @@ test(`at ${NARROWEST_WIDTH}x${NARROWEST_HEIGHT} the card's three numbers are abo
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   const numbers = carousel.getByRole("article", { name: "Clay card" }).locator(".card-front .usage-measurement-stats strong");
   await expect(numbers).toHaveCount(3);
-  const row = (await carousel.getByRole("group", { name: "Choose a product example" }).boundingBox())!;
+  const barTop = await carousel.getByRole("group", { name: "Choose a product example" }).evaluate(group => group.parentElement!.getBoundingClientRect().top);
   const bottoms = await numbers.evaluateAll(strongs => strongs.map(strong => strong.getBoundingClientRect().bottom));
-  expect(bottoms.filter(bottom => bottom > row.y)).toEqual([]);
+  expect(bottoms.filter(bottom => bottom > barTop)).toEqual([]);
   expect(await page.evaluate(() => scrollY)).toBe(0);
 });
 
