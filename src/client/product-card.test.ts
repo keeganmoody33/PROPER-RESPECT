@@ -81,6 +81,9 @@ test.each([
     expect($(".product-logo").attr("data-logo-layout")).toBe("app-icon");
     expect($(".product-logo img").attr("width")).toBe("512");
     expect($(".product-logo img").attr("height")).toBe("512");
+    // The 512px original stays the src a failed rendition falls back from; the browser picks a rendition the app resizes for its 48px slot.
+    const rendition = (width: number) => `/_next/image?url=${encodeURIComponent(path)}&w=${width}&q=75`;
+    expect($(".product-logo img").attr("srcset")).toBe(`${rendition(48)} 1x, ${rendition(96)} 2x, ${rendition(256)} 3x`);
   }
 });
 

@@ -102,7 +102,14 @@ type CardLogo = {
   provider?: string;
   /** "wordmark" replaces the visible product name; "app-icon" fills the square slot edge to edge. */
   layout?: "app-icon" | "wordmark";
+  /** Smaller renditions of the same file, resized by the app's image route for the logo slot at each screen density. */
+  srcSet?: string;
 };
+
+/** The logo slot is 3rem; a reviewed icon is drawn at 1x, 2x and 3x of it from the app's image route (sizes it allows). */
+const ICON_RENDITIONS = [[48, "1x"], [96, "2x"], [256, "3x"]] as const;
+const ICON_QUALITY = 75;
+const iconSrcSet = (path: string) => ICON_RENDITIONS.map(([width, density]) => `/_next/image?url=${encodeURIComponent(path)}&w=${width}&q=${ICON_QUALITY} ${density}`).join(", ");
 
 /** The one image a card's logo slot shows, skipping any that failed to load. Verified assets win, then a reviewed app icon, then the stored brand. */
 function cardLogo({ brand, verifiedAssets, icon, logoUrl, surface, failed }: {
@@ -119,7 +126,7 @@ function cardLogo({ brand, verifiedAssets, icon, logoUrl, surface, failed }: {
   }
   if (icon) {
     return failed.includes(icon.path) ? {}
-      : { url: icon.path, width: icon.width, height: icon.height, mode: "surface" in icon ? icon.surface : undefined, provider: "official-vendor", layout: "app-icon" };
+      : { url: icon.path, srcSet: iconSrcSet(icon.path), width: icon.width, height: icon.height, mode: "surface" in icon ? icon.surface : undefined, provider: "official-vendor", layout: "app-icon" };
   }
   const choice = brand && selectProductBrandLogo({ logos: brand.logos.filter(candidate => !failed.includes(candidate.url)) }, surface);
   if (choice) {
@@ -147,6 +154,7 @@ function ProductLogo({ logo, mark, onFailed }: { logo: CardLogo; mark: string; o
             if (element?.complete && element.naturalWidth === 0) onFailed(url);
           }}
           src={ownOriginImageUrl(url)}
+          srcSet={logo.srcSet}
           alt=""
           width={logo.width}
           height={logo.height}
