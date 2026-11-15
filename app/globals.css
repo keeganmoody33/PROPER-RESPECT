@@ -1997,7 +1997,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   font-family: var(--brand-card-number-font, inherit);
   font-variant-numeric: tabular-nums;
 }
-.product-card[data-panel] .card-front :is(.contribution-calendar, .card-artifact-links, .card-activity-preview .usage-chart) {
+/* The back's every value is the front's chart in numbers, so it sits in the same frame. */
+.product-card[data-panel] .card-front :is(.contribution-calendar, .card-artifact-links, .card-activity-preview .usage-chart),
+.product-card[data-panel] .card-back .card-back-values {
   background-color: var(--brand-card-panel);
   border: 1px solid var(--brand-card-panel-border, transparent);
   border-radius: var(--brand-card-panel-radius, min(var(--brand-card-radius, 12px), 14px));
@@ -2029,10 +2031,10 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 }
 .product-card[data-slab] .card-front > .card-topline { padding-bottom: 0; }
 .product-card[data-slab] .card-front > .card-headline { margin-top: -0.8rem; padding-top: 0.6rem; }
-.product-card[data-slab] .card-back-topline { border-bottom: 0; }
+.product-card[data-slab] .card-back > .card-back-topline { border-bottom: 0; padding-bottom: .75rem; }
 .product-card[data-slab] .card-visit { border-color: currentColor; color: inherit; }
 /* The back's slab is its header; its note under the status line keeps the house rule in the slab's colour, not a second band of it. */
-.product-card[data-slab] .card-back blockquote { background: none; border-left: 2px solid var(--brand-card-slab); color: inherit; margin: 1rem 0; padding: 0 0 0 .8rem; }
+.product-card[data-slab] .card-back blockquote { background: none; border-left: 2px solid var(--brand-card-slab); color: inherit; margin: .4rem 0 0; padding: 0 0 0 .8rem; }
 .product-card[data-slab] .card-table-preview { background: var(--brand-card-background); border: 1px solid var(--brand-card-rule, var(--card-line)); }
 
 /* The back's work-sample link lights up in the brand's button colours, as the site's own controls do, not in the card's text colour. */
