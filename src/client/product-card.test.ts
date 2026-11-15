@@ -1150,3 +1150,11 @@ test("a calendar's month label has room for its name: it spans up to three weeks
   expect($(".card-front .contribution-months span").map((_, label) => $(label).attr("style")).get())
     .toEqual(["grid-column:1 / span 3", "grid-column:5 / span 3", "grid-column:10 / span 2"]);
 });
+
+test("a calendar of whole months lists them by name under a caption that carries the years, so a narrow card fits more columns", () => {
+  const days = Array.from({ length: 62 }, (_, index) => ({ date: new Date(Date.UTC(2025, 11, 1 + index)).toISOString().slice(0, 10), count: index % 2, level: 1 }));
+  const $ = renderCard({ activity: { ...activityEvidence, period: { start: "2025-12-01", end: "2026-01-31" }, kind: "contributionCalendar", total: 31, days } });
+  expect($(".card-back .card-back-values-caption").text()).toBe("Contributions each month, Dec 2025 – Jan 2026");
+  expect($(".card-back .card-back-values").attr("data-short")).toBe("");
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["Dec15", "Jan16"]);
+});

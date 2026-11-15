@@ -22,7 +22,7 @@ import { costDetail, costSummary } from "@/src/domain/cost";
 import { tablePreview as parseTablePreview, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
 import { useReducedMotion } from "./use-reduced-motion";
 import { dayMonthYear, formatPeriod, freshnessNote, monthYear as monthYearOf, yearOf } from "@/src/domain/format-period";
-import { activityHeadline, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
+import { activityHeadline, cadenceEnd, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart } from "./usage-chart";
@@ -389,16 +389,21 @@ const POINT_WORDS: Readonly<Record<"day" | "week" | "month" | "level", (date: st
   level: date => dayMonthYear(date),
 };
 
+const MONTH_NAME = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
+
 /** A calendar's months, each with its contributions: what the front's cells add up to, which they can't show as numbers. */
 function MonthValues({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
   const coverage = contributionCalendarCoverage(activity);
   if (!coverage) return null;
   const months = monthlyTotals(coverage.days);
   const busiest = months.reduce((best, month) => (month.total > best.total ? month : best), months[0]);
+  // Whole months need only their names: the caption carries the years, and the shorter names fit more columns.
+  const whole = months.every(month => month.first.endsWith("-01") && month.last === cadenceEnd(month.first, "month"));
+  const span = formatPeriod(months[0].first, months.at(-1)!.last);
   return <>
-    <p className="card-back-values-caption">Contributions each month</p>
-    <ol className="card-back-values" aria-label="Contributions each month">
-      {months.map(month => <li key={month.month}><span>{formatPeriod(month.first, month.last)}</span><strong>{fullNumber(month.total)}</strong></li>)}
+    <p className="card-back-values-caption">Contributions each month{whole ? `, ${span}` : ""}</p>
+    <ol className="card-back-values" aria-label={`Contributions each month, ${span}`} data-short={whole ? "" : undefined}>
+      {months.map(month => <li key={month.month}><span>{whole ? MONTH_NAME.format(new Date(`${month.first}T00:00:00Z`)) : formatPeriod(month.first, month.last)}</span><strong>{fullNumber(month.total)}</strong></li>)}
     </ol>
     {months.length > 1 && <p className="card-back-busiest">
       Most contributions: {formatPeriod(busiest.first, busiest.last)}, with {fullNumber(busiest.total)}, on {busiest.activeDays} of {busiest.days} {busiest.days === 1 ? "day" : "days"} drawn.

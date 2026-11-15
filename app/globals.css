@@ -1027,6 +1027,12 @@ main {
   padding: 0;
 }
 
+/* Month names alone ("Sep 84") take narrower columns. */
+.card-back-values[data-short] {
+  column-gap: 0.7rem;
+  columns: 6 3.6rem;
+}
+
 .card-back-values li {
   break-inside: avoid;
   display: flex;
