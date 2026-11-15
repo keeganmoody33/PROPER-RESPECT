@@ -653,6 +653,26 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Cloudfl
   expect(slab.headline[2]).toBeGreaterThanOrEqual(LARGE_TEXT_CONTRAST);
 });
 
+test("on a phone Firecrawl's Referral link tag takes its own row under the arrow, so the status line beside the logo stays on one line", async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
+  const card = carousel.getByRole("article", { name: "Firecrawl card" });
+  const header = await card.locator(".card-front > .card-topline").evaluate(topline => {
+    const box = (selector: string) => topline.querySelector(selector)!.getBoundingClientRect();
+    const eyebrow = topline.querySelector(".eyebrow")!, range = document.createRange();
+    range.selectNodeContents(eyebrow);
+    const lines = new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size;
+    return { eyebrowLines: lines, tagUnderArrow: box(".card-link-disclosure").top >= box(".card-visit").bottom - 1, tagInCard: box(".card-link-disclosure").right <= topline.getBoundingClientRect().right };
+  });
+  expect(header).toEqual({ eyebrowLines: 1, tagUnderArrow: true, tagInCard: true });
+});
+
+/** The most of a figure's width a group separator may take; Exa's tabular comma took all of it. */
+const MAX_SEPARATOR_SHARE = 0.7;
 test("Exa's 3,690 sets its comma at the font's own width, not a tabular figure's, so it never reads 3 , 690", async ({ page }) => {
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -663,9 +683,14 @@ test("Exa's 3,690 sets its comma at the font's own width, not a tabular figure's
   await carousel.getByRole("button", { name: "Exa", exact: true }).click();
   const number = carousel.getByRole("article", { name: "Exa card" }).locator(".card-front .card-activity-preview > p").first().locator("strong");
   await expect(number).toHaveText("3,690");
-  const widths = await number.evaluate(element => [...element.querySelectorAll(".figure-separator")].map(mark => mark.getBoundingClientRect().width / parseFloat(getComputedStyle(element).fontSize)));
-  // In Exa's tabular figures the comma is 0.59em, a figure's width; set in its own spacing its box is 0.36em.
-  expect(widths.map(width => Math.round(width * 100) / 100)).toEqual([0.36]);
+  // Measured against a figure in the same face, so the check holds whatever fonts the machine has: a tabular comma is a figure's width.
+  const ratios = await number.evaluate(element => {
+    const figure = document.createRange();
+    figure.setStart(element.firstChild!, 0);
+    figure.setEnd(element.firstChild!, 1);
+    return [...element.querySelectorAll(".figure-separator")].map(mark => mark.getBoundingClientRect().width / figure.getBoundingClientRect().width);
+  });
+  expect(ratios.map(ratio => ratio < MAX_SEPARATOR_SHARE)).toEqual([true]);
 });
 
 /** Each word or number in a face's text that the layout breaks across lines ("1,1 / 00"), by name and face. */
