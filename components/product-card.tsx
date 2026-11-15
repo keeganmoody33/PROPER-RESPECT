@@ -462,11 +462,14 @@ const SCOPE_WORDS: Readonly<Record<ActivityModule["attributionScope"], string>> 
   PERSONAL: "the owner's own use", REPOSITORY: "one repository", WORKSPACE: "a shared workspace", ORGANIZATION: "a whole organisation",
 };
 
-/** An activity's provenance on one plain line: where it came from, whose use, its period and how old it is. */
-function activitySummary(activity: ActivityModule, today?: string): string {
+/**
+ * An activity's provenance on one plain line: where it came from, whose use, its period and how old it is. A sample's provenance
+ * only says it is a sample, which its front already says, so How this was measured keeps it.
+ */
+function activitySummary(activity: ActivityModule, today?: string, sample = false): string {
   const when = freshnessNote(activity.freshness, activity.capturedAt, { today }) ?? `recorded ${dayMonthYear(activity.capturedAt)}`;
   const period = activity.period ? formatPeriod(activity.period.start, activity.period.end) : "Measurement period not supplied";
-  return [activity.provenanceLabel, SCOPE_WORDS[activity.attributionScope], period, when].join(" · ");
+  return [...(sample ? [] : [activity.provenanceLabel]), SCOPE_WORDS[activity.attributionScope], period, when].join(" · ");
 }
 
 function MetricRow({ metrics }: { metrics: readonly { label: string; value: number; unit?: string }[] }) {
@@ -480,7 +483,7 @@ function MetricRow({ metrics }: { metrics: readonly { label: string; value: numb
 }
 
 /** What the back adds to the front's activity: never its chart or calendar again, only what the front leaves out. */
-function ActivityEvidence({ activity, today }: { activity: ActivityModule; today?: string }) {
+function ActivityEvidence({ activity, today, sample }: { activity: ActivityModule; today?: string; sample: boolean }) {
   const empty = (activity.kind === "timeSeries" && !activity.points.length) || (activity.kind === "artifactCollection" && !activity.artifacts.length);
   // Every work, each with the owner's line about it: the front links only the first few, by title.
   const works = activity.kind === "artifactCollection" ? activity.artifacts : [];
@@ -507,7 +510,7 @@ function ActivityEvidence({ activity, today }: { activity: ActivityModule; today
           </li>;
         })}
       </ul>}
-      <p className="activity-summary">{activitySummary(activity, today)}</p>
+      <p className="activity-summary">{activitySummary(activity, today, sample)}</p>
     </div>
   );
 }
@@ -723,7 +726,7 @@ export function ProductCard({
           <ul className="card-uses" aria-label={pastUse ? "What I used it for" : "What I use it for"}>{useLabels.map(label => <li key={label}>{label}</li>)}</ul>
         </div>}
 
-        {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
+        {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact sampleCard={sample} /> : null}
         {!brandPreview && card.activity ? (
           <ActivityPreview activity={card.activity} pastUse={pastUse} today={today} unreviewed={!relationshipConfirmed} expanded={expandedActivity} countsPerPeriod={countsPerPeriod} />
         ) : (brandPreview || (audience === "owner" && !ownerUsage && !card.measurements?.length)) ? (
@@ -788,7 +791,7 @@ export function ProductCard({
           {!brandPreview && card.cost && <p>{costDetail(card.cost, { today, sample })}</p>}
           {!brandPreview && card.activity && <>
             {!relationshipConfirmed && <p className="card-evidence-review">Unreviewed evidence</p>}
-            <ActivityEvidence activity={card.activity} today={today} />
+            <ActivityEvidence activity={card.activity} today={today} sample={sample} />
           </>}
           {/* Past the few the front shows; the front's own are in How this was measured, each with how it was recorded. */}
           {!brandPreview && card.measurements && card.measurements.length > FRONT_MEASUREMENT_LIMIT ? <MeasurementLines measurements={card.measurements.slice(FRONT_MEASUREMENT_LIMIT)} /> : null}

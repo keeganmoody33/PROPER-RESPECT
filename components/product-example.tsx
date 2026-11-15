@@ -115,7 +115,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
     onFocus={() => setFocused(true)} onBlur={leave}>
     {/* The controls sit above the chooser and the card, so they stay put while the frame below takes each card's own height. */}
     <div className={styles.header}>
-      <p className={styles.label}><span className={styles.shortLabel} aria-hidden="true">Examples</span><span className={styles.longLabel}>Inside a card / Illustrative examples</span></p>
+      <p className={styles.label}><span className={styles.shortLabel} aria-hidden="true">Examples</span><span className={styles.longLabel}>Inside a card</span></p>
       <div className={styles.controls}>
         <button type="button" onClick={() => select(index - 1)} aria-label="Previous example">←</button>
         <span>{index + 1} / {inPlay}</span>

@@ -62,15 +62,15 @@ function countedThing(measurement: PublicMeasurement): string {
   return hasWord(metric, unit) ? metric : `${unit} ${metric}`;
 }
 
-/** Whose the shown numbers are, decided on the rows a visitor sees: Details labels every row it holds. */
-function shownOrigin(shown: readonly PublicMeasurement[]): string {
+/** Whose the shown numbers are, decided on the rows a visitor sees: Details labels every row it holds. A card that already says Sample doesn't say it again. */
+function shownOrigin(shown: readonly PublicMeasurement[], sampleCard: boolean): string | undefined {
   const samples = shown.filter(row => row.sample === "synthetic").length;
-  if (samples === shown.length) return "Sample numbers";
+  if (samples === shown.length) return sampleCard ? undefined : "Sample numbers";
   return samples ? "Rows marked Sample are invented, not account activity; the rest are owner-reported, not verified" : "Owner-reported, not verified";
 }
 
 /** A card's front: the numbers in one row, then one line saying whose they are; how each was recorded stays on the back. */
-function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] }) {
+function MeasurementStats({ measurements, sampleCard }: { measurements: PublicMeasurement[]; sampleCard: boolean }) {
   const shown = measurements.slice(0, FRONT_MEASUREMENT_LIMIT);
   const more = measurements.length - shown.length;
   const mixed = shown.some(row => row.sample === "synthetic") && shown.some(row => row.sample !== "synthetic");
@@ -79,7 +79,7 @@ function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] 
   const shared = periods.every(period => period === periods[0]) ? periods[0] : undefined;
   const note = [
     ...(shared ? [shared] : []),
-    shownOrigin(shown),
+    ...[shownOrigin(shown, sampleCard)].filter(origin => origin !== undefined),
     ...(measurements.some(row => row.status === "baseline") ? ["includes a baseline, which is not new activity"] : []),
     more > 0 ? `${more} more and how each was measured are in Details` : "how each was measured is in Details",
   ].join(" · ");
@@ -109,9 +109,10 @@ export function MeasurementLines({ measurements }: { measurements: PublicMeasure
   </ul>;
 }
 
-export function PublicMeasurements({ measurements, compact = false }: { measurements: PublicMeasurement[]; compact?: boolean }) {
+/** `sampleCard`: the card around the numbers already says Sample, so its front says it no more. */
+export function PublicMeasurements({ measurements, compact = false, sampleCard = false }: { measurements: PublicMeasurement[]; compact?: boolean; sampleCard?: boolean }) {
   if (!measurements.length) return null;
-  if (compact) return <MeasurementStats measurements={measurements} />;
+  if (compact) return <MeasurementStats measurements={measurements} sampleCard={sampleCard} />;
   return <section className="usage-measurement-public" aria-label="Reported usage measurements">
     {measurements.map((measurement, index) => <MeasurementValue key={index} measurement={measurement} />)}
     <p className="usage-measurement-disclosure">Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.</p>

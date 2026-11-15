@@ -152,7 +152,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "clay", featured: true, capability: "One published number", level: "DAILY", since: "2023", headline: "Contact enrichment for my sales team.", note: "Lists that took a week of spreadsheets take an hour.",
     measurements: clayMeasurements, usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
-    caveat: "Its work-sample link opens Clay's public templates.", backHint: "The period and a work sample inside",
+    caveat: "Its link to how I use it opens Clay's public templates.", backHint: "The period and how I use it, inside",
   },
   {
     slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.", headlineAccent: "every project's code",
@@ -170,7 +170,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "firecrawl", featured: true, capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", headlineAccent: "clean Markdown", note: "I pull docs and product pages through it.",
     linkType: "REFERRAL",
-    caveat: "A real card's referral link carries its owner's code. This sample's goes to Firecrawl's home page and credits nobody.",
+    caveat: "A real card's referral link carries its owner's code. This one goes to Firecrawl's home page and credits nobody.",
   },
   {
     slug: "n8n", capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
@@ -189,7 +189,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "spider", capability: "Affiliate link, disclosed", level: "OCCASIONAL", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it.",
     linkType: "AFFILIATE",
-    caveat: "A real card's affiliate link carries its owner's code. This sample's goes to Spider's home page and credits nobody.",
+    caveat: "A real card's affiliate link carries its owner's code. This one goes to Spider's home page and credits nobody.",
   },
   {
     slug: "open-places", capability: "Used now and then", level: "OCCASIONAL", since: "2026", headline: "Local business lists by category and city.", note: "I start local prospect lists here.",

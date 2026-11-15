@@ -106,7 +106,7 @@ test("the five featured fronts show go-to, cost and a disclosed referral link be
 });
 
 test("Clay's and Exa's cards say what is behind Details: Clay's back holds the most, and Exa's holds the demo its label names", () => {
-  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "The period and a work sample inside"], ["exa", "A demo link inside"]]);
+  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "The period and how I use it, inside"], ["exa", "A demo link inside"]]);
 });
 
 test("every headline and note is a short line under the card's limit", () => {
@@ -161,6 +161,24 @@ test("Clay's card is no tutorial: neither face draws a lead list, a provider wat
   const clay = $('[data-example="clay"]');
   expect([clay.find(".card-front").length, clay.find(".card-back").length]).toEqual([1, 1]);
   expect([clay.find("table").length, clay.text().match(/waterfall|emails found|job change|invented rows|provider/gi)]).toEqual([0, null]);
+});
+
+/** Every word that marks a card as invented. */
+const SAMPLE_WORDS = /sample|synthetic|illustrative|invented/gi;
+
+test("a visitor reads Sample once per card: the card's own tag and the one line above it, never again on the front, its caveat or the carousel's label", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductExample, { examples })));
+  const slides = $("[data-example]").toArray().map(slide => {
+    const shown = $(slide).clone();
+    shown.find(".card-back, .visually-hidden").remove();
+    return [$(slide).attr("data-example"), shown.text().match(SAMPLE_WORDS)];
+  });
+  expect(slides.length).toBeGreaterThanOrEqual(5);
+  expect(slides).toEqual(slides.map(([id]) => [id, ["Sample", "Sample"]]));
+  expect($("[aria-label='Product usage examples'] > div").first().text().match(SAMPLE_WORDS)).toBeNull();
+  // The examples the carousel mounts later say no more than these.
+  expect(examples.flatMap(({ id, capability, caveat, backHint, card }) => [capability, caveat, backHint, card.headline]
+    .filter(text => text?.match(SAMPLE_WORDS)).map(text => [id, text]))).toEqual([]);
 });
 
 test("every outbound link on every example is https", () => {

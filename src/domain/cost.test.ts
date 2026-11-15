@@ -33,9 +33,9 @@ describe("how a cost reads on a card", () => {
     expect(costDetail(future, { today: "2026-11-14" })).toBe("Owner-reported cost: $5/month · dated 1 Jan 2027, after today");
     expect(costSummary(monthly, { today: "2026-09-01" })).toBe("Costs $5/month · owner-reported");
   });
-  it("calls an invented example's price a sample, front and back, since no owner reported it, and never ages it", () => {
-    expect(costSummary({ ...monthly, asOf: "2020-01-01" }, { today: "2026-09-01", sample: true })).toBe("Costs $5/month · sample");
-    expect(costDetail(monthly, { sample: true })).toBe("Sample cost: $5/month · as of 1 Sep 2026");
+  it("names no basis for an invented example's price, front or back, since no owner reported it and its card already says Sample, and never ages it", () => {
+    expect(costSummary({ ...monthly, asOf: "2020-01-01" }, { today: "2026-09-01", sample: true })).toBe("Costs $5/month");
+    expect(costDetail(monthly, { sample: true })).toBe("Cost: $5/month · as of 1 Sep 2026");
   });
   it("keeps the full record on the back, in plain words: basis, amount with cents only when it has them, the day it was true and any period", () => {
     expect(costDetail(monthly)).toBe("Owner-reported cost: $5/month · as of 1 Sep 2026");

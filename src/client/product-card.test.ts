@@ -1056,6 +1056,36 @@ test("the back is the same branded object, shorter: its logo and name, plain pro
   expect(back.text()).not.toMatch(/\d{4}-\d{2}-\d{2}|stale|observ/i);
 });
 
+/** Every word that marks a card as invented, which a visitor should meet once on a sample's front. */
+const SAMPLE_WORDS = /sample|synthetic|illustrative|invented/gi;
+
+test("a sample card says Sample once on its front and nowhere on its back outside How this was measured; a real card keeps its provenance words", () => {
+  const measured = {
+    metric: "enriched", value: "1500000", unit: "rows", period: { kind: "date", start: "2023-01-01", end: "2026-08-31", timezone: "UTC" },
+    scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE", capturedAt: "2026-09-01T00:00:00.000Z",
+    status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
+  } as const;
+  const cost = { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" } as const;
+  const sampleActivity = { ...activityExamples[2], provenanceLabel: "Illustrative sample, not account data" };
+  const render = (card: Partial<Card>, sample: boolean) => load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, product: { ...baseCard.product, description: "A product for rendering checks." }, note: "I use it daily.", ...card }, index: 0, sample })));
+  const words = ($: ReturnType<typeof render>) => {
+    const front = $(".card-front").text().match(SAMPLE_WORDS) ?? [];
+    const panel = $(".card-back .card-provenance").text().match(SAMPLE_WORDS) ?? [];
+    $(".card-back .card-provenance").remove();
+    return { front, back: $(".card-back").text().match(SAMPLE_WORDS) ?? [], panel: panel.length > 0 };
+  };
+  for (const card of [{ measurements: [measured], cost }, { activity: sampleActivity, cost }]) {
+    const $ = render(card, true);
+    expect(words($)).toEqual({ front: ["Sample"], back: [], panel: true });
+    expect([$(".card-front .card-cost").text(), $(".card-back").text().includes("Cost: $5/month · as of 1 Sep 2026")]).toEqual(["Costs $5/month", true]);
+  }
+  // A published card is no sample: its front keeps whose the numbers are, and its back keeps where its activity came from.
+  const real = render({ measurements: [{ ...measured, sample: "owner-supplied" }], cost }, false);
+  expect([real(".card-front .usage-measurement-note").text(), real(".card-front .card-cost").text()])
+    .toEqual(["Jan 2023 – Aug 2026 · Owner-reported, not verified · how each was measured is in Details", "Costs $5/month · owner-reported"]);
+  expect(render({ activity: activityExamples[2] }, false)(".card-back .activity-summary").text()).toMatch(/^Synthetic owner-approved evidence · the owner's own use · /);
+});
+
 test("a daily chart's screen-reader table has one Date column, since each bar is one day", () => {
   const $ = renderCard({ activity: { ...activityEvidence, kind: "timeSeries", label: "Requests served", unit: "per day", points: [{ date: "2026-08-01", value: 3 }, { date: "2026-08-02", value: 5 }] } });
   const table = $(".card-front .usage-chart > .visually-hidden > table");

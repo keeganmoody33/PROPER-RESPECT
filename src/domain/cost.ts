@@ -46,13 +46,13 @@ const datedAfter = (cost: Cost, today?: string) => today !== undefined && cost.a
 export type CostContext = Readonly<{
   /** The day the card is read: a price much older says when it was true, and one dated later isn't shown as current. */
   today?: string;
-  /** An invented example with no owner: its price is a sample, not owner-reported, and never ages. */
+  /** An invented example with no owner: its card already says Sample, so its price names no basis, and it never ages. */
   sample?: boolean;
 }>;
 
 /** A card's front: the price and who says so, in a few words, and its month when it is old. Nothing for a price dated after today. */
 export function costSummary(cost: Cost, { today, sample = false }: CostContext = {}): string | undefined {
-  if (sample) return `Costs ${price(cost)} · sample`;
+  if (sample) return `Costs ${price(cost)}`;
   if (datedAfter(cost, today)) return undefined;
   const when = today && staleBy(cost.asOf, today) ? ` · as of ${monthYear(cost.asOf)}` : "";
   return `Costs ${price(cost)} · ${BASIS_TAG[cost.basis]}${when}`;
@@ -62,5 +62,5 @@ export function costSummary(cost: Cost, { today, sample = false }: CostContext =
 export function costDetail(cost: Cost, { today, sample = false }: CostContext = {}): string {
   const period = cost.period ? ` · ${dayMonthYear(cost.period.start)} to ${dayMonthYear(cost.period.end)}` : "";
   const when = !sample && datedAfter(cost, today) ? `dated ${dayMonthYear(cost.asOf)}, after today` : `as of ${dayMonthYear(cost.asOf)}`;
-  return `${sample ? "Sample cost" : BASIS_NAME[cost.basis]}: ${price(cost)} · ${when}${period}`;
+  return `${sample ? "Cost" : BASIS_NAME[cost.basis]}: ${price(cost)} · ${when}${period}`;
 }
