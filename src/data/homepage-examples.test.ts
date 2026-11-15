@@ -1,11 +1,14 @@
+import { load } from "cheerio";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
+import { ProductExample } from "@/components/product-example";
 import { isHttpsUrl, isHttpUrl } from "@/src/domain/http-url";
 import { productBrandSnapshotSchema } from "@/src/domain/product-brand";
 import { directoryEntry } from "@/src/domain/product-directory";
 import { listedUses, productUseLabels } from "@/src/domain/product-uses";
 import { activityModuleSchema, publicProfileSchema } from "@/src/domain/public-profile";
 import { usageLinkHost, usageLinkLabelText } from "@/src/domain/usage-links";
-import { tablePreview } from "@/src/domain/table-preview";
 import { activityHeadline } from "@/src/domain/activity-headline";
 import { noLongerInUse } from "@/src/domain/relationship-level";
 import { homepageExamples } from "./homepage-examples";
@@ -84,8 +87,8 @@ test("five examples are featured, first, in the order the chooser shows them; th
 });
 
 /** What a card's front draws, which is what a visitor tells examples apart by: two time series can draw different things. */
-function frontDrawing({ card, tablePreview: table }: (typeof examples)[number]): string {
-  if (table) return "table";
+function frontDrawing({ card }: (typeof examples)[number]): string {
+  if (card.measurements?.length) return "numbers";
   const activity = card.activity;
   if (activity?.kind === "timeSeries") return `${activity.unit} bars`;
   return activity?.kind ?? "numbers";
@@ -94,7 +97,7 @@ function frontDrawing({ card, tablePreview: table }: (typeof examples)[number]):
 test("the five featured fronts each draw something different, and between them show go-to, cost and a disclosed referral link", () => {
   const featured = examples.filter(example => example.featured);
   expect(featured.map(example => [example.id, frontDrawing(example), example.card.goTo === true, Boolean(example.card.cost), example.card.primaryLink?.type])).toEqual([
-    ["clay", "table", false, true, "CANONICAL"],
+    ["clay", "numbers", false, true, "CANONICAL"],
     ["github", "contributionCalendar", true, false, "CANONICAL"],
     ["cloudflare", "per day bars", true, true, "CANONICAL"],
     ["docker", "artifactCollection", false, false, "CANONICAL"],
@@ -166,40 +169,11 @@ test("Clay's three numbers and its price fit one plan over one stated year: a da
   expect(tables).toBeGreaterThanOrEqual(26);
 });
 
-test("only Clay's front shows a table: people found from a job-change signal, their work emails by a provider waterfall, on reserved .example domains", () => {
-  expect(examples.filter(({ tablePreview: table }) => table).map(({ id }) => id)).toEqual(["clay"]);
-  const table = tablePreview(examples.find(({ id }) => id === "clay")!.tablePreview)!;
-  expect(table.caption).toBe("Lead list · job-change signal · invented rows");
-  expect([table.columns.map(column => ["kind" in column ? column.kind : undefined, column.label, column.enriched]), table.rows.length, table.frontRows]).toEqual([
-    [["text", "Person", false], ["email", "Work email", true], ["waterfall", "Waterfall", true], ["ai", "Job change", true]],
-    5, 3,
-  ]);
-  const shown = (cell: (typeof table.rows)[number][number]) => cell.fillsIn ?? cell;
-  // A lead list names people: each row is a person and their title at a company, and every signal is the job change the caption names.
-  expect(table.rows.map(row => [row[0].text, row[0].detail, shown(row[1]).text, `${shown(row[2]).text} ${shown(row[2]).waterfall?.step}/${shown(row[2]).waterfall?.of}`, shown(row[3]).text])).toEqual([
-    ["Ana Ruiz", "VP Sales, Nimbus", "ana@nimbus.example", "Found 1/3", "New role · 3\u00a0wk"],
-    ["Li Chen", "RevOps lead, Heron", "li@heron.example", "Found 2/3", "Promoted · 6\u00a0wk"],
-    ["Mo Okafor", "Director, Quillon", "mo@quillon.example", "Found 3/3", "Joined · 2\u00a0wk"],
-    ["Raj Patel", "CRO, Tessel", "raj@tessel.example", "Found 1/3", "New role · 1\u00a0mo"],
-    ["Sara Lind", "VP Growth, Marrow", "No match", "No match 3/3", "Promoted · 5\u00a0wk"],
-  ]);
-  expect(table.rows.flatMap(row => row.flatMap(cell => cell.fillsIn ? [`${cell.text} -> ${cell.fillsIn.text}`] : []))).toEqual([
-    "Finding… -> mo@quillon.example", "Running -> Found", "Running -> Joined · 2\u00a0wk",
-  ]);
-  const addresses = table.rows.flatMap(row => row.flatMap(cell => [cell.text, ...(cell.fillsIn ? [cell.fillsIn.text] : [])])).filter(text => text.includes("@"));
-  expect(addresses.filter(text => !text.endsWith(".example"))).toEqual([]);
-  // The summary is the whole table's: its match rate, its waterfall and the year's credits a row, each from the numbers it names.
-  expect(table.summary).toBe("171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row");
-  const clay = examples.find(({ id }) => id === "clay")!.card;
-  const [rows, tables, credits] = clay.measurements!.map(row => Number(row.value));
-  const FOUND = 171;
-  expect([table.totalRows, Math.round(FOUND / table.totalRows! * 100), (credits / rows).toFixed(1)]).toEqual([214, 80, "2.3"]);
-  // The sample rows find as often as the whole table: 4 of 5, as 171 of 214 rounds to 80%.
-  expect(table.rows.filter(row => shown(row[1]).state === "filled").length / table.rows.length).toBe(0.8);
-  expect(new Set(table.rows.map(row => shown(row[2]).waterfall?.of))).toEqual(new Set([3]));
-  // A 214-row table is about the size of the year's average, 11,800 rows over 52 tables (227), and its credits fit Launch's 30,000.
-  expect(Math.abs(table.totalRows! - rows / tables) / (rows / tables)).toBeLessThan(0.1);
-  expect(credits).toBeLessThanOrEqual(CLAY_LAUNCH.dataCreditsPerYear);
+test("Clay's card is no tutorial: neither face draws a lead list, a provider waterfall or a match rate", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductExample, { examples })));
+  const clay = $('[data-example="clay"]');
+  expect([clay.find(".card-front").length, clay.find(".card-back").length]).toEqual([1, 1]);
+  expect([clay.find("table").length, clay.text().match(/waterfall|emails found|job change|invented rows|provider/gi)]).toEqual([0, null]);
 });
 
 test("Docker lists three things as links to public pages, and every outbound link on every example is https", () => {

@@ -3,7 +3,7 @@
 import { Figures, FRONT_MEASUREMENT_LIMIT, MeasurementLines, PublicMeasurements } from "./measurement-values";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import {
   selectProductBrandLogo,
   type ProductBrandSnapshot,
@@ -19,7 +19,6 @@ import { isHttpUrl } from "@/src/domain/http-url";
 import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
 import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relationship-level";
 import { costDetail, costSummary } from "@/src/domain/cost";
-import { tablePreview as parseTablePreview, type TableColumnKind, type TablePreview, type TablePreviewCell, type TablePreviewInput } from "@/src/domain/table-preview";
 import { useReducedMotion } from "./use-reduced-motion";
 import { dayMonthYear, formatPeriod, freshnessNote, monthYear as monthYearOf, yearOf } from "@/src/domain/format-period";
 import { activityHeadline, cadenceEnd, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
@@ -315,114 +314,6 @@ function HeadlineText({ text, accent, colour }: { text: string; accent?: string;
   return <>{text.slice(0, at)}<span className="card-headline-accent" style={colour ? { color: colour } : undefined}>{accent}</span>{text.slice(at + accent.length)}</>;
 }
 
-/** How long a shown table waits before its running row fills in, so the visitor sees it pending first. */
-const FILL_IN_DELAY_MS = 600;
-
-const noSubscription = () => () => undefined;
-
-/** Once, a moment after the card is shown; a visitor who asked for less motion sees the filled-in table as soon as the page runs. */
-function useFilledIn(shown: boolean): boolean {
-  const reducedMotion = useReducedMotion();
-  // The server can't know the preference, so it draws the row pending; the browser decides.
-  const inBrowser = useSyncExternalStore(noSubscription, () => true, () => false);
-  const [filledIn, setFilledIn] = useState(false);
-  useEffect(() => {
-    if (!shown || reducedMotion || filledIn) return;
-    const timer = window.setTimeout(() => setFilledIn(true), FILL_IN_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [shown, reducedMotion, filledIn]);
-  return filledIn || (reducedMotion && inBrowser);
-}
-
-/** An address may break after its @ and before its last dot, so a narrow column wraps it in whole parts rather than mid-word. */
-function cellText(text: string) {
-  const [at, dot] = [text.indexOf("@"), text.lastIndexOf(".")];
-  if (at <= 0) return <WholeWords text={text} />;
-  if (dot <= at) return <>{text.slice(0, at + 1)}<wbr />{text.slice(at + 1)}</>;
-  return <>{text.slice(0, at + 1)}<wbr />{text.slice(at + 1, dot)}<wbr />{text.slice(dot)}</>;
-}
-
-/** A column kind's glyph, drawn in its header the way an enrichment table marks what each column holds. 16-unit strokes in the text colour. */
-const COLUMN_GLYPHS: Readonly<Record<TableColumnKind, string>> = {
-  text: "M3 4h10M8 4v9",
-  email: "M2.5 4.5h11v8h-11zM3 5l5 4 5-4",
-  waterfall: "M2 3.5h12M4 7.5h8M6 11.5h4",
-  ai: "M8 2l1.4 4.6L14 8l-4.6 1.4L8 14l-1.4-4.6L2 8l4.6-1.4z",
-  formula: "M11 2.5c-2 0-2.6 1-3 3l-1.6 7c-.4 1.6-1 2-2.4 2M5 7h5",
-};
-function ColumnGlyph({ kind }: { kind: TableColumnKind }) {
-  return <svg className="table-glyph" data-kind={kind} viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d={COLUMN_GLYPHS[kind]} /></svg>;
-}
-
-type WaterfallStep = "missed" | "answered" | "asking" | "unasked";
-/** Each provider of a waterfall in turn: the ones before the step missed, the step answered (or is being asked), the rest not asked. Nothing found: all missed. */
-function waterfallSteps({ step, of }: NonNullable<TablePreviewCell["waterfall"]>, state: TablePreviewCell["state"]): WaterfallStep[] {
-  return Array.from({ length: of }, (_, index): WaterfallStep => {
-    if (state === "empty" || index + 1 < step) return "missed";
-    if (index + 1 > step) return "unasked";
-    return state === "pending" ? "asking" : "answered";
-  });
-}
-function waterfallWords({ step, of }: NonNullable<TablePreviewCell["waterfall"]>, state: TablePreviewCell["state"]) {
-  if (state === "empty") return `, none of ${of} providers answered`;
-  return state === "pending" ? `, asking provider ${step} of ${of}` : `, provider ${step} of ${of} answered`;
-}
-
-/** A waterfall cell: its run status as a pill, then a mark for each provider it tries in turn. */
-function WaterfallCell({ text, state, waterfall }: Pick<TablePreviewCell, "text" | "state" | "waterfall">) {
-  return <>
-    <span className="table-pill" data-state={state}>{text}</span>
-    {waterfall && <><span className="table-steps" aria-hidden="true">{waterfallSteps(waterfall, state).map((step, index) => <i key={index} data-step={step} />)}</span>
-      <span className="visually-hidden">{waterfallWords(waterfall, state)}</span></>}
-  </>;
-}
-
-/** What a waterfall's marks mean, said once in the table's title bar for a sighted visitor; each cell already says it in words. */
-function WaterfallKey() {
-  return <span className="card-table-key" aria-hidden="true">
-    <span><i data-step="answered" />found it</span> <span><i data-step="missed" />missed</span> <span><i data-step="unasked" />not asked</span>
-  </span>;
-}
-
-/**
- * A few rows of a table the product makes, drawn as a real table: a row number in the gutter, the row filled in last highlighted,
- * long cells wrapping rather than cut short. The back carries on with the rows the front has no room for. A narrow card stacks
- * each row into a block, every cell beside its column's label.
- */
-function TablePreviewBlock({ preview, shown, full = false }: { preview: TablePreview; shown: boolean; full?: boolean }) {
-  const captionId = useId();
-  const filledIn = useFilledIn(shown);
-  const cellShown = (cell: TablePreviewCell) => filledIn && cell.fillsIn ? cell.fillsIn : cell;
-  // The back carries on from the rows the front shows, its row numbers counting on; with none left over it shows them all.
-  const onFront = preview.frontRows ?? preview.rows.length, rest = preview.rows.slice(onFront);
-  const carriesOn = full && rest.length > 0;
-  const rows = full ? (carriesOn ? rest : preview.rows) : preview.rows.slice(0, onFront);
-  const hasWaterfall = preview.columns.some(column => "kind" in column && column.kind === "waterfall");
-  const count = preview.summary ?? (!full && preview.totalRows ? `${rows.length} of ${fullNumber(preview.totalRows)} rows` : undefined);
-  return (
-    <div className="card-table-preview" role="region" tabIndex={0} aria-labelledby={captionId} data-full={full ? "" : undefined}>
-      <table style={carriesOn ? { counterReset: `preview-row ${onFront}` } : undefined}>
-        <caption id={captionId}><span className="card-table-title"><span><WholeWords text={preview.caption} /></span>{hasWaterfall && <WaterfallKey />}</span></caption>
-        <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined}>
-          {"kind" in column && column.kind && <ColumnGlyph kind={column.kind} />}{column.label}</th>)}</tr></thead>
-        <tbody>
-          {rows.map((row, rowIndex) => <tr key={rowIndex} data-latest={row.some(cell => cell.fillsIn) ? "" : undefined}>
-            {row.map((cell, column) => {
-              const shownCell = cellShown(cell), kind = preview.columns[column];
-              const content = <span className="table-cell-value">{"kind" in kind && kind.kind === "waterfall" ? <WaterfallCell {...shownCell} /> : cellText(shownCell.text)}
-                {cell.detail && <span className="table-cell-detail"><WholeWords text={cell.detail} /></span>}</span>;
-              return column === 0
-                ? <th key={column} scope="row" data-label={kind.label} data-state={shownCell.state}>{content}</th>
-                : <td key={column} data-label={kind.label} data-state={shownCell.state}>{content}</td>;
-            })}
-          </tr>)}
-        </tbody>
-      </table>
-      {count && <p className="card-table-count"><WholeWords text={count} /></p>}
-    </div>
-  );
-}
-
 function ActivityPreview({ activity, pastUse, today, unreviewed = false, expanded = false, countsPerPeriod = false }: { activity: ActivityModule; pastUse: boolean; today?: string; unreviewed?: boolean; expanded?: boolean; countsPerPeriod?: boolean }) {
   const metric = activityHeadline(activity, pastUse, { countsPerPeriod });
   const number = (value: number) => expanded ? fullNumber(value) : compactNumber(value);
@@ -636,8 +527,6 @@ export function ProductCard({
   siteTraits,
   backHint,
   headlineAccent,
-  tablePreview,
-  shown = true,
   sample = false,
   countsPerPeriod = false,
   today: readOn,
@@ -662,10 +551,6 @@ export function ProductCard({
   backHint?: string;
   /** A phrase within the headline to set apart, as the product's own site sets part of its heading in its brand colour. Presentation only. */
   headlineAccent?: string;
-  /** A few rows of a table the product makes, shown on the front. Presentation only, never part of the card's stored data. */
-  tablePreview?: TablePreviewInput;
-  /** Whether a visitor can see this card now; a table preview fills in only once it is. */
-  shown?: boolean;
   /** An invented example with no owner, as on the homepage: its front says Sample and its words never claim an owner. */
   sample?: boolean;
   /** The series' points each count their own period, so they add up. Presentation only: nothing a card stores can say so. */
@@ -700,7 +585,6 @@ export function ProductCard({
   const footerLabel = ([[brandPreview, "Brand identity"], [!relationshipConfirmed, "Needs your review"], [ownerGoTo, "Owner-selected go-to"]] as const)
     .find(([applies]) => applies)?.[1] ?? backHint ?? "Relationship & evidence";
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
-  const table = brandPreview ? undefined : parseTablePreview(tablePreview);
   const pastUse = noLongerInUse(card);
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
@@ -839,9 +723,7 @@ export function ProductCard({
           <ul className="card-uses" aria-label={pastUse ? "What I used it for" : "What I use it for"}>{useLabels.map(label => <li key={label}>{label}</li>)}</ul>
         </div>}
 
-        {/* The numbers come first, so a card that publishes them leads with them; a table preview shows where they come from. */}
         {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
-        {table && <TablePreviewBlock preview={table} shown={shown} />}
         {!brandPreview && card.activity ? (
           <ActivityPreview activity={card.activity} pastUse={pastUse} today={today} unreviewed={!relationshipConfirmed} expanded={expandedActivity} countsPerPeriod={countsPerPeriod} />
         ) : (brandPreview || (audience === "owner" && !ownerUsage && !card.measurements?.length)) ? (
@@ -910,7 +792,6 @@ export function ProductCard({
           </>}
           {/* Past the few the front shows; the front's own are in How this was measured, each with how it was recorded. */}
           {!brandPreview && card.measurements && card.measurements.length > FRONT_MEASUREMENT_LIMIT ? <MeasurementLines measurements={card.measurements.slice(FRONT_MEASUREMENT_LIMIT)} /> : null}
-          {table && <TablePreviewBlock preview={table} shown full />}
           {ownerUsage && <PrivateUsageCardDetails usage={ownerUsage} />}
           {/* Every provenance line stays, folded: exact dates, scope, status words and how each number was recorded. */}
           {!brandPreview && <Collapsible className="card-provenance">

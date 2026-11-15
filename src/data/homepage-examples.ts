@@ -8,7 +8,6 @@ import type { PublicMeasurement } from "@/src/domain/measurements";
 import type { ActivityModule, PublicProfile } from "@/src/domain/public-profile";
 import type { UsageLink } from "@/src/domain/usage-links";
 import { levelStatus, type RelationshipLevel } from "@/src/domain/relationship-level";
-import type { TablePreviewInput } from "@/src/domain/table-preview";
 
 export type HomepageExample = Readonly<{
   id: string;
@@ -25,8 +24,6 @@ export type HomepageExample = Readonly<{
   backHint?: string;
   /** The phrase in the headline the product's own site would set apart in its brand colour. Presentation only, never part of the card's data. */
   headlineAccent?: string;
-  /** A few invented rows of a table the product makes, drawn on the card's front. Presentation only, never part of the card's data. */
-  tablePreview?: TablePreviewInput;
   /** The sample series' points each count their own day or week, so its headline adds them up. Presentation only, never part of the card's data. */
   countsPerPeriod?: true;
 }>;
@@ -125,41 +122,7 @@ const CLOUDFLARE_MONTHLY_USD = 5;
 const CLAY_LAUNCH_MONTHLY_USD = 167;
 const SAMPLE_YEAR = { start: "2025-09-01", end: "2026-08-31" } as const;
 
-/**
- * A Clay table the way clay.com draws its own: a lead list from a job-change signal, each column marked with its kind, the people
- * it found with their new titles, a work email found by a waterfall of three providers tried in turn, and an AI column naming each
- * change. Invented people at invented companies on reserved .example domains, and providers counted rather than named: no real
- * company, person or vendor. The front shows three of the five rows, out of a 214-row table; the back carries on with the other two, one of which found no address.
- */
-const filled = (text: string) => ({ text, state: "filled" as const });
-const foundBy = (step: number) => ({ text: "Found", state: "filled" as const, waterfall: { step, of: CLAY_WATERFALL_PROVIDERS } });
-/** Providers the sample's email waterfall asks in turn, the rows in the whole table the sample rows come from, and the addresses it found. */
-const CLAY_WATERFALL_PROVIDERS = 3, CLAY_TABLE_ROWS = 214, CLAY_FRONT_ROWS = 3, CLAY_EMAILS_FOUND = 171;
 const CLAY_ROWS_ENRICHED = 11_800, CLAY_TABLES_BUILT = 52, CLAY_DATA_CREDITS_USED = 27_600;
-const PERCENT = 100;
-/** The whole table in one line a Clay user reads first: how often the waterfall found an address, and what a row cost in data credits this year. */
-const CLAY_SUMMARY = [
-  `${CLAY_EMAILS_FOUND} of ${CLAY_TABLE_ROWS} emails found`, `${Math.round(CLAY_EMAILS_FOUND / CLAY_TABLE_ROWS * PERCENT)}%`,
-  `${CLAY_WATERFALL_PROVIDERS}-provider waterfall`, `${(CLAY_DATA_CREDITS_USED / CLAY_ROWS_ENRICHED).toFixed(1)} credits a row`,
-].join(" · ");
-const CLAY_TABLE: TablePreviewInput = {
-  caption: "Lead list · job-change signal · invented rows",
-  columns: [
-    { label: "Person", kind: "text" }, { label: "Work email", kind: "email", enriched: true },
-    { label: "Waterfall", kind: "waterfall", enriched: true }, { label: "Job change", kind: "ai", enriched: true },
-  ],
-  rows: [
-    [{ text: "Ana Ruiz", detail: "VP Sales, Nimbus" }, filled("ana@nimbus.example"), foundBy(1), filled("New role · 3\u00a0wk")],
-    [{ text: "Li Chen", detail: "RevOps lead, Heron" }, filled("li@heron.example"), foundBy(2), filled("Promoted · 6\u00a0wk")],
-    [{ text: "Mo Okafor", detail: "Director, Quillon" }, { text: "Finding…", state: "pending", fillsIn: filled("mo@quillon.example") },
-      { text: "Running", state: "pending", waterfall: { step: 2, of: CLAY_WATERFALL_PROVIDERS }, fillsIn: foundBy(3) },
-      { text: "Running", state: "pending", fillsIn: filled("Joined · 2\u00a0wk") }],
-    [{ text: "Raj Patel", detail: "CRO, Tessel" }, filled("raj@tessel.example"), foundBy(1), filled("New role · 1\u00a0mo")],
-    [{ text: "Sara Lind", detail: "VP Growth, Marrow" }, { text: "No match", state: "empty" },
-      { text: "No match", state: "empty", waterfall: { step: CLAY_WATERFALL_PROVIDERS, of: CLAY_WATERFALL_PROVIDERS } }, filled("Promoted · 5\u00a0wk")],
-  ],
-  frontRows: CLAY_FRONT_ROWS, totalRows: CLAY_TABLE_ROWS, summary: CLAY_SUMMARY,
-};
 
 /** Exact numbers an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. Each metric is a verb, since its unit already names what was counted. */
 const CLAY_MEASURED = {
@@ -197,7 +160,6 @@ type ExampleSource = Readonly<{
   caveat?: string;
   source?: HomepageExample["source"];
   backHint?: string;
-  tablePreview?: TablePreviewInput;
 }>;
 
 /**
@@ -211,7 +173,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
     cost: { amount: CLAY_LAUNCH_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01", period: SAMPLE_YEAR },
     usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
-    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Periods, sources and a work sample inside", tablePreview: CLAY_TABLE,
+    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Periods, sources and a work sample inside",
   },
   {
     slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.", headlineAccent: "every project's code",
@@ -299,7 +261,6 @@ export function homepageExamples(): HomepageExample[] {
       ...(example.caveat ? { caveat: example.caveat } : {}),
       ...(example.backHint ? { backHint: example.backHint } : {}),
       ...(example.headlineAccent ? { headlineAccent: example.headlineAccent } : {}),
-      ...(example.tablePreview ? { tablePreview: example.tablePreview } : {}),
       ...(example.source ? { source: example.source } : {}),
       // Every hand-written sample series counts what happened in each of its days or weeks.
       ...(SAMPLE_USAGE.series[entry.slug] && !example.activity ? { countsPerPeriod: true as const } : {}),

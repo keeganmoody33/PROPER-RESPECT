@@ -243,21 +243,8 @@ const NARROWEST_WIDTH = 320;
       await expect(bars.last()).toHaveCSS("background-color", brand.bars.color);
       await expect(card.locator(".card-front .activity-bars")).toHaveAttribute("role", "img");
     } else {
-      // Clay shows the product: a few rows of a table filling in, then its three published numbers in one row.
-      const table = card.getByRole("table", { name: "Lead list · job-change signal · invented rows" });
-      await expect(table).toBeVisible();
-      // Every column stays a column to a screen reader, at every width; a phone-wide card stacks the rows only to the eye.
-      await expect(table.getByRole("columnheader")).toHaveText(["Person", "Work email", "Waterfall", "Job change"]);
-      // The front shows three of the table's people, and says what the whole table came to.
-      await expect(table.getByRole("rowheader")).toHaveText(["Ana RuizVP Sales, Nimbus", "Li ChenRevOps lead, Heron", "Mo OkaforDirector, Quillon"]);
-      await expect(card.locator(".card-front .card-table-count")).toHaveText("171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row");
-      // One period for all three numbers, said once beside them.
-      const stats = card.locator(".card-front .usage-measurement-stats li");
-      await expect(stats).toHaveText(["11,800rows enriched", "52tables built", "27,600data credits used"]);
-      await expect(card.locator(".card-front .usage-measurement-note")).toHaveText("Sep 2025 – Aug 2026 · Sample numbers · how each was measured is in Details");
-      // The numbers the capability names come first, above the table they come from.
-      const [statsBottom, tableTop] = [await stats.first().evaluate(item => item.getBoundingClientRect().bottom), await table.evaluate(item => item.getBoundingClientRect().top)];
-      expect(statsBottom).toBeLessThan(tableTop);
+      // Clay publishes its numbers and nothing else: no table, no tool craft.
+      await expect(card.locator(".card-front table, .card-back table")).toHaveCount(0);
       // The disclosures are above the card and on its back, not on its front.
       await expect(card.locator(".card-front")).not.toContainText(/Synthetic sample|Owner-supplied evidence|more reported measurements/);
       // Its footer says what is behind Details, and the button carries the same words.
@@ -556,72 +543,6 @@ test("an occasional card's empty weeks draw as stubs on the baseline, so a gap r
   expect(stubs).toEqual(stubs.map(() => ({ opacity: "1", colour: barColour })));
 });
 
-const MIN_CONTRAST = 4.5;
-/** The widest a card stacks its table's rows into blocks, from the table's own container query (27.5rem). */
-const STACKED_TABLE_MAX_PX = 440;
-const FIRST_SCREEN_BOTTOM_PX = 1000;
-for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits both faces at ${width}px with every column readable and nothing scrolling sideways, on a slab like clay.com's`, async ({ page }) => {
-  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await page.evaluate(() => document.fonts.ready);
-  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
-  // The first card on a wide screen sits whole in the first screen, table and Details included.
-  if (width === DESKTOP_WIDTH) expect(await card.evaluate(element => element.getBoundingClientRect().bottom + scrollY)).toBeLessThanOrEqual(FIRST_SCREEN_BOTTOM_PX);
-  const measure = (face: "front" | "back") => card.locator(`.card-${face} .card-table-preview`).evaluate((element, minContrast) => {
-    // A computed colour is rgb() in 0-255, or color(srgb …) in 0-1 where color-mix() made it.
-    const luminance = (colour: string) => {
-      const scale = colour.startsWith("color(") ? 1 : 255;
-      const [red, green, blue] = colour.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(value => value / scale).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
-      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-    };
-    const contrast = (first: string, second: string) => {
-      const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
-      return (light + 0.05) / (dark + 0.05);
-    };
-    /** The first opaque background behind an element: its own, or an ancestor's. */
-    const backdrop = (start: Element) => {
-      for (let node: Element | null = start; node; node = node.parentElement) {
-        const fill = getComputedStyle(node).backgroundColor;
-        if (fill !== "rgba(0, 0, 0, 0)" && fill !== "transparent") return fill;
-      }
-      return "rgb(255, 255, 255)";
-    };
-    const shown = (node: Element) => node.getBoundingClientRect().width > 0 && node.checkVisibility();
-    const cells = [...element.querySelectorAll("tbody :is(th, td)")];
-    const texts = [...element.querySelectorAll("*")].filter(node => shown(node) && [...node.childNodes].some(child => child.nodeType === Node.TEXT_NODE && child.textContent!.trim()));
-    const bounds = element.closest("article")!.getBoundingClientRect();
-    const table = element.querySelector("table")!.getBoundingClientRect();
-    // Stacked, the header row is kept for screen readers in a box one pixel tall.
-    const stacked = element.querySelector("thead")!.getBoundingClientRect().height <= 1;
-    return {
-      sideways: [element.scrollWidth - element.clientWidth, document.documentElement.scrollWidth - innerWidth],
-      inCard: table.left >= bounds.left && table.right <= bounds.right,
-      hidden: cells.filter(cell => !shown(cell)).map(cell => cell.textContent),
-      cut: cells.filter(cell => cell.scrollWidth > cell.clientWidth).map(cell => cell.textContent),
-      faint: cells.filter(cell => contrast(getComputedStyle(cell).color, backdrop(cell)) < minContrast).map(cell => cell.textContent),
-      small: texts.filter(node => parseFloat(getComputedStyle(node).fontSize) < 12).map(node => node.textContent),
-      // Stacked, each cell past the first says its column beside its value; laid out as a table, the header row does.
-      labels: stacked ? [...new Set(cells.filter(cell => cell.tagName === "TD").map(cell => getComputedStyle(cell, "::before").content))] : [...element.querySelectorAll("thead th")].map(th => th.textContent),
-      highlighted: [...element.querySelectorAll("tbody tr[data-latest]")].map(row => row.querySelector("th")!.textContent),
-      key: element.querySelector(".card-table-key")?.textContent, summary: element.querySelector(".card-table-count")?.textContent,
-      headerWeight: getComputedStyle(element.querySelector("thead th")!).fontWeight,
-      slab: getComputedStyle(element).backgroundColor !== getComputedStyle(element.closest("article")!).backgroundColor,
-    };
-  }, MIN_CONTRAST);
-  const stacked = width <= STACKED_TABLE_MAX_PX;
-  const expected = {
-    sideways: [0, 0], inCard: true, hidden: [], cut: [], faint: [], small: [],
-    labels: stacked ? ['"Work email" / ""', '"Waterfall" / ""', '"Job change" / ""'] : ["Person", "Work email", "Waterfall", "Job change"],
-    highlighted: ["Mo OkaforDirector, Quillon"], key: "found it missed not asked", summary: "171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row",
-    headerWeight: "400", slab: true,
-  };
-  expect(await measure("front")).toEqual(expected);
-  await card.getByRole("button", { name: "Details", exact: true }).click();
-  // The back carries on with the two rows past the front's, so the row that filled in is the front's alone.
-  expect(await measure("back")).toEqual({ ...expected, highlighted: [] });
-});
-
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Cloudflare's orange runs from the card's top through its headline at ${width}px: white only where the text is large, the rest in a colour that reads small`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -724,23 +645,6 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`every w
   }
   expect(split).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
-
-const FILL_IN_WAIT_MS = 1000;
-for (const motion of ["no-preference", "reduce"] as const) test(`Clay's running row ${motion === "reduce" ? "shows its filled-in end state at once, without motion," : "fills in once"} when motion is ${motion}`, async ({ page }) => {
-  await page.clock.install();
-  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
-  await page.emulateMedia({ reducedMotion: motion });
-  await page.goto("/");
-  const row = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" }).getByRole("row", { name: /Quillon/ });
-  const filled = ["mo@quillon.example", "Found, provider 3 of 3 answered", "Joined · 2\u00a0wk"];
-  if (motion === "reduce") {
-    await expect(row.getByRole("cell")).toHaveText(filled);
-    return;
-  }
-  await expect(row).toContainText("Running, asking provider 2 of 3");
-  await page.clock.runFor(FILL_IN_WAIT_MS);
-  await expect(row.getByRole("cell")).toHaveText(filled);
 });
 
 const ADVANCE_MS = 8000;
@@ -852,7 +756,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`nothing
       // A visually hidden copy is a 1px clipped box, read by a screen reader and never seen.
       if (box.width <= 1 || box.height <= 1 || getComputedStyle(element).visibility === "hidden") return [];
       let [left, right] = [box.left, box.right];
-      // What a scrolling or clipping box inside the card cuts off (the Clay table's, the calendar's) is not seen past the card.
+      // What a scrolling or clipping box inside the card cuts off (the calendar's) is not seen past the card.
       for (let node = element.parentElement; node && node !== article; node = node.parentElement) {
         const style = getComputedStyle(node);
         if (style.overflowX !== "visible" || style.clipPath !== "none") { const clip = node.getBoundingClientRect(); left = Math.max(left, clip.left); right = Math.min(right, clip.right); }
@@ -892,7 +796,7 @@ test(`on a ${PHONE_WIDTH}px touch screen one tap on Play moves the slideshow on 
   await context.close();
 });
 
-/** The phone's first screen: the card starts by here, and its first table row is above the examples row held at the screen's foot. */
+/** The phone's first screen: the card starts by here, and its number is above the examples row held at the screen's foot. */
 const PHONE_CARD_TOP_PX = 300;
 test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right after the heading, and holds still`, async ({ page }) => {
   await page.clock.install();
@@ -906,14 +810,13 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   const first = await card.evaluate(article => ({
     top: article.getBoundingClientRect().top,
     numberBottom: article.querySelector(".card-front .usage-measurement-stats strong")!.getBoundingClientRect().bottom,
-    rowBottom: article.querySelector(".card-front .card-table-preview tbody tr")!.getBoundingClientRect().bottom,
     scrolled: scrollY,
   }));
   expect(first.scrolled).toBe(0);
   expect(first.top).toBeLessThanOrEqual(PHONE_CARD_TOP_PX);
   // The row's visible top edge is its bar's ruled border, just above the toggles.
   const barTop = await carousel.getByRole("group", { name: "Choose a product example" }).evaluate(group => group.parentElement!.getBoundingClientRect().top);
-  expect(first.rowBottom).toBeLessThanOrEqual(barTop);
+  expect(first.numberBottom).toBeLessThanOrEqual(barTop);
   // The card says it is a sample on its own front, so a cropped screenshot still says so.
   await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
   await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
@@ -1186,7 +1089,7 @@ test("opening More examples mounts none of the nine; each mounts when it is pick
  */
 const FEATURED_LOOK = [
   // Clay's green hero covers the header as one slab, over its warm grey second surface.
-  { name: "Clay", slug: "clay", surface: "rgb(244, 243, 240)", band: "rgb(3, 93, 68)", draws: "table" },
+  { name: "Clay", slug: "clay", surface: "rgb(244, 243, 240)", band: "rgb(3, 93, 68)", draws: "numbers" },
   { name: "GitHub", slug: "github", surface: "rgb(255, 255, 255)", band: null, draws: "calendar" },
   { name: "Cloudflare", slug: "cloudflare", surface: "rgb(255, 255, 255)", band: "rgb(255, 94, 31)", draws: "per day bars" },
   { name: "Docker", slug: "docker", surface: "rgb(249, 250, 251)", band: "rgb(15, 17, 23)", draws: "linked works" },
@@ -1218,7 +1121,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
       const face = article.querySelector<HTMLElement>(".card-front")!;
       const headline = getComputedStyle(face.querySelector(".card-headline")!);
       const bars = [...face.querySelectorAll(".activity-bars > span")];
-      const draws = face.querySelector(".card-table-preview") ? "table" : face.querySelector(".contribution-calendar") ? "calendar"
+      const draws = face.querySelector(".usage-measurement-stats") ? "numbers" : face.querySelector(".contribution-calendar") ? "calendar"
         : face.querySelector(".card-artifact-links") ? "linked works" : bars.length ? `${bars[0].getAttribute("title")!.match(/per (day|week)/)![0]} bars` : "nothing";
       // Every bit of visible text on the front, at its rendered size; the screen-reader table is not drawn.
       const walker = document.createTreeWalker(face, NodeFilter.SHOW_TEXT);
@@ -1254,7 +1157,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
       textAtLeast12: front.smallestText >= MIN_TEXT_PX, leadsWithZero: front.biggestNumber === 0,
       // The card keeps its size turned over, and its back's content ends within the target of the front's height.
       // At 1440 the card keeps its size turned over, within the target. On a phone the back carries what the front can't fit
-      // (Clay's whole table, Cloudflare's 31 values), so it may be taller; it never shrinks, and the turn keeps the card's top in place (tested below).
+      // (Cloudflare's 31 values), so it may be taller; it never shrinks, and the turn keeps the card's top in place (tested below).
       faceDifference: back.height >= front.height - 1 && (width === PHONE_WIDTH || (Math.abs(back.height - front.height) <= MAX_FACE_DIFFERENCE_PX && back.contentBottom <= front.height + MAX_FACE_DIFFERENCE_PX)),
       backLogo: back.logo, shortTargets: width === PHONE_WIDTH ? front.shortTargets : 0,
     });
@@ -1285,7 +1188,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the featured cards carry
         eyebrowCase: style(".card-front .eyebrow")!.textTransform,
         numberFont: style(".card-front .card-activity-preview > p:first-child strong, .card-front .usage-measurement-stats strong")!.fontFamily.split(",")[0].replaceAll('"', ""),
         numberColour: style(".card-front .card-activity-preview > p:first-child strong, .card-front .usage-measurement-stats strong")!.color,
-        panel: style(".card-front :is(.card-table-preview, .contribution-calendar, .card-artifact-links, .usage-chart)")!.backgroundColor,
+        panel: style(".card-front :is(.contribution-calendar, .card-artifact-links, .usage-chart)")?.backgroundColor,
       };
     });
   };
@@ -1296,8 +1199,8 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the featured cards carry
   // GitHub's biggest number is green, as on github.com, in GitHub's own served face: the card serves no Mona Sans Mono, and a system mono spaced it like code.
   expect(looks.GitHub.numberFont).toMatch(/^PRBrand-github-\w+-heading$/);
   expect(looks.GitHub.numberColour).toBe("rgb(8, 135, 43)");
-  // Clay's table a white panel on its warm grey body; Docker's linked work on its dark terminal panel; GitHub's calendar framed on white.
-  expect([looks.Clay.panel, looks.Docker.panel, looks.GitHub.panel]).toEqual(["rgb(255, 255, 255)", "rgb(14, 18, 23)", "rgb(255, 255, 255)"]);
+  // Clay draws no panel, only its number; Docker's linked work on its dark terminal panel; GitHub's calendar framed on white.
+  expect([looks.Clay.panel, looks.Docker.panel, looks.GitHub.panel]).toEqual([undefined, "rgb(14, 18, 23)", "rgb(255, 255, 255)"]);
 });
 
 test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone that it scrolls, and reads as one summary line", async ({ page }) => {
@@ -1525,7 +1428,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
     expect(await close.evaluate(button => getComputedStyle(button).backgroundColor), name).toBe(name === "Cloudflare" ? "rgb(255, 255, 255)" : detailsFill);
     await close.click();
   }
-  // What only the back holds: Cloudflare's day-by-day values, Clay's whole table, Docker's links with what each one is.
+  // What only the back holds: Cloudflare's day-by-day values, Docker's links with what each one is.
   await carousel.getByRole("button", { name: "Cloudflare", exact: true }).click();
   const cloudflare = carousel.getByRole("article", { name: "Cloudflare card" });
   await cloudflare.getByRole("button", { name: "Details", exact: true }).click();
@@ -1538,14 +1441,6 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
   await expect(everyDay.getByRole("listitem")).toHaveCount(31);
   await expect(everyDay.getByRole("listitem").first()).toHaveText("1 Aug2,840");
   await cloudflare.getByRole("button", { name: "Close details" }).click();
-  await carousel.getByRole("button", { name: "Clay", exact: true }).click();
-  const clay = carousel.getByRole("article", { name: "Clay card" });
-  await clay.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(clay.locator(".card-back .card-table-preview th[scope=col]")).toHaveText(["Person", "Work email", "Waterfall", "Job change"]);
-  // The back carries on from the front's three people with the sample's last two: the last found no address.
-  await expect(clay.locator(".card-back .card-table-preview tbody th")).toHaveText(["Raj PatelCRO, Tessel", "Sara LindVP Growth, Marrow"]);
-  await expect(clay.locator(".card-back .card-table-preview tbody tr").last()).toContainText("No match");
-  await clay.getByRole("button", { name: "Close details" }).click();
   await carousel.getByRole("button", { name: "Docker", exact: true }).click();
   const docker = carousel.getByRole("article", { name: "Docker card" });
   await docker.getByRole("button", { name: "Details", exact: true }).click();
