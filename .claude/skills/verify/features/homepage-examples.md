@@ -7,7 +7,8 @@ The homepage carousel shows sample product cards, each rendered through the real
 - `examples-chooser` picks a featured example; one tab stop, arrow keys move, Enter picks and stops the slideshow.
 - `examples-more` reveals the nine other examples, which mount only when picked.
 - `examples-slideshow` advances every 8 s only while the carousel is on screen, pauses on hover and focus, never runs under reduced motion.
-- `card-front` shows the brand header, headline band, what the owner uses it for, the data block (chart, calendar, table or linked works) and the footer.
+- `card-front` shows the brand header, headline band, what the owner uses it for, the data block (chart, calendar, table or linked works), any props line and the footer.
+- `card-credit` is the sample props line above the footer on Clay (a linked Proper Respect handle), n8n (a linked GitHub username) and Spider (plain text). Samples have no report link.
 - `card-flip` turns to the back; focus moves to the back's heading; Escape or "Close details" returns focus to "Details".
 - `card-measured` is the "How this was measured" disclosure on the back.
 
