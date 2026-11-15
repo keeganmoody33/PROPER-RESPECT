@@ -8,7 +8,9 @@ import { GITHUB_LOGIN, GITHUB_MARKETING_PATHS } from "./product-destination.ts";
 
 export const CREDIT_OTHER_HANDLE_MAX = 40;
 export const CREDIT_OTHER_PLATFORM_MAX = 30;
-export const CREDIT_INPUT_MAX = 200;
+// Room for a pasted profile link, not only a handle: a 30-letter non-Latin YouTube handle percent-encodes to about 180
+// characters before its host and any share query, so 200 cut real links short.
+export const CREDIT_INPUT_MAX = 512;
 const PROPER_RESPECT_ORIGIN = "https://proper-respect.com";
 
 type PlatformRule = Readonly<{

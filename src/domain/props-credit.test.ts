@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { creditHref, creditText, listedCredit, normalizeCredit, CREDIT_PLATFORMS, CREDIT_OTHER_HANDLE_MAX, CREDIT_OTHER_PLATFORM_MAX, type CreditPlatform } from "./props-credit";
+import { creditHref, creditInputSchema, creditText, listedCredit, normalizeCredit, CREDIT_PLATFORMS, CREDIT_OTHER_HANDLE_MAX, CREDIT_OTHER_PLATFORM_MAX, type CreditPlatform } from "./props-credit";
 
 // R03's bad-URL set, beside one good https link.
 const X_HANDLE_MAX = 15;
@@ -136,4 +136,11 @@ test("a credit reads as Props to the person and where they are", () => {
     { name: "@lecturesfrom", platform: "Proper Respect" },
     { name: "a teammate", platform: "Slack" },
   ]);
+});
+
+test("a pasted profile link for the longest non-Latin YouTube handle fits the input and saves as that handle", () => {
+  const handle = "д".repeat(30);
+  const pasted = `https://www.youtube.com/@${encodeURIComponent(handle)}?si=AbCdEfGhIjKlMnOp`;
+  expect(creditInputSchema.safeParse({ platform: "YOUTUBE", handle: pasted }).success).toBe(true);
+  expect(normalizeCredit({ platform: "YOUTUBE", handle: pasted })).toEqual({ ok: true, credit: { platform: "YOUTUBE", handle } });
 });
