@@ -8,7 +8,7 @@ import path from "node:path";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { e2eReferenceProfile } from "@/src/data/e2e-reference-profile";
 import { projectVisiblePublicProfile } from "@/src/domain/visible-public-profile";
-import type { PublicProfile } from "@/src/domain/public-profile";
+import type { ActivityModule, PublicProfile } from "@/src/domain/public-profile";
 import { createPublicReader, parseProfileReference, projectPresentation, readPublicGuide } from "../src/public-reader.js";
 import { assertLocalEnvironment, acceptedHeaders, startLoopbackServer } from "../src/transport.js";
 import { toToolResult } from "../src/server.js";
@@ -90,6 +90,48 @@ test("what a product does for its owner reaches agents as the labels visitors re
   if (result.kind !== "profile") assert.fail();
   assert.deepEqual(result.profile.cards[0].uses, ["host my code and its history", "review and merge pull requests", "ship side projects"]);
   assert.equal("uses" in result.profile.cards[1], false);
+  assert(publicToolResultSchema.safeParse(result).success);
+});
+
+test("every optional field the visitor projection emits reaches agents through the strict contract", async () => {
+  const base = measurementProfile();
+  const meta = { attributionScope: "PERSONAL" as const, capturedAt: "2026-09-21T13:14:15.000Z", freshness: "FRESH" as const, provenanceLabel: "Captured evidence" };
+  const period = { start: "2026-09-01", end: "2026-09-05" };
+  const activities: ActivityModule[] = [
+    // The days add up to 5, not the stored 523, and leave three days of the period blank.
+    { ...meta, period, kind: "contributionCalendar", total: 523, memberSince: "2020-05-17", days: [{ date: "2026-09-02", count: 1, level: 1 }, { date: "2026-09-04", count: 4, level: 3 }] },
+    { ...meta, kind: "contributionCalendar", total: 0, days: [] },
+    { ...meta, period, kind: "headlineMetrics", primary: { label: "Words", value: 5, unit: "words" }, supporting: [{ label: "Speed", value: 3, unit: "WPM" }] },
+    { ...meta, period, kind: "timeSeries", label: "Runs", unit: "per day", points: [{ date: "2026-09-01", value: 2 }] },
+    { ...meta, period, kind: "timeSeries", label: "Runs", points: [] },
+    { ...meta, period, kind: "artifactCollection", total: 1, artifacts: [{ title: "Article", url: "https://example.com/article" }] },
+    { ...meta, period, kind: "artifactCollection", total: 0, artifacts: [] },
+    { ...meta, period, kind: "reviewActivity", reviews: 3, bugsCaught: 1, severity: [{ label: "High", count: 1 }], points: [] },
+    { ...meta, period, kind: "codingActivity", primary: { label: "Sessions", value: 2 }, supporting: [{ label: "Hours", value: 1 }], days: [{ date: "2026-09-01", count: 2, level: 2 }] },
+  ];
+  const card = base.cards[0];
+  const raw: PublicProfile = {
+    ...base, profileLinks: [{ label: "Website", url: "https://example.com/" }], preferredLinkUrl: "https://example.com/",
+    cards: activities.map((activity, index) => ({
+      ...card, activity, level: "DAILY", startedAt: index === 0 ? undefined : card.startedAt,
+      cost: { amount: 12.34, currency: "USD", cadence: "MONTHLY", basis: "ESTIMATE", asOf: "2026-09-05", period },
+      primaryLink: { type: "AFFILIATE", url: "https://example.com/buy", label: "Buy" },
+      usageLink: { url: "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002", label: "DEMO" },
+    })),
+  };
+  const result = await createPublicReader({ ...options, readPublished: async () => raw })("keegan");
+  assert.equal(result.kind, "profile", JSON.stringify(result));
+  if (result.kind !== "profile") assert.fail();
+  const emitted = new Set<string>();
+  (function collect(value: unknown, path: string) {
+    if (Array.isArray(value)) return value.forEach(item => collect(item, `${path}[]`));
+    if (value && typeof value === "object") for (const [key, child] of Object.entries(value)) { emitted.add(`${path}.${key}`); collect(child, `${path}.${key}`); }
+  })(result.profile, "profile");
+  const optional = ["nameLink", "cards[].level", "cards[].uses", "cards[].startedAt", "cards[].startDateNote", "cards[].measurements", "cards[].cost.period",
+    "cards[].primaryLink.disclosure", "cards[].usageLink", "cards[].activity.period", "cards[].activity.note", "cards[].activity.reportedTotal",
+    "cards[].activity.memberSinceYear", "cards[].activity.coverageNote", "cards[].activity.suppliedRange", "cards[].activity.emptyNote",
+    "cards[].activity.label", "cards[].activity.unit", "cards[].activity.days", "cards[].activity.primary.unit"];
+  assert.deepEqual(optional.filter(key => !emitted.has(`profile.${key}`)), []);
   assert(publicToolResultSchema.safeParse(result).success);
 });
 
