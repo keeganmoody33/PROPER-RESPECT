@@ -14,7 +14,7 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart"
   | "--brand-card-number-font" | "--brand-card-number-colour" | "--brand-card-panel" | "--brand-card-panel-text" | "--brand-card-panel-border"
   | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
-  | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted", string>>;
+  | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -181,6 +181,11 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   // A measured site's labels with no measured case stay as typed: the house uppercase is the house's, not the brand's.
   if (measured) kit["--brand-card-label-case"] = CSS_CASE[measured.labelCase?.value ?? "as typed"];
   if (measured?.labelTrackingEm) kit["--brand-card-label-tracking"] = `${measured.labelTrackingEm.value}em`;
+  // The use chips and the footer note are set like the site's buttons, its sentence-length controls, not its tiniest labels.
+  const chipCase = measuredButton?.case ?? measured?.labelCase?.value;
+  if (measured) kit["--brand-card-chip-case"] = CSS_CASE[chipCase ?? "as typed"];
+  const chipFont = measuredButton?.font ?? measured?.labelFont?.value;
+  if (chipFont) kit["--brand-card-chip-font"] = measuredFace(chipFont, guide);
 
   // A site whose heading sits on a full-bleed colour shows that colour as a band across the card's top, not as its whole surface.
   const hero = measured?.hero?.value;

@@ -59,6 +59,13 @@ describe("what a card makes of the feel", () => {
     expect(brandCardKit(undefined, WHITE, INK)["--brand-card-label-case"]).toBeUndefined();
   });
 
+  it("sets the use chips and footer note in the site's button case and face, not its small-label case", () => {
+    const clay = kit({ labels: { case: "uppercase" }, primaryButton: { fill: "#cbd810", label: "#000000", case: "as written", font: { generic: "sans-serif" } } });
+    expect([clay["--brand-card-label-case"], clay["--brand-card-chip-case"], clay["--brand-card-chip-font"]])
+      .toEqual(["uppercase", "none", 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif']);
+    expect(kit({ labels: { case: "uppercase" } })["--brand-card-chip-case"]).toBe("uppercase");
+  });
+
   it("sets the hero number in the site's number face, and in its colour only where that colour reaches 3:1", () => {
     const github = kit({ number: { font: { family: "Mona Sans Mono", generic: "monospace" }, colour: "#08872b" } });
     // The card serves no Mona Sans Mono, so the figures stay in the brand's own served face rather than a system mono.

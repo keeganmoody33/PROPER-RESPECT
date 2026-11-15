@@ -191,9 +191,9 @@ main {
 }
 
 .product-card :is(.card-footer > span, .card-uses li) {
-  font-family: var(--brand-card-label-font);
+  font-family: var(--brand-card-chip-font, var(--brand-card-label-font));
   letter-spacing: var(--brand-card-label-tracking);
-  text-transform: var(--brand-card-label-case);
+  text-transform: var(--brand-card-chip-case, var(--brand-card-label-case));
 }
 
 .product-card:nth-child(4n + 2),
