@@ -37,5 +37,26 @@ The 390 captures of n8n and Spider are cut at the foot by the homepage's fixed e
 | At 390 every credit link is at least 44px tall. | Passed | 44px for each handle link and the report link; at 1440 they are text-height (15px and 19.2px), as other card links are on desktop. |
 | Credit text has at least 4.5:1 contrast against the surface behind it. | Passed | 13.27 (private Clay), 18.93 (Clay sample), 17.34 (n8n), 18.45 (Spider), 15.48 (GitHub profile). |
 | The credit sits just above the footer and causes no overflow or sideways scroll. | Passed | 12.8px gap to the footer in every capture; `overflow` and `sidewaysScroll` false. |
-| The credit reads well on all fourteen homepage cards. | Untested here | Only three samples carry a credit. The other eleven render no credit line, which `src/data/homepage-examples.test.ts` asserts, and the fourteen-card 44px and featured-look e2e checks pass. |
-| Dark theme. | Untested here | Captured in light only. The credit inherits the card's own text colour, and the existing theme e2e checks pass. |
+| The credit reads well on all fourteen homepage cards, at worst-case lengths, at 1440, 390 and 320. | Passed, with one note | Worst-case pass below. Every card showed its credit inside the front, at least 12px, with no short tap target, no sideways scroll, and contrast from 6.26:1 (Claude Code) to 21:1. A long handle with no spaces wraps inside itself: at hyphens first, and a 100-character LinkedIn slug wherever it must. |
+| The credit and its report link read well on a real card with the longest handle. | Passed | `worst-keegan-linkedin-100-320.png`: the slug wraps over four lines inside the card, and both links stay 44px tall. |
+| Dark theme. | Untested here | Captured in light only. The credit takes the card's own text colour, and the existing theme e2e checks pass. |
+
+## Worst-case pass
+
+At `a45e3b9`, a throwaway edit, not committed, gave all fourteen homepage examples a credit, rotating through eight at each platform's longest: a 39-character Proper Respect handle (linked), a 100-character LinkedIn slug, an Other credit at its 40 and 30 character caps, a 15-character X handle, a 30-character YouTube handle, a 30-character Instagram username, a 32-character Substack handle and a 39-character GitHub username. The reference profile's GitHub card took the 100-character LinkedIn slug, with its report link. The doctor reported the two edited data files as the only changes. Each front was measured at 1440×1000, 390×844 and 320×700 with the verify skill's floors snippet; `worst.json` holds all 45 rows.
+
+| Measure | Result |
+| --- | --- |
+| Credit shown inside the front | 45 of 45 |
+| Text under 12px | none |
+| Tap targets under 44px at 390 and 320 | none |
+| Sideways scroll | none |
+| Credit contrast | 6.26:1 to 21:1 |
+| Words broken across lines | Only the 39-character Proper Respect and GitHub handles at 320, which wrap at a hyphen, and the 100-character LinkedIn slug, which has no other place to wrap. |
+| Cut text | "Cloudflare", "n8n" and GitHub's calendar summary, which are visually hidden or scrolling elements that report the same without a credit. |
+
+| File | What it shows |
+| --- | --- |
+| `worst-clay-proper-respect-39-320.png` | A 39-character Proper Respect handle at 320, wrapping at its hyphen. |
+| `worst-cloudflare-other-40-30-320.png` | Other at both caps at 320, on two lines. |
+| `worst-keegan-linkedin-100-320.png` | A 100-character LinkedIn slug with the report link at 320. |
