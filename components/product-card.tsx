@@ -23,6 +23,8 @@ import { useReducedMotion } from "./use-reduced-motion";
 import { dayMonthYear, formatPeriod, freshnessNote, monthYear as monthYearOf, yearOf } from "@/src/domain/format-period";
 import { activityHeadline, cadenceEnd, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
 import { productUseLabels } from "@/src/domain/product-uses";
+import { creditHref, creditText, listedCredit } from "@/src/domain/props-credit";
+import { reportHref } from "@/src/domain/report-link";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
@@ -524,6 +526,7 @@ export function ProductCard({
   audience = "visitor",
   expandedActivity = false,
   privateUsage,
+  profileHandle,
   deferBrandAssets = false,
   siteTraits,
   backHint,
@@ -541,6 +544,8 @@ export function ProductCard({
   audience?: "owner" | "visitor";
   expandedActivity?: boolean;
   privateUsage?: PrivateUsageCard;
+  /** The published profile the card is shown on. A credit then offers a report naming that page and card. */
+  profileHandle?: string;
   /** Lays the card out without fetching its brand fonts or logo, for a card nobody can see yet. */
   deferBrandAssets?: boolean;
   /** What measuring the product's own site added to its brand. Used only beside that same brand. */
@@ -586,6 +591,10 @@ export function ProductCard({
     .find(([applies]) => applies)?.[1] ?? backHint ?? backSays;
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
   const pastUse = noLongerInUse(card);
+  const credit = brandPreview ? undefined : listedCredit(card.credit);
+  const creditWords = credit && creditText(credit);
+  const creditLink = credit && creditHref(credit);
+  const creditReport = credit && profileHandle ? reportHref(`Report credit on proper-respect.com/${profileHandle} · ${card.product.name}`) : undefined;
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
@@ -740,6 +749,13 @@ export function ProductCard({
         ) : null}
         {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
         {cost && <p className="card-cost">{cost}</p>}
+        {creditWords && <div className="card-credit">
+          <p className="card-credit-line">Props to {creditLink ? (credit.platform === "PROPER_RESPECT"
+            ? <a href={creditLink}>{creditWords.name}</a>
+            : <a href={creditLink} target="_blank" rel="noopener noreferrer" aria-label={`${creditWords.name} on ${creditWords.platform} (opens in a new tab)`}>{creditWords.name}</a>)
+            : creditWords.name} · {creditWords.platform}</p>
+          {creditReport && <a className="card-credit-report" href={creditReport}>Not you? Report</a>}
+        </div>}
 
         <div className="card-footer">
           <span id={`${cardId}-footer`} className={ownerGoTo ? "card-go-to" : undefined}><WholeWords text={footerLabel} /></span>

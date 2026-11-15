@@ -9,7 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
 import { productUseOptions, USE_OTHER_MAX, type ProductUses } from "@/src/domain/product-uses";
-import { CREDIT_OTHER_PLATFORM_MAX, CREDIT_PLATFORMS, normalizeCredit, type CreditPlatform } from "@/src/domain/props-credit";
+import { CREDIT_OTHER_PLATFORM_MAX, CREDIT_PLATFORMS, listedCredit, normalizeCredit, type CreditPlatform } from "@/src/domain/props-credit";
 import { cardStatusLabel, isRelationshipLevel, levelDefinition, levelStatus, RELATIONSHIP_LEVELS } from "@/src/domain/relationship-level";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
@@ -297,7 +297,7 @@ export function InventoryDetails({ item, onSave, brandEnrichmentAvailable, focus
 
 function InventoryCard({ item, index, expandedActivity = false }: { item: Item; index: number; expandedActivity?: boolean }) {
   return <ProductCard audience="owner" index={index} expandedActivity={expandedActivity} relationshipConfirmed={isRelationshipConfirmed(item.prop)} goTo={item.prop.goTo} card={{
-    product: item.product, status: item.prop.status, level: item.prop.level, headline: item.prop.headline, uses: item.prop.uses, note: item.prop.note,
+    product: item.product, status: item.prop.status, level: item.prop.level, headline: item.prop.headline, uses: item.prop.uses, credit: listedCredit(item.prop.credit), note: item.prop.note,
     startedAt: item.prop.startedAt, activity: item.prop.activity, cost: item.prop.cost,
     primaryLink: privateCardPrimaryLink({
       product: item.product,

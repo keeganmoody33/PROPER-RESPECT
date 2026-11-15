@@ -9,6 +9,7 @@ import { ProductCard } from "@/components/product-card";
 import { getPublicMailboxAggregate } from "@/src/data/get-public-mailbox-aggregate";
 import { getPublicProfile } from "@/src/data/get-public-profile";
 import { publicPageMetadata } from "@/src/server/public-site";
+import { reportHref } from "@/src/domain/report-link";
 import styles from "./profile.module.css";
 
 type ProfilePageProps = {
@@ -73,6 +74,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 card={card}
                 index={index}
                 goTo={card.goTo}
+                profileHandle={profile.handle}
                 today={today}
               />
             ))}
@@ -86,7 +88,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <div>
           <span>@{profile.handle}</span>
         </div>
-        <a href={`mailto:33@lecturesfrom.com?subject=${encodeURIComponent(`Report proper-respect.com/${profile.handle}`)}`}>
+        <a href={reportHref(`Report proper-respect.com/${profile.handle}`)}>
           Report this page
         </a>
         <Link href="/app/collection">Open your private collection →</Link>

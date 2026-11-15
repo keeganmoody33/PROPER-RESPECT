@@ -433,6 +433,9 @@ for (const width of [1280, 390]) test(`an owner credits who put them on a produc
   await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
   await expect(question.getByRole("combobox", { name: "Platform", exact: true })).toHaveValue("X");
   await expect(question.getByLabel("Their handle", { exact: true })).toHaveValue("jack");
+  const front = page.locator(".card-front");
+  await expect(front.locator(".card-credit-line")).toHaveText("Props to @jack · X");
+  await expect(front.getByRole("link", { name: "Not you? Report", exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 
@@ -446,4 +449,5 @@ for (const width of [1280, 390]) test(`an owner credits who put them on a produc
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
   await expect(question.getByRole("combobox", { name: "Platform", exact: true })).toHaveValue("PROPER_RESPECT");
   await expect(question.getByLabel("Their handle", { exact: true })).toHaveValue("");
+  await expect(page.locator(".card-front .card-credit")).toHaveCount(0);
 });
