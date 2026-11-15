@@ -127,7 +127,7 @@ const SAMPLE_YEAR = { start: "2025-09-01", end: "2026-08-31" } as const;
  * A Clay table the way clay.com draws its own: a lead list from a job-change signal, each column marked with its kind, the people
  * it found with their new titles, a work email found by a waterfall of three providers tried in turn, and an AI column naming each
  * change. Invented people at invented companies on reserved .example domains, and providers counted rather than named: no real
- * company, person or vendor. The front shows three of the five rows, out of a 214-row table; the back adds the rest, one of which found no address.
+ * company, person or vendor. The front shows three of the five rows, out of a 214-row table; the back carries on with the other two, one of which found no address.
  */
 const filled = (text: string) => ({ text, state: "filled" as const });
 const foundBy = (step: number) => ({ text: "Found", state: "filled" as const, waterfall: { step, of: CLAY_WATERFALL_PROVIDERS } });

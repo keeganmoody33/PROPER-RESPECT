@@ -812,7 +812,7 @@ const waterfallLeads = {
   frontRows: 2, totalRows: 214, summary: "171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row",
 } as const;
 
-test("a table shows its column kinds as glyphs, a waterfall as a status pill and its providers in turn with a key to the marks in its title bar, and what the whole table came to", () => {
+test("a table shows its column kinds as glyphs, a waterfall as a status pill and its providers in turn with a key to the marks in its title bar, the back carrying on from the front, and what the whole table came to", () => {
   const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: waterfallLeads })));
   const front = $(".card-front .card-table-preview"), back = $(".card-back .card-table-preview");
   // Each kind's glyph sits in its header, hidden from screen readers, which hear the label.
@@ -823,9 +823,11 @@ test("a table shows its column kinds as glyphs, a waterfall as a status pill and
     const pill = $(cell).find(".table-pill");
     return `${pill.attr("data-state")}:${pill.text()}:${$(cell).find(".table-steps i").map((_, step) => $(step).attr("data-step")).get().join(",")}:${$(cell).find(".visually-hidden").text()}`;
   };
-  expect(back.find("tbody td:last-child").map((_, cell) => waterfall(cell)).get()).toEqual([
+  expect(front.find("tbody td:last-child").map((_, cell) => waterfall(cell)).get()).toEqual([
     "filled:Found:missed,answered,unasked:, provider 2 of 3 answered",
     "pending:Running:asking,unasked,unasked:, asking provider 1 of 3",
+  ]);
+  expect(back.find("tbody td:last-child").map((_, cell) => waterfall(cell)).get()).toEqual([
     "empty:No match:missed,missed,missed:, none of 3 providers answered",
   ]);
   // A sighted visitor gets the marks' meaning in a key in the title bar, on both faces; a screen reader already hears it in each cell.
@@ -833,8 +835,8 @@ test("a table shows its column kinds as glyphs, a waterfall as a status pill and
   expect([key(front), key(back)]).toEqual([
     ["true:answered,missed,unasked:found it missed not asked"], ["true:answered,missed,unasked:found it missed not asked"],
   ]);
-  // The front shows its first rows and the back them all; both say what the whole table came to.
-  expect([front.find("tbody tr").length, back.find("tbody tr").length]).toEqual([2, 3]);
+  // The front shows its first rows and the back carries on from them, its row numbers counting on; both say what the whole table came to.
+  expect([front.find("tbody tr").length, back.find("tbody tr").length, back.find("table").attr("style")]).toEqual([2, 1, "counter-reset:preview-row 2"]);
   expect([front.find(".card-table-count").text(), back.find(".card-table-count").text()]).toEqual([waterfallLeads.summary, waterfallLeads.summary]);
 });
 

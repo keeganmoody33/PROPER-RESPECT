@@ -618,7 +618,8 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's 
   };
   expect(await measure("front")).toEqual(expected);
   await card.getByRole("button", { name: "Details", exact: true }).click();
-  expect(await measure("back")).toEqual(expected);
+  // The back carries on with the two rows past the front's, so the row that filled in is the front's alone.
+  expect(await measure("back")).toEqual({ ...expected, highlighted: [] });
 });
 
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Cloudflare's orange runs from the card's top through its headline at ${width}px: white only where the text is large, the rest in a colour that reads small`, async ({ page }) => {
@@ -1010,7 +1011,7 @@ const FEATURED_LOOK = [
   { name: "Firecrawl", slug: "firecrawl", surface: "rgb(249, 249, 249)", band: null, draws: "per week bars" },
 ] as const;
 const MAX_FACE_DIFFERENCE_PX = 80;
-const MIN_BAND_CONTRAST = 4.5;
+const MIN_BAND_CONTRAST = 4.5, MIN_LARGE_BAND_CONTRAST = 3;
 
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards hold their look at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
@@ -1049,7 +1050,9 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
       const targets = [...face.querySelectorAll("a, button")].map(target => target.getBoundingClientRect()).filter(box => box.width && box.height < minTap).length;
       return {
         surface: getComputedStyle(article).backgroundColor, band: article.hasAttribute("data-band") ? headline.backgroundColor : null,
+        // A headline at WCAG's large size (24px, or bold at 18.66px) needs 3:1 on its band; a smaller one needs 4.5:1.
         bandContrast: article.hasAttribute("data-band") ? contrast(headline.color, headline.backgroundColor) : null,
+        bandLarge: parseFloat(headline.fontSize) >= 24 || (parseFloat(headline.fontWeight) >= 700 && parseFloat(headline.fontSize) >= 18.66),
         headlineFace: headline.fontFamily.split(",")[0].replaceAll('"', ""), nameFace: getComputedStyle(face.querySelector("h2")!).fontFamily.split(",")[0].replaceAll('"', ""),
         draws, smallestText: Math.min(...sizes), biggestNumber: Math.max(...numbers), shortTargets: targets,
         height: article.getBoundingClientRect().height,
@@ -1065,7 +1068,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
     looks.push({
       name: look.name, surface: front.surface, band: front.band, draws: front.draws,
       faces: front.headlineFace.startsWith(`PRBrand-${look.slug}-`) && front.headlineFace.endsWith("-heading") && front.nameFace === front.headlineFace,
-      bandReadable: front.bandContrast === null || front.bandContrast >= MIN_BAND_CONTRAST,
+      bandReadable: front.bandContrast === null || front.bandContrast >= (front.bandLarge ? MIN_LARGE_BAND_CONTRAST : MIN_BAND_CONTRAST),
       textAtLeast12: front.smallestText >= MIN_TEXT_PX, leadsWithZero: front.biggestNumber === 0,
       // The card keeps its size turned over, and its back's content ends within the target of the front's height.
       // At 1440 the card keeps its size turned over, within the target. On a phone the back carries what the front can't fit
@@ -1313,7 +1316,8 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
       return { gap: Math.round(box.bottom - last) };
     });
     expect((found[name] as { gap: number }).gap, name).toBeLessThanOrEqual(MAX_BACK_GAP_PX);
-    expect(await close.evaluate(button => getComputedStyle(button).backgroundColor), name).toBe(detailsFill);
+    // Close details is the brand's button, except where its fill is the slab's own colour: there it takes the card's surface, as Cloudflare's hero button is white.
+    expect(await close.evaluate(button => getComputedStyle(button).backgroundColor), name).toBe(name === "Cloudflare" ? "rgb(255, 255, 255)" : detailsFill);
     await close.click();
   }
   // What only the back holds: Cloudflare's day-by-day values, Clay's whole table, Docker's links with what each one is.
@@ -1328,8 +1332,8 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
   const clay = carousel.getByRole("article", { name: "Clay card" });
   await clay.getByRole("button", { name: "Details", exact: true }).click();
   await expect(clay.locator(".card-back .card-table-preview th[scope=col]")).toHaveText(["Person", "Work email", "Waterfall", "Job change"]);
-  // The back holds the whole sample, five rows to the front's three: the last found no address.
-  await expect(clay.locator(".card-back .card-table-preview tbody tr")).toHaveCount(5);
+  // The back carries on from the front's three people with the sample's last two: the last found no address.
+  await expect(clay.locator(".card-back .card-table-preview tbody th")).toHaveText(["Raj PatelCRO, Tessel", "Sara LindVP Growth, Marrow"]);
   await expect(clay.locator(".card-back .card-table-preview tbody tr").last()).toContainText("No match");
   await clay.getByRole("button", { name: "Close details" }).click();
   await carousel.getByRole("button", { name: "Docker", exact: true }).click();

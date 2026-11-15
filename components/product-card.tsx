@@ -365,18 +365,22 @@ function WaterfallKey() {
 
 /**
  * A few rows of a table the product makes, drawn as a real table: a row number in the gutter, the row filled in last highlighted,
- * long cells wrapping rather than cut short. A narrow card stacks each row into a block, every cell beside its column's label.
+ * long cells wrapping rather than cut short. The back carries on with the rows the front has no room for. A narrow card stacks
+ * each row into a block, every cell beside its column's label.
  */
 function TablePreviewBlock({ preview, shown, full = false }: { preview: TablePreview; shown: boolean; full?: boolean }) {
   const captionId = useId();
   const filledIn = useFilledIn(shown);
   const cellShown = (cell: TablePreviewCell) => filledIn && cell.fillsIn ? cell.fillsIn : cell;
-  const rows = full ? preview.rows : preview.rows.slice(0, preview.frontRows);
+  // The back carries on from the rows the front shows, its row numbers counting on; with none left over it shows them all.
+  const onFront = preview.frontRows ?? preview.rows.length, rest = preview.rows.slice(onFront);
+  const carriesOn = full && rest.length > 0;
+  const rows = full ? (carriesOn ? rest : preview.rows) : preview.rows.slice(0, onFront);
   const hasWaterfall = preview.columns.some(column => "kind" in column && column.kind === "waterfall");
   const count = preview.summary ?? (!full && preview.totalRows ? `${rows.length} of ${fullNumber(preview.totalRows)} rows` : undefined);
   return (
     <div className="card-table-preview" role="region" tabIndex={0} aria-labelledby={captionId} data-full={full ? "" : undefined}>
-      <table>
+      <table style={carriesOn ? { counterReset: `preview-row ${onFront}` } : undefined}>
         <caption id={captionId}><span className="card-table-title"><span><WholeWords text={preview.caption} /></span>{hasWaterfall && <WaterfallKey />}</span></caption>
         <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined}>
           {"kind" in column && column.kind && <ColumnGlyph kind={column.kind} />}{column.label}</th>)}</tr></thead>
