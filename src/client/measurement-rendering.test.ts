@@ -47,7 +47,8 @@ describe("exact public measurement rendering", () => {
     const html = renderToStaticMarkup(createElement(PublicMeasurements, { measurements: [first, projected("86")], compact: true }));
     // Any one HTML tag, so only the visible text is left: matches "<p>" and "</strong>", leaves "2,140,000" alone.
     // https://regex101.com/?regex=%3C%5B%5E%3E%5D%2B%3E&testString=%3Cp%3E2%2C140%2C000%3C%2Fstrong%3E
-    const text = html.replace(/<[^>]+>/g, "|").split("|").filter(Boolean);
+    // A number's group separators are set in their own span inside it, part of the same number.
+    const text = html.replace(/<span class="figure-separator">([,.])<\/span>/g, "$1").replace(/<[^>]+>/g, "|").split("|").filter(Boolean);
     expect(text).toEqual([
       "2,140,000", "input tokens", "Sample", "86", "input tokens",
       "9 Sep 2001 · Rows marked Sample are invented, not account activity; the rest are owner-reported, not verified · includes a baseline, which is not new activity · how each was measured is in Details",

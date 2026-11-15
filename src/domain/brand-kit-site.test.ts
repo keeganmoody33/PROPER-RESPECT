@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandCardKit, brandMark } from "./brand-kit";
+import { brandCardKit, brandMark, contrast } from "./brand-kit";
 import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "@/src/data/homepage-brands";
 
 /** Each homepage brand's kit with its measured site file, on the card colours the provider gave it. */
@@ -143,13 +143,38 @@ describe("the hero band", () => {
     expect(bands).toEqual({ clay: ["#035d44", "#ffffff"], cloudflare: ["#ff5e1f", "#262626"], docker: ["#0f1117", "#ffffff"] });
   });
 
-  it("covers the card's whole header when the hero runs flush to the page, and the body then takes the site's second surface", () => {
+  it("covers the card's whole header, rounded or square, and the body then takes the site's second surface", () => {
     const slabs = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).flatMap(slug => {
       const { "--brand-card-slab": slab, "--brand-card-slab-body": body } = kit(slug);
       return slab ? [[slug, [slab, body]]] : [];
     }));
-    // Clay's green and Docker's dark hero run square to the edge of what holds them; Cloudflare's rounded, inset slab stays a band.
-    // Under Clay's green the body is its warm grey second surface; Docker measured no light second surface, so its body stays as is.
-    expect(slabs).toEqual({ clay: ["#035d44", "#f4f3f0"], docker: ["#0f1117", undefined] });
+    // Under Clay's green the body is its warm grey second surface; Docker and Cloudflare measured none, so theirs stays as is.
+    expect(slabs).toEqual({ clay: ["#035d44", "#f4f3f0"], cloudflare: ["#ff5e1f", undefined], docker: ["#0f1117", undefined] });
+  });
+
+  it("sets its large headline in white wherever white passes 3:1 as large text, and its small text in the label that passes 4.5:1", () => {
+    const large = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).flatMap(slug => {
+      const { "--brand-card-band": band, "--brand-card-band-large-text": text, "--brand-card-band-text": label } = kit(slug);
+      return band ? [[slug, [text, label, Math.floor(contrast(text!, band) * 100) / 100]]] : [];
+    }));
+    // White on Cloudflare's orange is 3.05:1: its hero heading's white, at a headline's size; the eyebrow and buttons keep #262626.
+    expect(large).toEqual({ clay: ["#ffffff", "#ffffff", 7.91], cloudflare: ["#ffffff", "#262626", 3.05], docker: ["#ffffff", "#ffffff", 18.87] });
+    // A pale hero that white can't read on at any size keeps its label colour for the headline too.
+    const pale = { ...HOMEPAGE_SITE_TRAITS.cloudflare!, traits: { ...HOMEPAGE_SITE_TRAITS.cloudflare!.traits, hero: { value: { kind: "colour" as const, hex: "#ffd84d", radiusPx: 16 }, from: "backdrop behind the first heading" as const } } };
+    const paleKit = brandCardKit(HOMEPAGE_BRANDS.cloudflare, "#ffffff", "#262626", pale);
+    expect([paleKit["--brand-card-band-large-text"], paleKit["--brand-card-band-text"]]).toEqual(["#262626", "#262626"]);
+  });
+
+  it("sets the logo on a tile of the card's surface when the logo's own colour would vanish into the slab", () => {
+    // Cloudflare's cloud is #ff5f08 on a #ff5e1f slab; Clay's and Docker's logos read on theirs.
+    expect(kits("--brand-card-logo-tile")).toEqual(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, slug === "cloudflare" ? "#ffffff" : undefined])));
+  });
+
+  it("gives a button on the slab the card's surface when the brand's own fill would vanish into it, as Cloudflare's hero button is white", () => {
+    const onSlab = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).flatMap(slug => {
+      const { "--brand-card-slab-button-fill": fill, "--brand-card-slab-button-text": label } = kit(slug);
+      return fill ? [[slug, [fill, label]]] : [];
+    }));
+    expect(onSlab).toEqual({ cloudflare: ["#ffffff", "#262626"] });
   });
 });

@@ -244,13 +244,13 @@ const NARROWEST_WIDTH = 320;
       await expect(card.locator(".card-front .activity-bars")).toHaveAttribute("role", "img");
     } else {
       // Clay shows the product: a few rows of a table filling in, then its three published numbers in one row.
-      const table = card.getByRole("table", { name: "Lead list · from a job-change signal · invented sample rows" });
+      const table = card.getByRole("table", { name: "Lead list · job-change signal · invented rows" });
       await expect(table).toBeVisible();
-      // A phone-wide card leaves out the AI column, so the address and the waterfall that found it stay in view.
-      await expect(table.getByRole("columnheader")).toHaveText(width === DESKTOP_WIDTH ? ["Company", "Work email", "Waterfall", "AI: signal"] : ["Company", "Work email", "Waterfall"]);
-      // The front shows four of the table's rows, and says how much of the whole table they are.
-      await expect(table.getByRole("rowheader")).toHaveText(["Nimbus", "Heron", "Quillon", "Tessel"]);
-      await expect(card.locator(".card-front .card-table-count")).toHaveText("4 of 214 rows · 2.3 credits a row this year");
+      // Every column stays a column to a screen reader, at every width; a phone-wide card stacks the rows only to the eye.
+      await expect(table.getByRole("columnheader")).toHaveText(["Person", "Work email", "Waterfall", "Job change"]);
+      // The front shows three of the table's people, and says what the whole table came to.
+      await expect(table.getByRole("rowheader")).toHaveText(["Ana RuizVP Sales, Nimbus", "Li ChenRevOps lead, Heron", "Mo OkaforDirector, Quillon"]);
+      await expect(card.locator(".card-front .card-table-count")).toHaveText("171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row");
       // One period for all three numbers, said once beside them.
       const stats = card.locator(".card-front .usage-measurement-stats li");
       await expect(stats).toHaveText(["11,800rows enriched", "52tables built", "27,600data credits used"]);
@@ -556,18 +556,19 @@ test("an occasional card's empty weeks draw as stubs on the baseline, so a gap r
   expect(stubs).toEqual(stubs.map(() => ({ opacity: "1", colour: barColour })));
 });
 
-const CLAY_CAPTION = "Lead list · from a job-change signal · invented sample rows";
 const MIN_CONTRAST = 4.5;
-for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits its card at ${width}px with no cell cut short, on a slab like clay.com's`, async ({ page }) => {
+/** The widest a card stacks its table's rows into blocks, from the table's own container query (27.5rem). */
+const STACKED_TABLE_MAX_PX = 440;
+const FIRST_SCREEN_BOTTOM_PX = 1000;
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's table fits both faces at ${width}px with every column readable and nothing scrolling sideways, on a slab like clay.com's`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
   const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
-  const box = card.getByRole("region", { name: CLAY_CAPTION });
-  await expect(box).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  const fit = await box.evaluate((element, minContrast) => {
+  // The first card on a wide screen sits whole in the first screen, table and Details included.
+  if (width === DESKTOP_WIDTH) expect(await card.evaluate(element => element.getBoundingClientRect().bottom + scrollY)).toBeLessThanOrEqual(FIRST_SCREEN_BOTTOM_PX);
+  const measure = (face: "front" | "back") => card.locator(`.card-${face} .card-table-preview`).evaluate((element, minContrast) => {
     // A computed colour is rgb() in 0-255, or color(srgb …) in 0-1 where color-mix() made it.
     const luminance = (colour: string) => {
       const scale = colour.startsWith("color(") ? 1 : 255;
@@ -586,20 +587,110 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's 
       }
       return "rgb(255, 255, 255)";
     };
-    const cells = [...element.querySelectorAll("th, td")].filter(cell => cell.getBoundingClientRect().width > 0);
-    const cut = cells.filter(cell => cell.scrollWidth > cell.clientWidth).map(cell => cell.textContent);
-    const faint = cells.filter(cell => contrast(getComputedStyle(cell).color, backdrop(cell)) < minContrast).map(cell => cell.textContent);
-    const small = cells.filter(cell => parseFloat(getComputedStyle(cell).fontSize) < 12).map(cell => cell.textContent);
+    const shown = (node: Element) => node.getBoundingClientRect().width > 0 && node.checkVisibility();
+    const cells = [...element.querySelectorAll("tbody :is(th, td)")];
+    const texts = [...element.querySelectorAll("*")].filter(node => shown(node) && [...node.childNodes].some(child => child.nodeType === Node.TEXT_NODE && child.textContent!.trim()));
     const bounds = element.closest("article")!.getBoundingClientRect();
     const table = element.querySelector("table")!.getBoundingClientRect();
-    const highlighted = [...element.querySelectorAll("tbody tr[data-latest]")].map(row => row.querySelector("th")!.textContent);
-    const headerWeight = getComputedStyle(element.querySelector("thead th")!).fontWeight;
-    return { cut, faint, small, wrapperScrolls: element.scrollWidth > element.clientWidth, inCard: table.left >= bounds.left && table.right <= bounds.right,
-      columns: element.querySelectorAll("thead th").length - [...element.querySelectorAll("thead th")].filter(th => !th.getBoundingClientRect().width).length,
-      highlighted, headerWeight, slab: getComputedStyle(element).backgroundColor !== getComputedStyle(element.closest("article")!).backgroundColor };
+    // Stacked, the header row is kept for screen readers in a box one pixel tall.
+    const stacked = element.querySelector("thead")!.getBoundingClientRect().height <= 1;
+    return {
+      sideways: [element.scrollWidth - element.clientWidth, document.documentElement.scrollWidth - innerWidth],
+      inCard: table.left >= bounds.left && table.right <= bounds.right,
+      hidden: cells.filter(cell => !shown(cell)).map(cell => cell.textContent),
+      cut: cells.filter(cell => cell.scrollWidth > cell.clientWidth).map(cell => cell.textContent),
+      faint: cells.filter(cell => contrast(getComputedStyle(cell).color, backdrop(cell)) < minContrast).map(cell => cell.textContent),
+      small: texts.filter(node => parseFloat(getComputedStyle(node).fontSize) < 12).map(node => node.textContent),
+      // Stacked, each cell past the first says its column beside its value; laid out as a table, the header row does.
+      labels: stacked ? [...new Set(cells.filter(cell => cell.tagName === "TD").map(cell => getComputedStyle(cell, "::before").content))] : [...element.querySelectorAll("thead th")].map(th => th.textContent),
+      highlighted: [...element.querySelectorAll("tbody tr[data-latest]")].map(row => row.querySelector("th")!.textContent),
+      key: element.querySelector(".card-table-key")?.textContent, summary: element.querySelector(".card-table-count")?.textContent,
+      headerWeight: getComputedStyle(element.querySelector("thead th")!).fontWeight,
+      slab: getComputedStyle(element).backgroundColor !== getComputedStyle(element.closest("article")!).backgroundColor,
+    };
   }, MIN_CONTRAST);
-  expect(fit).toEqual({ cut: [], faint: [], small: [], wrapperScrolls: false, inCard: true, columns: width === DESKTOP_WIDTH ? 4 : 3,
-    highlighted: ["Quillon"], headerWeight: "400", slab: true });
+  const stacked = width <= STACKED_TABLE_MAX_PX;
+  const expected = {
+    sideways: [0, 0], inCard: true, hidden: [], cut: [], faint: [], small: [],
+    labels: stacked ? ['"Work email" / ""', '"Waterfall" / ""', '"Job change" / ""'] : ["Person", "Work email", "Waterfall", "Job change"],
+    highlighted: ["Mo OkaforDirector, Quillon"], key: "found it missed not asked", summary: "171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row",
+    headerWeight: "400", slab: true,
+  };
+  expect(await measure("front")).toEqual(expected);
+  await card.getByRole("button", { name: "Details", exact: true }).click();
+  // The back carries on with the two rows past the front's, so the row that filled in is the front's alone.
+  expect(await measure("back")).toEqual({ ...expected, highlighted: [] });
+});
+
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Cloudflare's orange runs from the card's top through its headline at ${width}px: white only where the text is large, the rest in a colour that reads small`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "Cloudflare", exact: true }).click();
+  const card = carousel.getByRole("article", { name: "Cloudflare card" });
+  const slab = await card.evaluate((element, largePx) => {
+    const luminance = (colour: string) => {
+      const [red, green, blue] = colour.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const contrast = (first: string, second: string) => {
+      const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+      return Math.floor((light + 0.05) / (dark + 0.05) * 100) / 100;
+    };
+    const topline = element.querySelector(".card-front > .card-topline")!, headline = element.querySelector(".card-front > .card-headline")!;
+    const fill = getComputedStyle(topline).backgroundColor;
+    const small = [...topline.querySelectorAll(".eyebrow, .card-sample-tag, .card-visit")].map(node => [node.textContent, contrast(getComputedStyle(node).color, fill)]);
+    return { fill, sameFill: getComputedStyle(headline).backgroundColor === fill, slabTop: topline.getBoundingClientRect().top - element.getBoundingClientRect().top <= 1,
+      headline: [getComputedStyle(headline).color, parseFloat(getComputedStyle(headline).fontSize) >= largePx, contrast(getComputedStyle(headline).color, fill)], small,
+      logoTile: getComputedStyle(element.querySelector(".product-logo")!).backgroundColor };
+  }, LARGE_TEXT_PX);
+  expect(slab).toEqual({
+    fill: "rgb(255, 94, 31)", sameFill: true, slabTop: true, headline: ["rgb(255, 255, 255)", true, 3.05],
+    small: [["Daily · since 2020", 4.95], ["Sample", 4.95], ["↗", 4.95]], logoTile: "rgb(255, 255, 255)",
+  });
+  expect(slab.headline[2]).toBeGreaterThanOrEqual(LARGE_TEXT_CONTRAST);
+});
+
+test("on a phone Firecrawl's Referral link tag takes its own row under the arrow, so the status line beside the logo stays on one line", async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
+  const card = carousel.getByRole("article", { name: "Firecrawl card" });
+  const header = await card.locator(".card-front > .card-topline").evaluate(topline => {
+    const box = (selector: string) => topline.querySelector(selector)!.getBoundingClientRect();
+    const eyebrow = topline.querySelector(".eyebrow")!, range = document.createRange();
+    range.selectNodeContents(eyebrow);
+    const lines = new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size;
+    return { eyebrowLines: lines, tagUnderArrow: box(".card-link-disclosure").top >= box(".card-visit").bottom - 1, tagInCard: box(".card-link-disclosure").right <= topline.getBoundingClientRect().right };
+  });
+  expect(header).toEqual({ eyebrowLines: 1, tagUnderArrow: true, tagInCard: true });
+});
+
+/** The most of a figure's width a group separator may take; Exa's tabular comma took all of it. */
+const MAX_SEPARATOR_SHARE = 0.7;
+test("Exa's 3,690 sets its comma at the font's own width, not a tabular figure's, so it never reads 3 , 690", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  await carousel.getByRole("button", { name: "Exa", exact: true }).click();
+  const number = carousel.getByRole("article", { name: "Exa card" }).locator(".card-front .card-activity-preview > p").first().locator("strong");
+  await expect(number).toHaveText("3,690");
+  // Measured against a figure in the same face, so the check holds whatever fonts the machine has: a tabular comma is a figure's width.
+  const ratios = await number.evaluate(element => {
+    const figure = document.createRange();
+    figure.setStart(element.firstChild!, 0);
+    figure.setEnd(element.firstChild!, 1);
+    return [...element.querySelectorAll(".figure-separator")].map(mark => mark.getBoundingClientRect().width / figure.getBoundingClientRect().width);
+  });
+  expect(ratios.map(ratio => ratio < MAX_SEPARATOR_SHARE)).toEqual([true]);
 });
 
 /** Each word or number in a face's text that the layout breaks across lines ("1,1 / 00"), by name and face. */
@@ -642,7 +733,7 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Clay's running 
   await page.emulateMedia({ reducedMotion: motion });
   await page.goto("/");
   const row = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" }).getByRole("row", { name: /Quillon/ });
-  const filled = ["mo@quillon.example", "Enriched, provider 3 of 3 answered", "New VP Sales"];
+  const filled = ["mo@quillon.example", "Found, provider 3 of 3 answered", "Joined · 2\u00a0wk"];
   if (motion === "reduce") {
     await expect(row.getByRole("cell")).toHaveText(filled);
     return;
@@ -928,9 +1019,10 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`Firecrawl's front says i
   const [arrow, label] = [(await link.boundingBox())!, (await tag.boundingBox())!];
   const fontSize = await tag.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
   expect(fontSize).toBeGreaterThanOrEqual(MIN_TEXT_PX);
-  // Right under the arrow, centred on it.
+  // Right under the arrow: centred on it where the card has room, and on a phone on its own row, flush with the arrow's right edge.
   expect(label.y - (arrow.y + arrow.height)).toBeLessThan(MIN_TEXT_PX);
-  expect(Math.abs(label.x + label.width / 2 - (arrow.x + arrow.width / 2))).toBeLessThan(2);
+  if (width === DESKTOP_WIDTH) expect(Math.abs(label.x + label.width / 2 - (arrow.x + arrow.width / 2))).toBeLessThan(2);
+  else expect(Math.abs(label.x + label.width - (arrow.x + arrow.width))).toBeLessThan(2);
 });
 
 const ALL_EXAMPLES = ["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl", "n8n", "Claude Code", "Exa", "Porkbun", "Spider", "Open Places", "Grok Bot", "Elicit", "Context.dev"] as const;
@@ -1087,7 +1179,7 @@ const FEATURED_LOOK = [
   { name: "Firecrawl", slug: "firecrawl", surface: "rgb(249, 249, 249)", band: null, draws: "per week bars" },
 ] as const;
 const MAX_FACE_DIFFERENCE_PX = 80;
-const MIN_BAND_CONTRAST = 4.5;
+const MIN_BAND_CONTRAST = 4.5, MIN_LARGE_BAND_CONTRAST = 3;
 
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards hold their look at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
@@ -1126,7 +1218,9 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
       const targets = [...face.querySelectorAll("a, button")].map(target => target.getBoundingClientRect()).filter(box => box.width && box.height < minTap).length;
       return {
         surface: getComputedStyle(article).backgroundColor, band: article.hasAttribute("data-band") ? headline.backgroundColor : null,
+        // A headline at WCAG's large size (24px, or bold at 18.66px) needs 3:1 on its band; a smaller one needs 4.5:1.
         bandContrast: article.hasAttribute("data-band") ? contrast(headline.color, headline.backgroundColor) : null,
+        bandLarge: parseFloat(headline.fontSize) >= 24 || (parseFloat(headline.fontWeight) >= 700 && parseFloat(headline.fontSize) >= 18.66),
         headlineFace: headline.fontFamily.split(",")[0].replaceAll('"', ""), nameFace: getComputedStyle(face.querySelector("h2")!).fontFamily.split(",")[0].replaceAll('"', ""),
         draws, smallestText: Math.min(...sizes), biggestNumber: Math.max(...numbers), shortTargets: targets,
         height: article.getBoundingClientRect().height,
@@ -1142,7 +1236,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
     looks.push({
       name: look.name, surface: front.surface, band: front.band, draws: front.draws,
       faces: front.headlineFace.startsWith(`PRBrand-${look.slug}-`) && front.headlineFace.endsWith("-heading") && front.nameFace === front.headlineFace,
-      bandReadable: front.bandContrast === null || front.bandContrast >= MIN_BAND_CONTRAST,
+      bandReadable: front.bandContrast === null || front.bandContrast >= (front.bandLarge ? MIN_LARGE_BAND_CONTRAST : MIN_BAND_CONTRAST),
       textAtLeast12: front.smallestText >= MIN_TEXT_PX, leadsWithZero: front.biggestNumber === 0,
       // The card keeps its size turned over, and its back's content ends within the target of the front's height.
       // At 1440 the card keeps its size turned over, within the target. On a phone the back carries what the front can't fit
@@ -1215,7 +1309,7 @@ test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone 
 
 /** WCAG's large text: 24px and up, where a colour needs 3:1 rather than 4.5:1. */
 const LARGE_TEXT_PX = 24, LARGE_TEXT_CONTRAST = 3;
-test("a flush hero's slab covers the header, an inset hero rounds the card, and a brand-coloured number is large text that reads", async ({ page }) => {
+test("a colour hero's slab covers the header, an inset hero rounds the card, and a brand-coloured number is large text that reads", async ({ page }) => {
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -1246,9 +1340,9 @@ test("a flush hero's slab covers the header, an inset hero rounds the card, and 
   };
   const looks: Record<string, Awaited<ReturnType<typeof look>>> = {};
   for (const name of FEATURED) looks[name] = await look(name);
-  // Clay's green and Docker's dark hero run flush, so their colour covers the whole header; Cloudflare's 16px inset slab stays a band and rounds the card.
+  // Clay's green, Docker's dark and Cloudflare's orange hero cover the whole header; Cloudflare's 16px inset slab also rounds the card.
   expect(Object.fromEntries(FEATURED.map(name => [name, looks[name].topline]))).toEqual({
-    Clay: "rgb(3, 93, 68)", GitHub: "rgba(0, 0, 0, 0)", Cloudflare: "rgba(0, 0, 0, 0)", Docker: "rgb(15, 17, 23)", Firecrawl: "rgba(0, 0, 0, 0)",
+    Clay: "rgb(3, 93, 68)", GitHub: "rgba(0, 0, 0, 0)", Cloudflare: "rgb(255, 94, 31)", Docker: "rgb(15, 17, 23)", Firecrawl: "rgba(0, 0, 0, 0)",
   });
   expect([looks.Cloudflare.radius, looks.Docker.radius]).toEqual(["16px", "18px"]);
   // Firecrawl's orange 5,520 is 3.2:1 on its #f9f9f9: allowed only because it is drawn at 24px or more.
@@ -1413,7 +1507,8 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
       return { gap: Math.round(box.bottom - last) };
     });
     expect((found[name] as { gap: number }).gap, name).toBeLessThanOrEqual(MAX_BACK_GAP_PX);
-    expect(await close.evaluate(button => getComputedStyle(button).backgroundColor), name).toBe(detailsFill);
+    // Close details is the brand's button, except where its fill is the slab's own colour: there it takes the card's surface, as Cloudflare's hero button is white.
+    expect(await close.evaluate(button => getComputedStyle(button).backgroundColor), name).toBe(name === "Cloudflare" ? "rgb(255, 255, 255)" : detailsFill);
     await close.click();
   }
   // What only the back holds: Cloudflare's day-by-day values, Clay's whole table, Docker's links with what each one is.
@@ -1432,10 +1527,10 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
   await carousel.getByRole("button", { name: "Clay", exact: true }).click();
   const clay = carousel.getByRole("article", { name: "Clay card" });
   await clay.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(clay.locator(".card-back .card-table-preview th[scope=col]")).toHaveText(["Company", "Work email", "Waterfall", "AI: signal"]);
-  // The back holds the whole sample, five rows to the front's four: the fifth found no address.
-  await expect(clay.locator(".card-back .card-table-preview tbody tr")).toHaveCount(5);
-  await expect(clay.locator(".card-back .card-table-preview th[scope=col]").nth(2)).toBeVisible();
+  await expect(clay.locator(".card-back .card-table-preview th[scope=col]")).toHaveText(["Person", "Work email", "Waterfall", "Job change"]);
+  // The back carries on from the front's three people with the sample's last two: the last found no address.
+  await expect(clay.locator(".card-back .card-table-preview tbody th")).toHaveText(["Raj PatelCRO, Tessel", "Sara LindVP Growth, Marrow"]);
+  await expect(clay.locator(".card-back .card-table-preview tbody tr").last()).toContainText("No match");
   await clay.getByRole("button", { name: "Close details" }).click();
   await carousel.getByRole("button", { name: "Docker", exact: true }).click();
   const docker = carousel.getByRole("article", { name: "Docker card" });

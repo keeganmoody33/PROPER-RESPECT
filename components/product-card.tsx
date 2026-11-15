@@ -1,6 +1,6 @@
 "use client";
 
-import { FRONT_MEASUREMENT_LIMIT, MeasurementLines, PublicMeasurements } from "./measurement-values";
+import { Figures, FRONT_MEASUREMENT_LIMIT, MeasurementLines, PublicMeasurements } from "./measurement-values";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
@@ -19,7 +19,7 @@ import { isHttpUrl } from "@/src/domain/http-url";
 import { linkDisclosure, linkTypeLabel } from "@/src/domain/link-type";
 import { cardStatusLabel, cardTopLine, noLongerInUse } from "@/src/domain/relationship-level";
 import { costDetail, costSummary } from "@/src/domain/cost";
-import { tablePreview as parseTablePreview, type TableColumnKind, type TablePreview, type TablePreviewCell, type TablePreviewColumn, type TablePreviewInput } from "@/src/domain/table-preview";
+import { tablePreview as parseTablePreview, type TableColumnKind, type TablePreview, type TablePreviewCell, type TablePreviewInput } from "@/src/domain/table-preview";
 import { useReducedMotion } from "./use-reduced-motion";
 import { dayMonthYear, formatPeriod, freshnessNote, monthYear as monthYearOf, yearOf } from "@/src/domain/format-period";
 import { activityHeadline, cadenceEnd, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
@@ -102,7 +102,14 @@ type CardLogo = {
   provider?: string;
   /** "wordmark" replaces the visible product name; "app-icon" fills the square slot edge to edge. */
   layout?: "app-icon" | "wordmark";
+  /** Smaller renditions of the same file, resized by the app's image route for the logo slot at each screen density. */
+  srcSet?: string;
 };
+
+/** The logo slot is 3rem; a reviewed icon is drawn at 1x, 2x and 3x of it from the app's image route (sizes it allows). */
+const ICON_RENDITIONS = [[48, "1x"], [96, "2x"], [256, "3x"]] as const;
+const ICON_QUALITY = 75;
+const iconSrcSet = (path: string) => ICON_RENDITIONS.map(([width, density]) => `/_next/image?url=${encodeURIComponent(path)}&w=${width}&q=${ICON_QUALITY} ${density}`).join(", ");
 
 /** The one image a card's logo slot shows, skipping any that failed to load. Verified assets win, then a reviewed app icon, then the stored brand. */
 function cardLogo({ brand, verifiedAssets, icon, logoUrl, surface, failed }: {
@@ -118,8 +125,10 @@ function cardLogo({ brand, verifiedAssets, icon, logoUrl, surface, failed }: {
     return { url: logo?.path, width: logo?.width, height: logo?.height, mode: logo?.mode, provider: logo && verifiedAssets.provider, layout: "wordmark" };
   }
   if (icon) {
+    // Where the app's image route is missing (a standalone bundle), a failed rendition falls back to the original file.
+    const srcSet = iconSrcSet(icon.path);
     return failed.includes(icon.path) ? {}
-      : { url: icon.path, width: icon.width, height: icon.height, mode: "surface" in icon ? icon.surface : undefined, provider: "official-vendor", layout: "app-icon" };
+      : { url: icon.path, srcSet: failed.includes(srcSet) ? undefined : srcSet, width: icon.width, height: icon.height, mode: "surface" in icon ? icon.surface : undefined, provider: "official-vendor", layout: "app-icon" };
   }
   const choice = brand && selectProductBrandLogo({ logos: brand.logos.filter(candidate => !failed.includes(candidate.url)) }, surface);
   if (choice) {
@@ -143,15 +152,18 @@ function ProductLogo({ logo, mark, onFailed }: { logo: CardLogo; mark: string; o
         // preserve onError fallback without a remote image-loader allowlist.
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          // A fresh element for the fallback file: one reused from its srcset keeps the density it chose there.
+          key={logo.srcSet ? "renditions" : "file"}
           ref={element => {
-            if (element?.complete && element.naturalWidth === 0) onFailed(url);
+            if (element?.complete && element.naturalWidth === 0) onFailed(logo.srcSet ?? url);
           }}
           src={ownOriginImageUrl(url)}
+          srcSet={logo.srcSet}
           alt=""
           width={logo.width}
           height={logo.height}
           referrerPolicy="no-referrer"
-          onError={() => onFailed(url)}
+          onError={() => onFailed(logo.srcSet ?? url)}
         />
       ) : mark}
     </span>
@@ -312,12 +324,10 @@ function useFilledIn(shown: boolean): boolean {
   return filledIn || (reducedMotion && inBrowser);
 }
 
-const columnMarks = (column: TablePreviewColumn) => ({ "data-droppable": column.droppable ? "" : undefined });
-
 /** An address may break after its @ and before its last dot, so a narrow column wraps it in whole parts rather than mid-word. */
 function cellText(text: string) {
   const [at, dot] = [text.indexOf("@"), text.lastIndexOf(".")];
-  if (at <= 0) return text;
+  if (at <= 0) return <WholeWords text={text} />;
   if (dot <= at) return <>{text.slice(0, at + 1)}<wbr />{text.slice(at + 1)}</>;
   return <>{text.slice(0, at + 1)}<wbr />{text.slice(at + 1, dot)}<wbr />{text.slice(dot)}</>;
 }
@@ -357,34 +367,48 @@ function WaterfallCell({ text, state, waterfall }: Pick<TablePreviewCell, "text"
   </>;
 }
 
+/** What a waterfall's marks mean, said once in the table's title bar for a sighted visitor; each cell already says it in words. */
+function WaterfallKey() {
+  return <span className="card-table-key" aria-hidden="true">
+    <span><i data-step="answered" />found it</span> <span><i data-step="missed" />missed</span> <span><i data-step="unasked" />not asked</span>
+  </span>;
+}
+
 /**
  * A few rows of a table the product makes, drawn as a real table: a row number in the gutter, the row filled in last highlighted,
- * and on a narrow card the droppable columns left out so the rest fit, long cells wrapping rather than cut short.
+ * long cells wrapping rather than cut short. The back carries on with the rows the front has no room for. A narrow card stacks
+ * each row into a block, every cell beside its column's label.
  */
 function TablePreviewBlock({ preview, shown, full = false }: { preview: TablePreview; shown: boolean; full?: boolean }) {
   const captionId = useId();
   const filledIn = useFilledIn(shown);
   const cellShown = (cell: TablePreviewCell) => filledIn && cell.fillsIn ? cell.fillsIn : cell;
-  const rows = full ? preview.rows : preview.rows.slice(0, preview.frontRows);
+  // The back carries on from the rows the front shows, its row numbers counting on; with none left over it shows them all.
+  const onFront = preview.frontRows ?? preview.rows.length, rest = preview.rows.slice(onFront);
+  const carriesOn = full && rest.length > 0;
+  const rows = full ? (carriesOn ? rest : preview.rows) : preview.rows.slice(0, onFront);
+  const hasWaterfall = preview.columns.some(column => "kind" in column && column.kind === "waterfall");
+  const count = preview.summary ?? (!full && preview.totalRows ? `${rows.length} of ${fullNumber(preview.totalRows)} rows` : undefined);
   return (
     <div className="card-table-preview" role="region" tabIndex={0} aria-labelledby={captionId} data-full={full ? "" : undefined}>
-      <table>
-        <caption id={captionId}>{preview.caption}</caption>
-        <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined} {...columnMarks(column)}>
+      <table style={carriesOn ? { counterReset: `preview-row ${onFront}` } : undefined}>
+        <caption id={captionId}><span className="card-table-title"><span><WholeWords text={preview.caption} /></span>{hasWaterfall && <WaterfallKey />}</span></caption>
+        <thead><tr>{preview.columns.map(column => <th key={column.label} scope="col" data-enriched={column.enriched ? "" : undefined}>
           {"kind" in column && column.kind && <ColumnGlyph kind={column.kind} />}{column.label}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, rowIndex) => <tr key={rowIndex} data-latest={row.some(cell => cell.fillsIn) ? "" : undefined}>
             {row.map((cell, column) => {
               const shownCell = cellShown(cell), kind = preview.columns[column];
-              const content = "kind" in kind && kind.kind === "waterfall" ? <WaterfallCell {...shownCell} /> : cellText(shownCell.text);
+              const content = <span className="table-cell-value">{"kind" in kind && kind.kind === "waterfall" ? <WaterfallCell {...shownCell} /> : cellText(shownCell.text)}
+                {cell.detail && <span className="table-cell-detail"><WholeWords text={cell.detail} /></span>}</span>;
               return column === 0
-                ? <th key={column} scope="row" data-state={shownCell.state} {...columnMarks(kind)}>{content}</th>
-                : <td key={column} data-state={shownCell.state} {...columnMarks(kind)}>{content}</td>;
+                ? <th key={column} scope="row" data-label={kind.label} data-state={shownCell.state}>{content}</th>
+                : <td key={column} data-label={kind.label} data-state={shownCell.state}>{content}</td>;
             })}
           </tr>)}
         </tbody>
       </table>
-      {!full && preview.totalRows && <p className="card-table-count">{[`${rows.length} of ${fullNumber(preview.totalRows)} rows`, preview.rowNote].filter(Boolean).join(" · ")}</p>}
+      {count && <p className="card-table-count"><WholeWords text={count} /></p>}
     </div>
   );
 }
@@ -399,7 +423,7 @@ function ActivityPreview({ activity, pastUse, today, unreviewed = false, expande
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
       <p>
         {metric === undefined ? "No data points supplied" : <>
-          <strong>{number(metric.value)}</strong>{" "}
+          <strong><Figures text={number(metric.value)} /></strong>{" "}
           {metric.label}
         </>}
       </p>
@@ -747,6 +771,8 @@ export function ProductCard({
       data-band={appearance.style["--brand-card-band"] ? "" : undefined}
       data-slab={appearance.style["--brand-card-slab"] ? "" : undefined}
       data-panel={appearance.style["--brand-card-panel"] ? "" : undefined}
+      data-logo-tile={appearance.style["--brand-card-logo-tile"] ? "" : undefined}
+      data-slab-button={appearance.style["--brand-card-slab-button-fill"] ? "" : undefined}
       data-verified-brand={verifiedAssets?.productSlug}
       data-brand-revision={verifiedAssets?.revision}
       data-side={isFlipped ? "back" : "front"}
