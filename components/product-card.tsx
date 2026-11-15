@@ -60,7 +60,8 @@ function contrast(first: number, second: number) {
 }
 
 function brandAppearance(brand?: ProductBrandSnapshot, site?: BrandSiteTraits) {
-  const roles = brand?.styleguide?.colors;
+  // A product with no stored brand (Claude Code, whose domain is its parent company's) is drawn in its own measured page's colours.
+  const roles = brand?.styleguide?.colors ?? (site && !brand ? { background: site.traits.surface?.value, text: site.traits.text?.value } : undefined);
   const background = roles?.background && luminance(roles.background);
   const text = roles?.text && luminance(roles.text);
   const readablePair = typeof background === "number" && typeof text === "number"
@@ -609,7 +610,8 @@ export function ProductCard({
     && card.product.brand.canonicalDomain === card.product.domain
     ? card.product.brand
     : undefined;
-  const site = brand && siteTraits?.productSlug === brand.productSlug && siteTraits.canonicalDomain === brand.canonicalDomain ? siteTraits : undefined;
+  // A measured page is read only for the product and domain it was measured for; a stored brand already names the same pair.
+  const site = siteTraits?.productSlug === card.product.slug && siteTraits.canonicalDomain === card.product.domain ? siteTraits : undefined;
   const appearance = brandAppearance(brand, site);
   const verifiedAssets = verifiedProductAssets(card.product);
   const typography = verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand);

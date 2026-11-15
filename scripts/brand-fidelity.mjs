@@ -4,7 +4,7 @@
 //
 //   node scripts/brand-fidelity.mjs reference [--only spider,exa]
 //   node scripts/brand-fidelity.mjs build
-//   node scripts/brand-fidelity.mjs card --base http://127.0.0.1:3100 --label before [--only ...] [--with-unbranded]
+//   node scripts/brand-fidelity.mjs card --base http://127.0.0.1:3100 --label before [--only ...]
 //   node scripts/brand-fidelity.mjs compare --label before
 //   node scripts/brand-fidelity.mjs pairs --label after
 //
@@ -16,6 +16,7 @@ import { chromium } from "playwright";
 import sharp from "sharp";
 import { assertionsMarkdown, compareBrand } from "../tests/support/brand-fidelity.ts";
 import { captureSite, DESKTOP, PAGE_HELPERS, PHONE } from "./brand-site-measure.mjs";
+import { SITE_ONLY_PAGES } from "../src/data/homepage-brands/site-only.ts";
 
 const ROOT = resolve(".artifacts/brand-fidelity");
 const BRANDS_DIR = resolve("src/data/homepage-brands");
@@ -31,11 +32,12 @@ const args = process.argv.slice(2);
 const command = args[0];
 const option = (name) => { const at = args.indexOf(`--${name}`); return at >= 0 ? args[at + 1] : undefined; };
 const only = option("only")?.split(",");
-const brands = readdirSync(BRANDS_DIR).filter(file => file.endsWith(".json") && !file.endsWith(".site.json")).map(file => JSON.parse(readFileSync(join(BRANDS_DIR, file), "utf8")))
-  .map(snapshot => ({ slug: snapshot.productSlug, name: NAMES[snapshot.productSlug], url: `https://${snapshot.canonicalDomain}/` }))
-  .filter(brand => brand.name && (!only || only.includes(brand.slug)));
-/** Examples with no stored brand. `card --with-unbranded` captures them too, to show a change left them alone. */
-const UNBRANDED = [{ slug: "claude-code", name: "Claude Code" }, { slug: "grok-bot", name: "Grok Bot" }];
+// The stored brands, measured at their domain's root, and the examples with no stored brand, measured at their own product page.
+const brands = [
+  ...readdirSync(BRANDS_DIR).filter(file => file.endsWith(".json") && !file.endsWith(".site.json")).map(file => JSON.parse(readFileSync(join(BRANDS_DIR, file), "utf8")))
+    .map(snapshot => ({ slug: snapshot.productSlug, name: NAMES[snapshot.productSlug], url: `https://${snapshot.canonicalDomain}/` })),
+  ...SITE_ONLY_PAGES.map(page => ({ slug: page.productSlug, name: page.name, url: page.url })),
+].filter(brand => brand.name && (!only || only.includes(brand.slug)));
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 const write = (path, value) => { mkdirSync(resolve(path, ".."), { recursive: true }); writeFileSync(path, typeof value === "string" ? value : `${JSON.stringify(value, null, 2)}\n`); };
 
@@ -129,7 +131,7 @@ async function card() {
       await carousel.getByRole("button", { name: "Pause slideshow" }).click({ timeout: 2_000 }).catch(() => undefined);
       // Every brand's toggle is in the chooser once the examples behind More examples are shown.
       await carousel.getByRole("button", { name: "More examples" }).click({ timeout: 2_000 }).catch(() => undefined);
-      for (const brand of [...brands, ...(args.includes("--with-unbranded") ? UNBRANDED : [])]) {
+      for (const brand of brands) {
         await carousel.getByRole("button", { name: brand.name, exact: true }).click();
         const article = carousel.getByRole("article", { name: `${brand.name} card` });
         await article.waitFor();
@@ -168,10 +170,20 @@ async function pairs() {
   mkdirSync(join(ROOT, label, "pairs"), { recursive: true });
   for (const brand of brands) for (const width of [1440, 390]) {
     const sitePath = join(ROOT, "reference", `${brand.slug}-${width}.png`), cardPath = join(ROOT, label, "card", `${brand.slug}-${width}.png`);
-    if (!existsSync(sitePath) || !existsSync(cardPath)) continue;
-    const site = await sharp(sitePath).resize({ width: PAIR_SITE_WIDTH[width] }).toBuffer({ resolveWithObject: true });
+    const referencePath = join(ROOT, "reference", `${brand.slug}.json`);
+    const blocked = existsSync(referencePath) ? JSON.parse(readFileSync(referencePath, "utf8")).blocked : undefined;
+    if (!existsSync(cardPath) || (!blocked && !existsSync(sitePath))) continue;
     const cardImage = await sharp(cardPath).toBuffer({ resolveWithObject: true });
     const cardCommit = JSON.parse(readFileSync(join(ROOT, label, "card", `${brand.slug}.json`), "utf8")).commit;
+    // A site that answered with a block page is never shown: the card stands alone, captioned with why.
+    if (blocked) {
+      const note = `<svg width="${Math.max(cardImage.info.width, PAIR_SITE_WIDTH[1440])}" height="${PAIR_LABEL * 2}"><text x="4" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#fff">${brand.name}: no site beside it. ${brand.url} answered automation with ${blocked.replaceAll('"', "")}.</text><text x="4" y="58" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#fff">card only @ ${cardCommit.slice(0, 7)}, ${width}px</text></svg>`;
+      await sharp({ create: { width: Math.max(cardImage.info.width, PAIR_SITE_WIDTH[1440]), height: cardImage.info.height + PAIR_LABEL * 2, channels: 4, background: BACKDROP } })
+        .composite([{ input: Buffer.from(note), top: 0, left: 0 }, { input: cardImage.data, top: PAIR_LABEL * 2, left: 0 }])
+        .png({ compressionLevel: 9, palette: true }).toFile(join(ROOT, label, "pairs", `${brand.slug}-${width}.png`));
+      continue;
+    }
+    const site = await sharp(sitePath).resize({ width: PAIR_SITE_WIDTH[width] }).toBuffer({ resolveWithObject: true });
     const height = Math.max(site.info.height, cardImage.info.height) + PAIR_LABEL;
     const total = site.info.width + PAIR_GAP + cardImage.info.width;
     const caption = `<svg width="${total}" height="${PAIR_LABEL}"><text x="4" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#fff">${brand.name} site (${brand.url}) at ${width}px</text><text x="${site.info.width + PAIR_GAP + 4}" y="24" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#fff">card @ ${cardCommit.slice(0, 7)}</text></svg>`;

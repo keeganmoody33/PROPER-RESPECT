@@ -20,7 +20,7 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font"
   | "--brand-card-slab" | "--brand-card-slab-body" | "--brand-card-band-large-text" | "--brand-card-logo-tile"
   | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text" | "--brand-card-chart-tint" | "--brand-card-number-backdrop" | "--brand-card-value-colour" | "--brand-card-pattern-dot"
-  | "--brand-card-panel-frame", string>>;
+  | "--brand-card-panel-frame" | "--brand-card-heading-font" | "--brand-card-body-font", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -117,9 +117,10 @@ function measuredFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { fon
  * The face a card's big figures are set in. A measured number family the card serves is used as is; one it can't load
  * (GitHub's Mona Sans Mono) stays in the brand's own served faces, since a system mono spaces "1,121" like code.
  */
-function numberFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { fontLinks: unknown }>["styleguide"]) {
+function numberFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { fontLinks: unknown }>["styleguide"], systemHeading: boolean) {
   const face = measuredFace(font, guide);
-  return face.startsWith("var(") ? face : `var(--brand-card-heading-font, var(--brand-card-body-font, ${face}))`;
+  // A card whose heading is itself a system face (a brand that stored none) keeps the number in the measured face's kind instead.
+  return face.startsWith("var(") || systemHeading ? face : `var(--brand-card-heading-font, var(--brand-card-body-font, ${face}))`;
 }
 
 export type BrandAccent = { hex: string; source: "site accent" | "primary button" | "logo colour" | "site colour" };
@@ -251,6 +252,9 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   if (measuredButton?.case) kit["--brand-card-button-case"] = CSS_CASE[measuredButton.case];
   if (measuredButton?.trackingEm !== undefined) kit["--brand-card-button-tracking"] = `${measuredButton.trackingEm}em`;
 
+  // A brand that stored no faces (a product drawn from its measured page alone) sets its heading and body in system faces of the page's kinds.
+  if (!guide?.typography && measured?.headingFont) kit["--brand-card-heading-font"] = SYSTEM_FACES[measured.headingFont.value.generic];
+  if (!guide?.typography && measured?.bodyFont) kit["--brand-card-body-font"] = SYSTEM_FACES[measured.bodyFont.value.generic];
   if (measured?.labelFont) kit["--brand-card-label-font"] = measuredFace(measured.labelFont.value, guide);
   // A measured site's labels with no measured case stay as typed: the house uppercase is the house's, not the brand's.
   if (measured) kit["--brand-card-label-case"] = CSS_CASE[measured.labelCase?.value ?? "as typed"];
@@ -344,7 +348,7 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
   const traits = site?.traits;
   if (!traits) return {};
   const kit: BrandCardKit = {};
-  if (traits.numberFont) kit["--brand-card-number-font"] = numberFace(traits.numberFont.value, guide);
+  if (traits.numberFont) kit["--brand-card-number-font"] = numberFace(traits.numberFont.value, guide, !guide?.typography && traits.headingFont !== undefined);
   const number = traits.numberColour?.value, backdrop = traits.numberBackdrop?.value;
   // A number the site sets on a highlight that hugs it (Open Places' yellow) sits on that highlight, read against it.
   if (number && backdrop && contrast(number, backdrop) >= MIN_LARGE_TEXT_CONTRAST) {

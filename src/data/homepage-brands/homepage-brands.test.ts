@@ -5,6 +5,7 @@ import { productBrandEligibility } from "@/convex/productBrands";
 import { CONTEXT_BRAND_ADAPTER_VERSION, productBrandSnapshotSchema } from "@/src/domain/product-brand";
 import { directoryEntry } from "@/src/domain/product-directory";
 import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "./index";
+import { SITE_ONLY_PAGES } from "./site-only";
 
 const DIRECTORY = join(process.cwd(), "src/data/homepage-brands");
 /** The width every site was measured at. */
@@ -52,19 +53,23 @@ test("the pull had no fonts endpoint to call, so each snapshot records that requ
   expect(new Set(fontReceipts)).toEqual(new Set(["error"]));
 });
 
-test("every brand but Porkbun has a measured site file, loaded by the index; Porkbun's site blocked the measurement", () => {
+test("every example has a measured site file, loaded by the index, but Porkbun and Grok Bot, whose sites blocked the measurement", () => {
   expect(siteFiles).toEqual([
-    "clay.site.json", "cloudflare.site.json", "context-dev.site.json", "docker.site.json", "elicit.site.json", "exa.site.json",
+    "claude-code.site.json", "clay.site.json", "cloudflare.site.json", "context-dev.site.json", "docker.site.json", "elicit.site.json", "exa.site.json",
     "firecrawl.site.json", "github.site.json", "n8n.site.json", "open-places.site.json", "spider.site.json",
   ]);
   expect(Object.keys(HOMEPAGE_SITE_TRAITS).sort()).toEqual(siteFiles.map(name => name.replace(".site.json", "")));
   expect(Object.keys(HOMEPAGE_SITE_TRAITS)).not.toEqual(expect.arrayContaining(["porkbun"]));
+  expect(Object.keys(HOMEPAGE_SITE_TRAITS)).not.toEqual(expect.arrayContaining(["grok-bot"]));
 });
 
-test("each site file measured the root of its own brand's domain at desktop width", () => {
-  const wrong = Object.entries(HOMEPAGE_SITE_TRAITS).filter(([slug, site]) => site.productSlug !== slug || site.canonicalDomain !== HOMEPAGE_BRANDS[slug].canonicalDomain
-    || site.url !== `https://${HOMEPAGE_BRANDS[slug].canonicalDomain}/` || site.viewport.width !== DESKTOP_WIDTH);
+test("each site file measured its own product's page at desktop width: a stored brand's domain root, else its listed product page", () => {
+  const page = (slug: string) => HOMEPAGE_BRANDS[slug] ? { domain: HOMEPAGE_BRANDS[slug].canonicalDomain, url: `https://${HOMEPAGE_BRANDS[slug].canonicalDomain}/` }
+    : SITE_ONLY_PAGES.map(only => ({ slug: only.productSlug, domain: only.canonicalDomain, url: only.url })).find(only => only.slug === slug);
+  const wrong = Object.entries(HOMEPAGE_SITE_TRAITS).filter(([slug, site]) => site.productSlug !== slug || site.canonicalDomain !== page(slug)?.domain
+    || site.canonicalDomain !== directoryEntry(slug)?.domain || site.url !== page(slug)?.url || site.viewport.width !== DESKTOP_WIDTH);
   expect(wrong.map(([slug]) => slug)).toEqual([]);
+  expect(HOMEPAGE_SITE_TRAITS["claude-code"].url).toBe("https://claude.com/product/claude-code");
   expect(HOMEPAGE_SITE_TRAITS.spider.traits.signature).toEqual({ value: "#3bde77", from: "heading highlight" });
   // Clay's green hero runs flush to the page edge: a square slab.
   expect(HOMEPAGE_SITE_TRAITS.clay.traits.hero).toEqual({ value: { kind: "colour", hex: "#035d44", radiusPx: 0 }, from: "backdrop behind the first heading" });

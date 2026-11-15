@@ -1209,3 +1209,20 @@ test("a headline's phrase set apart takes the brand's mark only where it reads a
   // A phrase the headline doesn't hold sets nothing apart.
   expect(phrase(firecrawl, "LLM-ready data")).toEqual(["Turns pages into clean Markdown for my agents.", "", undefined]);
 });
+
+test("a product with no stored brand takes its look from its own measured page alone, and only from its own", async () => {
+  const { HOMEPAGE_SITE_TRAITS } = await import("../data/homepage-brands");
+  const claudeCode = { ...baseCard, product: { name: "Claude Code", slug: "claude-code", domain: "claude.com", description: "Coding agent." } };
+  const render = (card: Card, siteTraits?: typeof HOMEPAGE_SITE_TRAITS[string]) => load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, siteTraits })))("article");
+  const style = render(claudeCode, HOMEPAGE_SITE_TRAITS["claude-code"]).attr("style") ?? "";
+  // claude.com's ivory page and its grey text, its near-black button and its serif heading in a system serif (no font file is stored).
+  expect(style).toContain("--brand-card-background:#faf9f5;--brand-card-text:#5e5d59");
+  expect(style).toContain("--brand-card-button-fill:#141413");
+  expect(style).toContain('--brand-card-heading-font:ui-serif, Georgia, "Times New Roman", serif');
+  // Its big number is set in the page's sans, as claude.com sets its numbers, not in the serif heading.
+  expect(style).toContain('--brand-card-number-font:system-ui, -apple-system, "Segoe UI", Arial, sans-serif');
+  expect(render(claudeCode, HOMEPAGE_SITE_TRAITS["claude-code"]).attr("data-surface")).toBe("light");
+  // Another product's page, or none, leaves the house card.
+  expect(render(claudeCode, HOMEPAGE_SITE_TRAITS.exa).attr("style") ?? "").not.toContain("--brand-card-background");
+  expect(render(claudeCode).attr("style") ?? "").not.toContain("--brand-card-background");
+});

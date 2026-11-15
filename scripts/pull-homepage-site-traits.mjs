@@ -16,15 +16,20 @@ import { join, resolve } from "node:path";
 import { brandSiteTraitsFromMeasurement } from "../src/domain/brand-site-traits.ts";
 import { DESKTOP, pageTexture } from "./brand-site-measure.mjs";
 import { oklabDistance } from "../src/domain/oklab.ts";
+import { SITE_ONLY_PAGES } from "../src/data/homepage-brands/site-only.ts";
 
 const BRANDS = resolve("src/data/homepage-brands");
 const SAVED = resolve(".artifacts/brand-fidelity/reference");
 const measure = process.argv.includes("--measure"), readLogos = measure || process.argv.includes("--logos");
 
-// Only a product with a stored brand is measured: the brand gate has already refused the rest (Claude Code
-// and Grok Bot list a parent company's domain), and a parent company's site is never measured for them.
-const snapshots = readdirSync(BRANDS).filter(name => name.endsWith(".json") && !name.endsWith(".site.json")).sort()
-  .map(name => JSON.parse(readFileSync(join(BRANDS, name), "utf8")));
+// A product with a stored brand is measured at its domain's root. Claude Code and Grok Bot have no stored brand (their
+// domains belong to a parent company) and are measured at their own product page, with no logos to read.
+const snapshots = [
+  ...readdirSync(BRANDS).filter(name => name.endsWith(".json") && !name.endsWith(".site.json")).sort()
+    .map(name => JSON.parse(readFileSync(join(BRANDS, name), "utf8"))),
+  ...SITE_ONLY_PAGES.map(page => ({ productSlug: page.productSlug, canonicalDomain: page.canonicalDomain, url: page.url, logos: [] })),
+];
+const pageOf = (snapshot) => snapshot.url ?? `https://${snapshot.canonicalDomain}/`;
 
 async function savedOrMeasured(snapshot) {
   const path = join(SAVED, `${snapshot.productSlug}.json`);
@@ -34,7 +39,7 @@ async function savedOrMeasured(snapshot) {
   mkdirSync(SAVED, { recursive: true });
   const browser = await chromium.launch();
   try {
-    const capture = await captureSite(browser, { slug: snapshot.productSlug, name: snapshot.productSlug, url: `https://${snapshot.canonicalDomain}/` }, SAVED);
+    const capture = await captureSite(browser, { slug: snapshot.productSlug, name: snapshot.productSlug, url: pageOf(snapshot) }, SAVED);
     writeFileSync(path, `${JSON.stringify(capture, null, 2)}\n`);
     return capture;
   } finally { await browser.close(); }
@@ -94,7 +99,7 @@ for (const snapshot of snapshots) {
     writeFileSync(join(SAVED, `${slug}.json`), `${JSON.stringify(capture, null, 2)}\n`);
   }
   const traits = brandSiteTraitsFromMeasurement({
-    productSlug: slug, canonicalDomain: snapshot.canonicalDomain, measuredAt: capture.capturedAt, url: capture.url, viewport: capture.viewport ?? DESKTOP,
+    productSlug: slug, canonicalDomain: snapshot.canonicalDomain, measuredAt: capture.capturedAt, url: pageOf(snapshot), viewport: capture.viewport ?? DESKTOP,
   }, capture.site);
   writeFileSync(output, `${JSON.stringify(traits, null, 2)}\n`);
   results.push(`${slug}: ${Object.keys(traits.traits).length} traits measured ${traits.measuredAt}`);
