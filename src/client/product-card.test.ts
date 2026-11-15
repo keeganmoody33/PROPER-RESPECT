@@ -1068,8 +1068,8 @@ const FRONT_ARTIFACTS = [
 test("an artifact collection's front names its count and links up to three of its works, dropping a bad link quietly", () => {
   const $ = renderCard({ activity: { ...activityEvidence, kind: "artifactCollection", total: FRONT_ARTIFACTS.length, artifacts: FRONT_ARTIFACTS } });
   const front = $(".card-front .card-activity-preview");
-  // Eight stored, three linked on the front: the count says how many it shows.
-  expect(front.children("p").first().text()).toBe("8 linked works · 3 shown");
+  // Eight stored, four with an address that can be opened, three linked on the front: the four dropped are not counted.
+  expect(front.children("p").first().text()).toBe("4 linked works · 3 shown");
   expect(front.find(".card-artifact-links a").toArray().map(link => [$(link).text(), $(link).attr("href"), $(link).attr("target"), $(link).attr("rel")])).toEqual([
     ["Compose apps ↗", "https://example.com/compose", "_blank", "noopener noreferrer"],
     ["Postgres image ↗", "https://example.com/postgres", "_blank", "noopener noreferrer"],

@@ -7,7 +7,7 @@ import { isHttpUrl } from "./http-url.ts";
 import { linkDisclosure } from "./link-type.ts";
 import { cardStatusLabel, type RelationshipLevel } from "./relationship-level.ts";
 import { productUseLabels } from "./product-uses.ts";
-import { activityHeadline } from "./activity-headline.ts";
+import { activityHeadline, linkedWorksCount } from "./activity-headline.ts";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;
@@ -99,8 +99,7 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
     };
     case "artifactCollection": {
       const artifacts = activity.artifacts.filter(artifact => isHttpUrl(artifact.url));
-      // Never fewer than the works listed, as on the card.
-      const count = Math.max(activity.total, artifacts.length);
+      const count = linkedWorksCount(activity);
       return {
         ...meta, kind: activity.kind, total: metric({ label: count === 1 ? "linked work" : "linked works", value: count }),
         artifacts: artifacts.map(artifact => ({ title: artifact.title, url: artifact.url })),

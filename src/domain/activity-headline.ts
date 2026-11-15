@@ -140,6 +140,12 @@ function codingHeadline(activity: Extract<ActivityModule, { kind: "codingActivit
   return { value: activeDays, label: activeDays === 1 ? "active day" : "active days", reported: { value: owner.value, label: `${owner.label}${AS_REPORTED}` } };
 }
 
+/** How many linked works a card counts: never fewer than the works it can link, and none whose address was dropped. */
+export function linkedWorksCount(activity: Extract<ActivityModule, { kind: "artifactCollection" }>): number {
+  const linked = activity.artifacts.filter(artifact => isHttpUrl(artifact.url)).length;
+  return Math.max(activity.total - (activity.artifacts.length - linked), linked);
+}
+
 /** What a card leads with: a period's total where the points add up, otherwise what they can honestly say. */
 export function activityHeadline(activity: ActivityModule, pastUse: boolean, options: HeadlineOptions = {}): ActivityHeadline | undefined {
   switch (activity.kind) {
@@ -148,8 +154,8 @@ export function activityHeadline(activity: ActivityModule, pastUse: boolean, opt
     case "codingActivity": return codingHeadline(activity);
     case "timeSeries": return seriesHeadline(activity, pastUse, options);
     case "artifactCollection": {
-      // Never fewer than the works the back lists, and past the few the front links, how many it shows.
-      const value = Math.max(activity.total, activity.artifacts.length);
+      // Past the few the front links, how many it shows.
+      const value = linkedWorksCount(activity);
       const shown = Math.min(FRONT_ARTIFACT_LIMIT, activity.artifacts.filter(artifact => isHttpUrl(artifact.url)).length);
       const label = value === 1 ? "linked work" : "linked works";
       return { value, label: shown > 0 && shown < value ? `${label} · ${shown} shown` : label };

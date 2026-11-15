@@ -89,8 +89,17 @@ test("linked works say how many of them the front shows when the stored total is
   const works = (total: number, urls: readonly string[]): ActivityModule => ({ ...common, kind: "artifactCollection", total, artifacts: urls.map((url, index) => ({ title: `Work ${index}`, url })) });
   const links = ["https://a.example/1", "https://a.example/2", "https://a.example/3", "https://a.example/4"];
   expect(activityHeadline(works(12, links), false)).toEqual({ value: 12, label: "linked works · 3 shown" });
-  expect(activityHeadline(works(2, ["https://a.example/1", "ftp://a.example/2"]), false)).toEqual({ value: 2, label: "linked works · 1 shown" });
+  expect(activityHeadline(works(3, ["https://a.example/1", "ftp://a.example/2"]), false)).toEqual({ value: 2, label: "linked works · 1 shown" });
   expect(activityHeadline(works(1, ["https://a.example/1"]), false)).toEqual({ value: 1, label: "linked work" });
+});
+
+test("a link dropped for its address is not counted: five stored links, two of them bad, read as three", () => {
+  const works = (total: number, urls: readonly string[]): ActivityModule => ({ ...common, kind: "artifactCollection", total, artifacts: urls.map((url, index) => ({ title: `Work ${index}`, url })) });
+  const good = ["https://a.example/1", "https://a.example/2", "https://a.example/3"];
+  expect(activityHeadline(works(5, [...good, "javascript:alert(1)", "data:text/html,x"]), false)).toEqual({ value: 3, label: "linked works" });
+  expect(activityHeadline(works(5, [...good, "ftp://a.example/4", "https://user:pass@a.example/5"]), false)).toEqual({ value: 3, label: "linked works" });
+  // A stored total past the works listed still stands, less the ones dropped.
+  expect(activityHeadline(works(20, [...good, "javascript:alert(1)"]), false)).toEqual({ value: 19, label: "linked works · 3 shown" });
 });
 
 test("a stored card never sums a series: a unit alone cannot tell a count from a level, so it leads with its latest value and date", () => {

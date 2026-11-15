@@ -157,7 +157,8 @@ describe("link schemes", () => {
       { title: "Bad artifact", url }, { title: "Published article", url: "https://example.com/article" },
     ] });
     const result = projectVisiblePublicProfile(source);
-    expect(result.cards[0].activity).toMatchObject({ kind: "artifactCollection", total: { label: "linked works", displayValue: "2" },
+    // The dropped link is not counted either, so the total matches the works a visitor can open.
+    expect(result.cards[0].activity).toMatchObject({ kind: "artifactCollection", total: { label: "linked work", displayValue: "1" },
       artifacts: [{ title: "Published article", url: "https://example.com/article" }] });
     expect(JSON.stringify(result)).not.toContain(url);
   });
