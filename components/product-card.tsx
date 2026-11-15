@@ -125,8 +125,10 @@ function cardLogo({ brand, verifiedAssets, icon, logoUrl, surface, failed }: {
     return { url: logo?.path, width: logo?.width, height: logo?.height, mode: logo?.mode, provider: logo && verifiedAssets.provider, layout: "wordmark" };
   }
   if (icon) {
+    // Where the app's image route is missing (a standalone bundle), a failed rendition falls back to the original file.
+    const srcSet = iconSrcSet(icon.path);
     return failed.includes(icon.path) ? {}
-      : { url: icon.path, srcSet: iconSrcSet(icon.path), width: icon.width, height: icon.height, mode: "surface" in icon ? icon.surface : undefined, provider: "official-vendor", layout: "app-icon" };
+      : { url: icon.path, srcSet: failed.includes(srcSet) ? undefined : srcSet, width: icon.width, height: icon.height, mode: "surface" in icon ? icon.surface : undefined, provider: "official-vendor", layout: "app-icon" };
   }
   const choice = brand && selectProductBrandLogo({ logos: brand.logos.filter(candidate => !failed.includes(candidate.url)) }, surface);
   if (choice) {
@@ -150,8 +152,10 @@ function ProductLogo({ logo, mark, onFailed }: { logo: CardLogo; mark: string; o
         // preserve onError fallback without a remote image-loader allowlist.
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          // A fresh element for the fallback file: one reused from its srcset keeps the density it chose there.
+          key={logo.srcSet ? "renditions" : "file"}
           ref={element => {
-            if (element?.complete && element.naturalWidth === 0) onFailed(url);
+            if (element?.complete && element.naturalWidth === 0) onFailed(logo.srcSet ?? url);
           }}
           src={ownOriginImageUrl(url)}
           srcSet={logo.srcSet}
@@ -159,7 +163,7 @@ function ProductLogo({ logo, mark, onFailed }: { logo: CardLogo; mark: string; o
           width={logo.width}
           height={logo.height}
           referrerPolicy="no-referrer"
-          onError={() => onFailed(url)}
+          onError={() => onFailed(logo.srcSet ?? url)}
         />
       ) : mark}
     </span>
