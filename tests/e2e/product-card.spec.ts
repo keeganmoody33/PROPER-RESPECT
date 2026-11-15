@@ -328,3 +328,38 @@ for (const width of [320, 1280]) test(`a headline is set large in the heading fa
   expect(shown.every(({ family, fits }) => family === '"Trebuchet MS", sans-serif' && fits)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+/** The longest value a published measurement can carry, and one below one, beside each other on a card. */
+const LONG_VALUE_DIGITS = 650;
+const measured = {
+  capturedAt: "2026-09-19T09:00:00.000Z", status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
+  scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE", unit: "rows", period: { kind: "date", start: "2026-01-01", end: "2026-08-31", timezone: "UTC" },
+} as const;
+const longValueCard = { ...card, activity: undefined, measurements: [{ ...measured, metric: "enriched", value: "9".repeat(LONG_VALUE_DIGITS) }, { ...measured, metric: "used", value: "0.004" }] };
+const longValueBundle = buildSync({
+  stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement("div", { className: "card-grid" }, createElement(ProductCard, { card: ${JSON.stringify(longValueCard)}, index: 0 })));`, resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"production"' },
+});
+
+test("at 390px a 650-digit published value wraps inside its card, front and back, and a value below one keeps its digits", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.setContent('<main id="root"></main>');
+  await page.addStyleTag({ content: readFileSync(process.env.CARD_LAYOUT_STYLESHEET ?? "app/globals.css", "utf8") });
+  await page.addScriptTag({ content: longValueBundle.outputFiles[0].text });
+  const article = page.locator(".product-card");
+  await expect(article).toBeVisible();
+  const inside = () => article.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    const face = element.querySelector(element.getAttribute("data-side") === "back" ? ".card-back" : ".card-front")!;
+    return [...face.querySelectorAll("*")].filter(node => node.checkVisibility())
+      .filter(node => node.getBoundingClientRect().right > box.right + 1 || node.scrollWidth > node.clientWidth + 1 && getComputedStyle(node).overflowX === "visible").length;
+  });
+  await expect(article.locator(".card-front")).toContainText("0.004");
+  expect(await inside()).toBe(0);
+  await article.getByRole("button", { name: "Details", exact: true }).click();
+  await article.getByRole("button", { name: "How this was measured" }).click();
+  expect(await inside()).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
