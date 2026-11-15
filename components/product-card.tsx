@@ -479,17 +479,37 @@ function WeekActiveDays({ days }: { days: readonly { date: string; count: number
   </>;
 }
 
+/** Past this many days, a narrow card's back leads with its highest days and keeps every day behind a press. */
+const LONG_DAILY_SERIES = 14;
+const HIGHEST_DAYS = 4;
+
 /** A series' every value, in a compact list the front's bars can't show as numbers. */
 function SeriesValues({ activity }: { activity: Extract<ActivityModule, { kind: "timeSeries" }> }) {
   const series = normalizeSeries(activity.points, activity.unit);
   if (!series.points.length) return null;
   const words = POINT_WORDS[series.cadence ?? "level"];
-  return <>
+  const list = (points: typeof series.points, label: string) => <ol className="card-back-values" aria-label={label}>
+    {points.map(point => <li key={point.date}><span>{words(point.date)}</span><strong>{fullNumber(point.value)}</strong></li>)}
+  </ol>;
+  const every = list(series.points, `${activity.label}, ${series.cadence ? `each ${series.cadence}` : "by date"}`);
+  if (series.cadence !== "day" || series.points.length <= LONG_DAILY_SERIES) return <>
     {series.cadence === "week" && <p className="card-back-values-caption">Each week, from the day it starts</p>}
-    <ol className="card-back-values" aria-label={`${activity.label}, ${series.cadence ? `each ${series.cadence}` : "by date"}`}>
-      {series.points.map(point => <li key={point.date}><span>{words(point.date)}</span><strong>{fullNumber(point.value)}</strong></li>)}
-    </ol>
+    {every}
   </>;
+  // A month of days runs to sixteen rows on a phone, so a narrow card shows the highest few and every day one press away.
+  // The card's width picks one of the two (globals.css), so a screen reader meets only the one shown.
+  const highest = [...series.points].sort((a, b) => b.value - a.value || a.date.localeCompare(b.date)).slice(0, HIGHEST_DAYS);
+  return <div className="series-values">
+    <div className="series-values-wide">{every}</div>
+    <div className="series-values-narrow">
+      <p className="card-back-values-caption">Highest days</p>
+      {list(highest, "Highest days")}
+      <Collapsible className="series-values-every">
+        <CollapsibleTrigger className="card-provenance-trigger">All {series.points.length} days</CollapsibleTrigger>
+        <CollapsiblePanel hiddenUntilFound>{list(series.points, `${activity.label}, each day`)}</CollapsiblePanel>
+      </Collapsible>
+    </div>
+  </div>;
 }
 
 function ActivityMeta({ activity }: { activity: ActivityModule }) {

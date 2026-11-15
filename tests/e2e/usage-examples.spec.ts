@@ -987,6 +987,8 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px every li
   expect(short).toEqual([]);
 });
 
+/** The least space between two links on one row, so neither reads as part of the other. */
+const MIN_LINK_SPACE_PX = 12;
 test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a ${MIN_TAP_PX}px target`, async ({ page }) => {
   await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -1016,9 +1018,9 @@ test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a 
   }
   await carousel.getByRole("button", { name: "Docker", exact: true }).click();
   await docker.getByRole("button", { name: "Details", exact: true }).click();
-  // Taller, the back's two links still sit one under the other, not run together on one line.
+  // The back's two links share a row where they fit, never run together: a clear space between them, or one under the other.
   const [open, evidence] = await Promise.all([".outbound-link", ".evidence-link"].map(selector => docker.locator(`.card-back ${selector}`).boundingBox()));
-  expect(evidence!.y).toBeGreaterThanOrEqual(open!.y + open!.height);
+  expect(evidence!.x >= open!.x + open!.width + MIN_LINK_SPACE_PX || evidence!.y >= open!.y + open!.height).toBe(true);
   // A paid link's tag sits apart from its arrow: "Open Firecrawl ↗  Referral link", not "↗Referral link".
   await docker.getByRole("button", { name: "Close details" }).click();
   await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
@@ -1364,6 +1366,29 @@ test(`at ${DESKTOP_WIDTH}px no featured card grows when it turns: each back fits
   expect(growth).toEqual(Object.fromEntries(FEATURED.map(name => [name, 0])));
 });
 
+/** How much a featured card may grow when it turns on a phone: the page under it barely moves. */
+const MAX_PHONE_TURN_GROWTH_PX = 20;
+for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px no featured card grows more than ${MAX_PHONE_TURN_GROWTH_PX}px when it turns`, async ({ page }) => {
+  await page.setViewportSize({ width, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const growth: Record<string, number> = {};
+  for (const name of FEATURED) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    // Each card's brand fonts load when it is shown, so its front is measured in them.
+    await page.evaluate(() => document.fonts.ready);
+    const front = (await card.boundingBox())!.height;
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
+    growth[name] = Math.max(0, Math.round((await card.boundingBox())!.height - front));
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+  expect(Object.entries(growth).filter(([, grown]) => grown > MAX_PHONE_TURN_GROWTH_PX)).toEqual([]);
+});
+
 /** The most a back's last line may sit above the card's bottom edge: its padding and a little. */
 const MAX_BACK_GAP_PX = 24;
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds what its front cannot, fills its card and closes with the brand's button at ${width}px`, async ({ page }) => {
@@ -1394,9 +1419,14 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
   await carousel.getByRole("button", { name: "Cloudflare", exact: true }).click();
   const cloudflare = carousel.getByRole("article", { name: "Cloudflare card" });
   await cloudflare.getByRole("button", { name: "Details", exact: true }).click();
-  const values = cloudflare.locator(".card-back .card-back-values li");
-  await expect(values).toHaveCount(31);
-  await expect(values.first()).toHaveText("1 Aug2,840");
+  // Every day, at once where the card is wide; on a phone its highest days, and every day one press away.
+  const everyDay = cloudflare.getByRole("list", { name: "requests served, each day" });
+  if (width !== DESKTOP_WIDTH) {
+    await expect(cloudflare.getByRole("list", { name: "Highest days" }).getByRole("listitem")).toHaveCount(4);
+    await cloudflare.getByRole("button", { name: "All 31 days" }).click();
+  }
+  await expect(everyDay.getByRole("listitem")).toHaveCount(31);
+  await expect(everyDay.getByRole("listitem").first()).toHaveText("1 Aug2,840");
   await cloudflare.getByRole("button", { name: "Close details" }).click();
   await carousel.getByRole("button", { name: "Clay", exact: true }).click();
   const clay = carousel.getByRole("article", { name: "Clay card" });

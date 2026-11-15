@@ -1147,6 +1147,24 @@ test("a weekly series' back lists each week by its first day under one caption, 
   expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["17 Aug880", "24 Aug1,100"]);
 });
 
+test("a month of days on the back reads, on a narrow card, as its four highest days with every day one press away", () => {
+  const values = [2840, 2610, 7120, 8040, 7880, 3110];
+  const daily = { ...activityEvidence, kind: "timeSeries" as const, label: "requests served", unit: "per day",
+    points: Array.from({ length: 31 }, (_, index) => ({ date: `2026-08-${String(index + 1).padStart(2, "0")}`, value: values[index % values.length] + index })) };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, activity: daily }, index: 0 })));
+  const narrow = $(".card-back .series-values-narrow");
+  // Highest first; the full month is behind a disclosure, so the back is no taller than the front on a phone.
+  expect(narrow.find(".card-back-values-caption").first().text()).toBe("Highest days");
+  expect(narrow.find("ol[aria-label='Highest days'] li").map((_, item) => $(item).text()).get()).toEqual(["28 Aug8,067", "22 Aug8,061", "16 Aug8,055", "10 Aug8,049"]);
+  expect(narrow.find("button").text()).toBe("All 31 days");
+  expect(narrow.find("ol[aria-label='requests served, each day'] li")).toHaveLength(31);
+  // A wide card lists every day at once, as before.
+  expect($(".card-back .series-values-wide ol[aria-label='requests served, each day'] li")).toHaveLength(31);
+  // A short run of days, or weeks, keeps the one list.
+  const week = { ...daily, points: daily.points.slice(0, 7) };
+  expect(load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, activity: week }, index: 0 })))(".series-values-narrow")).toHaveLength(0);
+});
+
 test("a hyphenated word on a card never breaks at its hyphen: \"go-to-market\" and \"(awesome-compose)\" each stay on one line", () => {
   const card = { ...baseCard, product: { ...baseCard.product, description: "A go-to-market tool." },
     activity: { ...activityEvidence, kind: "artifactCollection" as const, total: 1, artifacts: [{ title: "Sample apps (awesome-compose)", url: "https://example.com/a" }] } };
