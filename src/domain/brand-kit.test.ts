@@ -32,8 +32,8 @@ describe("brandCardKit", () => {
     expect(brandCardKit(firecrawl, "#f9f9f9", "#262626")).toEqual({
       // Its own border (#e5e7eb) is too faint to define the card's edge, so one is drawn from its text colour.
       "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px",
-      // White on this orange is 3.3:1, too low for the button's small text, so the label is the card's text colour.
-      "--brand-card-button-fill": "#ff4c00", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450",
+      // White on this orange is 3.3:1, too low for the button's small text: the orange deepens 16%, as little as makes its white label read 4.5:1.
+      "--brand-card-button-fill": "#d64000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450",
       "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff",
       // The accent is 3.2:1 on the card: too faint for text, enough for bars.
       "--brand-card-chart": "#ff4c00",

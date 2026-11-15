@@ -793,6 +793,8 @@ export function ProductCard({
       data-panel={appearance.style["--brand-card-panel"] ? "" : undefined}
       data-logo-tile={appearance.style["--brand-card-logo-tile"] ? "" : undefined}
       data-slab-button={appearance.style["--brand-card-slab-button-fill"] ? "" : undefined}
+      data-marks={appearance.style["--brand-card-chart-tint"] ? "line" : undefined}
+      data-number-backdrop={appearance.style["--brand-card-number-backdrop"] ? "" : undefined}
       data-verified-brand={verifiedAssets?.productSlug}
       data-brand-revision={verifiedAssets?.revision}
       data-side={isFlipped ? "back" : "front"}

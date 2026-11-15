@@ -61,7 +61,9 @@ function measureCard(card) {
     set("buttonTracking", f.tracking(button), ".card-button letter-spacing / font-size");
   }
   const bar = part(".activity-bars span") ?? part('.contribution-grid span[data-level="4"]') ?? part('.activity-calendar span[data-level="4"]');
-  set("accent", bar ? f.color(getComputedStyle(bar).backgroundColor) : undefined, bar ? "chart mark background-color" : "no chart");
+  // An outlined bar (a brand that draws in lines) is drawn in its border; a filled one in its background.
+  const outlined = bar && parseFloat(getComputedStyle(bar).borderTopWidth) > 0;
+  set("accent", bar ? f.color(outlined ? getComputedStyle(bar).borderTopColor : getComputedStyle(bar).backgroundColor) : undefined, bar ? `chart mark ${outlined ? "border-top-color" : "background-color"}` : "no chart");
   set("panelRadius", { px: f.radius(card).px }, "card border-top-left-radius");
   const chip = part(".card-uses li");
   set("chipRadius", chip ? f.radius(chip) : undefined, chip ? ".card-uses li border-top-left-radius" : "no chips");

@@ -19,7 +19,7 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
   | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font"
   | "--brand-card-slab" | "--brand-card-slab-body" | "--brand-card-band-large-text" | "--brand-card-logo-tile"
-  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text", string>>;
+  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text" | "--brand-card-chart-tint" | "--brand-card-number-backdrop", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -57,6 +57,18 @@ const SYSTEM_FACES: Readonly<Record<SiteFont["generic"], string>> = {
 const CSS_CASE = { uppercase: "uppercase", "as typed": "none" } as const;
 /** Two colours within this OKLab distance read as the same colour at a glance: the fidelity check's tolerance. */
 const SAME_COLOUR_DISTANCE = 0.05;
+/**
+ * The most a button's fill deepens, mixed toward black or white, so the site's own label reads on it at 4.5:1: white on Firecrawl's
+ * orange takes 16%. Past this the fill is no longer the brand's, and the label gives way instead.
+ */
+const MAX_BUTTON_SHADE = 0.2, BUTTON_SHADE_STEP = 0.01;
+/**
+ * A box of 40x40px. A site that fills less of its first screen than this with its mark colour draws in that colour rather than filling
+ * with it (Spider's thin green lines and dots), and the card's chart is drawn in outline the same way.
+ */
+const MIN_FILLED_MARK_AREA = 40 * 40;
+/** How much of the mark colour tints the inside of an outlined bar. */
+const LINE_MARK_TINT = 0.18;
 
 const solid = (value: string | undefined) => (value && SOLID_HEX.test(value) ? value.toLowerCase() : undefined);
 function mix(from: string, into: string, amount: number) {
@@ -68,6 +80,15 @@ function readableOn(fill: string, preferred: string | undefined, cardText: strin
   const candidates = [preferred, cardText, WHITE, BLACK].filter((value): value is string => Boolean(value));
   return candidates.find(candidate => contrast(candidate, fill) >= MIN_LABEL_CONTRAST)
     ?? (contrast(WHITE, fill) >= contrast(BLACK, fill) ? WHITE : BLACK);
+}
+/** The fill, deepened as little as makes the site's own label read on it at 4.5:1, up to MAX_BUTTON_SHADE; else nothing. */
+function shadedFor(label: string, fill: string) {
+  const away = contrast(label, BLACK) >= contrast(label, WHITE) ? BLACK : WHITE;
+  for (let amount = BUTTON_SHADE_STEP; amount <= MAX_BUTTON_SHADE + BUTTON_SHADE_STEP / 2; amount += BUTTON_SHADE_STEP) {
+    const shaded = mix(away, fill, amount);
+    if (contrast(label, shaded) >= MIN_LABEL_CONTRAST) return shaded;
+  }
+  return undefined;
 }
 function derivedBorder(surface: string, text: string) {
   const mixes = BORDER_MIXES.map(amount => mix(text, surface, amount));
@@ -173,11 +194,13 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   ];
   // With no stored button at all (a brand fetched before buttons were kept), the card keeps its default outlined button.
   const chosen = primary || measuredButton ? fills.find(({ fill }) => fill && contrast(fill, surface) >= MIN_FILL_CONTRAST) : undefined;
-  const fill = chosen?.fill;
+  // The site's own label on a fill it fails on (white on Firecrawl's orange, 3.3:1) keeps its colour where the fill can deepen a little.
+  const shaded = chosen?.fill && chosen.label && contrast(chosen.label, chosen.fill) < MIN_LABEL_CONTRAST ? shadedFor(chosen.label, chosen.fill) : undefined;
+  const fill = shaded ?? chosen?.fill;
   if (fill) {
     kit["--brand-card-button-fill"] = fill;
-    kit["--brand-card-button-text"] = readableOn(fill, chosen.label, text);
-    if (chosen.border) kit["--brand-card-button-border"] = chosen.border;
+    kit["--brand-card-button-text"] = shaded ? chosen!.label! : readableOn(fill, chosen!.label, text);
+    if (chosen!.border) kit["--brand-card-button-border"] = chosen!.border;
   }
   if (measuredButton?.radius) kit["--brand-card-button-radius"] = measuredButton.radius.pill ? PILL_RADIUS : `${measuredButton.radius.px}px`;
   else if (primary?.radiusPx !== undefined) kit["--brand-card-button-radius"] = `${primary.radiusPx}px`;
@@ -221,12 +244,23 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
 
   Object.assign(kit, siteFeel(snapshot, surface, text, guide, site));
 
+  // A brand that draws in its colour rather than filling with it draws the chart's bars as outlines, tinted inside, on whatever they sit on.
+  const chart = kit["--brand-card-chart"];
+  if (!kit["--brand-card-panel-text"] && drawsInLines(chart, site)) kit["--brand-card-chart-tint"] = mix(chart, kit["--brand-card-panel"] ?? surface, LINE_MARK_TINT);
+
   const quiet = parts?.buttonSecondary, quietFill = solid(quiet?.background);
   if (quietFill && quietFill !== fill && contrast(quietFill, surface) >= MIN_QUIET_FILL_CONTRAST) {
     kit["--brand-card-quiet-fill"] = quietFill;
     kit["--brand-card-quiet-text"] = readableOn(quietFill, solid(quiet?.text), text);
   }
   return kit;
+}
+
+/** Whether the site fills less than a 40px box of its first screen with this brand colour; a grey (the text-colour fallback) never counts. */
+function drawsInLines(mark: string, site: BrandSiteTraits | undefined) {
+  const fills = site?.traits.fills?.value;
+  if (!fills || oklchChroma(mark) <= NEUTRAL_MAX_CHROMA) return false;
+  return fills.filter(fill => oklabDistance(fill.hex, mark) <= SAME_COLOUR_DISTANCE).reduce((area, fill) => area + fill.areaPx, 0) < MIN_FILLED_MARK_AREA;
 }
 
 /** The card's mark candidates on an inverse panel: the site's signature, the provider's accent, then the panel's own text. */
@@ -244,8 +278,12 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
   if (!traits) return {};
   const kit: BrandCardKit = {};
   if (traits.numberFont) kit["--brand-card-number-font"] = numberFace(traits.numberFont.value, guide);
-  const number = traits.numberColour?.value;
-  if (number && contrast(number, surface) >= MIN_LARGE_TEXT_CONTRAST) kit["--brand-card-number-colour"] = number;
+  const number = traits.numberColour?.value, backdrop = traits.numberBackdrop?.value;
+  // A number the site sets on a highlight that hugs it (Open Places' yellow) sits on that highlight, read against it.
+  if (number && backdrop && contrast(number, backdrop) >= MIN_LARGE_TEXT_CONTRAST) {
+    kit["--brand-card-number-colour"] = number;
+    kit["--brand-card-number-backdrop"] = backdrop;
+  } else if (number && contrast(number, surface) >= MIN_LARGE_TEXT_CONTRAST) kit["--brand-card-number-colour"] = number;
   const inverse = traits.inversePanel?.value;
   if (inverse && contrast(inverse.text, inverse.fill) >= MIN_LABEL_CONTRAST) {
     kit["--brand-card-panel"] = inverse.fill;

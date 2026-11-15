@@ -2057,6 +2057,19 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   background-image: linear-gradient(var(--brand-card-pattern-line, transparent) 1px, transparent 1px), linear-gradient(90deg, var(--brand-card-pattern-line, transparent) 1px, transparent 1px);
   background-size: var(--brand-card-pattern-pitch, 10px) var(--brand-card-pattern-pitch, 10px);
 }
+/* A brand that draws in its colour rather than filling boxes with it (Spider's thin green lines) draws its bars as outlines, tinted inside. */
+.product-card[data-marks="line"] .card-front .activity-bars > span:not([data-zero], [data-below-zero]) {
+  background: var(--brand-card-chart-tint);
+  border: 1.5px solid var(--brand-card-chart);
+}
+/* A number the site sets on a highlight that hugs it (Open Places' yellow) sits on that highlight. */
+.product-card[data-number-backdrop] :is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong) {
+  background: var(--brand-card-number-backdrop);
+  border-radius: .3rem;
+  box-decoration-break: clone;
+  padding: 0 .2em;
+  width: fit-content;
+}
 .product-card .card-footer { border-top: 1px var(--brand-card-rule-style, solid) var(--brand-card-rule, var(--card-line)); }
 .product-card :is(.card-activity-coverage, .usage-measurement-note, .contribution-range) { color: var(--brand-card-muted, inherit); }
 .product-card .card-table-preview { --table-ink: var(--brand-card-muted, color-mix(in srgb, var(--brand-card-text, currentColor) 74%, var(--brand-card-background, #fff))); }
