@@ -69,7 +69,8 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     ["Docker", "Weekly · since 2024", "none", "none"],
     ["Firecrawl", "Weekly · since 2025", "none", "none"],
     ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
-    ["Claude Code", "Daily · since 2025", "uppercase", "uppercase"],
+    // Claude Code's own page sets its labels and buttons as typed.
+    ["Claude Code", "Daily · since 2025", "none", "none"],
     // Exa's first screen labels its controls in mono capitals (LATENCY, CATEGORY); its buttons stay as typed.
     ["Exa", "Weekly · since 2025", "uppercase", "none"],
     ["Porkbun", "Occasionally · since 2021", "uppercase", "uppercase"],
@@ -205,7 +206,8 @@ test(`every example card, front and back, passes axe at ${DESKTOP_WIDTH}px`, asy
 const BRANDED = [
   { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)", bars: { count: 12, color: "rgb(255, 76, 0)" }, logo: "square" },
   { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)", bars: { count: 31, color: "rgb(255, 94, 31)" }, logo: "wordmark" },
-  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: { count: 12, color: "rgb(22, 22, 22)" }, logo: "wordmark" },
+  // n8n's pink, deepened in lightness with its hue kept, so its bars read 3:1 on its grey panel.
+  { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: { count: 12, color: "rgb(183, 121, 135)" }, logo: "wordmark" },
   { name: "Clay", slug: "clay", background: "rgb(244, 243, 240)", bars: undefined, logo: "app-icon" },
 ] as const;
 const CODING_DAYS = 31;
@@ -1557,11 +1559,12 @@ test(`at ${PHONE_WIDTH}px GitHub's source link under its card is a ${MIN_TAP_PX}
 /**
  * The nine behind More examples hold the same look floors as the five featured: each branded card on its brand's surface, its
  * headline and name in the brand's heading face, and every text, bar and button on both faces at its WCAG contrast. Claude Code
- * and Grok Bot have no stored brand (their domains belong to a parent company), so they keep the house card.
+ * and Grok Bot have no stored brand (their domains belong to a parent company). Claude Code takes claude.com's ivory from its own
+ * measured page, in system faces; x.ai blocked the measurement, so Grok Bot keeps the house card.
  */
 const OTHER_LOOK = [
   { name: "n8n", slug: "n8n", surface: "rgb(250, 250, 250)" },
-  { name: "Claude Code", slug: undefined, surface: "rgb(37, 37, 31)" },
+  { name: "Claude Code", slug: undefined, surface: "rgb(250, 249, 245)" },
   { name: "Exa", slug: "exa", surface: "rgb(255, 255, 255)" },
   { name: "Porkbun", slug: "porkbun", surface: "rgb(254, 249, 249)" },
   { name: "Spider", slug: "spider", surface: "rgb(12, 14, 19)" },
