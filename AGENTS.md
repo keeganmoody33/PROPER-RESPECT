@@ -38,9 +38,9 @@ branch and PR per task. That also applies:
   `remediate/<ID>-*` branch already names it. Either one means another writer
   holds the task.
 - **Review.** It never reviews or clears its own PRs. A reviewer other than
-  Claude reviews them: today Codex, asked with an `@codex review` comment on
-  each new head (owner decision, 2026-11-15). The owner merges while the
-  autopilot is off.
+  Claude reviews them. Since the owner's decision of 2026-11-15, that reviewer
+  is Codex, and the lead asks for each review with an `@codex review` comment
+  on the PR's newest commit. The owner merges while the autopilot is off.
 - **Autopilot.** Its task PRs carry the `needs-owner` label, so a re-enabled
   autopilot doesn't send them to Codex to fix.
 - **Authority.** The role adds no authority to deploy, change production
