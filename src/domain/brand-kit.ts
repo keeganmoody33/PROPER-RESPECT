@@ -255,6 +255,11 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
     const rule = traits.rule.value.hex;
     kit["--brand-card-rule"] = contrast(rule, surface) >= MIN_BORDER_CONTRAST ? rule : derivedBorder(surface, text);
     kit["--brand-card-rule-style"] = traits.rule.value.style;
+    // The data sits in a panel framed by that rule: on the site's light second surface, or on the card's own when it measured none.
+    if (!kit["--brand-card-panel-text"]) {
+      kit["--brand-card-panel"] ??= surface;
+      kit["--brand-card-panel-border"] = kit["--brand-card-rule"];
+    }
   }
   const muted = traits.mutedText?.value;
   if (muted && contrast(muted, surface) >= MIN_LABEL_CONTRAST) kit["--brand-card-muted"] = muted;

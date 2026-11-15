@@ -94,6 +94,16 @@ describe("what a card makes of the feel", () => {
     expect(clay["--brand-card-rule-style"]).toBe("solid");
   });
 
+  it("frames the card's data panel in the site's rule: on its second surface, or on the card's own surface when it measured none", () => {
+    const github = kit({ rule: { style: "solid", hex: "#d2d9d4" } });
+    expect([github["--brand-card-panel"], github["--brand-card-panel-border"]]).toEqual([WHITE, "#d2d9d4"]);
+    const firecrawl = kit({ panelFill: "#f9f9f9", rule: { style: "solid", hex: "#d2d9d4" } });
+    expect([firecrawl["--brand-card-panel"], firecrawl["--brand-card-panel-border"]]).toEqual(["#f9f9f9", "#d2d9d4"]);
+    // A dark inverse panel keeps its own border, and a site with no rule gets no frame.
+    expect(kit({ inversePanel: { fill: "#0e1217", text: "#e6ebf2" }, rule: { style: "solid", hex: "#d2d9d4" } })["--brand-card-panel-border"]).toBeUndefined();
+    expect(kit({ surface: WHITE })["--brand-card-panel"]).toBeUndefined();
+  });
+
   it("uses the site's muted text for captions only where it reads at 4.5:1 on the card", () => {
     expect(kit({ mutedText: "#58635b" })["--brand-card-muted"]).toBe("#58635b");
     expect(kit({ mutedText: "#aaaaaa" })["--brand-card-muted"]).toBeUndefined();
