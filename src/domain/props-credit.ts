@@ -20,6 +20,8 @@ type PlatformRule = Readonly<{
   // The handle in a profile link's path segments, or undefined when the path isn't a profile.
   fromPath: (segments: readonly string[]) => string | undefined;
   accepts: (handle: string) => boolean;
+  // The site's own one-segment pages, such as x.com/home, which look like a handle but are no one's profile. Lowercase.
+  pages: ReadonlySet<string>;
   refused: string;
   href: (handle: string) => string;
   // Whether the handle is written after an @. A LinkedIn profile is named by its link, not an @handle.
@@ -48,6 +50,13 @@ const SUBSTACK_HANDLE = /^[A-Za-z0-9]{4,32}$/;
 const PLAIN_TEXT = /^[^\p{Cc}\u200E\u200F\u202A-\u202E\u2066-\u2069]+$/u;
 // Accepts one leading @: matches "@jack", rejects "jack@". https://regex101.com/?regex=%5E%40&flags=&testString=%40jack%0Ajack%40
 const LEADING_AT = /^@/;
+// Finds two hyphens in a row: matches "foo--bar", rejects "foo-bar". https://regex101.com/?regex=--&flags=&testString=foo--bar%0Afoo-bar
+const DOUBLE_HYPHEN = /--/;
+const NO_PAGES: ReadonlySet<string> = new Set();
+// x.com's one-segment pages (as of 2026-11-15); X reserves these names, so none is a person.
+const X_PAGES: ReadonlySet<string> = new Set(["home", "explore", "notifications", "messages", "search", "settings", "i", "compose", "login", "logout", "signup", "tos", "privacy", "hashtag", "intent", "share"]);
+// instagram.com's one-segment pages (as of 2026-11-15).
+const INSTAGRAM_PAGES: ReadonlySet<string> = new Set(["explore", "accounts", "reels", "reel", "p", "stories", "direct", "about", "legal", "developer", "tv", "challenge", "emails", "web"]);
 
 const RULES = {
   PROPER_RESPECT: {
@@ -56,6 +65,8 @@ const RULES = {
     fromPath: only,
     // The site's own handle rule (src/domain/handle.ts). Handles are lowercase, so a pasted one is lowercased first.
     accepts: handle => handleSchema.safeParse(handle).success && handle === handle.trim(),
+    // handleSchema already refuses the site's own routes.
+    pages: NO_PAGES,
     refused: "Enter a Proper Respect handle: up to 39 lowercase letters, numbers or hyphens, starting and ending with a letter or number.",
     href: handle => `${PROPER_RESPECT_ORIGIN}/${encoded(handle)}`,
     at: true,
@@ -67,6 +78,7 @@ const RULES = {
     // https://help.x.com/en/managing-your-account/x-username-rules (checked 2026-11-15): letters, numbers and
     // underscores, at most 15. The page states no minimum, so one character is allowed (short legacy names exist).
     accepts: handle => X_HANDLE.test(handle),
+    pages: X_PAGES,
     refused: "Enter an X handle: up to 15 letters, numbers or underscores.",
     href: handle => `https://x.com/${encoded(handle)}`,
     at: true,
@@ -79,6 +91,8 @@ const RULES = {
     // characters, with no spaces, symbols or special characters. Hyphens are our reading: LinkedIn's own generated
     // profile links use them, but the page doesn't list them.
     accepts: handle => LINKEDIN_SLUG.test(handle),
+    // A profile is always under /in/, so no page can be mistaken for one.
+    pages: NO_PAGES,
     refused: "Enter the part of their LinkedIn profile link after /in/: 3 to 100 letters, numbers or hyphens.",
     href: handle => `https://www.linkedin.com/in/${encoded(handle)}`,
     at: false,
@@ -89,8 +103,10 @@ const RULES = {
     fromPath: only,
     // The repo's GitHub login rule and reserved paths (src/domain/product-destination.ts). It matches
     // https://docs.github.com/en/enterprise-cloud@latest/admin/managing-iam/iam-configuration-reference/username-considerations-for-external-authentication
-    // (checked 2026-11-15): letters, numbers and hyphens, no hyphen first or last, at most 39 on GitHub.com.
-    accepts: handle => GITHUB_LOGIN.test(handle) && !GITHUB_MARKETING_PATHS.has(handle.toLowerCase()),
+    // (checked 2026-11-15): letters, numbers and hyphens, no hyphen first or last, at most 39 on GitHub.com. Sign-up
+    // also refuses two hyphens in a row, which the shared GITHUB_LOGIN does not check.
+    accepts: handle => GITHUB_LOGIN.test(handle) && !DOUBLE_HYPHEN.test(handle),
+    pages: GITHUB_MARKETING_PATHS,
     refused: "Enter a GitHub username: up to 39 letters, numbers or single hyphens, not starting or ending with a hyphen.",
     href: handle => `https://github.com/${encoded(handle)}`,
     at: true,
@@ -104,6 +120,8 @@ const RULES = {
     // or last. Some scripts allow shorter handles (Han and Hangul from 1), so a handle with a non-Latin letter may be
     // 1 or 2 characters; the per-script maximums are not checked.
     accepts: handle => YOUTUBE_HANDLE.test(handle) && [...handle].length <= YOUTUBE_MAX && ([...handle].length >= YOUTUBE_MIN || !LATIN_ONLY.test(handle)),
+    // A handle is always after an @, so no page can be mistaken for one.
+    pages: NO_PAGES,
     refused: "Enter a YouTube handle: 3 to 30 letters, numbers, underscores, hyphens or periods, starting and ending with a letter or number.",
     href: handle => `https://www.youtube.com/@${encoded(handle)}`,
     at: true,
@@ -115,6 +133,7 @@ const RULES = {
     // Instagram's help center publishes no username rule (checked 2026-11-15). Secondary sources agree on at most 30
     // letters, numbers, periods and underscores, with no period first, last or twice in a row; that is our rule.
     accepts: handle => INSTAGRAM_USERNAME.test(handle),
+    pages: INSTAGRAM_PAGES,
     refused: "Enter an Instagram username: up to 30 letters, numbers, periods or underscores, with no period first, last or twice in a row.",
     href: handle => `https://www.instagram.com/${encoded(handle)}/`,
     at: true,
@@ -127,6 +146,7 @@ const RULES = {
     // https://support.substack.com/hc/en-us/articles/15574565677204-What-are-Substack-Handles (checked 2026-11-15):
     // letters and numbers only, 4 to 32 characters.
     accepts: handle => SUBSTACK_HANDLE.test(handle),
+    pages: NO_PAGES,
     refused: "Enter a Substack handle: 4 to 32 letters or numbers, from their substack.com/@ profile.",
     href: handle => `https://substack.com/@${encoded(handle)}`,
     at: true,
@@ -162,9 +182,10 @@ export const creditInputSchema = z.object({
 });
 export type CreditInput = z.infer<typeof creditInputSchema>;
 
-// A handle fits when it meets its platform's rule and the link built from it is an http(s) URL, so every layer that
+// A handle fits when it meets its platform's rule, is not one of the site's own pages, and the link built from it is an http(s) URL, so every layer that
 // reads a credit through this schema checks that link as well.
-const fits = (platform: HandlePlatform, handle: string) => RULES[platform].accepts(handle) && isHttpUrl(RULES[platform].href(handle));
+const fits = (platform: HandlePlatform, handle: string) =>
+  RULES[platform].accepts(handle) && !RULES[platform].pages.has(handle.toLowerCase()) && isHttpUrl(RULES[platform].href(handle));
 // A Proper Respect credit links only when, at publish, its handle named a published profile.
 const properRespectCredit = z.object({
   platform: z.literal("PROPER_RESPECT"), handle: z.string().refine(handle => fits("PROPER_RESPECT", handle)), linked: z.literal(true).optional(),
@@ -203,7 +224,7 @@ function typedHandle(platform: HandlePlatform, typed: string): NormalizedCredit 
     const url = parseLooseHttpUrl(typed);
     const segments = url && rule.hosts.includes(url.hostname) ? segmentsOf(url.pathname) : undefined;
     const fromPath = segments && rule.fromPath(segments);
-    if (fromPath === undefined) return notAProfile;
+    if (fromPath === undefined || rule.pages.has(fromPath.toLowerCase())) return notAProfile;
     handle = fromPath;
   }
   if (platform === "PROPER_RESPECT") handle = handle.toLowerCase();

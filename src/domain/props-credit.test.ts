@@ -144,3 +144,28 @@ test("a pasted profile link for the longest non-Latin YouTube handle fits the in
   expect(creditInputSchema.safeParse({ platform: "YOUTUBE", handle: pasted }).success).toBe(true);
   expect(normalizeCredit({ platform: "YOUTUBE", handle: pasted })).toEqual({ ok: true, credit: { platform: "YOUTUBE", handle } });
 });
+
+test("a pasted link to a platform's own page is refused as not a profile, and typing that page's name is refused too", () => {
+  const notAProfile = (label: string) => ({ ok: false, message: `That link isn't a profile on ${label}. Paste their ${label} profile link or just the handle.` });
+  const pages = [
+    ["X", "https://x.com/home", "X"],
+    ["X", "https://twitter.com/Explore", "X"],
+    ["INSTAGRAM", "https://www.instagram.com/explore/", "Instagram"],
+    ["INSTAGRAM", "https://www.instagram.com/reels/", "Instagram"],
+    ["GITHUB", "https://github.com/pricing", "GitHub"],
+  ] as const;
+  expect(pages.map(([platform, handle]) => normalizeCredit({ platform, handle }))).toEqual(pages.map(([, , label]) => notAProfile(label)));
+  expect(normalizeCredit({ platform: "X", handle: "home" })).toEqual({ ok: false, message: "Enter an X handle: up to 15 letters, numbers or underscores." });
+  expect(normalizeCredit({ platform: "INSTAGRAM", handle: "explore" })).toEqual({ ok: false, message: "Enter an Instagram username: up to 30 letters, numbers, periods or underscores, with no period first, last or twice in a row." });
+  const stored = [{ platform: "X", handle: "home" }, { platform: "INSTAGRAM", handle: "explore" }];
+  expect(stored.map(listedCredit)).toEqual(stored.map(() => undefined));
+});
+
+test("a GitHub username with two hyphens in a row is refused, typed, pasted or stored", () => {
+  const refused = { ok: false, message: "Enter a GitHub username: up to 39 letters, numbers or single hyphens, not starting or ending with a hyphen." };
+  expect(normalizeCredit({ platform: "GITHUB", handle: "foo--bar" })).toEqual(refused);
+  expect(normalizeCredit({ platform: "GITHUB", handle: "https://github.com/foo--bar" })).toEqual(refused);
+  expect(normalizeCredit({ platform: "GITHUB", handle: "foo-bar" })).toEqual({ ok: true, credit: { platform: "GITHUB", handle: "foo-bar" } });
+  expect(listedCredit({ platform: "GITHUB", handle: "foo--bar" })).toBeUndefined();
+  expect(creditHref({ platform: "GITHUB", handle: "foo--bar" })).toBeUndefined();
+});
