@@ -1239,3 +1239,18 @@ test("a big number's group separator is set apart from its tabular figures, so a
   const number = $(".card-front .card-activity-preview > p").first().find("strong");
   expect([number.text(), number.find(".figure-separator").map((_, mark) => $(mark).text()).get()]).toEqual(["3,690", [","]]);
 });
+
+test("a headline's phrase set apart takes the brand's mark only where it reads as large text, and keeps the headline's colour otherwise", async () => {
+  const { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } = await import("../data/homepage-brands");
+  const firecrawl = { ...baseCard, headline: "Turns pages into clean Markdown for my agents.", product: { name: "Firecrawl", slug: "firecrawl", domain: "firecrawl.dev", description: "Scraper.", brand: HOMEPAGE_BRANDS.firecrawl } };
+  const phrase = (card: Card, headlineAccent: string) => {
+    const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, siteTraits: HOMEPAGE_SITE_TRAITS.firecrawl, headlineAccent })));
+    return [$(".card-front .card-headline").text(), $(".card-front .card-headline-accent").text(), $(".card-front .card-headline-accent").attr("style")];
+  };
+  expect(phrase(firecrawl, "clean Markdown")).toEqual(["Turns pages into clean Markdown for my agents.", "clean Markdown", "color:#ff4c00"]);
+  // Past 60 characters the headline steps down to 20.8px, under large text at Firecrawl's weight.
+  const long = "Turns docs, product pages and changelogs into clean Markdown for my agents.";
+  expect(phrase({ ...firecrawl, headline: long }, "clean Markdown")).toEqual([long, "clean Markdown", undefined]);
+  // A phrase the headline doesn't hold sets nothing apart.
+  expect(phrase(firecrawl, "LLM-ready data")).toEqual(["Turns pages into clean Markdown for my agents.", "", undefined]);
+});

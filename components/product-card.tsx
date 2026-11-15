@@ -29,7 +29,7 @@ import { UsageChart } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
-import { brandAccent, brandCardKit, brandMark } from "@/src/domain/brand-kit";
+import { brandAccent, brandCardKit, brandMark, headlineAccentColour } from "@/src/domain/brand-kit";
 import type { BrandSiteTraits } from "@/src/domain/brand-site-traits";
 import { ownOriginImageUrl } from "@/src/domain/brand-image-url";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
@@ -303,6 +303,16 @@ function ArtifactLinks({ artifacts }: { artifacts: Extract<ActivityModule, { kin
 const HEADLINE_STEPS = [[120, "long"], [60, "medium"]] as const;
 function headlineLength(text: string): "short" | "medium" | "long" {
   return HEADLINE_STEPS.find(([limit]) => text.length > limit)?.[1] ?? "short";
+}
+/** Each step's size in px, as globals.css sets `.card-headline` (1.5rem, 1.3rem, 1.15rem); the CSS default heading weight is 400. */
+const HEADLINE_PX = { short: 24, medium: 20.8, long: 18.4 } as const;
+const DEFAULT_HEADING_WEIGHT = 400;
+
+/** The headline, with its phrase set apart in `colour` when it has one; without, the phrase keeps the headline's colour. */
+function HeadlineText({ text, accent, colour }: { text: string; accent?: string; colour?: string }) {
+  const at = accent ? text.indexOf(accent) : -1;
+  if (!accent || at < 0) return <>{text}</>;
+  return <>{text.slice(0, at)}<span className="card-headline-accent" style={colour ? { color: colour } : undefined}>{accent}</span>{text.slice(at + accent.length)}</>;
 }
 
 /** How long a shown table waits before its running row fills in, so the visitor sees it pending first. */
@@ -625,6 +635,7 @@ export function ProductCard({
   deferBrandAssets = false,
   siteTraits,
   backHint,
+  headlineAccent,
   tablePreview,
   shown = true,
   sample = false,
@@ -649,6 +660,8 @@ export function ProductCard({
   siteTraits?: BrandSiteTraits;
   /** Says what the back holds, in the footer, for a visitor who might never press Details. */
   backHint?: string;
+  /** A phrase within the headline to set apart, as the product's own site sets part of its heading in its brand colour. Presentation only. */
+  headlineAccent?: string;
   /** A few rows of a table the product makes, shown on the front. Presentation only, never part of the card's stored data. */
   tablePreview?: TablePreviewInput;
   /** Whether a visitor can see this card now; a table preview fills in only once it is. */
@@ -710,6 +723,13 @@ export function ProductCard({
   const site = brand && siteTraits?.productSlug === brand.productSlug && siteTraits.canonicalDomain === brand.canonicalDomain ? siteTraits : undefined;
   const appearance = brandAppearance(brand, site);
   const verifiedAssets = verifiedProductAssets(card.product);
+  const typography = verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand);
+  // The headline sits on the hero band where the card has one, otherwise on the card.
+  const headlineSurface = appearance.style["--brand-card-band"] ?? appearance.style["--brand-card-background"];
+  const headlineSize = HEADLINE_PX[headlineLength(headlineText)];
+  const headlineWeight = Number(typography["--brand-card-heading-weight"] ?? DEFAULT_HEADING_WEIGHT);
+  const accentColour = !brandPreview && headlineAccent && headlineSurface
+    ? headlineAccentColour(brand, headlineSurface, { sizePx: headlineSize, weight: headlineWeight }, site) : undefined;
   const [failedLogoUrls, setFailedLogoUrls] = useState<string[]>([]);
   const chosenLogo = cardLogo({ brand, verifiedAssets, icon: officialProductIcon(card.product), logoUrl: card.product.logoUrl, surface: appearance.surface, failed: failedLogoUrls });
   const logo = deferBrandAssets ? { ...chosenLogo, url: undefined } : chosenLogo;
@@ -766,7 +786,7 @@ export function ProductCard({
     <article
       className="product-card"
       ref={articleRef}
-      style={{ ...appearance.style, ...(verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand)), ...(isFlipped && frontHeight ? { minHeight: frontHeight } : {}) }}
+      style={{ ...appearance.style, ...typography, ...(isFlipped && frontHeight ? { minHeight: frontHeight } : {}) }}
       data-surface={appearance.surface}
       data-band={appearance.style["--brand-card-band"] ? "" : undefined}
       data-slab={appearance.style["--brand-card-slab"] ? "" : undefined}
@@ -812,7 +832,7 @@ export function ProductCard({
           }}>Give props</button>}</div>}
         </div>
 
-        <p className="card-headline" data-length={headlineLength(headlineText)}>{headlineText}</p>
+        <p className="card-headline" data-length={headlineLength(headlineText)}><HeadlineText text={headlineText} accent={brandPreview ? undefined : headlineAccent} colour={accentColour} /></p>
         {reason && <p className="card-reason">{reason}</p>}
         {!!useLabels.length && <div className="card-uses-block">
           <p className="card-uses-lead">{pastUse ? "I used it to" : "I use it to"}</p>

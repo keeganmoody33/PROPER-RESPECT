@@ -934,6 +934,20 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`at ${width}px Firecrawl's headline sets its phrase in the brand's orange, as its site sets its second line, and the rest stays dark`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name: "Firecrawl", exact: true }).click();
+  const headline = carousel.getByRole("article", { name: "Firecrawl card" }).locator(".card-front .card-headline");
+  await expect(headline.locator(".card-headline-accent")).toHaveText("clean Markdown");
+  // Orange reads 3:1 on the card only as large text, so the headline holds 24px wherever the phrase is orange.
+  expect(await headline.evaluate(element => ({
+    size: getComputedStyle(element).fontSize, headline: getComputedStyle(element).color, phrase: getComputedStyle(element.querySelector(".card-headline-accent")!).color,
+  }))).toEqual({ size: "24px", headline: "rgb(38, 38, 38)", phrase: "rgb(255, 76, 0)" });
+});
+
 const NARROWEST_HEIGHT = 700;
 test(`at ${NARROWEST_WIDTH}x${NARROWEST_HEIGHT} the card's three numbers are above the examples row in the first screen`, async ({ page }) => {
   await page.setViewportSize({ width: NARROWEST_WIDTH, height: NARROWEST_HEIGHT });

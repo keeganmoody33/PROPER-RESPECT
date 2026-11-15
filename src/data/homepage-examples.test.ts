@@ -361,3 +361,8 @@ test("each example's card leads with a number that means something: a period's t
     ["context-dev", 76, "domains looked up over 6 weeks"],
   ]);
 });
+
+test("Firecrawl's headline sets its phrase apart as its site does, and every phrase set apart is in its own headline", () => {
+  const accents = examples.filter(example => example.headlineAccent).map(example => [example.id, example.headlineAccent, example.card.headline!.includes(example.headlineAccent!)]);
+  expect(accents).toEqual([["github", "every project's code", true], ["firecrawl", "clean Markdown", true]]);
+});

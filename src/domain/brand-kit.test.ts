@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandAccent, brandCardKit, contrast } from "./brand-kit";
+import { brandAccent, brandCardKit, contrast, headlineAccentColour } from "./brand-kit";
 import { normalizeProductBrand } from "./product-brand";
 import { HOMEPAGE_BRANDS } from "@/src/data/homepage-brands";
 
@@ -146,5 +146,21 @@ describe("brandAccent", () => {
     const grey = stored({ accent: "#94a3b8", background: "#0c0e13", text: "#f8fafc" });
     expect(brandAccent(grey, "#0c0e13")).toEqual({ hex: "#94a3b8", source: "site accent" });
     expect(brandAccent(undefined, "#0c0e13")).toBeUndefined();
+  });
+});
+
+describe("headlineAccentColour", () => {
+  it("draws the phrase in the brand's mark where the headline is large text and the mark reads 3:1 on the headline's surface", () => {
+    expect(headlineAccentColour(firecrawl, "#f9f9f9", { sizePx: 24, weight: 500 })).toBe("#ff4c00");
+    // Bold from 18.66px is large text too.
+    expect(headlineAccentColour(firecrawl, "#f9f9f9", { sizePx: 20.8, weight: 700 })).toBe("#ff4c00");
+  });
+
+  it("keeps the headline's own colour for text under large size, and for a mark that doesn't reach 3:1 on the surface", () => {
+    expect(headlineAccentColour(firecrawl, "#f9f9f9", { sizePx: 20.8, weight: 500 })).toBeUndefined();
+    expect(headlineAccentColour(firecrawl, "#f9f9f9", { sizePx: 18.4, weight: 700 })).toBeUndefined();
+    // Yellow on white is 1.4:1; Firecrawl's orange on its own orange is 1:1.
+    expect(headlineAccentColour(stored({ accent: "#ffd400", background: "#ffffff", text: "#111111" }), "#ffffff", { sizePx: 24, weight: 400 })).toBeUndefined();
+    expect(headlineAccentColour(firecrawl, "#ff4c00", { sizePx: 24, weight: 400 })).toBeUndefined();
   });
 });

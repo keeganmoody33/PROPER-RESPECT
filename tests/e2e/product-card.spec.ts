@@ -363,3 +363,35 @@ test("at 390px a 650-digit published value wraps inside its card, front and back
   expect(await inside()).toBe(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+/** A brand whose mark is the colour given, on a white card with near-black text. */
+const markedBrand = (accent: string) => normalizeProductBrand({
+  productSlug: "synthetic-card", canonicalDomain: "example.com", retrievalId: "synthetic-accent-2026-11-14",
+  retrievedAt: "2026-11-14T09:00:00.000Z", responseHash: "b".repeat(64),
+}, {
+  brand: { status: "ok", brand: { domain: "example.com", logos: [], colors: [] } },
+  styleguide: { status: "ok", domain: "example.com", styleguide: { mode: "light", colors: { accent, background: "#ffffff", text: "#111111" } } },
+});
+// Yellow is 1.4:1 on white, short of the 3:1 large text needs; burnt orange is 5.2:1.
+const accentCards = [["#ffd400", "Yellow"], ["#c2410c", "Orange"]].map(([accent, name]) => ({
+  ...card, activity: undefined, headline: "Turns pages into clean Markdown.", product: { ...card.product, name, brand: markedBrand(accent) },
+}));
+const accentBundle = buildSync({
+  stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement("div", { className: "card-grid" },
+      ${JSON.stringify(accentCards)}.map((card, index) => createElement(ProductCard, { key: index, card, index, headlineAccent: "clean Markdown" }))));`, resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"production"' },
+});
+
+test("a large headline's phrase takes the brand's mark where it reads 3:1, and stays in the headline's colour where it doesn't", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.setContent('<main id="root"></main>');
+  await page.addStyleTag({ content: readFileSync(process.env.CARD_LAYOUT_STYLESHEET ?? "app/globals.css", "utf8") });
+  await page.addScriptTag({ content: accentBundle.outputFiles[0].text });
+  const shown = (name: string) => page.getByRole("article", { name: `${name} card` }).locator(".card-headline").evaluate(headline => ({
+    size: getComputedStyle(headline).fontSize, headline: getComputedStyle(headline).color, phrase: getComputedStyle(headline.querySelector(".card-headline-accent")!).color,
+  }));
+  expect(await shown("Yellow")).toEqual({ size: "24px", headline: "rgb(17, 17, 17)", phrase: "rgb(17, 17, 17)" });
+  expect(await shown("Orange")).toEqual({ size: "24px", headline: "rgb(17, 17, 17)", phrase: "rgb(194, 65, 12)" });
+});

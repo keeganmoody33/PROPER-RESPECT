@@ -138,6 +138,18 @@ export function brandMark(snapshot: ProductBrandSnapshot | undefined, surface: s
   return [differs ? signature : undefined, heroColour, provider].find((hex): hex is string => hex !== undefined && contrast(hex, surface) >= minContrast);
 }
 
+/** WCAG's large text: 24px, or bold (700) from 18.66px. */
+const LARGE_TEXT_PX = 24, LARGE_BOLD_TEXT_PX = 18.66, BOLD_WEIGHT = 700;
+
+/**
+ * The colour a headline's phrase set apart is drawn in: the brand's mark, where the headline is large text and the mark reads
+ * 3:1 on the surface behind the headline. Otherwise none, and the phrase keeps the headline's own colour.
+ */
+export function headlineAccentColour(snapshot: ProductBrandSnapshot | undefined, surface: string, text: { sizePx: number; weight: number }, site?: BrandSiteTraits): string | undefined {
+  const large = text.sizePx >= LARGE_TEXT_PX || (text.weight >= BOLD_WEIGHT && text.sizePx >= LARGE_BOLD_TEXT_PX);
+  return large ? brandMark(snapshot, surface, MIN_LARGE_TEXT_CONTRAST, site) : undefined;
+}
+
 /**
  * `surface` and `text` are the colours the card is already drawn in. With no usable brand values the
  * result still carries a border that shows, so every card has a defined edge.

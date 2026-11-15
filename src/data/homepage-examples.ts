@@ -23,6 +23,8 @@ export type HomepageExample = Readonly<{
   source?: Readonly<{ href: string; label: string }>;
   /** What the card's back holds, said on its front. */
   backHint?: string;
+  /** The phrase in the headline the product's own site would set apart in its brand colour. Presentation only, never part of the card's data. */
+  headlineAccent?: string;
   /** A few invented rows of a table the product makes, drawn on the card's front. Presentation only, never part of the card's data. */
   tablePreview?: TablePreviewInput;
   /** The sample series' points each count their own day or week, so its headline adds them up. Presentation only, never part of the card's data. */
@@ -181,6 +183,8 @@ type ExampleSource = Readonly<{
   goTo?: true;
   since: string;
   headline: string;
+  /** A phrase within the headline to set apart, where the product's site sets part of its own heading in its colour. */
+  headlineAccent?: string;
   note: string;
   uses: readonly string[];
   /** GitHub keeps its contribution calendar and Docker lists its links; every other example reads homepage-sample-usage.json. */
@@ -210,7 +214,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     caveat: "Its work-sample link opens Clay's public templates.", backHint: "Periods, sources and a work sample inside", tablePreview: CLAY_TABLE,
   },
   {
-    slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.",
+    slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.", headlineAccent: "every project's code",
     note: "Contribution counts don't measure quality or hours.", uses: ["host-code", "review-pull-requests", "run-ci"], activity: githubActivity,
     caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
     source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
@@ -226,7 +230,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     caveat: "The listed links go to public Docker pages, standing in for an owner's own repositories and images.",
   },
   {
-    slug: "firecrawl", featured: true, capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", note: "I pull docs and product pages through it.",
+    slug: "firecrawl", featured: true, capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", headlineAccent: "clean Markdown", note: "I pull docs and product pages through it.",
     uses: ["scrape-pages", "crawl-sites"], linkType: "REFERRAL",
     caveat: "A real card's referral link carries its owner's code. This sample's goes to Firecrawl's home page and credits nobody.",
   },
@@ -274,6 +278,7 @@ export function homepageExamples(): HomepageExample[] {
   return EXAMPLES.map(example => {
     const entry = directoryEntry(example.slug);
     if (!entry) throw new Error(`Homepage example "${example.slug}" is not in the product directory.`);
+    if (example.headlineAccent && !example.headline.includes(example.headlineAccent)) throw new Error(`Homepage example "${example.slug}" sets apart a phrase its headline doesn't hold.`);
     const brand = HOMEPAGE_BRANDS[entry.slug], site = HOMEPAGE_SITE_TRAITS[entry.slug];
     const uses: ProductUses = { picks: [...example.uses] };
     const activity = example.activity ?? sampleActivity(entry.slug);
@@ -293,6 +298,7 @@ export function homepageExamples(): HomepageExample[] {
       ...(site ? { site } : {}),
       ...(example.caveat ? { caveat: example.caveat } : {}),
       ...(example.backHint ? { backHint: example.backHint } : {}),
+      ...(example.headlineAccent ? { headlineAccent: example.headlineAccent } : {}),
       ...(example.tablePreview ? { tablePreview: example.tablePreview } : {}),
       ...(example.source ? { source: example.source } : {}),
       // Every hand-written sample series counts what happened in each of its days or weeks.
