@@ -1955,3 +1955,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .product-card[data-slab] .card-back-topline { border-bottom: 0; }
 .product-card[data-slab] .card-visit { border-color: currentColor; color: inherit; }
 .product-card[data-slab] .card-table-preview { background: var(--brand-card-background); border: 1px solid var(--brand-card-rule, var(--card-line)); }
+
+/* The back's work-sample link lights up in the brand's button colours, as the site's own controls do, not in the card's text colour. */
+.product-card .usage-link:is(:hover, :focus-visible) {
+  background: var(--brand-card-button-fill, var(--brand-card-text, var(--paper)));
+  color: var(--brand-card-button-text, var(--brand-card-background, var(--ink)));
+}
