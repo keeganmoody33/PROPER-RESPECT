@@ -71,7 +71,8 @@ const MIN_TARGET_PX = 44;
 const MIN_TEXT_PX = 12;
 [DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`a visitor sees who put the owner on a product, and can report the credit, at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
-  await page.emulateMedia({ colorScheme: "light" });
+  // Without motion the front isn't mid-turn, scaled down, when its links are measured.
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
   await page.goto("/keegan");
   const github = page.locator(".product-card", { has: page.getByRole("heading", { name: "GitHub" }) });
   const credit = github.locator(".card-front .card-credit");
