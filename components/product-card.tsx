@@ -518,16 +518,18 @@ function ActivityEvidence({ activity, today, sample }: { activity: ActivityModul
   );
 }
 
-// A report names the card as well as the page: one owner can publish two cards for the same product, each with its own credit.
+// A report names the card as well as the page. One owner can publish two cards with the same product, headline and credit,
+// so the card's place on the page (the profile shows its cards in stored order) names it; the rest lets the operator check.
 const REPORT_HEADLINE_MAX = 80;
-function creditReportSubject(profileHandle: string, card: Card, credit: { name: string; platform: string }): string {
+function creditReportSubject(profileHandle: string, position: number, card: Card, credit: { name: string; platform: string }): string {
   const headline = [...card.headline.trim()];
   const shown = headline.length > REPORT_HEADLINE_MAX ? `${headline.slice(0, REPORT_HEADLINE_MAX - 1).join("")}…` : headline.join("");
-  return [`Report credit on proper-respect.com/${profileHandle}`, card.product.name, `${credit.name} on ${credit.platform}`, ...(shown ? [`"${shown}"`] : [])].join(" · ");
+  return [`Report credit on proper-respect.com/${profileHandle}`, `card ${position}`, card.product.name, `${credit.name} on ${credit.platform}`, ...(shown ? [`"${shown}"`] : [])].join(" · ");
 }
 
 export function ProductCard({
   card,
+  index,
   displayMode = "relationship",
   relationshipConfirmed = true,
   goTo = false,
@@ -605,7 +607,7 @@ export function ProductCard({
   // A Proper Respect page opens here; another platform's profile opens in a new tab.
   const creditLinkTarget = credit?.platform === "PROPER_RESPECT" || !creditWords ? {}
     : { target: "_blank", rel: "noopener noreferrer", "aria-label": `${creditWords.name} on ${creditWords.platform} (opens in a new tab)` };
-  const creditReport = credit && creditWords && profileHandle ? reportHref(creditReportSubject(profileHandle, card, creditWords)) : undefined;
+  const creditReport = credit && creditWords && profileHandle ? reportHref(creditReportSubject(profileHandle, index + 1, card, creditWords)) : undefined;
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;

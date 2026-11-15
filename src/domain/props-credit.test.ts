@@ -149,6 +149,7 @@ test("a pasted link to a platform's own page is refused as not a profile, and ty
   const notAProfile = (label: string) => ({ ok: false, message: `That link isn't a profile on ${label}. Paste their ${label} profile link or just the handle.` });
   const pages = [
     ["X", "https://x.com/home", "X"],
+    ["X", "https://x.com/about", "X"],
     ["X", "https://twitter.com/Explore", "X"],
     ["INSTAGRAM", "https://www.instagram.com/explore/", "Instagram"],
     ["INSTAGRAM", "https://www.instagram.com/reels/", "Instagram"],

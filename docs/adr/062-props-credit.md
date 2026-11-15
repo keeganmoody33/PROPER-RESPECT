@@ -74,9 +74,10 @@ out of a later publish keeps the credit it was published with.
 @handle · Platform", in the card's own colours, the handle linked where
 allowed. On a published profile it adds "Not you? Report", an email to the
 existing report address with the subject `Report credit on
-proper-respect.com/<handle> · <product> · <credit> on <platform> ·
-"<headline>"`. The credit and headline tell apart two cards for the same
-product. The operator removes a reported
+proper-respect.com/<handle> · card <N> · <product> · <credit> on
+<platform> · "<headline>"`. The card's place on the page names it, since two
+cards can share a product, headline and credit; the rest lets the operator
+check it. The operator removes a reported
 credit by hand ([takedown runbook](../runbooks/takedown.md), step 5).
 Homepage samples, the owner's private card and the publish preview have
 no report link.

@@ -54,7 +54,7 @@ const LEADING_AT = /^@/;
 const DOUBLE_HYPHEN = /--/;
 const NO_PAGES: ReadonlySet<string> = new Set();
 // x.com's one-segment pages (as of 2026-11-15); X reserves these names, so none is a person.
-const X_PAGES: ReadonlySet<string> = new Set(["home", "explore", "notifications", "messages", "search", "settings", "i", "compose", "login", "logout", "signup", "tos", "privacy", "hashtag", "intent", "share"]);
+const X_PAGES: ReadonlySet<string> = new Set(["home", "about", "explore", "notifications", "messages", "search", "settings", "i", "compose", "login", "logout", "signup", "tos", "privacy", "hashtag", "intent", "share"]);
 // instagram.com's one-segment pages (as of 2026-11-15).
 const INSTAGRAM_PAGES: ReadonlySet<string> = new Set(["explore", "accounts", "reels", "reel", "p", "stories", "direct", "about", "legal", "developer", "tv", "challenge", "emails", "web"]);
 

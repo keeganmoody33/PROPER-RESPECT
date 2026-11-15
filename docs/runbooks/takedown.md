@@ -100,7 +100,7 @@ the stored reason.
 
 Added 2026-11-15 with props ([ADR-062](../adr/062-props-credit.md)). A
 published credit has a "Not you? Report" link. Its email's subject is
-`Report credit on proper-respect.com/<handle> · <product> · <credit> on <platform> · "<headline>"`,
+`Report credit on proper-respect.com/<handle> · card <N> · <product> · <credit> on <platform> · "<headline>"`,
 with a headline over 80 characters cut short with "…". Removing a
 credit leaves the rest of the profile up, so there is no takedown and no
 command: the owner edits the published snapshot by hand in the Convex
@@ -108,12 +108,14 @@ dashboard for production.
 
 1. Record the report, as in "Before you start".
 2. In **Data → publishedProfiles**, open the document whose `handle` is the
-   reported handle. Under `profile.cards`, find the card whose
-   `product.name` is the reported product, whose `credit` is the reported
-   credit, and whose `headline` starts with the reported headline (drop a
-   trailing "…" first: it marks where the headline was cut). One owner
-   can publish two cards for the same product, so match all three. Delete
-   that card's `credit` field and leave everything else as it is.
+   reported handle. Card N is `profile.cards[N-1]` (the dashboard counts
+   from 0). Check that its `product.name`, `credit` and `headline` match the
+   report; the headline only has to start with the reported one, after
+   dropping a trailing "…" that marks where it was cut. If they don't match,
+   the owner has republished since the report: find the card by those three
+   instead, and if two cards match, ask the reporter which before removing
+   anything. Delete that card's `credit` field and leave everything else as
+   it is.
 3. Open `https://proper-respect.com/<handle>` in a private window. The card
    should show no "Props to" line.
 4. Email the owner what was removed and why. Ask them to remove or change
