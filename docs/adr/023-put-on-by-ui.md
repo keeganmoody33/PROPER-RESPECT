@@ -1,5 +1,7 @@
 # ADR-023: The "Put On By" UI — Exact Specification
 
+> **Decided — 2026-11-15:** The owner decided put-on-by for v1 as props: one credit per card, a handle on one platform, with no count, reverse lookup or notifications. See [ADR-062](062-props-credit.md). Whether a props count can ever exist is still undecided.
+
 > **Status correction — 2026-09-20:** Historical UI proposal is not a delivered lineage workflow. Credibility-score examples are superseded and must not be implemented; no universal activity or credibility ranking is permitted. On 2026-09-28 (R14) the example card below was changed to show an evidence method label instead of a score. Put-on-by itself is **Later** (brief Section 3). See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
 
 ## Status

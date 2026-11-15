@@ -1,6 +1,6 @@
 # Taking down a reported public profile
 
-Updated: 2026-09-28. Written for R06. The owner runs these commands.
+Updated: 2026-11-15. Written for R06; step 5 added for props. The owner runs these commands.
 
 A takedown hides a published profile at its handle and at every old handle
 that redirects to it. The page then returns the same 404 as an unpublished
@@ -95,3 +95,24 @@ change it. This runbook never edits or deletes their content.
 
 Keep the reply to what was done. Don't share the profile owner's details or
 the stored reason.
+
+## 5. Remove one credit from a card
+
+Added 2026-11-15 with props ([ADR-062](../adr/062-props-credit.md)). A
+published credit has a "Not you? Report" link. Its email's subject is
+`Report credit on proper-respect.com/<handle> · <product>`. Removing a
+credit leaves the rest of the profile up, so there is no takedown and no
+command: the owner edits the published snapshot by hand in the Convex
+dashboard for production.
+
+1. Record the report, as in "Before you start".
+2. In **Data → publishedProfiles**, open the document whose `handle` is the
+   reported handle. Under `profile.cards`, find the card whose
+   `product.name` is the reported product, and delete its `credit` field.
+   Leave everything else as it is.
+3. Open `https://proper-respect.com/<handle>` in a private window. The card
+   should show no "Props to" line.
+4. Email the owner what was removed and why. Ask them to remove or change
+   the credit in their collection. The private credit is theirs, so leave it
+   alone: until they change it, publishing that card again sends it again.
+5. Reply to the reporter as in step 4, saying the credit was removed.
