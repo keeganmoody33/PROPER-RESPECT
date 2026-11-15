@@ -529,7 +529,8 @@ main {
   min-height: 0;
 }
 
-.card-activity-coverage {
+.card-activity-coverage,
+.card-activity-reported {
   font-size: 0.75rem;
   line-height: 1.5;
 }

@@ -1,6 +1,7 @@
 import type { ActivityModule } from "./public-profile";
 import { dayMonthYear } from "./format-period";
 import { isHttpUrl } from "./http-url";
+import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 
 type Cadence = "day" | "week" | "month";
 
@@ -69,8 +70,18 @@ export function normalizeSeries(points: readonly Point[], unit: string | undefin
   return { points: sorted, cadence, contiguous, decimals, hasNegative: sorted.some(point => point.value < 0) };
 }
 
-/** A card's biggest number and the words after it, which say what kind of number it is. */
-export type ActivityHeadline = Readonly<{ value: number; label: string }>;
+type Figure = Readonly<{ value: number; label: string }>;
+/**
+ * A card's biggest number and the words after it, which say what kind of number it is. A stored figure that disagrees with
+ * the days drawn beside it stands apart as `reported`, since nothing says which span it covers.
+ */
+export type ActivityHeadline = Figure & Readonly<{ reported?: Figure }>;
+
+/**
+ * Whether a series' points each count what happened in their period, so they add up. Nothing a card stores says so (a unit
+ * like "daily" fits a follower count as well as a run count), so only presentation data that knows its series declares it.
+ */
+export type HeadlineOptions = Readonly<{ countsPerPeriod?: boolean }>;
 
 /** How many of a collection's works the front links; the back lists the rest. */
 export const FRONT_ARTIFACT_LIMIT = 3;
@@ -93,14 +104,15 @@ function withUnit(label: string, unit?: string): string {
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
 const roundTo = (value: number, decimals: number) => Number(value.toFixed(decimals));
 
-function seriesHeadline(activity: Extract<ActivityModule, { kind: "timeSeries" }>, pastUse: boolean): ActivityHeadline | undefined {
+function seriesHeadline(activity: Extract<ActivityModule, { kind: "timeSeries" }>, pastUse: boolean, { countsPerPeriod = false }: HeadlineOptions): ActivityHeadline | undefined {
   const series = normalizeSeries(activity.points, activity.unit);
   const latest = series.points.at(-1);
   if (!latest) return undefined;
   const { cadence } = series;
-  // Paused or stopped, the latest point is the pause itself: the peak says what the use was.
-  if (pastUse) return { value: Math.max(...series.points.map(point => point.value)), label: `${cadence ? `${activity.label} a ${cadence}` : withUnit(activity.label, activity.unit)} at its peak` };
-  if (cadence && !series.hasNegative) {
+  const peak = Math.max(...series.points.map(point => point.value));
+  // Paused or stopped, the latest point is the pause itself: the peak says what the use was, when there was any.
+  if (pastUse && peak > 0) return { value: peak, label: `${cadence ? `${activity.label} a ${cadence}` : withUnit(activity.label, activity.unit)} at its peak` };
+  if (!pastUse && countsPerPeriod && cadence && !series.hasNegative) {
     const total = roundTo(series.points.reduce((sum, point) => sum + point.value, 0), series.decimals);
     const span = series.contiguous ? plural(series.points.length, cadence) : plural(series.points.length, "data point");
     return { value: total, label: `${activity.label} over ${span}` };
@@ -109,18 +121,38 @@ function seriesHeadline(activity: Extract<ActivityModule, { kind: "timeSeries" }
   return { value: latest.value, label: `${withUnit(activity.label, activity.unit)} · as of ${dayMonthYear(latest.date)}` };
 }
 
+const AS_REPORTED = " · as reported";
+
+/** The calendar's drawn days lead; a stored total they don't add up to is kept apart. */
+function calendarHeadline(activity: Extract<ActivityModule, { kind: "contributionCalendar" }>): ActivityHeadline {
+  const drawn = contributionCalendarCoverage(activity)?.days.reduce((sum, day) => sum + day.count, 0);
+  if (drawn === undefined || drawn === activity.total) return { value: activity.total, label: "contributions" };
+  return { value: drawn, label: "contributions", reported: { value: activity.total, label: `contributions${AS_REPORTED}` } };
+}
+
+/** The owner names their own figure, so it leads while it matches the bars drawn (their sum or their active days); otherwise the active days do. */
+function codingHeadline(activity: Extract<ActivityModule, { kind: "codingActivity" }>): ActivityHeadline {
+  const owner = { value: activity.primary.value, label: withUnit(activity.primary.label, activity.primary.unit) };
+  if (!activity.days?.length) return owner;
+  const activeDays = activity.days.filter(day => day.count > 0).length;
+  const sum = activity.days.reduce((total, day) => total + day.count, 0);
+  if (owner.value === activeDays || owner.value === sum) return owner;
+  return { value: activeDays, label: activeDays === 1 ? "active day" : "active days", reported: { value: owner.value, label: `${owner.label}${AS_REPORTED}` } };
+}
+
 /** What a card leads with: a period's total where the points add up, otherwise what they can honestly say. */
-export function activityHeadline(activity: ActivityModule, pastUse: boolean): ActivityHeadline | undefined {
+export function activityHeadline(activity: ActivityModule, pastUse: boolean, options: HeadlineOptions = {}): ActivityHeadline | undefined {
   switch (activity.kind) {
-    case "contributionCalendar": return { value: activity.total, label: "contributions" };
-    case "headlineMetrics":
-    case "codingActivity": return { value: activity.primary.value, label: withUnit(activity.primary.label, activity.primary.unit) };
-    case "timeSeries": return seriesHeadline(activity, pastUse);
+    case "contributionCalendar": return calendarHeadline(activity);
+    case "headlineMetrics": return { value: activity.primary.value, label: withUnit(activity.primary.label, activity.primary.unit) };
+    case "codingActivity": return codingHeadline(activity);
+    case "timeSeries": return seriesHeadline(activity, pastUse, options);
     case "artifactCollection": {
-      // The count and the list the front shows agree: past the few it links, the label says how many it shows.
+      // Never fewer than the works the back lists, and past the few the front links, how many it shows.
+      const value = Math.max(activity.total, activity.artifacts.length);
       const shown = Math.min(FRONT_ARTIFACT_LIMIT, activity.artifacts.filter(artifact => isHttpUrl(artifact.url)).length);
-      const label = activity.total === 1 ? "linked work" : "linked works";
-      return { value: activity.total, label: shown < activity.total ? `${label} · ${shown} shown` : label };
+      const label = value === 1 ? "linked work" : "linked works";
+      return { value, label: shown > 0 && shown < value ? `${label} · ${shown} shown` : label };
     }
     case "reviewActivity": return { value: activity.reviews, label: "reviews" };
   }

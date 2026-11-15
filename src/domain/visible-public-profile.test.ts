@@ -184,3 +184,21 @@ describe("relationship label for agents and visitors", () => {
     expect(leveled.cards[1]).not.toHaveProperty("level");
   });
 });
+
+it("gives agents the calendar's drawn total, the same number the card leads with, and keeps a stored total that disagrees apart", () => {
+  const activity: ActivityModule = { ...common, period: { start: "2026-09-01", end: "2026-09-03" }, kind: "contributionCalendar", total: 523, days: [
+    { date: "2026-09-01", count: 1, level: 1 }, { date: "2026-09-02", count: 4, level: 3 }, { date: "2026-09-03", count: 2, level: 2 },
+  ] };
+  const source = profile(activity);
+  expect(projectVisiblePublicProfile(source).cards[0].activity).toMatchObject({
+    total: { label: "contributions", displayValue: "7" }, reportedTotal: { label: "contributions · as reported", displayValue: "523" },
+  });
+  const text = load(renderToStaticMarkup(createElement(ProductCard, { card: source.cards[0], index: 0 }))).text();
+  expect(text).toContain("7 contributions");
+  expect(text).toContain("523 contributions · as reported");
+});
+
+it("never tells agents fewer linked works than it lists", () => {
+  const source = profile({ ...common, kind: "artifactCollection", total: 0, artifacts: [{ title: "Published article", url: "https://example.com/article" }] });
+  expect(projectVisiblePublicProfile(source).cards[0].activity).toMatchObject({ total: { label: "linked work", displayValue: "1" } });
+});

@@ -27,7 +27,8 @@ export const e2eReferenceProfile: PublicProfile = {
         freshness: "FRESH",
         provenanceLabel: "GitHub account",
         period: { start: "2026-07-20", end: "2026-07-26", label: "Fixture week" },
-        total: 523,
+        // The week's days add up to it, so the headline and the calendar beside it agree.
+        total: 22,
         memberSince: "2024-01-01",
         days: [
           { date: "2026-07-20", count: 1, level: 1 },

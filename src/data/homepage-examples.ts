@@ -25,6 +25,8 @@ export type HomepageExample = Readonly<{
   backHint?: string;
   /** A few invented rows of a table the product makes, drawn on the card's front. Presentation only, never part of the card's data. */
   tablePreview?: TablePreviewInput;
+  /** The sample series' points each count their own day or week, so its headline adds them up. Presentation only, never part of the card's data. */
+  countsPerPeriod?: true;
 }>;
 
 const DAYS_PER_WEEK = 7;
@@ -276,6 +278,8 @@ export function homepageExamples(): HomepageExample[] {
       ...(example.backHint ? { backHint: example.backHint } : {}),
       ...(example.tablePreview ? { tablePreview: example.tablePreview } : {}),
       ...(example.source ? { source: example.source } : {}),
+      // Every hand-written sample series counts what happened in each of its days or weeks.
+      ...(SAMPLE_USAGE.series[entry.slug] && !example.activity ? { countsPerPeriod: true as const } : {}),
     };
   });
 }

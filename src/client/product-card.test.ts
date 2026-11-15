@@ -639,7 +639,9 @@ test("a contribution calendar renders only supplied days and never relabels cont
     expect($(`${side} .contribution-calendar .visually-hidden`).text()).toBe("3 contributions from 15 Sep 2026 to 15 Sep 2026, on 1 of 1 days; the most in a day was 3, on 15 Sep 2026.");
     expect(days.attr("data-date")).toBe("2026-09-15");
   }
-  expect($(".card-front .card-activity-preview > p").first().text()).toBe("37 contributions");
+  // It leads with the one day it draws; the stored 37 disagrees, so it stands apart, named as reported.
+  expect($(".card-front .card-activity-preview > p").first().text()).toBe("3 contributions");
+  expect($(".card-front .card-activity-reported").text()).toBe("37 contributions · as reported");
   // The back doesn't draw the calendar again.
   expect($(".card-back .activity-calendar")).toHaveLength(0);
   expect($.text()).not.toContain("commits");
@@ -999,11 +1001,13 @@ test("a card whose site's heading sits on a full-bleed colour marks itself for t
 
 test("a time series leads with its period's total, or its peak once the card is paused, on the front only", () => {
   const weekly = { ...activityEvidence, kind: "timeSeries" as const, label: "workflow runs", unit: "per week", points: [312, 341, 0].map((value, index) => ({ date: `2026-08-${String(3 + index * 7).padStart(2, "0")}`, value })) };
-  const hero = (card: Partial<typeof baseCard>) => {
-    const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, ...card }, index: 0, expandedActivity: true })));
+  const hero = (card: Partial<typeof baseCard>, countsPerPeriod = true) => {
+    const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, ...card }, index: 0, expandedActivity: true, countsPerPeriod })));
     return [$(".card-front .card-activity-preview > p").first().text(), $(".card-back .activity-hero").text()];
   };
   expect(hero({ activity: weekly })).toEqual(["653 workflow runs over 3 weeks", ""]);
+  // A stored card can't say its points are counts, so it reads its latest week.
+  expect(hero({ activity: weekly }, false)).toEqual(["0 workflow runs · per week · as of 17 Aug 2026", ""]);
   expect(hero({ activity: weekly, level: "PAUSED", status: "ARCHIVED" })).toEqual(["341 workflow runs a week at its peak", ""]);
 });
 

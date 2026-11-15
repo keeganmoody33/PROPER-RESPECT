@@ -325,8 +325,8 @@ test("GitHub's sample contribution calendar covers one year", () => {
 });
 
 test("each example's card leads with a number that means something: a period's total, or the peak of one paused or stopped, never a zero", () => {
-  expect(examples.flatMap(({ id, card }) => {
-    const headline = card.activity && activityHeadline(card.activity, noLongerInUse(card));
+  expect(examples.flatMap(({ id, card, countsPerPeriod }) => {
+    const headline = card.activity && activityHeadline(card.activity, noLongerInUse(card), { countsPerPeriod });
     return headline ? [[id, headline.value, headline.label]] : [];
   })).toEqual([
     ["github", 1121, "contributions"],

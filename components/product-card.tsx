@@ -324,8 +324,9 @@ function TablePreviewBlock({ preview, shown, full = false }: { preview: TablePre
   );
 }
 
-function ActivityPreview({ activity, pastUse, unreviewed = false, expanded = false }: { activity: ActivityModule; pastUse: boolean; unreviewed?: boolean; expanded?: boolean }) {
-  const metric = activityHeadline(activity, pastUse);
+function ActivityPreview({ activity, pastUse, unreviewed = false, expanded = false, countsPerPeriod = false }: { activity: ActivityModule; pastUse: boolean; unreviewed?: boolean; expanded?: boolean; countsPerPeriod?: boolean }) {
+  const metric = activityHeadline(activity, pastUse, { countsPerPeriod });
+  const number = (value: number) => expanded ? fullNumber(value) : compactNumber(value);
   const series = activitySeries(activity);
   const freshness = freshnessNote(activity.freshness, activity.capturedAt);
   return (
@@ -333,10 +334,11 @@ function ActivityPreview({ activity, pastUse, unreviewed = false, expanded = fal
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
       <p>
         {metric === undefined ? "No data points supplied" : <>
-          <strong>{expanded ? fullNumber(metric.value) : compactNumber(metric.value)}</strong>{" "}
+          <strong>{number(metric.value)}</strong>{" "}
           {metric.label}
         </>}
       </p>
+      {metric?.reported && <p className="card-activity-reported">{number(metric.reported.value)} {metric.reported.label}</p>}
       {activity.kind === "contributionCalendar" && <ContributionCalendar activity={activity} />}
       {activity.kind === "artifactCollection" && <ArtifactLinks artifacts={activity.artifacts} />}
       {series && <UsageChart {...series} framed={false} />}
@@ -467,6 +469,7 @@ export function ProductCard({
   tablePreview,
   shown = true,
   sample = false,
+  countsPerPeriod = false,
 }: {
   card: Card;
   index: number;
@@ -491,6 +494,8 @@ export function ProductCard({
   shown?: boolean;
   /** An invented example with no owner, as on the homepage: its front says Sample and its words never claim an owner. */
   sample?: boolean;
+  /** The series' points each count their own period, so they add up. Presentation only: nothing a card stores can say so. */
+  countsPerPeriod?: boolean;
 }) {
   const brandPreview = displayMode === "brand-preview";
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -634,7 +639,7 @@ export function ProductCard({
         {!brandPreview && card.measurements?.length ? <PublicMeasurements measurements={card.measurements} compact /> : null}
         {table && <TablePreviewBlock preview={table} shown={shown} />}
         {!brandPreview && card.activity ? (
-          <ActivityPreview activity={card.activity} pastUse={pastUse} unreviewed={!relationshipConfirmed} expanded={expandedActivity} />
+          <ActivityPreview activity={card.activity} pastUse={pastUse} unreviewed={!relationshipConfirmed} expanded={expandedActivity} countsPerPeriod={countsPerPeriod} />
         ) : (brandPreview || (audience === "owner" && !ownerUsage && !card.measurements?.length)) ? (
           <p className="activity-placeholder">
             {brandPreview ? "No personal activity is included in this brand preview." : "Add a usage snapshot or describe your history."}

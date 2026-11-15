@@ -24,6 +24,10 @@ test("visitor sees the approved public reference projection", async ({
   await expect(page.getByText("Keegan Moody")).toBeVisible();
   await expect(page.getByText("Draft source record")).toHaveCount(0);
   await expect(page.getByText("Private source record")).toHaveCount(0);
+  // The headline is the week the calendar draws: its seven days add up to 22.
+  const githubFront = page.locator(".product-card", { has: page.getByRole("heading", { name: "GitHub" }) }).locator(".card-front");
+  await expect(githubFront.locator(".card-activity-preview > p").first()).toHaveText("22 contributions");
+  await expect(githubFront.locator(".card-activity-reported")).toHaveCount(0);
 
   const trigger = page.getByRole("button", { name: "Details" }).first();
   await trigger.click();

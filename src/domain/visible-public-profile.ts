@@ -7,6 +7,7 @@ import { isHttpUrl } from "./http-url.ts";
 import { linkDisclosure } from "./link-type.ts";
 import { cardStatusLabel, type RelationshipLevel } from "./relationship-level.ts";
 import { productUseLabels } from "./product-uses.ts";
+import { activityHeadline } from "./activity-headline.ts";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;
@@ -20,7 +21,7 @@ type VisibleActivityMeta = Readonly<{
   note?: string;
 }>;
 export type VisibleActivity = VisibleActivityMeta & (
-  | Readonly<{ kind: "contributionCalendar"; total: VisibleMetric; memberSinceYear?: string; days: readonly VisibleDay[]; coverageNote?: string; suppliedRange?: string; emptyNote?: string }>
+  | Readonly<{ kind: "contributionCalendar"; total: VisibleMetric; reportedTotal?: VisibleMetric; memberSinceYear?: string; days: readonly VisibleDay[]; coverageNote?: string; suppliedRange?: string; emptyNote?: string }>
   | Readonly<{ kind: "headlineMetrics"; primary: VisibleMetric; supporting: readonly VisibleMetric[] }>
   | Readonly<{ kind: "timeSeries"; label?: string; unit?: string; points: readonly Readonly<{ date: string; value: number }>[]; emptyNote?: string }>
   | Readonly<{ kind: "artifactCollection"; total: VisibleMetric; artifacts: readonly Readonly<{ title: string; url: string }>[]; emptyNote?: string }>
@@ -79,8 +80,10 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
   switch (activity.kind) {
     case "contributionCalendar": {
       const coverage = contributionCalendarCoverage(activity);
+      // The card's own headline: the days drawn, and a stored total that disagrees kept apart.
+      const { reported, ...total } = activityHeadline(activity, false)!;
       return {
-      ...meta, kind: activity.kind, total: metric({ label: "contributions", value: activity.total }),
+      ...meta, kind: activity.kind, total: metric(total), ...(reported ? { reportedTotal: metric(reported) } : {}),
       ...(activity.memberSince ? { memberSinceYear: activity.memberSince.slice(0, 4) } : {}),
       days: days([...activity.days].sort((a, b) => a.date.localeCompare(b.date))),
       ...(coverage?.gapNote ? { coverageNote: coverage.gapNote } : {}),
@@ -96,8 +99,10 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
     };
     case "artifactCollection": {
       const artifacts = activity.artifacts.filter(artifact => isHttpUrl(artifact.url));
+      // Never fewer than the works listed, as on the card.
+      const count = Math.max(activity.total, artifacts.length);
       return {
-        ...meta, kind: activity.kind, total: metric({ label: activity.total === 1 ? "linked work" : "linked works", value: activity.total }),
+        ...meta, kind: activity.kind, total: metric({ label: count === 1 ? "linked work" : "linked works", value: count }),
         artifacts: artifacts.map(artifact => ({ title: artifact.title, url: artifact.url })),
         ...(artifacts.length === 0 ? { emptyNote: "No artifacts selected" } : {}),
       };

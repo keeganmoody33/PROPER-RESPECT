@@ -91,7 +91,7 @@ test("native Chrome lists and executes only the visible published profile", asyn
           uses: ["host my code and its history", "review and merge pull requests"],
           activity: {
             kind: "contributionCalendar",
-            total: { displayValue: "523", label: "contributions" },
+            total: { displayValue: "22", label: "contributions" },
             memberSinceYear: "2024",
             capturedOn: "2026-07-26",
             provenanceLabel: "GitHub account",
