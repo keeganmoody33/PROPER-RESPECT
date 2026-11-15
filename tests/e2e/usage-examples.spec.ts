@@ -822,6 +822,29 @@ test("no card face says a raw date or a status word, in its text, titles or labe
 });
 
 const MIN_TAP_PX = 44;
+for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px every link and button on both faces of all fourteen cards is a ${MIN_TAP_PX}px-tall target`, async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const short: string[] = [];
+  const targets = (card: Locator, face: "front" | "back") => card.locator(`.card-${face}`).locator("a, button, summary").evaluateAll(elements => elements
+    .filter(element => element.checkVisibility() && element.getBoundingClientRect().height < 44)
+    .map(element => `${(element.getAttribute("aria-label") ?? element.textContent ?? "").trim().slice(0, 30)} (${element.getBoundingClientRect().height.toFixed(1)}px)`));
+  for (const name of ALL_EXAMPLES) {
+    await carousel.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    short.push(...(await targets(card, "front")).map(target => `${name} front: ${target}`));
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await card.getByRole("button", { name: "How this was measured" }).click();
+    short.push(...(await targets(card, "back")).map(target => `${name} back: ${target}`));
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+  expect(short).toEqual([]);
+});
+
 test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a ${MIN_TAP_PX}px target`, async ({ page }) => {
   await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -1044,17 +1067,20 @@ test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone 
 });
 
 const MAX_FLIP_SCROLL_PX = 20;
-test(`at ${PHONE_WIDTH}px turning a card that is already in view over moves neither the page nor the card`, async ({ page }) => {
+for (const name of ["Clay", "GitHub", "Cloudflare"]) test(`at ${PHONE_WIDTH}px turning ${name}'s card while it is in view moves neither the page nor the card`, async ({ page }) => {
   await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name, exact: true }).click();
+  const card = carousel.getByRole("article", { name: `${name} card` });
   await expect(card).toBeVisible();
   // The whole card on screen, its top just under the screen's top.
   await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().top - 10));
   const before = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top }));
   await card.getByRole("button", { name: "Details", exact: true }).click();
   await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
+  // Its back may run longer than its front, below the card; its top stays put.
   const after = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top, focused: document.activeElement?.tagName }));
   expect(Math.abs(after.scroll - before.scroll)).toBeLessThanOrEqual(MAX_FLIP_SCROLL_PX);
   expect(Math.abs(after.top - before.top)).toBeLessThanOrEqual(MAX_FLIP_SCROLL_PX);
