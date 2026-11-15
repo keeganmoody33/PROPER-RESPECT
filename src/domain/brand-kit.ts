@@ -19,7 +19,7 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
   | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font"
   | "--brand-card-slab" | "--brand-card-slab-body" | "--brand-card-band-large-text" | "--brand-card-logo-tile"
-  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text" | "--brand-card-chart-tint" | "--brand-card-number-backdrop", string>>;
+  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text" | "--brand-card-chart-tint" | "--brand-card-number-backdrop" | "--brand-card-value-colour", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -283,7 +283,14 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
   if (number && backdrop && contrast(number, backdrop) >= MIN_LARGE_TEXT_CONTRAST) {
     kit["--brand-card-number-colour"] = number;
     kit["--brand-card-number-backdrop"] = backdrop;
-  } else if (number && contrast(number, surface) >= MIN_LARGE_TEXT_CONTRAST) kit["--brand-card-number-colour"] = number;
+  } else if (number && oklchChroma(number) > NEUTRAL_MAX_CHROMA && contrast(number, surface) >= MIN_LARGE_TEXT_CONTRAST) kit["--brand-card-number-colour"] = number;
+  else {
+    // A number the site sets in a grey, or doesn't set, is the card's one figure: it takes the brand's mark, as GitHub's, Firecrawl's and
+    // Elicit's sites colour theirs, where the mark reads 4.5:1 so it holds at any size the card sets it. Else the site's grey, as measured.
+    const mark = brandMark(snapshot, surface, MIN_LABEL_CONTRAST, site);
+    const neutral = number && contrast(number, surface) >= MIN_LARGE_TEXT_CONTRAST ? number : undefined;
+    if (mark ?? neutral) kit["--brand-card-number-colour"] = (mark ?? neutral)!;
+  }
   const inverse = traits.inversePanel?.value;
   if (inverse && contrast(inverse.text, inverse.fill) >= MIN_LABEL_CONTRAST) {
     kit["--brand-card-panel"] = inverse.fill;
@@ -312,5 +319,9 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
   }
   const muted = traits.mutedText?.value;
   if (muted && contrast(muted, surface) >= MIN_LABEL_CONTRAST) kit["--brand-card-muted"] = muted;
+  // The back's values are the front's chart in numbers: set in its number colour where that reads 4.5:1 on their panel. A highlight's
+  // ink (Open Places' brown on yellow) is the highlight's, not the brand's, so it stays on the front.
+  const valueColour = kit["--brand-card-number-colour"];
+  if (valueColour && !kit["--brand-card-number-backdrop"] && contrast(valueColour, kit["--brand-card-panel"] ?? surface) >= MIN_LABEL_CONTRAST) kit["--brand-card-value-colour"] = valueColour;
   return kit;
 }
