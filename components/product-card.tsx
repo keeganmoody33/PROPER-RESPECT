@@ -722,6 +722,8 @@ export function ProductCard({
       data-band={appearance.style["--brand-card-band"] ? "" : undefined}
       data-slab={appearance.style["--brand-card-slab"] ? "" : undefined}
       data-panel={appearance.style["--brand-card-panel"] ? "" : undefined}
+      data-logo-tile={appearance.style["--brand-card-logo-tile"] ? "" : undefined}
+      data-slab-button={appearance.style["--brand-card-slab-button-fill"] ? "" : undefined}
       data-verified-brand={verifiedAssets?.productSlug}
       data-brand-revision={verifiedAssets?.revision}
       data-side={isFlipped ? "back" : "front"}

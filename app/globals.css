@@ -2031,6 +2031,17 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .product-card[data-slab] .card-front > .card-headline { margin-top: -0.8rem; padding-top: 0.6rem; }
 .product-card[data-slab] .card-back > .card-back-topline { border-bottom: 0; padding-bottom: .75rem; }
 .product-card[data-slab] .card-visit { border-color: currentColor; color: inherit; }
+/* A large headline on the slab takes its large-text colour (white on Cloudflare's orange, 3:1 at 24px); smaller ones keep the label's. */
+.product-card[data-band] .card-headline[data-length="short"] { color: var(--brand-card-band-large-text, var(--brand-card-band-text)); }
+/* A logo drawn in the slab's own colour sits on a tile of the card's surface, as it sits on the site's own page. */
+.product-card[data-logo-tile] .product-logo { background: var(--brand-card-logo-tile); border-radius: .5rem; padding: .3rem .55rem; width: fit-content; }
+.product-card[data-logo-tile] .product-logo img { width: auto; }
+/* So does a button filled in the slab's own colour: on the slab it takes the card's surface, as the site's hero button does. */
+.product-card[data-slab-button] .card-back-topline .close-button:is(*, :hover, :focus-visible) {
+  background: var(--brand-card-slab-button-fill);
+  border-color: var(--brand-card-slab-button-fill);
+  color: var(--brand-card-slab-button-text);
+}
 /* The back's slab is its header; its note under the status line keeps the house rule in the slab's colour, not a second band of it. */
 .product-card[data-slab] .card-back blockquote { background: none; border-left: 2px solid var(--brand-card-slab); color: inherit; margin: .4rem 0 0; padding: 0 0 0 .8rem; }
 .product-card[data-slab] .card-table-preview { background: var(--brand-card-background); border: 1px solid var(--brand-card-rule, var(--card-line)); }

@@ -621,6 +621,37 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Clay's 
   expect(await measure("back")).toEqual(expected);
 });
 
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Cloudflare's orange runs from the card's top through its headline at ${width}px: white only where the text is large, the rest in a colour that reads small`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("button", { name: "Cloudflare", exact: true }).click();
+  const card = carousel.getByRole("article", { name: "Cloudflare card" });
+  const slab = await card.evaluate((element, largePx) => {
+    const luminance = (colour: string) => {
+      const [red, green, blue] = colour.match(/[\d.]+/g)!.slice(0, 3).map(Number).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const contrast = (first: string, second: string) => {
+      const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+      return Math.floor((light + 0.05) / (dark + 0.05) * 100) / 100;
+    };
+    const topline = element.querySelector(".card-front > .card-topline")!, headline = element.querySelector(".card-front > .card-headline")!;
+    const fill = getComputedStyle(topline).backgroundColor;
+    const small = [...topline.querySelectorAll(".eyebrow, .card-sample-tag, .card-visit")].map(node => [node.textContent, contrast(getComputedStyle(node).color, fill)]);
+    return { fill, sameFill: getComputedStyle(headline).backgroundColor === fill, slabTop: topline.getBoundingClientRect().top - element.getBoundingClientRect().top <= 1,
+      headline: [getComputedStyle(headline).color, parseFloat(getComputedStyle(headline).fontSize) >= largePx, contrast(getComputedStyle(headline).color, fill)], small,
+      logoTile: getComputedStyle(element.querySelector(".product-logo")!).backgroundColor };
+  }, LARGE_TEXT_PX);
+  expect(slab).toEqual({
+    fill: "rgb(255, 94, 31)", sameFill: true, slabTop: true, headline: ["rgb(255, 255, 255)", true, 3.05],
+    small: [["Daily · since 2020", 4.95], ["Sample", 4.95], ["↗", 4.95]], logoTile: "rgb(255, 255, 255)",
+  });
+  expect(slab.headline[2]).toBeGreaterThanOrEqual(LARGE_TEXT_CONTRAST);
+});
+
 /** Each word or number in a face's text that the layout breaks across lines ("1,1 / 00"), by name and face. */
 async function splitWords(card: Locator, face: "front" | "back") {
   return card.locator(`.card-${face}`).evaluate(element => [...element.querySelectorAll("*")]
@@ -1092,7 +1123,7 @@ test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone 
 
 /** WCAG's large text: 24px and up, where a colour needs 3:1 rather than 4.5:1. */
 const LARGE_TEXT_PX = 24, LARGE_TEXT_CONTRAST = 3;
-test("a flush hero's slab covers the header, an inset hero rounds the card, and a brand-coloured number is large text that reads", async ({ page }) => {
+test("a colour hero's slab covers the header, an inset hero rounds the card, and a brand-coloured number is large text that reads", async ({ page }) => {
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -1123,9 +1154,9 @@ test("a flush hero's slab covers the header, an inset hero rounds the card, and 
   };
   const looks: Record<string, Awaited<ReturnType<typeof look>>> = {};
   for (const name of FEATURED) looks[name] = await look(name);
-  // Clay's green and Docker's dark hero run flush, so their colour covers the whole header; Cloudflare's 16px inset slab stays a band and rounds the card.
+  // Clay's green, Docker's dark and Cloudflare's orange hero cover the whole header; Cloudflare's 16px inset slab also rounds the card.
   expect(Object.fromEntries(FEATURED.map(name => [name, looks[name].topline]))).toEqual({
-    Clay: "rgb(3, 93, 68)", GitHub: "rgba(0, 0, 0, 0)", Cloudflare: "rgba(0, 0, 0, 0)", Docker: "rgb(15, 17, 23)", Firecrawl: "rgba(0, 0, 0, 0)",
+    Clay: "rgb(3, 93, 68)", GitHub: "rgba(0, 0, 0, 0)", Cloudflare: "rgb(255, 94, 31)", Docker: "rgb(15, 17, 23)", Firecrawl: "rgba(0, 0, 0, 0)",
   });
   expect([looks.Cloudflare.radius, looks.Docker.radius]).toEqual(["16px", "18px"]);
   // Firecrawl's orange 5,520 is 3.2:1 on its #f9f9f9: allowed only because it is drawn at 24px or more.

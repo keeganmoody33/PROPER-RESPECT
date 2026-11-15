@@ -15,7 +15,8 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-number-font" | "--brand-card-number-colour" | "--brand-card-panel" | "--brand-card-panel-text" | "--brand-card-panel-border"
   | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
   | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font"
-  | "--brand-card-slab" | "--brand-card-slab-body", string>>;
+  | "--brand-card-slab" | "--brand-card-slab-body" | "--brand-card-band-large-text" | "--brand-card-logo-tile"
+  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -30,6 +31,8 @@ const MIN_BORDER_CONTRAST = 1.3, MIN_FILL_CONTRAST = 1.5, MIN_QUIET_FILL_CONTRAS
 const MIN_CHART_CONTRAST = 3;
 /** The card's button text is small (0.7rem), so its label needs the contrast WCAG asks of body text. */
 const MIN_LABEL_CONTRAST = 4.5;
+/** Large text (24px, or bold at 18.66px) and a large number need the 3:1 WCAG asks of large text. */
+const MIN_LARGE_TEXT_CONTRAST = 3;
 /** How much of the text colour a derived border takes when the brand's own border is too faint. Tried lightest first; the last is the text colour itself. */
 const BORDER_MIXES = [0.22, 0.35, 0.5, 0.75, 1] as const;
 /** A square brand keeps a square card. */
@@ -191,16 +194,24 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   const chipFont = measuredButton?.font ?? measured?.labelFont?.value;
   if (chipFont) kit["--brand-card-chip-font"] = measuredFace(chipFont, guide);
 
-  // A site whose heading sits on a full-bleed colour shows that colour as a band across the card's top, not as its whole surface.
-  // A hero that runs flush to the page's edge (Clay's) covers the card's whole header as one slab, and the body under it takes
-  // the site's second surface where its text still reads; a rounded, inset hero stays a band under the header.
+  // A site whose heading sits on a colour hero covers the card's whole header with it as one slab, and the body under it takes
+  // the site's second surface where its text still reads. The slab's small text is in a label that reads at 4.5:1; its large
+  // headline is white, as Clay's, Docker's and Cloudflare's hero headings are, wherever white reads at the 3:1 large text needs.
   if (hero?.kind === "colour") {
+    const label = readableOn(hero.hex, undefined, text);
     kit["--brand-card-band"] = hero.hex;
-    kit["--brand-card-band-text"] = readableOn(hero.hex, undefined, text);
-    if (!insetRadius) {
-      kit["--brand-card-slab"] = hero.hex;
-      const body = measured?.panelFill?.value;
-      if (body && contrast(text, body) >= MIN_LABEL_CONTRAST) kit["--brand-card-slab-body"] = body;
+    kit["--brand-card-band-text"] = label;
+    kit["--brand-card-band-large-text"] = contrast(WHITE, hero.hex) >= MIN_LARGE_TEXT_CONTRAST ? WHITE : label;
+    kit["--brand-card-slab"] = hero.hex;
+    const body = measured?.panelFill?.value;
+    if (body && contrast(text, body) >= MIN_LABEL_CONTRAST) kit["--brand-card-slab-body"] = body;
+    // A logo drawn in the hero's own colour (Cloudflare's orange cloud) would vanish into the slab, so it sits on a tile of the card.
+    const logoColour = measured?.signature?.from === "logo" ? measured.signature.value : undefined;
+    if (logoColour && contrast(logoColour, hero.hex) < MIN_CHART_CONTRAST) kit["--brand-card-logo-tile"] = surface;
+    // A button filled in the hero's own colour would vanish into the slab too, so there it takes the card's surface.
+    if (fill && contrast(fill, hero.hex) < MIN_FILL_CONTRAST) {
+      kit["--brand-card-slab-button-fill"] = surface;
+      kit["--brand-card-slab-button-text"] = readableOn(surface, undefined, text);
     }
   }
 
@@ -216,8 +227,6 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   return kit;
 }
 
-/** A large number is at least 24px, where WCAG asks 3:1 of its colour. */
-const MIN_LARGE_TEXT_CONTRAST = 3;
 /** The card's mark candidates on an inverse panel: the site's signature, the provider's accent, then the panel's own text. */
 function markOn(fill: string, candidates: readonly (string | undefined)[]) {
   return candidates.find((hex): hex is string => hex !== undefined && contrast(hex, fill) >= MIN_CHART_CONTRAST);
