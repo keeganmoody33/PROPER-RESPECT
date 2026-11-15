@@ -1225,9 +1225,13 @@ main {
 }
 
 .product-card :is(a, button, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--brand-card-text, var(--paper));
+  outline: 2px solid var(--card-focus-ring, var(--brand-card-text, var(--paper)));
   outline-offset: 3px;
 }
+
+/* A ring on a slab or a data panel takes that region's own text colour, so it stands off the fill it sits on. */
+.product-card[data-slab] :is(.card-front > .card-topline, .card-back-topline) { --card-focus-ring: var(--brand-card-band-text); }
+.product-card[data-panel] :is(.contribution-calendar, .card-artifact-links, .usage-chart, .card-back-values) { --card-focus-ring: var(--brand-card-panel-text, var(--brand-card-text)); }
 
 .card-brand-provenance {
   border-top: 1px solid var(--card-line);

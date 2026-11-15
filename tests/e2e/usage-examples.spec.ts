@@ -697,6 +697,54 @@ test("a screen reader finds one heading per card: the face it shows, never the h
   }
 });
 
+/** WCAG's focus appearance: a ring stands 3:1 off what it sits on. */
+const MIN_FOCUS_CONTRAST = 3;
+test(`every control on both faces of all fourteen cards shows a focus ring that stands ${MIN_FOCUS_CONTRAST}:1 off what it sits on`, async ({ page }) => {
+  test.slow();
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const faint: string[] = [];
+  const audit = (card: Locator, name: string, face: "front" | "back") => card.evaluate((article, [label, side, minimum]) => {
+    // A canvas reads any CSS colour (rgb, color-mix, oklab) back as sRGB bytes.
+    const context = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
+    const bytes = (colour: string) => { context.clearRect(0, 0, 1, 1); context.fillStyle = colour; context.fillRect(0, 0, 1, 1); return [...context.getImageData(0, 0, 1, 1).data]; };
+    const luminance = (colour: string) => {
+      const [red, green, blue] = bytes(colour).slice(0, 3).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+    };
+    const contrast = (first: string, second: string) => { const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a); return (light + 0.05) / (dark + 0.05); };
+    // The ring is drawn outside the control, so it sits on the nearest painted box around it.
+    const backdrop = (start: Element | null) => {
+      for (let node = start; node; node = node.parentElement) { const fill = getComputedStyle(node).backgroundColor; if (bytes(fill)[3] === 255) return fill; }
+      return getComputedStyle(document.body).backgroundColor;
+    };
+    const face = article.querySelector(side === "front" ? ".card-front" : ".card-back")!;
+    const controls = [...face.querySelectorAll<HTMLElement>("a[href], button, summary, [tabindex]:not([tabindex='-1'])")].filter(control => control.getClientRects().length);
+    return controls.flatMap(control => {
+      control.focus({ preventScroll: true });
+      const style = getComputedStyle(control);
+      const ratio = contrast(style.outlineColor, backdrop(control.parentElement));
+      return style.outlineStyle === "none" || ratio < minimum ? [`${label} ${side} "${control.textContent!.trim().slice(0, 24)}": ${style.outlineStyle} ${style.outlineColor} on ${backdrop(control.parentElement)} = ${ratio.toFixed(2)}`] : [];
+    });
+  }, [name, face, MIN_FOCUS_CONTRAST] as const);
+  for (const name of ALL_EXAMPLES) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    // A key press first, so focus moved by script shows the keyboard's ring.
+    await page.keyboard.press("Shift");
+    faint.push(...await audit(card, name, "front"));
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await page.keyboard.press("Shift");
+    faint.push(...await audit(card, name, "back"));
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+  expect(faint).toEqual([]);
+});
+
 /** A touch's turn: a whole turn and a margin, well short of a second turn. */
 const TOUCH_TURN_MS = 8500;
 test(`on a ${PHONE_WIDTH}px touch screen one tap on Play moves the slideshow on within a turn`, async ({ browser }, testInfo) => {
