@@ -226,9 +226,10 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
     kit["--brand-card-pattern-line"] = pattern.line;
     kit["--brand-card-pattern-pitch"] = `${pattern.pitchPx}px`;
   }
-  // Decorative: the rule sits between things that already read apart, never as the only mark of a meaning.
+  // Decorative: the rule sits between things that already read apart, never as the only mark of a meaning. Too faint to see, it gives way.
   if (traits.rule) {
-    kit["--brand-card-rule"] = traits.rule.value.hex;
+    const rule = traits.rule.value.hex;
+    kit["--brand-card-rule"] = contrast(rule, surface) >= MIN_BORDER_CONTRAST ? rule : derivedBorder(surface, text);
     kit["--brand-card-rule-style"] = traits.rule.value.style;
   }
   const muted = traits.mutedText?.value;
