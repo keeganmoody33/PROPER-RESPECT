@@ -413,3 +413,37 @@ for (const width of [1280, 390]) for (const theme of ["light", "dark"]) test(`an
   await expect(front.getByText("I use it to", { exact: true })).toHaveCount(0);
   await expect(crm).not.toBeChecked();
 });
+
+for (const width of [1280, 390]) test(`an owner credits who put them on a product, privately, at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("button", { name: "Load Clay fixture", exact: true }).click();
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await page.getByLabel("How it fits").selectOption("WEEKLY");
+  const question = page.getByRole("group", { name: "Who put you on Clay? (optional)", exact: true });
+  const platform = question.getByRole("combobox", { name: "Platform", exact: true });
+  await expect(platform).toHaveValue("PROPER_RESPECT");
+  await expect(platform.locator("option")).toHaveText(["Proper Respect", "X", "LinkedIn", "GitHub", "YouTube", "Instagram", "Substack", "Other"]);
+  await platform.selectOption("X");
+  await question.getByLabel("Their handle", { exact: true }).fill("https://x.com/jack/status/1");
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("That link isn't a profile on X. Paste their X profile link or just the handle.", { exact: true })).toBeVisible();
+  await question.getByLabel("Their handle", { exact: true }).fill("@jack");
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  await expect(question.getByRole("combobox", { name: "Platform", exact: true })).toHaveValue("X");
+  await expect(question.getByLabel("Their handle", { exact: true })).toHaveValue("jack");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
+  await question.getByRole("combobox", { name: "Platform", exact: true }).selectOption("OTHER");
+  await question.getByLabel("Their name or handle", { exact: true }).fill("a teammate");
+  await question.getByLabel("Where they are", { exact: true }).fill("Slack");
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(question.getByRole("combobox", { name: "Platform", exact: true })).toHaveValue("OTHER");
+  await expect(question.getByLabel("Where they are", { exact: true })).toHaveValue("Slack");
+  await question.getByLabel("Their name or handle", { exact: true }).fill("");
+  await page.getByRole("button", { name: "Save privately", exact: true }).click();
+  await expect(question.getByRole("combobox", { name: "Platform", exact: true })).toHaveValue("PROPER_RESPECT");
+  await expect(question.getByLabel("Their handle", { exact: true })).toHaveValue("");
+});

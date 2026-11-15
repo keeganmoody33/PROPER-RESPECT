@@ -392,3 +392,40 @@ test("a privately saved use goes out with its card when the owner publishes that
   expect(cards.map(card => [card.product.slug, card.headline, card.uses]))
     .toEqual([["clay", "Approved headline", { picks: ["enrich-leads"], other: "score inbound leads" }]]);
 });
+
+test("saving who put the owner on a product stores the checked handle, in history and in the owner's export", async () => {
+  const { t, owner, propId } = await fixture();
+  const input = { propId, expectedVersion: 0, operationId: "credit", status: "ACTIVE", goTo: false, headline: "", note: "",
+    credit: { platform: "X", handle: "https://x.com/jack" } };
+  expect(await owner.mutation(save, input)).toEqual({ version: 1, duplicate: false });
+  expect(await owner.mutation(save, input)).toEqual({ version: 1, duplicate: true });
+  const stored = { platform: "X", handle: "jack" };
+  expect((await t.run(ctx => ctx.db.get(propId)))?.credit).toEqual(stored);
+  const events = await owner.query(history, { propId, ...historyPage });
+  expect(events.page.map((event: { after: { credit?: unknown } }) => event.after.credit)).toEqual([stored]);
+  const exported = await owner.query(exportRelationships, firstPage);
+  expect(exported.page[0].credit).toEqual(stored);
+  expect(exported.page[0].history[0].after.credit).toEqual(stored);
+});
+
+test("a credit outside its platform's rule is refused with the rule and nothing is saved", async () => {
+  const { t, owner, propId } = await fixture();
+  await expect(owner.mutation(save, { propId, expectedVersion: 0, operationId: "bad-credit", status: "ACTIVE", goTo: false, headline: "", note: "",
+    credit: { platform: "SUBSTACK", handle: "https://janedoe.substack.com/" } }))
+    .rejects.toThrow("That link isn't a profile on Substack. Paste their Substack profile link or just the handle.");
+  expect(await t.run(async ctx => {
+    const prop = await ctx.db.get(propId);
+    return { credit: prop?.credit, version: prop?.relationshipVersion, events: (await ctx.db.query("relationshipEvents").collect()).length };
+  })).toEqual({ credit: undefined, version: undefined, events: 0 });
+});
+
+test("saving a blank handle removes the stored credit and keeps it in history", async () => {
+  const { t, owner, propId } = await fixture();
+  const base = { propId, status: "ACTIVE", goTo: false, headline: "", note: "" };
+  await owner.mutation(save, { ...base, expectedVersion: 0, operationId: "set", credit: { platform: "OTHER", handle: "a teammate", platformName: "Slack" } });
+  await owner.mutation(save, { ...base, expectedVersion: 1, operationId: "blank", credit: { platform: "X", handle: "  " } });
+  expect((await t.run(ctx => ctx.db.get(propId)))?.credit).toBeUndefined();
+  const events = await owner.query(history, { propId, ...historyPage });
+  expect(events.page.map((event: { before: { credit?: unknown } }) => event.before.credit))
+    .toEqual([{ platform: "OTHER", handle: "a teammate", platformName: "Slack" }, undefined]);
+});

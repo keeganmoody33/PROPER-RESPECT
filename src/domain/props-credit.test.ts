@@ -52,7 +52,7 @@ test("a handle outside its platform's rule is refused with a message the owner c
 });
 
 test("a pasted link that isn't a profile on that platform is refused, never followed", () => {
-  const notAProfile = (label: string) => ({ ok: false, message: `That link isn't a ${label} profile. Paste their ${label} profile link or just the handle.` });
+  const notAProfile = (label: string) => ({ ok: false, message: `That link isn't a profile on ${label}. Paste their ${label} profile link or just the handle.` });
   const pasted = BAD_LINKS.filter(link => link.includes("/"));
   expect(pasted.map(handle => normalizeCredit({ platform: "X", handle }))).toEqual(pasted.map(() => notAProfile("X")));
   expect(normalizeCredit({ platform: "X", handle: "javascript:alert(1)" })).toEqual({ ok: false, message: "Enter an X handle: up to 15 letters, numbers or underscores." });

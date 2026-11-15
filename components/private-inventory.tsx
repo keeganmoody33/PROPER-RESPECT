@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
 import { productUseOptions, USE_OTHER_MAX, type ProductUses } from "@/src/domain/product-uses";
+import { CREDIT_OTHER_PLATFORM_MAX, CREDIT_PLATFORMS, normalizeCredit, type CreditPlatform } from "@/src/domain/props-credit";
 import { cardStatusLabel, isRelationshipLevel, levelDefinition, levelStatus, RELATIONSHIP_LEVELS } from "@/src/domain/relationship-level";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
@@ -62,6 +63,24 @@ function UsesQuestion({ productName, productSlug, uses }: { productName: string;
   </fieldset>;
 }
 
+// The saved credit as stored, so one saved under an older rule still shows for the owner to fix.
+type SavedCredit = { platform: string; handle: string; platformName?: string };
+
+function CreditQuestion({ productName, credit }: { productName: string; credit?: SavedCredit }) {
+  const id = useId();
+  const saved = CREDIT_PLATFORMS.find(option => option.id === credit?.platform)?.id;
+  const [platform, setPlatform] = useState<CreditPlatform>(saved ?? "PROPER_RESPECT");
+  return <fieldset className={styles.credit} aria-describedby={`${id}-hint`}>
+    <legend>Who put you on {productName}? (optional)</legend>
+    <p id={`${id}-hint`} className={styles.hint}>Give them props. A Proper Respect handle is best: it links to their page here. You can also paste a profile link.</p>
+    <label>Platform<select name="creditPlatform" value={platform} onChange={event => setPlatform(event.target.value as CreditPlatform)}>
+      {CREDIT_PLATFORMS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+    </select></label>
+    <label>{platform === "OTHER" ? "Their name or handle" : "Their handle"}<input name="creditHandle" autoComplete="off" spellCheck={false} maxLength={200} defaultValue={credit?.handle ?? ""} /></label>
+    {platform === "OTHER" && <label>Where they are<input name="creditPlatformName" maxLength={CREDIT_OTHER_PLATFORM_MAX} defaultValue={credit?.platform === "OTHER" ? credit.platformName ?? "" : ""} /></label>}
+  </fieldset>;
+}
+
 function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChange, dateNotice, supportingContext, saveNotice }: {
   item: Item; evidence: InventoryEvidence; onSave: (input: SaveInput) => Promise<SaveResult>;
   startedAt: string; onStartDateChange: (value: string) => void; dateNotice: string;
@@ -78,6 +97,10 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
   const retry = useRef<{ body: string; id: string } | null>(null);
   async function submit(form: FormData) {
     if (!isRelationshipLevel(currentLevel)) { setMessage({ version, text: "Choose how often you use this product." }); return; }
+    const creditPlatformName = String(form.get("creditPlatformName") ?? "");
+    const credit = normalizeCredit({ platform: String(form.get("creditPlatform") ?? "PROPER_RESPECT") as CreditPlatform,
+      handle: String(form.get("creditHandle") ?? ""), ...(creditPlatformName ? { platformName: creditPlatformName } : {}) });
+    if (!credit.ok) { setMessage({ version, text: credit.message }); return; }
     setBusy(true);
     setMessage({ version, text: "" });
     const activityChoice = String(form.get("activityEvidenceId") ?? "");
@@ -88,6 +111,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       level: currentLevel, status: levelStatus(currentLevel), goTo: form.get("goTo") === "on",
       headline: String(form.get("headline") ?? ""), note: String(form.get("note") ?? ""),
       uses: usePicks.length || useOther ? { picks: usePicks, ...(useOther ? { other: useOther } : {}) } : undefined,
+      credit: credit.credit,
       startedAt: String(form.get("startedAt") ?? "") || undefined,
       supportingUrl: String(form.get("supportingUrl") ?? "") || undefined,
       activityEvidenceId: (activityChoice === "__remove__" ? undefined : activityChoice || undefined) as Id<"rawEvidence"> | undefined,
@@ -119,6 +143,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       <p className={styles.hint}>You choose the level and the go-to mark. Activity never sets either. Earlier choices stay in history.</p>
       <label>What it helps you do (optional)<input name="headline" maxLength={240} defaultValue={confirmed ? item.prop.headline : ""} /></label>
       <UsesQuestion productName={item.product.name} productSlug={item.product.slug} uses={item.prop.uses} />
+      <CreditQuestion productName={item.product.name} credit={item.prop.credit} />
       <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
       <label className={styles.dateField}><span>Started using (optional)</span><input name="startedAt" type="date" aria-label="Started using (optional)" value={startedAt} onChange={event => onStartDateChange(event.target.value)} />

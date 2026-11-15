@@ -179,6 +179,10 @@ export const usageLinkLabelValidator = v.union(
 export const usageLinkValidator = v.object({ url: v.string(), label: usageLinkLabelValidator });
 // Permissive on purpose: ids a product no longer lists still read, and are dropped when shown.
 export const productUsesValidator = v.object({ picks: v.array(v.string()), other: v.optional(v.string()) });
+// Permissive on purpose, like uses: a stored credit is checked against its platform's rule when it is saved and shown.
+export const propsCreditValidator = v.object({
+  platform: v.string(), handle: v.string(), platformName: v.optional(v.string()), linked: v.optional(v.boolean()),
+});
 
 // Exact measurement projections deliberately do not use numeric ActivityModule values.
 export const measurementPeriodValidator = v.union(

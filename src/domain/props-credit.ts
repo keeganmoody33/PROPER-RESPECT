@@ -182,7 +182,7 @@ function segmentsOf(pathname: string): string[] | undefined {
 
 function typedHandle(platform: HandlePlatform, typed: string): NormalizedCredit {
   const rule: PlatformRule = RULES[platform];
-  const notAProfile = { ok: false as const, message: `That link isn't a ${rule.label} profile. Paste their ${rule.label} profile link or just the handle.` };
+  const notAProfile = { ok: false as const, message: `That link isn't a profile on ${rule.label}. Paste their ${rule.label} profile link or just the handle.` };
   let handle = typed.replace(LEADING_AT, "");
   if (typed.includes("/")) {
     const url = parseLooseHttpUrl(typed);
