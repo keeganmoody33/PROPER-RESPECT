@@ -100,7 +100,8 @@ the stored reason.
 
 Added 2026-11-15 with props ([ADR-062](../adr/062-props-credit.md)). A
 published credit has a "Not you? Report" link. Its email's subject is
-`Report credit on proper-respect.com/<handle> · <product>`. Removing a
+`Report credit on proper-respect.com/<handle> · <product> · <credit> on <platform> · "<headline>"`,
+with a headline over 80 characters cut short with "…". Removing a
 credit leaves the rest of the profile up, so there is no takedown and no
 command: the owner edits the published snapshot by hand in the Convex
 dashboard for production.
@@ -108,8 +109,10 @@ dashboard for production.
 1. Record the report, as in "Before you start".
 2. In **Data → publishedProfiles**, open the document whose `handle` is the
    reported handle. Under `profile.cards`, find the card whose
-   `product.name` is the reported product, and delete its `credit` field.
-   Leave everything else as it is.
+   `product.name` is the reported product, whose `credit` is the reported
+   credit, and whose `headline` starts with the reported headline. One owner
+   can publish two cards for the same product, so match all three. Delete
+   that card's `credit` field and leave everything else as it is.
 3. Open `https://proper-respect.com/<handle>` in a private window. The card
    should show no "Props to" line.
 4. Email the owner what was removed and why. Ask them to remove or change

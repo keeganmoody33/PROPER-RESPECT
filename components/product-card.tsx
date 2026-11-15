@@ -518,6 +518,14 @@ function ActivityEvidence({ activity, today, sample }: { activity: ActivityModul
   );
 }
 
+// A report names the card as well as the page: one owner can publish two cards for the same product, each with its own credit.
+const REPORT_HEADLINE_MAX = 80;
+function creditReportSubject(profileHandle: string, card: Card, credit: { name: string; platform: string }): string {
+  const headline = [...card.headline.trim()];
+  const shown = headline.length > REPORT_HEADLINE_MAX ? `${headline.slice(0, REPORT_HEADLINE_MAX - 1).join("")}…` : headline.join("");
+  return [`Report credit on proper-respect.com/${profileHandle}`, card.product.name, `${credit.name} on ${credit.platform}`, ...(shown ? [`"${shown}"`] : [])].join(" · ");
+}
+
 export function ProductCard({
   card,
   displayMode = "relationship",
@@ -597,7 +605,7 @@ export function ProductCard({
   // A Proper Respect page opens here; another platform's profile opens in a new tab.
   const creditLinkTarget = credit?.platform === "PROPER_RESPECT" || !creditWords ? {}
     : { target: "_blank", rel: "noopener noreferrer", "aria-label": `${creditWords.name} on ${creditWords.platform} (opens in a new tab)` };
-  const creditReport = credit && profileHandle ? reportHref(`Report credit on proper-respect.com/${profileHandle} · ${card.product.name}`) : undefined;
+  const creditReport = credit && creditWords && profileHandle ? reportHref(creditReportSubject(profileHandle, card, creditWords)) : undefined;
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;

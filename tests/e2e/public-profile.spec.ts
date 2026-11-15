@@ -79,7 +79,7 @@ const MIN_TEXT_PX = 12;
   await expect(credit.locator(".card-credit-line")).toHaveText("Props to @lecturesfrom · Proper Respect");
   await expect(credit.getByRole("link", { name: "@lecturesfrom", exact: true })).toHaveAttribute("href", "https://proper-respect.com/lecturesfrom");
   await expect(credit.getByRole("link", { name: "Not you? Report", exact: true })).toHaveAttribute(
-    "href", "mailto:33@lecturesfrom.com?subject=Report%20credit%20on%20proper-respect.com%2Fkeegan%20%C2%B7%20GitHub",
+    "href", `mailto:33@lecturesfrom.com?subject=${encodeURIComponent('Report credit on proper-respect.com/keegan · GitHub · @lecturesfrom on Proper Respect · "Where the receipts live."')}`,
   );
   if (width === PHONE_WIDTH) {
     const heights = await credit.getByRole("link").evaluateAll(links => links.map(link => link.getBoundingClientRect().height));

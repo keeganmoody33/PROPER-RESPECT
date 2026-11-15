@@ -1254,12 +1254,27 @@ test("a stored credit outside its platform's rule shows no credit and no link", 
   expect(renderCard({ credit: { platform: "X", handle: "jack" } })(".card-credit").length).toBe(1);
 });
 
+test("two cards for the same product report as different cards, by credit and headline, with a long headline cut short", () => {
+  const subjectOf = (card: Card) => {
+    const href = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, profileHandle: "owner" })))(".card-credit-report").attr("href") ?? "";
+    return decodeURIComponent(href.split("?subject=")[1] ?? "");
+  };
+  const first = subjectOf({ ...baseCard, headline: "Enrichment for my sales team.", credit: { platform: "X", handle: "jack" } });
+  const second = subjectOf({ ...baseCard, headline: "Lead lists for a side project.", credit: { platform: "GITHUB", handle: "octocat" } });
+  expect([first, second]).toEqual([
+    'Report credit on proper-respect.com/owner · Example Product · @jack on X · "Enrichment for my sales team."',
+    'Report credit on proper-respect.com/owner · Example Product · @octocat on GitHub · "Lead lists for a side project."',
+  ]);
+  const long = subjectOf({ ...baseCard, headline: "w".repeat(200), credit: { platform: "X", handle: "jack" } });
+  expect(long).toBe(`Report credit on proper-respect.com/owner · Example Product · @jack on X · "${"w".repeat(79)}…"`);
+});
+
 test("on a published profile a credit offers a report naming the page and the card; samples, previews and the owner's cards don't", () => {
   const published = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, credit: { platform: "X", handle: "jack" } }, index: 0, profileHandle: "owner" })));
   const report = published(".card-credit .card-credit-report");
   expect([report.text(), report.attr("href")]).toEqual([
     "Not you? Report",
-    "mailto:33@lecturesfrom.com?subject=Report%20credit%20on%20proper-respect.com%2Fowner%20%C2%B7%20Example%20Product",
+    `mailto:33@lecturesfrom.com?subject=${encodeURIComponent('Report credit on proper-respect.com/owner · Example Product · @jack on X · "An owner-approved observation."')}`,
   ]);
   expect(renderCard({ credit: { platform: "X", handle: "jack" } })(".card-credit-report").length).toBe(0);
   const preview = load(renderToStaticMarkup(createElement(ProductCard, {
