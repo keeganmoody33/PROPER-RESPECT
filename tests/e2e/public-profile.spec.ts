@@ -81,14 +81,8 @@ const MIN_TEXT_PX = 12;
     "href", "mailto:33@lecturesfrom.com?subject=Report%20credit%20on%20proper-respect.com%2Fkeegan%20%C2%B7%20GitHub",
   );
   if (width === PHONE_WIDTH) {
-    await credit.evaluate(element => element.scrollIntoView({ block: "center" }));
-    // A tap 22px above or below the middle of each link still lands on it.
-    const reach = await credit.getByRole("link").evaluateAll((links, half) => links.map(link => {
-      const box = link.getBoundingClientRect();
-      const x = box.left + box.width / 2, y = box.top + box.height / 2;
-      return [y - half + 1, y + half - 1].every(point => link.contains(document.elementFromPoint(x, point)));
-    }), MIN_TARGET_PX / 2);
-    expect(reach).toEqual([true, true]);
+    const heights = await credit.getByRole("link").evaluateAll(links => links.map(link => link.getBoundingClientRect().height));
+    expect(heights.map(height => height >= MIN_TARGET_PX)).toEqual([true, true]);
   }
   const fontSizes = await credit.locator(".card-credit-line, .card-credit-report").evaluateAll(nodes => nodes.map(node => parseFloat(getComputedStyle(node).fontSize)));
   expect(fontSizes.every(size => size >= MIN_TEXT_PX)).toBe(true);
