@@ -6,6 +6,7 @@ import type { Cost } from "@/src/domain/cost";
 import type { PublicMeasurement } from "@/src/domain/measurements";
 import type { ActivityModule, PublicProfile } from "@/src/domain/public-profile";
 import type { UsageLink } from "@/src/domain/usage-links";
+import type { PropsCredit } from "@/src/domain/props-credit";
 import { levelStatus, type RelationshipLevel } from "@/src/domain/relationship-level";
 
 export type HomepageExample = Readonly<{
@@ -140,6 +141,8 @@ type ExampleSource = Readonly<{
   caveat?: string;
   source?: HomepageExample["source"];
   backHint?: string;
+  /** Sample props: a handle the operator owns, or plain text that names nobody. */
+  credit?: PropsCredit;
 }>;
 
 /**
@@ -153,6 +156,7 @@ const EXAMPLES: readonly ExampleSource[] = [
     slug: "clay", featured: true, capability: "One published number", level: "DAILY", since: "2023", headline: "Contact enrichment for my sales team.", note: "Lists that took a week of spreadsheets take an hour.",
     measurements: clayMeasurements, usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
     caveat: "Its link to how I use it opens Clay's public templates.", backHint: "The period and how I use it, inside",
+    credit: { platform: "PROPER_RESPECT", handle: "lecturesfrom", linked: true },
   },
   {
     slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.", headlineAccent: "every project's code",
@@ -174,6 +178,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   },
   {
     slug: "n8n", capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
+    credit: { platform: "GITHUB", handle: "keeganmoody33" },
   },
   {
     slug: "claude-code", capability: "Coding days", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code.",
@@ -189,6 +194,7 @@ const EXAMPLES: readonly ExampleSource[] = [
   {
     slug: "spider", capability: "Affiliate link, disclosed", level: "OCCASIONAL", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it.",
     linkType: "AFFILIATE",
+    credit: { platform: "OTHER", handle: "a teammate", platformName: "Slack" },
     caveat: "A real card's affiliate link carries its owner's code. This one goes to Spider's home page and credits nobody.",
   },
   {
@@ -224,6 +230,7 @@ export function homepageExamples(): HomepageExample[] {
         ...(example.measurements ? { measurements: example.measurements } : {}),
         ...(example.cost ? { cost: example.cost } : {}),
         ...(example.usageLink ? { usageLink: example.usageLink } : {}),
+        ...(example.credit ? { credit: example.credit } : {}),
       },
       ...(site ? { site } : {}),
       ...(example.caveat ? { caveat: example.caveat } : {}),
