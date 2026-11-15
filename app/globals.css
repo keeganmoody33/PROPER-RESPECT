@@ -409,7 +409,7 @@ main {
 /* On a phone the paid-link tag takes its own row under the arrow, so the title beside the logo keeps the arrow's width only. */
 @media (max-width: 480px) {
   .card-topline > .card-destination:has(.card-link-disclosure) { display: contents; }
-  .card-topline > .card-destination > .card-link-disclosure { margin: -0.5rem 0 0 auto; order: 1; }
+  .card-topline > .card-destination > .card-link-disclosure { margin: -0.75rem 0 0 auto; order: 1; }
 }
 
 /* A paid link says so under its arrow, as a tag a visitor reads before they press it. */

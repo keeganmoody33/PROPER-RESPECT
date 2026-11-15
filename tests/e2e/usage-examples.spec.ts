@@ -879,9 +879,10 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`Firecrawl's front says i
   const [arrow, label] = [(await link.boundingBox())!, (await tag.boundingBox())!];
   const fontSize = await tag.evaluate(element => parseFloat(getComputedStyle(element).fontSize));
   expect(fontSize).toBeGreaterThanOrEqual(MIN_TEXT_PX);
-  // Right under the arrow, centred on it.
+  // Right under the arrow: centred on it where the card has room, and on a phone on its own row, flush with the arrow's right edge.
   expect(label.y - (arrow.y + arrow.height)).toBeLessThan(MIN_TEXT_PX);
-  expect(Math.abs(label.x + label.width / 2 - (arrow.x + arrow.width / 2))).toBeLessThan(2);
+  if (width === DESKTOP_WIDTH) expect(Math.abs(label.x + label.width / 2 - (arrow.x + arrow.width / 2))).toBeLessThan(2);
+  else expect(Math.abs(label.x + label.width - (arrow.x + arrow.width))).toBeLessThan(2);
 });
 
 const ALL_EXAMPLES = ["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl", "n8n", "Claude Code", "Exa", "Porkbun", "Spider", "Open Places", "Grok Bot", "Elicit", "Context.dev"] as const;
