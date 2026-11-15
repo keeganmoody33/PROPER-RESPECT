@@ -43,13 +43,14 @@ const buttonSchema = z.object({
   font: fontSchema.optional(), case: caseSchema.optional(), trackingEm: emSchema.optional(),
 }).strict();
 const heroSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("colour"), hex: hexSchema }).strict(),
+  /** `radiusPx` is the slab's corner: 0 runs flush to the page, more is a rounded slab inset from it. */
+  z.object({ kind: z.literal("colour"), hex: hexSchema, radiusPx: pxSchema.optional() }).strict(),
   z.object({ kind: z.literal("image"), hex: hexSchema }).strict(),
   z.object({ kind: z.literal("none") }).strict(),
 ]);
 const SIGNATURE_SOURCES = ["primary call-to-action", "heading highlight", "hero", "logo"] as const;
-/** The largest a surface pattern's cell can be and still read as a pattern on a card. */
-const MAX_PATTERN_PITCH_PX = 64;
+/** The largest a surface pattern's cell can be and still read as a pattern on a card: two cells across a 330px phone card. */
+const MAX_PATTERN_PITCH_PX = 165;
 const patternSchema = z.object({ kind: z.enum(["grid", "dots"]), pitchPx: z.number().int().min(2).max(MAX_PATTERN_PITCH_PX), line: hexSchema }).strict();
 const inversePanelSchema = z.object({ fill: hexSchema, text: hexSchema, border: hexSchema.optional(), radiusPx: pxSchema.optional() }).strict();
 const ruleSchema = z.object({ style: z.enum(["solid", "dashed"]), hex: hexSchema }).strict();
@@ -72,7 +73,7 @@ const traitsSchema = z.object({
   numberFont: located(fontSchema, ["largest number"]).optional(),
   numberColour: located(hexSchema, ["largest number"]).optional(),
   panelFill: located(hexSchema, ["second large surface"]).optional(),
-  surfacePattern: located(patternSchema, ["second large surface"]).optional(),
+  surfacePattern: located(patternSchema, ["second large surface", "ruled columns"]).optional(),
   inversePanel: located(inversePanelSchema, ["dark panel"]).optional(),
   rule: located(ruleSchema, ["most common border"]).optional(),
   mutedText: located(hexSchema, ["secondary text on the page background"]).optional(),
@@ -105,7 +106,11 @@ export type SiteMeasurement = {
   primaryButton?: RawButton; secondaryButton?: RawButton; panelRadiusPx?: unknown;
   signatureCandidates?: readonly { hex?: unknown; from?: unknown }[];
   /** A backdrop's width as a share of the viewport, and of the frame it sits in; or `fullBleed` from an older capture. */
-  hero?: { hex?: unknown; fullBleed?: unknown; widthShare?: unknown; frameShare?: unknown; kind?: unknown };
+  hero?: { hex?: unknown; fullBleed?: unknown; widthShare?: unknown; frameShare?: unknown; kind?: unknown; radiusPx?: unknown };
+  /** Every bordered or shadowed panel's corner and area; an older capture has only their modal radius as `panelRadiusPx`. */
+  panels?: readonly { px?: unknown; area?: unknown }[];
+  /** Tall vertical lines in the first screen: a border's x position and colour. */
+  verticalRules?: readonly { x?: unknown; hex?: unknown }[];
   number?: { font?: RawFont; colour?: unknown };
   panelFill?: unknown;
   surfacePattern?: { kind?: unknown; pitchPx?: unknown; line?: unknown };
@@ -151,7 +156,44 @@ function hero(raw: SiteMeasurement["hero"]): SiteHero | undefined {
   if (!raw) return undefined;
   const backdrop = hex(raw.hex);
   if (!backdrop || !(raw.fullBleed === true || spans(raw.widthShare) || spans(raw.frameShare))) return { kind: "none" };
-  return raw.kind === "colour" || raw.kind === "image" ? { kind: raw.kind, hex: backdrop } : undefined;
+  if (raw.kind === "image") return { kind: "image", hex: backdrop };
+  return raw.kind === "colour" ? defined({ kind: "colour" as const, hex: backdrop, radiusPx: kept(pxSchema, rounded(raw.radiusPx, PX_PLACES)) }) as SiteHero : undefined;
+}
+
+/** The corner most of the panels' area is drawn with: a few big rounded cards outweigh many small square boxes. */
+function panelRadius(raw: SiteMeasurement) {
+  if (!raw.panels?.length) return kept(pxSchema, rounded(raw.panelRadiusPx, PX_PLACES));
+  const areas = new Map<number, number>();
+  for (const panel of raw.panels) {
+    const px = kept(pxSchema, Math.round(Number(panel.px))), area = typeof panel.area === "number" && Number.isFinite(panel.area) ? panel.area : 0;
+    if (px !== undefined) areas.set(px, (areas.get(px) ?? 0) + area);
+  }
+  return [...areas].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0];
+}
+
+/** A grid needs this many even gaps between its lines; two lines are a frame. */
+const MIN_GRID_GAPS = 3;
+/** Lines this close are one line drawn twice (a box's right edge and the next box's left). */
+const SAME_LINE_PX = 2;
+/** A page ruled into even columns by tall lines: the commonest gap between neighbouring lines, in their commonest colour. */
+function ruledColumns(raw: SiteMeasurement["verticalRules"]) {
+  const rules = (raw ?? []).flatMap(rule => {
+    const colour = hex(rule.hex), x = typeof rule.x === "number" && Number.isFinite(rule.x) ? Math.round(rule.x) : undefined;
+    return colour && x !== undefined ? [{ x, hex: colour }] : [];
+  }).sort((a, b) => a.x - b.x).filter((rule, index, sorted) => index === 0 || rule.x - sorted[index - 1].x > SAME_LINE_PX);
+  const gaps = rules.slice(1).map((rule, index) => rule.x - rules[index].x);
+  const counts = gaps.reduce((tally, gap) => tally.set(gap, (tally.get(gap) ?? 0) + 1), new Map<number, number>());
+  const [pitchPx, count] = [...counts].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0] ?? [];
+  if (pitchPx === undefined || count < MIN_GRID_GAPS) return undefined;
+  const colours = rules.reduce((tally, rule) => tally.set(rule.hex, (tally.get(rule.hex) ?? 0) + 1), new Map<string, number>());
+  const line = [...colours].sort((a, b) => b[1] - a[1])[0][0];
+  return kept(patternSchema, { kind: "grid", pitchPx, line });
+}
+function surfacePattern(raw: SiteMeasurement) {
+  const drawn = kept(patternSchema, raw.surfacePattern && { ...raw.surfacePattern, line: typeof raw.surfacePattern.line === "string" ? raw.surfacePattern.line.toLowerCase() : raw.surfacePattern.line });
+  if (drawn) return { value: drawn, from: "second large surface" as const };
+  const ruled = ruledColumns(raw.verticalRules);
+  return ruled && { value: ruled, from: "ruled columns" as const };
 }
 const at = <Value, From extends string>(value: Value | undefined, from: From) => (value === undefined ? undefined : { value, from });
 
@@ -182,13 +224,13 @@ export function brandSiteTraitsFromMeasurement(meta: SiteMeasurementMeta, raw: S
     labelTrackingEm: at(kept(emSchema, rounded(raw.labels?.trackingEm, EM_PLACES)), "small labels"),
     primaryButton: at(button(raw.primaryButton), "primary call-to-action"),
     secondaryButton: at(button(raw.secondaryButton), "secondary call-to-action"),
-    panelRadiusPx: at(kept(pxSchema, rounded(raw.panelRadiusPx, PX_PLACES)), "bordered panels"),
+    panelRadiusPx: at(panelRadius(raw), "bordered panels"),
     signature: signature && { value: signature.hex, from: signature.from },
     hero: at(heroValue, "backdrop behind the first heading"),
     numberFont: at(font(raw.number?.font), "largest number"),
     numberColour: at(hex(raw.number?.colour), "largest number"),
     panelFill: at(hex(raw.panelFill), "second large surface"),
-    surfacePattern: at(kept(patternSchema, raw.surfacePattern && { ...raw.surfacePattern, line: typeof raw.surfacePattern.line === "string" ? raw.surfacePattern.line.toLowerCase() : raw.surfacePattern.line }), "second large surface"),
+    surfacePattern: surfacePattern(raw),
     inversePanel: at(kept(inversePanelSchema, raw.inversePanel && defined({ fill: hex(raw.inversePanel.fill), text: hex(raw.inversePanel.text), border: hex(raw.inversePanel.border), radiusPx: kept(pxSchema, rounded(raw.inversePanel.radiusPx, PX_PLACES)) })), "dark panel"),
     rule: at(kept(ruleSchema, raw.rule && { style: raw.rule.style, hex: hex(raw.rule.hex) }), "most common border"),
     mutedText: at(hex(raw.mutedText), "secondary text on the page background"),

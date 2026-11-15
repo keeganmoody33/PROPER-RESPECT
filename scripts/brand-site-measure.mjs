@@ -218,7 +218,7 @@ export function measureSite({ labelMonoShare, neutralChroma }) {
     const frameWidth = frame?.getBoundingClientRect().width;
     site.hero = own
       ? { hex: behind.hex, widthShare: Math.round((area.width / innerWidth) * 1000) / 1000, frameShare: frameWidth ? Math.round((area.width / frameWidth) * 1000) / 1000 : 0,
-        heading: { x: box.left, y: box.top, width: box.width, height: box.height } }
+        radiusPx: f.radius(behind.node).px, heading: { x: box.left, y: box.top, width: box.width, height: box.height } }
       : { hex: undefined, widthShare: 0 };
   }
 
@@ -231,12 +231,23 @@ export function measureSite({ labelMonoShare, neutralChroma }) {
     return boxed || style.boxShadow !== "none";
   });
   const panelRadii = panels.map(element => Math.round(f.radius(element).px));
+  // Each panel's corner and area: the site's panel corner is the one most of the panels' area is drawn with (brand-site-traits keeps the same rule).
+  site.panels = panels.map((element, index) => { const box = element.getBoundingClientRect(); return { px: panelRadii[index], area: Math.round(box.width * box.height) }; });
   if (panelRadii.length) {
-    const modal = mode(panelRadii);
-    set("panelRadius", { px: modal }, `most common border-top-left-radius of ${panelRadii.length} bordered or shadowed boxes 220px+ wide (under 90% of the width, not buttons)`);
-    site.panelRadiusPx = modal;
+    const areas = site.panels.reduce((tally, panel) => tally.set(panel.px, (tally.get(panel.px) ?? 0) + panel.area), new Map());
+    const widest = [...areas].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
+    set("panelRadius", { px: widest }, `the border-top-left-radius covering the most area among ${panelRadii.length} bordered or shadowed boxes 220px+ wide (under 90% of the width, not buttons)`);
+    site.panelRadiusPx = widest;
   } else set("panelRadius", undefined, "no bordered or shadowed box 220px+ wide on the page");
   notes.panelRadii = panelRadii;
+
+  // Tall 1px vertical lines in the first screen (a page ruled into columns): each border's x position and colour.
+  site.verticalRules = all("div, section, main, article, aside, header, footer").flatMap(element => {
+    const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+    if (box.height < 150) return [];
+    return [["Left", box.left], ["Right", box.right]].filter(([side]) => parseFloat(style[`border${side}Width`]) >= 1 && style[`border${side}Style`] !== "none")
+      .map(([side, x]) => ({ x: Math.round(x), hex: f.color(style[`border${side}Color`]).hex })).filter(rule => rule.hex);
+  });
 
   // The largest number on the page: a text leaf that is a figure ("1,000+", "$5", "99.9%"), at its biggest font size.
   // https://regex101.com/?regex=%5E%5B%24%E2%82%AC%C2%A3%5D%3F%5Cd%5B%5Cd%2C.%5D*%5Cs%3F%5B%25%2BkKmMbBx%C3%97%5D*%24&testString=100M%2B%0A%245%0A99.9%25%0Aplan%202
@@ -297,8 +308,8 @@ export function measureSite({ labelMonoShare, neutralChroma }) {
   site.mutedText = [...onSurface].filter(([hex, characters]) => hex !== textColor && characters >= 20 && f.contrast(hex, pageBackground) >= 4.5)
     .sort((a, b) => b[1] - a[1])[0]?.[0];
 
-  // Small text leaves anywhere on the page: elements with 2-30 characters of their own text at 14px or smaller.
-  const labels = rendered("a, span, p, li, button, div, small, label, dt, dd, code, strong, em, h4, h5, h6, td, th").filter(element => {
+  // Small text leaves in the first screen, where the site introduces itself: elements with 2-30 characters of their own text at 14px or smaller.
+  const labels = all("a, span, p, li, button, div, small, label, dt, dd, code, strong, em, h4, h5, h6, td, th").filter(element => {
     const own = ownText(element);
     return own.length >= 2 && own.length <= 30 && parseFloat(getComputedStyle(element).fontSize) <= 14;
   });

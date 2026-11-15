@@ -1,33 +1,48 @@
 import { z } from "zod";
 
 /** A preview stays a glance: a few columns, a few rows, short cells, and a caption that can say where the list came from. */
-export const TABLE_PREVIEW_LIMITS = { columns: 4, rows: 6, text: 40, caption: 80 } as const;
+export const TABLE_PREVIEW_LIMITS = { columns: 4, rows: 8, text: 40, caption: 80 } as const;
+/** A waterfall tries at most this many providers in turn. */
+const MAX_WATERFALL_STEPS = 6;
 
 const text = z.string().min(1).max(TABLE_PREVIEW_LIMITS.text);
+/** Which provider of a waterfall answered (or, while it runs, is being asked), counting from 1, of how many it tries in turn. */
+const waterfallSchema = z.object({ step: z.number().int().min(1), of: z.number().int().min(1).max(MAX_WATERFALL_STEPS) })
+  .refine(waterfall => waterfall.step <= waterfall.of, "A waterfall's step is one of its providers.");
 /** What a pending cell shows once it has filled in: a value found, or nothing found. */
-const filledSchema = z.object({ text, state: z.enum(["filled", "empty"]) });
+const filledSchema = z.object({ text, state: z.enum(["filled", "empty"]), waterfall: waterfallSchema.optional() });
 /** A cell can say it was filled in, is still being looked up, or came back empty, the way an enrichment table shows it. */
-const cellSchema = z.object({ text, state: z.enum(["filled", "pending", "empty"]).optional(), fillsIn: filledSchema.optional() });
+const cellSchema = z.object({ text, state: z.enum(["filled", "pending", "empty"]).optional(), waterfall: waterfallSchema.optional(), fillsIn: filledSchema.optional() });
+/** The kinds of column an enrichment table draws a glyph for: typed text, a found address, a provider waterfall, an AI prompt, a formula. */
+export const TABLE_COLUMN_KINDS = ["text", "email", "waterfall", "ai", "formula"] as const;
 /**
  * A column is its label, or its label with how it's drawn: "enriched" for a column the product fills in (its header is tinted),
- * "droppable" for one a narrow card leaves out so the rest fit.
+ * "droppable" for one a narrow card leaves out so the rest fit, and its kind for the glyph in its header.
  */
 const columnSchema = z.union([
   text.transform(label => ({ label, droppable: false, enriched: false })),
-  z.object({ label: text, droppable: z.boolean().default(false), enriched: z.boolean().default(false) }),
+  z.object({ label: text, kind: z.enum(TABLE_COLUMN_KINDS).optional(), droppable: z.boolean().default(false), enriched: z.boolean().default(false) }),
 ]);
 
 const tablePreviewSchema = z.object({
   caption: z.string().min(1).max(TABLE_PREVIEW_LIMITS.caption),
   columns: z.array(columnSchema).min(1).max(TABLE_PREVIEW_LIMITS.columns).readonly(),
   rows: z.array(z.array(cellSchema).readonly()).min(1).max(TABLE_PREVIEW_LIMITS.rows).readonly(),
-}).refine(table => table.rows.every(row => row.length === table.columns.length), "Every row needs one cell per column.");
+  /** How many of the rows the card's front shows; the back shows them all. */
+  frontRows: z.number().int().min(1).optional(),
+  /** How many rows the whole table has, of which these are a few, and a short note on them ("2.3 credits a row"). */
+  totalRows: z.number().int().min(1).optional(),
+  rowNote: text.optional(),
+}).refine(table => table.rows.every(row => row.length === table.columns.length), "Every row needs one cell per column.")
+  .refine(table => (table.frontRows ?? 0) <= table.rows.length, "The front shows some of the rows.")
+  .refine(table => (table.totalRows ?? Infinity) >= table.rows.length, "The whole table has at least the rows shown.");
 
 /** A table as its author writes it: a column may be a bare label. */
 export type TablePreviewInput = z.input<typeof tablePreviewSchema>;
 export type TablePreview = Readonly<z.output<typeof tablePreviewSchema>>;
 export type TablePreviewColumn = TablePreview["columns"][number];
 export type TablePreviewCell = TablePreview["rows"][number][number];
+export type TableColumnKind = typeof TABLE_COLUMN_KINDS[number];
 
 /** The preview when it fits the caps, with every column spelled out; undefined otherwise, so an oversized or ragged table is never drawn. */
 export function tablePreview(value: unknown): TablePreview | undefined {

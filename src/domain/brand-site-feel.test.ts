@@ -16,6 +16,8 @@ const GRID_PITCH_PX = 10;
 const TERMINAL_RADIUS_PX = 10;
 /** Bars are marks: 3:1 against what they are drawn on. */
 const MARK_CONTRAST = 3;
+/** A border or rule must show against the card. */
+const BORDER_CONTRAST = 1.3;
 
 describe("the brand's feel, as measured traits", () => {
   it("stores the biggest number's face and colour, the second surface, its pattern, a dark inverse panel, the page's rule and its muted text", () => {
@@ -57,9 +59,18 @@ describe("what a card makes of the feel", () => {
     expect(brandCardKit(undefined, WHITE, INK)["--brand-card-label-case"]).toBeUndefined();
   });
 
+  it("sets the use chips and footer note in the site's button case and face, not its small-label case", () => {
+    const clay = kit({ labels: { case: "uppercase" }, primaryButton: { fill: "#cbd810", label: "#000000", case: "as written", font: { generic: "sans-serif" } } });
+    expect([clay["--brand-card-label-case"], clay["--brand-card-chip-case"], clay["--brand-card-chip-font"]])
+      .toEqual(["uppercase", "none", 'system-ui, -apple-system, "Segoe UI", Arial, sans-serif']);
+    expect(kit({ labels: { case: "uppercase" } })["--brand-card-chip-case"]).toBe("uppercase");
+  });
+
   it("sets the hero number in the site's number face, and in its colour only where that colour reaches 3:1", () => {
-    const github = kit({ number: { font: { generic: "monospace" }, colour: "#08872b" } });
-    expect([github["--brand-card-number-font"], github["--brand-card-number-colour"]]).toEqual(['ui-monospace, "SF Mono", Menlo, monospace', "#08872b"]);
+    const github = kit({ number: { font: { family: "Mona Sans Mono", generic: "monospace" }, colour: "#08872b" } });
+    // The card serves no Mona Sans Mono, so the figures stay in the brand's own served face rather than a system mono.
+    expect([github["--brand-card-number-font"], github["--brand-card-number-colour"]])
+      .toEqual(['var(--brand-card-heading-font, var(--brand-card-body-font, ui-monospace, "SF Mono", Menlo, monospace))', "#08872b"]);
     expect(kit({ number: { colour: "#f5f5f5" } })["--brand-card-number-colour"]).toBeUndefined();
   });
 
@@ -73,6 +84,24 @@ describe("what a card makes of the feel", () => {
     const docker = brandCardKit(undefined, WHITE, INK, site({ inversePanel: { fill: "#0e1217", text: "#e6ebf2", border: "#363941", radiusPx: TERMINAL_RADIUS_PX }, signatureCandidates: [{ hex: "#1d63ed", from: "primary call-to-action" }] }));
     expect([docker["--brand-card-panel"], docker["--brand-card-panel-text"], docker["--brand-card-panel-border"], docker["--brand-card-panel-radius"]]).toEqual(["#0e1217", "#e6ebf2", "#363941", "10px"]);
     expect(contrast(docker["--brand-card-panel-chart"]!, "#0e1217")).toBeGreaterThanOrEqual(MARK_CONTRAST);
+  });
+
+  it("draws the page's rule only where it shows on the card (1.3:1); a fainter one gives way to a border mixed from the text", () => {
+    expect(kit({ rule: { style: "solid", hex: "#d2d9d4" } })["--brand-card-rule"]).toBe("#d2d9d4");
+    const clay = kit({ rule: { style: "solid", hex: "#f0f8ff" } });
+    expect(clay["--brand-card-rule"]).not.toBe("#f0f8ff");
+    expect(contrast(clay["--brand-card-rule"]!, WHITE)).toBeGreaterThanOrEqual(BORDER_CONTRAST);
+    expect(clay["--brand-card-rule-style"]).toBe("solid");
+  });
+
+  it("frames the card's data panel in the site's rule: on its second surface, or on the card's own surface when it measured none", () => {
+    const github = kit({ rule: { style: "solid", hex: "#d2d9d4" } });
+    expect([github["--brand-card-panel"], github["--brand-card-panel-border"]]).toEqual([WHITE, "#d2d9d4"]);
+    const firecrawl = kit({ panelFill: "#f9f9f9", rule: { style: "solid", hex: "#d2d9d4" } });
+    expect([firecrawl["--brand-card-panel"], firecrawl["--brand-card-panel-border"]]).toEqual(["#f9f9f9", "#d2d9d4"]);
+    // A dark inverse panel keeps its own border, and a site with no rule gets no frame.
+    expect(kit({ inversePanel: { fill: "#0e1217", text: "#e6ebf2" }, rule: { style: "solid", hex: "#d2d9d4" } })["--brand-card-panel-border"]).toBeUndefined();
+    expect(kit({ surface: WHITE })["--brand-card-panel"]).toBeUndefined();
   });
 
   it("uses the site's muted text for captions only where it reads at 4.5:1 on the card", () => {

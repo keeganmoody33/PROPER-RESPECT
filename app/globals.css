@@ -191,9 +191,9 @@ main {
 }
 
 .product-card :is(.card-footer > span, .card-uses li) {
-  font-family: var(--brand-card-label-font);
+  font-family: var(--brand-card-chip-font, var(--brand-card-label-font));
   letter-spacing: var(--brand-card-label-tracking);
-  text-transform: var(--brand-card-label-case);
+  text-transform: var(--brand-card-chip-case, var(--brand-card-label-case));
 }
 
 .product-card:nth-child(4n + 2),
@@ -1915,6 +1915,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .card-table-preview thead th { background: var(--table-panel); }
 .card-table-preview thead th:first-child { width: 26%; }
 .card-table-preview thead th:nth-child(2) { width: 32%; }
+.card-table-preview thead th:nth-child(3) { width: 24%; }
 /* The row-number gutter, its own ruled column inside the first cell; drawn, not read out. */
 .card-table-preview tr > :first-child::before { align-items: flex-start; border-right: 1px solid var(--table-rule); bottom: 0; content: "" / ""; display: flex; font-variant-numeric: tabular-nums; justify-content: center; left: 0; padding-top: .32rem; position: absolute; top: 0; width: 1.5rem; }
 .card-table-preview tbody tr { counter-increment: preview-row; }
@@ -1930,17 +1931,31 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .card-table-preview :is(th, td) { padding: .4rem .35rem; }
   .card-table-preview tr > :first-child { padding-left: 1.6rem; }
   .card-table-preview tr > :first-child::before { width: 1.2rem; }
-  .card-table-preview thead th:first-child { width: 33%; }
-  .card-table-preview thead th:nth-child(2) { width: 40%; }
+  .card-table-preview thead th:first-child { width: 32%; }
+  .card-table-preview thead th:nth-child(2) { width: 34%; }
+  .card-table-preview thead th:nth-child(3) { width: auto; }
+  .card-table-preview:not([data-full]) .table-glyph { display: block; margin-bottom: .15rem; }
 }
 @container (max-width: 15rem) {
-  .card-table-preview :is(th, td) { padding-inline: .3rem; }
-  .card-table-preview tr > :first-child { padding-left: 1.3rem; }
-  .card-table-preview tr > :first-child::before { width: 1rem; }
-  .card-table-preview thead th:first-child { width: 41%; }
+  /* The narrowest front gives its row numbers' gutter to the cells, so a company and a run-status pill stay whole. */
+  .card-table-preview :is(th, td) { padding-inline: .25rem; }
+  .card-table-preview:not([data-full]) tr > :first-child { padding-left: .25rem; }
+  .card-table-preview:not([data-full]) tr > :first-child::before { display: none; }
+  .card-table-preview thead th:first-child { width: 31%; }
   .card-table-preview thead th:nth-child(2) { width: 35%; }
 }
 @media (prefers-reduced-motion: no-preference) { .card-table-preview :is(th, td) { transition: background-color .4s ease, color .4s ease; } }
+/* A column's kind as a glyph before its label; a waterfall cell's run status as a pill in the brand's colours, then a mark per provider. */
+.card-table-preview .table-glyph { fill: none; height: .75rem; margin: 0 .3rem -.1rem 0; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; width: .75rem; }
+.card-table-preview .table-pill { border: 1px solid currentColor; border-radius: 999px; display: inline-block; font-size: .75rem; line-height: 1.3; padding: 0 .35rem; white-space: nowrap; }
+.card-table-preview .table-pill[data-state="filled"] { background: var(--brand-card-button-fill, transparent); border-color: var(--brand-card-button-fill, currentColor); color: var(--brand-card-button-text, inherit); }
+.card-table-preview .table-pill[data-state="pending"] { background: var(--brand-card-band, transparent); border-color: var(--brand-card-band, currentColor); color: var(--brand-card-band-text, inherit); font-style: normal; }
+.card-table-preview .table-steps { display: inline-flex; gap: .2rem; margin-left: .3rem; vertical-align: middle; }
+.card-table-preview .table-steps i { border: 1.5px solid var(--brand-card-chart, currentColor); border-radius: 50%; height: .45rem; width: .45rem; }
+.card-table-preview .table-steps i[data-step="answered"] { background: var(--brand-card-chart, currentColor); }
+.card-table-preview .table-steps i[data-step="missed"] { border-color: var(--table-ink, currentColor); }
+.card-table-preview .table-steps i[data-step="unasked"] { border-style: dotted; border-color: var(--table-ink, currentColor); }
+.card-table-preview .card-table-count { color: var(--table-ink, inherit); font-size: .75rem; margin: .4rem .25rem 0; }
 .usage-measurement-panel { padding: 1.25rem 0; min-width: 0; }
 .usage-measurement-sources { display: grid; gap: 1rem; }
 .usage-measurement-source { border: 1px solid var(--border, #999); border-radius: .5rem; padding: 1rem; min-width: 0; }
@@ -1980,6 +1995,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .product-card :is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong) {
   color: var(--brand-card-number-colour, inherit);
   font-family: var(--brand-card-number-font, inherit);
+  font-variant-numeric: tabular-nums;
 }
 .product-card[data-panel] .card-front :is(.contribution-calendar, .card-artifact-links, .card-activity-preview .usage-chart) {
   background-color: var(--brand-card-panel);
@@ -1988,6 +2004,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   color: var(--brand-card-panel-text, inherit);
   padding: .7rem .75rem;
 }
+/* The calendar's frame sits in the card's padding, so framing it costs its days no width. */
+.product-card[data-panel] .card-front .contribution-calendar { margin-inline: calc(-.75rem - 1px); }
 .product-card[data-panel] .card-front .card-artifact-links a { color: inherit; }
 .product-card[data-panel] .card-front .activity-bars span { background: var(--brand-card-panel-chart, var(--brand-card-chart, var(--brand-card-accent, currentColor))); }
 .product-card .card-front :is(.contribution-calendar, .card-activity-preview .usage-chart) {
@@ -1997,3 +2015,28 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .product-card .card-footer { border-top: 1px var(--brand-card-rule-style, solid) var(--brand-card-rule, var(--card-line)); }
 .product-card :is(.card-activity-coverage, .usage-measurement-note, .contribution-range) { color: var(--brand-card-muted, inherit); }
 .product-card .card-table-preview { --table-ink: var(--brand-card-muted, color-mix(in srgb, var(--brand-card-text, currentColor) 74%, var(--brand-card-background, #fff))); }
+
+/*
+ * A hero that runs flush to its site's edge (Clay's green): one slab of it covers the card's header, logo row and headline, in
+ * the text that reads on it, on both faces. The body under it takes the site's second surface, and the data's panel the page white.
+ */
+.product-card[data-slab] { background: var(--brand-card-slab-body, var(--brand-card-background)); }
+.product-card[data-slab] :is(.card-front > .card-topline, .card-back-topline) {
+  background: var(--brand-card-slab);
+  color: var(--brand-card-band-text);
+  margin: -1rem -1rem 0;
+  padding: 1rem;
+}
+.product-card[data-slab] .card-front > .card-topline { padding-bottom: 0; }
+.product-card[data-slab] .card-front > .card-headline { margin-top: -0.8rem; padding-top: 0.6rem; }
+.product-card[data-slab] .card-back-topline { border-bottom: 0; }
+.product-card[data-slab] .card-visit { border-color: currentColor; color: inherit; }
+/* The back's slab is its header; its note under the status line keeps the house rule in the slab's colour, not a second band of it. */
+.product-card[data-slab] .card-back blockquote { background: none; border-left: 2px solid var(--brand-card-slab); color: inherit; margin: 1rem 0; padding: 0 0 0 .8rem; }
+.product-card[data-slab] .card-table-preview { background: var(--brand-card-background); border: 1px solid var(--brand-card-rule, var(--card-line)); }
+
+/* The back's work-sample link lights up in the brand's button colours, as the site's own controls do, not in the card's text colour. */
+.product-card .usage-link:is(:hover, :focus-visible) {
+  background: var(--brand-card-button-fill, var(--brand-card-text, var(--paper)));
+  color: var(--brand-card-button-text, var(--brand-card-background, var(--ink)));
+}

@@ -64,7 +64,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   const githubControls = await controlsTop();
   // The top line and button are typed as written; each card's measured site, or the house default, sets their case.
   for (const [name, text, labelCase, buttonCase] of [
-    ["Clay", "Daily · since 2023", "uppercase", "none"],
+    ["Clay", "Daily · since 2023", "none", "none"],
     ["Cloudflare", "Daily · since 2020", "none", "none"],
     ["Docker", "Weekly · since 2024", "none", "none"],
     ["Firecrawl", "Weekly · since 2025", "none", "none"],
@@ -208,7 +208,7 @@ const BRANDED = [
   { name: "Firecrawl", slug: "firecrawl", background: "rgb(249, 249, 249)", bars: { count: 12, color: "rgb(255, 76, 0)" }, logo: "square" },
   { name: "Cloudflare", slug: "cloudflare", background: "rgb(255, 255, 255)", bars: { count: 31, color: "rgb(255, 94, 31)" }, logo: "wordmark" },
   { name: "n8n", slug: "n8n", background: "rgb(250, 250, 250)", bars: { count: 12, color: "rgb(22, 22, 22)" }, logo: "wordmark" },
-  { name: "Clay", slug: "clay", background: "rgb(255, 255, 255)", bars: undefined, logo: "app-icon" },
+  { name: "Clay", slug: "clay", background: "rgb(244, 243, 240)", bars: undefined, logo: "app-icon" },
 ] as const;
 const CODING_DAYS = 31;
 const NARROWEST_WIDTH = 320;
@@ -246,9 +246,11 @@ const NARROWEST_WIDTH = 320;
       // Clay shows the product: a few rows of a table filling in, then its three published numbers in one row.
       const table = card.getByRole("table", { name: "Lead list · from a job-change signal · invented sample rows" });
       await expect(table).toBeVisible();
-      // A phone-wide card leaves out which provider found the address, so the address and the AI column stay in view.
-      await expect(table.getByRole("columnheader")).toHaveText(width === DESKTOP_WIDTH ? ["Company", "Work email", "Found by", "AI: signal"] : ["Company", "Work email", "AI: signal"]);
-      await expect(table.getByRole("rowheader")).toHaveText(["Nimbus", "Heron", "Quillon", "Tessel", "Marrow"]);
+      // A phone-wide card leaves out the AI column, so the address and the waterfall that found it stay in view.
+      await expect(table.getByRole("columnheader")).toHaveText(width === DESKTOP_WIDTH ? ["Company", "Work email", "Waterfall", "AI: signal"] : ["Company", "Work email", "Waterfall"]);
+      // The front shows four of the table's rows, and says how much of the whole table they are.
+      await expect(table.getByRole("rowheader")).toHaveText(["Nimbus", "Heron", "Quillon", "Tessel"]);
+      await expect(card.locator(".card-front .card-table-count")).toHaveText("4 of 214 rows · 2.3 credits a row this year");
       // One period for all three numbers, said once beside them.
       const stats = card.locator(".card-front .usage-measurement-stats li");
       await expect(stats).toHaveText(["11,800rows enriched", "52tables built", "27,600data credits used"]);
@@ -640,12 +642,12 @@ for (const motion of ["no-preference", "reduce"] as const) test(`Clay's running 
   await page.emulateMedia({ reducedMotion: motion });
   await page.goto("/");
   const row = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" }).getByRole("row", { name: /Quillon/ });
-  const filled = ["mo@quillon.example", "2nd provider", "New VP Sales"];
+  const filled = ["mo@quillon.example", "Enriched, provider 3 of 3 answered", "New VP Sales"];
   if (motion === "reduce") {
     await expect(row.getByRole("cell")).toHaveText(filled);
     return;
   }
-  await expect(row).toContainText("Running");
+  await expect(row).toContainText("Running, asking provider 2 of 3");
   await page.clock.runFor(FILL_IN_WAIT_MS);
   await expect(row.getByRole("cell")).toHaveText(filled);
 });
@@ -935,7 +937,8 @@ test("opening More examples mounts none of the nine; each mounts when it is pick
  * macOS and CI's Linux: each one's brand surface, band and heading face, what its front draws, its biggest number, its sizes.
  */
 const FEATURED_LOOK = [
-  { name: "Clay", slug: "clay", surface: "rgb(255, 255, 255)", band: "rgb(3, 93, 68)", draws: "table" },
+  // Clay's green hero covers the header as one slab, over its warm grey second surface.
+  { name: "Clay", slug: "clay", surface: "rgb(244, 243, 240)", band: "rgb(3, 93, 68)", draws: "table" },
   { name: "GitHub", slug: "github", surface: "rgb(255, 255, 255)", band: null, draws: "calendar" },
   { name: "Cloudflare", slug: "cloudflare", surface: "rgb(255, 255, 255)", band: "rgb(255, 94, 31)", draws: "per day bars" },
   { name: "Docker", slug: "docker", surface: "rgb(249, 250, 251)", band: "rgb(15, 17, 23)", draws: "linked works" },
@@ -1038,12 +1041,13 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the featured cards carry
   };
   const looks: Record<string, Awaited<ReturnType<typeof feel>>> = {};
   for (const name of FEATURED) looks[name] = await feel(name);
-  // Cloudflare's site sets no text in capitals, so its labels stay as typed; Clay's small labels are capitals.
-  expect([looks.Cloudflare.eyebrowCase, looks.Clay.eyebrowCase]).toEqual(["none", "uppercase"]);
-  // GitHub's biggest number is green monospace, as on github.com.
-  expect([looks.GitHub.numberFont, looks.GitHub.numberColour]).toEqual(["ui-monospace", "rgb(8, 135, 43)"]);
-  // Clay's table on its warm grey slab; Docker's linked work on its dark terminal panel.
-  expect([looks.Clay.panel, looks.Docker.panel]).toEqual(["rgb(244, 243, 240)", "rgb(14, 18, 23)"]);
+  // Neither Cloudflare's nor Clay's first screen sets its small labels in capitals, so both stay as typed.
+  expect([looks.Cloudflare.eyebrowCase, looks.Clay.eyebrowCase]).toEqual(["none", "none"]);
+  // GitHub's biggest number is green, as on github.com, in GitHub's own served face: the card serves no Mona Sans Mono, and a system mono spaced it like code.
+  expect(looks.GitHub.numberFont).toMatch(/^PRBrand-github-\w+-heading$/);
+  expect(looks.GitHub.numberColour).toBe("rgb(8, 135, 43)");
+  // Clay's table a white panel on its warm grey body; Docker's linked work on its dark terminal panel; GitHub's calendar framed on white.
+  expect([looks.Clay.panel, looks.Docker.panel, looks.GitHub.panel]).toEqual(["rgb(255, 255, 255)", "rgb(14, 18, 23)", "rgb(255, 255, 255)"]);
 });
 
 test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone that it scrolls, and reads as one summary line", async ({ page }) => {
@@ -1065,6 +1069,75 @@ test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone 
   await expect(calendar.getByText("Scroll for earlier months")).toBeHidden();
   await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
   await expect(calendar.getByText("Scroll for earlier months")).toBeVisible();
+});
+
+/** WCAG's large text: 24px and up, where a colour needs 3:1 rather than 4.5:1. */
+const LARGE_TEXT_PX = 24, LARGE_TEXT_CONTRAST = 3;
+test("a flush hero's slab covers the header, an inset hero rounds the card, and a brand-coloured number is large text that reads", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const look = async (name: string) => {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await expect(card).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    return card.evaluate((article, [largePx, largeContrast]) => {
+      const luminance = (colour: string) => {
+        const [red, green, blue] = colour.match(/\d+/g)!.slice(0, 3).map(Number).map(value => value / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+      };
+      const contrast = (first: string, second: string) => { const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a); return (light + 0.05) / (dark + 0.05); };
+      const backdrop = (start: Element) => {
+        for (let node: Element | null = start; node; node = node.parentElement) { const fill = getComputedStyle(node).backgroundColor; if (fill !== "rgba(0, 0, 0, 0)") return fill; }
+        return "rgb(255, 255, 255)";
+      };
+      const text = getComputedStyle(article).color;
+      // Every big number in a colour other than the card's text is large text at 3:1; a number that can't be is in the text colour.
+      const numbers = [...article.querySelectorAll(".card-front :is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong)")].map(number => {
+        const style = getComputedStyle(number);
+        return style.color === text || (parseFloat(style.fontSize) >= largePx && contrast(style.color, backdrop(number)) >= largeContrast);
+      });
+      return { topline: getComputedStyle(article.querySelector(".card-front > .card-topline")!).backgroundColor, radius: getComputedStyle(article).borderTopLeftRadius, numbersRead: numbers.every(Boolean) };
+    }, [LARGE_TEXT_PX, LARGE_TEXT_CONTRAST] as const);
+  };
+  const looks: Record<string, Awaited<ReturnType<typeof look>>> = {};
+  for (const name of FEATURED) looks[name] = await look(name);
+  // Clay's green and Docker's dark hero run flush, so their colour covers the whole header; Cloudflare's 16px inset slab stays a band and rounds the card.
+  expect(Object.fromEntries(FEATURED.map(name => [name, looks[name].topline]))).toEqual({
+    Clay: "rgb(3, 93, 68)", GitHub: "rgba(0, 0, 0, 0)", Cloudflare: "rgba(0, 0, 0, 0)", Docker: "rgb(15, 17, 23)", Firecrawl: "rgba(0, 0, 0, 0)",
+  });
+  expect([looks.Cloudflare.radius, looks.Docker.radius]).toEqual(["16px", "18px"]);
+  // Firecrawl's orange 5,520 is 3.2:1 on its #f9f9f9: allowed only because it is drawn at 24px or more.
+  expect(Object.fromEntries(FEATURED.map(name => [name, looks[name].numbersRead]))).toEqual(Object.fromEntries(FEATURED.map(name => [name, true])));
+});
+
+test("a slab card's back keeps one slab at its top: its note under the header is not banded in the slab colour again", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  for (const name of ["Clay", "Docker"]) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    const [topline, note] = await card.evaluate(article => [".card-back-topline", ".card-back blockquote"].map(selector => getComputedStyle(article.querySelector(selector)!).backgroundColor));
+    expect(note, name).not.toBe(topline);
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+});
+
+test("the work-sample link on Clay's back lights up in Clay's lime on hover, not the card's black", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const clay = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  await clay.getByRole("button", { name: "Details", exact: true }).click();
+  const link = clay.getByRole("link", { name: /See how I use it/ });
+  await link.hover();
+  await expect(link).toHaveCSS("background-color", "rgb(203, 216, 16)");
+  await expect(link).toHaveCSS("color", "rgb(0, 0, 0)");
 });
 
 const MAX_FLIP_SCROLL_PX = 20;
@@ -1173,7 +1246,9 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
   await carousel.getByRole("button", { name: "Clay", exact: true }).click();
   const clay = carousel.getByRole("article", { name: "Clay card" });
   await clay.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(clay.locator(".card-back .card-table-preview th[scope=col]")).toHaveText(["Company", "Work email", "Found by", "AI: signal"]);
+  await expect(clay.locator(".card-back .card-table-preview th[scope=col]")).toHaveText(["Company", "Work email", "Waterfall", "AI: signal"]);
+  // The back holds the whole sample, five rows to the front's four: the fifth found no address.
+  await expect(clay.locator(".card-back .card-table-preview tbody tr")).toHaveCount(5);
   await expect(clay.locator(".card-back .card-table-preview th[scope=col]").nth(2)).toBeVisible();
   await clay.getByRole("button", { name: "Close details" }).click();
   await carousel.getByRole("button", { name: "Docker", exact: true }).click();

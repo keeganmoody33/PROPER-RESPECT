@@ -14,7 +14,8 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart"
   | "--brand-card-number-font" | "--brand-card-number-colour" | "--brand-card-panel" | "--brand-card-panel-text" | "--brand-card-panel-border"
   | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
-  | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted", string>>;
+  | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font"
+  | "--brand-card-slab" | "--brand-card-slab-body", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -92,6 +93,15 @@ function measuredFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { fon
   return loaded ? `var(--brand-card-${loaded}-font)` : SYSTEM_FACES[font.generic];
 }
 
+/**
+ * The face a card's big figures are set in. A measured number family the card serves is used as is; one it can't load
+ * (GitHub's Mona Sans Mono) stays in the brand's own served faces, since a system mono spaces "1,121" like code.
+ */
+function numberFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { fontLinks: unknown }>["styleguide"]) {
+  const face = measuredFace(font, guide);
+  return face.startsWith("var(") ? face : `var(--brand-card-heading-font, var(--brand-card-body-font, ${face}))`;
+}
+
 export type BrandAccent = { hex: string; source: "site accent" | "primary button" | "logo colour" | "site colour" };
 
 /**
@@ -140,7 +150,10 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
 
   const border = solid(parts?.card?.border);
   kit["--brand-card-border"] = border && contrast(border, surface) >= MIN_BORDER_CONTRAST ? border : derivedBorder(surface, text);
-  const cardRadius = measured?.panelRadiusPx?.value ?? parts?.card?.radiusPx;
+  // A hero drawn as a rounded slab inset from the page (Cloudflare's) is what the card echoes: its corners are the card's.
+  const hero = measured?.hero?.value;
+  const insetRadius = hero?.kind === "colour" && hero.radiusPx ? hero.radiusPx : undefined;
+  const cardRadius = insetRadius ?? measured?.panelRadiusPx?.value ?? parts?.card?.radiusPx;
   if (cardRadius !== undefined) kit["--brand-card-radius"] = `${Math.min(RADIUS.max, Math.max(RADIUS.min, cardRadius))}px`;
 
   // The stored "primary" is whichever button came first on the product's site. On a coloured hero that can be
@@ -172,12 +185,23 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   // A measured site's labels with no measured case stay as typed: the house uppercase is the house's, not the brand's.
   if (measured) kit["--brand-card-label-case"] = CSS_CASE[measured.labelCase?.value ?? "as typed"];
   if (measured?.labelTrackingEm) kit["--brand-card-label-tracking"] = `${measured.labelTrackingEm.value}em`;
+  // The use chips and the footer note are set like the site's buttons, its sentence-length controls, not its tiniest labels.
+  const chipCase = measuredButton?.case ?? measured?.labelCase?.value;
+  if (measured) kit["--brand-card-chip-case"] = CSS_CASE[chipCase ?? "as typed"];
+  const chipFont = measuredButton?.font ?? measured?.labelFont?.value;
+  if (chipFont) kit["--brand-card-chip-font"] = measuredFace(chipFont, guide);
 
   // A site whose heading sits on a full-bleed colour shows that colour as a band across the card's top, not as its whole surface.
-  const hero = measured?.hero?.value;
+  // A hero that runs flush to the page's edge (Clay's) covers the card's whole header as one slab, and the body under it takes
+  // the site's second surface where its text still reads; a rounded, inset hero stays a band under the header.
   if (hero?.kind === "colour") {
     kit["--brand-card-band"] = hero.hex;
     kit["--brand-card-band-text"] = readableOn(hero.hex, undefined, text);
+    if (!insetRadius) {
+      kit["--brand-card-slab"] = hero.hex;
+      const body = measured?.panelFill?.value;
+      if (body && contrast(text, body) >= MIN_LABEL_CONTRAST) kit["--brand-card-slab-body"] = body;
+    }
   }
 
   kit["--brand-card-chart"] = brandMark(snapshot, surface, MIN_CHART_CONTRAST, site) ?? text;
@@ -208,7 +232,7 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
   const traits = site?.traits;
   if (!traits) return {};
   const kit: BrandCardKit = {};
-  if (traits.numberFont) kit["--brand-card-number-font"] = measuredFace(traits.numberFont.value, guide);
+  if (traits.numberFont) kit["--brand-card-number-font"] = numberFace(traits.numberFont.value, guide);
   const number = traits.numberColour?.value;
   if (number && contrast(number, surface) >= MIN_LARGE_TEXT_CONTRAST) kit["--brand-card-number-colour"] = number;
   const inverse = traits.inversePanel?.value;
@@ -226,10 +250,16 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
     kit["--brand-card-pattern-line"] = pattern.line;
     kit["--brand-card-pattern-pitch"] = `${pattern.pitchPx}px`;
   }
-  // Decorative: the rule sits between things that already read apart, never as the only mark of a meaning.
+  // Decorative: the rule sits between things that already read apart, never as the only mark of a meaning. Too faint to see, it gives way.
   if (traits.rule) {
-    kit["--brand-card-rule"] = traits.rule.value.hex;
+    const rule = traits.rule.value.hex;
+    kit["--brand-card-rule"] = contrast(rule, surface) >= MIN_BORDER_CONTRAST ? rule : derivedBorder(surface, text);
     kit["--brand-card-rule-style"] = traits.rule.value.style;
+    // The data sits in a panel framed by that rule: on the site's light second surface, or on the card's own when it measured none.
+    if (!kit["--brand-card-panel-text"]) {
+      kit["--brand-card-panel"] ??= surface;
+      kit["--brand-card-panel-border"] = kit["--brand-card-rule"];
+    }
   }
   const muted = traits.mutedText?.value;
   if (muted && contrast(muted, surface) >= MIN_LABEL_CONTRAST) kit["--brand-card-muted"] = muted;
