@@ -1141,3 +1141,10 @@ test("coding activity's back lists the active days in each week its bars cover, 
   expect($(".card-back .card-back-values-caption").text()).toBe("Active days each week, from the day it starts");
   expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["1 Aug4 of 7", "8 Aug2 of 2"]);
 });
+
+test("a calendar's month label has room for its name: it spans up to three weeks, never past the calendar's last week", () => {
+  const days = Array.from({ length: 70 }, (_, index) => ({ date: new Date(Date.UTC(2026, 6, 1 + index)).toISOString().slice(0, 10), count: 1, level: 1 }));
+  const $ = renderCard({ activity: { ...activityEvidence, period: { start: days[0].date, end: days.at(-1)!.date }, kind: "contributionCalendar", total: 70, days } });
+  expect($(".card-front .contribution-months span").map((_, label) => $(label).attr("style")).get())
+    .toEqual(["grid-column:1 / span 3", "grid-column:5 / span 3", "grid-column:10 / span 2"]);
+});

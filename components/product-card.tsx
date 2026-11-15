@@ -204,6 +204,9 @@ function calendarSummary(days: readonly { date: string; count: number }[]): stri
     + `the most in a day was ${fullNumber(busiest.count)}, on ${dayMonthYear(busiest.date)}.`;
 }
 
+/** The most weeks a month's label spans: months closer than this keep only the later label. */
+const MONTH_LABEL_WEEKS = 3;
+
 function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
   const scrollRef = useNewestWeekInView();
   const coverage = contributionCalendarCoverage(activity);
@@ -215,7 +218,7 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
     const monthStart = new Date(`${month}-01T00:00:00Z`);
     const column = Math.max(1, Math.floor((monthStart.getTime() - firstSunday) / (7 * 86_400_000)) + 1);
     return { month, column, label: monthStart.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" }) };
-  }).filter((month, index, all) => index === all.length - 1 || all[index + 1].column - month.column >= 3);
+  }).filter((month, index, all) => index === all.length - 1 || all[index + 1].column - month.column >= MONTH_LABEL_WEEKS);
   const columns = { gridTemplateColumns: `repeat(${weeks}, var(--contribution-cell))` };
   return (
     <div className="contribution-calendar">
@@ -223,7 +226,8 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
         style={{ "--contribution-weeks": weeks } as CSSProperties}>
         <div className="contribution-calendar-layout">
           <div className="contribution-months" aria-hidden="true" style={columns}>
-            {months.map(month => <span key={month.month} style={{ gridColumn: month.column }}>{month.label}</span>)}
+            {/* A label spans up to three weeks, so its name fits its own cells rather than spilling past them. */}
+            {months.map(month => <span key={month.month} style={{ gridColumn: `${month.column} / span ${Math.min(MONTH_LABEL_WEEKS, weeks - month.column + 1)}` }}>{month.label}</span>)}
           </div>
           <div className="contribution-weekdays" aria-hidden="true">
             {["", "Mon", "", "Wed", "", "Fri", ""].map((label, index) => <span key={index}>{label}</span>)}
