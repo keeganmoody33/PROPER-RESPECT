@@ -2,6 +2,7 @@ import { z } from "zod";
 import { contrast } from "./wcag-contrast.ts";
 import { oklabDistance, oklchChroma } from "./oklab.ts";
 import { canonicalBrandDomainSchema } from "./product-brand.ts";
+import { isHttpsUrl } from "./http-url.ts";
 
 /**
  * What measuring a product's own site adds to its provider brand: the label and button type, corners, the colour the
@@ -53,6 +54,7 @@ const SIGNATURE_SOURCES = ["primary call-to-action", "heading highlight", "hero"
 /** The largest a surface pattern's cell can be and still read as a pattern on a card: two cells across a 330px phone card. */
 const MAX_PATTERN_PITCH_PX = 165;
 const patternSchema = z.object({ kind: z.enum(["grid", "dots"]), pitchPx: z.number().int().min(2).max(MAX_PATTERN_PITCH_PX), line: hexSchema }).strict();
+const framedPanelSchema = z.object({ hex: hexSchema, radiusPx: pxSchema.optional() }).strict();
 const inversePanelSchema = z.object({ fill: hexSchema, text: hexSchema, border: hexSchema.optional(), radiusPx: pxSchema.optional() }).strict();
 const ruleSchema = z.object({ style: z.enum(["solid", "dashed"]), hex: hexSchema }).strict();
 /** The most fills kept: enough for a page's buttons, panels and bands. */
@@ -92,9 +94,21 @@ const traitsSchema = z.object({
   panelFill: located(hexSchema, ["second large surface"]).optional(),
   surfacePattern: located(patternSchema, ["second large surface", "ruled columns", "page margins"]).optional(),
   inversePanel: located(inversePanelSchema, ["dark panel"]).optional(),
+  /**
+   * The first screen's largest coloured panel, not the hero (Context.dev's blue around its search box). The measurer records no
+   * nesting, so a panel that frames a light box and one filled solid read alike; the card draws either as a frame.
+   */
+  framedPanel: located(framedPanelSchema, ["coloured panel"]).optional(),
   rule: located(ruleSchema, ["most common border"]).optional(),
   mutedText: located(hexSchema, ["secondary text on the page background"]).optional(),
 }).strict();
+
+/** An https page on exactly this host, with no port, credentials, query or fragment. */
+function pageOnDomain(value: string, domain: string) {
+  if (!isHttpsUrl(value)) return false;
+  const url = new URL(value);
+  return url.hostname === domain && !url.port && !url.search && !url.hash;
+}
 
 export const brandSiteTraitsSchema = z.object({
   schemaVersion: z.literal(BRAND_SITE_TRAITS_VERSION),
@@ -102,11 +116,11 @@ export const brandSiteTraitsSchema = z.object({
   canonicalDomain: canonicalBrandDomainSchema,
   // Defer Zod's circular ISO module initialization in the server/client bundle, as product-brand does.
   measuredAt: z.lazy(() => z.iso.datetime()),
-  /** The page measured: always the root of the product's canonical domain. */
+  /** The page measured: the root of the product's canonical domain, or a product page on it (Claude Code's at claude.com). */
   url: z.string(),
   viewport: z.object({ width: z.number().int().positive().max(MAX_VIEWPORT_PX), height: z.number().int().positive().max(MAX_VIEWPORT_PX) }).strict(),
   traits: traitsSchema,
-}).strict().refine(file => file.url === `https://${file.canonicalDomain}/`, { message: "url must be the canonical domain's root", path: ["url"] });
+}).strict().refine(file => pageOnDomain(file.url, file.canonicalDomain), { message: "url must be a page on the canonical domain", path: ["url"] });
 
 export type BrandSiteTraits = z.infer<typeof brandSiteTraitsSchema>;
 export type SiteTraits = BrandSiteTraits["traits"];
@@ -279,6 +293,17 @@ function secondSurface(raw: SiteMeasurement, heroHex: string | undefined): { pan
   return {};
 }
 
+/** The first screen's largest coloured panel, mostly not chrome and not the hero, showing at least a 220x120px box of itself. */
+function colouredPanel(raw: SiteMeasurement, heroHex: string | undefined) {
+  const shown = (surface: NonNullable<SiteMeasurement["surfaces"]>[number]) => finite(surface.firstScreenArea) ?? 0;
+  const panel = [...(raw.surfaces ?? [])].sort((a, b) => shown(b) - shown(a)).find(surface => {
+    const fill = hex(surface.hex), area = finite(surface.area) ?? 0;
+    return fill !== undefined && fill !== heroHex && oklchChroma(fill) >= SURFACE_MAX_CHROMA && shown(surface) >= MIN_FIRST_SCREEN_AREA
+      && (finite(surface.chromeArea) ?? 0) * 2 <= area;
+  });
+  return panel && kept(framedPanelSchema, defined({ hex: hex(panel.hex), radiusPx: kept(pxSchema, rounded(panel.radiusPx, PX_PLACES)) }));
+}
+
 /** The page's rule: its commonest layout border, since a run of outlined links and buttons is a control's edge, not a rule; else its commonest border. */
 function pageRule(raw: SiteMeasurement) {
   if (!raw.ruleCensus) return kept(ruleSchema, raw.rule && { style: raw.rule.style, hex: hex(raw.rule.hex) });
@@ -349,6 +374,7 @@ export function brandSiteTraitsFromMeasurement(meta: SiteMeasurementMeta, raw: S
     panelFill: at(second.panelFill, "second large surface"),
     surfacePattern: surfacePattern(raw),
     inversePanel: at(kept(inversePanelSchema, second.inversePanel), "dark panel"),
+    framedPanel: at(colouredPanel(raw, heroValue?.kind === "colour" ? heroValue.hex : undefined), "coloured panel"),
     rule: at(pageRule(raw), "most common border"),
     mutedText: at(hex(raw.mutedText), "secondary text on the page background"),
   });

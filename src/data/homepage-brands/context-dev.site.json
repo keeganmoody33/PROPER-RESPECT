@@ -233,6 +233,13 @@
       ],
       "from": "stored logos"
     },
+    "framedPanel": {
+      "value": {
+        "hex": "#2563eb",
+        "radiusPx": 32.4
+      },
+      "from": "coloured panel"
+    },
     "rule": {
       "value": {
         "style": "solid",

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { brandSiteTraitsFromMeasurement, type BrandSiteTraits, type SiteMeasurement } from "./brand-site-traits";
-import { brandCardKit } from "./brand-kit";
+import { brandCardKit, brandMark } from "./brand-kit";
 import { contrast } from "./brand-kit";
+import { oklab } from "./oklab";
+import { HOMEPAGE_BRANDS } from "@/src/data/homepage-brands";
 
 const DESKTOP_WIDTH = 1440, DESKTOP_HEIGHT = 900;
 const VIEWPORT = { width: DESKTOP_WIDTH, height: DESKTOP_HEIGHT } as const;
@@ -126,8 +128,9 @@ describe("what a card makes of the feel", () => {
     expect([spider["--brand-card-chart"], spider["--brand-card-chart-tint"]]).toEqual(["#3bde77", "#143325"]);
     const github = kit({ signatureCandidates: [{ hex: "#08872b", from: "primary call-to-action" }], fills: [{ hex: "#08872b", areaPx: GITHUB_BUTTON_FILL }] });
     expect([github["--brand-card-chart"], github["--brand-card-chart-tint"]]).toEqual(["#08872b", undefined]);
-    // A chart drawn in the text colour, where no brand colour reads (n8n's pink), is no brand's line.
-    expect(kit({ signatureCandidates: [{ hex: "#ffbcca", from: "primary call-to-action" }], fills: [] })["--brand-card-chart-tint"]).toBeUndefined();
+    // A chart drawn in the text colour, where no brand colour reads even moved as far as a mark may move, is no brand's line.
+    const pale = kit({ signatureCandidates: [{ hex: "#fff1a8", from: "primary call-to-action" }], fills: [] });
+    expect([pale["--brand-card-chart"], pale["--brand-card-chart-tint"]]).toEqual([INK, undefined]);
   });
 
   it("sets the site's big number on the highlight that hugs it, where the number reads 3:1 on it", () => {
@@ -171,5 +174,75 @@ describe("a dot pattern", () => {
   it("is drawn as dots, not grid lines", () => {
     const n8n = kit({ texture: { kind: "dots", pitchPx: 18, line: "#d9d9d9" } });
     expect([n8n["--brand-card-pattern-dot"], n8n["--brand-card-pattern-line"], n8n["--brand-card-pattern-pitch"]]).toEqual(["#d9d9d9", undefined, "18px"]);
+  });
+});
+
+/** The hue of a colour in OKLCH, in degrees. */
+const hue = (hex: string) => { const [, a, b] = oklab(hex); return (Math.atan2(b, a) * 180) / Math.PI; };
+/** Two hues this close read as the same colour family. */
+const SAME_HUE_DEGREES = 6;
+
+describe("a brand colour too pale or too dark for bars", () => {
+  it("moves in lightness, keeping its hue, as little as makes the bars read 3:1 on what they sit on, before giving way to the text colour", () => {
+    // n8n's pink call-to-action is 1.5:1 on its grey #f0f0f0 panel. Deepened, still pink, it reads 3:1 there.
+    const n8n = kit({ panelFill: "#f0f0f0", signatureCandidates: [{ hex: "#ffbcca", from: "primary call-to-action" }], fills: [{ hex: "#ffbcca", areaPx: 12_005 }] });
+    const bars = n8n["--brand-card-chart"]!;
+    expect(n8n["--brand-card-panel"]).toBe("#f0f0f0");
+    expect(contrast(bars, "#f0f0f0")).toBeGreaterThanOrEqual(MARK_CONTRAST);
+    expect(Math.abs(hue(bars) - hue("#ffbcca"))).toBeLessThan(SAME_HUE_DEGREES);
+    expect(bars).toBe("#b77987");
+    // The site fills a 40px box and more with its pink, so the bars stay filled, not outlined.
+    expect(n8n["--brand-card-chart-tint"]).toBeUndefined();
+  });
+
+  it("tries every brand colour as it is before moving any, so a colour that already reads wins over one that needed moving", () => {
+    // Clay's lime is 1.6:1 on white and its green hero passes as is: the green draws the bars, not a darkened lime.
+    const clay = kit({ signatureCandidates: [{ hex: "#cbd810", from: "primary call-to-action" }], hero: { hex: "#035d44", widthShare: 1, kind: "colour", radiusPx: 0 } });
+    expect(clay["--brand-card-chart"]).toBe("#035d44");
+  });
+
+  it("lightens on a dark inverse panel, keeping its hue, before the panel's own text takes the bars", () => {
+    const dark = brandCardKit(undefined, WHITE, INK, site({ inversePanel: { fill: "#0e1217", text: "#e6ebf2" }, signatureCandidates: [{ hex: "#5b2a86", from: "primary call-to-action" }] }));
+    const bars = dark["--brand-card-panel-chart"]!;
+    expect(contrast(bars, "#0e1217")).toBeGreaterThanOrEqual(MARK_CONTRAST);
+    expect(bars).not.toBe("#e6ebf2");
+    expect(Math.abs(hue(bars) - hue("#5b2a86"))).toBeLessThan(SAME_HUE_DEGREES);
+  });
+});
+
+describe("a measured site that shows no brand colour", () => {
+  // Exa: no colourful call-to-action, heading phrase, hero or logo, a near-black number, and the provider's blue nowhere in its first screen.
+  const exaLike = { figures: [{ sizePx: DOCKER_FIGURE_PX, colour: "#111827", top: 0, font: { generic: "serif" as const } }], fills: [{ hex: "#fafafa", areaPx: 190_400 }, { hex: "#000000", areaPx: 7_233 }] };
+  const provider = (accent: string) => ({ ...HOMEPAGE_BRANDS.exa, styleguide: { ...HOMEPAGE_BRANDS.exa.styleguide!, colors: { ...HOMEPAGE_BRANDS.exa.styleguide!.colors, accent } } });
+
+  it("draws the card in the site's neutrals: its number in the site's number colour and its bars in the card's text colour", () => {
+    const exa = brandCardKit(provider("#1f40ed"), WHITE, INK, site(exaLike));
+    expect([exa["--brand-card-number-colour"], exa["--brand-card-chart"], exa["--brand-card-chart-tint"]]).toEqual(["#111827", INK, undefined]);
+    expect(brandMark(provider("#1f40ed"), WHITE, TEXT_CONTRAST, site(exaLike))).toBeUndefined();
+  });
+
+  it("keeps the provider's colour where the site fills a 40px box or more of its first screen with it", () => {
+    const filled = brandCardKit(provider("#1f40ed"), WHITE, INK, site({ ...exaLike, fills: [...exaLike.fills, { hex: "#1f40ed", areaPx: 40 * 40 }] }));
+    expect(filled["--brand-card-chart"]).toBe("#1f40ed");
+  });
+});
+
+describe("a coloured panel in the site's first screen", () => {
+  // Context.dev frames its search box in a blue panel with rounded corners, the first screen's largest coloured surface.
+  const framed = { surfaces: [{ hex: "#2563eb", area: 2_636_329, firstScreenArea: 224_852, chromeArea: 166_484, ink: "#000000", radiusPx: 32.4 }], rule: { style: "solid", hex: "#b2b2b2" } };
+
+  it("is stored as the panel's frame colour and corner", () => {
+    expect(site(framed).traits.framedPanel).toEqual({ value: { hex: "#2563eb", radiusPx: 32.4 }, from: "coloured panel" });
+    // One that shows only below the first screen, or is mostly navigation chrome, or is the hero, is not the site's frame.
+    expect(site({ surfaces: [{ ...framed.surfaces[0], firstScreenArea: 0 }] }).traits.framedPanel).toBeUndefined();
+    expect(site({ surfaces: [{ ...framed.surfaces[0], chromeArea: 2_000_000 }] }).traits.framedPanel).toBeUndefined();
+    expect(site({ surfaces: [{ ...framed.surfaces[0], hex: "#ff5e1f" }], hero: { hex: "#ff5e1f", widthShare: 1, kind: "colour", radiusPx: 16 } }).traits.framedPanel).toBeUndefined();
+  });
+
+  it("frames the card's data panel in that colour, thick and rounded, over the page's grey rule", () => {
+    const card = kit(framed);
+    expect([card["--brand-card-panel"], card["--brand-card-panel-border"], card["--brand-card-panel-frame"], card["--brand-card-panel-radius"]]).toEqual([WHITE, "#2563eb", "6px", "24px"]);
+    // A frame that would not show on the card (3:1, as any graphic) is not drawn.
+    expect(kit({ surfaces: [{ ...framed.surfaces[0], hex: "#a8c4ff" }] })["--brand-card-panel-frame"]).toBeUndefined();
   });
 });

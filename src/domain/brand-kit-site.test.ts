@@ -13,22 +13,36 @@ const kits = (key: string) => Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).ma
 
 describe("a brand without a site file", () => {
   it("gets exactly the kit it got before site files existed", () => {
-    // Recorded at 2ba6aa8, before any rule read a site file. Since then one rule reaches a card with no site file: Firecrawl's stored
-    // white label, 3.3:1 on its orange, keeps its colour on that orange deepened 16%, rather than giving way to the card's text colour.
+    // Recorded at 2ba6aa8, before any rule read a site file. Since then three rules reach a card with no site file: Firecrawl's stored
+    // white label, 3.3:1 on its orange, keeps its colour on that orange deepened 16%, rather than giving way to the card's text colour;
+    // an accent too pale or dark for bars moves in lightness, hue kept, to 3:1 (n8n's and Porkbun's pinks) before the text colour takes
+    // them; and the figures take the accent, moved the same way to 4.5:1 where it must be (Cloudflare's, Firecrawl's and Porkbun's).
     expect(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, kit(slug, false)]))).toEqual({
-    "clay": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "18px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "500", "--brand-card-chart": "#3859f9", "--brand-card-quiet-fill": "#f3f2ed", "--brand-card-quiet-text": "#000000" },
-    "cloudflare": { "--brand-card-border": "#cfcfcf", "--brand-card-radius": "4px", "--brand-card-button-fill": "#ff5e1f", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "500", "--brand-card-chart": "#ff5e1f" },
-    "context-dev": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "7.2px", "--brand-card-button-fill": "#2563eb", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#2563eb" },
-    "docker": { "--brand-card-border": "#ccced2", "--brand-card-radius": "18px", "--brand-card-button-fill": "#2560ff", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "500", "--brand-card-chart": "#2560ff", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#000000" },
-    "elicit": { "--brand-card-border": "#c5c5c1", "--brand-card-radius": "8px", "--brand-card-button-fill": "#083d44", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "400", "--brand-card-chart": "#083d44" },
-    "exa": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "4px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "4px", "--brand-card-button-weight": "500", "--brand-card-chart": "#1f40ed", "--brand-card-quiet-fill": "#1f40ed", "--brand-card-quiet-text": "#ffffff" },
-    "firecrawl": { "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px", "--brand-card-button-fill": "#d64000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450", "--brand-card-chart": "#ff4c00", "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff" },
-    "github": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "8px", "--brand-card-button-fill": "#08872b", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "6px", "--brand-card-button-weight": "500", "--brand-card-chart": "#0d6731" },
-    "n8n": { "--brand-card-border": "#c8c8c8", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ffbcca", "--brand-card-button-text": "#212121", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#161616", "--brand-card-quiet-fill": "#d9d9d9", "--brand-card-quiet-text": "#161616" },
-    "open-places": { "--brand-card-border": "#c8c7c1", "--brand-card-radius": "22px", "--brand-card-button-fill": "#3f5a2c", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "600", "--brand-card-chart": "#3f5a2c" },
-    "porkbun": { "--brand-card-border": "#c6c2c2", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ef7878", "--brand-card-button-text": "#000000", "--brand-card-button-radius": "3px", "--brand-card-button-weight": "400", "--brand-card-chart": "#000000", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#222222" },
-    "spider": { "--brand-card-border": "#374151", "--brand-card-radius": "8px", "--brand-card-button-fill": "#f8fafc", "--brand-card-button-text": "#0c0e13", "--brand-card-button-radius": "0px", "--brand-card-button-weight": "400", "--brand-card-chart": "#24c45c" },
+    "clay": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "18px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "500", "--brand-card-chart": "#3859f9", "--brand-card-quiet-fill": "#f3f2ed", "--brand-card-quiet-text": "#000000", "--brand-card-number-colour": "#3859f9", "--brand-card-value-colour": "#3859f9" },
+    "cloudflare": { "--brand-card-border": "#cfcfcf", "--brand-card-radius": "4px", "--brand-card-button-fill": "#ff5e1f", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "500", "--brand-card-chart": "#ff5e1f", "--brand-card-number-colour": "#d44500", "--brand-card-value-colour": "#d44500" },
+    "context-dev": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "7.2px", "--brand-card-button-fill": "#2563eb", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#2563eb", "--brand-card-number-colour": "#2563eb", "--brand-card-value-colour": "#2563eb" },
+    "docker": { "--brand-card-border": "#ccced2", "--brand-card-radius": "18px", "--brand-card-button-fill": "#2560ff", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "500", "--brand-card-chart": "#2560ff", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#000000", "--brand-card-number-colour": "#2560ff", "--brand-card-value-colour": "#2560ff" },
+    "elicit": { "--brand-card-border": "#c5c5c1", "--brand-card-radius": "8px", "--brand-card-button-fill": "#083d44", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "400", "--brand-card-chart": "#083d44", "--brand-card-number-colour": "#083d44", "--brand-card-value-colour": "#083d44" },
+    "exa": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "4px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "4px", "--brand-card-button-weight": "500", "--brand-card-chart": "#1f40ed", "--brand-card-quiet-fill": "#1f40ed", "--brand-card-quiet-text": "#ffffff", "--brand-card-number-colour": "#1f40ed", "--brand-card-value-colour": "#1f40ed" },
+    "firecrawl": { "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px", "--brand-card-button-fill": "#d64000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450", "--brand-card-chart": "#ff4c00", "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff", "--brand-card-number-colour": "#d23d00", "--brand-card-value-colour": "#d23d00" },
+    "github": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "8px", "--brand-card-button-fill": "#08872b", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "6px", "--brand-card-button-weight": "500", "--brand-card-chart": "#0d6731", "--brand-card-number-colour": "#0d6731", "--brand-card-value-colour": "#0d6731" },
+    "n8n": { "--brand-card-border": "#c8c8c8", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ffbcca", "--brand-card-button-text": "#212121", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#be7f8d", "--brand-card-quiet-fill": "#d9d9d9", "--brand-card-quiet-text": "#161616" },
+    "open-places": { "--brand-card-border": "#c8c7c1", "--brand-card-radius": "22px", "--brand-card-button-fill": "#3f5a2c", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "600", "--brand-card-chart": "#3f5a2c", "--brand-card-number-colour": "#3f5a2c", "--brand-card-value-colour": "#3f5a2c" },
+    "porkbun": { "--brand-card-border": "#c6c2c2", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ef7878", "--brand-card-button-text": "#000000", "--brand-card-button-radius": "3px", "--brand-card-button-weight": "400", "--brand-card-chart": "#e36d6e", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#222222", "--brand-card-number-colour": "#c04e51", "--brand-card-value-colour": "#c04e51" },
+    "spider": { "--brand-card-border": "#374151", "--brand-card-radius": "8px", "--brand-card-button-fill": "#f8fafc", "--brand-card-button-text": "#0c0e13", "--brand-card-button-radius": "0px", "--brand-card-button-weight": "400", "--brand-card-chart": "#24c45c", "--brand-card-number-colour": "#24c45c", "--brand-card-value-colour": "#24c45c" },
     });
+  });
+});
+
+describe("a card with no measured site", () => {
+  it("sets its figures in the brand's accent, moved in lightness, hue kept, until they read 4.5:1 at any size, and else leaves them", () => {
+    // Porkbun's salmon is 2.6:1 on its blush card: a deeper salmon reads 4.5:1. n8n's pale pink is too far from 4.5:1 to move there.
+    const porkbun = kit("porkbun", false);
+    expect([porkbun["--brand-card-number-colour"], porkbun["--brand-card-value-colour"]]).toEqual(["#c04e51", "#c04e51"]);
+    expect(contrast(porkbun["--brand-card-number-colour"]!, "#fef9f9")).toBeGreaterThanOrEqual(TEXT_CONTRAST);
+    expect(kit("n8n", false)["--brand-card-number-colour"]).toBeUndefined();
+    // An accent that already reads keeps its own colour: GitHub's green.
+    expect(kit("github", false)["--brand-card-number-colour"]).toBe("#0d6731");
   });
 });
 
@@ -94,9 +108,11 @@ describe("the signature colour", () => {
       // Clay's lime call-to-action is 1.6:1 on its white card, under the 3:1 bars need, so the bars take its green hero.
       clay: "#035d44",
       // Cloudflare's logo orange is the provider's accent within 0.05, so the provider's stays.
-      cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", exa: "#1f40ed", firecrawl: "#ff4c00", "open-places": "#3f5a2c",
-      // n8n's signature is the provider's pink, 1.5:1 on the card: the bars keep the card's text colour, and Porkbun has no site file.
-      n8n: "#161616", porkbun: "#000000",
+      cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", firecrawl: "#ff4c00", "open-places": "#3f5a2c",
+      // Exa's site shows no colour of its own and none of the provider's blue, so its bars are the card's text colour, as the site is ink on white.
+      exa: "#000000",
+      // n8n's pink is 1.5:1 on its grey panel: deepened, hue kept, it reads 3:1. Porkbun has no site file; its salmon deepens a little on its card.
+      n8n: "#b77987", porkbun: "#e36d6e",
     });
   });
 

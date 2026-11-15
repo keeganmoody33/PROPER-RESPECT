@@ -1,5 +1,5 @@
 import type { BrandSiteTraits, SiteFont } from "./brand-site-traits";
-import { oklabDistance, oklchChroma } from "./oklab";
+import { fromOklab, oklab, oklabDistance, oklchChroma } from "./oklab";
 import { productBrandFontFamilyKey, type ProductBrandSnapshot } from "./product-brand";
 import { channels, contrast } from "./wcag-contrast";
 
@@ -19,7 +19,8 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
   | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font"
   | "--brand-card-slab" | "--brand-card-slab-body" | "--brand-card-band-large-text" | "--brand-card-logo-tile"
-  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text" | "--brand-card-chart-tint" | "--brand-card-number-backdrop" | "--brand-card-value-colour" | "--brand-card-pattern-dot", string>>;
+  | "--brand-card-slab-button-fill" | "--brand-card-slab-button-text" | "--brand-card-chart-tint" | "--brand-card-number-backdrop" | "--brand-card-value-colour" | "--brand-card-pattern-dot"
+  | "--brand-card-panel-frame", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -69,6 +70,13 @@ const MAX_BUTTON_SHADE = 0.2, BUTTON_SHADE_STEP = 0.01;
 const MIN_FILLED_MARK_AREA = 40 * 40;
 /** How much of the mark colour tints the inside of an outlined bar. */
 const LINE_MARK_TINT = 0.18;
+/**
+ * The most a brand colour's OKLab lightness moves, away from what its bars sit on, keeping its hue, so they read 3:1: the bar's
+ * counterpart of the button's 20% deepening. n8n's pink on its #f0f0f0 panel needs 0.215; a cap of 0.2 left it 0.015 short.
+ */
+const MAX_MARK_SHIFT = 0.25, MARK_SHIFT_STEP = 0.005;
+/** A coloured panel frames the card's data this thick: prominent on a phone card, still clear of the bars inside. */
+const PANEL_FRAME = "6px";
 
 const solid = (value: string | undefined) => (value && SOLID_HEX.test(value) ? value.toLowerCase() : undefined);
 function mix(from: string, into: string, amount: number) {
@@ -141,10 +149,44 @@ export function brandAccent(snapshot: ProductBrandSnapshot | undefined, surface:
  * first when it differs from the provider's accent; then the site's own hero colour; then the provider's accent.
  */
 export function brandMark(snapshot: ProductBrandSnapshot | undefined, surface: string, minContrast: number, site?: BrandSiteTraits): string | undefined {
+  return markCandidates(snapshot, surface, site).find(hex => contrast(hex, surface) >= minContrast);
+}
+
+/**
+ * The brand colours a card can draw in, best first. A measured site that shows no colour of its own (no colourful call-to-action,
+ * heading phrase, hero or logo) and fills less than a 40px box of its first screen with the provider's accent doesn't use that accent
+ * (Exa's blue), so the card leaves it out as the site does.
+ */
+function markCandidates(snapshot: ProductBrandSnapshot | undefined, surface: string, site: BrandSiteTraits | undefined): string[] {
   const provider = brandAccent(snapshot, surface)?.hex, signature = site?.traits.signature?.value, hero = site?.traits.hero?.value;
   const differs = signature && (!provider || oklabDistance(signature, provider) > SAME_COLOUR_DISTANCE);
   const heroColour = differs && hero?.kind === "colour" && oklchChroma(hero.hex) > NEUTRAL_MAX_CHROMA ? hero.hex : undefined;
-  return [differs ? signature : undefined, heroColour, provider].find((hex): hex is string => hex !== undefined && contrast(hex, surface) >= minContrast);
+  const unused = provider !== undefined && site?.traits.fills !== undefined && !signature && filledArea(provider, site) < MIN_FILLED_MARK_AREA;
+  return [differs ? signature : undefined, heroColour, unused ? undefined : provider].filter((hex): hex is string => hex !== undefined);
+}
+
+/** The colour moved in OKLab lightness away from `backing`, hue kept, as little as makes it read `minContrast` there, up to MAX_MARK_SHIFT. */
+function shiftedFor(hex: string, backing: string, minContrast: number) {
+  const [lightness, a, b] = oklab(hex), direction = contrast(backing, BLACK) >= contrast(backing, WHITE) ? -1 : 1;
+  for (let shift = MARK_SHIFT_STEP; shift <= MAX_MARK_SHIFT + MARK_SHIFT_STEP / 2; shift += MARK_SHIFT_STEP) {
+    const moved = fromOklab([lightness + direction * shift, a, b]);
+    if (contrast(moved, backing) >= minContrast) return moved;
+  }
+  return undefined;
+}
+
+/**
+ * The colour bars are drawn in on `backing`, and the brand colour it came from: the first candidate that reads 3:1 as it is, else
+ * the first that reads once moved in lightness. Every candidate is tried as it is first, so a moved lime never beats a green that passed.
+ */
+function barMark(candidates: readonly string[], backing: string): { drawn: string; source: string } | undefined {
+  const as = candidates.find(hex => contrast(hex, backing) >= MIN_CHART_CONTRAST);
+  if (as) return { drawn: as, source: as };
+  for (const source of candidates) {
+    const drawn = shiftedFor(source, backing, MIN_CHART_CONTRAST);
+    if (drawn) return { drawn, source };
+  }
+  return undefined;
 }
 
 /** WCAG's large text: 24px, or bold (700) from 18.66px. */
@@ -241,13 +283,22 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
     }
   }
 
-  kit["--brand-card-chart"] = brandMark(snapshot, surface, MIN_CHART_CONTRAST, site) ?? text;
-
   Object.assign(kit, siteFeel(snapshot, surface, text, guide, site));
 
+  // The bars sit on the data panel where the card has a light one (a dark inverse panel draws its own), else on the card.
+  const inverse = kit["--brand-card-panel-text"] !== undefined, backing = inverse ? surface : kit["--brand-card-panel"] ?? surface;
+  const bars = barMark(markCandidates(snapshot, backing, site), backing);
+  kit["--brand-card-chart"] = bars?.drawn ?? text;
   // A brand that draws in its colour rather than filling with it draws the chart's bars as outlines, tinted inside, on whatever they sit on.
-  const chart = kit["--brand-card-chart"];
-  if (!kit["--brand-card-panel-text"] && drawsInLines(chart, site)) kit["--brand-card-chart-tint"] = mix(chart, kit["--brand-card-panel"] ?? surface, LINE_MARK_TINT);
+  if (bars && !inverse && drawsInLines(bars.source, site)) kit["--brand-card-chart-tint"] = mix(bars.drawn, backing, LINE_MARK_TINT);
+  // With no measured site to say how its numbers are set, the card's figures take the brand's accent as it is or moved in lightness,
+  // hue kept, to read 4.5:1 at any size the card sets them (Porkbun's salmon, deepened). A measured site's numbers follow siteFeel.
+  if (!measured) {
+    const candidates = markCandidates(snapshot, surface, undefined);
+    const figure = candidates.find(hex => contrast(hex, surface) >= MIN_LABEL_CONTRAST)
+      ?? candidates.map(hex => shiftedFor(hex, surface, MIN_LABEL_CONTRAST)).find(hex => hex !== undefined);
+    if (figure) Object.assign(kit, { "--brand-card-number-colour": figure, "--brand-card-value-colour": figure });
+  }
 
   const quiet = parts?.buttonSecondary, quietFill = solid(quiet?.background);
   if (quietFill && quietFill !== fill && contrast(quietFill, surface) >= MIN_QUIET_FILL_CONTRAST) {
@@ -275,14 +326,13 @@ export function slabLogo(snapshot: ProductBrandSnapshot | undefined, site: Brand
 
 /** Whether the site fills less than a 40px box of its first screen with this brand colour; a grey (the text-colour fallback) never counts. */
 function drawsInLines(mark: string, site: BrandSiteTraits | undefined) {
-  const fills = site?.traits.fills?.value;
-  if (!fills || oklchChroma(mark) <= NEUTRAL_MAX_CHROMA) return false;
-  return fills.filter(fill => oklabDistance(fill.hex, mark) <= SAME_COLOUR_DISTANCE).reduce((area, fill) => area + fill.areaPx, 0) < MIN_FILLED_MARK_AREA;
+  if (!site?.traits.fills || oklchChroma(mark) <= NEUTRAL_MAX_CHROMA) return false;
+  return filledArea(mark, site) < MIN_FILLED_MARK_AREA;
 }
 
-/** The card's mark candidates on an inverse panel: the site's signature, the provider's accent, then the panel's own text. */
-function markOn(fill: string, candidates: readonly (string | undefined)[]) {
-  return candidates.find((hex): hex is string => hex !== undefined && contrast(hex, fill) >= MIN_CHART_CONTRAST);
+/** How much of the site's first screen is filled with this colour, within the fidelity check's tolerance. */
+function filledArea(colour: string, site: BrandSiteTraits) {
+  return (site.traits.fills?.value ?? []).filter(fill => oklabDistance(fill.hex, colour) <= SAME_COLOUR_DISTANCE).reduce((area, fill) => area + fill.areaPx, 0);
 }
 
 /**
@@ -314,7 +364,9 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
     kit["--brand-card-panel-text"] = inverse.text;
     if (inverse.border) kit["--brand-card-panel-border"] = inverse.border;
     if (inverse.radiusPx !== undefined) kit["--brand-card-panel-radius"] = `${Math.min(RADIUS.max, inverse.radiusPx)}px`;
-    kit["--brand-card-panel-chart"] = markOn(inverse.fill, [traits.signature?.value, brandAccent(snapshot, inverse.fill)?.hex, inverse.text])!;
+    // The site's signature, then the provider's accent, as they are or lightened to read 3:1 on the panel; else the panel's own text.
+    const marks = [traits.signature?.value, brandAccent(snapshot, inverse.fill)?.hex].filter((hex): hex is string => hex !== undefined);
+    kit["--brand-card-panel-chart"] = barMark(marks, inverse.fill)?.drawn ?? inverse.text;
   } else if (traits.panelFill && contrast(text, traits.panelFill.value) >= MIN_LABEL_CONTRAST) {
     kit["--brand-card-panel"] = traits.panelFill.value;
   }
@@ -333,6 +385,14 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
       kit["--brand-card-panel"] ??= surface;
       kit["--brand-card-panel-border"] = kit["--brand-card-rule"];
     }
+  }
+  // A coloured panel in the site's first screen (Context.dev's blue around its search box) frames the card's data panel, over the rule.
+  const frame = traits.framedPanel?.value;
+  if (frame && !kit["--brand-card-panel-text"] && contrast(frame.hex, kit["--brand-card-panel"] ?? surface) >= MIN_CHART_CONTRAST && contrast(frame.hex, surface) >= MIN_CHART_CONTRAST) {
+    kit["--brand-card-panel"] ??= surface;
+    kit["--brand-card-panel-border"] = frame.hex;
+    kit["--brand-card-panel-frame"] = PANEL_FRAME;
+    if (frame.radiusPx !== undefined) kit["--brand-card-panel-radius"] = `${Math.min(RADIUS.max, frame.radiusPx)}px`;
   }
   const muted = traits.mutedText?.value;
   if (muted && contrast(muted, surface) >= MIN_LABEL_CONTRAST) kit["--brand-card-muted"] = muted;

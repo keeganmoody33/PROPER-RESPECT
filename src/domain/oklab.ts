@@ -19,7 +19,7 @@ const SOLID_HEX = /^#[0-9a-f]{6}$/i;
 export type OkLab = readonly [lightness: number, a: number, b: number];
 
 const linear = (unit: number) => (unit <= LINEAR_KNEE ? unit / LINEAR_DIVISOR : ((unit + GAMMA_OFFSET) / GAMMA_DIVISOR) ** GAMMA);
-const product = (matrix: typeof TO_LMS | typeof TO_LAB, vector: readonly number[]) =>
+const product = (matrix: readonly (readonly number[])[], vector: readonly number[]) =>
   matrix.map(row => row.reduce((sum, weight, index) => sum + weight * vector[index], 0));
 
 export function oklab(hex: string): OkLab {
@@ -38,4 +38,34 @@ export function oklchChroma(hex: string): number {
 export function oklabDistance(first: string, second: string): number {
   const [x, y] = [oklab(first), oklab(second)];
   return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+}
+
+const FROM_LAB = [
+  [1, 0.3963377774, 0.2158037573],
+  [1, -0.1055613458, -0.0638541728],
+  [1, -0.0894841775, -1.291485548],
+] as const;
+const FROM_LMS = [
+  [4.0767416621, -3.3077115913, 0.2309699292],
+  [-1.2684380046, 2.6097574011, -0.3413193965],
+  [-0.0041960863, -0.7034186147, 1.707614701],
+] as const;
+const ENCODE_KNEE = 0.0031308, GAMUT_SLACK = 1e-6, GAMUT_STEPS = 24;
+const encode = (unit: number) => (unit <= ENCODE_KNEE ? unit * LINEAR_DIVISOR : GAMMA_DIVISOR * unit ** (1 / GAMMA) - GAMMA_OFFSET);
+const linearRgb = ([lightness, a, b]: OkLab) => product(FROM_LMS, product(FROM_LAB, [lightness, a, b]).map(value => value ** 3));
+const inGamut = (rgb: readonly number[]) => rgb.every(value => value >= -GAMUT_SLACK && value <= 1 + GAMUT_SLACK);
+
+/**
+ * The sRGB colour at this OKLab point. One outside sRGB keeps its lightness and hue and gives up only as much chroma as
+ * brings it inside, so a shifted brand colour stays the same hue.
+ */
+export function fromOklab([lightness, a, b]: OkLab): string {
+  let [low, high] = [0, 1];
+  if (!inGamut(linearRgb([lightness, a, b]))) {
+    for (let step = 0; step < GAMUT_STEPS; step += 1) {
+      const middle = (low + high) / 2;
+      if (inGamut(linearRgb([lightness, a * middle, b * middle]))) low = middle; else high = middle;
+    }
+  } else low = 1;
+  return `#${linearRgb([lightness, a * low, b * low]).map(value => Math.round(Math.min(1, Math.max(0, encode(value))) * CHANNEL_MAX).toString(HEX_RADIX).padStart(CHANNEL_DIGITS, "0")).join("")}`;
 }

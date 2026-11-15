@@ -35,8 +35,8 @@ describe("brandCardKit", () => {
       // White on this orange is 3.3:1, too low for the button's small text: the orange deepens 16%, as little as makes its white label read 4.5:1.
       "--brand-card-button-fill": "#d64000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450",
       "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff",
-      // The accent is 3.2:1 on the card: too faint for text, enough for bars.
-      "--brand-card-chart": "#ff4c00",
+      // The accent is 3.2:1 on the card: too faint for text, enough for bars. The figures take it deepened to read 4.5:1.
+      "--brand-card-chart": "#ff4c00", "--brand-card-number-colour": "#d23d00", "--brand-card-value-colour": "#d23d00",
     });
   });
 
@@ -88,7 +88,7 @@ describe("brandCardKit", () => {
   it("keeps the default outlined button for a brand stored before button values were kept, even with an accent", () => {
     // Until the hourly re-fetch reaches it, such a brand has an accent and no components.
     const legacy = stored({ accent: "#123456", background: "#ffffff", text: "#111111" });
-    expect(Object.keys(brandCardKit(legacy, "#ffffff", "#111111"))).toEqual(["--brand-card-border", "--brand-card-chart"]);
+    expect(Object.keys(brandCardKit(legacy, "#ffffff", "#111111"))).toEqual(["--brand-card-border", "--brand-card-chart", "--brand-card-number-colour", "--brand-card-value-colour"]);
   });
 
   it("leaves buttons alone when the brand has nothing that shows, and does nothing without solid card colours", () => {
@@ -108,10 +108,12 @@ describe("brandCardKit", () => {
       clay: "#3859f9", cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", elicit: "#083d44", exa: "#1f40ed",
       // Spider's site accent is slate, a grey; its bars take the green of its logo, as its site's highlights do.
       firecrawl: "#ff4c00", github: "#0d6731", "open-places": "#3f5a2c", spider: "#24c45c",
-      // n8n's pink is 1.5:1 on its card and Porkbun's coral 2.6:1, so their bars take the card's text colour.
-      n8n: "#161616", porkbun: "#000000",
+      // n8n's pink is 1.5:1 on its card and Porkbun's coral 2.6:1: each deepens, hue kept, until its bars read 3:1.
+      n8n: "#be7f8d", porkbun: "#e36d6e",
     });
     expect(brandCardKit(stored({ background: "#ffffff", text: "#111111" }), "#ffffff", "#111111")["--brand-card-chart"]).toBe("#111111");
+    // An accent too pale to reach 3:1 within a quarter of OKLab's lightness keeps the card's text colour.
+    expect(brandCardKit(stored({ accent: "#fff1a8", background: "#ffffff", text: "#111111" }), "#ffffff", "#111111")["--brand-card-chart"]).toBe("#111111");
   });
 
   it("lets a square brand's card be square", () => {

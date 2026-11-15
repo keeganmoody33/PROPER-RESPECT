@@ -1978,13 +1978,14 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .product-card[data-panel] .card-front :is(.contribution-calendar, .card-artifact-links, .card-activity-preview .usage-chart),
 .product-card[data-panel] .card-back .card-back-values {
   background-color: var(--brand-card-panel);
-  border: 1px solid var(--brand-card-panel-border, transparent);
+  /* A site that frames its content in a coloured panel (Context.dev's blue) frames the data thick in that colour; others in a 1px rule. */
+  border: var(--brand-card-panel-frame, 1px) solid var(--brand-card-panel-border, transparent);
   border-radius: var(--brand-card-panel-radius, min(var(--brand-card-radius, 12px), 14px));
   color: var(--brand-card-panel-text, inherit);
   padding: .7rem .75rem;
 }
 /* The calendar's frame sits in the card's padding, so framing it costs its days no width. */
-.product-card[data-panel] .card-front .contribution-calendar { margin-inline: calc(-.75rem - 1px); }
+.product-card[data-panel] .card-front .contribution-calendar { margin-inline: calc(-.75rem - var(--brand-card-panel-frame, 1px)); }
 .product-card[data-panel] .card-front .card-artifact-links a { color: inherit; }
 .product-card[data-panel] .card-front .activity-bars span { background: var(--brand-card-panel-chart, var(--brand-card-chart, var(--brand-card-accent, currentColor))); }
 .product-card .card-front :is(.contribution-calendar, .card-activity-preview .usage-chart) {

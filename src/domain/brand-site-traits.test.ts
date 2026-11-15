@@ -65,10 +65,13 @@ test("the signature is the most colourful candidate, greys never count and the e
   expect(signatureColour([{ hex: "#2560ff", from: "primary call-to-action" }, { hex: "#2560ff", from: "logo" }])).toEqual({ hex: "#2560ff", from: "primary call-to-action" });
 });
 
-test("a stored file must name the root of its own canonical domain and nothing else", () => {
+test("a stored file must name a page on its own canonical domain, over https, and nothing else", () => {
   const file = brandSiteTraitsFromMeasurement(META, {});
-  expect(brandSiteTraitsSchema.safeParse({ ...file, url: "https://spider.cloud/pricing" }).success).toBe(false);
-  expect(brandSiteTraitsSchema.safeParse({ ...file, url: "http://spider.cloud/" }).success).toBe(false);
+  // A product page on the domain (Claude Code's at claude.com/product/claude-code) is the product's own page.
+  expect(brandSiteTraitsSchema.safeParse({ ...file, url: "https://spider.cloud/pricing" }).success).toBe(true);
+  for (const url of ["http://spider.cloud/", "https://docs.spider.cloud/", "https://spider.cloud.example/", "https://user:pass@spider.cloud/", "https://spider.cloud/?ref=x", "https://spider.cloud:8443/", "javascript:alert(1)"]) {
+    expect(brandSiteTraitsSchema.safeParse({ ...file, url }).success, url).toBe(false);
+  }
   expect(brandSiteTraitsSchema.safeParse({ ...file, traits: { css: "color: red" } }).success).toBe(false);
   expect(brandSiteTraitsSchema.safeParse(file).success).toBe(true);
 });
