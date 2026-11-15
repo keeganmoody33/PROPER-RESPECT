@@ -134,12 +134,14 @@ test("a zero bar is marked as zero, so it draws as a stub on the baseline instea
     label: "pages crawled", unit: "per week",
   })));
   expect($(".activity-bars > span").map((_, bar) => $(bar).attr("data-zero") ?? "no").get()).toEqual(["", "no", ""]);
-  expect($(".visually-hidden td").map((_, cell) => $(cell).text()).get().filter((_, index) => index % 3 === 2)).toEqual(["0 per week", "9,200 per week", "0 per week"]);
+  expect($(".visually-hidden tbody tr").map((_, row) => $(row).children().last().text()).get()).toEqual(["0 per week", "9,200 per week", "0 per week"]);
+  // Each row is headed by when it starts, so a screen reader names the row as it reads its value.
+  expect($(".visually-hidden tbody th[scope=row]").map((_, cell) => $(cell).text()).get()).toEqual(["3 Aug 2026", "10 Aug 2026", "17 Aug 2026"]);
 });
 
 test("a bar's title and table row read in plain dates and grouped numbers", () => {
   const $ = load(renderToStaticMarkup(createElement(UsageChart, { points: [{ date: "2026-08-01", value: 2840 }], label: "requests served", unit: "per day" })));
   expect($(".activity-bars > span").attr("title")).toBe("1 Aug 2026: 2,840 per day");
   // A one-day bar is one date, not a From and a To that are the same.
-  expect($(".visually-hidden tbody td").toArray().map(cell => $(cell).text())).toEqual(["1 Aug 2026", "2,840 per day"]);
+  expect($(".visually-hidden tbody tr").children().toArray().map(cell => [cell.tagName, $(cell).text()])).toEqual([["th", "1 Aug 2026"], ["td", "2,840 per day"]]);
 });

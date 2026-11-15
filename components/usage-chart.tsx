@@ -125,7 +125,7 @@ function BarTable({ bars, label, unit }: { bars: readonly ChartBar[]; label?: st
         <caption>{label ?? "Activity"}, one row per bar</caption>
         <thead><tr>{daily ? <th scope="col">Date</th> : <><th scope="col">From</th><th scope="col">To</th></>}<th scope="col">Value</th></tr></thead>
         <tbody>
-          {rows.map(row => <tr key={row.key}><td>{row.from}</td>{!daily && <td>{row.to}</td>}<td>{row.value}</td></tr>)}
+          {rows.map(row => <tr key={row.key}><th scope="row">{row.from}</th>{!daily && <td>{row.to}</td>}<td>{row.value}</td></tr>)}
         </tbody>
       </table>
     </div>
