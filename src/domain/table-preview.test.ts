@@ -3,7 +3,7 @@ import { TABLE_PREVIEW_LIMITS, tablePreview } from "./table-preview";
 
 const cell = (text: string) => ({ text });
 const valid = { caption: "Lead list", columns: ["Company", "Status"], rows: [[cell("Northwind Labs"), { text: "Enriched", state: "filled" }]] };
-const plainColumn = (label: string) => ({ label, droppable: false, enriched: false });
+const plainColumn = (label: string) => ({ label, enriched: false });
 
 test("a table preview is a caption, a few named columns and short rows of short cells", () => {
   expect(TABLE_PREVIEW_LIMITS).toEqual({ columns: 4, rows: 8, text: 40, caption: 80 });
@@ -12,16 +12,15 @@ test("a table preview is a caption, a few named columns and short rows of short 
   expect(tablePreview(valid)).toEqual({ ...valid, columns: [plainColumn("Company"), plainColumn("Status")] });
 });
 
-test("a column can be marked enriched, or droppable on a narrow card; a pending cell can say what it fills in with", () => {
+test("a column can be marked enriched; a cell can carry a second line; a pending cell can say what it fills in with", () => {
   const table = {
     caption: "Lead list",
-    columns: ["Company", { label: "Domain", droppable: true }, { label: "Status", enriched: true }],
-    rows: [[cell("Quillon Health"), cell("quillon.example"), { text: "Running", state: "pending", fillsIn: { text: "Enriched", state: "filled" } }]],
+    columns: [{ label: "Person" }, { label: "Status", enriched: true }],
+    rows: [[{ text: "Mo Okafor", detail: "Sales Director, Quillon" }, { text: "Running", state: "pending", fillsIn: { text: "Found", state: "filled" } }]],
   };
-  expect(tablePreview(table)).toEqual({
-    ...table,
-    columns: [plainColumn("Company"), { label: "Domain", droppable: true, enriched: false }, { label: "Status", droppable: false, enriched: true }],
-  });
+  expect(tablePreview(table)).toEqual({ ...table, columns: [plainColumn("Person"), { label: "Status", enriched: true }] });
+  // A column written for an older card that left it out on a narrow screen still reads; every column now shows.
+  expect(tablePreview({ ...table, columns: [{ label: "Person", droppable: true }, "Status"] })?.columns).toEqual([plainColumn("Person"), plainColumn("Status")]);
 });
 
 test("anything past the caps, a ragged row or an empty cell is refused rather than drawn", () => {
@@ -40,11 +39,13 @@ test("anything past the caps, a ragged row or an empty cell is refused rather th
     { ...valid, caption: "x".repeat(81) },
     { ...valid, columns: [{ label: "" }, "Status"] },
     { ...valid, rows: [[cell("a"), { text: "b", state: "pending", fillsIn: { text: "", state: "filled" } }]] },
+    { ...valid, rows: [[{ text: "a", detail: "x".repeat(41) }, cell("b")]] },
+    { ...valid, summary: "x".repeat(81) },
   ];
   expect(refused.map(tablePreview)).toEqual(refused.map(() => undefined));
 });
 
-test("a column can say what kind it is, a waterfall cell which provider answered, and the table how many rows it really has", () => {
+test("a column can say what kind it is, a waterfall cell which provider answered, and the table how many rows it really has and what they came to", () => {
   const table = {
     caption: "Lead list",
     columns: [{ label: "Company", kind: "text" }, { label: "Email waterfall", kind: "waterfall", enriched: true }, { label: "AI: signal", kind: "ai" }],
@@ -52,14 +53,14 @@ test("a column can say what kind it is, a waterfall cell which provider answered
       [cell("Nimbus"), { text: "Enriched", state: "filled", waterfall: { step: 2, of: 3 } }, { text: "Series B", state: "filled" }],
       [cell("Quillon"), { text: "Running", state: "pending", waterfall: { step: 2, of: 3 }, fillsIn: { text: "Enriched", state: "filled", waterfall: { step: 3, of: 3 } } }, { text: "Running", state: "pending" }],
     ],
-    frontRows: 1, totalRows: 214, rowNote: "2.3 credits a row",
+    frontRows: 1, totalRows: 214, summary: "171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row",
   };
   expect(tablePreview(table)).toEqual({
     ...table,
     columns: [
-      { label: "Company", kind: "text", droppable: false, enriched: false },
-      { label: "Email waterfall", kind: "waterfall", droppable: false, enriched: true },
-      { label: "AI: signal", kind: "ai", droppable: false, enriched: false },
+      { label: "Company", kind: "text", enriched: false },
+      { label: "Email waterfall", kind: "waterfall", enriched: true },
+      { label: "AI: signal", kind: "ai", enriched: false },
     ],
   });
 });

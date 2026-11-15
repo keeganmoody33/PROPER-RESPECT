@@ -166,28 +166,40 @@ test("Clay's three numbers and its price fit one plan over one stated year: a da
   expect(tables).toBeGreaterThanOrEqual(26);
 });
 
-test("only Clay's front shows a table: a lead list from a signal, a provider waterfall and an AI column, on reserved .example domains", () => {
+test("only Clay's front shows a table: people found from a job-change signal, their work emails by a provider waterfall, on reserved .example domains", () => {
   expect(examples.filter(({ tablePreview: table }) => table).map(({ id }) => id)).toEqual(["clay"]);
   const table = tablePreview(examples.find(({ id }) => id === "clay")!.tablePreview)!;
-  expect(table.caption).toBe("Lead list · from a job-change signal · invented sample rows");
-  expect([table.columns.map(column => ["kind" in column ? column.kind : undefined, column.label, column.droppable, column.enriched]), table.rows.length, table.frontRows]).toEqual([
-    [["text", "Company", false, false], ["email", "Work email", false, true], ["waterfall", "Waterfall", false, true], ["ai", "AI: signal", true, true]],
-    5, 4,
+  expect(table.caption).toBe("Lead list · job-change signal · invented rows");
+  expect([table.columns.map(column => ["kind" in column ? column.kind : undefined, column.label, column.enriched]), table.rows.length, table.frontRows]).toEqual([
+    [["text", "Person", false], ["email", "Work email", true], ["waterfall", "Waterfall", true], ["ai", "Job change", true]],
+    5, 3,
   ]);
-  // Each waterfall says which of three generic providers answered, so no real vendor is named; one row still running fills in, one finds nothing.
-  expect(table.rows.map(row => { const shown = row[2].fillsIn ?? row[2]; return `${row[0].text}: ${shown.text} ${shown.waterfall?.step}/${shown.waterfall?.of}`; })).toEqual([
-    "Nimbus: Enriched 1/3", "Heron: Enriched 2/3", "Quillon: Enriched 3/3", "Tessel: Enriched 1/3", "Marrow: No match 3/3",
+  const shown = (cell: (typeof table.rows)[number][number]) => cell.fillsIn ?? cell;
+  // A lead list names people: each row is a person and their title at a company, and every signal is the job change the caption names.
+  expect(table.rows.map(row => [row[0].text, row[0].detail, shown(row[1]).text, `${shown(row[2]).text} ${shown(row[2]).waterfall?.step}/${shown(row[2]).waterfall?.of}`, shown(row[3]).text])).toEqual([
+    ["Ana Ruiz", "VP Sales, Nimbus", "ana@nimbus.example", "Found 1/3", "New role · 3\u00a0wk"],
+    ["Li Chen", "RevOps lead, Heron", "li@heron.example", "Found 2/3", "Promoted · 6\u00a0wk"],
+    ["Mo Okafor", "Director, Quillon", "mo@quillon.example", "Found 3/3", "Joined · 2\u00a0wk"],
+    ["Raj Patel", "CRO, Tessel", "raj@tessel.example", "Found 1/3", "New role · 1\u00a0mo"],
+    ["Sara Lind", "VP Growth, Marrow", "No match", "No match 3/3", "Promoted · 5\u00a0wk"],
   ]);
   expect(table.rows.flatMap(row => row.flatMap(cell => cell.fillsIn ? [`${cell.text} -> ${cell.fillsIn.text}`] : []))).toEqual([
-    "Finding… -> mo@quillon.example", "Running -> Enriched", "Running -> New VP Sales",
+    "Finding… -> mo@quillon.example", "Running -> Found", "Running -> Joined · 2\u00a0wk",
   ]);
-  expect(table.rows.filter(row => row[1].state === "empty").map(row => row[0].text)).toEqual(["Marrow"]);
   const addresses = table.rows.flatMap(row => row.flatMap(cell => [cell.text, ...(cell.fillsIn ? [cell.fillsIn.text] : [])])).filter(text => text.includes("@"));
   expect(addresses.filter(text => !text.endsWith(".example"))).toEqual([]);
-  // The rows are a few of the whole table, and its credits a row are the year's: 27,600 data credits over 11,800 rows enriched.
+  // The summary is the whole table's: its match rate, its waterfall and the year's credits a row, each from the numbers it names.
+  expect(table.summary).toBe("171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row");
   const clay = examples.find(({ id }) => id === "clay")!.card;
-  const [rows, , credits] = clay.measurements!.map(row => Number(row.value));
-  expect([table.totalRows, table.rowNote]).toEqual([214, `${(credits / rows).toFixed(1)} credits a row this year`]);
+  const [rows, tables, credits] = clay.measurements!.map(row => Number(row.value));
+  const FOUND = 171;
+  expect([table.totalRows, Math.round(FOUND / table.totalRows! * 100), (credits / rows).toFixed(1)]).toEqual([214, 80, "2.3"]);
+  // The sample rows find as often as the whole table: 4 of 5, as 171 of 214 rounds to 80%.
+  expect(table.rows.filter(row => shown(row[1]).state === "filled").length / table.rows.length).toBe(0.8);
+  expect(new Set(table.rows.map(row => shown(row[2]).waterfall?.of))).toEqual(new Set([3]));
+  // A 214-row table is about the size of the year's average, 11,800 rows over 52 tables (227), and its credits fit Launch's 30,000.
+  expect(Math.abs(table.totalRows! - rows / tables) / (rows / tables)).toBeLessThan(0.1);
+  expect(credits).toBeLessThanOrEqual(CLAY_LAUNCH.dataCreditsPerYear);
 });
 
 test("Docker lists three things as links to public pages, and every outbound link on every example is https", () => {

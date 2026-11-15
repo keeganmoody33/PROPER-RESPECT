@@ -11,17 +11,17 @@ const waterfallSchema = z.object({ step: z.number().int().min(1), of: z.number()
   .refine(waterfall => waterfall.step <= waterfall.of, "A waterfall's step is one of its providers.");
 /** What a pending cell shows once it has filled in: a value found, or nothing found. */
 const filledSchema = z.object({ text, state: z.enum(["filled", "empty"]), waterfall: waterfallSchema.optional() });
-/** A cell can say it was filled in, is still being looked up, or came back empty, the way an enrichment table shows it. */
-const cellSchema = z.object({ text, state: z.enum(["filled", "pending", "empty"]).optional(), waterfall: waterfallSchema.optional(), fillsIn: filledSchema.optional() });
+/**
+ * A cell can say it was filled in, is still being looked up, or came back empty, the way an enrichment table shows it,
+ * and can carry a second, quieter line under its text (a person's title under their name).
+ */
+const cellSchema = z.object({ text, detail: text.optional(), state: z.enum(["filled", "pending", "empty"]).optional(), waterfall: waterfallSchema.optional(), fillsIn: filledSchema.optional() });
 /** The kinds of column an enrichment table draws a glyph for: typed text, a found address, a provider waterfall, an AI prompt, a formula. */
 export const TABLE_COLUMN_KINDS = ["text", "email", "waterfall", "ai", "formula"] as const;
-/**
- * A column is its label, or its label with how it's drawn: "enriched" for a column the product fills in (its header is tinted),
- * "droppable" for one a narrow card leaves out so the rest fit, and its kind for the glyph in its header.
- */
+/** A column is its label, or its label with how it's drawn: "enriched" for a column the product fills in (its header is tinted), and its kind for the glyph in its header. */
 const columnSchema = z.union([
-  text.transform(label => ({ label, droppable: false, enriched: false })),
-  z.object({ label: text, kind: z.enum(TABLE_COLUMN_KINDS).optional(), droppable: z.boolean().default(false), enriched: z.boolean().default(false) }),
+  text.transform(label => ({ label, enriched: false })),
+  z.object({ label: text, kind: z.enum(TABLE_COLUMN_KINDS).optional(), enriched: z.boolean().default(false) }),
 ]);
 
 const tablePreviewSchema = z.object({
@@ -30,9 +30,10 @@ const tablePreviewSchema = z.object({
   rows: z.array(z.array(cellSchema).readonly()).min(1).max(TABLE_PREVIEW_LIMITS.rows).readonly(),
   /** How many of the rows the card's front shows; the back shows them all. */
   frontRows: z.number().int().min(1).optional(),
-  /** How many rows the whole table has, of which these are a few, and a short note on them ("2.3 credits a row"). */
+  /** How many rows the whole table has, of which these are a few. */
   totalRows: z.number().int().min(1).optional(),
-  rowNote: text.optional(),
+  /** What the whole table came to, in a line under it on both faces ("171 of 214 emails found · 80%"). */
+  summary: z.string().min(1).max(TABLE_PREVIEW_LIMITS.caption).optional(),
 }).refine(table => table.rows.every(row => row.length === table.columns.length), "Every row needs one cell per column.")
   .refine(table => (table.frontRows ?? 0) <= table.rows.length, "The front shows some of the rows.")
   .refine(table => (table.totalRows ?? Infinity) >= table.rows.length, "The whole table has at least the rows shown.");

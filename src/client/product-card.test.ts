@@ -772,63 +772,78 @@ test("published numbers say how they were recorded on the back, where every row 
 
 const leads = {
   caption: "Lead list, sample rows",
-  columns: ["Company", { label: "Domain", droppable: true }, { label: "Work email", enriched: true }, { label: "Status", enriched: true }],
+  columns: ["Person", { label: "Work email", enriched: true }, { label: "Status", enriched: true }],
   rows: [
-    [{ text: "Northwind Labs" }, { text: "northwindlabs.example" }, { text: "a.lindqvist@northwindlabs.example", state: "filled" }, { text: "Enriched", state: "filled" }],
-    [{ text: "Quillon Health" }, { text: "quillon.example" }, { text: "Finding…", state: "pending", fillsIn: { text: "d.reyes@quillon.example", state: "filled" } },
+    [{ text: "Ana Lindqvist", detail: "VP Sales, Northwind" }, { text: "a.lindqvist@northwindlabs.example", state: "filled" }, { text: "Enriched", state: "filled" }],
+    [{ text: "Dan Reyes", detail: "CRO, Quillon" }, { text: "Finding…", state: "pending", fillsIn: { text: "d.reyes@quillon.example", state: "filled" } },
       { text: "Running", state: "pending", fillsIn: { text: "Enriched", state: "filled" } }],
   ],
 } as const;
 
-test("a table preview draws as a real table on the front: a caption, column headers, each row named by its first cell", () => {
+test("a table preview draws as a real table on the front: a caption, column headers, each row named by its first cell and its second line", () => {
   const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: leads })));
   const box = $(".card-front .card-table-preview");
   expect([box.attr("role"), box.attr("tabindex"), box.attr("aria-labelledby")]).toEqual(["region", "0", box.find("caption").attr("id")]);
   expect(box.find("caption").text()).toBe("Lead list, sample rows");
-  // An enriched column's header is marked for its tint; a droppable column's cells are marked so a narrow card leaves them out.
-  const marks = (cell: Parameters<typeof $>[0]) => ["data-enriched", "data-droppable"].filter(name => $(cell).attr(name) !== undefined).join("+") || "-";
-  expect(box.find("thead th").map((_, cell) => `${$(cell).attr("scope")}:${$(cell).text()}:${marks(cell)}`).get()).toEqual([
-    "col:Company:-", "col:Domain:data-droppable", "col:Work email:data-enriched", "col:Status:data-enriched",
+  expect(box.find("thead th").map((_, cell) => `${$(cell).attr("scope")}:${$(cell).text()}:${$(cell).attr("data-enriched") === "" ? "enriched" : "-"}`).get()).toEqual([
+    "col:Person:-", "col:Work email:enriched", "col:Status:enriched",
   ]);
-  // The row still running is drawn pending until the card is shown; it fills in on the visitor's screen, not on the server.
-  expect(box.find("tbody tr").map((_, row) => $(row).children().map((_, cell) => `${cell.tagName}/${$(cell).attr("data-state") ?? "-"}/${marks(cell)}/${$(cell).text()}`).get().join(" | ")).get()).toEqual([
-    "th/-/-/Northwind Labs | td/-/data-droppable/northwindlabs.example | td/filled/-/a.lindqvist@northwindlabs.example | td/filled/-/Enriched",
-    "th/-/-/Quillon Health | td/-/data-droppable/quillon.example | td/pending/-/Finding… | td/pending/-/Running",
+  // Each cell carries its column's label, which a narrow card stacking a row into a block shows beside it. The row still running
+  // is drawn pending until the card is shown; it fills in on the visitor's screen, not on the server.
+  expect(box.find("tbody tr").map((_, row) => $(row).children().map((_, cell) => `${cell.tagName}/${$(cell).attr("data-label")}/${$(cell).attr("data-state") ?? "-"}/${$(cell).text()}`).get().join(" | ")).get()).toEqual([
+    "th/Person/-/Ana LindqvistVP Sales, Northwind | td/Work email/filled/a.lindqvist@northwindlabs.example | td/Status/filled/Enriched",
+    "th/Person/-/Dan ReyesCRO, Quillon | td/Work email/pending/Finding… | td/Status/pending/Running",
   ]);
-  // The back draws the whole table: every column, none dropped on a narrow card.
+  expect(box.find("tbody th .table-cell-detail").map((_, line) => $(line).text()).get()).toEqual(["VP Sales, Northwind", "CRO, Quillon"]);
   expect($(".card-back .card-table-preview").attr("data-full")).toBe("");
 });
 
 const waterfallLeads = {
   caption: "Lead list, sample rows",
-  columns: [{ label: "Company", kind: "text" }, { label: "Work email", kind: "email", enriched: true }, { label: "Email waterfall", kind: "waterfall", enriched: true }],
+  columns: [{ label: "Person", kind: "text" }, { label: "Work email", kind: "email", enriched: true }, { label: "Email waterfall", kind: "waterfall", enriched: true }],
   rows: [
-    [{ text: "Nimbus" }, { text: "ana@nimbus.example", state: "filled" }, { text: "Enriched", state: "filled", waterfall: { step: 2, of: 3 } }],
-    [{ text: "Quillon" }, { text: "Finding…", state: "pending" }, { text: "Running", state: "pending", waterfall: { step: 1, of: 3 }, fillsIn: { text: "Enriched", state: "filled", waterfall: { step: 3, of: 3 } } }],
-    [{ text: "Marrow" }, { text: "No match", state: "empty" }, { text: "No match", state: "empty", waterfall: { step: 3, of: 3 } }],
+    [{ text: "Ana Ruiz" }, { text: "ana@nimbus.example", state: "filled" }, { text: "Found", state: "filled", waterfall: { step: 2, of: 3 } }],
+    [{ text: "Mo Okafor" }, { text: "Finding…", state: "pending" }, { text: "Running", state: "pending", waterfall: { step: 1, of: 3 }, fillsIn: { text: "Found", state: "filled", waterfall: { step: 3, of: 3 } } }],
+    [{ text: "Sara Lind" }, { text: "No match", state: "empty" }, { text: "No match", state: "empty", waterfall: { step: 3, of: 3 } }],
   ],
-  frontRows: 2, totalRows: 214, rowNote: "2.3 credits a row",
+  frontRows: 2, totalRows: 214, summary: "171 of 214 emails found · 80% · 3-provider waterfall · 2.3 credits a row",
 } as const;
 
-test("a table shows its column kinds as glyphs, a waterfall as a status pill and its providers in turn, and how much of the table it is", () => {
+test("a table shows its column kinds as glyphs, a waterfall as a status pill and its providers in turn with a key to the marks in its title bar, and what the whole table came to", () => {
   const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: waterfallLeads })));
   const front = $(".card-front .card-table-preview"), back = $(".card-back .card-table-preview");
   // Each kind's glyph sits in its header, hidden from screen readers, which hear the label.
   expect(front.find("thead th").map((_, cell) => `${$(cell).find("svg[aria-hidden=true]").attr("data-kind") ?? "-"}:${$(cell).text()}`).get())
-    .toEqual(["text:Company", "email:Work email", "waterfall:Email waterfall"]);
+    .toEqual(["text:Person", "email:Work email", "waterfall:Email waterfall"]);
   // A waterfall cell: its run status as a pill, a mark per provider (missed, answered, not asked), and the same in words for a screen reader.
   const waterfall = (cell: Parameters<typeof $>[0]) => {
     const pill = $(cell).find(".table-pill");
     return `${pill.attr("data-state")}:${pill.text()}:${$(cell).find(".table-steps i").map((_, step) => $(step).attr("data-step")).get().join(",")}:${$(cell).find(".visually-hidden").text()}`;
   };
   expect(back.find("tbody td:last-child").map((_, cell) => waterfall(cell)).get()).toEqual([
-    "filled:Enriched:missed,answered,unasked:, provider 2 of 3 answered",
+    "filled:Found:missed,answered,unasked:, provider 2 of 3 answered",
     "pending:Running:asking,unasked,unasked:, asking provider 1 of 3",
     "empty:No match:missed,missed,missed:, none of 3 providers answered",
   ]);
-  // The front shows its first rows and says how much of the whole table they are; the back shows them all, and keeps its height down.
+  // A sighted visitor gets the marks' meaning in a key in the title bar, on both faces; a screen reader already hears it in each cell.
+  const key = (face: typeof front) => face.find(".card-table-key").map((_, line) => `${$(line).attr("aria-hidden")}:${$(line).find("i").map((_, mark) => $(mark).attr("data-step")).get().join(",")}:${$(line).text()}`).get();
+  expect([key(front), key(back)]).toEqual([
+    ["true:answered,missed,unasked:found it missed not asked"], ["true:answered,missed,unasked:found it missed not asked"],
+  ]);
+  // The front shows its first rows and the back them all; both say what the whole table came to.
   expect([front.find("tbody tr").length, back.find("tbody tr").length]).toEqual([2, 3]);
-  expect([front.find(".card-table-count").text(), back.find(".card-table-count").length]).toEqual(["2 of 214 rows · 2.3 credits a row", 0]);
+  expect([front.find(".card-table-count").text(), back.find(".card-table-count").text()]).toEqual([waterfallLeads.summary, waterfallLeads.summary]);
+});
+
+test("a hyphenated word in a table's caption, summary or cells never breaks at its hyphen, whatever the fonts measure", () => {
+  const table = { ...waterfallLeads, caption: "Lead list · from a job-change signal", rows: [[{ text: "Ana Ruiz", detail: "Co-founder, Nimbus" }, ...waterfallLeads.rows[0].slice(1)]], frontRows: 1 };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: table })));
+  expect($(".card-front .card-table-preview .whole-word").map((_, word) => $(word).text()).get()).toEqual(["job-change", "Co-founder,", "3-provider"]);
+});
+
+test("a table with no summary says how much of the whole table its rows are, on the front", () => {
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: { ...waterfallLeads, summary: undefined } })));
+  expect([$(".card-front .card-table-count").text(), $(".card-back .card-table-count").length]).toEqual(["2 of 214 rows", 0]);
 });
 
 test("a table preview past its caps, or on a brand preview, is not drawn", () => {

@@ -124,34 +124,39 @@ const CLAY_LAUNCH_MONTHLY_USD = 167;
 const SAMPLE_YEAR = { start: "2025-09-01", end: "2026-08-31" } as const;
 
 /**
- * A Clay table the way clay.com draws its own: a lead list from a signal, each column marked with its kind, an address found by a
- * waterfall of three providers tried in turn, and one AI column. Invented companies on reserved .example domains, and providers
- * counted rather than named: no real company, person or vendor. The front shows four of the five rows, out of a 214-row table;
- * the back adds the row that found no address.
+ * A Clay table the way clay.com draws its own: a lead list from a job-change signal, each column marked with its kind, the people
+ * it found with their new titles, a work email found by a waterfall of three providers tried in turn, and an AI column naming each
+ * change. Invented people at invented companies on reserved .example domains, and providers counted rather than named: no real
+ * company, person or vendor. The front shows three of the five rows, out of a 214-row table; the back adds the rest, one of which found no address.
  */
 const filled = (text: string) => ({ text, state: "filled" as const });
-const enrichedBy = (step: number) => ({ text: "Enriched", state: "filled" as const, waterfall: { step, of: CLAY_WATERFALL_PROVIDERS } });
-/** Providers the sample's email waterfall asks in turn, and the rows in the whole table the sample rows come from. */
-const CLAY_WATERFALL_PROVIDERS = 3, CLAY_TABLE_ROWS = 214, CLAY_FRONT_ROWS = 4;
+const foundBy = (step: number) => ({ text: "Found", state: "filled" as const, waterfall: { step, of: CLAY_WATERFALL_PROVIDERS } });
+/** Providers the sample's email waterfall asks in turn, the rows in the whole table the sample rows come from, and the addresses it found. */
+const CLAY_WATERFALL_PROVIDERS = 3, CLAY_TABLE_ROWS = 214, CLAY_FRONT_ROWS = 3, CLAY_EMAILS_FOUND = 171;
+const CLAY_ROWS_ENRICHED = 11_800, CLAY_TABLES_BUILT = 52, CLAY_DATA_CREDITS_USED = 27_600;
+const PERCENT = 100;
+/** The whole table in one line a Clay user reads first: how often the waterfall found an address, and what a row cost in data credits this year. */
+const CLAY_SUMMARY = [
+  `${CLAY_EMAILS_FOUND} of ${CLAY_TABLE_ROWS} emails found`, `${Math.round(CLAY_EMAILS_FOUND / CLAY_TABLE_ROWS * PERCENT)}%`,
+  `${CLAY_WATERFALL_PROVIDERS}-provider waterfall`, `${(CLAY_DATA_CREDITS_USED / CLAY_ROWS_ENRICHED).toFixed(1)} credits a row`,
+].join(" · ");
 const CLAY_TABLE: TablePreviewInput = {
-  caption: "Lead list · from a job-change signal · invented sample rows",
-  // A phone-wide card leaves out the AI column, so the address and the waterfall that found it stay in view.
+  caption: "Lead list · job-change signal · invented rows",
   columns: [
-    { label: "Company", kind: "text" }, { label: "Work email", kind: "email", enriched: true },
-    { label: "Waterfall", kind: "waterfall", enriched: true }, { label: "AI: signal", kind: "ai", enriched: true, droppable: true },
+    { label: "Person", kind: "text" }, { label: "Work email", kind: "email", enriched: true },
+    { label: "Waterfall", kind: "waterfall", enriched: true }, { label: "Job change", kind: "ai", enriched: true },
   ],
   rows: [
-    [{ text: "Nimbus" }, filled("ana@nimbus.example"), enrichedBy(1), filled("Hiring SDRs")],
-    [{ text: "Heron" }, filled("li@heron.example"), enrichedBy(2), filled("Series B")],
-    [{ text: "Quillon" }, { text: "Finding…", state: "pending", fillsIn: filled("mo@quillon.example") },
-      { text: "Running", state: "pending", waterfall: { step: 2, of: CLAY_WATERFALL_PROVIDERS }, fillsIn: enrichedBy(3) },
-      { text: "Running", state: "pending", fillsIn: filled("New VP Sales") }],
-    [{ text: "Tessel" }, filled("raj@tessel.example"), enrichedBy(1), filled("No signal")],
-    [{ text: "Marrow" }, { text: "No match", state: "empty" }, { text: "No match", state: "empty", waterfall: { step: CLAY_WATERFALL_PROVIDERS, of: CLAY_WATERFALL_PROVIDERS } }, filled("Series A")],
+    [{ text: "Ana Ruiz", detail: "VP Sales, Nimbus" }, filled("ana@nimbus.example"), foundBy(1), filled("New role · 3\u00a0wk")],
+    [{ text: "Li Chen", detail: "RevOps lead, Heron" }, filled("li@heron.example"), foundBy(2), filled("Promoted · 6\u00a0wk")],
+    [{ text: "Mo Okafor", detail: "Director, Quillon" }, { text: "Finding…", state: "pending", fillsIn: filled("mo@quillon.example") },
+      { text: "Running", state: "pending", waterfall: { step: 2, of: CLAY_WATERFALL_PROVIDERS }, fillsIn: foundBy(3) },
+      { text: "Running", state: "pending", fillsIn: filled("Joined · 2\u00a0wk") }],
+    [{ text: "Raj Patel", detail: "CRO, Tessel" }, filled("raj@tessel.example"), foundBy(1), filled("New role · 1\u00a0mo")],
+    [{ text: "Sara Lind", detail: "VP Growth, Marrow" }, { text: "No match", state: "empty" },
+      { text: "No match", state: "empty", waterfall: { step: CLAY_WATERFALL_PROVIDERS, of: CLAY_WATERFALL_PROVIDERS } }, filled("Promoted · 5\u00a0wk")],
   ],
-  frontRows: CLAY_FRONT_ROWS, totalRows: CLAY_TABLE_ROWS,
-  // The year's data credits over its rows enriched (clayMeasurements below): 27,600 / 11,800.
-  rowNote: "2.3 credits a row this year",
+  frontRows: CLAY_FRONT_ROWS, totalRows: CLAY_TABLE_ROWS, summary: CLAY_SUMMARY,
 };
 
 /** Exact numbers an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. Each metric is a verb, since its unit already names what was counted. */
@@ -162,9 +167,9 @@ const CLAY_MEASURED = {
 const CLAY_YEAR = { kind: "date", ...SAMPLE_YEAR, timezone: "UTC" } as const;
 /** A daily user's year on Launch: about 45 rows a working day, a table a week, and data credits inside the plan's 30,000. */
 const clayMeasurements: PublicMeasurement[] = [
-  { ...CLAY_MEASURED, metric: "enriched", value: "11800", unit: "rows", period: CLAY_YEAR },
-  { ...CLAY_MEASURED, metric: "built", value: "52", unit: "tables", period: CLAY_YEAR },
-  { ...CLAY_MEASURED, metric: "used", value: "27600", unit: "data_credits", period: CLAY_YEAR },
+  { ...CLAY_MEASURED, metric: "enriched", value: String(CLAY_ROWS_ENRICHED), unit: "rows", period: CLAY_YEAR },
+  { ...CLAY_MEASURED, metric: "built", value: String(CLAY_TABLES_BUILT), unit: "tables", period: CLAY_YEAR },
+  { ...CLAY_MEASURED, metric: "used", value: String(CLAY_DATA_CREDITS_USED), unit: "data_credits", period: CLAY_YEAR },
 ];
 
 type ExampleSource = Readonly<{
