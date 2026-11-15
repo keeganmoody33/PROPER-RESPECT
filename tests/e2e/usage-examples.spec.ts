@@ -70,7 +70,8 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     ["Firecrawl", "Weekly · since 2025", "none", "none"],
     ["n8n", "Paused · started 2024", "uppercase", "uppercase"],
     ["Claude Code", "Daily · since 2025", "uppercase", "uppercase"],
-    ["Exa", "Weekly · since 2025", "none", "none"],
+    // Exa's first screen labels its controls in mono capitals (LATENCY, CATEGORY); its buttons stay as typed.
+    ["Exa", "Weekly · since 2025", "uppercase", "none"],
     ["Porkbun", "Occasionally · since 2021", "uppercase", "uppercase"],
     ["Spider", "Occasionally · since 2026", "uppercase", "uppercase"],
     ["Open Places", "Occasionally · since 2026", "none", "none"],
@@ -549,8 +550,12 @@ test("an occasional card's empty weeks draw as stubs on the baseline, so a gap r
   const heights = await bars.evaluateAll(spans => spans.map(span => Math.round(span.getBoundingClientRect().height)));
   expect(heights.filter(height => height === 2)).toHaveLength(9);
   expect(Math.max(...heights)).toBeGreaterThan(40);
-  // A stub keeps the bars' own opaque colour, so it holds the chart's contrast against the card; its height alone marks it as zero.
-  const paint = await bars.evaluateAll(spans => spans.map(span => ({ zero: span.hasAttribute("data-zero"), opacity: getComputedStyle(span).opacity, colour: getComputedStyle(span).backgroundColor })));
+  // A stub keeps the bars' own opaque ink, so it holds the chart's contrast against the card; its height alone marks it as zero.
+  // Spider draws in lines, so its bars' ink is their outline.
+  const paint = await bars.evaluateAll(spans => spans.map(span => {
+    const style = getComputedStyle(span), outlined = !span.hasAttribute("data-zero") && parseFloat(style.borderTopWidth) > 0;
+    return { zero: span.hasAttribute("data-zero"), opacity: style.opacity, colour: outlined ? style.borderTopColor : style.backgroundColor };
+  }));
   const barColour = paint.find(bar => !bar.zero)!.colour;
   const stubs = paint.filter(bar => bar.zero).map(({ opacity, colour }) => ({ opacity, colour }));
   expect(stubs).toEqual(stubs.map(() => ({ opacity: "1", colour: barColour })));
@@ -648,7 +653,8 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Cloudfl
   }, LARGE_TEXT_PX);
   expect(slab).toEqual({
     fill: "rgb(255, 94, 31)", sameFill: true, slabTop: true, headline: ["rgb(255, 255, 255)", true, 3.05],
-    small: [["Daily · since 2020", 4.95], ["Sample", 4.95], ["↗", 4.95]], logoTile: "rgb(255, 255, 255)",
+    // Its stored wordmark alone (black, 6.9:1 on the orange) shows straight on the slab, as no white tile ever sits on cloudflare.com's.
+    small: [["Daily · since 2020", 4.95], ["Sample", 4.95], ["↗", 4.95]], logoTile: "rgba(0, 0, 0, 0)",
   });
   expect(slab.headline[2]).toBeGreaterThanOrEqual(LARGE_TEXT_CONTRAST);
 });
@@ -1666,7 +1672,9 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`all fourteen fronts say 
         if (parseFloat(getComputedStyle(parent).fontSize) < 12) small.push(node.textContent!.trim());
       }
       const bar = face.querySelector(".activity-bars > span:not([data-zero])");
-      return { small, barContrast: bar ? contrast(getComputedStyle(bar).backgroundColor, backdrop(bar)) : undefined };
+      // An outlined bar (a brand that draws in lines) is drawn in its border; a filled one in its fill.
+      const ink = bar && (parseFloat(getComputedStyle(bar).borderTopWidth) > 0 ? getComputedStyle(bar).borderTopColor : getComputedStyle(bar).backgroundColor);
+      return { small, barContrast: bar ? contrast(ink!, backdrop(bar)) : undefined };
     });
     found.push(...front.small.map(text => `${name}: ${text}`));
     if (front.barContrast !== undefined && front.barContrast < 3) found.push(`${name}: bars ${front.barContrast.toFixed(2)}:1`);
@@ -1681,4 +1689,118 @@ test(`at ${PHONE_WIDTH}px GitHub's source link under its card is a ${MIN_TAP_PX}
   await carousel.getByRole("button", { name: "GitHub", exact: true }).click();
   const link = carousel.getByRole("link", { name: "GitHub contribution definitions ↗" });
   expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(MIN_TAP_PX);
+});
+
+/**
+ * The nine behind More examples hold the same look floors as the five featured: each branded card on its brand's surface, its
+ * headline and name in the brand's heading face, and every text, bar and button on both faces at its WCAG contrast. Claude Code
+ * and Grok Bot have no stored brand (their domains belong to a parent company), so they keep the house card.
+ */
+const OTHER_LOOK = [
+  { name: "n8n", slug: "n8n", surface: "rgb(250, 250, 250)" },
+  { name: "Claude Code", slug: undefined, surface: "rgb(37, 37, 31)" },
+  { name: "Exa", slug: "exa", surface: "rgb(255, 255, 255)" },
+  { name: "Porkbun", slug: "porkbun", surface: "rgb(254, 249, 249)" },
+  { name: "Spider", slug: "spider", surface: "rgb(12, 14, 19)" },
+  { name: "Open Places", slug: "open-places", surface: "rgb(247, 245, 239)" },
+  { name: "Grok Bot", slug: undefined, surface: "rgb(37, 37, 31)" },
+  { name: "Elicit", slug: "elicit", surface: "rgb(252, 252, 248)" },
+  { name: "Context.dev", slug: "context-dev", surface: "rgb(255, 255, 255)" },
+] as const;
+
+/** Runs in the page: every visible text, the first bar and the button on the card's shown face, each under its WCAG floor. */
+function contrastFailures(article: Element) {
+  const face = article.querySelector(article.getAttribute("data-side") === "back" ? ".card-back" : ".card-front")!;
+  const rgb = (colour: string) => {
+    const scale = colour.startsWith("color(srgb") ? 255 : 1, [red, green, blue, alpha = 1] = colour.match(/[\d.]+/g)!.map(Number);
+    return { channels: [red * scale, green * scale, blue * scale], alpha };
+  };
+  const luminance = (channels: number[]) => channels.map(value => value / 255).map(value => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4))
+    .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+  const ratio = (first: number[], second: number[]) => { const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a); return (light + 0.05) / (dark + 0.05); };
+  const behind = (element: Element | null) => {
+    for (let node = element; node; node = node.parentElement) { const fill = rgb(getComputedStyle(node).backgroundColor); if (fill.alpha > 0.5) return fill.channels; }
+    return [255, 255, 255];
+  };
+  const failures: string[] = [];
+  for (const element of face.querySelectorAll<HTMLElement>("*")) {
+    if (!element.checkVisibility() || element.closest(".visually-hidden") || ![...element.childNodes].some(node => node.nodeType === Node.TEXT_NODE && node.textContent!.trim())) continue;
+    const style = getComputedStyle(element), size = parseFloat(style.fontSize);
+    const floor = size >= 24 || (Number(style.fontWeight) >= 700 && size >= 18.66) ? 3 : 4.5;
+    const measured = ratio(rgb(style.color).channels, behind(element));
+    if (measured < floor - 0.005) failures.push(`${element.textContent!.trim().slice(0, 30)}: ${measured.toFixed(2)} < ${floor}`);
+  }
+  const bar = face.querySelector(".activity-bars > span:not([data-zero])");
+  if (bar) {
+    const style = getComputedStyle(bar), ink = parseFloat(style.borderTopWidth) > 0 ? style.borderTopColor : style.backgroundColor;
+    const measured = ratio(rgb(ink).channels, behind(bar.parentElement));
+    if (measured < 3) failures.push(`bar: ${measured.toFixed(2)} < 3`);
+  }
+  return failures;
+}
+
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`the nine behind More examples hold their look and contrast floors at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const looks = [];
+  for (const look of OTHER_LOOK) {
+    await carousel.getByRole("button", { name: look.name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${look.name} card` });
+    await expect(card).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const front = await card.evaluate(article => {
+      const face = article.querySelector(".card-front")!;
+      const headline = getComputedStyle(face.querySelector(".card-headline")!).fontFamily.split(",")[0].replaceAll('"', "");
+      const name = getComputedStyle(face.querySelector("h2")!).fontFamily.split(",")[0].replaceAll('"', "");
+      return { surface: getComputedStyle(article).backgroundColor, headline, name };
+    });
+    const frontFailures = await card.evaluate(contrastFailures);
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(card).toHaveAttribute("data-side", "back");
+    const backFailures = await card.evaluate(contrastFailures);
+    await card.getByRole("button", { name: "Close details" }).click();
+    looks.push({
+      name: look.name, surface: front.surface,
+      faces: look.slug ? front.headline.startsWith(`PRBrand-${look.slug}-`) && front.headline.endsWith("-heading") && front.name === front.headline : !front.headline.startsWith("PRBrand-"),
+      contrast: [...frontFailures, ...backFailures],
+    });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), look.name).toBe(true);
+  }
+  expect(looks).toEqual(OTHER_LOOK.map(look => ({ name: look.name, surface: look.surface, faces: true, contrast: [] })));
+});
+
+/** A group separator is at least a fifth of an em wide: the font's comma, not a speck between figures. */
+const MIN_SEPARATOR_EM = 0.2;
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`every card's lead number keeps its group separators clear of its figures at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  const separated: string[] = [];
+  for (const name of ["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl", "n8n", "Claude Code", "Exa", "Porkbun", "Spider", "Open Places", "Grok Bot", "Elicit", "Context.dev"]) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await expect(card).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    const separators = await card.evaluate(article => [...article.querySelectorAll(".card-front .figure-separator")].map(separator => {
+      const size = parseFloat(getComputedStyle(separator.parentElement!).fontSize), box = separator.getBoundingClientRect(), range = document.createRange();
+      const before = separator.previousSibling!, after = separator.nextSibling!;
+      range.setStart(before, before.textContent!.length - 1); range.setEnd(before, before.textContent!.length);
+      const digitBefore = range.getBoundingClientRect();
+      range.setStart(after, 0); range.setEnd(after, 1);
+      const digitAfter = range.getBoundingClientRect();
+      return { widthEm: box.width / size, clear: box.left >= digitBefore.right - 0.5 && box.right <= digitAfter.left + 0.5 };
+    }));
+    for (const separator of separators) {
+      expect(separator.clear, `${name}'s separator overlaps a figure`).toBe(true);
+      expect(separator.widthEm, `${name}'s separator width`).toBeGreaterThanOrEqual(MIN_SEPARATOR_EM);
+    }
+    if (separators.length) separated.push(name);
+  }
+  // At least the big numbers with thousands carry separators to check.
+  expect(separated.length).toBeGreaterThanOrEqual(3);
 });
