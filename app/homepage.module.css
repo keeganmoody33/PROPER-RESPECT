@@ -54,13 +54,16 @@
   .sectionHeading { flex-direction: column; align-items: flex-start; }
   .sectionHeading > p { max-width: 45ch; }
 }
+/* A phone's first screen leads with the heading and the card: the heading on two or three short lines, the card close under it,
+   and the line about the record after the card, so the card's numbers and table start above the examples row. */
 @media (max-width: 600px) {
-  .hero { padding-top: 1rem; }
+  .hero { padding-top: .75rem; grid-template-areas: "title" "example" "tagline" "rest"; row-gap: .6rem; }
+  .intro { display: contents; }
+  .intro h1 { grid-area: title; }
   .label { font-size: .62rem; }
-  .intro .label { margin-bottom: .6rem; }
-  .hero { row-gap: .9rem; }
-  .hero .example { padding: .75rem; }
-  .intro h1 { font-size: clamp(2.65rem, 12.5vw, 4.6rem); }
+  .intro .label { grid-area: tagline; margin: .15rem 0 0; }
+  .hero .example { padding: .5rem; }
+  .intro h1 { font-size: clamp(1.6rem, 7.4vw, 2.4rem); letter-spacing: -.03em; word-spacing: .08em; }
   .actions, .primary { width: 100%; }
   .figure figcaption { font-size: .55rem; padding: .65rem; }
   .steps { grid-template-columns: 1fr; }

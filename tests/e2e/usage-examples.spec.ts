@@ -801,8 +801,8 @@ test(`on a ${PHONE_WIDTH}px touch screen one tap on Play moves the slideshow on 
   await context.close();
 });
 
-/** The phone's first screen: the card starts by here, and its first number is above the fold. */
-const PHONE_CARD_TOP_PX = 450;
+/** The phone's first screen: the card starts by here, and its first table row is above the examples row held at the screen's foot. */
+const PHONE_CARD_TOP_PX = 300;
 test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right after the heading, and holds still`, async ({ page }) => {
   await page.clock.install();
   await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
@@ -815,10 +815,13 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   const first = await card.evaluate(article => ({
     top: article.getBoundingClientRect().top,
     numberBottom: article.querySelector(".card-front .usage-measurement-stats strong")!.getBoundingClientRect().bottom,
+    rowBottom: article.querySelector(".card-front .card-table-preview tbody tr")!.getBoundingClientRect().bottom,
     scrolled: scrollY,
   }));
   expect(first.scrolled).toBe(0);
   expect(first.top).toBeLessThanOrEqual(PHONE_CARD_TOP_PX);
+  const row = (await carousel.getByRole("group", { name: "Choose a product example" }).boundingBox())!;
+  expect(first.rowBottom).toBeLessThanOrEqual(row.y);
   // The card says it is a sample on its own front, so a cropped screenshot still says so.
   await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
   await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
@@ -837,6 +840,20 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   await page.clock.runFor(ADVANCE_MS * 2);
   await expect(card).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+const NARROWEST_HEIGHT = 700;
+test(`at ${NARROWEST_WIDTH}x${NARROWEST_HEIGHT} the card's three numbers are above the examples row in the first screen`, async ({ page }) => {
+  await page.setViewportSize({ width: NARROWEST_WIDTH, height: NARROWEST_HEIGHT });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const numbers = carousel.getByRole("article", { name: "Clay card" }).locator(".card-front .usage-measurement-stats strong");
+  await expect(numbers).toHaveCount(3);
+  const row = (await carousel.getByRole("group", { name: "Choose a product example" }).boundingBox())!;
+  const bottoms = await numbers.evaluateAll(strongs => strongs.map(strong => strong.getBoundingClientRect().bottom));
+  expect(bottoms.filter(bottom => bottom > row.y)).toEqual([]);
+  expect(await page.evaluate(() => scrollY)).toBe(0);
 });
 
 /** How far a tapped chooser button may move when the card under it changes. */
