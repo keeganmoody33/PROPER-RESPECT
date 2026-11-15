@@ -18,6 +18,11 @@ const TERMINAL_RADIUS_PX = 10;
 const MARK_CONTRAST = 3;
 /** A border or rule must show against the card. */
 const BORDER_CONTRAST = 1.3;
+const TEXT_CONTRAST = 4.5;
+const SPIDER_BUTTON_HEIGHT_PX = 48, PILL_RADIUS_PX = 24, FIRECRAWL_RADIUS_PX = 10, FIRECRAWL_HEIGHT_PX = 36;
+/** First-screen fills in square pixels, measured 2026-11-15: Spider's white buttons and its green dots; GitHub's green button. */
+const SPIDER_WHITE_FILL = 20_213, SPIDER_GREEN_DOTS = 49, GITHUB_BUTTON_FILL = 8_908;
+const OPEN_PLACES_FIGURE_PX = 52, DOCKER_FIGURE_PX = 60;
 
 describe("the brand's feel, as measured traits", () => {
   it("stores the biggest number's face and colour, the second surface, its pattern, a dark inverse panel, the page's rule and its muted text", () => {
@@ -107,5 +112,64 @@ describe("what a card makes of the feel", () => {
   it("uses the site's muted text for captions only where it reads at 4.5:1 on the card", () => {
     expect(kit({ mutedText: "#58635b" })["--brand-card-muted"]).toBe("#58635b");
     expect(kit({ mutedText: "#aaaaaa" })["--brand-card-muted"]).toBeUndefined();
+  });
+
+  it("rounds a card with no measured panel as the site's buttons, when they are not pills", () => {
+    const square = { fill: "#f8fafc", label: "#0c0e13", radiusPx: 0, heightPx: SPIDER_BUTTON_HEIGHT_PX };
+    expect(kit({ primaryButton: square })["--brand-card-radius"]).toBe("0px");
+    expect(kit({ primaryButton: { ...square, radiusPx: PILL_RADIUS_PX } })["--brand-card-radius"]).toBeUndefined();
+    expect(kit({ primaryButton: square, panelRadiusPx: TERMINAL_RADIUS_PX })["--brand-card-radius"]).toBe("10px");
+  });
+
+  it("draws the chart in outline where the site fills less than a 40px box of its first screen with the mark colour, as Spider draws lines", () => {
+    const spider = brandCardKit(undefined, "#0c0e13", "#f8fafc", site({ signatureCandidates: [{ hex: "#3bde77", from: "heading highlight" }], fills: [{ hex: "#f8fafc", areaPx: SPIDER_WHITE_FILL }, { hex: "#3bde77", areaPx: SPIDER_GREEN_DOTS }] }));
+    expect([spider["--brand-card-chart"], spider["--brand-card-chart-tint"]]).toEqual(["#3bde77", "#143325"]);
+    const github = kit({ signatureCandidates: [{ hex: "#08872b", from: "primary call-to-action" }], fills: [{ hex: "#08872b", areaPx: GITHUB_BUTTON_FILL }] });
+    expect([github["--brand-card-chart"], github["--brand-card-chart-tint"]]).toEqual(["#08872b", undefined]);
+    // A chart drawn in the text colour, where no brand colour reads (n8n's pink), is no brand's line.
+    expect(kit({ signatureCandidates: [{ hex: "#ffbcca", from: "primary call-to-action" }], fills: [] })["--brand-card-chart-tint"]).toBeUndefined();
+  });
+
+  it("sets the site's big number on the highlight that hugs it, where the number reads 3:1 on it", () => {
+    const openPlaces = kit({ figures: [{ sizePx: OPEN_PLACES_FIGURE_PX, colour: "#5c480a", top: 0, font: { generic: "sans-serif" }, backdrop: "#f7e7a1" }] });
+    expect([openPlaces["--brand-card-number-colour"], openPlaces["--brand-card-number-backdrop"]]).toEqual(["#5c480a", "#f7e7a1"]);
+    expect(kit({ figures: [{ sizePx: OPEN_PLACES_FIGURE_PX, colour: "#f0e0a0", top: 0, font: { generic: "sans-serif" }, backdrop: "#f7e7a1" }] })["--brand-card-number-backdrop"]).toBeUndefined();
+  });
+});
+
+describe("the button's label", () => {
+  it("keeps the site's own label colour where deepening the fill a little makes it read 4.5:1, as white on Firecrawl's orange", () => {
+    const firecrawl = kit({ primaryButton: { fill: "#ff4c00", label: "#ffffff", radiusPx: FIRECRAWL_RADIUS_PX, heightPx: FIRECRAWL_HEIGHT_PX } });
+    expect(firecrawl["--brand-card-button-text"]).toBe("#ffffff");
+    expect(contrast(firecrawl["--brand-card-button-fill"]!, "#ffffff")).toBeGreaterThanOrEqual(TEXT_CONTRAST);
+    expect(firecrawl["--brand-card-button-fill"]).toBe("#d64000");
+    // Too far to deepen (white on a pale lime): the label gives way to one that reads, on the site's own fill.
+    const clay = kit({ primaryButton: { fill: "#cbd810", label: "#ffffff", radiusPx: FIRECRAWL_RADIUS_PX, heightPx: FIRECRAWL_HEIGHT_PX } });
+    expect([clay["--brand-card-button-fill"], clay["--brand-card-button-text"]]).toEqual(["#cbd810", INK]);
+  });
+});
+
+describe("the big number and the back's values", () => {
+  it("draws a number the site sets in a grey, or doesn't set at all, in the brand's mark where that reads 4.5:1 at any size", () => {
+    const docker = kit({ signatureCandidates: [{ hex: "#2560ff", from: "primary call-to-action" }], figures: [{ sizePx: DOCKER_FIGURE_PX, colour: "#000000", top: 0, font: { generic: "sans-serif" } }] });
+    expect(docker["--brand-card-number-colour"]).toBe("#2560ff");
+    expect(kit({ signatureCandidates: [{ hex: "#2560ff", from: "primary call-to-action" }] })["--brand-card-number-colour"]).toBe("#2560ff");
+    // A mark at 3:1 is a large number's floor, not a small one's: Cloudflare's orange on white leaves its grey number alone.
+    expect(kit({ signatureCandidates: [{ hex: "#ff5e1f", from: "logo" }], figures: [{ sizePx: DOCKER_FIGURE_PX, colour: "#262626", top: 0, font: { generic: "sans-serif" } }] })["--brand-card-number-colour"]).toBe("#262626");
+  });
+
+  it("sets the back's values in the front's number colour where it reads 4.5:1 on their panel, but not a highlight's ink", () => {
+    const github = kit({ signatureCandidates: [{ hex: "#08872b", from: "primary call-to-action" }], figures: [{ sizePx: DOCKER_FIGURE_PX, colour: "#08872b", top: 0, font: { generic: "monospace" } }], rule: { style: "solid", hex: "#d2d9d4" } });
+    expect(github["--brand-card-value-colour"]).toBe("#08872b");
+    expect(kit({ figures: [{ sizePx: DOCKER_FIGURE_PX, colour: "#ff4d00", top: 0, font: { generic: "sans-serif" } }] })["--brand-card-value-colour"]).toBeUndefined();
+    expect(kit({ figures: [{ sizePx: OPEN_PLACES_FIGURE_PX, colour: "#5c480a", top: 0, font: { generic: "sans-serif" }, backdrop: "#f7e7a1" }] })["--brand-card-value-colour"]).toBeUndefined();
+  });
+});
+
+
+describe("a dot pattern", () => {
+  it("is drawn as dots, not grid lines", () => {
+    const n8n = kit({ texture: { kind: "dots", pitchPx: 18, line: "#d9d9d9" } });
+    expect([n8n["--brand-card-pattern-dot"], n8n["--brand-card-pattern-line"], n8n["--brand-card-pattern-pitch"]]).toEqual(["#d9d9d9", undefined, "18px"]);
   });
 });

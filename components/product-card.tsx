@@ -28,7 +28,7 @@ import { UsageChart } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
 import { ProductBrandDetails } from "./product-brand-details";
 import { ProductBrandFonts, productBrandTypography } from "./product-brand-fonts";
-import { brandAccent, brandCardKit, brandMark, headlineAccentColour } from "@/src/domain/brand-kit";
+import { brandAccent, brandCardKit, brandMark, headlineAccentColour, slabLogo } from "@/src/domain/brand-kit";
 import type { BrandSiteTraits } from "@/src/domain/brand-site-traits";
 import { ownOriginImageUrl } from "@/src/domain/brand-image-url";
 import { officialProductIcon, type ProductIcon } from "@/src/domain/product-icons";
@@ -620,7 +620,14 @@ export function ProductCard({
   const accentColour = !brandPreview && headlineAccent && headlineSurface
     ? headlineAccentColour(brand, headlineSurface, { sizePx: headlineSize, weight: headlineWeight }, site) : undefined;
   const [failedLogoUrls, setFailedLogoUrls] = useState<string[]>([]);
-  const chosenLogo = cardLogo({ brand, verifiedAssets, icon: officialProductIcon(card.product), logoUrl: card.product.logoUrl, surface: appearance.surface, failed: failedLogoUrls });
+  // A stored wordmark that reads on the brand's colour slab shows straight on it (Cloudflare's); one that fails to load gives way to
+  // the card's usual logo, on the tile of the card's surface it then needs.
+  const slabWordmark = !verifiedAssets && !officialProductIcon(card.product) && appearance.style["--brand-card-slab"] ? slabLogo(brand, site) : undefined;
+  const slabWordmarkShows = brand && slabWordmark && !failedLogoUrls.includes(slabWordmark.url);
+  const chosenLogo: CardLogo = slabWordmarkShows
+    ? { url: slabWordmark.url, width: slabWordmark.width, height: slabWordmark.height, mode: slabWordmark.mode, provider: brand.provider, layout: "wordmark" }
+    : cardLogo({ brand, verifiedAssets, icon: officialProductIcon(card.product), logoUrl: card.product.logoUrl, surface: appearance.surface, failed: failedLogoUrls });
+  const logoTile = appearance.style["--brand-card-logo-tile"] ?? (slabWordmark && !slabWordmarkShows ? appearance.style["--brand-card-background"] : undefined);
   const logo = deferBrandAssets ? { ...chosenLogo, url: undefined } : chosenLogo;
   const wordmark = logo.layout === "wordmark";
   const markFailed = (url: string) => setFailedLogoUrls(urls => urls.includes(url) ? urls : [...urls, url]);
@@ -675,13 +682,15 @@ export function ProductCard({
     <article
       className="product-card"
       ref={articleRef}
-      style={{ ...appearance.style, ...typography, ...(isFlipped && frontHeight ? { minHeight: frontHeight } : {}) }}
+      style={{ ...appearance.style, ...(logoTile ? { "--brand-card-logo-tile": logoTile } : {}), ...typography, ...(isFlipped && frontHeight ? { minHeight: frontHeight } : {}) }}
       data-surface={appearance.surface}
       data-band={appearance.style["--brand-card-band"] ? "" : undefined}
       data-slab={appearance.style["--brand-card-slab"] ? "" : undefined}
       data-panel={appearance.style["--brand-card-panel"] ? "" : undefined}
-      data-logo-tile={appearance.style["--brand-card-logo-tile"] ? "" : undefined}
+      data-logo-tile={logoTile ? "" : undefined}
       data-slab-button={appearance.style["--brand-card-slab-button-fill"] ? "" : undefined}
+      data-marks={appearance.style["--brand-card-chart-tint"] ? "line" : undefined}
+      data-number-backdrop={appearance.style["--brand-card-number-backdrop"] ? "" : undefined}
       data-verified-brand={verifiedAssets?.productSlug}
       data-brand-revision={verifiedAssets?.revision}
       data-side={isFlipped ? "back" : "front"}

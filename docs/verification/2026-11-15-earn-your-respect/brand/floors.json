@@ -1,0 +1,946 @@
+{
+ "clay@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 24
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "github@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "cloudflare@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "docker@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "firecrawl@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "n8n@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "claude-code@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "exa@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "porkbun@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "spider@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "open-places@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "grok-bot@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "elicit@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "context-dev@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "clay@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Person",
+    "Work email",
+    "Waterfall",
+    "Job change"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 16.8
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Person",
+    "Work email",
+    "Waterfall",
+    "Job change"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "github@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "cloudflare@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "docker@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "firecrawl@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "n8n@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "claude-code@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "exa@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "porkbun@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "spider@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "open-places@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "grok-bot@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "elicit@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "context-dev@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "clay@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Person",
+    "Work email",
+    "Waterfall",
+    "Job change"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 16.8
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Person",
+    "Work email",
+    "Waterfall",
+    "Job change"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "github@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "cloudflare@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "docker@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "firecrawl@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "n8n@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "claude-code@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "exa@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "porkbun@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "spider@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "open-places@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "grok-bot@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "elicit@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ },
+ "context-dev@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": 32
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "numberPx": null
+  }
+ }
+}

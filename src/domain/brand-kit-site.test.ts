@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandCardKit, brandMark, contrast } from "./brand-kit";
+import { brandCardKit, brandMark, contrast, slabLogo } from "./brand-kit";
 import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "@/src/data/homepage-brands";
 
 /** Each homepage brand's kit with its measured site file, on the card colours the provider gave it. */
@@ -13,7 +13,8 @@ const kits = (key: string) => Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).ma
 
 describe("a brand without a site file", () => {
   it("gets exactly the kit it got before site files existed", () => {
-    // Recorded at 2ba6aa8, before any rule read a site file.
+    // Recorded at 2ba6aa8, before any rule read a site file. Since then one rule reaches a card with no site file: Firecrawl's stored
+    // white label, 3.3:1 on its orange, keeps its colour on that orange deepened 16%, rather than giving way to the card's text colour.
     expect(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, kit(slug, false)]))).toEqual({
     "clay": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "18px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "500", "--brand-card-chart": "#3859f9", "--brand-card-quiet-fill": "#f3f2ed", "--brand-card-quiet-text": "#000000" },
     "cloudflare": { "--brand-card-border": "#cfcfcf", "--brand-card-radius": "4px", "--brand-card-button-fill": "#ff5e1f", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "500", "--brand-card-chart": "#ff5e1f" },
@@ -21,7 +22,7 @@ describe("a brand without a site file", () => {
     "docker": { "--brand-card-border": "#ccced2", "--brand-card-radius": "18px", "--brand-card-button-fill": "#2560ff", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "500", "--brand-card-chart": "#2560ff", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#000000" },
     "elicit": { "--brand-card-border": "#c5c5c1", "--brand-card-radius": "8px", "--brand-card-button-fill": "#083d44", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "400", "--brand-card-chart": "#083d44" },
     "exa": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "4px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "4px", "--brand-card-button-weight": "500", "--brand-card-chart": "#1f40ed", "--brand-card-quiet-fill": "#1f40ed", "--brand-card-quiet-text": "#ffffff" },
-    "firecrawl": { "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ff4c00", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450", "--brand-card-chart": "#ff4c00", "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff" },
+    "firecrawl": { "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px", "--brand-card-button-fill": "#d64000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450", "--brand-card-chart": "#ff4c00", "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff" },
     "github": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "8px", "--brand-card-button-fill": "#08872b", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "6px", "--brand-card-button-weight": "500", "--brand-card-chart": "#0d6731" },
     "n8n": { "--brand-card-border": "#c8c8c8", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ffbcca", "--brand-card-button-text": "#212121", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#161616", "--brand-card-quiet-fill": "#d9d9d9", "--brand-card-quiet-text": "#161616" },
     "open-places": { "--brand-card-border": "#c8c7c1", "--brand-card-radius": "22px", "--brand-card-button-fill": "#3f5a2c", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "600", "--brand-card-chart": "#3f5a2c" },
@@ -34,14 +35,15 @@ describe("a brand without a site file", () => {
 describe("corners", () => {
   it("take the site's measured panel and button corners, square included, with a pill kept a pill", () => {
     expect(kits("--brand-card-radius")).toEqual({
-      // Context.dev's 25.2px and n8n's 34px panels are held to the card's 24px most. The five featured take the radius most of
-      // their boxed or shadowed panels' area (220px+ wide) is drawn with, measured 2026-11-15: Clay's 48px held to 24px, Docker's
-      // big 18px cards over its many small square boxes, Cloudflare square, GitHub 6px.
-      clay: "24px", "context-dev": "24px", n8n: "24px", docker: "18px", spider: "0px", exa: "6px", firecrawl: "20px", github: "6px", "open-places": "18px",
+      // Each takes the radius most of its boxed or shadowed panels' area (220px+ wide) is drawn with, measured 2026-11-15: Clay's
+      // 48px held to the card's 24px most, Docker's big 18px cards over its many small square boxes, Context.dev's 7px, GitHub 6px.
+      clay: "24px", "context-dev": "7px", docker: "18px", exa: "4px", firecrawl: "20px", github: "6px", "open-places": "18px", elicit: "20px",
+      // Spider's page has no boxed panel; its buttons are square, so its card is.
+      spider: "0px",
       // Cloudflare's panels are square, but its orange hero is a slab inset from the page with 16px corners: the card is that slab.
       cloudflare: "16px",
-      // No bordered panel was measured on Elicit's first screen, and Porkbun has no site file: the stored radius stays.
-      elicit: "8px", porkbun: "8px",
+      // n8n's page has no boxed panel and its buttons are pills, and Porkbun has no site file: the stored radius stays.
+      n8n: "8px", porkbun: "8px",
     });
     expect(kits("--brand-card-button-radius")).toEqual({
       clay: "12px", "context-dev": "999px", n8n: "999px", docker: "8px", spider: "0px", exa: "4px", firecrawl: "10px", github: "6px", "open-places": "999px",
@@ -57,8 +59,8 @@ describe("the button", () => {
       // The site's own call-to-action: Clay's lime, Context.dev's black pill, Elicit's lighter teal.
       clay: ["#cbd810", "#000000"], "context-dev": ["#000000", "#ffffff"], elicit: ["#026370", "#fcfcf8"],
       docker: ["#2560ff", "#ffffff"], exa: ["#000000", "#ffffff"], github: ["#08872b", "#ffffff"], n8n: ["#ffbcca", "#212121"], "open-places": ["#3f5a2c", "#ffffff"], spider: ["#f8fafc", "#0c0e13"],
-      // White on Firecrawl's orange is 3.3:1, under the 4.5:1 floor, so the label stays the card's text colour.
-      firecrawl: ["#ff4c00", "#262626"],
+      // White on Firecrawl's orange is 3.3:1, under the 4.5:1 floor: the site's white label stays, on its orange deepened 16% to 4.5:1.
+      firecrawl: ["#d64000", "#ffffff"],
       // Cloudflare's call-to-action is white on its orange hero and would vanish on the white card, so the fallback holds.
       cloudflare: ["#ff5e1f", "#262626"],
       porkbun: ["#ef7878", "#000000"],
@@ -113,19 +115,20 @@ describe("the small labels", () => {
     expect(kits("--brand-card-label-font")).toEqual({
       // Monospace where 10%+ of the small text in the first screen, outside the header, is: Firecrawl's; Docker's is Inter there,
       // and Cloudflare's first screen has no small labels at all (measured 2026-11-15), so its labels stay in its body face.
-      spider: mono, n8n: mono, firecrawl: mono,
-      clay: body, "context-dev": body, docker: body, exa: body, github: body, "open-places": body,
+      // Exa's first screen labels its controls in GeistMono capitals (LATENCY, CATEGORY), which the card can't load.
+      spider: mono, n8n: mono, firecrawl: mono, exa: mono,
+      clay: body, "context-dev": body, docker: body, github: body, "open-places": body,
       cloudflare: undefined, elicit: undefined, porkbun: undefined,
     });
     expect(kits("--brand-card-label-case")).toEqual({
-      spider: "uppercase", n8n: "uppercase",
+      spider: "uppercase", n8n: "uppercase", exa: "uppercase",
       // Clay's first screen sets its small labels as typed; the capitals measured before came from the whole page, further down.
-      clay: "none", "context-dev": "none", docker: "none", exa: "none", firecrawl: "none", github: "none", "open-places": "none", cloudflare: "none",
+      clay: "none", "context-dev": "none", docker: "none", firecrawl: "none", github: "none", "open-places": "none", cloudflare: "none",
       // Elicit's site was measured but no label case: as typed, not the house uppercase. Porkbun has no site file.
       elicit: "none", porkbun: undefined,
     });
     expect(kits("--brand-card-label-tracking")).toEqual({
-      spider: "0.14em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "-0.011em", exa: "-0.02em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
+      spider: "0.16em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "-0.011em", exa: "0.08em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
       cloudflare: undefined, elicit: undefined, porkbun: undefined,
     });
   });
@@ -165,9 +168,9 @@ describe("the hero band", () => {
     expect([paleKit["--brand-card-band-large-text"], paleKit["--brand-card-band-text"]]).toEqual(["#262626", "#262626"]);
   });
 
-  it("sets the logo on a tile of the card's surface when the logo's own colour would vanish into the slab", () => {
-    // Cloudflare's cloud is #ff5f08 on a #ff5e1f slab; Clay's and Docker's logos read on theirs.
-    expect(kits("--brand-card-logo-tile")).toEqual(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, slug === "cloudflare" ? "#ffffff" : undefined])));
+  it("needs no logo tile on any homepage slab", () => {
+    // Cloudflare's cloud is #ff5f08 on a #ff5e1f slab, but its stored wordmark alone reads there (below); Clay's and Docker's logos read on theirs.
+    expect(kits("--brand-card-logo-tile")).toEqual(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, undefined])));
   });
 
   it("gives a button on the slab the card's surface when the brand's own fill would vanish into it, as Cloudflare's hero button is white", () => {
@@ -176,5 +179,23 @@ describe("the hero band", () => {
       return fill ? [[slug, [fill, label]]] : [];
     }));
     expect(onSlab).toEqual({ cloudflare: ["#ffffff", "#262626"] });
+  });
+});
+
+describe("the logo on the slab", () => {
+  const WORDMARK_ONLY = "https://media.brand.dev/fa417a46-2a7a-4fef-b0fa-3dda3d2bb3c8.svg";
+  it("shows a stored wordmark straight on the slab where its inks read 3:1 there: Cloudflare's black wordmark on its orange, with no tile", () => {
+    expect(slabLogo(HOMEPAGE_BRANDS.cloudflare, HOMEPAGE_SITE_TRAITS.cloudflare)?.url).toBe(WORDMARK_ONLY);
+    expect(kit("cloudflare")["--brand-card-logo-tile"]).toBeUndefined();
+  });
+
+  it("keeps the logo's tile where no stored wordmark reads on the slab", () => {
+    const site = HOMEPAGE_SITE_TRAITS.cloudflare;
+    const withoutWordmark = { ...site, traits: { ...site.traits, logoInks: { ...site.traits.logoInks!, value: site.traits.logoInks!.value.filter(logo => logo.width !== 719) } } };
+    expect(slabLogo(HOMEPAGE_BRANDS.cloudflare, withoutWordmark)).toBeUndefined();
+    const brand = HOMEPAGE_BRANDS.cloudflare, { background, text } = brand.styleguide!.colors;
+    expect(brandCardKit(brand, background!, text!, withoutWordmark)["--brand-card-logo-tile"]).toBe("#ffffff");
+    // A site with no colour slab shows no slab logo.
+    expect(slabLogo(HOMEPAGE_BRANDS.github, HOMEPAGE_SITE_TRAITS.github)).toBeUndefined();
   });
 });

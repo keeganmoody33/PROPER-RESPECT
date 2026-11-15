@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "open-places",
   "canonicalDomain": "openplaces.practicebase.io",
-  "measuredAt": "2026-11-14T12:33:57.204Z",
+  "measuredAt": "2026-11-15T09:33:00.743Z",
   "url": "https://openplaces.practicebase.io/",
   "viewport": {
     "width": 1440,
@@ -93,6 +93,118 @@
         "kind": "none"
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Figtree",
+        "generic": "sans-serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#5c480a",
+      "from": "largest number"
+    },
+    "numberBackdrop": {
+      "value": "#f7e7a1",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#eef6e3",
+          "areaPx": 281944
+        },
+        {
+          "hex": "#ffffff",
+          "areaPx": 216812
+        },
+        {
+          "hex": "#efece3",
+          "areaPx": 12131
+        },
+        {
+          "hex": "#3f5a2c",
+          "areaPx": 7731
+        },
+        {
+          "hex": "#f7e7a1",
+          "areaPx": 6957
+        },
+        {
+          "hex": "#d0e3ba",
+          "areaPx": 200
+        },
+        {
+          "hex": "#b4d395",
+          "areaPx": 200
+        },
+        {
+          "hex": "#8fba6c",
+          "areaPx": 200
+        },
+        {
+          "hex": "#557d39",
+          "areaPx": 200
+        },
+        {
+          "hex": "#273a19",
+          "areaPx": 200
+        }
+      ],
+      "from": "first screen"
+    },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 256,
+          "height": 256,
+          "inks": [
+            {
+              "hex": "#0e7351",
+              "share": 0.247
+            },
+            {
+              "hex": "#bc7245",
+              "share": 0.162
+            },
+            {
+              "hex": "#110c2c",
+              "share": 0.142
+            },
+            {
+              "hex": "#0e5e45",
+              "share": 0.101
+            },
+            {
+              "hex": "#fbedc6",
+              "share": 0.078
+            },
+            {
+              "hex": "#0e4437",
+              "share": 0.076
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
+    "panelFill": {
+      "value": "#eef6e3",
+      "from": "second large surface"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#e7e3d8"
+      },
+      "from": "most common border"
+    },
+    "mutedText": {
+      "value": "#676b5f",
+      "from": "secondary text on the page background"
     }
   }
 }
