@@ -1958,11 +1958,13 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 @container (max-width: 27.5rem) {
   .card-table-preview :is(table, caption, tbody, tr, th, td) { display: block; }
   .card-table-preview thead { clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
-  .card-table-preview tbody tr { border-top: 1px solid var(--table-rule); padding: .45rem .6rem; }
+  .card-table-preview tbody tr { border-top: 1px solid var(--table-rule); padding: .35rem .6rem; }
   .card-table-preview tbody tr > * { border: 0; padding: 0; }
-  .card-table-preview tbody tr > :first-child { color: var(--brand-card-text, currentColor); padding: 0 0 .2rem; }
+  .card-table-preview tbody tr > :first-child { color: var(--brand-card-text, currentColor); padding: 0 0 .1rem; }
   .card-table-preview tbody tr > :first-child::before { display: none; }
-  .card-table-preview tbody td { column-gap: .5rem; display: grid; grid-template-columns: 5.2rem minmax(0, 1fr); padding-top: .15rem; }
+  /* The person and their title share a line where they fit, the title wrapping whole beneath the name where they don't. */
+  .card-table-preview tbody th > .table-cell-value { align-items: baseline; column-gap: .5rem; display: flex; flex-wrap: wrap; }
+  .card-table-preview tbody td { column-gap: .5rem; display: grid; grid-template-columns: 5.2rem minmax(0, 1fr); padding-top: .1rem; }
   .card-table-preview tbody td::before { color: var(--table-ink); content: attr(data-label) / ""; }
 }
 @media (prefers-reduced-motion: no-preference) { .card-table-preview :is(th, td) { transition: background-color .4s ease, color .4s ease; } }
@@ -2010,6 +2012,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
      its spare height evenly from the header down, and its last line still sits on the card's foot. */
   .card-back-content { gap: 0.35rem; padding-block: 0 0; }
   .card-back-content::before { content: ""; }
+  /* A front with a stacked table sets its parts closer, so its first row clears the examples bar and the back, held to the front's
+     height, has no wide band to fill. */
+  .card-front:has(.card-table-preview) { gap: 0.6rem; }
   .product-card .card-back-content > *, .product-card[data-slab] .card-back .card-back-content > blockquote { margin-block: 0; }
   .card-back { gap: 0; }
   .card-back .activity-module { gap: 0.35rem; padding-block: 0.3rem 0; }
