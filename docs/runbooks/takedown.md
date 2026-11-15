@@ -110,7 +110,8 @@ dashboard for production.
 2. In **Data → publishedProfiles**, open the document whose `handle` is the
    reported handle. Under `profile.cards`, find the card whose
    `product.name` is the reported product, whose `credit` is the reported
-   credit, and whose `headline` starts with the reported headline. One owner
+   credit, and whose `headline` starts with the reported headline (drop a
+   trailing "…" first: it marks where the headline was cut). One owner
    can publish two cards for the same product, so match all three. Delete
    that card's `credit` field and leave everything else as it is.
 3. Open `https://proper-respect.com/<handle>` in a private window. The card
