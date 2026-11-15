@@ -22,8 +22,8 @@ export type AssociatedAccountEvidence = {
   url?: string;
 };
 
-const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const GITHUB_MARKETING_PATHS = new Set([
+export const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+export const GITHUB_MARKETING_PATHS = new Set([
   "about", "apps", "codespaces", "collections", "copilot", "customer-stories",
   "enterprise", "events", "explore", "features", "issues", "join", "login",
   "marketplace", "new", "notifications", "organizations", "orgs", "pricing",

@@ -7,13 +7,9 @@ import { usageLinkSchema, type UsageLink } from "./usage-links";
 import { productBrandSnapshotSchema } from "./product-brand";
 import { relationshipLevelSchema, type RelationshipLevel } from "./relationship-level";
 import { listedUses, productUsesSchema, type ProductUses } from "./product-uses";
+import { handleSchema } from "./handle.ts";
 
-export const handleSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(39)
-  .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/);
+export { handleSchema };
 
 const statusSchema = z.enum(["ACTIVE", "TESTING", "ARCHIVED"]);
 const linkTypeSchema = z.enum([
