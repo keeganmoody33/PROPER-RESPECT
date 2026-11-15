@@ -2,6 +2,7 @@ import type { ActivityModule } from "./public-profile";
 import { dayMonthYear } from "./format-period";
 import { isHttpUrl } from "./http-url";
 import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
+import { byDate } from "./chart-bars";
 
 type Cadence = "day" | "week" | "month";
 
@@ -62,8 +63,7 @@ export type NormalizedSeries = Readonly<{
 }>;
 
 export function normalizeSeries(points: readonly Point[], unit: string | undefined): NormalizedSeries {
-  const byDate = new Map(points.map(point => [point.date, point.value]));
-  const sorted = [...byDate].sort(([a], [b]) => a.localeCompare(b)).map(([date, value]) => ({ date, value }));
+  const sorted = byDate(points);
   const cadence = seriesCadence(unit);
   const contiguous = Boolean(cadence) && sorted.every((point, index) => index === 0 || nextPeriod(sorted[index - 1].date, point.date, cadence!));
   const decimals = Math.min(MAX_DECIMALS, Math.max(0, ...sorted.map(point => (String(point.value).split(".")[1] ?? "").length)));
