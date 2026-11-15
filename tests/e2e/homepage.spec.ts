@@ -43,7 +43,8 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await expect(page.locator("#page-content")).toBeFocused();
   // The examples come right after the heading, in the page's order as on a phone's screen; the call to action follows them.
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Previous example" })).toBeFocused();
+  // A phone's examples row starts at Play; a wider screen's controls start at the arrows.
+  await expect(page.getByRole("button", { name: width > 600 ? "Previous example" : "Play slideshow" })).toBeFocused();
   const start = page.getByRole("link", { name: "Start your collection", exact: true }).first();
   for (let stops = 0; stops < MAX_TAB_STOPS_TO_START && !(await start.evaluate(link => link === document.activeElement)); stops++) await page.keyboard.press("Tab");
   await expect(start).toBeFocused();

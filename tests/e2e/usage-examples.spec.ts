@@ -1,6 +1,8 @@
 import { expect, test, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+/** The widest screen that shows a phone's chooser row, with Play and no arrows (product-example.module.css). */
+const PHONE_ONLY_MAX_PX = 600;
 for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and caveats distinct at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -8,10 +10,13 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("Published usage numbers");
-  await expect(carousel.getByText("1 / 5", { exact: true })).toBeVisible();
+  // A phone's row keeps the names and Play; the arrows and count are for wider screens, where the row has room.
+  const arrows = width > PHONE_ONLY_MAX_PX;
+  const count = carousel.getByText("1 / 5", { exact: true });
+  await (arrows ? expect(count).toBeVisible() : expect(count).toBeHidden());
   // Opening the rest shows them; only picking one of them puts all fourteen in play.
   await openMoreExamples(carousel);
-  await expect(carousel.getByText("1 / 5", { exact: true })).toBeVisible();
+  await (arrows ? expect(count).toBeVisible() : expect(count).toBeHidden());
   await carousel.getByRole("button", { name: "GitHub", exact: true }).click();
   await expect(carousel.getByRole("article", { name: "GitHub card" })).toContainText("contributions");
   const calendar = carousel.locator(".card-front .contribution-calendar");
@@ -52,8 +57,9 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("A year of contributions");
   await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
-  // The controls sit above the card, so picking another example never moves them.
-  const controlsTop = () => carousel.getByRole("button", { name: "Next example" }).evaluate(element => element.getBoundingClientRect().top + scrollY);
+  // Picking another example never moves the controls on the screen: above the card on a wide one, held at the foot on a phone.
+  const controlsTop = () => carousel.getByRole("button", { name: "Pause slideshow" }).or(carousel.getByRole("button", { name: "Play slideshow" }))
+    .evaluate((element, phone) => Math.round(element.getBoundingClientRect().top + (phone ? 0 : scrollY)), !arrows);
   const githubControls = await controlsTop();
   // The top line and button are typed as written; each card's measured site, or the house default, sets their case.
   for (const [name, text, labelCase, buttonCase] of [
@@ -97,10 +103,12 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     await card.getByRole("button", { name: "Close details" }).click();
   }
   // With every example open, the arrows run through all fourteen and wrap.
-  await carousel.getByRole("button", { name: "Next example" }).click();
-  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
-  await carousel.getByRole("button", { name: "Previous example" }).click();
-  await expect(carousel.getByRole("article", { name: "Context.dev card" })).toBeVisible();
+  if (arrows) {
+    await carousel.getByRole("button", { name: "Next example" }).click();
+    await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+    await carousel.getByRole("button", { name: "Previous example" }).click();
+    await expect(carousel.getByRole("article", { name: "Context.dev card" })).toBeVisible();
+  } else await carousel.getByRole("button", { name: "Context.dev", exact: true }).click();
   await carousel.getByRole("button", { name: "Details", exact: true }).click();
   await expect(carousel.getByRole("button", { name: "Close details" })).toBeVisible();
   await carousel.getByRole("button", { name: "Clay", exact: true }).click();
@@ -681,6 +689,42 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await page.clock.runFor(ADVANCE_MS * 2);
   await expect(card).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+/** How far a tapped chooser button may move when the card under it changes. */
+const MAX_CHOOSER_SHIFT_PX = 20;
+for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px picking an example from the chooser shows its card in view, and the tapped name stays put`, async ({ page }) => {
+  await page.setViewportSize({ width, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const chooser = carousel.getByRole("group", { name: "Choose a product example" });
+  // The chooser is one row, held at the foot of the screen while the examples are in view, so it is always under the thumb.
+  const row = (await chooser.boundingBox())!;
+  expect(row.height).toBeLessThanOrEqual(MIN_TAP_PX + 8);
+  expect(row.y + row.height).toBeGreaterThan(PHONE_HEIGHT - MIN_TAP_PX - 16);
+  expect(row.y + row.height).toBeLessThanOrEqual(PHONE_HEIGHT);
+  await openMoreExamples(carousel);
+  const pick = async (name: string) => {
+    const toggle = chooser.getByRole("button", { name, exact: true });
+    await toggle.scrollIntoViewIfNeeded();
+    const before = (await toggle.boundingBox())!.y;
+    await toggle.click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await expect(card).toBeVisible();
+    const top = (await card.boundingBox())!.y;
+    expect(top, name).toBeGreaterThanOrEqual(0);
+    expect(top, name).toBeLessThanOrEqual(PHONE_HEIGHT / 2);
+    expect(Math.abs((await toggle.boundingBox())!.y - before), name).toBeLessThanOrEqual(MAX_CHOOSER_SHIFT_PX);
+  };
+  for (const name of ["n8n", "Context.dev", "Clay"]) await pick(name);
+  // Read down a long card, then pick another: the new card's top comes into view and the row stays under the thumb.
+  await page.evaluate(() => scrollBy(0, 600));
+  await pick("GitHub");
+  await page.evaluate(() => scrollBy(0, 400));
+  await pick("Cloudflare");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

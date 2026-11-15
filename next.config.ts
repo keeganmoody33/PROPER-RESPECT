@@ -3,6 +3,8 @@ import { securityHeaderRules } from "./src/server/security-headers";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // The homepage holds its examples row at a phone's foot, where the dev badge would sit on its first name. Errors still show.
+  devIndicators: false,
   async headers() {
     // Later rules win for the same key, so the page-specific ones follow these.
     return [...securityHeaderRules({

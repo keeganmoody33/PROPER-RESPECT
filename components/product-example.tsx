@@ -16,9 +16,9 @@ const ONE_COLUMN = "(max-width: 900px)";
 /** "auto" follows the visitor's motion preference; a press of play or pause, or picking an example, is their own choice. */
 type PlayChoice = "auto" | "playing" | "paused";
 
-/** Whether any of the element is on screen; false until the browser says so. */
-function useInView(ref: RefObject<HTMLElement | null>): boolean {
-  const [inView, setInView] = useState(false);
+/** Whether any of the element is on screen; undefined until the browser says. */
+function useInView(ref: RefObject<HTMLElement | null>): boolean | undefined {
+  const [inView, setInView] = useState<boolean>();
   useEffect(() => {
     const element = ref.current;
     if (!element || typeof IntersectionObserver === "undefined") return;
@@ -43,7 +43,8 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const chooserId = useId();
   const stageRef = useRef<HTMLDivElement>(null);
   // Nobody watches a slideshow below the fold: it holds still until the visitor reaches it, and each arrival starts a whole turn.
-  const inView = useInView(stageRef);
+  const seen = useInView(stageRef);
+  const inView = seen === true;
   const playing = choice === "playing" || (choice === "auto" && !reducedMotion && !oneColumn);
   const advancing = playing && !hovered && !focused && inView;
   // The slideshow and its count stay with the featured examples until the visitor picks one of the others; after that, all of them.
@@ -56,6 +57,22 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const upcoming = (index + 1) % inPlay;
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([index, upcoming]));
   if (!revealed.has(index) || !revealed.has(upcoming)) setRevealed(new Set([...revealed, index, upcoming]));
+
+  // In one column the row is held at the screen's foot while any of the card is on screen; a pick from it brings the new card's
+  // top into view when it is above the screen or below its middle, so the name just tapped doesn't move.
+  // The examples sit in a phone's first screen, so the row is held from the first paint until the browser says they've left it.
+  const held = oneColumn && seen !== false;
+  const pickedRef = useRef(false);
+  useEffect(() => {
+    if (!pickedRef.current) return;
+    pickedRef.current = false;
+    const slide = stageRef.current?.querySelector<HTMLElement>("[data-current=true]");
+    const card = slide?.querySelector("article");
+    if (!held || !slide || !card) return;
+    const [cardTop, slideTop] = [card.getBoundingClientRect().top, slide.getBoundingClientRect().top];
+    if (cardTop >= 0 && cardTop <= innerHeight / 2) return;
+    scrollBy({ top: slideTop, behavior: reducedMotion ? "instant" : "smooth" });
+  }, [index, held, reducedMotion]);
 
   useEffect(() => {
     if (!advancing) return;
@@ -85,7 +102,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
     {item.card.product.name}<span id={`${chooserId}-${item.id}`} className="visually-hidden" aria-hidden="true">{item.capability}</span>
   </Toggle>;
 
-  return <section className={styles.carousel} aria-label="Product usage examples" aria-roledescription="carousel"
+  return <section className={styles.carousel} aria-label="Product usage examples" aria-roledescription="carousel" data-held={held ? "" : undefined}
     onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setFocused(true)} onBlur={leave}>
     {/* The controls sit above the chooser and the card, so they stay put while the frame below takes each card's own height. */}
     <div className={styles.header}>
@@ -100,7 +117,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
     {/* One tab stop across every shown toggle; arrow keys move between examples and a press picks one. The current example stays pressed. */}
     <Collapsible className={styles.chooser} open={more} onOpenChange={setMore}>
       <ToggleGroup className={styles.choices} aria-label="Choose a product example" value={[ordered[index].id]} deselectable={false}
-        onValueChange={value => { const next = ordered.findIndex(item => item.id === value[0]); if (next >= 0) { setChoice("paused"); setIndex(next); } }}>
+        onValueChange={value => { const next = ordered.findIndex(item => item.id === value[0]); if (next >= 0) { setChoice("paused"); pickedRef.current = true; setIndex(next); } }}>
         {featured.map(chooserToggle)}
         <CollapsiblePanel className={styles.more}>{ordered.slice(featured.length).map(chooserToggle)}</CollapsiblePanel>
       </ToggleGroup>

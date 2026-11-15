@@ -40,18 +40,34 @@
 @media (max-width: 600px) { .chooser, .choices { gap: .3rem; } .choices button, .moreTrigger { padding: .4rem .5rem; } }
 /* A phone's tap targets: every chooser toggle and control at least 44px. */
 @media (max-width: 480px) { .choices button, .controls button, .moreTrigger { min-height: 44px; min-width: 44px; } }
-/* One column (homepage.module.css): a compact header, then the card, then the chooser, so the card is in a phone's first screen. */
+/* One column (homepage.module.css): the card comes first, right under the heading, and the chooser with its controls is one row.
+   While any of the card is on screen the row is held at the foot of the screen, so a picked name stays where it was tapped and the
+   new card's top is brought into view above it; its place under the card stays reserved, so nothing moves when it is let go.
+   The row scrolls sideways inside itself, never the page. */
 @media (max-width: 900px) {
-  .carousel { display: flex; flex-direction: column; }
-  .header { order: 0; margin-bottom: .25rem; align-items: center; flex-wrap: nowrap; }
-  .header .label { flex: 1 1 auto; }
-  .stage { order: 1; }
-  .chooser { order: 2; margin: 1rem 0 0; }
-  .carousel > .label:last-child { order: 3; }
-  .controls { gap: .4rem; flex-wrap: nowrap; }
+  .carousel { --bar-height: 3.7rem; --bar-controls: 15rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto var(--bar-height) auto;
+    grid-template-areas: "stage stage" "chooser controls" "foot foot"; }
+  .header { display: contents; }
+  .header .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .stage { grid-area: stage; margin-bottom: .75rem; }
+  .chooser, .controls { align-items: center; background: var(--example-panel); border-top: 1px solid var(--control-line); box-sizing: border-box; height: var(--bar-height); padding: .4rem 0; }
+  /* Positioned, so the toggles' hidden descriptions are clipped with the row rather than widening the page. */
+  .chooser { grid-area: chooser; flex-wrap: nowrap; margin: 0; min-width: 0; position: relative; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .controls { grid-area: controls; gap: .4rem; flex-wrap: nowrap; justify-content: flex-end; padding-left: .4rem; }
+  .carousel[data-held] .chooser, .carousel[data-held] .controls { bottom: 0; position: fixed; z-index: 10; }
+  .carousel[data-held] .chooser { left: 0; padding-left: 1rem; right: var(--bar-controls); }
+  .carousel[data-held] .controls { padding-right: 1rem; right: 0; width: var(--bar-controls); }
+  .choices { flex-wrap: nowrap; }
+  .choices button, .moreTrigger { flex: none; white-space: nowrap; }
+  .carousel > .label:last-child { grid-area: foot; }
   .controls > span { min-width: 5ch; }
+  /* A control the held row would cover scrolls into view above it. */
+  .stage :is(a, button, [tabindex]) { scroll-margin-bottom: 4.5rem; }
 }
 @media (max-width: 600px) {
+  /* A phone's row keeps Play beside the names; the names step through the examples, so the arrows and count give way. */
+  .carousel { --bar-controls: 5.5rem; }
+  .controls > button:not(.play), .controls > span { display: none; }
   /* The words stay in the button's name; on a phone it shows Play or Pause. */
   .playWord, .longLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .shortLabel { display: inline; }
