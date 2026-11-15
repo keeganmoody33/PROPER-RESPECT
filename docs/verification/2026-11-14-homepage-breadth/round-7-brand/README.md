@@ -29,7 +29,7 @@ The script's automatic assertions: 67 passed, 4 failed, 9 untested. The failures
 | Cloudflare's orange from the card's top through the headline, white headline at 24px | `cloudflare-*.png`, e2e test | passed. White on `#ff5e1f` is 3.05:1 at 24px; eyebrow, Sample tag and arrow keep `#262626` at 4.95:1. |
 | Cloudflare's wordmark in white | `cloudflare-*.png` | not done. Making it white means recolouring the mark. It sits on a white tile instead, because its orange cloud matches the slab. |
 | Firecrawl's second headline phrase in orange | none | not done. It needs a new prop passed through `components/product-example.tsx`, which belongs to the other writer. |
-| Firecrawl's header at 390 | `firecrawl-390.png` | not done. The eyebrow still wraps to two lines. |
+| Firecrawl's header at 390 | e2e test (the pair predates this fix, commits 953d2ab and 8ae13d3) | passed. On a phone the Referral link tag takes its own row under the arrow, so the status line keeps one line at 390. At 320 it still wraps. |
 | Exa's 3,690 without gaps around the comma | e2e test | passed. The comma's box is 0.36em; it was 0.59em, a tabular figure's width. |
 | Clay's icon at 15 KB or less for a 2x screen | e2e test | passed. A 96px rendition from `/_next/image` is 2.6 KB; the original is 267 KB. |
 
@@ -75,8 +75,8 @@ Reads wrong: at 390 "Multi-stage build guide" wraps with a wide gap, which is th
 
 Reads right: the orange 5,520 and bars, the dotted-grid chart frame, the mono eyebrow, the orange Details button.
 
-Reads wrong: the headline is all black, where firecrawl.dev sets its second phrase in orange. At 390 the eyebrow wraps to
-"Weekly · since / 2025" beside the logo.
+Reads wrong: the headline is all black, where firecrawl.dev sets its second phrase in orange. The pair shows the eyebrow
+wrapping at 390; after 953d2ab it stays on one line there, and still wraps at 320.
 
 Assertions failed: the button label is `#262626`, where the site's is white. White on `#ff4c00` is under 4.5:1 at the
 button's 12px.
