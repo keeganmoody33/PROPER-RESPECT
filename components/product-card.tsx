@@ -1,6 +1,6 @@
 "use client";
 
-import { FRONT_MEASUREMENT_LIMIT, MeasurementLines, PublicMeasurements } from "./measurement-values";
+import { Figures, FRONT_MEASUREMENT_LIMIT, MeasurementLines, PublicMeasurements } from "./measurement-values";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
@@ -400,7 +400,7 @@ function ActivityPreview({ activity, pastUse, today, unreviewed = false, expande
       {unreviewed && <p className="card-evidence-review">Unreviewed evidence</p>}
       <p>
         {metric === undefined ? "No data points supplied" : <>
-          <strong>{number(metric.value)}</strong>{" "}
+          <strong><Figures text={number(metric.value)} /></strong>{" "}
           {metric.label}
         </>}
       </p>

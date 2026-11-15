@@ -1205,3 +1205,9 @@ test("a calendar of whole months lists them by name under a caption that carries
   expect($(".card-back .card-back-values").attr("data-short")).toBe("");
   expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["Dec15", "Jan16"]);
 });
+
+test("a big number's group separator is set apart from its tabular figures, so a font whose comma is figure-wide never reads 3 , 690", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "timeSeries", label: "Searches run", points: [{ date: "2026-09-15", value: 3690 }] } });
+  const number = $(".card-front .card-activity-preview > p").first().find("strong");
+  expect([number.text(), number.find(".figure-separator").map((_, mark) => $(mark).text()).get()]).toEqual(["3,690", [","]]);
+});

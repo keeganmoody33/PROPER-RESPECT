@@ -652,6 +652,21 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) test(`Cloudfl
   expect(slab.headline[2]).toBeGreaterThanOrEqual(LARGE_TEXT_CONTRAST);
 });
 
+test("Exa's 3,690 sets its comma at the font's own width, not a tabular figure's, so it never reads 3 , 690", async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
+  await carousel.getByRole("button", { name: "Exa", exact: true }).click();
+  const number = carousel.getByRole("article", { name: "Exa card" }).locator(".card-front .card-activity-preview > p").first().locator("strong");
+  await expect(number).toHaveText("3,690");
+  const widths = await number.evaluate(element => [...element.querySelectorAll(".figure-separator")].map(mark => mark.getBoundingClientRect().width / parseFloat(getComputedStyle(element).fontSize)));
+  // In Exa's tabular figures the comma is 0.59em, a figure's width; set in its own spacing its box is 0.36em.
+  expect(widths.map(width => Math.round(width * 100) / 100)).toEqual([0.36]);
+});
+
 /** Each word or number in a face's text that the layout breaks across lines ("1,1 / 00"), by name and face. */
 async function splitWords(card: Locator, face: "front" | "back") {
   return card.locator(`.card-${face}`).evaluate(element => [...element.querySelectorAll("*")]

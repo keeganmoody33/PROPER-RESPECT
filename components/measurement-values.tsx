@@ -26,6 +26,14 @@ export function measurementPeriodInWords(period: VisibleMeasurement["period"]) {
   }
 }
 
+/**
+ * A big number in tabular figures with its group separators set apart in the font's own spacing: some fonts' tabular set
+ * makes the comma as wide as a figure ("3 , 690"), and a separator is not a column of figures.
+ */
+export function Figures({ text }: { text: string }) {
+  return <>{text.split(/([,.])/).map((part, index) => index % 2 ? <span key={index} className="figure-separator">{part}</span> : part)}</>;
+}
+
 /** One published number with how it was recorded, as the card's back and the review screen show it. */
 export function MeasurementValue({ measurement }: { measurement: VisibleMeasurement }) {
   const synthetic = measurement.sample === "synthetic";
@@ -78,7 +86,7 @@ function MeasurementStats({ measurements }: { measurements: PublicMeasurement[] 
   return <section className="usage-measurement-public" aria-label="Reported usage measurements">
     <ul className="usage-measurement-stats">
       {shown.map((row, index) => <li key={index}>
-        <strong>{row.value === null ? "Unknown" : groupedDecimal(row.value)}</strong>
+        <strong>{row.value === null ? "Unknown" : <Figures text={groupedDecimal(row.value)} />}</strong>
         <span>{countedThing(row)}</span>
         {!shared && <small>{periods[index]}</small>}
         {mixed && row.sample === "synthetic" && <em className="usage-measurement-sample">Sample</em>}
