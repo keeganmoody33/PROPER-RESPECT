@@ -31,8 +31,11 @@ const DATE_LENGTH = "yyyy-mm-dd".length;
 
 /** Whether `asOf` is more than six months before `today` (a calendar date or an instant). */
 function staleBy(asOf: string, today: string): boolean {
-  const cutoff = new Date(`${today.slice(0, DATE_LENGTH)}T00:00:00Z`);
-  cutoff.setUTCMonth(cutoff.getUTCMonth() - STALE_PRICE_MONTHS);
+  const day = new Date(`${today.slice(0, DATE_LENGTH)}T00:00:00Z`);
+  const month = day.getUTCMonth() - STALE_PRICE_MONTHS;
+  // Day 0 of the month after is the target month's last day, so 31 Aug goes back to 28 Feb rather than rolling into March.
+  const lastDay = new Date(Date.UTC(day.getUTCFullYear(), month + 1, 0)).getUTCDate();
+  const cutoff = new Date(Date.UTC(day.getUTCFullYear(), month, Math.min(day.getUTCDate(), lastDay)));
   return asOf < cutoff.toISOString().slice(0, DATE_LENGTH);
 }
 

@@ -16,6 +16,17 @@ describe("how a cost reads on a card", () => {
     expect(costSummary({ ...monthly, asOf: "2026-03-02" }, { today: "2026-09-01" })).toBe("Costs $5/month · owner-reported");
     expect(costSummary(old, { today: "2026-06-01" })).toBe("Costs $5/month · owner-reported");
   });
+  it("counts six months back from a month's end to the last day of the shorter month, never past it", () => {
+    // 31 Aug less six months is 28 Feb, not 3 Mar: a price from 1 Mar is still within six months.
+    expect(costSummary({ ...monthly, asOf: "2026-03-01" }, { today: "2026-08-31" })).toBe("Costs $5/month · owner-reported");
+    expect(costSummary({ ...monthly, asOf: "2026-02-28" }, { today: "2026-08-31" })).toBe("Costs $5/month · owner-reported");
+    expect(costSummary({ ...monthly, asOf: "2026-02-27" }, { today: "2026-08-31" })).toBe("Costs $5/month · owner-reported · as of Feb 2026");
+    // A leap year's February has 29 days.
+    expect(costSummary({ ...monthly, asOf: "2028-02-29" }, { today: "2028-08-31" })).toBe("Costs $5/month · owner-reported");
+    expect(costSummary({ ...monthly, asOf: "2028-02-28" }, { today: "2028-08-31" })).toBe("Costs $5/month · owner-reported · as of Feb 2028");
+    expect(costSummary({ ...monthly, asOf: "2026-03-30" }, { today: "2026-09-30" })).toBe("Costs $5/month · owner-reported");
+    expect(costSummary({ ...monthly, asOf: "2026-03-29" }, { today: "2026-09-30" })).toBe("Costs $5/month · owner-reported · as of Mar 2026");
+  });
   it("never shows a price dated after today as current: the front leaves it out and the back says its date is in the future", () => {
     const future = { ...monthly, asOf: "2027-01-01" };
     expect(costSummary(future, { today: "2026-11-14" })).toBeUndefined();
