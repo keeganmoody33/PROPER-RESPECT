@@ -34,14 +34,15 @@ describe("a brand without a site file", () => {
 describe("corners", () => {
   it("take the site's measured panel and button corners, square included, with a pill kept a pill", () => {
     expect(kits("--brand-card-radius")).toEqual({
-      // Context.dev's 25.2px and n8n's 34px panels are held to the card's 24px most. The five featured take the radius most of
-      // their boxed or shadowed panels' area (220px+ wide) is drawn with, measured 2026-11-15: Clay's 48px held to 24px, Docker's
-      // big 18px cards over its many small square boxes, Cloudflare square, GitHub 6px.
-      clay: "24px", "context-dev": "24px", n8n: "24px", docker: "18px", spider: "0px", exa: "6px", firecrawl: "20px", github: "6px", "open-places": "18px",
+      // Each takes the radius most of its boxed or shadowed panels' area (220px+ wide) is drawn with, measured 2026-11-15: Clay's
+      // 48px held to the card's 24px most, Docker's big 18px cards over its many small square boxes, Context.dev's 7px, GitHub 6px.
+      clay: "24px", "context-dev": "7px", docker: "18px", exa: "4px", firecrawl: "20px", github: "6px", "open-places": "18px", elicit: "20px",
+      // Spider's page has no boxed panel; its buttons are square, so its card is.
+      spider: "0px",
       // Cloudflare's panels are square, but its orange hero is a slab inset from the page with 16px corners: the card is that slab.
       cloudflare: "16px",
-      // No bordered panel was measured on Elicit's first screen, and Porkbun has no site file: the stored radius stays.
-      elicit: "8px", porkbun: "8px",
+      // n8n's page has no boxed panel and its buttons are pills, and Porkbun has no site file: the stored radius stays.
+      n8n: "8px", porkbun: "8px",
     });
     expect(kits("--brand-card-button-radius")).toEqual({
       clay: "12px", "context-dev": "999px", n8n: "999px", docker: "8px", spider: "0px", exa: "4px", firecrawl: "10px", github: "6px", "open-places": "999px",
@@ -113,19 +114,20 @@ describe("the small labels", () => {
     expect(kits("--brand-card-label-font")).toEqual({
       // Monospace where 10%+ of the small text in the first screen, outside the header, is: Firecrawl's; Docker's is Inter there,
       // and Cloudflare's first screen has no small labels at all (measured 2026-11-15), so its labels stay in its body face.
-      spider: mono, n8n: mono, firecrawl: mono,
-      clay: body, "context-dev": body, docker: body, exa: body, github: body, "open-places": body,
+      // Exa's first screen labels its controls in GeistMono capitals (LATENCY, CATEGORY), which the card can't load.
+      spider: mono, n8n: mono, firecrawl: mono, exa: mono,
+      clay: body, "context-dev": body, docker: body, github: body, "open-places": body,
       cloudflare: undefined, elicit: undefined, porkbun: undefined,
     });
     expect(kits("--brand-card-label-case")).toEqual({
-      spider: "uppercase", n8n: "uppercase",
+      spider: "uppercase", n8n: "uppercase", exa: "uppercase",
       // Clay's first screen sets its small labels as typed; the capitals measured before came from the whole page, further down.
-      clay: "none", "context-dev": "none", docker: "none", exa: "none", firecrawl: "none", github: "none", "open-places": "none", cloudflare: "none",
+      clay: "none", "context-dev": "none", docker: "none", firecrawl: "none", github: "none", "open-places": "none", cloudflare: "none",
       // Elicit's site was measured but no label case: as typed, not the house uppercase. Porkbun has no site file.
       elicit: "none", porkbun: undefined,
     });
     expect(kits("--brand-card-label-tracking")).toEqual({
-      spider: "0.14em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "-0.011em", exa: "-0.02em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
+      spider: "0.16em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "-0.011em", exa: "0.08em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
       cloudflare: undefined, elicit: undefined, porkbun: undefined,
     });
   });

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "spider",
   "canonicalDomain": "spider.cloud",
-  "measuredAt": "2026-11-14T12:34:02.952Z",
+  "measuredAt": "2026-11-15T09:33:07.481Z",
   "url": "https://spider.cloud/",
   "viewport": {
     "width": 1440,
@@ -43,7 +43,7 @@
       "from": "small labels"
     },
     "labelTrackingEm": {
-      "value": 0.14,
+      "value": 0.16,
       "from": "small labels"
     },
     "primaryButton": {
@@ -81,10 +81,6 @@
       },
       "from": "secondary call-to-action"
     },
-    "panelRadiusPx": {
-      "value": 0,
-      "from": "bordered panels"
-    },
     "signature": {
       "value": "#3bde77",
       "from": "heading highlight"
@@ -94,6 +90,41 @@
         "kind": "none"
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Fraunces Variable",
+        "generic": "serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#f8fafc",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#f8fafc",
+          "areaPx": 20213
+        },
+        {
+          "hex": "#3bde77",
+          "areaPx": 49
+        }
+      ],
+      "from": "first screen"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#2b313c"
+      },
+      "from": "most common border"
+    },
+    "mutedText": {
+      "value": "#94a3b8",
+      "from": "secondary text on the page background"
     }
   }
 }

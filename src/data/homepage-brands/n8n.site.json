@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "n8n",
   "canonicalDomain": "n8n.io",
-  "measuredAt": "2026-11-14T12:33:47.381Z",
+  "measuredAt": "2026-11-15T09:32:52.036Z",
   "url": "https://n8n.io/",
   "viewport": {
     "width": 1440,
@@ -80,10 +80,6 @@
       },
       "from": "secondary call-to-action"
     },
-    "panelRadiusPx": {
-      "value": 34,
-      "from": "bordered panels"
-    },
     "signature": {
       "value": "#ffbcca",
       "from": "primary call-to-action"
@@ -93,6 +89,50 @@
         "kind": "none"
       },
       "from": "backdrop behind the first heading"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#f0f0f0",
+          "areaPx": 201264
+        },
+        {
+          "hex": "#212121",
+          "areaPx": 48960
+        },
+        {
+          "hex": "#e6e6e6",
+          "areaPx": 17499
+        },
+        {
+          "hex": "#ffbcca",
+          "areaPx": 12005
+        },
+        {
+          "hex": "#d9d9d9",
+          "areaPx": 6083
+        },
+        {
+          "hex": "#ffffff",
+          "areaPx": 2116
+        }
+      ],
+      "from": "first screen"
+    },
+    "panelFill": {
+      "value": "#f0f0f0",
+      "from": "second large surface"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#d9d9d9"
+      },
+      "from": "most common border"
+    },
+    "mutedText": {
+      "value": "#303030",
+      "from": "secondary text on the page background"
     }
   }
 }

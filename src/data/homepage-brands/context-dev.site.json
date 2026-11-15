@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "context-dev",
   "canonicalDomain": "context.dev",
-  "measuredAt": "2026-11-14T12:33:06.754Z",
+  "measuredAt": "2026-11-15T09:31:50.555Z",
   "url": "https://context.dev/",
   "viewport": {
     "width": 1440,
@@ -75,7 +75,7 @@
       "from": "secondary call-to-action"
     },
     "panelRadiusPx": {
-      "value": 25.2,
+      "value": 7,
       "from": "bordered panels"
     },
     "signature": {
@@ -87,6 +87,65 @@
         "kind": "none"
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "rethinkSans",
+        "generic": "sans-serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#2563eb",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#2563eb",
+          "areaPx": 239861
+        },
+        {
+          "hex": "#5182ef",
+          "areaPx": 101579
+        },
+        {
+          "hex": "#f7f8fa",
+          "areaPx": 58163
+        },
+        {
+          "hex": "#f8f8f8",
+          "areaPx": 32343
+        },
+        {
+          "hex": "#e9effd",
+          "areaPx": 11221
+        },
+        {
+          "hex": "#000000",
+          "areaPx": 6142
+        },
+        {
+          "hex": "#222222",
+          "areaPx": 4252
+        },
+        {
+          "hex": "#e5e7eb",
+          "areaPx": 2340
+        },
+        {
+          "hex": "#d97757",
+          "areaPx": 466
+        }
+      ],
+      "from": "first screen"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#b2b2b2"
+      },
+      "from": "most common border"
     }
   }
 }

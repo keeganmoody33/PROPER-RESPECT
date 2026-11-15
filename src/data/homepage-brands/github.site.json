@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "github",
   "canonicalDomain": "github.com",
-  "measuredAt": "2026-11-15T00:40:47.101Z",
+  "measuredAt": "2026-11-15T09:32:41.252Z",
   "url": "https://github.com/",
   "viewport": {
     "width": 1440,
@@ -98,6 +98,47 @@
     "numberColour": {
       "value": "#08872b",
       "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#f9fbf9",
+          "areaPx": 14524
+        },
+        {
+          "hex": "#08872b",
+          "areaPx": 8908
+        },
+        {
+          "hex": "#000000",
+          "areaPx": 2480
+        },
+        {
+          "hex": "#0377ff",
+          "areaPx": 1920
+        },
+        {
+          "hex": "#0fbf3e",
+          "areaPx": 960
+        },
+        {
+          "hex": "#c898fd",
+          "areaPx": 960
+        },
+        {
+          "hex": "#ff80d2",
+          "areaPx": 960
+        },
+        {
+          "hex": "#f2f5f3",
+          "areaPx": 576
+        },
+        {
+          "hex": "#0969da",
+          "areaPx": 1
+        }
+      ],
+      "from": "first screen"
     },
     "rule": {
       "value": {

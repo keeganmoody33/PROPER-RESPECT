@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "firecrawl",
   "canonicalDomain": "firecrawl.dev",
-  "measuredAt": "2026-11-15T00:41:21.640Z",
+  "measuredAt": "2026-11-15T09:32:30.937Z",
   "url": "https://firecrawl.dev/",
   "viewport": {
     "width": 1440,
@@ -87,6 +87,39 @@
     "numberColour": {
       "value": "#ff4d00",
       "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#ffffff",
+          "areaPx": 65160
+        },
+        {
+          "hex": "#ff4d00",
+          "areaPx": 43520
+        },
+        {
+          "hex": "#ff4c00",
+          "areaPx": 6096
+        },
+        {
+          "hex": "#ededed",
+          "areaPx": 5610
+        },
+        {
+          "hex": "#000000",
+          "areaPx": 1152
+        },
+        {
+          "hex": "#d97757",
+          "areaPx": 576
+        },
+        {
+          "hex": "#262626",
+          "areaPx": 324
+        }
+      ],
+      "from": "first screen"
     },
     "panelFill": {
       "value": "#ffffff",

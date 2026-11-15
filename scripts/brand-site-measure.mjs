@@ -43,6 +43,13 @@ export const PAGE_HELPERS = () => {
       if (a < 128) return { transparent: true };
       return { hex: `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}` };
     },
+    /** The opaque colour `css` paints over `under`: a translucent rule or dot reads as what it looks like on the page. */
+    blend(css, under) {
+      context.clearRect(0, 0, 1, 1); context.fillStyle = under; context.fillRect(0, 0, 1, 1);
+      context.fillStyle = "#000"; context.fillStyle = css; context.fillRect(0, 0, 1, 1);
+      const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+      return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+    },
     visible(element) {
       const box = element.getBoundingClientRect(), style = getComputedStyle(element);
       return box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < innerHeight && box.right > 0 && box.left < innerWidth
@@ -114,6 +121,10 @@ export function measureSite({ labelMonoShare, neutralChroma }) {
   site.surface = pageBackground;
   const inChrome = element => Boolean(element.closest("header, nav, [role=banner], [role=navigation]"));
   const ownText = element => [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE).map(node => node.textContent.trim()).join(" ").trim();
+  /** How much of a box shows in the first screen, in square pixels. */
+  const firstScreenArea = box => Math.max(0, Math.min(box.right, innerWidth) - Math.max(box.left, 0)) * Math.max(0, Math.min(box.bottom, innerHeight) - Math.max(box.top, 0));
+  /** A box that is, or holds, the site's header or navigation is chrome (a sidebar menu), not a surface its content sits on. */
+  const holdsChrome = element => inChrome(element) || Boolean(element.querySelector("header, nav, [role=banner], [role=navigation]"));
 
   // The site's text colour: of the colours carrying 20+ characters of plain text straight on the page background,
   // the one that stands off it most. A muted subtitle is by design the weaker one.
@@ -131,6 +142,7 @@ export function measureSite({ labelMonoShare, neutralChroma }) {
     .reduce((best, hex) => (!best || f.contrast(hex, pageBackground) > f.contrast(best, pageBackground) ? hex : best), undefined);
   set("text", textColor ? { hex: textColor } : undefined, textColor ? textMethod : "no 20+ characters of plain text straight on the page background");
   site.text = textColor;
+  site.pageText = textColor ?? f.color(getComputedStyle(document.body).color).hex;
   notes.textOnSurface = Object.fromEntries(onSurface);
 
   const prose = all("p").find(p => !inChrome(p) && p.innerText.trim().length >= 20)
@@ -249,60 +261,85 @@ export function measureSite({ labelMonoShare, neutralChroma }) {
       .map(([side, x]) => ({ x: Math.round(x), hex: f.color(style[`border${side}Color`]).hex })).filter(rule => rule.hex);
   });
 
-  // The largest number on the page: a text leaf that is a figure ("1,000+", "$5", "99.9%"), at its biggest font size.
+  // Every figure on the page ("1,000+", "$5", "99.9%", "591"), in any element: its size, colour and face, how far down the page it
+  // sits, and the highlight drawn tight behind it, if any. brand-site-traits picks the site's number from these.
   // https://regex101.com/?regex=%5E%5B%24%E2%82%AC%C2%A3%5D%3F%5Cd%5B%5Cd%2C.%5D*%5Cs%3F%5B%25%2BkKmMbBx%C3%97%5D*%24&testString=100M%2B%0A%245%0A99.9%25%0Aplan%202
   const FIGURE = /^[$€£]?\d[\d,.]*\s?[%+kKmMbBx×]*$/;
-  const figures = rendered("span, p, div, strong, b, h1, h2, h3, h4, dt, dd, td").filter(element => FIGURE.test(ownText(element)));
-  const biggest = figures.reduce((best, element) => (!best || parseFloat(getComputedStyle(element).fontSize) > parseFloat(getComputedStyle(best).fontSize) ? element : best), undefined);
-  if (biggest) {
-    const style = getComputedStyle(biggest), family = f.family(style.fontFamily);
-    site.number = { font: { family: family.name, generic: f.monospace(style.fontFamily, style.fontWeight) ? "monospace" : family.generic }, colour: f.color(style.color).hex };
-    notes.number = { text: ownText(biggest), size: style.fontSize, weight: style.fontWeight };
-  }
+  site.figures = rendered("body *").filter(element => !element.closest("svg") && FIGURE.test(ownText(element))).map(element => {
+    const style = getComputedStyle(element), box = element.getBoundingClientRect(), family = f.family(style.fontFamily), behind = opaque(element);
+    const backdrop = behind && behind.hex !== pageBackground ? behind.node.getBoundingClientRect() : undefined;
+    return {
+      text: ownText(element), sizePx: parseFloat(style.fontSize), colour: f.color(style.color).hex, top: Math.round(box.top),
+      font: { family: family.name, generic: f.monospace(style.fontFamily, style.fontWeight) ? "monospace" : family.generic },
+      // A highlight hugs its figure: its box is at most a few times the figure's. A larger one is the section the figure sits in.
+      backdrop: backdrop && backdrop.width * backdrop.height <= box.width * box.height * 6 ? behind.hex : undefined,
+    };
+  }).sort((a, b) => b.sizePx - a.sizePx).slice(0, 8);
 
-  // The second surface: of the large boxes (220x120px+) filled in something other than the page and the hero, the fill
-  // covering the most area. A fill the page's text can't be read on is a dark inverse panel, with its own text colour.
-  const heroHex = site.hero?.hex;
-  const fills = new Map();
+  // The large boxes (220x120px+) filled in something other than the page, by colour: their area, how much of it shows in the first
+  // screen and how much is chrome, and the largest one's text, border and corner. brand-site-traits picks the second surface from these.
+  const surfaceMap = new Map();
   for (const element of rendered("div, section, article, aside, pre, figure, main")) {
     const box = element.getBoundingClientRect();
     if (box.width < 220 || box.height < 120 || box.width > innerWidth * 0.98) continue;
     const fill = f.color(getComputedStyle(element).backgroundColor).hex;
-    // A surface is near-neutral (an orange block is a colour, not where data sits) and visibly off the page (1.05:1, so white on #f9fafb is not one).
-    if (!fill || fill === heroHex || f.chroma(fill) >= neutralChroma || f.contrast(fill, pageBackground) < 1.05) continue;
-    const entry = fills.get(fill) ?? { area: 0, element };
-    entry.area += box.width * box.height;
-    fills.set(fill, entry);
+    if (!fill || fill === pageBackground) continue;
+    const area = box.width * box.height, entry = surfaceMap.get(fill) ?? { hex: fill, area: 0, firstScreenArea: 0, chromeArea: 0, element, largest: 0 };
+    entry.area += area;
+    entry.firstScreenArea += firstScreenArea(box);
+    if (holdsChrome(element)) entry.chromeArea += area;
+    if (area > entry.largest) Object.assign(entry, { largest: area, element });
+    surfaceMap.set(fill, entry);
   }
-  const [secondFill, second] = [...fills].sort((a, b) => b[1].area - a[1].area)[0] ?? [];
-  const pageText = textColor ?? f.color(getComputedStyle(document.body).color).hex;
-  if (secondFill && pageText && f.contrast(pageText, secondFill) < 4.5) {
-    const style = getComputedStyle(second.element);
-    const border = parseFloat(style.borderTopWidth) >= 1 ? f.color(style.borderTopColor).hex : undefined;
+  site.surfaces = [...surfaceMap.values()].sort((a, b) => b.area - a.area).slice(0, 10).map(entry => {
+    const style = getComputedStyle(entry.element);
     // Its text: of the colours its text is set in, the one that reads best on it, since a muted prompt is not the panel's text.
-    const inks = [...second.element.querySelectorAll("*")].filter(element => ownText(element)).map(element => f.color(getComputedStyle(element).color).hex).filter(Boolean);
-    const ink = inks.reduce((best, hex) => (!best || f.contrast(hex, secondFill) > f.contrast(best, secondFill) ? hex : best), undefined);
-    site.inversePanel = { fill: secondFill, text: ink, border, radiusPx: f.radius(second.element).px };
-  } else if (secondFill) site.panelFill = secondFill;
-  notes.secondSurfaces = [...fills].map(([hex, entry]) => [hex, Math.round(entry.area)]).slice(0, 8);
+    const inks = [...entry.element.querySelectorAll("*")].filter(element => ownText(element)).map(element => f.color(getComputedStyle(element).color).hex).filter(Boolean);
+    const ink = inks.reduce((best, hex) => (!best || f.contrast(hex, entry.hex) > f.contrast(best, entry.hex) ? hex : best), undefined);
+    return {
+      hex: entry.hex, area: Math.round(entry.area), firstScreenArea: Math.round(entry.firstScreenArea), chromeArea: Math.round(entry.chromeArea),
+      ink, border: parseFloat(style.borderTopWidth) >= 1 ? f.color(style.borderTopColor).hex : undefined, radiusPx: f.radius(entry.element).px,
+    };
+  });
+  notes.secondSurfaces = site.surfaces.map(surface => [surface.hex, surface.area, surface.firstScreenArea]);
 
-  // A ruled pattern a box draws as repeating CSS gradients: lines (linear) or dots (radial), at the background-size pitch.
-  const patterned = rendered("body, div, section, main, article").map(element => ({ element, style: getComputedStyle(element) }))
+  // Every colour filled behind something in the first screen, buttons included, by the area it covers there: whether a site fills
+  // boxes with its brand colour or only draws lines and type in it.
+  const fillAreas = new Map();
+  for (const element of all("*")) {
+    const fill = f.color(getComputedStyle(element).backgroundColor).hex;
+    if (fill && fill !== pageBackground) fillAreas.set(fill, (fillAreas.get(fill) ?? 0) + firstScreenArea(element.getBoundingClientRect()));
+  }
+  site.fills = [...fillAreas].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([hex, area]) => ({ hex, areaPx: Math.round(area) }));
+
+  // A pattern a box draws as repeating CSS gradients: lines (linear) or dots (radial), at the background-size pitch, in the colour it
+  // shows on its box. The one covering most of the first screen, else the largest anywhere, marked as below the first screen.
+  const patterned = rendered("body, div, section, main, article").map(element => ({ element, style: getComputedStyle(element), box: element.getBoundingClientRect() }))
     .filter(({ style }) => /gradient/.test(style.backgroundImage) && /^\d+(\.\d+)?px/.test(style.backgroundSize))
-    .sort((a, b) => b.element.getBoundingClientRect().width * b.element.getBoundingClientRect().height - a.element.getBoundingClientRect().width * a.element.getBoundingClientRect().height)[0];
+    .sort((a, b) => firstScreenArea(b.box) - firstScreenArea(a.box) || b.box.width * b.box.height - a.box.width * a.box.height)[0];
   if (patterned) {
-    const colour = patterned.style.backgroundImage.match(/rgba?\([^)]+\)|#[0-9a-f]{3,8}/i)?.[0];
-    site.surfacePattern = { kind: patterned.style.backgroundImage.includes("radial") ? "dots" : "grid", pitchPx: Math.round(parseFloat(patterned.style.backgroundSize)), line: colour && f.color(colour).hex };
+    const colour = patterned.style.backgroundImage.match(/(?:rgba?|oklab|oklch)\([^)]+\)|#[0-9a-f]{3,8}/i)?.[0];
+    site.surfacePattern = {
+      kind: patterned.style.backgroundImage.includes("radial") ? "dots" : "grid", pitchPx: Math.round(parseFloat(patterned.style.backgroundSize)),
+      line: colour && f.blend(colour, opaque(patterned.element)?.hex ?? pageBackground), firstScreen: firstScreenArea(patterned.box) > 0,
+    };
   }
 
-  // The page's rule: the most common visible border, by style and colour.
-  const rules = rendered("div, section, article, aside, li, hr, table, td, th, header, footer, nav, a, span, button").flatMap(element => {
-    const style = getComputedStyle(element);
-    return ["Top", "Bottom"].filter(side => parseFloat(style[`border${side}Width`]) >= 1 && ["solid", "dashed"].includes(style[`border${side}Style`]))
-      .map(side => ({ style: style[`border${side}Style`], hex: f.color(style[`border${side}Color`]).hex })).filter(rule => rule.hex && rule.hex !== pageBackground);
-  });
-  const commonRule = mode(rules.map(rule => `${rule.style} ${rule.hex}`));
-  if (commonRule) { const [style, hex] = commonRule.split(" "); site.rule = { style, hex }; }
+  // Every visible top and bottom border, by style and the colour it shows on its own backdrop, and whether it edges a control (a link,
+  // button or field) or the layout. brand-site-traits takes the commonest layout rule as the page's.
+  const ruleCounts = new Map();
+  for (const element of rendered("div, section, article, aside, li, hr, table, td, th, header, footer, nav, a, span, button")) {
+    const style = getComputedStyle(element), under = opaque(element)?.hex ?? pageBackground;
+    const kind = element.closest("a, button, [role=button], input, select, label") ? "control" : "layout";
+    for (const side of ["Top", "Bottom"]) {
+      if (parseFloat(style[`border${side}Width`]) < 1 || !["solid", "dashed"].includes(style[`border${side}Style`])) continue;
+      const hex = f.blend(style[`border${side}Color`], under);
+      if (hex === under || hex === pageBackground) continue;
+      const key = `${style[`border${side}Style`]} ${hex} ${kind}`;
+      ruleCounts.set(key, (ruleCounts.get(key) ?? 0) + 1);
+    }
+  }
+  site.ruleCensus = [...ruleCounts].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([key, count]) => { const [style, hex, kind] = key.split(" "); return { style, hex, kind, count }; });
 
   // The secondary text colour: of the others carrying 20+ characters on the page background, the one carrying the most that still reads (4.5:1).
   site.mutedText = [...onSurface].filter(([hex, characters]) => hex !== textColor && characters >= 20 && f.contrast(hex, pageBackground) >= 4.5)

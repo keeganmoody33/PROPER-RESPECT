@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "exa",
   "canonicalDomain": "exa.ai",
-  "measuredAt": "2026-11-14T12:33:27.815Z",
+  "measuredAt": "2026-11-15T09:32:21.402Z",
   "url": "https://exa.ai/",
   "viewport": {
     "width": 1440,
@@ -33,17 +33,17 @@
     },
     "labelFont": {
       "value": {
-        "family": "ABCDiatype",
-        "generic": "sans-serif"
+        "family": "GeistMono",
+        "generic": "monospace"
       },
       "from": "small labels"
     },
     "labelCase": {
-      "value": "as typed",
+      "value": "uppercase",
       "from": "small labels"
     },
     "labelTrackingEm": {
-      "value": -0.02,
+      "value": 0.08,
       "from": "small labels"
     },
     "primaryButton": {
@@ -82,7 +82,7 @@
       "from": "secondary call-to-action"
     },
     "panelRadiusPx": {
-      "value": 6,
+      "value": 4,
       "from": "bordered panels"
     },
     "hero": {
@@ -90,6 +90,61 @@
         "kind": "none"
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Arizona",
+        "generic": "serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#111827",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#fafafa",
+          "areaPx": 190400
+        },
+        {
+          "hex": "#eef8ff",
+          "areaPx": 40960
+        },
+        {
+          "hex": "#f2f1f0",
+          "areaPx": 25314
+        },
+        {
+          "hex": "#000000",
+          "areaPx": 7233
+        },
+        {
+          "hex": "#f2f0ef",
+          "areaPx": 3804
+        },
+        {
+          "hex": "#f3f4f6",
+          "areaPx": 1024
+        }
+      ],
+      "from": "first screen"
+    },
+    "panelFill": {
+      "value": "#faf9f7",
+      "from": "second large surface"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#e2e2e4"
+      },
+      "from": "most common border"
+    },
+    "mutedText": {
+      "value": "#6b7280",
+      "from": "secondary text on the page background"
     }
   }
 }

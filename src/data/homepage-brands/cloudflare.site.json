@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "cloudflare",
   "canonicalDomain": "cloudflare.com",
-  "measuredAt": "2026-11-15T00:40:21.798Z",
+  "measuredAt": "2026-11-15T09:31:41.062Z",
   "url": "https://cloudflare.com/",
   "viewport": {
     "width": 1440,
@@ -87,6 +87,15 @@
     "numberColour": {
       "value": "#262626",
       "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#ff5e1f",
+          "areaPx": 1025280
+        }
+      ],
+      "from": "first screen"
     },
     "rule": {
       "value": {

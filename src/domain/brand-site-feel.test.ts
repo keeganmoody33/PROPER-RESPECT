@@ -18,6 +18,7 @@ const TERMINAL_RADIUS_PX = 10;
 const MARK_CONTRAST = 3;
 /** A border or rule must show against the card. */
 const BORDER_CONTRAST = 1.3;
+const SPIDER_BUTTON_HEIGHT_PX = 48, PILL_RADIUS_PX = 24;
 
 describe("the brand's feel, as measured traits", () => {
   it("stores the biggest number's face and colour, the second surface, its pattern, a dark inverse panel, the page's rule and its muted text", () => {
@@ -107,5 +108,12 @@ describe("what a card makes of the feel", () => {
   it("uses the site's muted text for captions only where it reads at 4.5:1 on the card", () => {
     expect(kit({ mutedText: "#58635b" })["--brand-card-muted"]).toBe("#58635b");
     expect(kit({ mutedText: "#aaaaaa" })["--brand-card-muted"]).toBeUndefined();
+  });
+
+  it("rounds a card with no measured panel as the site's buttons, when they are not pills", () => {
+    const square = { fill: "#f8fafc", label: "#0c0e13", radiusPx: 0, heightPx: SPIDER_BUTTON_HEIGHT_PX };
+    expect(kit({ primaryButton: square })["--brand-card-radius"]).toBe("0px");
+    expect(kit({ primaryButton: { ...square, radiusPx: PILL_RADIUS_PX } })["--brand-card-radius"]).toBeUndefined();
+    expect(kit({ primaryButton: square, panelRadiusPx: TERMINAL_RADIUS_PX })["--brand-card-radius"]).toBe("10px");
   });
 });

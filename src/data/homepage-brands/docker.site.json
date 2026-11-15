@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "docker",
   "canonicalDomain": "docker.com",
-  "measuredAt": "2026-11-15T00:40:28.937Z",
+  "measuredAt": "2026-11-15T09:31:58.209Z",
   "url": "https://docker.com/",
   "viewport": {
     "width": 1440,
@@ -104,6 +104,31 @@
     "numberColour": {
       "value": "#000000",
       "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#0f1117",
+          "areaPx": 537751
+        },
+        {
+          "hex": "#ffffff",
+          "areaPx": 108605
+        },
+        {
+          "hex": "#00084d",
+          "areaPx": 41760
+        },
+        {
+          "hex": "#2560ff",
+          "areaPx": 9314
+        },
+        {
+          "hex": "#000000",
+          "areaPx": 1520
+        }
+      ],
+      "from": "first screen"
     },
     "inversePanel": {
       "value": {

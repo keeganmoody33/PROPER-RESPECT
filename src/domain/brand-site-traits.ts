@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { oklchChroma } from "./oklab.ts";
+import { contrast } from "./wcag-contrast.ts";
+import { oklabDistance, oklchChroma } from "./oklab.ts";
 import { canonicalBrandDomainSchema } from "./product-brand.ts";
 
 /**
@@ -54,6 +55,9 @@ const MAX_PATTERN_PITCH_PX = 165;
 const patternSchema = z.object({ kind: z.enum(["grid", "dots"]), pitchPx: z.number().int().min(2).max(MAX_PATTERN_PITCH_PX), line: hexSchema }).strict();
 const inversePanelSchema = z.object({ fill: hexSchema, text: hexSchema, border: hexSchema.optional(), radiusPx: pxSchema.optional() }).strict();
 const ruleSchema = z.object({ style: z.enum(["solid", "dashed"]), hex: hexSchema }).strict();
+/** The most fills kept: enough for a page's buttons, panels and bands. */
+const MAX_FILLS = 12;
+const fillSchema = z.object({ hex: hexSchema, areaPx: z.number().int().min(0).max(MAX_VIEWPORT_PX * MAX_VIEWPORT_PX) }).strict();
 const located = <Value extends z.ZodType, From extends readonly [string, ...string[]]>(value: Value, from: From) =>
   z.object({ value, from: z.enum(from) }).strict();
 
@@ -72,6 +76,10 @@ const traitsSchema = z.object({
   hero: located(heroSchema, ["backdrop behind the first heading"]).optional(),
   numberFont: located(fontSchema, ["largest number"]).optional(),
   numberColour: located(hexSchema, ["largest number"]).optional(),
+  /** The highlight drawn tight behind the site's largest number (Open Places' yellow), when it has one. */
+  numberBackdrop: located(hexSchema, ["largest number"]).optional(),
+  /** The colours filled behind things in the first screen, by the area they cover there, largest first. */
+  fills: located(z.array(fillSchema).max(MAX_FILLS), ["first screen"]).optional(),
   panelFill: located(hexSchema, ["second large surface"]).optional(),
   surfacePattern: located(patternSchema, ["second large surface", "ruled columns"]).optional(),
   inversePanel: located(inversePanelSchema, ["dark panel"]).optional(),
@@ -111,10 +119,20 @@ export type SiteMeasurement = {
   panels?: readonly { px?: unknown; area?: unknown }[];
   /** Tall vertical lines in the first screen: a border's x position and colour. */
   verticalRules?: readonly { x?: unknown; hex?: unknown }[];
+  /** The page's text colour, else its body's: what a second surface's text is read against. */
+  pageText?: unknown;
+  /** Every figure on the page with its size, colour, face, top in the viewport and tight highlight; an older capture has only `number`. */
+  figures?: readonly { sizePx?: unknown; colour?: unknown; top?: unknown; font?: RawFont; backdrop?: unknown }[];
   number?: { font?: RawFont; colour?: unknown };
+  /** Large filled boxes by colour, with how much shows in the first screen and is chrome; an older capture has only `panelFill` or `inversePanel`. */
+  surfaces?: readonly { hex?: unknown; area?: unknown; firstScreenArea?: unknown; chromeArea?: unknown; ink?: unknown; border?: unknown; radiusPx?: unknown }[];
   panelFill?: unknown;
-  surfacePattern?: { kind?: unknown; pitchPx?: unknown; line?: unknown };
+  /** `firstScreen` false: the pattern was found only below the first screen. */
+  surfacePattern?: { kind?: unknown; pitchPx?: unknown; line?: unknown; firstScreen?: unknown };
   inversePanel?: { fill?: unknown; text?: unknown; border?: unknown; radiusPx?: unknown };
+  fills?: readonly { hex?: unknown; areaPx?: unknown }[];
+  /** Borders by style, colour and whether they edge a control or the layout; an older capture has only `rule`. */
+  ruleCensus?: readonly { style?: unknown; hex?: unknown; kind?: unknown; count?: unknown }[];
   rule?: { style?: unknown; hex?: unknown };
   mutedText?: unknown;
 };
@@ -190,11 +208,77 @@ function ruledColumns(raw: SiteMeasurement["verticalRules"]) {
   return kept(patternSchema, { kind: "grid", pitchPx, line });
 }
 function surfacePattern(raw: SiteMeasurement) {
-  const drawn = kept(patternSchema, raw.surfacePattern && { ...raw.surfacePattern, line: typeof raw.surfacePattern.line === "string" ? raw.surfacePattern.line.toLowerCase() : raw.surfacePattern.line });
+  const { firstScreen, ...measured } = raw.surfacePattern ?? {};
+  // A pattern found only below the first screen (n8n's dots on a dark band far down) is not the surface the site introduces itself on.
+  const drawn = firstScreen === false ? undefined : kept(patternSchema, raw.surfacePattern && { ...measured, line: typeof measured.line === "string" ? measured.line.toLowerCase() : measured.line });
   if (drawn) return { value: drawn, from: "second large surface" as const };
   const ruled = ruledColumns(raw.verticalRules);
   return ruled && { value: ruled, from: "ruled columns" as const };
 }
+const finite = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : undefined);
+
+/** A figure set clearly larger than body text: a smaller one is a caption's number (Open Places' 12.5px counts), not the site's big one. */
+const LARGE_FIGURE_PX = 20;
+/**
+ * The site's big number: the largest figure in the first screen, where the site introduces itself, else the largest anywhere,
+ * of those set at least 20px. With its face, its colour and the highlight drawn tight behind it.
+ */
+function bigNumber(raw: SiteMeasurement, viewportHeight: number) {
+  if (!raw.figures) return raw.number && { font: font(raw.number.font), colour: hex(raw.number.colour), backdrop: undefined };
+  const large = raw.figures.filter(figure => (finite(figure.sizePx) ?? 0) >= LARGE_FIGURE_PX);
+  const biggest = (figures: typeof large) => figures.reduce<typeof large[number] | undefined>((best, figure) => (!best || Number(figure.sizePx) > Number(best.sizePx) ? figure : best), undefined);
+  const chosen = biggest(large.filter(figure => (finite(figure.top) ?? Infinity) < viewportHeight)) ?? biggest(large);
+  return chosen && { font: font(chosen.font), colour: hex(chosen.colour), backdrop: hex(chosen.backdrop) };
+}
+
+/**
+ * A surface is visibly off the page at this contrast, so white on #f9fafb is not one; or, as a tint of another hue at nearly the
+ * page's lightness, at this OKLab distance (Open Places' pale green map panel on its cream page is 0.022).
+ */
+const MIN_SURFACE_STEP = 1.05, MIN_SURFACE_TINT = 0.02;
+/** At or over this OKLCH chroma a fill is a colour (an orange block), not a surface data sits on: the measurer's own threshold. */
+const SURFACE_MAX_CHROMA = 0.04;
+/** A box of 220x120px: this much of a dark surface must show in the first screen for it to speak for the site. */
+const MIN_FIRST_SCREEN_AREA = 220 * 120;
+const BODY_TEXT_CONTRAST = 4.5;
+/**
+ * The site's second surface: of its large near-neutral boxes off the page and the hero, and mostly not chrome (a sidebar menu), the
+ * one the first screen shows most of, then the one covering most of the page. A fill the page's text can't be read on is a dark inverse panel, and it counts only where the first screen
+ * already shows dark, in that panel or in a dark hero: a dark band far down a light page is not how the site looks.
+ */
+function secondSurface(raw: SiteMeasurement, heroHex: string | undefined): { panelFill?: string; inversePanel?: unknown } {
+  if (!raw.surfaces) return { panelFill: hex(raw.panelFill), inversePanel: raw.inversePanel && defined({ fill: hex(raw.inversePanel.fill), text: hex(raw.inversePanel.text), border: hex(raw.inversePanel.border), radiusPx: kept(pxSchema, rounded(raw.inversePanel.radiusPx, PX_PLACES)) }) };
+  const page = hex(raw.surface), text = hex(raw.pageText) ?? hex(raw.text);
+  const darkHero = heroHex !== undefined && text !== undefined && contrast(text, heroHex) < BODY_TEXT_CONTRAST;
+  const shown = (surface: typeof raw.surfaces[number]) => finite(surface.firstScreenArea) ?? 0;
+  for (const surface of [...raw.surfaces].sort((a, b) => shown(b) - shown(a) || (finite(b.area) ?? 0) - (finite(a.area) ?? 0))) {
+    const fill = hex(surface.hex), area = finite(surface.area) ?? 0;
+    if (!fill || !page || fill === heroHex || oklchChroma(fill) >= SURFACE_MAX_CHROMA) continue;
+    if (contrast(fill, page) < MIN_SURFACE_STEP && oklabDistance(fill, page) < MIN_SURFACE_TINT) continue;
+    if ((finite(surface.chromeArea) ?? 0) * 2 > area) continue;
+    if (!text || contrast(text, fill) >= BODY_TEXT_CONTRAST) return { panelFill: fill };
+    if (!darkHero && (finite(surface.firstScreenArea) ?? 0) < MIN_FIRST_SCREEN_AREA) continue;
+    return { inversePanel: defined({ fill, text: hex(surface.ink), border: hex(surface.border), radiusPx: kept(pxSchema, rounded(surface.radiusPx, PX_PLACES)) }) };
+  }
+  return {};
+}
+
+/** The page's rule: its commonest layout border, since a run of outlined links and buttons is a control's edge, not a rule; else its commonest border. */
+function pageRule(raw: SiteMeasurement) {
+  if (!raw.ruleCensus) return kept(ruleSchema, raw.rule && { style: raw.rule.style, hex: hex(raw.rule.hex) });
+  const rules = [...raw.ruleCensus].sort((a, b) => (finite(b.count) ?? 0) - (finite(a.count) ?? 0));
+  const chosen = rules.find(rule => rule.kind === "layout") ?? rules[0];
+  return kept(ruleSchema, chosen && { style: chosen.style, hex: hex(chosen.hex) });
+}
+
+function firstScreenFills(raw: SiteMeasurement) {
+  const fills = (raw.fills ?? []).flatMap(fill => {
+    const parsed = kept(fillSchema, { hex: hex(fill.hex), areaPx: Math.round(finite(fill.areaPx) ?? -1) });
+    return parsed ? [parsed] : [];
+  }).sort((a, b) => b.areaPx - a.areaPx).slice(0, MAX_FILLS);
+  return fills.length ? fills : undefined;
+}
+
 const at = <Value, From extends string>(value: Value | undefined, from: From) => (value === undefined ? undefined : { value, from });
 
 /** The site's signature colour: the most colourful of its call-to-action, heading highlights, colour hero and logo. Earlier candidates win ties. */
@@ -214,6 +298,7 @@ export function brandSiteTraitsFromMeasurement(meta: SiteMeasurementMeta, raw: S
     ...(heroValue?.kind === "colour" ? [{ hex: heroValue.hex, from: "hero" as const }] : []),
   ];
   const signature = signatureColour(candidates);
+  const number = bigNumber(raw, meta.viewport.height), second = secondSurface(raw, heroValue?.kind === "colour" ? heroValue.hex : undefined);
   const traits = defined({
     surface: at(hex(raw.surface), "page background"),
     text: at(hex(raw.text), "text on the page background"),
@@ -227,12 +312,14 @@ export function brandSiteTraitsFromMeasurement(meta: SiteMeasurementMeta, raw: S
     panelRadiusPx: at(panelRadius(raw), "bordered panels"),
     signature: signature && { value: signature.hex, from: signature.from },
     hero: at(heroValue, "backdrop behind the first heading"),
-    numberFont: at(font(raw.number?.font), "largest number"),
-    numberColour: at(hex(raw.number?.colour), "largest number"),
-    panelFill: at(hex(raw.panelFill), "second large surface"),
+    numberFont: at(number?.font, "largest number"),
+    numberColour: at(number?.colour, "largest number"),
+    numberBackdrop: at(number?.backdrop, "largest number"),
+    fills: at(firstScreenFills(raw), "first screen"),
+    panelFill: at(second.panelFill, "second large surface"),
     surfacePattern: surfacePattern(raw),
-    inversePanel: at(kept(inversePanelSchema, raw.inversePanel && defined({ fill: hex(raw.inversePanel.fill), text: hex(raw.inversePanel.text), border: hex(raw.inversePanel.border), radiusPx: kept(pxSchema, rounded(raw.inversePanel.radiusPx, PX_PLACES)) })), "dark panel"),
-    rule: at(kept(ruleSchema, raw.rule && { style: raw.rule.style, hex: hex(raw.rule.hex) }), "most common border"),
+    inversePanel: at(kept(inversePanelSchema, second.inversePanel), "dark panel"),
+    rule: at(pageRule(raw), "most common border"),
     mutedText: at(hex(raw.mutedText), "secondary text on the page background"),
   });
   return brandSiteTraitsSchema.parse({ schemaVersion: BRAND_SITE_TRAITS_VERSION, ...meta, traits });
