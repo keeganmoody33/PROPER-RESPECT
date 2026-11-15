@@ -1,7 +1,8 @@
 # The fourteen homepage cards beside their brands' sites
 
-Updated: 2026-11-15. Branch `feat/homepage-brand-look`, cards captured at `07bf94f` from this checkout's
-reference-mode dev server (doctor: listener runs from this checkout, 0 tracked files changed). All card data
+Updated: 2026-11-15. Branch `feat/homepage-brand-look`, cards captured at `f332dac` from this checkout's
+reference-mode dev server (doctor: listener runs from this checkout, 0 tracked files changed; `next dev` rewrites
+`next-env.d.ts` on start, and it was restored after). All card data
 is synthetic sample data. The brands' sites were visited on 2026-11-15 at 1440x900 and 390x844, home pages
 only, cookies declined where a plain Decline or Reject control existed (Docker, n8n, Spider). No site showed a
 bot challenge. Porkbun was not visited: porkbun.com answers automation with a 403 bot-block page.
@@ -10,11 +11,15 @@ Each `<slug>-1440.png` and `<slug>-390.png` shows the site on the left and the c
 `node scripts/brand-fidelity.mjs pairs --label round8`. Porkbun, Claude Code and Grok Bot have no site beside
 them, and their images say why.
 
-`floors.json` holds both faces of all fourteen at 1440, 390 and 320 (84 faces): no sideways scroll, no text
-under 12px, no phone tap target under 44px, no word split across lines, every text at 4.5:1 (3:1 where it is
-large) and every bar at 3:1, measured from computed colours. One note outside this round's area: Clay's stacked
-table reports its column headers wider than their cells at 390 and 320. That table is being removed in the other
-writer's commits.
+`floors.json` holds both faces of all fourteen at 1440, 390 and 320 (84 faces). All 84 have no sideways scroll,
+no text under 12px, no phone tap target under 44px, no word split across lines, every text at 4.5:1 (3:1 where it
+is large) and every bar at 3:1, measured from computed colours. The "cut" check (an element's content wider than
+its box) is not in that count: Clay's stacked table reports its four column headers cut at 390 and 320 on both
+faces. Not checked whether that predates this round; that table is being removed in the other writer's commits.
+
+An earlier capture of this round showed Cloudflare's phone card with its old logo on a white tile: that load of the
+wordmark file failed once, and the card fell back as designed. The capture here, and three direct reloads at 390
+and 1440, show the wordmark on the slab.
 
 The fidelity check's automatic rows went from 147 passed and 13 failed (before this round) to 152 passed and 8
 failed. The pairs are the judgement, not the counts.
