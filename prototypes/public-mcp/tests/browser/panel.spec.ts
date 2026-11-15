@@ -15,7 +15,9 @@ test("real SDK bridge loads branded cards, preserves evidence, refreshes and med
   await expect(view.getByText("Synthetic test data", { exact: true })).toBeVisible();
   await expect(view.locator("article")).toHaveAttribute("data-brand", "github");
   await expect(view.locator("article img")).toHaveAttribute("src", /^data:image/);
-  await expect(view.locator("article")).toContainText("523");
+  // The card leads with the contributions its calendar draws (the fixture's week adds up to 22), as the site's own card does.
+  await expect(view.locator("article")).toContainText("TotalLabelcontributionsDisplay Value22");
+  await expect(view.locator("article")).not.toContainText("Reported Total");
   await expect(view.locator("article")).toContainText("2026-07-20");
   await expect(view.locator("article")).toContainText("GitHub account");
   await expect(view.locator("article")).toContainText("ESTIMATE");

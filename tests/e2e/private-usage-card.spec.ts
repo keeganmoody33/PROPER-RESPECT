@@ -75,7 +75,7 @@ test.afterAll(async () => {
 });
 
 async function expectKnownLogo(card: Locator, slug: string, pixels: number) {
-  const logo = card.locator(".product-logo img");
+  const logo = card.locator(".card-front .product-logo img");
   await expect(logo).toBeVisible();
   await expect(logo).toHaveAttribute("src", `/product-assets/${slug}/2026-09-24/app-icon.png`);
   await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
@@ -106,12 +106,12 @@ for (const width of [390, 1280]) for (const theme of ["light", "dark"]) {
     await expectKnownLogo(claude, "claude-code", 266);
     await expect(claude).toContainText("Synthetic");
     await expectKnownLogo(codex, "codex", 385);
-    await expect(codex.locator(".product-logo")).toHaveAttribute("data-logo-mode", "dark");
-    await expect(codex.locator(".product-logo")).toHaveCSS("background-color", "rgb(23, 23, 19)");
+    await expect(codex.locator(".card-front .product-logo")).toHaveAttribute("data-logo-mode", "dark");
+    await expect(codex.locator(".card-front .product-logo")).toHaveCSS("background-color", "rgb(23, 23, 19)");
     await expect(codex).toContainText("Origin unverified");
     await expect(copilot.locator(".private-usage-preview")).toHaveCount(0);
     await expect(copilot).toHaveAttribute("data-verified-brand", "github-copilot");
-    const logo = copilot.locator(".product-logo img");
+    const logo = copilot.locator(".card-front .product-logo img");
     await expect(logo).toBeVisible();
     await expect.poll(() => logo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -212,9 +212,12 @@ for (const product of [{ name: "Claude Code", slug: "claude-code", mark: "CC" },
     await page.goto(origin);
     const card = page.getByRole("article", { name: `${product.name} card`, exact: true });
     await expect.poll(() => attempted).toBe(true);
-    await expect(card.locator(".product-logo img")).toHaveCount(0);
-    await expect(card.locator(".product-logo")).toHaveText(product.mark);
+    await expect(card.locator(".card-front .product-logo img")).toHaveCount(0);
+    await expect(card.locator(".card-front .product-logo")).toHaveText(product.mark);
     await card.getByRole("button", { name: "Details", exact: true }).click();
     await expect(card.locator(".card-back h2")).toBeFocused();
+    // The back's logo falls back the same way: no broken image, the product's mark in its place.
+    await expect(card.locator(".card-back .product-logo img")).toHaveCount(0);
+    await expect(card.locator(".card-back .product-logo")).toHaveText(product.mark);
   });
 }

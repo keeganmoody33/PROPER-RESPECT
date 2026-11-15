@@ -95,6 +95,13 @@ describe("next.config headers", () => {
     expect(headers["Content-Security-Policy"]).toBe("frame-ancestors 'none'");
   });
 
+  it.each(["/api/brand-images/5019dab7-f07e-4e29-98bb-f8bb7b613877.svg", "/api/brand-fonts/google/inter/v20/x.ttf"])("gives %s the site's headers and no policy over the route's own", async path => {
+    const headers = await headersFor(path);
+    expect(headers["X-Content-Type-Options"]).toBe("nosniff");
+    expect(headers["Content-Security-Policy-Report-Only"]).toContain("report-uri /api/csp-report");
+    expect(headers).not.toHaveProperty("Content-Security-Policy");
+  });
+
   it("keeps the homepage Link header and the agent-file headers", async () => {
     expect((await headersFor("/")).Link).toContain('rel="alternate"; type="text/markdown"');
     expect(await headersFor("/agent-plugins/proper-respect/plugin.json")).toMatchObject({

@@ -1,28 +1,78 @@
 .carousel { min-width: 0; }
-.label, .sample, .controls, .choices, .source { font: .65rem/1.6 var(--homepage-mono), monospace; }
+.label, .capability, .sample, .controls, .chooser, .source { font: .75rem/1.6 var(--homepage-mono), monospace; }
 .label { margin: 0 0 1rem; }
 .label:last-child { margin: 1rem 0 0; }
-.choices { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.2rem; }
-.choices button, .controls button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--control-line); padding: .45rem .65rem; min-height: 36px; cursor: pointer; }
+.shortLabel { display: none; }
+.header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .4rem 1rem; margin-bottom: 1rem; }
+.header .label { flex: 1 1 14rem; margin: 0; min-width: 0; }
+/* A fixed width for "1 / 5" and "14 / 14", so the arrows don't shift as the count grows. */
+.controls { flex: none; flex-wrap: wrap; max-width: 100%; }
+.controls > span { min-width: 7ch; text-align: center; }
+.chooser { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .4rem; margin-bottom: .9rem; }
+.choices { display: flex; flex-wrap: wrap; gap: .4rem; }
+/* The rest of the toggles join the group's own row, so the group stays one set of arrow-key stops. */
+.more { display: contents; }
+.choices button, .controls button, .moreTrigger { font: inherit; color: inherit; background: transparent; border: 1px solid var(--control-line); padding: .45rem .65rem; min-height: 36px; cursor: pointer; }
 .choices button[data-pressed] { background: var(--ink); border-color: var(--ink); color: var(--action-text); }
 .carousel button:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 3px; }
-.sample { margin: 0 0 .6rem; color: var(--sample-text); }
-.stage { display: grid; min-width: 0; }
-.slide { grid-area: 1 / 1; min-width: 0; }
-.slide[data-current="false"] { visibility: hidden; }
-.slide :global(.product-card) { width: 100%; margin: 0; animation: none; border-radius: 10px; }
-.slide[data-example="github"] :global(.product-logo) { background: #fff; }
-.slide :global(.card-activity-preview > p:first-child strong) { font-size: 2rem; line-height: 1.1; }
+.capability { margin: 0; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.sample { margin: 0; color: var(--sample-text); }
+/* What the example shows and that it is a sample, on one line where they fit. */
+.slideHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 1rem; margin-bottom: .6rem; }
+/* A last caveat's margin stays outside the slide, so the frame is as tall as the slide in a flex column too. */
+.slide > :last-child { margin-bottom: 0; }
+.moreTrigger { border-style: dashed; }
+.stage { min-width: 0; position: relative; }
+.slide { min-width: 0; }
+/* Only the shown slide takes space, so the frame is as tall as its card: no empty band under a short one.
+   The others stay laid out at no height, so the next one's brand fonts load before it is shown. */
+.slide[data-current="false"] { height: 0; inset: 0 0 auto; overflow: hidden; position: absolute; visibility: hidden; }
+.slide :global(.product-card) { width: 100%; margin: 0; animation: none; }
+/* Each card leads with one number, so it is the largest thing on the front, published or drawn from activity alike. */
+.slide :global(:is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong)) { font-size: clamp(2.5rem, 9vw, 3.25rem); line-height: 1.05; }
 .slide :global(.card-activity-preview > p:first-child) { display: flex; flex-direction: column; gap: .3rem; }
 .slide :global(.activity-preview-metrics) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; margin: 1rem 0; }
-.slide :global(.activity-preview-metrics dt) { font-size: .7rem; }
+.slide :global(.activity-preview-metrics dt) { font-size: .75rem; }
 .slide :global(.activity-preview-metrics dd) { font-size: 1.1rem; margin: .15rem 0 0; font-weight: 600; }
-.slide[data-example="github"] { --brand-card-background: #0d1117; --brand-card-text: #e6edf3; --brand-card-heading-font: -apple-system, "Segoe UI", Helvetica, sans-serif; --brand-card-body-font: -apple-system, "Segoe UI", Helvetica, sans-serif; }
-.slide[data-example="clay"] { --brand-card-background: #f7f5ef; --brand-card-text: #25241f; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: Arial, sans-serif; --card-line: #d4d1c7; }
-.slide[data-example="claude-code"] { --brand-card-background: #292724; --brand-card-text: #f5f0e8; --brand-card-heading-font: Georgia, serif; --brand-card-body-font: ui-monospace, monospace; }
-.slide[data-example="clay"] :global(.product-card) { border: 1px solid #d4d1c7; }
 .caveat { font-size: .78rem; line-height: 1.6; margin: 1rem 0 .5rem; }
-.source { text-underline-offset: .2em; }
-.controls { display: flex; align-items: center; gap: .65rem; margin-top: 1.2rem; }
-.controls .play { margin-left: auto; }
-@media (max-width: 600px) { .choices { gap: .3rem; } .choices button { padding: .4rem .5rem; } }
+/* A phone's tap target: the source link is 44px tall however short its line. */
+.source { align-items: center; display: inline-flex; min-height: 44px; text-underline-offset: .2em; }
+.controls { display: flex; align-items: center; gap: .65rem; }
+@media (max-width: 600px) { .chooser, .choices { gap: .3rem; } .choices button, .moreTrigger { padding: .4rem .5rem; } }
+/* A phone's tap targets: every chooser toggle and control at least 44px. */
+@media (max-width: 480px) { .choices button, .controls button, .moreTrigger { min-height: 44px; min-width: 44px; } }
+/* One column (homepage.module.css): the card comes first, right under the heading, and the chooser with its controls is one row.
+   While the card reaches below the screen's top quarter the row is held at the foot of the screen, so a picked name stays where it was tapped and the
+   new card's top is brought into view above it; its place under the card stays reserved, so nothing moves when it is let go.
+   The row scrolls sideways inside itself, never the page. */
+@media (max-width: 900px) {
+  .carousel { --bar-height: 3.7rem; --bar-controls: 15rem; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto var(--bar-height) auto;
+    grid-template-areas: "stage stage" "chooser controls" "foot foot"; }
+  .header { display: contents; }
+  .header .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .stage { grid-area: stage; margin-bottom: .75rem; }
+  .chooser, .controls { align-items: center; background: var(--example-panel); border-top: 1px solid var(--control-line); box-sizing: border-box; height: var(--bar-height); padding: .4rem 0; }
+  /* Positioned, so the toggles' hidden descriptions are clipped with the row rather than widening the page. */
+  .chooser { grid-area: chooser; flex-wrap: nowrap; margin: 0; min-width: 0; position: relative; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .controls { grid-area: controls; gap: .4rem; flex-wrap: nowrap; justify-content: flex-end; padding-left: .4rem; }
+  .carousel[data-held] .chooser, .carousel[data-held] .controls { bottom: 0; position: fixed; z-index: 10; }
+  .carousel[data-held] .chooser { left: 0; padding-left: 1rem; right: var(--bar-controls); }
+  .carousel[data-held] .controls { padding-right: 1rem; right: 0; width: var(--bar-controls); }
+  .choices { flex-wrap: nowrap; }
+  .choices button, .moreTrigger { flex: none; white-space: nowrap; }
+  .carousel > .label:last-child { grid-area: foot; }
+  .controls > span { min-width: 5ch; }
+  /* A control the held row would cover scrolls into view above it. */
+  .stage :is(a, button, [tabindex]) { scroll-margin-bottom: 4.5rem; }
+}
+@media (max-width: 600px) {
+  /* A phone's row keeps Play beside the names; the names step through the examples, so the arrows and count give way. */
+  .carousel { --bar-controls: 5.5rem; }
+  .controls > button:not(.play), .controls > span { display: none; }
+  /* The words stay in the button's name; on a phone it shows Play or Pause. */
+  .playWord, .longLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .shortLabel { display: inline; }
+  /* Each card's front carries its own Sample tag, so a phone drops the line that repeats it. */
+  .sample { display: none; }
+  .slideHead { margin-bottom: .4rem; }
+}

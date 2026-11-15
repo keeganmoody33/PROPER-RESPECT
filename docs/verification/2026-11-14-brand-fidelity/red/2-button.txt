@@ -1,0 +1,84 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a
+
+ ❯ src/domain/brand-kit-site.test.ts (4 tests | 2 failed) 6ms
+     × takes the fill and label of the site's primary call-to-action when it shows on the card, else falls back as before 3ms
+     × takes the site's button outline, type, case and letter-spacing 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/domain/brand-kit-site.test.ts > the button > takes the fill and label of the site's primary call-to-action when it shows on the card, else falls back as before
+AssertionError: expected { …(12) } to deeply equal { …(12) }
+
+- Expected
++ Received
+
+@@ -1,25 +1,25 @@
+  {
+    "clay": [
+-     "#cbd810",
+      "#000000",
++     "#ffffff",
+    ],
+    "cloudflare": [
+      "#ff5e1f",
+      "#262626",
+    ],
+    "context-dev": [
+-     "#000000",
++     "#2563eb",
+      "#ffffff",
+    ],
+    "docker": [
+      "#2560ff",
+      "#ffffff",
+    ],
+    "elicit": [
+-     "#026370",
+-     "#fcfcf8",
++     "#083d44",
++     "#ffffff",
+    ],
+    "exa": [
+      "#000000",
+      "#ffffff",
+    ],
+
+ ❯ src/domain/brand-kit-site.test.ts:50:21
+     48|   it("takes the fill and label of the site's primary call-to-action wh…
+     49|     const buttons = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).ma…
+     50|     expect(buttons).toEqual({
+       |                     ^
+     51|       // The site's own call-to-action: Clay's lime, Context.dev's bla…
+     52|       clay: ["#cbd810", "#000000"], "context-dev": ["#000000", "#fffff…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/domain/brand-kit-site.test.ts > the button > takes the site's button outline, type, case and letter-spacing
+AssertionError: expected undefined to be '#000000' // Object.is equality
+
+- Expected:
+"#000000"
+
++ Received:
+undefined
+
+ ❯ src/domain/brand-kit-site.test.ts:63:57
+     61|
+     62|   it("takes the site's button outline, type, case and letter-spacing",…
+     63|     expect(kit("docker")["--brand-card-button-border"]).toBe("#000000"…
+       |                                                         ^
+     64|     expect(kit("clay")).not.toHaveProperty("--brand-card-button-border…
+     65|     expect(kits("--brand-card-button-case")).toEqual({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 passed (4)
+   Start at  07:39:20
+   Duration  168ms (transform 50ms, setup 0ms, import 101ms, tests 6ms, environment 0ms)
+

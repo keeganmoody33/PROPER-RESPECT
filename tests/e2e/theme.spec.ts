@@ -122,6 +122,8 @@ test("the branded examples keep their palette, logo, typography and focused cont
   await page.goto("/");
   const control = page.getByRole("combobox", { name: "Appearance" }).first();
   const carousel = page.getByRole("region", { name: "Product usage examples" });
+  // Claude Code is one of the examples behind More examples.
+  await carousel.getByRole("button", { name: "More examples" }).click();
   for (const name of ["GitHub", "Clay", "Claude Code"]) {
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });

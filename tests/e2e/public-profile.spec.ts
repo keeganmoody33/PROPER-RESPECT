@@ -24,11 +24,22 @@ test("visitor sees the approved public reference projection", async ({
   await expect(page.getByText("Keegan Moody")).toBeVisible();
   await expect(page.getByText("Draft source record")).toHaveCount(0);
   await expect(page.getByText("Private source record")).toHaveCount(0);
+  // The headline is the week the calendar draws: its seven days add up to 22.
+  const githubFront = page.locator(".product-card", { has: page.getByRole("heading", { name: "GitHub" }) }).locator(".card-front");
+  await expect(githubFront.locator(".card-activity-preview > p").first()).toHaveText("22 contributions");
+  await expect(githubFront.locator(".card-activity-reported")).toHaveCount(0);
+  // Stored as fresh on 26 Jul 2026, and more than 30 days old now, so it says when it was last updated.
+  await expect(githubFront.locator(".card-activity-coverage")).toHaveText("20–26 Jul 2026 · last updated 26 Jul 2026");
 
   const trigger = page.getByRole("button", { name: "Details" }).first();
   await trigger.click();
-  await expect(page.getByText("2026-07-20 to 2026-07-26", { exact: true })).toBeVisible();
-  await expect(page.getByText(/Estimated cost:.*12\.34.*as of 2026-07-26/)).toBeVisible();
+  // The back says the cost and dates in plain words; the exact period is folded under How this was measured.
+  await expect(page.getByText(/Estimated cost:.*12\.34.*as of 26 Jul 2026/)).toBeVisible();
+  const back = page.locator('.card-back:not([hidden])');
+  await back.getByRole("button", { name: "How this was measured" }).click();
+  // Exact to the day: plain dates, with the stored value in each <time datetime>.
+  await expect(back.getByText("20 Jul 2026 to 26 Jul 2026", { exact: true })).toBeVisible();
+  await expect(back.locator(".activity-meta time[datetime='2026-07-20']")).toHaveText("20 Jul 2026");
   await expect(
     page.getByRole("link", { name: "See Keegan on GitHub ↗", exact: true }),
   ).toBeVisible();
@@ -90,4 +101,40 @@ test("private collection has a separate noindex route", async ({ page }, testInf
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await expect(page.getByText("Synthetic published profile for route compatibility checks.")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("2026-09-21-private-collection.png"), fullPage: true });
+});
+
+test(`at ${PHONE_WIDTH}px a calendar that fits its card says nothing about scrolling`, async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.goto("/keegan");
+  const calendar = page.locator(".product-card", { has: page.getByRole("heading", { name: "GitHub" }) }).locator(".card-front .contribution-calendar");
+  await expect(calendar.locator(".contribution-grid")).toBeVisible();
+  // The fixture's one week fits the card, so there is nothing earlier to scroll to.
+  expect(await calendar.locator(".contribution-scroll").evaluate(scroll => scroll.scrollWidth > scroll.clientWidth)).toBe(false);
+  await expect(calendar.getByText("Scroll for earlier months")).toBeHidden();
+  // Nor does a screen reader or the Tab key hear that it scrolls.
+  const region = calendar.getByRole("region", { name: "Contribution calendar", exact: true });
+  await expect(region).toBeVisible();
+  await expect(region).not.toHaveAttribute("tabindex");
+});
+
+/** How far turning a card in view may move the page or the card: its back may run longer below, never shift what is read. */
+const MAX_TURN_SHIFT_PX = 20;
+/** Where the card's top sits on the screen when Details is pressed: at the top, mid-screen, and low with its foot below. */
+const CARD_TOPS_PX = [10, 300, 600];
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`at ${width}px turning a real card in view moves neither the page nor the card more than ${MAX_TURN_SHIFT_PX}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/keegan");
+  for (const name of ["GitHub", "Wispr Flow"]) for (const top of CARD_TOPS_PX) {
+    const card = page.getByRole("article", { name: `${name} card` });
+    await card.evaluate((article, offset) => scrollBy(0, article.getBoundingClientRect().top - offset), top);
+    const before = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top }));
+    if (before.top < 0) continue;
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
+    const after = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top }));
+    expect(Math.abs(after.scroll - before.scroll), `${name} at ${top}px`).toBeLessThanOrEqual(MAX_TURN_SHIFT_PX);
+    expect(Math.abs(after.top - before.top), `${name} at ${top}px`).toBeLessThanOrEqual(MAX_TURN_SHIFT_PX);
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
 });

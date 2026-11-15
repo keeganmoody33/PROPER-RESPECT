@@ -133,7 +133,7 @@ for (const width of [1280, 390]) test(`observed date remains an editable private
   await expect(date).toHaveValue("2024-06-03");
   await expect(operations).toHaveText("");
   await expect(page.getByLabel("Synthetic saved start date")).toHaveText("Unknown");
-  await expect(page.getByText("PRIVATE DISCOVERY", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Private discovery", { exact: true }).first()).toBeVisible();
   await page.getByRole("region", { name: "Example Tool in your collection", exact: true }).screenshot({ path: testInfo.outputPath(`2026-10-06-observed-date-${width}.png`) });
   await date.fill("2024-05-20");
   await page.getByLabel("How it fits").selectOption("WEEKLY");
@@ -187,7 +187,7 @@ test("an observed-date action is locked during save and a newer saved version cl
 for (const width of [1280, 390]) test(`private collection interaction and reversible card at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto("/evidence-fixture/inventory");
-  await expect(page.getByText("PRIVATE DISCOVERY", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Private discovery", { exact: true }).first()).toBeVisible();
   await page.getByText("Review this discovery", { exact: true }).click();
   await expect(page.getByLabel("How it fits")).toHaveValue("");
   await page.getByLabel("How it fits").selectOption("TESTING");
@@ -198,7 +198,7 @@ for (const width of [1280, 390]) test(`private collection interaction and revers
   await page.getByLabel("How it fits").selectOption("WEEKLY");
   await page.getByLabel("One of my go-to tools").check();
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
-  await expect(page.getByText("Owner-selected go-to", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".card-go-to").first()).toHaveText("Go-to");
   await page.getByRole("button", { name: "Go-to", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Example Tool", exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "History", exact: true }).click();
@@ -218,7 +218,7 @@ for (const width of [1280, 390]) test(`private collection interaction and revers
   await page.getByLabel("How it fits").selectOption("WEEKLY");
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
   await page.getByRole("button", { name: "Current", exact: true }).click();
-  await expect(page.getByText("Owner-selected go-to", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".card-go-to").first()).toHaveText("Go-to");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
@@ -326,7 +326,8 @@ for (const width of [1280, 390]) test(`usage stays with its explicitly selected 
   await expect(group.locator(".product-card")).toHaveAttribute("data-side", "front");
   await expect(group.getByText("This record has a saved usage snapshot. Open Details to see its source and coverage.", { exact: true })).toBeVisible();
   await group.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(group.locator(".activity-hero strong")).toHaveText("7");
+  // The back says where the snapshot came from, without repeating the front's number.
+  await expect(group.locator(".card-back .activity-summary")).toContainText("Synthetic retained source · the owner's own use · Measurement period not supplied");
   await expect(group.locator(".activity-meta")).toContainText("Synthetic retained source");
   await expect(group.locator(".activity-meta")).toContainText("Measurement period not supplied");
   await expect(group.locator(".activity-meta")).toContainText("stale");

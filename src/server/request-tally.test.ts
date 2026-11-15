@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { classifyUserAgent, isCountablePageRequest, toSnapshot } from "@/src/server/request-tally";
-import { readTally, recordHit } from "@/src/server/tally-store";
+import { readTally, recordHit, tallyStoreConfigured } from "@/src/server/tally-store";
 
 const CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
 
@@ -146,5 +146,16 @@ describe("proxy counting", () => {
     await Promise.all(pending);
     expect(pending).toHaveLength(1);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("tally route without a store", () => {
+  it("answers 204 No Content where no store is configured, so a page asks without logging an error; a store's failure stays a 503", async () => {
+    const { GET } = await import("@/app/api/tally/route");
+    expect(tallyStoreConfigured({ PROPER_RESPECT_E2E_REFERENCE: "1", KV_REST_API_URL: "https://kv.example", KV_REST_API_TOKEN: "t" })).toBe(false);
+    expect(tallyStoreConfigured({ KV_REST_API_URL: "https://kv.example", KV_REST_API_TOKEN: "t" })).toBe(true);
+    vi.stubEnv("PROPER_RESPECT_E2E_REFERENCE", "1");
+    expect((await GET()).status).toBe(204);
+    vi.unstubAllEnvs();
   });
 });

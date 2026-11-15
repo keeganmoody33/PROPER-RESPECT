@@ -4,8 +4,11 @@ import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
 import { usageLinkLabelText, usageLinkSchema } from "./usage-links";
 import { isHttpUrl } from "./http-url.ts";
+import { linkDisclosure } from "./link-type.ts";
 import { cardStatusLabel, type RelationshipLevel } from "./relationship-level.ts";
 import { productUseLabels } from "./product-uses.ts";
+import { activityHeadline, linkedWorksCount } from "./activity-headline.ts";
+import { byDate } from "./chart-bars.ts";
 
 type VisibleMetric = Readonly<{ label: string; displayValue: string; unit?: string }>;
 type VisibleDay = Readonly<{ date: string; count: number }>;
@@ -19,7 +22,7 @@ type VisibleActivityMeta = Readonly<{
   note?: string;
 }>;
 export type VisibleActivity = VisibleActivityMeta & (
-  | Readonly<{ kind: "contributionCalendar"; total: VisibleMetric; memberSinceYear?: string; days: readonly VisibleDay[]; coverageNote?: string; suppliedRange?: string; emptyNote?: string }>
+  | Readonly<{ kind: "contributionCalendar"; total: VisibleMetric; reportedTotal?: VisibleMetric; memberSinceYear?: string; days: readonly VisibleDay[]; coverageNote?: string; suppliedRange?: string; emptyNote?: string }>
   | Readonly<{ kind: "headlineMetrics"; primary: VisibleMetric; supporting: readonly VisibleMetric[] }>
   | Readonly<{ kind: "timeSeries"; label?: string; unit?: string; points: readonly Readonly<{ date: string; value: number }>[]; emptyNote?: string }>
   | Readonly<{ kind: "artifactCollection"; total: VisibleMetric; artifacts: readonly Readonly<{ title: string; url: string }>[]; emptyNote?: string }>
@@ -64,8 +67,9 @@ export type VisiblePublicProfile = Readonly<{
 function metric(value: Readonly<{ label: string; value: number; unit?: string }>): VisibleMetric {
   return { label: value.label, displayValue: compactNumber(value.value), ...(value.unit ? { unit: value.unit } : {}) };
 }
+/** One count a date in date order, as the card's chart draws them. */
 function days(values: readonly VisibleDay[]): readonly VisibleDay[] {
-  return values.map(day => ({ date: day.date, count: day.count }));
+  return byDate(values.map(day => ({ date: day.date, value: day.count }))).map(point => ({ date: point.date, count: point.value }));
 }
 function visibleActivity(activity: ActivityModule): VisibleActivity {
   const meta: VisibleActivityMeta = {
@@ -78,25 +82,30 @@ function visibleActivity(activity: ActivityModule): VisibleActivity {
   switch (activity.kind) {
     case "contributionCalendar": {
       const coverage = contributionCalendarCoverage(activity);
+      // The card's own headline: the days drawn, and a stored total that disagrees kept apart.
+      const { reported, ...total } = activityHeadline(activity, false)!;
       return {
-      ...meta, kind: activity.kind, total: metric({ label: "contributions", value: activity.total }),
+      ...meta, kind: activity.kind, total: metric(total), ...(reported ? { reportedTotal: metric(reported) } : {}),
       ...(activity.memberSince ? { memberSinceYear: activity.memberSince.slice(0, 4) } : {}),
-      days: days([...activity.days].sort((a, b) => a.date.localeCompare(b.date))),
+      days: days(coverage?.days ?? []),
       ...(coverage?.gapNote ? { coverageNote: coverage.gapNote } : {}),
       ...(coverage?.suppliedRange ? { suppliedRange: coverage.suppliedRange } : {}),
       ...(activity.days.length === 0 ? { emptyNote: "No daily contribution counts supplied" } : {}),
       };
     }
     case "headlineMetrics": return { ...meta, kind: activity.kind, primary: metric(activity.primary), supporting: activity.supporting.map(metric) };
-    case "timeSeries": return {
-      ...meta, kind: activity.kind, ...(activity.points.length ? { label: activity.label, ...(activity.unit ? { unit: activity.unit } : {}) } : {}),
-      points: activity.points.map(point => ({ date: point.date, value: point.value })),
-      ...(activity.points.length === 0 ? { emptyNote: "No observations supplied" } : {}),
-    };
+    case "timeSeries": {
+      const points = byDate(activity.points);
+      return {
+        ...meta, kind: activity.kind, ...(points.length ? { label: activity.label, ...(activity.unit ? { unit: activity.unit } : {}) } : {}),
+        points, ...(points.length === 0 ? { emptyNote: "No data points supplied" } : {}),
+      };
+    }
     case "artifactCollection": {
       const artifacts = activity.artifacts.filter(artifact => isHttpUrl(artifact.url));
+      const count = linkedWorksCount(activity);
       return {
-        ...meta, kind: activity.kind, total: metric({ label: "artifacts", value: activity.total }),
+        ...meta, kind: activity.kind, total: metric({ label: count === 1 ? "linked work" : "linked works", value: count }),
         artifacts: artifacts.map(artifact => ({ title: artifact.title, url: artifact.url })),
         ...(artifacts.length === 0 ? { emptyNote: "No artifacts selected" } : {}),
       };
@@ -142,8 +151,7 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
       } } : {}),
       ...(card.primaryLink && isHttpUrl(card.primaryLink.url) ? { primaryLink: {
         type: card.primaryLink.type, label: card.primaryLink.label, url: card.primaryLink.url,
-        ...(card.primaryLink.type === "AFFILIATE" ? { disclosure: "Affiliate link" }
-          : card.primaryLink.type === "REFERRAL" ? { disclosure: "Referral link" } : {}),
+        ...(linkDisclosure(card.primaryLink.type) ? { disclosure: linkDisclosure(card.primaryLink.type) } : {}),
       } } : {}),
       ...(card.usageLink && usageLinkSchema.safeParse(card.usageLink).success
         ? { usageLink: { label: usageLinkLabelText(card.usageLink.label), url: card.usageLink.url } } : {}),

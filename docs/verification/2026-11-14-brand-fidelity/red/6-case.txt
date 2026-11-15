@@ -1,0 +1,292 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a
+
+ ❯ src/client/product-card.test.ts (118 tests | 18 failed) 174ms
+   × a brand preview makes no owner relationship or activity claim 4ms
+   × uses a retained brand logo for the actual dark card surface without changing evidence 2ms
+   × ACTIVE without a level retains the supplied relationship start year 1ms
+   × TESTING without a level retains the supplied relationship start year 1ms
+   × ARCHIVED without a level retains the supplied relationship start year 1ms
+   × level TRIED_NOT_ADOPTED shows its own label on the top line 1ms
+   × level STOPPED shows its own label on the top line 1ms
+   × level PAUSED shows its own label on the top line 1ms
+   × level OCCASIONAL shows its own label on the top line 1ms
+   × level TESTING shows its own label on the top line 1ms
+   × level WEEKLY shows its own label on the top line 1ms
+   × level DAILY shows its own label on the top line 1ms
+   × a go-to card keeps its go-to badge whatever its level 1ms
+   × an unconfirmed ACTIVE discovery does not assert a relationship, start date, or go-to decision 1ms
+   × an unconfirmed TESTING discovery does not assert a relationship, start date, or go-to decision 1ms
+   × an unconfirmed ARCHIVED discovery does not assert a relationship, start date, or go-to decision 1ms
+   × the go-to designation requires an explicit prop for a confirmed relationship 2ms
+   × brand preview suppresses private discovery and go-to state 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/client/product-card.test.ts > a brand preview makes no owner relationship or activity claim
+AssertionError: expected 'BRAND PREVIEW' to be 'Brand preview' // Object.is equality
+
+Expected: "Brand preview"
+Received: "BRAND PREVIEW"
+
+ ❯ src/client/product-card.test.ts:112:44
+    110| test("a brand preview makes no owner relationship or activity claim", …
+    111|   const $ = load(renderToStaticMarkup(createElement(ProductCard, { car…
+    112|   expect($(".card-title .eyebrow").text()).toBe("Brand preview");
+       |                                            ^
+    113|   expect($(".activity-placeholder").text()).toBe("No personal activity…
+    114|   expect($.text()).not.toContain(baseCard.headline);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/18]⎯
+
+ FAIL  src/client/product-card.test.ts > uses a retained brand logo for the actual dark card surface without changing evidence
+AssertionError: expected 'TESTING' to be 'Testing' // Object.is equality
+
+Expected: "Testing"
+Received: "TESTING"
+
+ ❯ src/client/product-card.test.ts:162:44
+    160|   expect($(".product-logo img").attr("src")).toBe("https://example.com…
+    161|   expect($(".product-logo").attr("data-logo-mode")).toBe("dark");
+    162|   expect($(".card-title .eyebrow").text()).toBe("Testing");
+       |                                            ^
+    163|   expect($(".activity-placeholder")).toHaveLength(0);
+    164|   expect($(".card-headline").text()).toBe(baseCard.headline);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/18]⎯
+
+ FAIL  src/client/product-card.test.ts > ACTIVE without a level retains the supplied relationship start year
+AssertionError: expected 'USING · SINCE 2024' to be 'Using · since 2024' // Object.is equality
+
+Expected: "Using · since 2024"
+Received: "USING · SINCE 2024"
+
+ ❯ src/client/product-card.test.ts:338:46
+    336|     const $ = renderCard({ status, startedAt: "2024-06-03" });
+    337|
+    338|     expect($(".card-title .eyebrow").text()).toBe(topLine);
+       |                                              ^
+    339|   },
+    340| );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/18]⎯
+
+ FAIL  src/client/product-card.test.ts > TESTING without a level retains the supplied relationship start year
+AssertionError: expected 'TESTING · SINCE 2024' to be 'Testing · since 2024' // Object.is equality
+
+Expected: "Testing · since 2024"
+Received: "TESTING · SINCE 2024"
+
+ ❯ src/client/product-card.test.ts:338:46
+    336|     const $ = renderCard({ status, startedAt: "2024-06-03" });
+    337|
+    338|     expect($(".card-title .eyebrow").text()).toBe(topLine);
+       |                                              ^
+    339|   },
+    340| );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/18]⎯
+
+ FAIL  src/client/product-card.test.ts > ARCHIVED without a level retains the supplied relationship start year
+AssertionError: expected 'USED BEFORE · STARTED 2024' to be 'Used before · started 2024' // Object.is equality
+
+Expected: "Used before · started 2024"
+Received: "USED BEFORE · STARTED 2024"
+
+ ❯ src/client/product-card.test.ts:338:46
+    336|     const $ = renderCard({ status, startedAt: "2024-06-03" });
+    337|
+    338|     expect($(".card-title .eyebrow").text()).toBe(topLine);
+       |                                              ^
+    339|   },
+    340| );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/18]⎯
+
+ FAIL  src/client/product-card.test.ts > level TRIED_NOT_ADOPTED shows its own label on the top line
+AssertionError: expected 'TRIED, DIDN\'T ADOPT' to be 'Tried, didn\'t adopt' // Object.is equality
+
+Expected: "Tried, didn't adopt"
+Received: "TRIED, DIDN'T ADOPT"
+
+ ❯ src/client/product-card.test.ts:353:44
+    351|   const $ = renderCard({ status, level, startedAt: "2022-04-05" });
+    352|
+    353|   expect($(".card-title .eyebrow").text()).toBe(line);
+       |                                            ^
+    354|   expect($(".product-card").text()).not.toContain("ARCHIVED");
+    355| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/18]⎯
+
+ FAIL  src/client/product-card.test.ts > level STOPPED shows its own label on the top line
+AssertionError: expected 'STOPPED USING · STARTED 2022' to be 'Stopped using · started 2022' // Object.is equality
+
+Expected: "Stopped using · started 2022"
+Received: "STOPPED USING · STARTED 2022"
+
+ ❯ src/client/product-card.test.ts:353:44
+    351|   const $ = renderCard({ status, level, startedAt: "2022-04-05" });
+    352|
+    353|   expect($(".card-title .eyebrow").text()).toBe(line);
+       |                                            ^
+    354|   expect($(".product-card").text()).not.toContain("ARCHIVED");
+    355| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/18]⎯
+
+ FAIL  src/client/product-card.test.ts > level PAUSED shows its own label on the top line
+AssertionError: expected 'PAUSED · STARTED 2022' to be 'Paused · started 2022' // Object.is equality
+
+Expected: "Paused · started 2022"
+Received: "PAUSED · STARTED 2022"
+
+ ❯ src/client/product-card.test.ts:353:44
+    351|   const $ = renderCard({ status, level, startedAt: "2022-04-05" });
+    352|
+    353|   expect($(".card-title .eyebrow").text()).toBe(line);
+       |                                            ^
+    354|   expect($(".product-card").text()).not.toContain("ARCHIVED");
+    355| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/18]⎯
+
+ FAIL  src/client/product-card.test.ts > level OCCASIONAL shows its own label on the top line
+AssertionError: expected 'OCCASIONALLY · SINCE 2022' to be 'Occasionally · since 2022' // Object.is equality
+
+Expected: "Occasionally · since 2022"
+Received: "OCCASIONALLY · SINCE 2022"
+
+ ❯ src/client/product-card.test.ts:353:44
+    351|   const $ = renderCard({ status, level, startedAt: "2022-04-05" });
+    352|
+    353|   expect($(".card-title .eyebrow").text()).toBe(line);
+       |                                            ^
+    354|   expect($(".product-card").text()).not.toContain("ARCHIVED");
+    355| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/18]⎯
+
+ FAIL  src/client/product-card.test.ts > level TESTING shows its own label on the top line
+AssertionError: expected 'TESTING · SINCE 2022' to be 'Testing · since 2022' // Object.is equality
+
+Expected: "Testing · since 2022"
+Received: "TESTING · SINCE 2022"
+
+ ❯ src/client/product-card.test.ts:353:44
+    351|   const $ = renderCard({ status, level, startedAt: "2022-04-05" });
+    352|
+    353|   expect($(".card-title .eyebrow").text()).toBe(line);
+       |                                            ^
+    354|   expect($(".product-card").text()).not.toContain("ARCHIVED");
+    355| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/18]⎯
+
+ FAIL  src/client/product-card.test.ts > level WEEKLY shows its own label on the top line
+AssertionError: expected 'WEEKLY · SINCE 2022' to be 'Weekly · since 2022' // Object.is equality
+
+Expected: "Weekly · since 2022"
+Received: "WEEKLY · SINCE 2022"
+
+ ❯ src/client/product-card.test.ts:353:44
+    351|   const $ = renderCard({ status, level, startedAt: "2022-04-05" });
+    352|
+    353|   expect($(".card-title .eyebrow").text()).toBe(line);
+       |                                            ^
+    354|   expect($(".product-card").text()).not.toContain("ARCHIVED");
+    355| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/18]⎯
+
+ FAIL  src/client/product-card.test.ts > level DAILY shows its own label on the top line
+AssertionError: expected 'DAILY · SINCE 2022' to be 'Daily · since 2022' // Object.is equality
+
+Expected: "Daily · since 2022"
+Received: "DAILY · SINCE 2022"
+
+ ❯ src/client/product-card.test.ts:353:44
+    351|   const $ = renderCard({ status, level, startedAt: "2022-04-05" });
+    352|
+    353|   expect($(".card-title .eyebrow").text()).toBe(line);
+       |                                            ^
+    354|   expect($(".product-card").text()).not.toContain("ARCHIVED");
+    355| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/18]⎯
+
+ FAIL  src/client/product-card.test.ts > a go-to card keeps its go-to badge whatever its level
+AssertionError: expected 'OCCASIONALLY · SINCE 2023' to be 'Occasionally · since 2023' // Object.is equality
+
+Expected: "Occasionally · since 2023"
+Received: "OCCASIONALLY · SINCE 2023"
+
+ ❯ src/client/product-card.test.ts:362:44
+    360|   })));
+    361|
+    362|   expect($(".card-title .eyebrow").text()).toBe("Occasionally · since …
+       |                                            ^
+    363|   expect($(".card-footer .card-go-to").text()).toBe("Owner-selected go…
+    364|   expect($(".card-back .card-go-to").text()).toBe("Owner-selected go-t…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/18]⎯
+
+ FAIL  src/client/product-card.test.ts > an unconfirmed ACTIVE discovery does not assert a relationship, start date, or go-to decision
+ FAIL  src/client/product-card.test.ts > an unconfirmed TESTING discovery does not assert a relationship, start date, or go-to decision
+ FAIL  src/client/product-card.test.ts > an unconfirmed ARCHIVED discovery does not assert a relationship, start date, or go-to decision
+AssertionError: expected 'PRIVATE DISCOVERY' to be 'Private discovery' // Object.is equality
+
+Expected: "Private discovery"
+Received: "PRIVATE DISCOVERY"
+
+ ❯ src/client/product-card.test.ts:562:46
+    560|     const $ = load(renderToStaticMarkup(createElement(ProductCard, { c…
+    561|
+    562|     expect($(".card-title .eyebrow").text()).toBe("Private discovery");
+       |                                              ^
+    563|     expect($(".card-footer > span").text()).toBe("Needs your review");
+    564|     expect($(".card-back .status-row").text()).toContain("Private disc…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/18]⎯
+
+ FAIL  src/client/product-card.test.ts > the go-to designation requires an explicit prop for a confirmed relationship
+AssertionError: expected 'TESTING' to be 'Testing' // Object.is equality
+
+Expected: "Testing"
+Received: "TESTING"
+
+ ❯ src/client/product-card.test.ts:592:44
+    590|   })));
+    591|
+    592|   expect($(".card-title .eyebrow").text()).toBe("Testing");
+       |                                            ^
+    593|   expect($(".card-footer > span").text()).toBe("Owner-selected go-to");
+    594|   expect($.text()).not.toContain("Unreviewed evidence");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/18]⎯
+
+ FAIL  src/client/product-card.test.ts > brand preview suppresses private discovery and go-to state
+AssertionError: expected 'BRAND PREVIEW' to be 'Brand preview' // Object.is equality
+
+Expected: "Brand preview"
+Received: "BRAND PREVIEW"
+
+ ❯ src/client/product-card.test.ts:606:44
+    604|   })));
+    605|
+    606|   expect($(".card-title .eyebrow").text()).toBe("Brand preview");
+       |                                            ^
+    607|   expect($(".card-footer > span").text()).toBe("Brand identity");
+    608|   expect($.text()).not.toContain("Private discovery");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/18]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  18 failed | 100 passed (118)
+   Start at  07:45:17
+   Duration  465ms (transform 119ms, setup 0ms, import 233ms, tests 174ms, environment 0ms)
+

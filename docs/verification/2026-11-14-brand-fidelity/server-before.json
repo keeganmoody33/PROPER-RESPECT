@@ -1,0 +1,8 @@
+{
+  "port": "3217",
+  "pid": "27229",
+  "cwd": "/Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a",
+  "command": "next-server (v16.3.8)",
+  "commit": "2ba6aa8e6c9c761d0fc0a017c4e6b8881aa8d8cb",
+  "uncommittedChanges": "none"
+}

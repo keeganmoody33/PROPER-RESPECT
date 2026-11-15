@@ -4,7 +4,7 @@ import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
 import { PublicSiteGuideWebMcp } from "@/components/public-site-guide-webmcp";
 import { homepageExamples } from "@/src/data/homepage-examples";
-import { homepageProvenFacts, homepageSteps, productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
+import { homepageSteps, productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
@@ -22,16 +22,13 @@ export default function HomePage() {
           <div className={styles.intro}>
             <p className={styles.label}>A personal record of the tools you use.</p>
             <h1 id="homepage-title">Your tools.<br /><span>Your track record.</span></h1>
-            <ul className={styles.facts}>
-              {homepageProvenFacts.map(fact => <li key={fact}>{fact}</li>)}
-            </ul>
-            <div className={styles.actions}>
-              <Link className={styles.primary} href="/app/collection">Start your collection</Link>
-              <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
-            </div>
-            <p className={styles.privacy}>Start with a private collection. Publishing is your choice.</p>
           </div>
+          {/* Right after the heading, so a phone shows a card in its first screen; a wide screen puts it in the second column. */}
           <div className={styles.example} id="example"><ProductExample examples={homepageExamples()} /></div>
+          <div className={`${styles.introRest} ${styles.actions}`}>
+            <Link className={styles.primary} href="/app/collection">Start your collection</Link>
+            <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
+          </div>
         </section>
         <section id="how-it-works" className={styles.journey} aria-labelledby="journey-title">
           <div className={styles.sectionHeading}>

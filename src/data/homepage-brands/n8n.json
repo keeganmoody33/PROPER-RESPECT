@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "n8n",
+  "canonicalDomain": "n8n.io",
+  "retrievalId": "6177e818-370e-4581-bd99-eb1168ff983a",
+  "retrievedAt": "2026-11-14T10:13:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/cbf1c081-1258-4ad0-9381-e1a4428a7073.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 120,
+      "height": 48
+    },
+    {
+      "url": "https://media.brand.dev/86717aa8-1acd-4f14-99d1-c2f1d50b6737.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 32,
+      "height": 14
+    },
+    {
+      "url": "https://media.brand.dev/f234c3d6-280d-40ca-974a-a0451f51c552.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 240,
+      "height": 48
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#ffbcca",
+      "name": "Rosie",
+      "source": "site"
+    },
+    {
+      "hex": "#040404",
+      "name": "Armor Wash",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#ffbcca",
+      "background": "#fafafa",
+      "text": "#161616"
+    },
+    "headingFamily": "n8n Baumer Uniwidth",
+    "bodyFamily": "n8n Baumer Uniwidth",
+    "typography": {
+      "heading": {
+        "family": "n8n Baumer Uniwidth",
+        "fallbacks": [
+          "n8n Baumer Uniwidth",
+          "Helvetica",
+          "system-ui",
+          "-apple-system",
+          "sans-serif"
+        ],
+        "weight": 500,
+        "fontSizePx": 64,
+        "lineHeight": 1.203125,
+        "letterSpacingEm": -0.01
+      },
+      "body": {
+        "family": "n8n Baumer Uniwidth",
+        "fallbacks": [
+          "n8n Baumer Uniwidth",
+          "Helvetica",
+          "system-ui",
+          "-apple-system",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 16,
+        "lineHeight": 1.5,
+        "letterSpacingEm": 0
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#fafafa",
+        "text": "#161616",
+        "border": "#e5e7eb",
+        "radiusPx": 8,
+        "paddingPx": 16
+      },
+      "buttonPrimary": {
+        "background": "#ffbcca",
+        "text": "#212121",
+        "border": "#212121",
+        "radiusPx": 9999,
+        "paddingPx": 12,
+        "weight": 400
+      },
+      "buttonSecondary": {
+        "background": "#d9d9d9",
+        "text": "#161616",
+        "border": "#161616",
+        "radiusPx": 9999,
+        "paddingPx": 12,
+        "weight": 400
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "6177e818-370e-4581-bd99-eb1168ff983a"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "aa9eafae-754b-4ce4-8649-1a2db1c7431a",
+      "partial": true
+    }
+  ],
+  "responseHash": "86a3ee53aa3eded3f363a264d8f644eae8bd5e688238631002df06123c461afd",
+  "fontLinks": [
+    {
+      "family": "n8n Baumer Uniwidth",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/378bc95292b934981093f305a6a104e541eb912abd4391a01b490d4d3939b655.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/97a53bf0e36c40ece9b47833aa0ffbd3f8d2d4d6c206b6d50195c9529fffa1d7.woff2",
+          "weight": 500,
+          "format": "woff2"
+        }
+      ]
+    }
+  ]
+}

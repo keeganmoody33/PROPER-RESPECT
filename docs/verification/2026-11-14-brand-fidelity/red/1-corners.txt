@@ -1,0 +1,56 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a
+
+ ❯ src/domain/brand-kit-site.test.ts (2 tests | 1 failed) 5ms
+     × take the site's measured panel and button corners, square included, with a pill kept a pill 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/domain/brand-kit-site.test.ts > corners > take the site's measured panel and button corners, square included, with a pill kept a pill
+AssertionError: expected { clay: '18px', …(11) } to deeply equal { clay: '24px', …(11) }
+
+- Expected
++ Received
+
+  {
+-   "clay": "24px",
++   "clay": "18px",
+    "cloudflare": "4px",
+-   "context-dev": "24px",
+-   "docker": "0px",
++   "context-dev": "7.2px",
++   "docker": "18px",
+    "elicit": "8px",
+-   "exa": "6px",
+-   "firecrawl": "20px",
++   "exa": "4px",
++   "firecrawl": "8px",
+    "github": "8px",
+-   "n8n": "24px",
+-   "open-places": "18px",
++   "n8n": "8px",
++   "open-places": "22px",
+    "porkbun": "8px",
+-   "spider": "0px",
++   "spider": "8px",
+  }
+
+ ❯ src/domain/brand-kit-site.test.ts:34:41
+     32| describe("corners", () => {
+     33|   it("take the site's measured panel and button corners, square includ…
+     34|     expect(kits("--brand-card-radius")).toEqual({
+       |                                         ^
+     35|       // Clay's 48px, Context.dev's 25.2px and n8n's 34px panels are h…
+     36|       clay: "24px", "context-dev": "24px", n8n: "24px", docker: "0px",…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  07:38:15
+   Duration  149ms (transform 50ms, setup 0ms, import 87ms, tests 5ms, environment 0ms)
+

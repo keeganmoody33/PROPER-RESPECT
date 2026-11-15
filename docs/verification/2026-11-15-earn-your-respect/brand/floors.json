@@ -1,0 +1,950 @@
+{
+ "Clay@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "GitHub@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Cloudflare@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Docker@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Firecrawl@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "n8n@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "n8n"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "n8n"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Claude Code@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Exa@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Porkbun@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Spider@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Open Places@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Grok Bot@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Elicit@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Context.dev@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Clay@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "GitHub@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Cloudflare@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Docker@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Firecrawl@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "n8n@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "n8n"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "n8n"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Claude Code@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Exa@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Porkbun@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Spider@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Open Places@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Grok Bot@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Elicit@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Context.dev@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Clay@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "GitHub@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Cloudflare@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Docker@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Firecrawl@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "n8n@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "n8n"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "n8n"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Claude Code@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Exa@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Porkbun@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Spider@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Open Places@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Grok Bot@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Elicit@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Context.dev@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ }
+}

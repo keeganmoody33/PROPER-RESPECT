@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "clay",
+  "canonicalDomain": "clay.com",
+  "retrievalId": "b1e6af89-bd5b-4d1d-a92c-fbbece1b46d7",
+  "retrievedAt": "2026-11-14T10:15:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/acb54167-2eae-4c41-890c-574d0be724c3.png",
+      "mode": "dark",
+      "type": "logo",
+      "width": 509,
+      "height": 163
+    },
+    {
+      "url": "https://media.brand.dev/1263c04e-791e-41a4-bbd7-3058a37e4009.png",
+      "mode": "dark",
+      "type": "icon",
+      "width": 512,
+      "height": 512
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#3859f9",
+      "name": "Hooloovoo Blue",
+      "source": "site"
+    },
+    {
+      "hex": "#2bafd5",
+      "name": "Aquarius",
+      "source": "logo"
+    },
+    {
+      "hex": "#040404",
+      "name": "Armor Wash",
+      "source": "logo"
+    },
+    {
+      "hex": "#47c4e9",
+      "name": "Clean Pool",
+      "source": "logo"
+    },
+    {
+      "hex": "#f48b4e",
+      "name": "Poppy Glow",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#3859f9",
+      "background": "#ffffff",
+      "text": "#000000"
+    },
+    "headingFamily": "Roobertvf",
+    "bodyFamily": "Roobertvf",
+    "typography": {
+      "heading": {
+        "family": "Roobertvf",
+        "fallbacks": [
+          "Roobertvf",
+          "Arial",
+          "sans-serif"
+        ],
+        "weight": 575,
+        "fontSizePx": 88,
+        "lineHeight": 1,
+        "letterSpacingEm": -0.04
+      },
+      "body": {
+        "family": "Roobertvf",
+        "fallbacks": [
+          "Roobertvf",
+          "Arial",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 24,
+        "lineHeight": 1.5,
+        "letterSpacingEm": 0
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#fefdfb",
+        "text": "#000000",
+        "border": "#ffffff",
+        "radiusPx": 18,
+        "paddingPx": 16
+      },
+      "buttonPrimary": {
+        "background": "#000000",
+        "text": "#ffffff",
+        "radiusPx": 12,
+        "paddingPx": 8,
+        "weight": 500
+      },
+      "buttonSecondary": {
+        "background": "#f3f2ed",
+        "text": "#000000",
+        "radiusPx": 12,
+        "paddingPx": 8,
+        "weight": 500
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "b1e6af89-bd5b-4d1d-a92c-fbbece1b46d7"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "23e02606-87b6-4cee-87dc-09ed69f144d4"
+    }
+  ],
+  "responseHash": "163237c170cf0326ef7131a59ce439747eab3dca4449bf0651328d06c580027e",
+  "fontLinks": [
+    {
+      "family": "Roobertvf",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
+          "weight": 300,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
+          "weight": 600,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
+          "weight": 700,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
+          "weight": 800,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
+          "weight": 900,
+          "format": "woff2"
+        }
+      ]
+    }
+  ]
+}

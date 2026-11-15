@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "elicit",
+  "canonicalDomain": "elicit.com",
+  "measuredAt": "2026-11-15T09:32:11.857Z",
+  "url": "https://elicit.com/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#fcfcf8",
+      "from": "page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Martina Plantijn Regular",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "Special Gothic Variable",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#026370",
+        "text": "#fcfcf8",
+        "radius": {
+          "px": 8,
+          "pill": false
+        },
+        "font": {
+          "family": "Special Gothic Variable",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0.009
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#083d44",
+        "text": "#fcfcf8",
+        "radius": {
+          "px": 8,
+          "pill": false
+        },
+        "font": {
+          "family": "Special Gothic Variable",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0.01
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 20,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#026370",
+      "from": "primary call-to-action"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Crimson Pro",
+        "generic": "serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#083d44",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#026370",
+          "areaPx": 11969
+        },
+        {
+          "hex": "#083d44",
+          "areaPx": 2411
+        }
+      ],
+      "from": "first screen"
+    },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 128,
+          "height": 128,
+          "inks": [
+            {
+              "hex": "#093d46",
+              "share": 1
+            },
+            {
+              "hex": "#002937",
+              "share": 0
+            }
+          ]
+        },
+        {
+          "mode": "unknown",
+          "type": "icon",
+          "width": 180,
+          "height": 180,
+          "inks": [
+            {
+              "hex": "#014958",
+              "share": 0.539
+            },
+            {
+              "hex": "#ffffff",
+              "share": 0.255
+            },
+            {
+              "hex": "#035a6d",
+              "share": 0.19
+            },
+            {
+              "hex": "#d3e1e4",
+              "share": 0.004
+            },
+            {
+              "hex": "#94b5bc",
+              "share": 0.004
+            },
+            {
+              "hex": "#588c97",
+              "share": 0.004
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
+    "panelFill": {
+      "value": "#f3f6e4",
+      "from": "second large surface"
+    }
+  }
+}

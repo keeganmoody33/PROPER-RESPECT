@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "open-places",
+  "canonicalDomain": "openplaces.practicebase.io",
+  "retrievalId": "5764ade3-b168-41bf-9dbd-11d9673bebff",
+  "retrievedAt": "2026-11-14T10:06:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/d0d02048-61a8-4924-b673-caf59df86026.png",
+      "mode": "light",
+      "type": "icon",
+      "width": 256,
+      "height": 256
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#3f5a2c",
+      "name": "Trefoil",
+      "source": "site"
+    },
+    {
+      "hex": "#f7f5ef",
+      "name": "The Speed of Light",
+      "source": "site"
+    },
+    {
+      "hex": "#c38c65",
+      "name": "Butterum",
+      "source": "logo"
+    },
+    {
+      "hex": "#164c44",
+      "name": "Swedish Green",
+      "source": "logo"
+    },
+    {
+      "hex": "#84a49c",
+      "name": "Beckett",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#3f5a2c",
+      "background": "#f7f5ef",
+      "text": "#23261f"
+    },
+    "headingFamily": "Figtree",
+    "bodyFamily": "Figtree",
+    "typography": {
+      "heading": {
+        "family": "Figtree",
+        "fallbacks": [
+          "Figtree",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "sans-serif"
+        ],
+        "weight": 800,
+        "fontSizePx": 88,
+        "lineHeight": 1.02,
+        "letterSpacingEm": -0.04
+      },
+      "body": {
+        "family": "Figtree",
+        "fallbacks": [
+          "Figtree",
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          "Segoe UI",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 20,
+        "lineHeight": 1.4,
+        "letterSpacingEm": 0
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#eef6e3",
+        "text": "#23261f",
+        "border": "#d6e8c2",
+        "radiusPx": 22,
+        "paddingPx": 24
+      },
+      "buttonPrimary": {
+        "background": "#efece3",
+        "text": "#23261f",
+        "radiusPx": 12,
+        "paddingPx": 9,
+        "weight": 600
+      },
+      "buttonSecondary": {
+        "text": "#23261f",
+        "border": "#23261f",
+        "radiusPx": 4,
+        "paddingPx": 9,
+        "weight": 600
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "5764ade3-b168-41bf-9dbd-11d9673bebff"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "c070563d-fba6-4dfa-b8ec-288e131b0164"
+    }
+  ],
+  "responseHash": "b3a42c0fbcf2df927196ab19d321c8d69a1cbbef6ddb90add0d3f905560e5486",
+  "fontLinks": [
+    {
+      "family": "Figtree",
+      "source": "styleguide",
+      "type": "google",
+      "category": "sans-serif",
+      "files": [
+        {
+          "url": "https://fonts.gstatic.com/s/figtree/v9/_Xmz-HUzqDCFdgfMsYiV_F7wfS-Bs_chQF5ewkEU4HTy.ttf",
+          "weight": 300,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/figtree/v9/_Xmz-HUzqDCFdgfMsYiV_F7wfS-Bs_d_QF5ewkEU4HTy.ttf",
+          "weight": 400,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/figtree/v9/_Xmz-HUzqDCFdgfMsYiV_F7wfS-Bs_dNQF5ewkEU4HTy.ttf",
+          "weight": 500,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/figtree/v9/_Xmz-HUzqDCFdgfMsYiV_F7wfS-Bs_ehR15ewkEU4HTy.ttf",
+          "weight": 600,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/figtree/v9/_Xmz-HUzqDCFdgfMsYiV_F7wfS-Bs_eYR15ewkEU4HTy.ttf",
+          "weight": 700,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/figtree/v9/_Xmz-HUzqDCFdgfMsYiV_F7wfS-Bs_f_R15ewkEU4HTy.ttf",
+          "weight": 800,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/figtree/v9/_Xmz-HUzqDCFdgfMsYiV_F7wfS-Bs_fWR15ewkEU4HTy.ttf",
+          "weight": 900,
+          "format": "truetype"
+        }
+      ]
+    }
+  ]
+}

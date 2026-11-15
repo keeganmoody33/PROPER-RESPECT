@@ -1,0 +1,8 @@
+{
+  "port": "3100",
+  "pid": "20017",
+  "cwd": "<worktree>",
+  "command": "next-server (v16.3.8)",
+  "commit": "006257531b7936415ed32194941f95547756b4cc",
+  "uncommittedChanges": "M next-env.d.ts"
+}

@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "cloudflare",
+  "canonicalDomain": "cloudflare.com",
+  "retrievalId": "1e9b098c-e21f-41db-9577-fc085209be14",
+  "retrievedAt": "2026-11-14T09:57:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/25ed59c7-3a63-4aa7-ba5d-ea97c9ec5dfe.svg",
+      "mode": "dark",
+      "type": "logo",
+      "width": 341,
+      "height": 156
+    },
+    {
+      "url": "https://media.brand.dev/f8704dcb-de29-4517-b2ca-a6a6122fa79d.png",
+      "mode": "dark",
+      "type": "icon",
+      "width": 198,
+      "height": 192
+    },
+    {
+      "url": "https://media.brand.dev/5019dab7-f07e-4e29-98bb-f8bb7b613877.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 248,
+      "height": 58
+    },
+    {
+      "url": "https://media.brand.dev/fa417a46-2a7a-4fef-b0fa-3dda3d2bb3c8.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 719,
+      "height": 59
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#ff5e1f",
+      "name": "Giants Orange",
+      "source": "site"
+    },
+    {
+      "hex": "#fcac84",
+      "name": "Peach Fizz",
+      "source": "logo"
+    },
+    {
+      "hex": "#fcac43",
+      "name": "Safflower",
+      "source": "logo"
+    },
+    {
+      "hex": "#040404",
+      "name": "Armor Wash",
+      "source": "logo"
+    },
+    {
+      "hex": "#242424",
+      "name": "Verified Black",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#ff5e1f",
+      "background": "#ffffff",
+      "text": "#262626"
+    },
+    "headingFamily": "STK Bureau Sans",
+    "bodyFamily": "STK Bureau Sans",
+    "typography": {
+      "heading": {
+        "family": "STK Bureau Sans",
+        "fallbacks": [
+          "STK Bureau Sans",
+          "sans-serif"
+        ],
+        "weight": 500,
+        "fontSizePx": 56,
+        "lineHeight": 1.1964285714285714,
+        "letterSpacingEm": -0.024999999999999998
+      },
+      "body": {
+        "family": "STK Bureau Sans",
+        "fallbacks": [
+          "STK Bureau Sans",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 19.2,
+        "lineHeight": 1.5104166666666667,
+        "letterSpacingEm": -0.025
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#ff5e1f",
+        "text": "#ffffff",
+        "border": "#f0f0f0",
+        "radiusPx": 4,
+        "paddingPx": 32
+      },
+      "buttonPrimary": {
+        "background": "#ffffff",
+        "text": "#1f1f1f",
+        "border": "#ffffff",
+        "radiusPx": 9999,
+        "paddingPx": 12,
+        "weight": 500
+      },
+      "buttonSecondary": {
+        "background": "#ffffff",
+        "text": "#1f1f1f",
+        "border": "#ffffff",
+        "radiusPx": 9999,
+        "paddingPx": 12,
+        "weight": 500
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "1e9b098c-e21f-41db-9577-fc085209be14"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "cb001661-a03e-4fbc-a393-7cf23e94229d",
+      "partial": true
+    }
+  ],
+  "responseHash": "6230554926af2dea874e19d2f6a7266034fe1f35fbc174e80b85c301ea22250d",
+  "fontLinks": [
+    {
+      "family": "STK Bureau Sans",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/16bb192b61c258c142e3e0d92fe74cbb625ab72b60d3031cbcca2bee0968b345.otf",
+          "weight": 400,
+          "format": "opentype"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/408f046e22327dabd7d0c5a0c9ee443e7163e95ac699982fd1c9a4e577ede3ac.otf",
+          "weight": 500,
+          "format": "opentype"
+        }
+      ]
+    }
+  ]
+}

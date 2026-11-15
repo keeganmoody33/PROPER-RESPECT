@@ -1,3 +1,4 @@
+import { dayMonthYear } from "./format-period";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { load } from "cheerio";
@@ -38,7 +39,8 @@ for (const activity of activities) it(`projects only visible ${activity.kind} va
   const projected = result.cards[0].activity!;
   expect(projected).toMatchObject({ capturedOn: "2026-09-21", freshness: "STALE", attributionScope: "WORKSPACE", provenanceLabel: common.provenanceLabel, period: { start: "2026-09-01", end: "2026-09-21" } });
   expect(text).toContain(projected.provenanceLabel);
-  expect(text).toContain(projected.capturedOn);
+  // The card says the captured day in plain words; its exact value is the <time> element's datetime.
+  expect(text).toContain(dayMonthYear(projected.capturedOn));
   function checkDisplayedValues(value: unknown): void {
     if (!value || typeof value !== "object") return;
     for (const [key, child] of Object.entries(value)) {
@@ -103,7 +105,7 @@ it("keeps sparse daily coverage and no-period boundaries identical to the card",
     if (projected.kind !== "contributionCalendar") throw new Error("Unexpected projection");
     const text = load(renderToStaticMarkup(createElement(ProductCard, { card: source.cards[0], index: 0 }))).text();
     expect(projected.coverageNote).toBe(`${period ? "3 days have" : "1 day has"} no supplied count; blank spaces are not zero activity.`);
-    expect(projected.suppliedRange).toBe("Daily counts: 2026-09-02 – 2026-09-04");
+    expect(projected.suppliedRange).toBe("Daily counts: 2 Sep 2026 – 4 Sep 2026");
     expect(text).toContain(projected.coverageNote);
     expect(text).toContain(projected.suppliedRange);
   }
@@ -113,10 +115,10 @@ it("omits unrendered labels and units from an empty time series", () => {
   const source = profile({ ...common, kind: "timeSeries", label: "HIDDEN_EMPTY_LABEL", unit: "HIDDEN_EMPTY_UNIT", points: [] });
   const projected = projectVisiblePublicProfile(source);
   const text = load(renderToStaticMarkup(createElement(ProductCard, { card: source.cards[0], index: 0 }))).text();
-  expect(text).toContain("No observations supplied");
+  expect(text).toContain("No data points supplied");
   expect(text).not.toMatch(/HIDDEN_EMPTY_/);
   expect(JSON.stringify(projected)).not.toMatch(/HIDDEN_EMPTY_/);
-  expect(projected.cards[0].activity).toMatchObject({ kind: "timeSeries", points: [], emptyNote: "No observations supplied" });
+  expect(projected.cards[0].activity).toMatchObject({ kind: "timeSeries", points: [], emptyNote: "No data points supplied" });
 });
 
 it("carries what a card's product does for its owner as the words visitors read, and nothing when none is listed", () => {
@@ -155,7 +157,8 @@ describe("link schemes", () => {
       { title: "Bad artifact", url }, { title: "Published article", url: "https://example.com/article" },
     ] });
     const result = projectVisiblePublicProfile(source);
-    expect(result.cards[0].activity).toMatchObject({ kind: "artifactCollection", total: { label: "artifacts", displayValue: "2" },
+    // The dropped link is not counted either, so the total matches the works a visitor can open.
+    expect(result.cards[0].activity).toMatchObject({ kind: "artifactCollection", total: { label: "linked work", displayValue: "1" },
       artifacts: [{ title: "Published article", url: "https://example.com/article" }] });
     expect(JSON.stringify(result)).not.toContain(url);
   });
@@ -181,4 +184,31 @@ describe("relationship label for agents and visitors", () => {
       .toEqual([["ARCHIVED", "STOPPED", "Stopped using", true], ["ARCHIVED", undefined, "Used before", true]]);
     expect(leveled.cards[1]).not.toHaveProperty("level");
   });
+});
+
+it("gives agents the calendar's drawn total, the same number the card leads with, and keeps a stored total that disagrees apart", () => {
+  const activity: ActivityModule = { ...common, period: { start: "2026-09-01", end: "2026-09-03" }, kind: "contributionCalendar", total: 523, days: [
+    { date: "2026-09-01", count: 1, level: 1 }, { date: "2026-09-02", count: 4, level: 3 }, { date: "2026-09-03", count: 2, level: 2 },
+  ] };
+  const source = profile(activity);
+  expect(projectVisiblePublicProfile(source).cards[0].activity).toMatchObject({
+    total: { label: "contributions", displayValue: "7" }, reportedTotal: { label: "contributions · as reported", displayValue: "523" },
+  });
+  const text = load(renderToStaticMarkup(createElement(ProductCard, { card: source.cards[0], index: 0 }))).text();
+  expect(text).toContain("7 contributions");
+  expect(text).toContain("523 contributions · as reported");
+});
+
+it("never tells agents fewer linked works than it lists", () => {
+  const source = profile({ ...common, kind: "artifactCollection", total: 0, artifacts: [{ title: "Published article", url: "https://example.com/article" }] });
+  expect(projectVisiblePublicProfile(source).cards[0].activity).toMatchObject({ total: { label: "linked work", displayValue: "1" } });
+});
+
+it("gives agents one point a date in date order, the history the card's chart draws", () => {
+  const points = [{ date: "2026-09-02", value: 999 }, { date: "2026-09-01", value: 3 }, { date: "2026-09-02", value: 4 }];
+  const series = projectVisiblePublicProfile(profile({ ...common, kind: "timeSeries", label: "Runs", points })).cards[0].activity;
+  expect(series).toMatchObject({ kind: "timeSeries", points: [{ date: "2026-09-01", value: 3 }, { date: "2026-09-02", value: 4 }] });
+  const days = [{ date: "2026-09-02", count: 999, level: 4 }, { date: "2026-09-01", count: 3, level: 1 }, { date: "2026-09-02", count: 4, level: 2 }];
+  const coding = projectVisiblePublicProfile(profile({ ...common, kind: "codingActivity", primary: { label: "Sessions", value: 2 }, supporting: [], days })).cards[0].activity;
+  expect(coding).toMatchObject({ kind: "codingActivity", days: [{ date: "2026-09-01", count: 3 }, { date: "2026-09-02", count: 4 }] });
 });

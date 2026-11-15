@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { brandCardKit, contrast } from "./brand-kit";
+import { brandAccent, brandCardKit, contrast, headlineAccentColour } from "./brand-kit";
 import { normalizeProductBrand } from "./product-brand";
+import { HOMEPAGE_BRANDS } from "@/src/data/homepage-brands";
 
 /** A stored snapshot for a product whose site has these colours and component styles. */
 function stored(colors: Record<string, string>, components?: unknown) {
@@ -31,9 +32,11 @@ describe("brandCardKit", () => {
     expect(brandCardKit(firecrawl, "#f9f9f9", "#262626")).toEqual({
       // Its own border (#e5e7eb) is too faint to define the card's edge, so one is drawn from its text colour.
       "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px",
-      // White on this orange is 3.3:1, too low for the button's small text, so the label is the card's text colour.
-      "--brand-card-button-fill": "#ff4c00", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450",
+      // White on this orange is 3.3:1, too low for the button's small text: the orange deepens 16%, as little as makes its white label read 4.5:1.
+      "--brand-card-button-fill": "#d64000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450",
       "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff",
+      // The accent is 3.2:1 on the card: too faint for text, enough for bars. The figures take it deepened to read 4.5:1.
+      "--brand-card-chart": "#ff4c00", "--brand-card-number-colour": "#d23d00", "--brand-card-value-colour": "#d23d00",
     });
   });
 
@@ -43,7 +46,7 @@ describe("brandCardKit", () => {
     expect(kit["--brand-card-button-fill"]).toBe("#ff5e1f");
     expect(kit["--brand-card-button-text"]).toBe("#262626");
     expect(kit["--brand-card-button-radius"]).toBe("9999px");
-    expect(kit["--brand-card-radius"]).toBe("6px");
+    expect(kit["--brand-card-radius"]).toBe("4px");
     expect(kit).not.toHaveProperty("--brand-card-quiet-fill");
   });
 
@@ -85,13 +88,81 @@ describe("brandCardKit", () => {
   it("keeps the default outlined button for a brand stored before button values were kept, even with an accent", () => {
     // Until the hourly re-fetch reaches it, such a brand has an accent and no components.
     const legacy = stored({ accent: "#123456", background: "#ffffff", text: "#111111" });
-    expect(Object.keys(brandCardKit(legacy, "#ffffff", "#111111"))).toEqual(["--brand-card-border"]);
+    expect(Object.keys(brandCardKit(legacy, "#ffffff", "#111111"))).toEqual(["--brand-card-border", "--brand-card-chart", "--brand-card-number-colour", "--brand-card-value-colour"]);
   });
 
   it("leaves buttons alone when the brand has nothing that shows, and does nothing without solid card colours", () => {
     const plain = stored({ background: "#ffffff", text: "#111111" });
-    expect(Object.keys(brandCardKit(plain, "#ffffff", "#111111"))).toEqual(["--brand-card-border"]);
+    expect(Object.keys(brandCardKit(plain, "#ffffff", "#111111"))).toEqual(["--brand-card-border", "--brand-card-chart"]);
     expect(brandCardKit(firecrawl, "rgba(0,0,0,0)", "#262626")).toEqual({});
     expect(brandCardKit(firecrawl, "#f9f9f9", "#26262680")).toEqual({});
+  });
+
+  it("draws a chart in the brand's accent when its bars show on the card, and in the card's text colour when they would not", () => {
+    // Bars are marks, not text: they need 3:1 against the card (WCAG 1.4.11).
+    const charts = Object.fromEntries(Object.entries(HOMEPAGE_BRANDS).map(([slug, brand]) => {
+      const { background, text } = brand.styleguide!.colors;
+      return [slug, brandCardKit(brand, background!, text!)["--brand-card-chart"]];
+    }));
+    expect(charts).toEqual({
+      clay: "#3859f9", cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", elicit: "#083d44", exa: "#1f40ed",
+      // Spider's site accent is slate, a grey; its bars take the green of its logo, as its site's highlights do.
+      firecrawl: "#ff4c00", github: "#0d6731", "open-places": "#3f5a2c", spider: "#24c45c",
+      // n8n's pink is 1.5:1 on its card and Porkbun's coral 2.6:1: each deepens, hue kept, until its bars read 3:1.
+      n8n: "#be7f8d", porkbun: "#e36d6e",
+    });
+    expect(brandCardKit(stored({ background: "#ffffff", text: "#111111" }), "#ffffff", "#111111")["--brand-card-chart"]).toBe("#111111");
+    // An accent too pale to reach 3:1 within a quarter of OKLab's lightness keeps the card's text colour.
+    expect(brandCardKit(stored({ accent: "#fff1a8", background: "#ffffff", text: "#111111" }), "#ffffff", "#111111")["--brand-card-chart"]).toBe("#111111");
+  });
+
+  it("lets a square brand's card be square", () => {
+    const square = stored({ background: "#0c0e13", text: "#f8fafc" }, { card: { borderRadius: "0px" } });
+    expect(brandCardKit(square, "#0c0e13", "#f8fafc")["--brand-card-radius"]).toBe("0px");
+  });
+
+  it("fills the button from the site's other stored button when the first has no fill that shows", () => {
+    // GitHub's first stored button is an outline; its green sign-up button is stored second.
+    const kit = brandCardKit(HOMEPAGE_BRANDS.github, "#ffffff", "#000000");
+    expect(kit).toMatchObject({ "--brand-card-button-fill": "#08872b", "--brand-card-button-text": "#ffffff" });
+    expect(kit).not.toHaveProperty("--brand-card-quiet-fill");
+  });
+});
+
+describe("brandAccent", () => {
+  it("keeps a site accent with colour, and replaces a grey one with the brand's most colourful colour that shows", () => {
+    const accents = Object.fromEntries(Object.entries(HOMEPAGE_BRANDS).map(([slug, brand]) => [slug, brandAccent(brand, brand.styleguide!.colors.background!)]));
+    expect(accents).toEqual({
+      clay: { hex: "#3859f9", source: "site accent" }, cloudflare: { hex: "#ff5e1f", source: "site accent" },
+      "context-dev": { hex: "#2563eb", source: "site accent" }, docker: { hex: "#2560ff", source: "site accent" },
+      elicit: { hex: "#083d44", source: "site accent" }, exa: { hex: "#1f40ed", source: "site accent" },
+      firecrawl: { hex: "#ff4c00", source: "site accent" }, github: { hex: "#0d6731", source: "site accent" },
+      n8n: { hex: "#ffbcca", source: "site accent" }, "open-places": { hex: "#3f5a2c", source: "site accent" },
+      porkbun: { hex: "#ef7878", source: "site accent" },
+      // Slate #94a3b8 has an OKLCH chroma of 0.035; the logo's #24c45c (0.19) is the most colourful brand colour at 3:1 on the card.
+      spider: { hex: "#24c45c", source: "logo colour" },
+    });
+  });
+
+  it("keeps a grey accent when no brand colour has colour and shows on the card", () => {
+    const grey = stored({ accent: "#94a3b8", background: "#0c0e13", text: "#f8fafc" });
+    expect(brandAccent(grey, "#0c0e13")).toEqual({ hex: "#94a3b8", source: "site accent" });
+    expect(brandAccent(undefined, "#0c0e13")).toBeUndefined();
+  });
+});
+
+describe("headlineAccentColour", () => {
+  it("draws the phrase in the brand's mark where the headline is large text and the mark reads 3:1 on the headline's surface", () => {
+    expect(headlineAccentColour(firecrawl, "#f9f9f9", { sizePx: 24, weight: 500 })).toBe("#ff4c00");
+    // Bold from 18.66px is large text too.
+    expect(headlineAccentColour(firecrawl, "#f9f9f9", { sizePx: 20.8, weight: 700 })).toBe("#ff4c00");
+  });
+
+  it("keeps the headline's own colour for text under large size, and for a mark that doesn't reach 3:1 on the surface", () => {
+    expect(headlineAccentColour(firecrawl, "#f9f9f9", { sizePx: 20.8, weight: 500 })).toBeUndefined();
+    expect(headlineAccentColour(firecrawl, "#f9f9f9", { sizePx: 18.4, weight: 700 })).toBeUndefined();
+    // Yellow on white is 1.4:1; Firecrawl's orange on its own orange is 1:1.
+    expect(headlineAccentColour(stored({ accent: "#ffd400", background: "#ffffff", text: "#111111" }), "#ffffff", { sizePx: 24, weight: 400 })).toBeUndefined();
+    expect(headlineAccentColour(firecrawl, "#ff4c00", { sizePx: 24, weight: 400 })).toBeUndefined();
   });
 });

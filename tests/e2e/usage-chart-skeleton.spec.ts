@@ -32,13 +32,32 @@ const card: PublicProfile["cards"][number] = {
   },
 };
 
-const compiled = buildSync({
+const QUARTER_DAYS = 90;
+const MAX_BARS = 31;
+const DAY_MS = 86_400_000;
+const QUARTER_START = "2026-07-03";
+const NARROWEST_WIDTH = 320;
+const PHONE_WIDTH = 390;
+const PHONE_WIDTHS = [NARROWEST_WIDTH, PHONE_WIDTH];
+const PHONE_HEIGHT = 900;
+// A 90-day snapshot, as a connected account can return: more points than a phone-width card has room for at 4px each.
+const quarter: PublicProfile["cards"][number] = {
+  ...card,
+  activity: {
+    ...card.activity!,
+    kind: "timeSeries", label: "Sessions", unit: "sessions",
+    points: Array.from({ length: QUARTER_DAYS }, (_, index) => ({ date: new Date(Date.parse(QUARTER_START) + index * DAY_MS).toISOString().split("T")[0], value: points[index % points.length].value })),
+    period: { start: QUARTER_START, end: "2026-09-30" },
+  },
+};
+
+const bundle = (fixture: PublicProfile["cards"][number]) => buildSync({
   stdin: {
     contents: `import { createElement } from "react";
       import { createRoot } from "react-dom/client";
       import { ProductCard } from "./components/product-card";
       import { ProductCardSkeleton } from "./components/product-card-skeleton";
-      const card = ${JSON.stringify(card)};
+      const card = ${JSON.stringify(fixture)};
       createRoot(document.getElementById("root")).render(createElement("div", { className: "stack" },
         createElement("p", { className: "before-copy" }, "Previously: Loading your private collection…"),
         createElement(ProductCardSkeleton, { label: "Loading your private collection…", log: "COLLECTION · LOADING", count: 2 }),
@@ -55,11 +74,12 @@ const compiled = buildSync({
   jsx: "automatic",
   define: { "process.env.NODE_ENV": '"production"' },
 });
+const compiled = bundle(card);
 
-async function mount(page: import("@playwright/test").Page, theme: "light" | "dark") {
+async function mount(page: import("@playwright/test").Page, theme: "light" | "dark", script = compiled) {
   await page.setContent(`<!doctype html><html lang="en" data-theme="${theme}"><head><title>Usage chart fixture</title></head><body><main><h1>Usage chart fixture</h1><div id="root"></div></main></body></html>`);
   await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
-  await page.addScriptTag({ content: compiled.outputFiles[0].text });
+  await page.addScriptTag({ content: script.outputFiles[0].text });
 }
 
 for (const theme of ["light", "dark"] as const) {
@@ -79,12 +99,17 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".product-card-skeleton .usage-chart-log")).not.toHaveText(/^(?:0|—|–)$/);
 
     const card = page.locator(".product-card").first();
+    const front = card.locator(".card-front");
+    await expect(front.getByRole("img", { name: "Sessions trend" })).toBeVisible();
+    await expect(front.locator(".activity-bars > span")).toHaveCount(30);
+    // Layout height, so the card's turn-in animation doesn't skew it.
+    expect(await front.locator(".usage-chart").evaluate(chart => (chart as HTMLElement).offsetHeight)).toBe(64);
+    await expect(front.locator(".usage-chart-log, .blueprint-dim")).toHaveCount(0);
+    await expect(front.locator(".usage-chart")).toHaveAttribute("data-ready", "true");
+    // The back doesn't draw the chart again.
     await card.getByRole("button", { name: "Details", exact: true }).click();
-    const bars = card.locator(".activity-bars > span");
-    await expect(bars).toHaveCount(30);
-    await expect(card.locator(".usage-chart")).toHaveAttribute("data-state", "resolved");
-    await expect(card.locator(".usage-chart")).toHaveAttribute("data-ready", "true");
-    await expect(card.locator(".activity-meta")).toContainText("Snapshot recorded 2026-10-01");
+    await expect(card.locator(".card-back .usage-chart")).toHaveCount(0);
+    await expect(card.locator(".activity-meta")).toContainText("Snapshot recorded 1 Oct 2026");
     await expect(card).not.toContainText(/score|rank|rating/i);
 
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -102,11 +127,32 @@ test("reduced motion swaps the blueprint for bars without a grow animation", asy
   await mount(page, "dark");
 
   const card = page.locator(".product-card").first();
-  await card.getByRole("button", { name: "Details", exact: true }).click();
-  const chart = card.locator(".usage-chart");
+  const chart = card.locator(".card-front .usage-chart");
   await expect(chart).toHaveAttribute("data-ready", "true");
-  const bars = card.locator(".activity-bars > span");
+  const bars = card.locator(".card-front .activity-bars > span");
   await expect(bars).toHaveCount(30);
   await expect(bars.first()).toHaveCSS("animation-name", "none");
   await expect(card.locator(".usage-chart-blueprint")).toHaveCount(0);
 });
+
+PHONE_WIDTHS.forEach(width => test(`a 90-day series fits a ${width}px card as ${MAX_BARS} bars`, async ({ page }) => {
+  await page.setViewportSize({ width, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mount(page, "dark", bundle(quarter));
+  const card = page.locator(".product-card").first();
+  const fits = (face: string) => card.locator(`${face} .activity-bars`).evaluate(chart => ({
+    overflow: chart.scrollWidth - chart.clientWidth,
+    lastBarPastEdge: Math.max(0, Math.round(chart.lastElementChild!.getBoundingClientRect().right - chart.getBoundingClientRect().right)),
+  }));
+  await expect(card.locator(".card-front .activity-bars > span")).toHaveCount(MAX_BARS);
+  expect(await fits(".card-front")).toEqual({ overflow: 0, lastBarPastEdge: 0 });
+  // A screen reader reads the same bars as rows, with the dates and averages the chart keeps in hover titles.
+  const rows = card.locator(".card-front").getByRole("table", { name: "Sessions, one row per bar" }).getByRole("row");
+  await expect(rows).toHaveCount(MAX_BARS + 1);
+  // Each row is headed by the day its bar starts.
+  await expect(rows.nth(1).getByRole("rowheader")).toHaveText("3 Jul 2026");
+  await expect(rows.nth(1).getByRole("cell")).toHaveText(["4 Jul 2026", "18 sessions on average"]);
+  await card.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(card.locator(".card-back .activity-bars")).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+}));

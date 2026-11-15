@@ -22,7 +22,7 @@ const snapshot = normalizeProductBrand({
 });
 
 describe("retained card typography", () => {
-  it("loads the provider-hosted font files through this site, and leaves hosts that allow other origins alone", () => {
+  it("loads the provider-hosted and Google-hosted font files through this site, so a visitor's browser asks neither host", () => {
     // media.brand.dev sends no Access-Control-Allow-Origin, so a browser refuses its fonts from any other site.
     const hash = "45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115";
     const hosted = normalizeProductBrand({
@@ -41,7 +41,8 @@ describe("retained card typography", () => {
     const css = renderToStaticMarkup(createElement(ProductBrandFonts, { snapshot: hosted }));
     expect(css).toContain(`url("/api/brand-fonts/${hash}.woff2") format("woff2")`);
     expect(css).not.toContain("media.brand.dev");
-    expect(css).toContain('url("https://fonts.gstatic.com/s/roboto/v51/roboto.ttf") format("truetype")');
+    expect(css).toContain('url("/api/brand-fonts/google/roboto/v51/roboto.ttf") format("truetype")');
+    expect(css).not.toContain("fonts.gstatic.com");
   });
 
   it("emits only namespaced font faces for explicit roles, with swap and fallback stacks", () => {

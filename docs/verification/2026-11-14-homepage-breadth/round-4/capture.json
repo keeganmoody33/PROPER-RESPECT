@@ -1,0 +1,388 @@
+{
+  "server": {
+    "port": "3317",
+    "pid": "8782",
+    "cwd": "/Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a",
+    "command": "next-server (v16.3.8)",
+    "commit": "bdc59ff58c09e2b221a7e7852608adbc72360135",
+    "uncommittedSource": "none"
+  },
+  "results": [
+    {
+      "target": "first-screen-1440",
+      "assertion": "1440×1000 viewport",
+      "observed": "carousel top 224px; elements in page 1232"
+    },
+    {
+      "target": "clay-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Daily · since 2023 /  / Clay / ↗ /  / My lead lists, enriched. /  / I use it to /  / enrich lead and account lists / find contact details / 38,400 / rows enriched / Mar 2023 – Aug 2026 / 86 / tables built / Mar 2023 – Aug 2026 / 48,500 / credits used / Sep 2025 – Aug 2026 /  / Sample numbers · how each was measured is in Details /  / Lead list · invented sample rows / Company\tDomain\tWork email\tStatus / Northwind Labs\tnorthwindlabs.example\ta.lindqvist@northwindlabs.example\tEnriched / Blue Heron Freight\tblueheron.example\tm.okafor@blueheron.example\tEnriched / Quillon Health\tquillon.example\tFinding…\tRunning / Tessel Robotics\ttessel.example\tr.amari@tessel.example\tEnriched / Marrow & Pine\tmarrowpine.example\tNot found\tNo match /  / Costs $149/month · owner-reported /  / Periods, sources and a work sample inside / Details ↶"
+    },
+    {
+      "target": "clay-back-1440",
+      "assertion": "back text, How this was measured closed",
+      "observed": "Clay / Close details / Daily · Direct link / Lists that took a week of spreadsheets take an hour. /  / Since 2023 /  / Data enrichment and go-to-market workflows. /  / Owner-reported cost: $149/month · as of 1 Sep 2026 /  / 38,400 rows enriched · Mar 2023 – Aug 2026 · workspace · sample, not account data / 86 tables built · Mar 2023 – Aug 2026 · workspace · sample, not account data / 48,500 credits used · Sep 2025 – Aug 2026 · workspace · sample, not account data / How this was measured / See how I use it ↗ / clay.com / Open Clay ↗ / How evidence works"
+    },
+    {
+      "target": "github-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Daily · since 2019 /  / GitHub / ↗ /  / Where every project's code lives. /  / I use it to /  / host my code and its history / review and merge pull requests / run tests and deploys on every push /  / 1,121 / contributions /  / Sep / Oct / Nov / Dec / Jan / Feb / Mar / Apr / May / Jun / Jul / Aug / Mon / Wed / Fri / Less / More /  / Sep 2025 – Aug 2026 · last updated 1 Sep 2026 /  / Owner-selected go-to / Details ↶"
+    },
+    {
+      "target": "github-back-1440",
+      "assertion": "back text, How this was measured closed",
+      "observed": "GitHub / Close details / Daily · Direct link /  / Owner-selected go-to /  / Contribution counts don't measure quality or hours. /  / Since 2019 /  / The home base for code, collaboration, and shipped work. /  / Illustrative sample, not account data · the owner's own use · Sep 2025 – Aug 2026 · last updated 1 Sep 2026 /  / How this was measured / Open GitHub ↗ / How evidence works"
+    },
+    {
+      "target": "cloudflare-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "DAILY · SINCE 2020 /  / Cloudflare / ↗ /  / DNS, Workers and caching for my projects. /  / I use it to /  / run DNS for my domains / run code at the edge with Workers / cache and protect my sites /  / 187,870 / requests served over 31 days /  / requests served, one row per bar / From\tTo\tValue / 1 Aug 2026\t1 Aug 2026\t2,840 per day / 2 Aug 2026\t2 Aug 2026\t2,610 per day / 3 Aug 2026\t3 Aug 2026\t7,120 per day / 4 Aug 2026\t4 Aug 2026\t7,480 per day / 5 Aug 2026\t5 Aug 2026\t7,690 per day / 6 Aug 2026\t6 Aug 2026\t7,350 per day / 7 Aug 2026\t7 Aug 2026\t6,210 per day / 8 Aug 2026\t8 Aug 2026\t3,020 per day / 9 Aug 2026\t9 Aug 2026\t2,750 per day / 10 Aug 2026\t10 Aug 2026\t7,310 per day / 11 Aug 2026\t11 Aug 2026\t7,820 per day / 12 Aug 2026\t12 Aug 2026\t8,040 per day / 13 Aug 2026\t13 Aug 2026\t7,930 per day / 14 Aug 2026\t14 Aug 2026\t6,480 per day / 15 Aug 2026\t15 Aug 2026\t3,110 per day / 16 Aug 2026\t16 Aug 2026\t2,690 per day / 17 Aug 2026\t17 Aug 2026\t7,560 per day / 18 Aug 2026\t18 Aug 2026\t7,710 per day / 19 Aug 2026\t19 Aug 2026\t8,120 per day / 20 Aug 2026\t20 Aug 2026\t7,880 per day / 21 Aug 2026\t21 Aug 2026\t6,620 per day / 22 Aug 2026\t22 Aug 2026\t3,240 per day / 23 Aug 2026\t23 Aug 2026\t2,930 per day / 24 Aug 2026\t24 Aug 2026\t7,690 per day / 25 Aug 2026\t25 Aug 2026\t8,010 per day / 26 Aug 2026\t26 Aug 2026\t8,270 per day / 27 Aug 2026\t27 Aug 2026\t8,150 per day / 28 Aug 2026\t28 Aug 2026\t6,870 per day / 29 Aug 2026\t29 Aug 2026\t3,380 per day / 30 Aug 2026\t30 Aug 2026\t3,050 per day / 31 Aug 2026\t31 Aug 2026\t7,940 per day /  / Aug 2026 · last updated 1 Sep 2026 /  / Costs $5/month · owner-reported /  / Owner-selected go-to / Details ↶"
+    },
+    {
+      "target": "cloudflare-back-1440",
+      "assertion": "back text, How this was measured closed",
+      "observed": "Cloudflare / Close details / DAILY · DIRECT LINK /  / Owner-selected go-to /  / Every domain I own points through it. /  / Since 2020 /  / Connectivity, security, and application infrastructure platform. /  / Owner-reported cost: $5/month · as of 1 Sep 2026 /  / Illustrative sample, not account data · the owner's own use · Aug 2026 · last updated 1 Sep 2026 /  / How this was measured / Open Cloudflare ↗ / How evidence works"
+    },
+    {
+      "target": "docker-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Weekly · since 2020 /  / Docker / ↗ /  / Packs scrapers and agents to run anywhere. /  / I use it to /  / run databases and services locally / package apps to run anywhere /  / 3 / linked works /  / Sample Compose apps (awesome-compose) ↗ / Official Postgres image ↗ / Multi-stage build guide ↗ /  / Jan 2024 – Aug 2026 · last updated 1 Sep 2026 /  / Relationship & evidence / Details ↶"
+    },
+    {
+      "target": "docker-back-1440",
+      "assertion": "back text, How this was measured closed",
+      "observed": "Docker / Close details / Weekly · Direct link / Every long-running job I ship is a container. /  / Since 2020 /  / Containers for building and shipping software. /  / Illustrative sample, not account data · the owner's own use · Jan 2024 – Aug 2026 · last updated 1 Sep 2026 /  / How this was measured / Open Docker ↗ / How evidence works"
+    },
+    {
+      "target": "firecrawl-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Weekly · since 2025 /  / Firecrawl / ↗ / Referral link /  / Turns pages into clean Markdown for my agents. /  / I use it to /  / turn web pages into Markdown / crawl whole sites /  / 5,520 / pages scraped over 12 weeks /  / pages scraped, one row per bar / From\tTo\tValue / 8 Jun 2026\t14 Jun 2026\t120 per week / 15 Jun 2026\t21 Jun 2026\t160 per week / 22 Jun 2026\t28 Jun 2026\t150 per week / 29 Jun 2026\t5 Jul 2026\t240 per week / 6 Jul 2026\t12 Jul 2026\t310 per week / 13 Jul 2026\t19 Jul 2026\t290 per week / 20 Jul 2026\t26 Jul 2026\t420 per week / 27 Jul 2026\t2 Aug 2026\t510 per week / 3 Aug 2026\t9 Aug 2026\t640 per week / 10 Aug 2026\t16 Aug 2026\t700 per week / 17 Aug 2026\t23 Aug 2026\t880 per week / 24 Aug 2026\t30 Aug 2026\t1,100 per week /  / Jun–Aug 2026 · last updated 1 Sep 2026 /  / Relationship & evidence / Details ↶"
+    },
+    {
+      "target": "firecrawl-back-1440",
+      "assertion": "back text, How this was measured closed",
+      "observed": "Firecrawl / Close details / Weekly · Referral link / I pull docs and product pages through it. /  / Since 2025 /  / Web crawling and data extraction. /  / Illustrative sample, not account data · the owner's own use · Jun–Aug 2026 · last updated 1 Sep 2026 /  / How this was measured / Open Firecrawl ↗ / Referral link / How evidence works"
+    },
+    {
+      "target": "more-opened-1440",
+      "assertion": "all fourteen toggles; none of the nine mounted",
+      "observed": "Clay, GitHub, Cloudflare, Docker, Firecrawl, n8n, Claude Code, Exa, Porkbun, Spider, Open Places, Grok Bot, Elicit, Context.dev; slides mounted 5"
+    },
+    {
+      "target": "n8n-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "PAUSED · STARTED 2024 /  / n8n / ↗ /  / Scheduled jobs and webhooks. /  / Paused while my nightly jobs move to plain cron. /  / I used it to /  / RUN JOBS ON A SCHEDULE / MOVE DATA BETWEEN SYSTEMS /  / 341 / workflow runs a week at its peak /  / workflow runs, one row per bar / From\tTo\tValue / 13 Jan 2025\t19 Jan 2025\t312 per week / 20 Jan 2025\t26 Jan 2025\t298 per week / 27 Jan 2025\t2 Feb 2025\t335 per week / 3 Feb 2025\t9 Feb 2025\t320 per week / 10 Feb 2025\t16 Feb 2025\t341 per week / 17 Feb 2025\t23 Feb 2025\t306 per week / 24 Feb 2025\t2 Mar 2025\t289 per week / 3 Mar 2025\t9 Mar 2025\t264 per week / 10 Mar 2025\t16 Mar 2025\t180 per week / 17 Mar 2025\t23 Mar 2025\t72 per week / 24 Mar 2025\t30 Mar 2025\t0 per week / 31 Mar 2025\t6 Apr 2025\t0 per week /  / Jan–Apr 2025 · last updated 1 Sep 2026 /  / RELATIONSHIP & EVIDENCE / DETAILS ↶"
+    },
+    {
+      "target": "elicit-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "STOPPED USING · STARTED 2026 /  / Elicit / ↗ /  / Reading research papers faster. /  / I stopped once my market study was done. /  / I used it to /  / find papers on a question / pull data out of studies into a table /  / 45 / papers screened a week at its peak /  / papers screened, one row per bar / From\tTo\tValue / 5 Jan 2026\t11 Jan 2026\t38 per week / 12 Jan 2026\t18 Jan 2026\t45 per week / 19 Jan 2026\t25 Jan 2026\t41 per week / 26 Jan 2026\t1 Feb 2026\t36 per week / 2 Feb 2026\t8 Feb 2026\t30 per week / 9 Feb 2026\t15 Feb 2026\t22 per week / 16 Feb 2026\t22 Feb 2026\t15 per week / 23 Feb 2026\t1 Mar 2026\t9 per week / 2 Mar 2026\t8 Mar 2026\t4 per week / 9 Mar 2026\t15 Mar 2026\t1 per week / 16 Mar 2026\t22 Mar 2026\t0 per week / 23 Mar 2026\t29 Mar 2026\t0 per week /  / Jan–Mar 2026 · last updated 1 Sep 2026 /  / Relationship & evidence / Details ↶"
+    },
+    {
+      "target": "page-1440",
+      "assertion": "no sideways scroll",
+      "observed": "true"
+    },
+    {
+      "target": "first-screen-390",
+      "assertion": "390×844 viewport",
+      "observed": "carousel top 1037px; elements in page 1232"
+    },
+    {
+      "target": "clay-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Daily · since 2023 /  / Clay / ↗ /  / My lead lists, enriched. /  / I use it to /  / enrich lead and account lists / find contact details / 38,400 / rows enriched / Mar 2023 – Aug 2026 / 86 / tables built / Mar 2023 – Aug 2026 / 48,500 / credits used / Sep 2025 – Aug 2026 /  / Sample numbers · how each was measured is in Details /  / Lead list · invented sample rows / Company\tWork email\tStatus / Northwind Labs\ta.lindqvist@northwindlabs.example\tEnriched / Blue Heron Freight\tm.okafor@blueheron.example\tEnriched / Quillon Health\tFinding…\tRunning / Tessel Robotics\tr.amari@tessel.example\tEnriched / Marrow & Pine\tNot found\tNo match /  / Costs $149/month · owner-reported /  / Periods, sources and a work sample inside / Details ↶"
+    },
+    {
+      "target": "clay-back-390",
+      "assertion": "back text, How this was measured closed",
+      "observed": "Clay / Close details / Daily · Direct link / Lists that took a week of spreadsheets take an hour. /  / Since 2023 /  / Data enrichment and go-to-market workflows. /  / Owner-reported cost: $149/month · as of 1 Sep 2026 /  / 38,400 rows enriched · Mar 2023 – Aug 2026 · workspace · sample, not account data / 86 tables built · Mar 2023 – Aug 2026 · workspace · sample, not account data / 48,500 credits used · Sep 2025 – Aug 2026 · workspace · sample, not account data / How this was measured / See how I use it ↗ / clay.com / Open Clay ↗ / How evidence works"
+    },
+    {
+      "target": "github-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Daily · since 2019 /  / GitHub / ↗ /  / Where every project's code lives. /  / I use it to /  / host my code and its history / review and merge pull requests / run tests and deploys on every push /  / 1,121 / contributions /  / Apr / May / Jun / Jul / Aug / Mon / Wed / Fri / Less / More /  / Sep 2025 – Aug 2026 · last updated 1 Sep 2026 /  / Owner-selected go-to / Details ↶"
+    },
+    {
+      "target": "github-back-390",
+      "assertion": "back text, How this was measured closed",
+      "observed": "GitHub / Close details / Daily · Direct link /  / Owner-selected go-to /  / Contribution counts don't measure quality or hours. /  / Since 2019 /  / The home base for code, collaboration, and shipped work. /  / Illustrative sample, not account data · the owner's own use · Sep 2025 – Aug 2026 · last updated 1 Sep 2026 /  / How this was measured / Open GitHub ↗ / How evidence works"
+    },
+    {
+      "target": "cloudflare-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "DAILY · SINCE 2020 /  / Cloudflare / ↗ /  / DNS, Workers and caching for my projects. /  / I use it to /  / run DNS for my domains / run code at the edge with Workers / cache and protect my sites /  / 187,870 / requests served over 31 days /  / requests served, one row per bar / From\tTo\tValue / 1 Aug 2026\t1 Aug 2026\t2,840 per day / 2 Aug 2026\t2 Aug 2026\t2,610 per day / 3 Aug 2026\t3 Aug 2026\t7,120 per day / 4 Aug 2026\t4 Aug 2026\t7,480 per day / 5 Aug 2026\t5 Aug 2026\t7,690 per day / 6 Aug 2026\t6 Aug 2026\t7,350 per day / 7 Aug 2026\t7 Aug 2026\t6,210 per day / 8 Aug 2026\t8 Aug 2026\t3,020 per day / 9 Aug 2026\t9 Aug 2026\t2,750 per day / 10 Aug 2026\t10 Aug 2026\t7,310 per day / 11 Aug 2026\t11 Aug 2026\t7,820 per day / 12 Aug 2026\t12 Aug 2026\t8,040 per day / 13 Aug 2026\t13 Aug 2026\t7,930 per day / 14 Aug 2026\t14 Aug 2026\t6,480 per day / 15 Aug 2026\t15 Aug 2026\t3,110 per day / 16 Aug 2026\t16 Aug 2026\t2,690 per day / 17 Aug 2026\t17 Aug 2026\t7,560 per day / 18 Aug 2026\t18 Aug 2026\t7,710 per day / 19 Aug 2026\t19 Aug 2026\t8,120 per day / 20 Aug 2026\t20 Aug 2026\t7,880 per day / 21 Aug 2026\t21 Aug 2026\t6,620 per day / 22 Aug 2026\t22 Aug 2026\t3,240 per day / 23 Aug 2026\t23 Aug 2026\t2,930 per day / 24 Aug 2026\t24 Aug 2026\t7,690 per day / 25 Aug 2026\t25 Aug 2026\t8,010 per day / 26 Aug 2026\t26 Aug 2026\t8,270 per day / 27 Aug 2026\t27 Aug 2026\t8,150 per day / 28 Aug 2026\t28 Aug 2026\t6,870 per day / 29 Aug 2026\t29 Aug 2026\t3,380 per day / 30 Aug 2026\t30 Aug 2026\t3,050 per day / 31 Aug 2026\t31 Aug 2026\t7,940 per day /  / Aug 2026 · last updated 1 Sep 2026 /  / Costs $5/month · owner-reported /  / Owner-selected go-to / Details ↶"
+    },
+    {
+      "target": "cloudflare-back-390",
+      "assertion": "back text, How this was measured closed",
+      "observed": "Cloudflare / Close details / DAILY · DIRECT LINK /  / Owner-selected go-to /  / Every domain I own points through it. /  / Since 2020 /  / Connectivity, security, and application infrastructure platform. /  / Owner-reported cost: $5/month · as of 1 Sep 2026 /  / Illustrative sample, not account data · the owner's own use · Aug 2026 · last updated 1 Sep 2026 /  / How this was measured / Open Cloudflare ↗ / How evidence works"
+    },
+    {
+      "target": "docker-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Weekly · since 2020 /  / Docker / ↗ /  / Packs scrapers and agents to run anywhere. /  / I use it to /  / run databases and services locally / package apps to run anywhere /  / 3 / linked works /  / Sample Compose apps (awesome-compose) ↗ / Official Postgres image ↗ / Multi-stage build guide ↗ /  / Jan 2024 – Aug 2026 · last updated 1 Sep 2026 /  / Relationship & evidence / Details ↶"
+    },
+    {
+      "target": "docker-back-390",
+      "assertion": "back text, How this was measured closed",
+      "observed": "Docker / Close details / Weekly · Direct link / Every long-running job I ship is a container. /  / Since 2020 /  / Containers for building and shipping software. /  / Illustrative sample, not account data · the owner's own use · Jan 2024 – Aug 2026 · last updated 1 Sep 2026 /  / How this was measured / Open Docker ↗ / How evidence works"
+    },
+    {
+      "target": "firecrawl-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Weekly · since 2025 /  / Firecrawl / ↗ / Referral link /  / Turns pages into clean Markdown for my agents. /  / I use it to /  / turn web pages into Markdown / crawl whole sites /  / 5,520 / pages scraped over 12 weeks /  / pages scraped, one row per bar / From\tTo\tValue / 8 Jun 2026\t14 Jun 2026\t120 per week / 15 Jun 2026\t21 Jun 2026\t160 per week / 22 Jun 2026\t28 Jun 2026\t150 per week / 29 Jun 2026\t5 Jul 2026\t240 per week / 6 Jul 2026\t12 Jul 2026\t310 per week / 13 Jul 2026\t19 Jul 2026\t290 per week / 20 Jul 2026\t26 Jul 2026\t420 per week / 27 Jul 2026\t2 Aug 2026\t510 per week / 3 Aug 2026\t9 Aug 2026\t640 per week / 10 Aug 2026\t16 Aug 2026\t700 per week / 17 Aug 2026\t23 Aug 2026\t880 per week / 24 Aug 2026\t30 Aug 2026\t1,100 per week /  / Jun–Aug 2026 · last updated 1 Sep 2026 /  / Relationship & evidence / Details ↶"
+    },
+    {
+      "target": "firecrawl-back-390",
+      "assertion": "back text, How this was measured closed",
+      "observed": "Firecrawl / Close details / Weekly · Referral link / I pull docs and product pages through it. /  / Since 2025 /  / Web crawling and data extraction. /  / Illustrative sample, not account data · the owner's own use · Jun–Aug 2026 · last updated 1 Sep 2026 /  / How this was measured / Open Firecrawl ↗ / Referral link / How evidence works"
+    },
+    {
+      "target": "more-opened-390",
+      "assertion": "all fourteen toggles; none of the nine mounted",
+      "observed": "Clay, GitHub, Cloudflare, Docker, Firecrawl, n8n, Claude Code, Exa, Porkbun, Spider, Open Places, Grok Bot, Elicit, Context.dev; slides mounted 5"
+    },
+    {
+      "target": "n8n-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "PAUSED · STARTED 2024 /  / n8n / ↗ /  / Scheduled jobs and webhooks. /  / Paused while my nightly jobs move to plain cron. /  / I used it to /  / RUN JOBS ON A SCHEDULE / MOVE DATA BETWEEN SYSTEMS /  / 341 / workflow runs a week at its peak /  / workflow runs, one row per bar / From\tTo\tValue / 13 Jan 2025\t19 Jan 2025\t312 per week / 20 Jan 2025\t26 Jan 2025\t298 per week / 27 Jan 2025\t2 Feb 2025\t335 per week / 3 Feb 2025\t9 Feb 2025\t320 per week / 10 Feb 2025\t16 Feb 2025\t341 per week / 17 Feb 2025\t23 Feb 2025\t306 per week / 24 Feb 2025\t2 Mar 2025\t289 per week / 3 Mar 2025\t9 Mar 2025\t264 per week / 10 Mar 2025\t16 Mar 2025\t180 per week / 17 Mar 2025\t23 Mar 2025\t72 per week / 24 Mar 2025\t30 Mar 2025\t0 per week / 31 Mar 2025\t6 Apr 2025\t0 per week /  / Jan–Apr 2025 · last updated 1 Sep 2026 /  / RELATIONSHIP & EVIDENCE / DETAILS ↶"
+    },
+    {
+      "target": "elicit-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "STOPPED USING · STARTED 2026 /  / Elicit / ↗ /  / Reading research papers faster. /  / I stopped once my market study was done. /  / I used it to /  / find papers on a question / pull data out of studies into a table /  / 45 / papers screened a week at its peak /  / papers screened, one row per bar / From\tTo\tValue / 5 Jan 2026\t11 Jan 2026\t38 per week / 12 Jan 2026\t18 Jan 2026\t45 per week / 19 Jan 2026\t25 Jan 2026\t41 per week / 26 Jan 2026\t1 Feb 2026\t36 per week / 2 Feb 2026\t8 Feb 2026\t30 per week / 9 Feb 2026\t15 Feb 2026\t22 per week / 16 Feb 2026\t22 Feb 2026\t15 per week / 23 Feb 2026\t1 Mar 2026\t9 per week / 2 Mar 2026\t8 Mar 2026\t4 per week / 9 Mar 2026\t15 Mar 2026\t1 per week / 16 Mar 2026\t22 Mar 2026\t0 per week / 23 Mar 2026\t29 Mar 2026\t0 per week /  / Jan–Mar 2026 · last updated 1 Sep 2026 /  / Relationship & evidence / Details ↶"
+    },
+    {
+      "target": "page-390",
+      "assertion": "no sideways scroll",
+      "observed": "true"
+    }
+  ],
+  "heights": {
+    "Clay": {
+      "390": {
+        "front": 691,
+        "back": 711,
+        "backContent": 696,
+        "difference": 20,
+        "contentDifference": 5
+      },
+      "1440": {
+        "front": 638,
+        "back": 638,
+        "backContent": 528,
+        "difference": 0,
+        "contentDifference": -110
+      }
+    },
+    "GitHub": {
+      "390": {
+        "front": 580,
+        "back": 580,
+        "backContent": 558,
+        "difference": 0,
+        "contentDifference": -22
+      },
+      "1440": {
+        "front": 526,
+        "back": 526,
+        "backContent": 451,
+        "difference": 0,
+        "contentDifference": -75
+      }
+    },
+    "Cloudflare": {
+      "390": {
+        "front": 608,
+        "back": 608,
+        "backContent": 560,
+        "difference": 0,
+        "contentDifference": -48
+      },
+      "1440": {
+        "front": 519,
+        "back": 519,
+        "backContent": 452,
+        "difference": 0,
+        "contentDifference": -67
+      }
+    },
+    "Docker": {
+      "390": {
+        "front": 576,
+        "back": 576,
+        "backContent": 521,
+        "difference": 0,
+        "contentDifference": -55
+      },
+      "1440": {
+        "front": 452,
+        "back": 452,
+        "backContent": 411,
+        "difference": 0,
+        "contentDifference": -41
+      }
+    },
+    "Firecrawl": {
+      "390": {
+        "front": 519,
+        "back": 519,
+        "backContent": 497,
+        "difference": 0,
+        "contentDifference": -22
+      },
+      "1440": {
+        "front": 460,
+        "back": 460,
+        "backContent": 423,
+        "difference": 0,
+        "contentDifference": -37
+      }
+    },
+    "n8n": {
+      "390": {
+        "front": 576,
+        "back": 576,
+        "backContent": 501,
+        "difference": 0,
+        "contentDifference": -75
+      },
+      "1440": {
+        "front": 496,
+        "back": 496,
+        "backContent": 411,
+        "difference": 0,
+        "contentDifference": -85
+      }
+    },
+    "Claude Code": {
+      "390": {
+        "front": 660,
+        "back": 660,
+        "backContent": 605,
+        "difference": 0,
+        "contentDifference": -55
+      },
+      "1440": {
+        "front": 576,
+        "back": 576,
+        "backContent": 514,
+        "difference": 0,
+        "contentDifference": -62
+      }
+    },
+    "Exa": {
+      "390": {
+        "front": 468,
+        "back": 563,
+        "backContent": 548,
+        "difference": 95,
+        "contentDifference": 80
+      },
+      "1440": {
+        "front": 446,
+        "back": 470,
+        "backContent": 456,
+        "difference": 24,
+        "contentDifference": 10
+      }
+    },
+    "Porkbun": {
+      "390": {
+        "front": 516,
+        "back": 570,
+        "backContent": 556,
+        "difference": 54,
+        "contentDifference": 40
+      },
+      "1440": {
+        "front": 447,
+        "back": 503,
+        "backContent": 488,
+        "difference": 56,
+        "contentDifference": 41
+      }
+    },
+    "Spider": {
+      "390": {
+        "front": 537,
+        "back": 537,
+        "backContent": 497,
+        "difference": 0,
+        "contentDifference": -40
+      },
+      "1440": {
+        "front": 490,
+        "back": 490,
+        "backContent": 427,
+        "difference": 0,
+        "contentDifference": -63
+      }
+    },
+    "Open Places": {
+      "390": {
+        "front": 496,
+        "back": 496,
+        "backContent": 470,
+        "difference": 0,
+        "contentDifference": -26
+      },
+      "1440": {
+        "front": 440,
+        "back": 440,
+        "backContent": 401,
+        "difference": 0,
+        "contentDifference": -39
+      }
+    },
+    "Grok Bot": {
+      "390": {
+        "front": 503,
+        "back": 575,
+        "backContent": 560,
+        "difference": 72,
+        "contentDifference": 57
+      },
+      "1440": {
+        "front": 450,
+        "back": 463,
+        "backContent": 449,
+        "difference": 13,
+        "contentDifference": -1
+      }
+    },
+    "Elicit": {
+      "390": {
+        "front": 548,
+        "back": 548,
+        "backContent": 479,
+        "difference": 0,
+        "contentDifference": -69
+      },
+      "1440": {
+        "front": 479,
+        "back": 479,
+        "backContent": 389,
+        "difference": 0,
+        "contentDifference": -90
+      }
+    },
+    "Context.dev": {
+      "390": {
+        "front": 499,
+        "back": 517,
+        "backContent": 502,
+        "difference": 18,
+        "contentDifference": 3
+      },
+      "1440": {
+        "front": 445,
+        "back": 445,
+        "backContent": 417,
+        "difference": 0,
+        "contentDifference": -28
+      }
+    }
+  }
+}

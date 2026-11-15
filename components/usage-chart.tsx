@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { chartBars, type ChartBar } from "@/src/domain/chart-bars";
+import { compactNumber, fullNumber } from "@/src/domain/format-activity-number";
+import { dayMonthYear } from "@/src/domain/format-period";
+import { cadenceEnd, seriesCadence } from "@/src/domain/activity-headline";
 
 export type UsageChartPoint = {
   date: string;
@@ -15,6 +19,11 @@ export type UsagePeriod = {
 
 const SKELETON_BAR_COUNT = 30;
 const BAR_STAGGER_MS = 18;
+/** Past this many bars the gaps narrow, so the bars keep most of the width. */
+const SPACIOUS_BAR_COUNT = 16;
+const SPACIOUS_GAP = "4px";
+const DENSE_GAP = "2px";
+const PERCENT = 100;
 
 export function coverageDays(period: UsagePeriod): number | undefined {
   const start = Date.parse(`${period.start}T00:00:00Z`);
@@ -88,6 +97,42 @@ export function MeasuredBlueprint({
   );
 }
 
+/** A bar's value as a person reads it: one point as recorded, a run of points as their average to one decimal place, or two significant digits below one. */
+function barValue(bar: ChartBar, unit?: string): string {
+  const average = Math.abs(bar.value) < 1 ? compactNumber(bar.value) : fullNumber(Number(bar.value.toFixed(1)));
+  const shown = bar.points === 1 ? fullNumber(bar.value) : average;
+  return `${shown}${unit ? ` ${unit}` : ""}${bar.points === 1 ? "" : " on average"}`;
+}
+
+/** The days a bar covers, in plain dates: a weekly point covers its seven days. */
+function barDays(bar: ChartBar, unit?: string): { from: string; to: string } {
+  return { from: dayMonthYear(bar.start), to: dayMonthYear(cadenceEnd(bar.end, seriesCadence(unit))) };
+}
+
+function barTitle(bar: ChartBar, unit?: string): string {
+  const { from, to } = barDays(bar, unit);
+  return `${from === to ? from : `${from} to ${to}`}: ${barValue(bar, unit)}`;
+}
+
+/** The bars again as rows, for a screen reader: the chart itself is one image, and its dates and values live only in hover titles. */
+function BarTable({ bars, label, unit }: { bars: readonly ChartBar[]; label?: string; unit?: string }) {
+  const rows = bars.map(bar => ({ key: bar.start, ...barDays(bar, unit), value: barValue(bar, unit) }));
+  // Bars of one day each read as one date, not a From and a To that are the same.
+  const daily = rows.every(row => row.from === row.to);
+  return (
+    // A table grows to fit its cells whatever its width, so the 1px clip goes on a box around it.
+    <div className="visually-hidden">
+      <table>
+        <caption>{label ?? "Activity"}, one row per bar{bars.some(bar => bar.value < 0) ? ". A value below zero is drawn as a stub on the baseline." : ""}</caption>
+        <thead><tr>{daily ? <th scope="col">Date</th> : <><th scope="col">From</th><th scope="col">To</th></>}<th scope="col">Value</th></tr></thead>
+        <tbody>
+          {rows.map(row => <tr key={row.key}><th scope="row">{row.from}</th>{!daily && <td>{row.to}</td>}<td>{row.value}</td></tr>)}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function SkeletonBars() {
   return (
     <div className="usage-chart-skeleton-bars" aria-hidden="true">
@@ -124,9 +169,9 @@ export function UsageChart({
     return () => cancelAnimationFrame(frame);
   }, [resolved]);
 
-  const maximum = resolved && points
-    ? Math.max(...points.map((point) => point.value), 1)
-    : 1;
+  const bars = resolved && points ? chartBars(points) : [];
+  // The bars scale to the largest value above zero, however small; a series with none draws only stubs.
+  const maximum = Math.max(...bars.map((bar) => bar.value), 0) || 1;
   return (
     <div
       ref={ref}
@@ -137,21 +182,25 @@ export function UsageChart({
     >
       {showBlueprint && framed && <BlueprintDimensions size={size} />}
       {resolved && points ? (
-        <div className="activity-bars" aria-label={label ? `${label} trend` : undefined}>
-          {points.map((point, index) => (
+        <div className="activity-bars" role={label ? "img" : undefined} aria-label={label ? `${label} trend` : undefined}
+          style={{ "--bar-gap": bars.length > SPACIOUS_BAR_COUNT ? DENSE_GAP : SPACIOUS_GAP } as CSSProperties}>
+          {bars.map((bar, index) => (
             <span
-              key={point.date}
+              key={bar.start}
+              data-zero={bar.value === 0 ? "" : undefined}
+              data-below-zero={bar.value < 0 ? "" : undefined}
               style={{
-                "--bar-height": `${Math.max(0, (point.value / maximum) * 100)}%`,
+                "--bar-height": `${Math.max(0, (bar.value / maximum) * PERCENT)}%`,
                 "--bar-delay": `${index * BAR_STAGGER_MS}ms`,
               } as CSSProperties}
-              title={`${point.date}: ${point.value}${unit ? ` ${unit}` : ""}`}
+              title={barTitle(bar, unit)}
             />
           ))}
         </div>
       ) : (
         <SkeletonBars />
       )}
+      {resolved && <BarTable bars={bars} label={label} unit={unit} />}
       {resolved && !ready && (
         <div className="usage-chart-blueprint" aria-hidden="true">
           <SkeletonBars />

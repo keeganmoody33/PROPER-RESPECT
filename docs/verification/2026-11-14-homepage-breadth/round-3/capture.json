@@ -1,0 +1,102 @@
+{
+  "server": {
+    "port": "3219",
+    "pid": "80554",
+    "cwd": "/Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a",
+    "command": "next-server (v16.3.8)",
+    "commit": "f545fd98529905ab9241a723f8cca2f831ff5c8e",
+    "uncommittedSource": "none"
+  },
+  "results": [
+    {
+      "target": "chooser-collapsed-1440-viewport",
+      "assertion": "chooser at most 100px tall; Clay's footer above 1000px",
+      "observed": "chooser 36.0px; footer bottom 965.2px; elements in carousel 1780, page 1970"
+    },
+    {
+      "target": "clay-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Daily · since 2023 /  / Clay / ↗ /  / My lead lists, enriched. /  / I use it to /  / enrich lead and account lists / find contact details / Lead list · invented sample rows / Company\tDomain\tWork email\tStatus / Northwind Labs\tnorthwindlabs.example\ta.lindqvist@northwindlabs.example\tEnriched / Blue Heron Freight\tblueheron.example\tm.okafor@blueheron.example\tEnriched / Quillon Health\tquillon.example\tFinding…\tRunning / Tessel Robotics\ttessel.example\tr.amari@tessel.example\tEnriched / Marrow & Pine\tmarrowpine.example\tNot found\tNo match / 2,140,000 / rows enriched / Mar 2023 – Aug 2026 / 86 / tables built / Mar 2023 – Aug 2026 / 48,500 / credits used / Sep 2025 – Aug 2026 /  / Sample numbers · how each was measured is in Details /  / Costs $149/month · owner-reported /  / Periods, sources and a work sample inside / Details ↶ [footer bottom 965px]"
+    },
+    {
+      "target": "cloudflare-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "DAILY · SINCE 2020 /  / Cloudflare / ↗ /  / DNS, Workers and caching for my projects. /  / I use it to /  / run DNS for my domains / run code at the edge with Workers / cache and protect my sites /  / 7,940 / requests served · per day /  / requests served, one row per bar / From\tTo\tValue / 2026-08-01\t2026-08-01\t2,840 per day / 2026-08-02\t2026-08-02\t2,610 per day / 2026-08-03\t2026-08-03\t7,120 per day / 2026-08-04\t2026-08-04\t7,480 per day / 2026-08-05\t2026-08-05\t7,690 per day / 2026-08-06\t2026-08-06\t7,350 per day / 2026-08-07\t2026-08-07\t6,210 per day / 2026-08-08\t2026-08-08\t3,020 per day / 2026-08-09\t2026-08-09\t2,750 per day / 2026-08-10\t2026-08-10\t7,310 per day / 2026-08-11\t2026-08-11\t7,820 per day / 2026-08-12\t2026-08-12\t8,040 per day / 2026-08-13\t2026-08-13\t7,930 per day / 2026-08-14\t2026-08-14\t6,480 per day / 2026-08-15\t2026-08-15\t3,110 per day / 2026-08-16\t2026-08-16\t2,690 per day / 2026-08-17\t2026-08-17\t7,560 per day / 2026-08-18\t2026-08-18\t7,710 per day / 2026-08-19\t2026-08-19\t8,120 per day / 2026-08-20\t2026-08-20\t7,880 per day / 2026-08-21\t2026-08-21\t6,620 per day / 2026-08-22\t2026-08-22\t3,240 per day / 2026-08-23\t2026-08-23\t2,930 per day / 2026-08-24\t2026-08-24\t7,690 per day / 2026-08-25\t2026-08-25\t8,010 per day / 2026-08-26\t2026-08-26\t8,270 per day / 2026-08-27\t2026-08-27\t8,150 per day / 2026-08-28\t2026-08-28\t6,870 per day / 2026-08-29\t2026-08-29\t3,380 per day / 2026-08-30\t2026-08-30\t3,050 per day / 2026-08-31\t2026-08-31\t7,940 per day /  / Aug 2026 · last updated Sep 2026 /  / Costs $5/month · owner-reported /  / Owner-selected go-to / Details ↶ [footer bottom 851px]"
+    },
+    {
+      "target": "firecrawl-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Weekly · since 2025 /  / Firecrawl / ↗ / Referral link /  / Turns pages into clean Markdown for my agents. /  / I use it to /  / turn web pages into Markdown / crawl whole sites /  / 1,100 / pages scraped · per week /  / pages scraped, one row per bar / From\tTo\tValue / 2026-06-08\t2026-06-08\t120 per week / 2026-06-15\t2026-06-15\t160 per week / 2026-06-22\t2026-06-22\t150 per week / 2026-06-29\t2026-06-29\t240 per week / 2026-07-06\t2026-07-06\t310 per week / 2026-07-13\t2026-07-13\t290 per week / 2026-07-20\t2026-07-20\t420 per week / 2026-07-27\t2026-07-27\t510 per week / 2026-08-03\t2026-08-03\t640 per week / 2026-08-10\t2026-08-10\t700 per week / 2026-08-17\t2026-08-17\t880 per week / 2026-08-24\t2026-08-24\t1,100 per week /  / Jun–Aug 2026 · last updated Sep 2026 /  / Relationship & evidence / Details ↶ [footer bottom 787px]"
+    },
+    {
+      "target": "github-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Daily · since 2019 /  / GitHub / ↗ /  / Where every project's code lives. /  / I use it to /  / host my code and its history / review and merge pull requests / run tests and deploys on every push /  / 1,121 / contributions /  / Sep / Oct / Nov / Dec / Jan / Feb / Mar / Apr / May / Jun / Jul / Aug / Mon / Wed / Fri / Less / More /  / Sep 2025 – Aug 2026 · last updated Sep 2026 /  / Owner-selected go-to / Details ↶ [footer bottom 855px]"
+    },
+    {
+      "target": "n8n-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "PAUSED · STARTED 2024 /  / n8n / ↗ /  / Scheduled jobs and webhooks. /  / Paused while my nightly jobs move to plain cron. /  / I used it to /  / RUN JOBS ON A SCHEDULE / MOVE DATA BETWEEN SYSTEMS /  / 0 / workflow runs · per week /  / workflow runs, one row per bar / From\tTo\tValue / 2025-01-13\t2025-01-13\t312 per week / 2025-01-20\t2025-01-20\t298 per week / 2025-01-27\t2025-01-27\t335 per week / 2025-02-03\t2025-02-03\t320 per week / 2025-02-10\t2025-02-10\t341 per week / 2025-02-17\t2025-02-17\t306 per week / 2025-02-24\t2025-02-24\t289 per week / 2025-03-03\t2025-03-03\t264 per week / 2025-03-10\t2025-03-10\t180 per week / 2025-03-17\t2025-03-17\t72 per week / 2025-03-24\t2025-03-24\t0 per week / 2025-03-31\t2025-03-31\t0 per week /  / Jan–Apr 2025 · last updated Sep 2026 /  / RELATIONSHIP & EVIDENCE / DETAILS ↶ [footer bottom 829px]"
+    },
+    {
+      "target": "clay-back-1440",
+      "assertion": "back keeps periods, disclosures, cost and work sample",
+      "observed": "Clay / Close details / Daily · Direct link / Lists that took a week of spreadsheets take an hour. /  / Since 2023-01-01 /  / Data enrichment and go-to-market workflows. /  / Owner-reported cost: $149.00/month · as of 2026-09-01 /  / Enriched / 2,140,000Rows /  / 2023-03-01 to 2026-08-31 · UTC /  / Scope: workspace · Coverage: complete /  / cumulative · Do not add to other views /  / Synthetic sample. Not real account activity. /  / Source-reported value /  / Captured 2026-09-01T00:00:00.000Z /  / Built / 86Tables /  / 2023-03-01 to 2026-08-31 · UTC /  / Scope: workspace · Coverage: complete /  / cumulative · Do not add to other views /  / Synthetic sample. Not real account activity. /  / Source-reported value /  / Captured 2026-09-01T00:00:00.000Z /  / Used / 48,500Credits /  / 2025-09-01 to 2026-08-31 · UTC /  / Scope: workspace · Coverage: complete /  / cumulative · Do not add to other views /  / Synthetic sample. Not real account activity. /  / Source-reported value /  / Captured 2026-09-01T00:00:00.000Z /  / Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown. /  / See how I use it ↗ / clay.com / Open Clay ↗ / How evidence works"
+    },
+    {
+      "target": "chooser-more-1440",
+      "assertion": "all fourteen toggles in one group",
+      "observed": "Clay, Cloudflare, Firecrawl, GitHub, n8n, Claude Code, Exa, Porkbun, Spider, Docker, Open Places, Grok Bot, Elicit, Context.dev; elements in carousel 3184"
+    },
+    {
+      "target": "open-places-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Occasionally · since 2026 /  / Open Places / ↗ /  / Local business lists by category and city. /  / I use it to /  / build lists of local businesses / find businesses in one area or category /  / 85 / businesses exported · per week /  / businesses exported, one row per bar / From\tTo\tValue / 2026-06-08\t2026-06-08\t0 per week / 2026-06-15\t2026-06-15\t140 per week / 2026-06-22\t2026-06-22\t0 per week / 2026-06-29\t2026-06-29\t0 per week / 2026-07-06\t2026-07-06\t0 per week / 2026-07-13\t2026-07-13\t0 per week / 2026-07-20\t2026-07-20\t320 per week / 2026-07-27\t2026-07-27\t0 per week / 2026-08-03\t2026-08-03\t0 per week / 2026-08-10\t2026-08-10\t0 per week / 2026-08-17\t2026-08-17\t0 per week / 2026-08-24\t2026-08-24\t85 per week /  / Jun–Aug 2026 · last updated Sep 2026 /  / Relationship & evidence / Details ↶"
+    },
+    {
+      "target": "elicit-front-1440",
+      "assertion": "front text as a visitor reads it",
+      "observed": "STOPPED USING · STARTED 2026 /  / Elicit / ↗ /  / Reading research papers faster. /  / I stopped once my market study was done. /  / I used it to /  / find papers on a question / pull data out of studies into a table /  / 0 / papers screened · per week /  / papers screened, one row per bar / From\tTo\tValue / 2026-01-05\t2026-01-05\t38 per week / 2026-01-12\t2026-01-12\t45 per week / 2026-01-19\t2026-01-19\t41 per week / 2026-01-26\t2026-01-26\t36 per week / 2026-02-02\t2026-02-02\t30 per week / 2026-02-09\t2026-02-09\t22 per week / 2026-02-16\t2026-02-16\t15 per week / 2026-02-23\t2026-02-23\t9 per week / 2026-03-02\t2026-03-02\t4 per week / 2026-03-09\t2026-03-09\t1 per week / 2026-03-16\t2026-03-16\t0 per week / 2026-03-23\t2026-03-23\t0 per week /  / Jan–Mar 2026 · last updated Sep 2026 /  / Relationship & evidence / Details ↶"
+    },
+    {
+      "target": "page-1440",
+      "assertion": "no sideways scroll",
+      "observed": "true"
+    },
+    {
+      "target": "chooser-collapsed-390",
+      "assertion": "five names and More examples",
+      "observed": "chooser 76.8px; elements in carousel 1780"
+    },
+    {
+      "target": "clay-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Daily · since 2023 /  / Clay / ↗ /  / My lead lists, enriched. /  / I use it to /  / enrich lead and account lists / find contact details / Lead list · invented sample rows / Company\tDomain\tWork email\tStatus / Northwind Labs\tnorthwindlabs.example\ta.lindqvist@northwindlabs.example\tEnriched / Blue Heron Freight\tblueheron.example\tm.okafor@blueheron.example\tEnriched / Quillon Health\tquillon.example\tFinding…\tRunning / Tessel Robotics\ttessel.example\tr.amari@tessel.example\tEnriched / Marrow & Pine\tmarrowpine.example\tNot found\tNo match / 2,140,000 / rows enriched / Mar 2023 – Aug 2026 / 86 / tables built / Mar 2023 – Aug 2026 / 48,500 / credits used / Sep 2025 – Aug 2026 /  / Sample numbers · how each was measured is in Details /  / Costs $149/month · owner-reported /  / Periods, sources and a work sample inside / Details ↶ [footer bottom 1871px]"
+    },
+    {
+      "target": "cloudflare-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "DAILY · SINCE 2020 /  / Cloudflare / ↗ /  / DNS, Workers and caching for my projects. /  / I use it to /  / run DNS for my domains / run code at the edge with Workers / cache and protect my sites /  / 7,940 / requests served · per day /  / requests served, one row per bar / From\tTo\tValue / 2026-08-01\t2026-08-01\t2,840 per day / 2026-08-02\t2026-08-02\t2,610 per day / 2026-08-03\t2026-08-03\t7,120 per day / 2026-08-04\t2026-08-04\t7,480 per day / 2026-08-05\t2026-08-05\t7,690 per day / 2026-08-06\t2026-08-06\t7,350 per day / 2026-08-07\t2026-08-07\t6,210 per day / 2026-08-08\t2026-08-08\t3,020 per day / 2026-08-09\t2026-08-09\t2,750 per day / 2026-08-10\t2026-08-10\t7,310 per day / 2026-08-11\t2026-08-11\t7,820 per day / 2026-08-12\t2026-08-12\t8,040 per day / 2026-08-13\t2026-08-13\t7,930 per day / 2026-08-14\t2026-08-14\t6,480 per day / 2026-08-15\t2026-08-15\t3,110 per day / 2026-08-16\t2026-08-16\t2,690 per day / 2026-08-17\t2026-08-17\t7,560 per day / 2026-08-18\t2026-08-18\t7,710 per day / 2026-08-19\t2026-08-19\t8,120 per day / 2026-08-20\t2026-08-20\t7,880 per day / 2026-08-21\t2026-08-21\t6,620 per day / 2026-08-22\t2026-08-22\t3,240 per day / 2026-08-23\t2026-08-23\t2,930 per day / 2026-08-24\t2026-08-24\t7,690 per day / 2026-08-25\t2026-08-25\t8,010 per day / 2026-08-26\t2026-08-26\t8,270 per day / 2026-08-27\t2026-08-27\t8,150 per day / 2026-08-28\t2026-08-28\t6,870 per day / 2026-08-29\t2026-08-29\t3,380 per day / 2026-08-30\t2026-08-30\t3,050 per day / 2026-08-31\t2026-08-31\t7,940 per day /  / Aug 2026 · last updated Sep 2026 /  / Costs $5/month · owner-reported /  / Owner-selected go-to / Details ↶ [footer bottom 1791px]"
+    },
+    {
+      "target": "firecrawl-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Weekly · since 2025 /  / Firecrawl / ↗ / Referral link /  / Turns pages into clean Markdown for my agents. /  / I use it to /  / turn web pages into Markdown / crawl whole sites /  / 1,100 / pages scraped · per week /  / pages scraped, one row per bar / From\tTo\tValue / 2026-06-08\t2026-06-08\t120 per week / 2026-06-15\t2026-06-15\t160 per week / 2026-06-22\t2026-06-22\t150 per week / 2026-06-29\t2026-06-29\t240 per week / 2026-07-06\t2026-07-06\t310 per week / 2026-07-13\t2026-07-13\t290 per week / 2026-07-20\t2026-07-20\t420 per week / 2026-07-27\t2026-07-27\t510 per week / 2026-08-03\t2026-08-03\t640 per week / 2026-08-10\t2026-08-10\t700 per week / 2026-08-17\t2026-08-17\t880 per week / 2026-08-24\t2026-08-24\t1,100 per week /  / Jun–Aug 2026 · last updated Sep 2026 /  / Relationship & evidence / Details ↶ [footer bottom 1697px]"
+    },
+    {
+      "target": "github-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "Daily · since 2019 /  / GitHub / ↗ /  / Where every project's code lives. /  / I use it to /  / host my code and its history / review and merge pull requests / run tests and deploys on every push /  / 1,121 / contributions /  / Sep / Oct / Nov / Dec / Jan / Feb / Mar / Apr / May / Jun / Jul / Aug / Mon / Wed / Fri / Less / More /  / Sep 2025 – Aug 2026 · last updated Sep 2026 /  / Owner-selected go-to / Details ↶ [footer bottom 1734px]"
+    },
+    {
+      "target": "n8n-front-390",
+      "assertion": "front text as a visitor reads it",
+      "observed": "PAUSED · STARTED 2024 /  / n8n / ↗ /  / Scheduled jobs and webhooks. /  / Paused while my nightly jobs move to plain cron. /  / I used it to /  / RUN JOBS ON A SCHEDULE / MOVE DATA BETWEEN SYSTEMS /  / 0 / workflow runs · per week /  / workflow runs, one row per bar / From\tTo\tValue / 2025-01-13\t2025-01-13\t312 per week / 2025-01-20\t2025-01-20\t298 per week / 2025-01-27\t2025-01-27\t335 per week / 2025-02-03\t2025-02-03\t320 per week / 2025-02-10\t2025-02-10\t341 per week / 2025-02-17\t2025-02-17\t306 per week / 2025-02-24\t2025-02-24\t289 per week / 2025-03-03\t2025-03-03\t264 per week / 2025-03-10\t2025-03-10\t180 per week / 2025-03-17\t2025-03-17\t72 per week / 2025-03-24\t2025-03-24\t0 per week / 2025-03-31\t2025-03-31\t0 per week /  / Jan–Apr 2025 · last updated Sep 2026 /  / RELATIONSHIP & EVIDENCE / DETAILS ↶ [footer bottom 1732px]"
+    },
+    {
+      "target": "page-390",
+      "assertion": "no sideways scroll",
+      "observed": "true"
+    }
+  ]
+}

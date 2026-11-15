@@ -105,7 +105,7 @@ test("omitting private usage leaves ordinary owner cards and existing subscripti
   const $ = render({ privateUsage: undefined, card: { ...card, cost: { amount: 20, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-24" } } });
   expect($(".private-usage-preview, .private-usage-details")).toHaveLength(0);
   expect($(".activity-placeholder").text()).toBe("Add a usage snapshot or describe your history.");
-  expect($(".card-back").text()).toContain("Owner-reported cost: $20.00/month");
+  expect($(".card-back").text()).toContain("Owner-reported cost: $20/month");
 });
 
 test("Codex account snapshots render only on the matching canonical card and stay unpriced", () => {

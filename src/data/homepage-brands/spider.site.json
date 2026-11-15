@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "spider",
+  "canonicalDomain": "spider.cloud",
+  "measuredAt": "2026-11-15T09:33:07.481Z",
+  "url": "https://spider.cloud/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#0c0e13",
+      "from": "page background"
+    },
+    "text": {
+      "value": "#f8fafc",
+      "from": "text on the page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Fraunces Variable",
+        "generic": "serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "Inter Variable",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "Berkeley",
+        "generic": "monospace"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "uppercase",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0.16,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#f8fafc",
+        "text": "#0c0e13",
+        "radius": {
+          "px": 0,
+          "pill": false
+        },
+        "font": {
+          "family": "Berkeley",
+          "generic": "monospace"
+        },
+        "case": "uppercase",
+        "trackingEm": 0.14
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#0c0e13",
+        "text": "#94a3b8",
+        "border": "#414a58",
+        "radius": {
+          "px": 0,
+          "pill": false
+        },
+        "font": {
+          "family": "Berkeley",
+          "generic": "monospace"
+        },
+        "case": "uppercase",
+        "trackingEm": 0.14
+      },
+      "from": "secondary call-to-action"
+    },
+    "signature": {
+      "value": "#3bde77",
+      "from": "heading highlight"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Fraunces Variable",
+        "generic": "serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#f8fafc",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#f8fafc",
+          "areaPx": 20213
+        },
+        {
+          "hex": "#3bde77",
+          "areaPx": 49
+        }
+      ],
+      "from": "first screen"
+    },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "dark",
+          "type": "icon",
+          "width": 512,
+          "height": 512,
+          "inks": [
+            {
+              "hex": "#21c45d",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "unknown",
+          "type": "icon",
+          "width": 180,
+          "height": 180,
+          "inks": [
+            {
+              "hex": "#0a0a0a",
+              "share": 0.871
+            },
+            {
+              "hex": "#21c45d",
+              "share": 0.12
+            },
+            {
+              "hex": "#166734",
+              "share": 0.003
+            },
+            {
+              "hex": "#1da24e",
+              "share": 0.002
+            },
+            {
+              "hex": "#0f2d1a",
+              "share": 0.002
+            },
+            {
+              "hex": "#13502a",
+              "share": 0.001
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#2b313c"
+      },
+      "from": "most common border"
+    },
+    "mutedText": {
+      "value": "#94a3b8",
+      "from": "secondary text on the page background"
+    }
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "cloudflare",
+  "canonicalDomain": "cloudflare.com",
+  "measuredAt": "2026-11-15T09:31:41.062Z",
+  "url": "https://cloudflare.com/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#ffffff",
+      "from": "page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "STK Bureau Sans",
+        "generic": "sans-serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "STK Bureau Sans",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#ffffff",
+        "text": "#1f1f1f",
+        "radius": {
+          "px": 50,
+          "pill": true
+        },
+        "font": {
+          "family": "STK Bureau Sans",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "text": "#262626",
+        "border": "#f0f0f0",
+        "radius": {
+          "px": 38,
+          "pill": true
+        },
+        "font": {
+          "family": "STK Bureau Sans",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": 0
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 0,
+      "from": "bordered panels"
+    },
+    "signature": {
+      "value": "#ff5f08",
+      "from": "logo"
+    },
+    "hero": {
+      "value": {
+        "kind": "colour",
+        "hex": "#ff5e1f",
+        "radiusPx": 16
+      },
+      "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "STK Bureau Sans",
+        "generic": "sans-serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#262626",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#ff5e1f",
+          "areaPx": 1025280
+        }
+      ],
+      "from": "first screen"
+    },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "dark",
+          "type": "logo",
+          "width": 341,
+          "height": 156,
+          "inks": [
+            {
+              "hex": "#f38020",
+              "share": 0.826
+            },
+            {
+              "hex": "#faae40",
+              "share": 0.174
+            }
+          ]
+        },
+        {
+          "mode": "dark",
+          "type": "icon",
+          "width": 198,
+          "height": 192,
+          "inks": [
+            {
+              "hex": "#ff4d06",
+              "share": 0.78
+            },
+            {
+              "hex": "#fffcf3",
+              "share": 0.209
+            },
+            {
+              "hex": "#ff7e51",
+              "share": 0.004
+            },
+            {
+              "hex": "#fde7d8",
+              "share": 0.003
+            },
+            {
+              "hex": "#ffa774",
+              "share": 0.002
+            },
+            {
+              "hex": "#fad2b5",
+              "share": 0.002
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 248,
+          "height": 58,
+          "inks": [
+            {
+              "hex": "#ff5f08",
+              "share": 0.498
+            },
+            {
+              "hex": "#262626",
+              "share": 0.403
+            },
+            {
+              "hex": "#ff9910",
+              "share": 0.099
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 719,
+          "height": 59,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 1
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
+    "rule": {
+      "value": {
+        "style": "dashed",
+        "hex": "#f0f0f0"
+      },
+      "from": "most common border"
+    }
+  }
+}

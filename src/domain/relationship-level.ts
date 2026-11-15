@@ -72,14 +72,22 @@ export const relationshipLevelsRule = "The relationship words on a card are the 
   + `A card without a level says ${STATUS_FALLBACK_LABELS.ACTIVE}, ${STATUS_FALLBACK_LABELS.TESTING} or ${STATUS_FALLBACK_LABELS.ARCHIVED}. `
   + "The order is not a score or a ranking, and go-to is a separate mark.";
 
+/** Paused or stopped, or with no level and only marked as used before. A tool never adopted was never in use. */
+export function noLongerInUse(card: { status: RelationshipStatus; level?: RelationshipLevel }): boolean {
+  return card.level ? card.level === "PAUSED" || card.level === "STOPPED" : card.status === "ARCHIVED";
+}
+
 const YEAR_LENGTH = 4;
 
-/** The card's top line, for example "DAILY · SINCE 2021" or "STOPPED USING · STARTED 2022". Never invents a date. */
+/**
+ * The card's top line as typed, for example "Daily · since 2021" or "Stopped using · started 2022". The card sets its
+ * case. Never invents a date.
+ */
 export function cardTopLine(card: { status: RelationshipStatus; level?: RelationshipLevel; startedAt?: string }): string {
-  const label = cardStatusLabel(card).toUpperCase();
+  const label = cardStatusLabel(card);
   // Someone who never adopted a tool has no "since".
   if (!card.startedAt || card.level === "TRIED_NOT_ADOPTED") return label;
   // "Stopped using since 2022" would read as the year it ended, so a tool no longer in use says when it started.
-  const word = card.status === "ARCHIVED" ? "STARTED" : "SINCE";
+  const word = card.status === "ARCHIVED" ? "started" : "since";
   return `${label} · ${word} ${card.startedAt.slice(0, YEAR_LENGTH)}`;
 }

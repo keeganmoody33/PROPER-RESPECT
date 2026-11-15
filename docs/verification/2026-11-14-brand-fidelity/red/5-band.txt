@@ -1,0 +1,45 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /Users/keeganmoody/Downloads/PROPER-RESPECT/.claude/worktrees/agent-ab078e6219dd88e3a
+
+ ❯ src/domain/brand-kit-site.test.ts (8 tests | 1 failed) 9ms
+     × is drawn only for a site whose first heading sits on a full-bleed colour, in that colour with a label that reads on it 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/domain/brand-kit-site.test.ts > the hero band > is drawn only for a site whose first heading sits on a full-bleed colour, in that colour with a label that reads on it
+AssertionError: expected {} to deeply equal { Object (clay, cloudflare) }
+
+- Expected
++ Received
+
+- {
+-   "clay": [
+-     "#035d44",
+-     "#ffffff",
+-   ],
+-   "cloudflare": [
+-     "#ff5e1f",
+-     "#262626",
+-   ],
+- }
++ {}
+
+ ❯ src/domain/brand-kit-site.test.ts:134:19
+    132|     // Cloudflare's sits on a 99%-wide orange panel, where its #262626…
+    133|     // Docker's dark hero panel is 81% of the width, so it is no band.
+    134|     expect(bands).toEqual({ clay: ["#035d44", "#ffffff"], cloudflare: …
+       |                   ^
+    135|   });
+    136| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 7 passed (8)
+   Start at  07:42:16
+   Duration  174ms (transform 54ms, setup 0ms, import 104ms, tests 9ms, environment 0ms)
+

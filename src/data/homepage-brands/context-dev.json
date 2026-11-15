@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "context-dev",
+  "canonicalDomain": "context.dev",
+  "retrievalId": "6a7938e1-df75-4d71-8e5c-6935acb5cfd0",
+  "retrievedAt": "2026-11-14T10:11:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/1f86665f-35a2-4850-9d8c-aa1bbfdb4363.svg",
+      "mode": "light",
+      "type": "logo",
+      "width": 822,
+      "height": 144
+    },
+    {
+      "url": "https://media.brand.dev/136231df-7049-4cd7-bc63-42b53dc9144d.svg",
+      "mode": "dark",
+      "type": "logo",
+      "width": 822,
+      "height": 144
+    },
+    {
+      "url": "https://media.brand.dev/2bae46d7-7c02-4591-9ca3-335bd330723c.png",
+      "mode": "unknown",
+      "type": "icon",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "url": "https://media.brand.dev/aad6fffb-9d91-4b97-b2e0-ee290430fcc1.svg",
+      "mode": "light",
+      "type": "icon",
+      "width": 372,
+      "height": 256
+    },
+    {
+      "url": "https://media.brand.dev/7a0160e5-c86f-4ac6-9e1b-a789b4667a8a.svg",
+      "mode": "dark",
+      "type": "icon",
+      "width": 372,
+      "height": 256
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#2563eb",
+      "name": "Blue",
+      "source": "site"
+    },
+    {
+      "hex": "#000000",
+      "name": "Black",
+      "source": "site"
+    },
+    {
+      "hex": "#ffffff",
+      "name": "White",
+      "source": "site"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "light",
+    "colors": {
+      "accent": "#2563eb",
+      "background": "#ffffff",
+      "text": "#000000"
+    },
+    "headingFamily": "rethinkSans",
+    "bodyFamily": "rethinkSans",
+    "typography": {
+      "heading": {
+        "family": "rethinkSans",
+        "fallbacks": [
+          "rethinkSans",
+          "rethinkSans Fallback",
+          "system-ui",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 56,
+        "lineHeight": 1.0799999999999998,
+        "letterSpacingEm": -0.034999999999999996
+      },
+      "body": {
+        "family": "rethinkSans",
+        "fallbacks": [
+          "rethinkSans",
+          "rethinkSans Fallback",
+          "system-ui",
+          "sans-serif"
+        ],
+        "weight": 400,
+        "fontSizePx": 16.2,
+        "lineHeight": 1.625,
+        "letterSpacingEm": 0
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#ffffff",
+        "text": "#000000",
+        "border": "#e6e6e6",
+        "radiusPx": 7.2,
+        "paddingPx": 28.8
+      },
+      "buttonPrimary": {
+        "background": "#ffffff",
+        "text": "#2563eb",
+        "border": "#2563eb",
+        "radiusPx": 9999,
+        "paddingPx": 10.8,
+        "weight": 400
+      },
+      "buttonSecondary": {
+        "text": "#ffffff",
+        "radiusPx": 9999,
+        "paddingPx": 10.8,
+        "weight": 400
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "6a7938e1-df75-4d71-8e5c-6935acb5cfd0"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "17831c59-8ed3-4300-b8b1-7b7186169f97",
+      "partial": true
+    }
+  ],
+  "responseHash": "c3b527c5a0009adcfa7e64483d0ecca231f3f93bd400bc80a94654399cc4241a",
+  "fontLinks": [
+    {
+      "family": "rethinkSans",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/5239013b59abd712f67f27baaf105617590d07574435374ce7751cd08adce1e6.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/5239013b59abd712f67f27baaf105617590d07574435374ce7751cd08adce1e6.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/5239013b59abd712f67f27baaf105617590d07574435374ce7751cd08adce1e6.woff2",
+          "weight": 600,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/5239013b59abd712f67f27baaf105617590d07574435374ce7751cd08adce1e6.woff2",
+          "weight": 700,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/5239013b59abd712f67f27baaf105617590d07574435374ce7751cd08adce1e6.woff2",
+          "weight": 800,
+          "format": "woff2"
+        }
+      ]
+    }
+  ]
+}

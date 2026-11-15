@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 2,
+  "provider": "context.dev",
+  "adapterVersion": "context-brand-v2-2026-11-13",
+  "productSlug": "spider",
+  "canonicalDomain": "spider.cloud",
+  "retrievalId": "7066b66f-696c-4ebb-8529-83c2de41cc3f",
+  "retrievedAt": "2026-11-14T10:02:00.000Z",
+  "partial": true,
+  "logos": [
+    {
+      "url": "https://media.brand.dev/0a17c0a1-46e0-4640-af37-2f633a3dedce.svg",
+      "mode": "dark",
+      "type": "icon",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "url": "https://media.brand.dev/d69dcf81-fcbf-4ef4-b726-0b021cd5fca9.png",
+      "mode": "unknown",
+      "type": "icon",
+      "width": 180,
+      "height": 180
+    }
+  ],
+  "colors": [
+    {
+      "hex": "#94a3b8",
+      "name": "Blue Blouse",
+      "source": "site"
+    },
+    {
+      "hex": "#0a0a0a",
+      "name": "Existential Angst",
+      "source": "site"
+    },
+    {
+      "hex": "#ffffff",
+      "name": "White",
+      "source": "site"
+    },
+    {
+      "hex": "#24c45c",
+      "name": "Vegan Mastermind",
+      "source": "logo"
+    },
+    {
+      "hex": "#14542c",
+      "name": "Crusoe",
+      "source": "logo"
+    }
+  ],
+  "fonts": [],
+  "styleguide": {
+    "mode": "dark",
+    "colors": {
+      "accent": "#94a3b8",
+      "background": "#0c0e13",
+      "text": "#f8fafc"
+    },
+    "headingFamily": "Fraunces Variable",
+    "bodyFamily": "Inter Variable",
+    "typography": {
+      "heading": {
+        "family": "Fraunces Variable",
+        "fallbacks": [
+          "Fraunces Variable",
+          "Fraunces Variable",
+          "Fraunces Fallback",
+          "ui-serif",
+          "Georgia",
+          "Cambria",
+          "Times New Roman",
+          "Times",
+          "serif"
+        ],
+        "weight": 500,
+        "fontSizePx": 96,
+        "lineHeight": 1.1979166666666667,
+        "letterSpacingEm": -0.02125
+      },
+      "body": {
+        "family": "Inter Variable",
+        "fallbacks": [
+          "Inter Variable",
+          "Inter Fallback",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Noto Sans",
+          "Arial",
+          "sans-serif",
+          "Apple Color Emoji",
+          "Segoe UI Emoji",
+          "Segoe UI Symbol",
+          "Noto Color Emoji"
+        ],
+        "weight": 400,
+        "fontSizePx": 21,
+        "lineHeight": 1.5499999999999998,
+        "letterSpacingEm": 0
+      }
+    },
+    "components": {
+      "card": {
+        "background": "#0c0e13",
+        "text": "#f8fafc",
+        "border": "#374151",
+        "radiusPx": 8,
+        "paddingPx": 16
+      },
+      "buttonPrimary": {
+        "background": "#f8fafc",
+        "text": "#0c0e13",
+        "border": "#f8fafc",
+        "radiusPx": 0,
+        "paddingPx": 12,
+        "weight": 400
+      },
+      "buttonSecondary": {
+        "background": "#0c0e13",
+        "text": "#94a3b8",
+        "border": "#414a58",
+        "radiusPx": 0,
+        "paddingPx": 12,
+        "weight": 400
+      }
+    }
+  },
+  "receipts": [
+    {
+      "endpoint": "brand",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "7066b66f-696c-4ebb-8529-83c2de41cc3f"
+    },
+    {
+      "endpoint": "fonts",
+      "status": "error"
+    },
+    {
+      "endpoint": "styleguide",
+      "status": "ok",
+      "httpStatus": 200,
+      "requestId": "7fd4bdf1-5fcd-4372-b51f-d75232a18dc8",
+      "partial": true
+    }
+  ],
+  "responseHash": "5861241846a0ea79c0315c98928445db9a621966708da423ce355d80230e6840",
+  "fontLinks": [
+    {
+      "family": "Fraunces Variable",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 100,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 200,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 300,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 600,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 700,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 800,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/f18853f63a870ebef013e30e789d8d544f102e4acd94988e57c223d9c796ddf4.woff2",
+          "weight": 900,
+          "format": "woff2"
+        }
+      ]
+    },
+    {
+      "family": "Inter Variable",
+      "source": "styleguide",
+      "type": "custom",
+      "files": [
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 100,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 200,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 300,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 400,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 500,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 600,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 700,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 800,
+          "format": "woff2"
+        },
+        {
+          "url": "https://media.brand.dev/fonts/ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd.woff2",
+          "weight": 900,
+          "format": "woff2"
+        }
+      ]
+    },
+    {
+      "family": "Roboto",
+      "source": "styleguide",
+      "type": "google",
+      "category": "sans-serif",
+      "files": [
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbGmTggvWl0Qn.ttf",
+          "weight": 100,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuZEbWmTggvWl0Qn.ttf",
+          "weight": 200,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuaabWmTggvWl0Qn.ttf",
+          "weight": 300,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbWmTggvWl0Qn.ttf",
+          "weight": 400,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWub2bWmTggvWl0Qn.ttf",
+          "weight": 500,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYaammTggvWl0Qn.ttf",
+          "weight": 600,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuYjammTggvWl0Qn.ttf",
+          "weight": 700,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuZEammTggvWl0Qn.ttf",
+          "weight": 800,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWuZtammTggvWl0Qn.ttf",
+          "weight": 900,
+          "format": "truetype"
+        }
+      ]
+    },
+    {
+      "family": "Noto Sans",
+      "source": "styleguide",
+      "type": "google",
+      "category": "sans-serif",
+      "files": [
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9At9d41P6zHtY.ttf",
+          "weight": 100,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyB9A99d41P6zHtY.ttf",
+          "weight": 200,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyCjA99d41P6zHtY.ttf",
+          "weight": 300,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyD9A99d41P6zHtY.ttf",
+          "weight": 400,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyDPA99d41P6zHtY.ttf",
+          "weight": 500,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyAjBN9d41P6zHtY.ttf",
+          "weight": 600,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyAaBN9d41P6zHtY.ttf",
+          "weight": 700,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyB9BN9d41P6zHtY.ttf",
+          "weight": 800,
+          "format": "truetype"
+        },
+        {
+          "url": "https://fonts.gstatic.com/s/notosans/v42/o-0mIpQlx3QUlC5A4PNB6Ryti20_6n1iPHjcz6L1SoM-jCpoiyBUBN9d41P6zHtY.ttf",
+          "weight": 900,
+          "format": "truetype"
+        }
+      ]
+    },
+    {
+      "family": "Noto Color Emoji",
+      "source": "styleguide",
+      "type": "google",
+      "category": "sans-serif",
+      "files": [
+        {
+          "url": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFab5s79iz64w.ttf",
+          "weight": 400,
+          "format": "truetype"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+{
+  "schemaVersion": 1,
+  "productSlug": "exa",
+  "canonicalDomain": "exa.ai",
+  "measuredAt": "2026-11-15T09:32:21.402Z",
+  "url": "https://exa.ai/",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "traits": {
+    "surface": {
+      "value": "#ffffff",
+      "from": "page background"
+    },
+    "text": {
+      "value": "#111827",
+      "from": "text on the page background"
+    },
+    "headingFont": {
+      "value": {
+        "family": "Arizona",
+        "generic": "serif"
+      },
+      "from": "first heading"
+    },
+    "bodyFont": {
+      "value": {
+        "family": "ABCDiatype",
+        "generic": "sans-serif"
+      },
+      "from": "first paragraph"
+    },
+    "labelFont": {
+      "value": {
+        "family": "GeistMono",
+        "generic": "monospace"
+      },
+      "from": "small labels"
+    },
+    "labelCase": {
+      "value": "uppercase",
+      "from": "small labels"
+    },
+    "labelTrackingEm": {
+      "value": 0.08,
+      "from": "small labels"
+    },
+    "primaryButton": {
+      "value": {
+        "fill": "#000000",
+        "text": "#ffffff",
+        "radius": {
+          "px": 4,
+          "pill": false
+        },
+        "font": {
+          "family": "ABCDiatype",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": -0.02
+      },
+      "from": "primary call-to-action"
+    },
+    "secondaryButton": {
+      "value": {
+        "fill": "#ffffff",
+        "text": "#4b5563",
+        "border": "#e5e7eb",
+        "radius": {
+          "px": 6,
+          "pill": false
+        },
+        "font": {
+          "family": "ABCDiatype",
+          "generic": "sans-serif"
+        },
+        "case": "as typed",
+        "trackingEm": -0.02
+      },
+      "from": "secondary call-to-action"
+    },
+    "panelRadiusPx": {
+      "value": 4,
+      "from": "bordered panels"
+    },
+    "hero": {
+      "value": {
+        "kind": "none"
+      },
+      "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Arizona",
+        "generic": "serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#111827",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#fafafa",
+          "areaPx": 190400
+        },
+        {
+          "hex": "#eef8ff",
+          "areaPx": 40960
+        },
+        {
+          "hex": "#f2f1f0",
+          "areaPx": 25314
+        },
+        {
+          "hex": "#000000",
+          "areaPx": 7233
+        },
+        {
+          "hex": "#f2f0ef",
+          "areaPx": 3804
+        },
+        {
+          "hex": "#f3f4f6",
+          "areaPx": 1024
+        }
+      ],
+      "from": "first screen"
+    },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 413,
+          "height": 129,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 0.647
+            },
+            {
+              "hex": "#0143d9",
+              "share": 0.353
+            }
+          ]
+        },
+        {
+          "mode": "unknown",
+          "type": "icon",
+          "width": 148,
+          "height": 148,
+          "inks": [
+            {
+              "hex": "#fffbea",
+              "share": 0.806
+            },
+            {
+              "hex": "#1f40ed",
+              "share": 0.167
+            },
+            {
+              "hex": "#8f9deb",
+              "share": 0.009
+            },
+            {
+              "hex": "#c7cceb",
+              "share": 0.007
+            },
+            {
+              "hex": "#576fec",
+              "share": 0.004
+            },
+            {
+              "hex": "#3b58ed",
+              "share": 0.003
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
+    "panelFill": {
+      "value": "#faf9f7",
+      "from": "second large surface"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#e2e2e4"
+      },
+      "from": "most common border"
+    },
+    "mutedText": {
+      "value": "#6b7280",
+      "from": "secondary text on the page background"
+    }
+  }
+}

@@ -3,6 +3,8 @@ import { securityHeaderRules } from "./src/server/security-headers";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // The homepage holds its examples row at a phone's foot, where the dev badge would sit on its first name. Errors still show.
+  devIndicators: false,
   // Every visitor gets each page's metadata in its head, not streamed in later. Streamed metadata hydrates late,
   // and a visitor who followed a link before it did kept the old page's canonical link, beside or instead of the new one.
   // Matches any user agent, "Mozilla/5.0 (Macintosh) Chrome/142" and "bingbot/2.0" alike; it rejects none.
