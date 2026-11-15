@@ -46,10 +46,11 @@ const brand: ProductBrandSnapshot = {
   responseHash: "a".repeat(64),
 };
 
-function renderCard(overrides: Partial<Card> = {}) {
+function renderCard(overrides: Partial<Card> = {}, today?: string) {
   return load(renderToStaticMarkup(createElement(ProductCard, {
     card: { ...baseCard, ...overrides },
     index: 0,
+    today,
   })));
 }
 
@@ -920,7 +921,8 @@ test("a paused or stopped card says why on its front, under the headline; a card
 });
 
 test("a published cost shows on the front in a few words, with the full record kept on the back", () => {
-  const $ = renderCard({ cost: { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" } });
+  // Read on a fixed day soon after the price, so the test does not age with the clock.
+  const $ = renderCard({ cost: { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" } }, "2026-10-01");
   expect($(".card-front .card-cost").text()).toBe("Costs $5/month · owner-reported");
   expect($(".card-front .card-cost").next().hasClass("card-footer")).toBe(true);
   expect($(".card-back").text()).toContain("Owner-reported cost: $5/month · as of 1 Sep 2026");
