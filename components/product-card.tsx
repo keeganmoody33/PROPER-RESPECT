@@ -358,7 +358,7 @@ function TablePreviewBlock({ preview, shown, full = false }: { preview: TablePre
           </tr>)}
         </tbody>
       </table>
-      {preview.totalRows && <p className="card-table-count">{[`${rows.length} of ${fullNumber(preview.totalRows)} rows`, preview.rowNote].filter(Boolean).join(" · ")}</p>}
+      {!full && preview.totalRows && <p className="card-table-count">{[`${rows.length} of ${fullNumber(preview.totalRows)} rows`, preview.rowNote].filter(Boolean).join(" · ")}</p>}
     </div>
   );
 }

@@ -1842,6 +1842,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .card-table-preview thead th { background: var(--table-panel); }
 .card-table-preview thead th:first-child { width: 26%; }
 .card-table-preview thead th:nth-child(2) { width: 32%; }
+.card-table-preview thead th:nth-child(3) { width: 24%; }
 /* The row-number gutter, its own ruled column inside the first cell; drawn, not read out. */
 .card-table-preview tr > :first-child::before { align-items: flex-start; border-right: 1px solid var(--table-rule); bottom: 0; content: "" / ""; display: flex; font-variant-numeric: tabular-nums; justify-content: center; left: 0; padding-top: .32rem; position: absolute; top: 0; width: 1.5rem; }
 .card-table-preview tbody tr { counter-increment: preview-row; }
@@ -1859,6 +1860,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .card-table-preview tr > :first-child::before { width: 1.2rem; }
   .card-table-preview thead th:first-child { width: 32%; }
   .card-table-preview thead th:nth-child(2) { width: 34%; }
+  .card-table-preview thead th:nth-child(3) { width: auto; }
   .card-table-preview:not([data-full]) .table-glyph { display: block; margin-bottom: .15rem; }
 }
 @container (max-width: 15rem) {
@@ -1925,6 +1927,8 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   color: var(--brand-card-panel-text, inherit);
   padding: .7rem .75rem;
 }
+/* The calendar's frame sits in the card's padding, so framing it costs its days no width. */
+.product-card[data-panel] .card-front .contribution-calendar { margin-inline: calc(-.75rem - 1px); }
 .product-card[data-panel] .card-front .card-artifact-links a { color: inherit; }
 .product-card[data-panel] .card-front .activity-bars span { background: var(--brand-card-panel-chart, var(--brand-card-chart, var(--brand-card-accent, currentColor))); }
 .product-card .card-front :is(.contribution-calendar, .card-activity-preview .usage-chart) {

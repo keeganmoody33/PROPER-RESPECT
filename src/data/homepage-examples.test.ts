@@ -172,11 +172,11 @@ test("only Clay's front shows a table: a lead list from a signal, a provider wat
   expect(table.caption).toBe("Lead list · from a job-change signal · invented sample rows");
   expect([table.columns.map(column => ["kind" in column ? column.kind : undefined, column.label, column.droppable, column.enriched]), table.rows.length, table.frontRows]).toEqual([
     [["text", "Company", false, false], ["email", "Work email", false, true], ["waterfall", "Waterfall", false, true], ["ai", "AI: signal", true, true]],
-    6, 4,
+    5, 4,
   ]);
   // Each waterfall says which of three generic providers answered, so no real vendor is named; one row still running fills in, one finds nothing.
   expect(table.rows.map(row => { const shown = row[2].fillsIn ?? row[2]; return `${row[0].text}: ${shown.text} ${shown.waterfall?.step}/${shown.waterfall?.of}`; })).toEqual([
-    "Nimbus: Enriched 1/3", "Heron: Enriched 2/3", "Quillon: Enriched 3/3", "Tessel: Enriched 1/3", "Marrow: No match 3/3", "Osprey: Enriched 2/3",
+    "Nimbus: Enriched 1/3", "Heron: Enriched 2/3", "Quillon: Enriched 3/3", "Tessel: Enriched 1/3", "Marrow: No match 3/3",
   ]);
   expect(table.rows.flatMap(row => row.flatMap(cell => cell.fillsIn ? [`${cell.text} -> ${cell.fillsIn.text}`] : []))).toEqual([
     "Finding… -> mo@quillon.example", "Running -> Enriched", "Running -> New VP Sales",

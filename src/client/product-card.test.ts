@@ -824,9 +824,9 @@ test("a table shows its column kinds as glyphs, a waterfall as a status pill and
     "pending:Running:asking,unasked,unasked:, asking provider 1 of 3",
     "empty:No match:missed,missed,missed:, none of 3 providers answered",
   ]);
-  // The front shows its first rows, the back all of them; each says how much of the whole table that is.
+  // The front shows its first rows and says how much of the whole table they are; the back shows them all, and keeps its height down.
   expect([front.find("tbody tr").length, back.find("tbody tr").length]).toEqual([2, 3]);
-  expect([front.find(".card-table-count").text(), back.find(".card-table-count").text()]).toEqual(["2 of 214 rows · 2.3 credits a row", "3 of 214 rows · 2.3 credits a row"]);
+  expect([front.find(".card-table-count").text(), back.find(".card-table-count").length]).toEqual(["2 of 214 rows · 2.3 credits a row", 0]);
 });
 
 test("a table preview past its caps, or on a brand preview, is not drawn", () => {

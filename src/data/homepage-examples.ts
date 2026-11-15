@@ -124,7 +124,8 @@ const SAMPLE_YEAR = { start: "2025-09-01", end: "2026-08-31" } as const;
 /**
  * A Clay table the way clay.com draws its own: a lead list from a signal, each column marked with its kind, an address found by a
  * waterfall of three providers tried in turn, and one AI column. Invented companies on reserved .example domains, and providers
- * counted rather than named: no real company, person or vendor. The front shows four of the six rows, out of a 214-row table.
+ * counted rather than named: no real company, person or vendor. The front shows four of the five rows, out of a 214-row table;
+ * the back adds the row that found no address.
  */
 const filled = (text: string) => ({ text, state: "filled" as const });
 const enrichedBy = (step: number) => ({ text: "Enriched", state: "filled" as const, waterfall: { step, of: CLAY_WATERFALL_PROVIDERS } });
@@ -145,7 +146,6 @@ const CLAY_TABLE: TablePreviewInput = {
       { text: "Running", state: "pending", fillsIn: filled("New VP Sales") }],
     [{ text: "Tessel" }, filled("raj@tessel.example"), enrichedBy(1), filled("No signal")],
     [{ text: "Marrow" }, { text: "No match", state: "empty" }, { text: "No match", state: "empty", waterfall: { step: CLAY_WATERFALL_PROVIDERS, of: CLAY_WATERFALL_PROVIDERS } }, filled("Series A")],
-    [{ text: "Osprey" }, filled("eve@osprey.example"), enrichedBy(2), filled("Hiring AEs")],
   ],
   frontRows: CLAY_FRONT_ROWS, totalRows: CLAY_TABLE_ROWS,
   // The year's data credits over its rows enriched (clayMeasurements below): 27,600 / 11,800.
