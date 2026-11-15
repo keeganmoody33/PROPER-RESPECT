@@ -38,6 +38,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const [index, setIndex] = useState(0);
   const [more, setMore] = useState(false);
   const [choice, setChoice] = useState<PlayChoice>("auto");
+  // Only a mouse hovers: a tap leaves no pointer resting on the slideshow, so it never holds it.
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const reducedMotion = useReducedMotion();
@@ -110,7 +111,8 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   </Toggle>;
 
   return <section className={styles.carousel} aria-label="Product usage examples" aria-roledescription="carousel" data-held={held ? "" : undefined}
-    onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocus={() => setFocused(true)} onBlur={leave}>
+    onPointerEnter={event => { if (event.pointerType === "mouse") setHovered(true); }} onPointerLeave={event => { if (event.pointerType === "mouse") setHovered(false); }}
+    onFocus={() => setFocused(true)} onBlur={leave}>
     {/* The controls sit above the chooser and the card, so they stay put while the frame below takes each card's own height. */}
     <div className={styles.header}>
       <p className={styles.label}><span className={styles.shortLabel} aria-hidden="true">Examples</span><span className={styles.longLabel}>Inside a card / Illustrative examples</span></p>

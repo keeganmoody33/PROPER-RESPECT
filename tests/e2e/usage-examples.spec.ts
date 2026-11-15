@@ -679,6 +679,23 @@ test("the slideshow waits for the visitor to reach it before it moves on, then m
   await expect(current).not.toHaveText("Published usage numbers");
 });
 
+/** A touch's turn: a whole turn and a margin, well short of a second turn. */
+const TOUCH_TURN_MS = 8500;
+test(`on a ${PHONE_WIDTH}px touch screen one tap on Play moves the slideshow on within a turn`, async ({ browser }, testInfo) => {
+  const context = await browser.newContext({ baseURL: testInfo.project.use.baseURL, viewport: { width: PHONE_WIDTH, height: PHONE_HEIGHT }, hasTouch: true, isMobile: true, reducedMotion: "no-preference" });
+  const page = await context.newPage();
+  await page.clock.install();
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+  await carousel.getByRole("button", { name: "Play slideshow" }).tap();
+  await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
+  // A tap is not a hover: nothing is left holding the slideshow once the finger lifts.
+  await page.clock.runFor(TOUCH_TURN_MS);
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await context.close();
+});
+
 /** The phone's first screen: the card starts by here, and its first number is above the fold. */
 const PHONE_CARD_TOP_PX = 450;
 test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right after the heading, and holds still`, async ({ page }) => {
