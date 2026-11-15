@@ -9,7 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
 import { productUseOptions, USE_OTHER_MAX, type ProductUses } from "@/src/domain/product-uses";
-import { CREDIT_OTHER_PLATFORM_MAX, CREDIT_PLATFORMS, listedCredit, normalizeCredit, type CreditPlatform } from "@/src/domain/props-credit";
+import { CREDIT_INPUT_MAX, CREDIT_OTHER_PLATFORM_MAX, CREDIT_PLATFORMS, creditPlatform, listedCredit, normalizeCredit, type CreditPlatform } from "@/src/domain/props-credit";
 import { cardStatusLabel, isRelationshipLevel, levelDefinition, levelStatus, RELATIONSHIP_LEVELS } from "@/src/domain/relationship-level";
 import { AccountEvidence } from "./account-evidence";
 import { ProductCard } from "./product-card";
@@ -68,15 +68,14 @@ type SavedCredit = { platform: string; handle: string; platformName?: string };
 
 function CreditQuestion({ productName, credit }: { productName: string; credit?: SavedCredit }) {
   const id = useId();
-  const saved = CREDIT_PLATFORMS.find(option => option.id === credit?.platform)?.id;
-  const [platform, setPlatform] = useState<CreditPlatform>(saved ?? "PROPER_RESPECT");
+  const [platform, setPlatform] = useState<CreditPlatform>(creditPlatform(credit?.platform) ?? "PROPER_RESPECT");
   return <fieldset className={styles.credit} aria-describedby={`${id}-hint`}>
     <legend>Who put you on {productName}? (optional)</legend>
     <p id={`${id}-hint`} className={styles.hint}>Give them props. A Proper Respect handle is best: it links to their page here. You can also paste a profile link.</p>
-    <label>Platform<select name="creditPlatform" value={platform} onChange={event => setPlatform(event.target.value as CreditPlatform)}>
+    <label>Platform<select name="creditPlatform" value={platform} onChange={event => setPlatform(creditPlatform(event.target.value) ?? "PROPER_RESPECT")}>
       {CREDIT_PLATFORMS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
     </select></label>
-    <label>{platform === "OTHER" ? "Their name or handle" : "Their handle"}<input name="creditHandle" autoComplete="off" spellCheck={false} maxLength={200} defaultValue={credit?.handle ?? ""} /></label>
+    <label>{platform === "OTHER" ? "Their name or handle" : "Their handle"}<input name="creditHandle" autoComplete="off" spellCheck={false} maxLength={CREDIT_INPUT_MAX} defaultValue={credit?.handle ?? ""} /></label>
     {platform === "OTHER" && <label>Where they are<input name="creditPlatformName" maxLength={CREDIT_OTHER_PLATFORM_MAX} defaultValue={credit?.platform === "OTHER" ? credit.platformName ?? "" : ""} /></label>}
   </fieldset>;
 }
@@ -98,7 +97,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
   async function submit(form: FormData) {
     if (!isRelationshipLevel(currentLevel)) { setMessage({ version, text: "Choose how often you use this product." }); return; }
     const creditPlatformName = String(form.get("creditPlatformName") ?? "");
-    const credit = normalizeCredit({ platform: String(form.get("creditPlatform") ?? "PROPER_RESPECT") as CreditPlatform,
+    const credit = normalizeCredit({ platform: creditPlatform(form.get("creditPlatform")) ?? "PROPER_RESPECT",
       handle: String(form.get("creditHandle") ?? ""), ...(creditPlatformName ? { platformName: creditPlatformName } : {}) });
     if (!credit.ok) { setMessage({ version, text: credit.message }); return; }
     setBusy(true);

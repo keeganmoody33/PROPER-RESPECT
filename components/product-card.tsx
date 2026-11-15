@@ -594,6 +594,9 @@ export function ProductCard({
   const credit = brandPreview ? undefined : listedCredit(card.credit);
   const creditWords = credit && creditText(credit);
   const creditLink = credit && creditHref(credit);
+  // A Proper Respect page opens here; another platform's profile opens in a new tab.
+  const creditLinkTarget = credit?.platform === "PROPER_RESPECT" || !creditWords ? {}
+    : { target: "_blank", rel: "noopener noreferrer", "aria-label": `${creditWords.name} on ${creditWords.platform} (opens in a new tab)` };
   const creditReport = credit && profileHandle ? reportHref(`Report credit on proper-respect.com/${profileHandle} · ${card.product.name}`) : undefined;
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
@@ -750,9 +753,8 @@ export function ProductCard({
         {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
         {cost && <p className="card-cost">{cost}</p>}
         {creditWords && <div className="card-credit">
-          <p className="card-credit-line">Props to {creditLink ? (credit.platform === "PROPER_RESPECT"
-            ? <a href={creditLink}>{creditWords.name}</a>
-            : <a href={creditLink} target="_blank" rel="noopener noreferrer" aria-label={`${creditWords.name} on ${creditWords.platform} (opens in a new tab)`}>{creditWords.name}</a>)
+          <p className="card-credit-line">Props to {creditLink
+            ? <a href={creditLink} {...creditLinkTarget}>{creditWords.name}</a>
             : creditWords.name} · {creditWords.platform}</p>
           {creditReport && <a className="card-credit-report" href={creditReport}>Not you? Report</a>}
         </div>}

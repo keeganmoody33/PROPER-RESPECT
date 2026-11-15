@@ -8,7 +8,7 @@ import { GITHUB_LOGIN, GITHUB_MARKETING_PATHS } from "./product-destination.ts";
 
 export const CREDIT_OTHER_HANDLE_MAX = 40;
 export const CREDIT_OTHER_PLATFORM_MAX = 30;
-const CREDIT_INPUT_MAX = 200;
+export const CREDIT_INPUT_MAX = 200;
 const PROPER_RESPECT_ORIGIN = "https://proper-respect.com";
 
 type PlatformRule = Readonly<{
@@ -136,10 +136,19 @@ export type CreditPlatform = HandlePlatform | "OTHER";
 
 /** In the order the owner is offered them: Proper Respect first, Other last. */
 export const CREDIT_PLATFORMS: readonly Readonly<{ id: CreditPlatform; label: string }>[] = [
+  // Object.keys widens to string[]; RULES' own keys are exactly HandlePlatform.
   ...(Object.keys(RULES) as HandlePlatform[]).map(id => ({ id, label: RULES[id].label })),
   { id: "OTHER", label: "Other" },
 ];
+// The same keys, as the non-empty tuple z.enum needs.
 const HANDLE_PLATFORMS = Object.keys(RULES) as [HandlePlatform, ...HandlePlatform[]];
+// A slash means a pasted link: no platform's handle can hold one.
+const LINK_MARK = "/";
+
+/** The platform an untyped value names, such as a form field's, or undefined when it names none. */
+export function creditPlatform(value: unknown): CreditPlatform | undefined {
+  return CREDIT_PLATFORMS.find(option => option.id === value)?.id;
+}
 
 const plain = (max: number) => (value: string) => value.length <= max && PLAIN_TEXT.test(value);
 
@@ -151,12 +160,16 @@ export const creditInputSchema = z.object({
 });
 export type CreditInput = z.infer<typeof creditInputSchema>;
 
+// A handle fits when it meets its platform's rule and the link built from it is an http(s) URL, so every layer that
+// reads a credit through this schema checks that link as well.
+const fits = (platform: HandlePlatform, handle: string) => RULES[platform].accepts(handle) && isHttpUrl(RULES[platform].href(handle));
 // A Proper Respect credit links only when, at publish, its handle named a published profile.
 const properRespectCredit = z.object({
-  platform: z.literal("PROPER_RESPECT"), handle: z.string().refine(RULES.PROPER_RESPECT.accepts), linked: z.literal(true).optional(),
+  platform: z.literal("PROPER_RESPECT"), handle: z.string().refine(handle => fits("PROPER_RESPECT", handle)), linked: z.literal(true).optional(),
 });
+// filter keeps the tuple's element type but not its non-empty shape, which z.enum needs; five platforms remain.
 const handleCredit = z.object({ platform: z.enum(HANDLE_PLATFORMS.filter(id => id !== "PROPER_RESPECT") as [HandlePlatform, ...HandlePlatform[]]), handle: z.string() })
-  .refine(credit => RULES[credit.platform].accepts(credit.handle));
+  .refine(credit => fits(credit.platform, credit.handle));
 const otherCredit = z.object({
   platform: z.literal("OTHER"),
   handle: z.string().min(1).refine(plain(CREDIT_OTHER_HANDLE_MAX)),
@@ -184,7 +197,7 @@ function typedHandle(platform: HandlePlatform, typed: string): NormalizedCredit 
   const rule: PlatformRule = RULES[platform];
   const notAProfile = { ok: false as const, message: `That link isn't a profile on ${rule.label}. Paste their ${rule.label} profile link or just the handle.` };
   let handle = typed.replace(LEADING_AT, "");
-  if (typed.includes("/")) {
+  if (typed.includes(LINK_MARK)) {
     const url = parseLooseHttpUrl(typed);
     const segments = url && rule.hosts.includes(url.hostname) ? segmentsOf(url.pathname) : undefined;
     const fromPath = segments && rule.fromPath(segments);
@@ -192,7 +205,8 @@ function typedHandle(platform: HandlePlatform, typed: string): NormalizedCredit 
     handle = fromPath;
   }
   if (platform === "PROPER_RESPECT") handle = handle.toLowerCase();
-  if (!rule.accepts(handle)) return { ok: false, message: rule.refused };
+  if (!fits(platform, handle)) return { ok: false, message: rule.refused };
+  // TypeScript can't pick a union member from a platform it only knows is one of several; each handle platform has this shape.
   return { ok: true, credit: { platform, handle } as PropsCredit };
 }
 
@@ -214,6 +228,7 @@ export function normalizeCredit(input: CreditInput | undefined): NormalizedCredi
 /** A stored or published credit as a card may show it, or undefined when it no longer fits its platform's rule. */
 export function listedCredit(stored: unknown): PropsCredit | undefined {
   const parsed = propsCreditSchema.safeParse(stored);
+  // The schema's handle-platform arm types its platform as any handle platform; its refinements make the value a PropsCredit.
   return parsed.success ? parsed.data as PropsCredit : undefined;
 }
 

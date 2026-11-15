@@ -810,11 +810,10 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   for (const selection of selections) if (selection.publish && selection.measurementEvidenceIds?.length) {
     measurementProjection.set(selection.propId, await reviewedMeasurementsForPublication(ctx, user._id, selection.propId, selection.measurementEvidenceIds));
   }
-  const credits = new Map<Id<"props">, PropsCredit | undefined>();
-  for (const selection of selections) if (selection.publish) {
+  const credits = new Map(await Promise.all(selections.filter(selection => selection.publish).map(async selection => {
     const prop = propsById.get(selection.propId)!;
-    credits.set(prop._id, await publishedCredit(ctx, prop.credit, productById.get(prop.productId)?.name ?? "this product"));
-  }
+    return [prop._id, await publishedCredit(ctx, prop.credit, productById.get(prop.productId)?.name ?? "this product")] as const;
+  })));
   const replacements = selections.filter(selection => selection.publish).flatMap(selection => {
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);
