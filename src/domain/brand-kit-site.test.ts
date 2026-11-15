@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandCardKit, brandMark, contrast } from "./brand-kit";
+import { brandCardKit, brandMark, contrast, slabLogo } from "./brand-kit";
 import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "@/src/data/homepage-brands";
 
 /** Each homepage brand's kit with its measured site file, on the card colours the provider gave it. */
@@ -168,9 +168,9 @@ describe("the hero band", () => {
     expect([paleKit["--brand-card-band-large-text"], paleKit["--brand-card-band-text"]]).toEqual(["#262626", "#262626"]);
   });
 
-  it("sets the logo on a tile of the card's surface when the logo's own colour would vanish into the slab", () => {
-    // Cloudflare's cloud is #ff5f08 on a #ff5e1f slab; Clay's and Docker's logos read on theirs.
-    expect(kits("--brand-card-logo-tile")).toEqual(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, slug === "cloudflare" ? "#ffffff" : undefined])));
+  it("needs no logo tile on any homepage slab", () => {
+    // Cloudflare's cloud is #ff5f08 on a #ff5e1f slab, but its stored wordmark alone reads there (below); Clay's and Docker's logos read on theirs.
+    expect(kits("--brand-card-logo-tile")).toEqual(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, undefined])));
   });
 
   it("gives a button on the slab the card's surface when the brand's own fill would vanish into it, as Cloudflare's hero button is white", () => {
@@ -179,5 +179,23 @@ describe("the hero band", () => {
       return fill ? [[slug, [fill, label]]] : [];
     }));
     expect(onSlab).toEqual({ cloudflare: ["#ffffff", "#262626"] });
+  });
+});
+
+describe("the logo on the slab", () => {
+  const WORDMARK_ONLY = "https://media.brand.dev/fa417a46-2a7a-4fef-b0fa-3dda3d2bb3c8.svg";
+  it("shows a stored wordmark straight on the slab where its inks read 3:1 there: Cloudflare's black wordmark on its orange, with no tile", () => {
+    expect(slabLogo(HOMEPAGE_BRANDS.cloudflare, HOMEPAGE_SITE_TRAITS.cloudflare)?.url).toBe(WORDMARK_ONLY);
+    expect(kit("cloudflare")["--brand-card-logo-tile"]).toBeUndefined();
+  });
+
+  it("keeps the logo's tile where no stored wordmark reads on the slab", () => {
+    const site = HOMEPAGE_SITE_TRAITS.cloudflare;
+    const withoutWordmark = { ...site, traits: { ...site.traits, logoInks: { ...site.traits.logoInks!, value: site.traits.logoInks!.value.filter(logo => logo.width !== 719) } } };
+    expect(slabLogo(HOMEPAGE_BRANDS.cloudflare, withoutWordmark)).toBeUndefined();
+    const brand = HOMEPAGE_BRANDS.cloudflare, { background, text } = brand.styleguide!.colors;
+    expect(brandCardKit(brand, background!, text!, withoutWordmark)["--brand-card-logo-tile"]).toBe("#ffffff");
+    // A site with no colour slab shows no slab logo.
+    expect(slabLogo(HOMEPAGE_BRANDS.github, HOMEPAGE_SITE_TRAITS.github)).toBeUndefined();
   });
 });

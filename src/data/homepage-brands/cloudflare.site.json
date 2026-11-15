@@ -97,6 +97,91 @@
       ],
       "from": "first screen"
     },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "dark",
+          "type": "logo",
+          "width": 341,
+          "height": 156,
+          "inks": [
+            {
+              "hex": "#f38020",
+              "share": 0.826
+            },
+            {
+              "hex": "#faae40",
+              "share": 0.174
+            }
+          ]
+        },
+        {
+          "mode": "dark",
+          "type": "icon",
+          "width": 198,
+          "height": 192,
+          "inks": [
+            {
+              "hex": "#ff4d06",
+              "share": 0.78
+            },
+            {
+              "hex": "#fffcf3",
+              "share": 0.209
+            },
+            {
+              "hex": "#ff7e51",
+              "share": 0.004
+            },
+            {
+              "hex": "#fde7d8",
+              "share": 0.003
+            },
+            {
+              "hex": "#ffa774",
+              "share": 0.002
+            },
+            {
+              "hex": "#fad2b5",
+              "share": 0.002
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 248,
+          "height": 58,
+          "inks": [
+            {
+              "hex": "#ff5f08",
+              "share": 0.498
+            },
+            {
+              "hex": "#262626",
+              "share": 0.403
+            },
+            {
+              "hex": "#ff9910",
+              "share": 0.099
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 719,
+          "height": 59,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 1
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
     "rule": {
       "value": {
         "style": "dashed",

@@ -170,3 +170,20 @@ test("the first screen's fills are kept largest first, so a card can tell a bran
   expect(brandSiteTraitsFromMeasurement(META, { fills: [{ hex: "#3bde77", areaPx: DOTS_AREA_PX }, { hex: "#F8FAFC", areaPx: BUTTON_AREA_PX }, { hex: "green", areaPx: 9 }] }).traits.fills)
     .toEqual({ value: [{ hex: "#f8fafc", areaPx: BUTTON_AREA_PX }, { hex: "#3bde77", areaPx: DOTS_AREA_ROUNDED_PX }], from: "first screen" });
 });
+
+/** Cloudflare's stored logos, measured 2026-11-15: the cloud alone, the cloud and wordmark, and the wordmark alone in currentColor (black). */
+const CLOUD = { mode: "dark", type: "logo", width: 341, height: 156 }, CLOUD_AND_WORDMARK = { mode: "light", type: "logo", width: 248, height: 58 };
+const WORDMARK = { mode: "light", type: "logo", width: 719, height: 59 };
+const CLOUD_SHARE = 0.62, WORDMARK_SHARE = 0.38;
+test("each stored logo's inks are kept by its kind and size, so a card can tell which variant shows on a coloured slab", () => {
+  expect(brandSiteTraitsFromMeasurement(META, { logoInks: [
+    { ...CLOUD, inks: [{ hex: "#F38020", share: CLOUD_SHARE }, { hex: "#faae40", share: WORDMARK_SHARE }] },
+    { ...CLOUD_AND_WORDMARK, inks: [{ hex: "#262626", share: WORDMARK_SHARE }, { hex: "#ff5e1f", share: CLOUD_SHARE }, { hex: "red", share: 0.1 }] },
+    { ...WORDMARK, inks: [{ hex: "#000000", share: 1 }] },
+    { mode: "light", type: "logo", width: -1, height: 59, inks: [{ hex: "#000000", share: 1 }] },
+  ] }).traits.logoInks).toEqual({ value: [
+    { ...CLOUD, inks: [{ hex: "#f38020", share: CLOUD_SHARE }, { hex: "#faae40", share: WORDMARK_SHARE }] },
+    { ...CLOUD_AND_WORDMARK, inks: [{ hex: "#ff5e1f", share: CLOUD_SHARE }, { hex: "#262626", share: WORDMARK_SHARE }] },
+    { ...WORDMARK, inks: [{ hex: "#000000", share: 1 }] },
+  ], from: "stored logos" });
+});

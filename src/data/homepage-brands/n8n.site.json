@@ -119,6 +119,47 @@
       ],
       "from": "first screen"
     },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 120,
+          "height": 48,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 32,
+          "height": 14,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 240,
+          "height": 48,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 1
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
     "panelFill": {
       "value": "#f0f0f0",
       "from": "second large surface"

@@ -154,6 +154,43 @@
       ],
       "from": "first screen"
     },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 256,
+          "height": 256,
+          "inks": [
+            {
+              "hex": "#0e7351",
+              "share": 0.247
+            },
+            {
+              "hex": "#bc7245",
+              "share": 0.162
+            },
+            {
+              "hex": "#110c2c",
+              "share": 0.142
+            },
+            {
+              "hex": "#0e5e45",
+              "share": 0.101
+            },
+            {
+              "hex": "#fbedc6",
+              "share": 0.078
+            },
+            {
+              "hex": "#0e4437",
+              "share": 0.076
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
     "panelFill": {
       "value": "#eef6e3",
       "from": "second large surface"

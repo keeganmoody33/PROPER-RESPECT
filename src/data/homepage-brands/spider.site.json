@@ -115,6 +115,55 @@
       ],
       "from": "first screen"
     },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "dark",
+          "type": "icon",
+          "width": 512,
+          "height": 512,
+          "inks": [
+            {
+              "hex": "#21c45d",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "unknown",
+          "type": "icon",
+          "width": 180,
+          "height": 180,
+          "inks": [
+            {
+              "hex": "#0a0a0a",
+              "share": 0.871
+            },
+            {
+              "hex": "#21c45d",
+              "share": 0.12
+            },
+            {
+              "hex": "#166734",
+              "share": 0.003
+            },
+            {
+              "hex": "#1da24e",
+              "share": 0.002
+            },
+            {
+              "hex": "#0f2d1a",
+              "share": 0.002
+            },
+            {
+              "hex": "#13502a",
+              "share": 0.001
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
     "rule": {
       "value": {
         "style": "solid",

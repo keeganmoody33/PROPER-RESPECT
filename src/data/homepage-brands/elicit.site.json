@@ -99,6 +99,59 @@
       ],
       "from": "first screen"
     },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 128,
+          "height": 128,
+          "inks": [
+            {
+              "hex": "#093d46",
+              "share": 1
+            },
+            {
+              "hex": "#002937",
+              "share": 0
+            }
+          ]
+        },
+        {
+          "mode": "unknown",
+          "type": "icon",
+          "width": 180,
+          "height": 180,
+          "inks": [
+            {
+              "hex": "#014958",
+              "share": 0.539
+            },
+            {
+              "hex": "#ffffff",
+              "share": 0.255
+            },
+            {
+              "hex": "#035a6d",
+              "share": 0.19
+            },
+            {
+              "hex": "#d3e1e4",
+              "share": 0.004
+            },
+            {
+              "hex": "#94b5bc",
+              "share": 0.004
+            },
+            {
+              "hex": "#588c97",
+              "share": 0.004
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
     "panelFill": {
       "value": "#f3f6e4",
       "from": "second large surface"

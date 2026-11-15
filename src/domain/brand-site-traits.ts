@@ -58,6 +58,13 @@ const ruleSchema = z.object({ style: z.enum(["solid", "dashed"]), hex: hexSchema
 /** The most fills kept: enough for a page's buttons, panels and bands. */
 const MAX_FILLS = 12;
 const fillSchema = z.object({ hex: hexSchema, areaPx: z.number().int().min(0).max(MAX_VIEWPORT_PX * MAX_VIEWPORT_PX) }).strict();
+/** A stored logo's inks: its few commonest colours and the share of its drawn pixels each covers, keyed by the logo's kind and size. */
+const MAX_LOGO_INKS = 6, MAX_LOGOS = 32, MAX_LOGO_PX = 10_000;
+const logoInksSchema = z.object({
+  mode: z.enum(["light", "dark", "unknown"]), type: z.enum(["logo", "icon", "unknown"]),
+  width: z.number().int().positive().max(MAX_LOGO_PX), height: z.number().int().positive().max(MAX_LOGO_PX),
+  inks: z.array(z.object({ hex: hexSchema, share: z.number().min(0).max(1) }).strict()).min(1).max(MAX_LOGO_INKS),
+}).strict();
 const located = <Value extends z.ZodType, From extends readonly [string, ...string[]]>(value: Value, from: From) =>
   z.object({ value, from: z.enum(from) }).strict();
 
@@ -80,6 +87,8 @@ const traitsSchema = z.object({
   numberBackdrop: located(hexSchema, ["largest number"]).optional(),
   /** The colours filled behind things in the first screen, by the area they cover there, largest first. */
   fills: located(z.array(fillSchema).max(MAX_FILLS), ["first screen"]).optional(),
+  /** What each of the brand's stored logo files is drawn in, measured from the files the snapshot names. */
+  logoInks: located(z.array(logoInksSchema).max(MAX_LOGOS), ["stored logos"]).optional(),
   panelFill: located(hexSchema, ["second large surface"]).optional(),
   surfacePattern: located(patternSchema, ["second large surface", "ruled columns"]).optional(),
   inversePanel: located(inversePanelSchema, ["dark panel"]).optional(),
@@ -104,6 +113,7 @@ export type SiteTraits = BrandSiteTraits["traits"];
 export type SiteButton = z.infer<typeof buttonSchema>;
 export type SiteFont = z.infer<typeof fontSchema>;
 export type SiteHero = z.infer<typeof heroSchema>;
+export type SiteLogoInks = z.infer<typeof logoInksSchema>;
 
 /** The raw `site` object scripts/brand-site-measure.mjs reads off a page. Nothing in it is trusted until parsed below. */
 type RawFont = { family?: unknown; generic?: unknown };
@@ -133,6 +143,8 @@ export type SiteMeasurement = {
   fills?: readonly { hex?: unknown; areaPx?: unknown }[];
   /** Borders by style, colour and whether they edge a control or the layout; an older capture has only `rule`. */
   ruleCensus?: readonly { style?: unknown; hex?: unknown; kind?: unknown; count?: unknown }[];
+  /** Each stored logo's kind, size and commonest colours, read from the snapshot's own files by the homepage pull. */
+  logoInks?: readonly { mode?: unknown; type?: unknown; width?: unknown; height?: unknown; inks?: readonly { hex?: unknown; share?: unknown }[] }[];
   rule?: { style?: unknown; hex?: unknown };
   mutedText?: unknown;
 };
@@ -279,6 +291,19 @@ function firstScreenFills(raw: SiteMeasurement) {
   return fills.length ? fills : undefined;
 }
 
+const SHARE_PLACES = 1_000;
+function storedLogoInks(raw: SiteMeasurement) {
+  const logos = (raw.logoInks ?? []).flatMap(logo => {
+    const inks = (logo.inks ?? []).flatMap(ink => {
+      const parsed = kept(logoInksSchema.shape.inks.element, { hex: hex(ink.hex), share: rounded(ink.share, SHARE_PLACES) });
+      return parsed ? [parsed] : [];
+    }).sort((a, b) => b.share - a.share).slice(0, MAX_LOGO_INKS);
+    const parsed = kept(logoInksSchema, { mode: logo.mode, type: logo.type, width: logo.width, height: logo.height, inks });
+    return parsed ? [parsed] : [];
+  }).slice(0, MAX_LOGOS);
+  return logos.length ? logos : undefined;
+}
+
 const at = <Value, From extends string>(value: Value | undefined, from: From) => (value === undefined ? undefined : { value, from });
 
 /** The site's signature colour: the most colourful of its call-to-action, heading highlights, colour hero and logo. Earlier candidates win ties. */
@@ -316,6 +341,7 @@ export function brandSiteTraitsFromMeasurement(meta: SiteMeasurementMeta, raw: S
     numberColour: at(number?.colour, "largest number"),
     numberBackdrop: at(number?.backdrop, "largest number"),
     fills: at(firstScreenFills(raw), "first screen"),
+    logoInks: at(storedLogoInks(raw), "stored logos"),
     panelFill: at(second.panelFill, "second large surface"),
     surfacePattern: surfacePattern(raw),
     inversePanel: at(kept(inversePanelSchema, second.inversePanel), "dark panel"),

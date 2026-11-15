@@ -140,6 +140,99 @@
       ],
       "from": "first screen"
     },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 822,
+          "height": 144,
+          "inks": [
+            {
+              "hex": "#2563eb",
+              "share": 0.586
+            },
+            {
+              "hex": "#000000",
+              "share": 0.414
+            }
+          ]
+        },
+        {
+          "mode": "dark",
+          "type": "logo",
+          "width": 822,
+          "height": 144,
+          "inks": [
+            {
+              "hex": "#2563eb",
+              "share": 0.586
+            },
+            {
+              "hex": "#ffffff",
+              "share": 0.414
+            }
+          ]
+        },
+        {
+          "mode": "unknown",
+          "type": "icon",
+          "width": 1024,
+          "height": 1024,
+          "inks": [
+            {
+              "hex": "#2563eb",
+              "share": 0.841
+            },
+            {
+              "hex": "#ffffff",
+              "share": 0.154
+            },
+            {
+              "hex": "#a1bcf6",
+              "share": 0.002
+            },
+            {
+              "hex": "#6f98f1",
+              "share": 0.001
+            },
+            {
+              "hex": "#e1e9fc",
+              "share": 0.001
+            },
+            {
+              "hex": "#4b7eee",
+              "share": 0.001
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 372,
+          "height": 256,
+          "inks": [
+            {
+              "hex": "#2563eb",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "dark",
+          "type": "icon",
+          "width": 372,
+          "height": 256,
+          "inks": [
+            {
+              "hex": "#ffffff",
+              "share": 1
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
     "rule": {
       "value": {
         "style": "solid",

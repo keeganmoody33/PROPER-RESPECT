@@ -136,6 +136,75 @@
       ],
       "from": "first screen"
     },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "dark",
+          "type": "logo",
+          "width": 509,
+          "height": 163,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 0.457
+            },
+            {
+              "hex": "#3cd1fb",
+              "share": 0.193
+            },
+            {
+              "hex": "#34aad0",
+              "share": 0.096
+            },
+            {
+              "hex": "#ffca00",
+              "share": 0.084
+            },
+            {
+              "hex": "#ff6065",
+              "share": 0.081
+            },
+            {
+              "hex": "#35bde3",
+              "share": 0.029
+            }
+          ]
+        },
+        {
+          "mode": "dark",
+          "type": "icon",
+          "width": 512,
+          "height": 512,
+          "inks": [
+            {
+              "hex": "#4fd7fe",
+              "share": 0.33
+            },
+            {
+              "hex": "#44c1e7",
+              "share": 0.251
+            },
+            {
+              "hex": "#ff6868",
+              "share": 0.162
+            },
+            {
+              "hex": "#ffd938",
+              "share": 0.099
+            },
+            {
+              "hex": "#3eb0d3",
+              "share": 0.033
+            },
+            {
+              "hex": "#e24343",
+              "share": 0.02
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
     "panelFill": {
       "value": "#f4f3f0",
       "from": "second large surface"

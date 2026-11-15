@@ -130,6 +130,79 @@
       ],
       "from": "first screen"
     },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "dark",
+          "type": "logo",
+          "width": 54,
+          "height": 16,
+          "inks": [
+            {
+              "hex": "#fad8a5",
+              "share": 0.163
+            },
+            {
+              "hex": "#ea867c",
+              "share": 0.138
+            },
+            {
+              "hex": "#ca67a0",
+              "share": 0.122
+            },
+            {
+              "hex": "#e5a299",
+              "share": 0.114
+            },
+            {
+              "hex": "#8ad5c0",
+              "share": 0.114
+            },
+            {
+              "hex": "#d0dcb2",
+              "share": 0.081
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 512,
+          "height": 512,
+          "inks": [
+            {
+              "hex": "#1d63ed",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 512,
+          "height": 512,
+          "inks": [
+            {
+              "hex": "#1d63ed",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 38,
+          "height": 30,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 1
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
     "inversePanel": {
       "value": {
         "fill": "#0e1217",

@@ -232,7 +232,8 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
     if (body && contrast(text, body) >= MIN_LABEL_CONTRAST) kit["--brand-card-slab-body"] = body;
     // A logo drawn in the hero's own colour (Cloudflare's orange cloud) would vanish into the slab, so it sits on a tile of the card.
     const logoColour = measured?.signature?.from === "logo" ? measured.signature.value : undefined;
-    if (logoColour && contrast(logoColour, hero.hex) < MIN_CHART_CONTRAST) kit["--brand-card-logo-tile"] = surface;
+    // Unless the brand stored a wordmark that reads on the slab itself, which then shows on it as the site would show it.
+    if (logoColour && contrast(logoColour, hero.hex) < MIN_CHART_CONTRAST && !slabLogo(snapshot, site)) kit["--brand-card-logo-tile"] = surface;
     // A button filled in the hero's own colour would vanish into the slab too, so there it takes the card's surface.
     if (fill && contrast(fill, hero.hex) < MIN_FILL_CONTRAST) {
       kit["--brand-card-slab-button-fill"] = surface;
@@ -254,6 +255,22 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
     kit["--brand-card-quiet-text"] = readableOn(quietFill, solid(quiet?.text), text);
   }
   return kit;
+}
+
+/** A wordmark is at least twice as wide as tall; one drawn this much in inks that read 3:1 on the slab (graphics' floor) shows straight on it. */
+const WORDMARK_ASPECT = 2, SLAB_LOGO_SHARE = 0.95;
+/**
+ * The brand's stored wordmark to show straight on its colour slab: one whose measured inks read 3:1 on the slab for nearly all of its
+ * drawn pixels (Cloudflare's black wordmark on its orange). None where every stored variant would vanish into the slab.
+ */
+export function slabLogo(snapshot: ProductBrandSnapshot | undefined, site: BrandSiteTraits | undefined) {
+  const hero = site?.traits.hero?.value, inks = site?.traits.logoInks?.value;
+  if (!snapshot || hero?.kind !== "colour" || !inks) return undefined;
+  return snapshot.logos.find(logo => {
+    if (logo.type !== "logo" || !logo.width || !logo.height || logo.width / logo.height < WORDMARK_ASPECT) return false;
+    const measured = inks.find(candidate => candidate.mode === logo.mode && candidate.type === logo.type && candidate.width === logo.width && candidate.height === logo.height);
+    return measured !== undefined && measured.inks.filter(ink => contrast(ink.hex, hero.hex) >= MIN_CHART_CONTRAST).reduce((share, ink) => share + ink.share, 0) >= SLAB_LOGO_SHARE;
+  });
 }
 
 /** Whether the site fills less than a 40px box of its first screen with this brand colour; a grey (the text-colour fallback) never counts. */
