@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { chartBars, type ChartBar } from "@/src/domain/chart-bars";
-import { fullNumber } from "@/src/domain/format-activity-number";
+import { compactNumber, fullNumber } from "@/src/domain/format-activity-number";
 import { dayMonthYear } from "@/src/domain/format-period";
 import { cadenceEnd, seriesCadence } from "@/src/domain/activity-headline";
 
@@ -97,9 +97,10 @@ export function MeasuredBlueprint({
   );
 }
 
-/** A bar's value as a person reads it: one point as recorded, a run of points as their average to one decimal place. */
+/** A bar's value as a person reads it: one point as recorded, a run of points as their average to one decimal place, or two significant digits below one. */
 function barValue(bar: ChartBar, unit?: string): string {
-  const shown = bar.points === 1 ? fullNumber(bar.value) : fullNumber(Number(bar.value.toFixed(1)));
+  const average = Math.abs(bar.value) < 1 ? compactNumber(bar.value) : fullNumber(Number(bar.value.toFixed(1)));
+  const shown = bar.points === 1 ? fullNumber(bar.value) : average;
   return `${shown}${unit ? ` ${unit}` : ""}${bar.points === 1 ? "" : " on average"}`;
 }
 

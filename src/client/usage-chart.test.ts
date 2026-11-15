@@ -164,3 +164,13 @@ test("a value below zero draws as a stub on the baseline, and the table says so"
   expect($(".visually-hidden caption").text()).toBe("net signups, one row per bar. A value below zero is drawn as a stub on the baseline.");
   expect($(".visually-hidden tbody tr").first().children().last().text()).toBe("-3 per week");
 });
+
+test("an average below one keeps its significant digits, so 62 days of 0.004 s never read as zero", () => {
+  const points = Array.from({ length: 62 }, (_, index) => ({ date: new Date(Date.UTC(2026, 6, 1 + index)).toISOString().slice(0, 10), value: 0.004 }));
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, { points, label: "latency", unit: "s" })));
+  expect($(".activity-bars > span").first().attr("title")).toBe("1 Jul 2026 to 2 Jul 2026: 0.004 s on average");
+  expect($(".visually-hidden tbody tr").first().children().last().text()).toBe("0.004 s on average");
+  // An average of one or more still reads to one decimal place.
+  const busy = load(renderToStaticMarkup(createElement(UsageChart, { points: points.map((point, index) => ({ ...point, value: index % 2 ? 2 : 1 })), unit: "s" })));
+  expect(busy(".visually-hidden tbody tr").first().children().last().text()).toBe("1.5 s on average");
+});
