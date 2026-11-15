@@ -1903,6 +1903,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .product-card :is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong) {
   color: var(--brand-card-number-colour, inherit);
   font-family: var(--brand-card-number-font, inherit);
+  font-variant-numeric: tabular-nums;
 }
 .product-card[data-panel] .card-front :is(.contribution-calendar, .card-artifact-links, .card-activity-preview .usage-chart) {
   background-color: var(--brand-card-panel);

@@ -92,6 +92,15 @@ function measuredFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { fon
   return loaded ? `var(--brand-card-${loaded}-font)` : SYSTEM_FACES[font.generic];
 }
 
+/**
+ * The face a card's big figures are set in. A measured number family the card serves is used as is; one it can't load
+ * (GitHub's Mona Sans Mono) stays in the brand's own served faces, since a system mono spaces "1,121" like code.
+ */
+function numberFace(font: SiteFont, guide: Extract<ProductBrandSnapshot, { fontLinks: unknown }>["styleguide"]) {
+  const face = measuredFace(font, guide);
+  return face.startsWith("var(") ? face : `var(--brand-card-heading-font, var(--brand-card-body-font, ${face}))`;
+}
+
 export type BrandAccent = { hex: string; source: "site accent" | "primary button" | "logo colour" | "site colour" };
 
 /**
@@ -208,7 +217,7 @@ function siteFeel(snapshot: ProductBrandSnapshot | undefined, surface: string, t
   const traits = site?.traits;
   if (!traits) return {};
   const kit: BrandCardKit = {};
-  if (traits.numberFont) kit["--brand-card-number-font"] = measuredFace(traits.numberFont.value, guide);
+  if (traits.numberFont) kit["--brand-card-number-font"] = numberFace(traits.numberFont.value, guide);
   const number = traits.numberColour?.value;
   if (number && contrast(number, surface) >= MIN_LARGE_TEXT_CONTRAST) kit["--brand-card-number-colour"] = number;
   const inverse = traits.inversePanel?.value;

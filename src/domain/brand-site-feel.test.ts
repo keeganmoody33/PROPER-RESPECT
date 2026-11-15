@@ -60,8 +60,10 @@ describe("what a card makes of the feel", () => {
   });
 
   it("sets the hero number in the site's number face, and in its colour only where that colour reaches 3:1", () => {
-    const github = kit({ number: { font: { generic: "monospace" }, colour: "#08872b" } });
-    expect([github["--brand-card-number-font"], github["--brand-card-number-colour"]]).toEqual(['ui-monospace, "SF Mono", Menlo, monospace', "#08872b"]);
+    const github = kit({ number: { font: { family: "Mona Sans Mono", generic: "monospace" }, colour: "#08872b" } });
+    // The card serves no Mona Sans Mono, so the figures stay in the brand's own served face rather than a system mono.
+    expect([github["--brand-card-number-font"], github["--brand-card-number-colour"]])
+      .toEqual(['var(--brand-card-heading-font, var(--brand-card-body-font, ui-monospace, "SF Mono", Menlo, monospace))', "#08872b"]);
     expect(kit({ number: { colour: "#f5f5f5" } })["--brand-card-number-colour"]).toBeUndefined();
   });
 
