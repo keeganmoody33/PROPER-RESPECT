@@ -39,7 +39,7 @@ Use Playwright (`require('playwright')`, `chromium.launch()`). Address elements 
 ```js
 const { chromium } = require("playwright");
 const browser = await chromium.launch();
-const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, reducedMotion: "no-preference" });
+const context = await browser.newContext({ baseURL: "http://127.0.0.1:3251", viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, reducedMotion: "no-preference" });
 const page = await context.newPage();
 await page.goto("http://127.0.0.1:3251/", { waitUntil: "load" });
 const carousel = page.getByRole("region", { name: "Product usage examples" });
@@ -115,7 +115,7 @@ Output lands in `.artifacts/brand-fidelity/`. Capture `--label before` from the 
 .claude/skills/verify/scripts/teardown.sh 3251
 ```
 
-Stops the pid `launch.sh` recorded and its children, waits for the port to free, and restores `next-env.d.ts`, which `next dev` rewrites on start. It never kills by process name and never touches `.artifacts/`. If the port still has a listener afterwards, doctor tells you whose it is; leave a process you did not start alone.
+Stops the pid `launch.sh` recorded (checked against its recorded start time, so a reused pid is left alone) and its children, waits for the port to free, and puts `next-env.d.ts`, which `next dev` rewrites on start, back to the contents it had at launch. It never kills by process name and never touches `.artifacts/`. If the port still has a listener afterwards, doctor tells you whose it is; leave a process you did not start alone.
 
 ## Helpers
 

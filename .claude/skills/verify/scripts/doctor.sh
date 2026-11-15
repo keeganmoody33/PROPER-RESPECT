@@ -12,7 +12,7 @@ cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
 if [ "$cwd" = "$ROOT" ]; then echo "ok   listener pid $pid runs from this checkout ($ROOT)"
 else echo "FAIL listener pid $pid runs from $cwd, not $ROOT"; failed=1; fi
 
-echo "info launch.sh recorded pid $(cat "$ROOT/.artifacts/verify/server-$PORT.pid" 2>/dev/null || echo none) (the listener may be its child)"
+echo "info launch.sh recorded pid $(cut -d"|" -f1 "$ROOT/.artifacts/verify/server-$PORT.pid" 2>/dev/null || echo none) (the listener may be its child)"
 changed="$(git -C "$ROOT" status --porcelain --untracked-files=no | grep -cv ' next-env.d.ts$')"
 echo "info commit $(git -C "$ROOT" rev-parse --short HEAD), $changed tracked files changed (next dev serves the working tree, not the commit)"
 

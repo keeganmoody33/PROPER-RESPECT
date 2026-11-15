@@ -18,7 +18,7 @@ The public page a visitor sees for a published collection. In reference test mod
 
 ## Driving it with Playwright
 
-Preconditions: doctor exits 0.
+Preconditions: doctor exits 0. Relative paths like `page.goto("/keegan")` need the context's `baseURL` set to your server, as in the recipe in SKILL.md.
 
 - **View.** `page.goto("/keegan")`. Expect `getByRole("heading", { level: 1, name: "Keegan Moody" })` and `getByRole("heading", { name: "GitHub" })`.
 - **Uses.** The GitHub card's `getByRole("list", { name: "What I use it for" })` lists "host my code and its history" and "review and merge pull requests".
