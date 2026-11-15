@@ -7,6 +7,7 @@ import { isHttpUrl } from "./http-url.ts";
 import { linkDisclosure } from "./link-type.ts";
 import { cardStatusLabel, type RelationshipLevel } from "./relationship-level.ts";
 import { productUseLabels } from "./product-uses.ts";
+import { creditHref, creditText, listedCredit } from "./props-credit.ts";
 import { activityHeadline, linkedWorksCount } from "./activity-headline.ts";
 import { byDate } from "./chart-bars.ts";
 
@@ -45,6 +46,8 @@ export type VisiblePublicProfile = Readonly<{
     headline: string;
     // What the product does for the owner, each finishing "I use it to …".
     uses?: readonly string[];
+    // Who put the owner on the product, as the card says it, and their profile link where the card links it.
+    credit?: Readonly<{ text: string; platform: string; handle: string; url?: string }>;
     note: string;
     startedAt?: string;
     startDateNote?: string;
@@ -127,6 +130,14 @@ function visibleUses(card: PublicProfile["cards"][number]): { uses?: readonly st
   return uses.length ? { uses } : {};
 }
 
+function visibleCredit(card: PublicProfile["cards"][number]): { credit?: NonNullable<VisiblePublicProfile["cards"][number]["credit"]> } {
+  const credit = listedCredit(card.credit);
+  if (!credit) return {};
+  const { name, platform } = creditText(credit);
+  const url = creditHref(credit);
+  return { credit: { text: `Props to ${name} · ${platform}`, platform, handle: credit.handle, ...(url ? { url } : {}) } };
+}
+
 export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePublicProfile {
   const profileLinks = (profile.profileLinks ?? []).filter(link => isHttpUrl(link.url));
   const nameLink = profileLinks.find(link => link.url === profile.preferredLinkUrl)?.url;
@@ -140,6 +151,7 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
       ownerSelectedGoTo: card.goTo === true,
       headline: card.headline || card.note || "Relationship note not supplied.",
       ...visibleUses(card),
+      ...visibleCredit(card),
       note: card.note || "Relationship note not supplied.",
       ...(card.startedAt ? { startedAt: card.startedAt } : { startDateNote: "Start date not supplied" }),
       ...(card.activity ? { activity: visibleActivity(card.activity) } : {}),

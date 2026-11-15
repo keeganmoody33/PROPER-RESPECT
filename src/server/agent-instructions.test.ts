@@ -15,7 +15,7 @@ function section(markdown: string, heading: string) {
   return next === -1 ? body : body.slice(0, next + marker.length);
 }
 
-it("states the three proven profile facts where an agent is told what a published profile can contain", () => {
+it("states the proven profile facts, in order, where an agent is told what a published profile can contain", () => {
   const profile = section(agentInstructions(), "Current public interface");
   const skill = section(
     readFileSync(path.join(process.cwd(), "public/agent-plugins/proper-respect/skills/read-public-profile/SKILL.md"), "utf8"),
