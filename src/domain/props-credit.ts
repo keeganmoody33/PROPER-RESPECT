@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { handleSchema } from "./handle.ts";
+import { handleSchema, RESERVED_HANDLES } from "./handle.ts";
 import { isHttpUrl, parseLooseHttpUrl } from "./http-url.ts";
 import { GITHUB_LOGIN, GITHUB_MARKETING_PATHS } from "./product-destination.ts";
 
@@ -65,8 +65,7 @@ const RULES = {
     fromPath: only,
     // The site's own handle rule (src/domain/handle.ts). Handles are lowercase, so a pasted one is lowercased first.
     accepts: handle => handleSchema.safeParse(handle).success && handle === handle.trim(),
-    // handleSchema already refuses the site's own routes.
-    pages: NO_PAGES,
+    pages: RESERVED_HANDLES,
     refused: "Enter a Proper Respect handle: up to 39 lowercase letters, numbers or hyphens, starting and ending with a letter or number.",
     href: handle => `${PROPER_RESPECT_ORIGIN}/${encoded(handle)}`,
     at: true,

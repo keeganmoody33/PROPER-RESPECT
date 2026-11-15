@@ -169,3 +169,13 @@ test("a GitHub username with two hyphens in a row is refused, typed, pasted or s
   expect(listedCredit({ platform: "GITHUB", handle: "foo--bar" })).toBeUndefined();
   expect(creditHref({ platform: "GITHUB", handle: "foo--bar" })).toBeUndefined();
 });
+
+test("a Proper Respect handle no one can claim, such as a site route, is refused typed, pasted or stored", () => {
+  const refused = { ok: false, message: "Enter a Proper Respect handle: up to 39 lowercase letters, numbers or hyphens, starting and ending with a letter or number." };
+  const notAProfile = { ok: false, message: "That link isn't a profile on Proper Respect. Paste their Proper Respect profile link or just the handle." };
+  expect(normalizeCredit({ platform: "PROPER_RESPECT", handle: "auth" })).toEqual(refused);
+  expect(normalizeCredit({ platform: "PROPER_RESPECT", handle: "@Agents" })).toEqual(refused);
+  expect(normalizeCredit({ platform: "PROPER_RESPECT", handle: "https://proper-respect.com/auth" })).toEqual(notAProfile);
+  expect(listedCredit({ platform: "PROPER_RESPECT", handle: "auth", linked: true })).toBeUndefined();
+  expect(creditHref({ platform: "PROPER_RESPECT", handle: "auth", linked: true })).toBeUndefined();
+});
