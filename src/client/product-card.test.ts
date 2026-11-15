@@ -364,8 +364,8 @@ test("a go-to card keeps its go-to badge whatever its level", () => {
   })));
 
   expect($(".card-title .eyebrow").text()).toBe("Occasionally · since 2023");
-  expect($(".card-footer .card-go-to").text()).toBe("Owner-selected go-to");
-  expect($(".card-back .card-go-to").text()).toBe("Owner-selected go-to");
+  expect($(".card-footer .card-go-to").text()).toBe("Go-to");
+  expect($(".card-back .card-go-to").text()).toBe("Go-to");
 });
 
 const activityEvidence = {
@@ -576,7 +576,7 @@ test.each(["ACTIVE", "TESTING", "ARCHIVED"] as const)(
     expect($.text().toLowerCase()).not.toContain(status.toLowerCase());
     expect($.text()).not.toContain("2024-06-03");
     expect($.text()).not.toContain("since");
-    expect($.text()).not.toContain("Owner-selected go-to");
+    expect($(".card-go-to")).toHaveLength(0);
   },
 );
 
@@ -602,11 +602,13 @@ test("the go-to designation requires an explicit prop for a confirmed relationsh
   })));
 
   expect($(".card-title .eyebrow").text()).toBe("Testing");
-  expect($(".card-footer > span").text()).toBe("Owner-selected go-to");
+  expect($(".card-footer > span").text()).toBe("Go-to");
   expect($.text()).not.toContain("Unreviewed evidence");
   const ordinary = renderCard();
   expect(ordinary(".card-title .eyebrow").text()).toBe("Testing");
-  expect(ordinary(".card-footer > span").text()).toBe("Relationship & evidence");
+  // The footer says, in a visitor's words, what Details adds: how long, and how much where the card has numbers.
+  expect(ordinary(".card-footer > span").text()).toBe("How long I've used it");
+  expect(renderCard({ activity: activityExamples[2] })(".card-footer > span").text()).toBe("How long and how much");
 });
 
 test("brand preview suppresses private discovery and go-to state", () => {
@@ -619,7 +621,7 @@ test("brand preview suppresses private discovery and go-to state", () => {
   expect($(".card-footer > span").text()).toBe("Brand identity");
   expect($.text()).not.toContain("Private discovery");
   expect($.text()).not.toContain("Needs your review");
-  expect($.text()).not.toContain("Owner-selected go-to");
+  expect($(".card-go-to")).toHaveLength(0);
   expect($.text()).not.toContain("Unreviewed evidence");
   expect($(".activity-module, .card-activity-preview")).toHaveLength(0);
 });
@@ -758,7 +760,7 @@ test("published numbers say how they were recorded on the back, where every row 
   } as const;
   const $ = renderCard({ measurements: [row, { ...row, metric: "built", value: "86", unit: "tables" }] });
   // An invented sample claims no source and no coverage; a date reads plainly, with the exact value in its markup.
-  const recorded = ["Scope: workspace", "cumulative · Do not add to other views", "Synthetic sample. Not real account activity.", "Captured 1 Sep 2026"];
+  const recorded = ["Scope: workspace", "Running total · not to be added to other numbers", "Synthetic sample. Not real account activity.", "Captured 1 Sep 2026"];
   expect(recorded.filter(text => $(".card-front").text().includes(text))).toEqual([]);
   expect($(".card-back .usage-measurement-measurement").toArray().map(element => recorded.filter(text => $(element).text().includes(text)).length)).toEqual([recorded.length, recorded.length]);
   // The front is one row of numbers, each named by what it counts; the disclosures and exact periods are on the back.
@@ -780,7 +782,7 @@ test("a hint names what the back holds in the footer, and describes the Details 
   expect(hint.text()).toBe("Numbers and a work sample inside");
   expect($(".card-button").attr("aria-describedby")).toBe(hint.attr("id"));
   const plain = renderCard();
-  expect(plain(".card-footer > span").text()).toBe("Relationship & evidence");
+  expect(plain(".card-footer > span").text()).toBe("How long I've used it");
   expect(plain(".card-button").attr("aria-describedby")).toBeUndefined();
 });
 
@@ -1048,7 +1050,7 @@ test("the back is the same branded object, shorter: its logo and name, plain pro
   // Folded, not removed: the panel is closed and holds the exact start date, the activity's stored record and how each number was recorded.
   const panel = back.find(".card-provenance [data-slot=collapsible-panel]");
   expect([back.find(".card-provenance-trigger").text(), back.find(".card-provenance-trigger").attr("aria-expanded"), panel.attr("hidden")]).toEqual(["How this was measured", "false", "hidden"]);
-  expect(["Relationship started 1 Jan 2023", "personal activity", "1 Sep 2026 to 15 Sep 2026", "stale", "Snapshot recorded 18 Sep 2026", "1 Mar 2023 to 31 Aug 2026 · UTC",
+  expect(["Using since 1 Jan 2023", "personal activity", "1 Sep 2026 to 15 Sep 2026", "stale", "Snapshot recorded 18 Sep 2026", "1 Mar 2023 to 31 Aug 2026 · UTC",
     "Captured 1 Sep 2026", "Synthetic sample. Not real account activity.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown."]
     .filter(text => !panel.text().includes(text))).toEqual([]);
   // Outside the panel, no raw date or status word.
@@ -1058,6 +1060,12 @@ test("the back is the same branded object, shorter: its logo and name, plain pro
 
 /** Every word that marks a card as invented, which a visitor should meet once on a sample's front. */
 const SAMPLE_WORDS = /sample|synthetic|illustrative|invented/gi;
+
+test("How this was measured says since when in a visitor's words: Using since while the tool is in use, Started once it is paused or stopped", () => {
+  const started = (card: Partial<Card>) => renderCard({ startedAt: "2023-01-01", ...card })(".card-provenance-panel p").first().text();
+  expect([started({ status: "ACTIVE", level: "DAILY" }), started({ status: "ARCHIVED", level: "PAUSED" }), started({ status: "ARCHIVED", level: "STOPPED" })])
+    .toEqual(["Using since 1 Jan 2023", "Started 1 Jan 2023", "Started 1 Jan 2023"]);
+});
 
 test("a sample card says Sample once on its front and nowhere on its back outside How this was measured; a real card keeps its provenance words", () => {
   const measured = {

@@ -34,6 +34,12 @@ export function Figures({ text }: { text: string }) {
   return <>{text.split(/([,.])/).map((part, index) => index % 2 ? <span key={index} className="figure-separator">{part}</span> : part)}</>;
 }
 
+/** What kind of number it is and whether it adds up with others, in a visitor's words; the stored values stay on the line's data attributes. */
+const TEMPORALITY_WORDS: Readonly<Record<VisibleMeasurement["temporality"], string>> = { SNAPSHOT: "A reading at one time", DELTA: "Change over the period", CUMULATIVE: "Running total" };
+const AGGREGATION_WORDS: Readonly<Record<VisibleMeasurement["aggregation"], string>> = {
+  NON_ADDITIVE: "not to be added to other numbers", SNAPSHOT: "a count at one time", DISTINCT: "each item counted once",
+};
+
 /** One published number with how it was recorded, as the card's back and the review screen show it. */
 export function MeasurementValue({ measurement }: { measurement: VisibleMeasurement }) {
   const synthetic = measurement.sample === "synthetic";
@@ -44,7 +50,7 @@ export function MeasurementValue({ measurement }: { measurement: VisibleMeasurem
     <p>{measurementPeriod(measurement.period)}</p>
     {/* An invented sample was reported by no source and covers nothing, so it claims neither. */}
     <p>Scope: {measurement.scope.toLowerCase()}{synthetic ? "" : ` · Coverage: ${measurement.coverage.toLowerCase()}`}</p>
-    <p>{measurement.temporality.toLowerCase()} · {measurement.aggregation === "NON_ADDITIVE" ? "Do not add to other views" : measurement.aggregation.toLowerCase()}</p>
+    <p data-temporality={measurement.temporality} data-aggregation={measurement.aggregation}>{TEMPORALITY_WORDS[measurement.temporality]} · {AGGREGATION_WORDS[measurement.aggregation]}</p>
     <p>{synthetic ? "Synthetic sample. Not real account activity." : measurement.sample === "owner-supplied" ? "Owner-supplied sample" : "Sample origin unknown"}</p>
     {!synthetic && <p>{measurement.derivation === "CUMULATIVE_DIFFERENCE" ? "Derived difference between cumulative captures" : "Source-reported value"}</p>}
     {measurement.status === "baseline" && <p>Baseline only. This is not new activity in the interval.</p>}

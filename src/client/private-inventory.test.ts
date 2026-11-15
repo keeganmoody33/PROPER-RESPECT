@@ -167,5 +167,5 @@ test("a card with a level shows it selected with its definition, beside an uncha
   expect($('input[name="goTo"]').attr("checked")).toBeDefined();
   const view = load(renderToStaticMarkup(createElement(PrivateInventoryView, { data: { cards: [leveled], hasMore: false }, onSave: vi.fn(), onImport: vi.fn() })));
   expect(view(".card-title .eyebrow").text()).toBe("Occasionally · since 2023");
-  expect(view(".card-footer .card-go-to").text()).toBe("Owner-selected go-to");
+  expect(view(".card-footer .card-go-to").text()).toBe("Go-to");
 });

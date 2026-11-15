@@ -20,7 +20,7 @@ describe("exact public measurement rendering", () => {
       expect(html).toContain(`>${shown}</strong>`);
       expect(html).toContain("1000000000000000001 to 1000000000000000002 ns since Unix epoch");
       expect(html).toContain("Scope: workspace · Coverage: partial");
-      expect(html).toContain("Do not add to other views");
+      expect(html).toContain("A reading at one time · not to be added to other numbers");
       for (const secret of ["private-source", "private-owner", "private-account", "private-workspace", "private-device", "private-overlap"]) expect(html).not.toContain(secret);
     }
   });

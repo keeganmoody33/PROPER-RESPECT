@@ -585,8 +585,10 @@ export function ProductCard({
   const cardStatus = brandPreview ? "Brand preview" : relationshipStatus;
   const topLine = !brandPreview && relationshipConfirmed ? cardTopLine(card) : cardStatus;
   const ownerGoTo = !brandPreview && relationshipConfirmed && goTo;
-  const footerLabel = ([[brandPreview, "Brand identity"], [!relationshipConfirmed, "Needs your review"], [ownerGoTo, "Owner-selected go-to"]] as const)
-    .find(([applies]) => applies)?.[1] ?? backHint ?? "Relationship & evidence";
+  // What Details adds, in a visitor's words: since when, and how much where the card has numbers.
+  const backSays = card.activity || card.measurements?.length ? "How long and how much" : "How long I've used it";
+  const footerLabel = ([[brandPreview, "Brand identity"], [!relationshipConfirmed, "Needs your review"], [ownerGoTo, "Go-to"]] as const)
+    .find(([applies]) => applies)?.[1] ?? backHint ?? backSays;
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
   const pastUse = noLongerInUse(card);
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
@@ -779,7 +781,7 @@ export function ProductCard({
               {card.primaryLink && <> · <span>{linkTypeLabel(card.primaryLink.type)}</span></>}
             </div>
             {!brandPreview && <>
-              {ownerGoTo && <p className="card-go-to">Owner-selected go-to</p>}
+              {ownerGoTo && <p className="card-go-to">Go-to</p>}
               {!relationshipConfirmed && <p>Needs your review</p>}
               <p className="relationship-date">
                 {!relationshipConfirmed ? "Relationship not confirmed" : card.startedAt ? `Since ${yearOf(card.startedAt)}` : "Start date not supplied"}
@@ -800,7 +802,8 @@ export function ProductCard({
           {!brandPreview && <Collapsible className="card-provenance">
             <CollapsibleTrigger className="card-provenance-trigger">How this was measured</CollapsibleTrigger>
             <CollapsiblePanel className="card-provenance-panel" hiddenUntilFound>
-              {relationshipConfirmed && card.startedAt && <p>Relationship started <PlainDate value={card.startedAt} /></p>}
+              {/* As the top line: a tool no longer in use says when it started, not "since". */}
+              {relationshipConfirmed && card.startedAt && <p>{card.status === "ARCHIVED" ? "Started" : "Using since"} <PlainDate value={card.startedAt} /></p>}
               {card.activity && <ActivityMeta activity={card.activity} />}
               {card.measurements?.length ? <PublicMeasurements measurements={card.measurements} /> : null}
               {!card.activity && !card.measurements?.length && <p>No activity or published numbers on this card.</p>}

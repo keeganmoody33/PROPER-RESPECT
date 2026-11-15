@@ -139,7 +139,7 @@ function render() {
       const logo = presentation?.brandKey ? logos[presentation.brandKey] : undefined;
       if (logo) { const image = el("img"); image.src = logo; image.alt = ""; image.width = 52; image.height = 52; image.className = "product-logo"; heading.append(image); }
       const identity = el("div");
-      identity.append(el("p", card.relationshipLabel.toUpperCase() + (card.ownerSelectedGoTo ? " · Owner-selected go-to" : ""), "eyebrow"), el("h2", card.product.name));
+      identity.append(el("p", card.relationshipLabel.toUpperCase() + (card.ownerSelectedGoTo ? " · Go-to" : ""), "eyebrow"), el("h2", card.product.name));
       heading.append(identity);
       article.append(heading, el("p", card.product.description, "description"), el("h3", card.headline));
       if (card.note !== card.headline) article.append(el("p", card.note));
