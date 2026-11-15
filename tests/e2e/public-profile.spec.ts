@@ -102,3 +102,13 @@ test("private collection has a separate noindex route", async ({ page }, testInf
   await expect(page.getByText("Synthetic published profile for route compatibility checks.")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("2026-09-21-private-collection.png"), fullPage: true });
 });
+
+test(`at ${PHONE_WIDTH}px a calendar that fits its card says nothing about scrolling`, async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.goto("/keegan");
+  const calendar = page.locator(".product-card", { has: page.getByRole("heading", { name: "GitHub" }) }).locator(".card-front .contribution-calendar");
+  await expect(calendar.locator(".contribution-grid")).toBeVisible();
+  // The fixture's one week fits the card, so there is nothing earlier to scroll to.
+  expect(await calendar.locator(".contribution-scroll").evaluate(scroll => scroll.scrollWidth > scroll.clientWidth)).toBe(false);
+  await expect(calendar.getByText("Scroll for earlier months")).toBeHidden();
+});

@@ -175,9 +175,13 @@ function markClippedMonths(element: HTMLElement) {
   });
 }
 
-/** Scrolls a calendar wider than its card to the newest week, once, the first time it has a width (a slide has none until shown). */
+/**
+ * Scrolls a calendar wider than its card to the newest week, once, the first time it has a width (a slide has none until shown),
+ * and says whether it is wider than its card now, so only a calendar with earlier weeks out of view says it scrolls.
+ */
 function useNewestWeekInView() {
   const ref = useRef<HTMLDivElement>(null);
+  const [scrolls, setScrolls] = useState(false);
   useEffect(() => {
     const element = ref.current;
     if (!element || typeof ResizeObserver === "undefined") return;
@@ -188,12 +192,13 @@ function useNewestWeekInView() {
       if (!element.clientWidth) return;
       if (!scrolled) element.scrollLeft = element.scrollWidth;
       scrolled = true;
+      setScrolls(element.scrollWidth > element.clientWidth);
       markClippedMonths(element);
     });
     observer.observe(element);
     return () => { observer.disconnect(); element.removeEventListener("scroll", onScroll); };
   }, []);
-  return ref;
+  return { ref, scrolls };
 }
 
 /** The calendar in one line for a screen reader: its total, how many days had any, and its busiest day. */
@@ -208,7 +213,7 @@ function calendarSummary(days: readonly { date: string; count: number }[]): stri
 const MONTH_LABEL_WEEKS = 3;
 
 function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
-  const scrollRef = useNewestWeekInView();
+  const { ref: scrollRef, scrolls } = useNewestWeekInView();
   const coverage = contributionCalendarCoverage(activity);
   if (!coverage) return <p className="activity-empty">No daily contribution counts supplied</p>;
   const { days, first, last, suppliedRange, gapNote } = coverage;
@@ -221,7 +226,7 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
   }).filter((month, index, all) => index === all.length - 1 || all[index + 1].column - month.column >= MONTH_LABEL_WEEKS);
   const columns = { gridTemplateColumns: `repeat(${weeks}, var(--contribution-cell))` };
   return (
-    <div className="contribution-calendar">
+    <div className="contribution-calendar" data-scrolls={scrolls ? "" : undefined}>
       <div ref={scrollRef} className="contribution-scroll" tabIndex={0} role="region" aria-label="Contribution calendar; scroll horizontally to see the full period"
         style={{ "--contribution-weeks": weeks } as CSSProperties}>
         <div className="contribution-calendar-layout">

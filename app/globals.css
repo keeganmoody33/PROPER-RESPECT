@@ -1812,9 +1812,9 @@ main {
 .profile-links-fields input[type="radio"] { width: auto; flex: 0 0 auto; padding: 0; }
 
 .contribution-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.75rem; margin-top: 0.4rem; white-space: nowrap; }
-/* Shown only where the year is wider than the card, so a phone says the calendar scrolls, not just a screen reader. */
+/* Shown only where the weeks are wider than the card, so a phone says the calendar scrolls, not just a screen reader. */
 .contribution-scroll-hint { display: none; margin-right: auto; }
-@container (max-width: 505px) { .contribution-scroll-hint { display: inline; } }
+.contribution-calendar[data-scrolls] .contribution-scroll-hint { display: inline; }
 .contribution-legend i { display: block; width: 0.45rem; height: 0.45rem; border-radius: 1px; border: 1px solid #30363d; background: #161b22; }
 
 .site-mark { display: inline-flex; flex: 0 0 auto; background: currentColor; mask: url("/brand/homepage/PR-mark-black.png") center / contain no-repeat; }
