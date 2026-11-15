@@ -16,18 +16,21 @@ const ONE_COLUMN = "(max-width: 900px)";
 /** "auto" follows the visitor's motion preference; a press of play or pause, or picking an example, is their own choice. */
 type PlayChoice = "auto" | "playing" | "paused";
 
-/** Whether any of the element is on screen; undefined until the browser says. */
-function useInView(ref: RefObject<HTMLElement | null>): boolean | undefined {
+/** Whether any of the element is on screen, or in the part of it `rootMargin` leaves; undefined until the browser says. */
+function useInView(ref: RefObject<HTMLElement | null>, rootMargin = "0px"): boolean | undefined {
   const [inView, setInView] = useState<boolean>();
   useEffect(() => {
     const element = ref.current;
     if (!element || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting));
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { rootMargin });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [ref]);
+  }, [ref, rootMargin]);
   return inView;
 }
+
+/** The screen below its top quarter: while the card reaches into it, a phone's examples row is held at the screen's foot. */
+const HOLD_ZONE = "-25% 0px 0px 0px";
 
 export function ProductExample({ examples }: { examples: readonly HomepageExample[] }) {
   const featured = examples.filter(example => example.featured);
@@ -43,8 +46,7 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const chooserId = useId();
   const stageRef = useRef<HTMLDivElement>(null);
   // Nobody watches a slideshow below the fold: it holds still until the visitor reaches it, and each arrival starts a whole turn.
-  const seen = useInView(stageRef);
-  const inView = seen === true;
+  const inView = useInView(stageRef) === true;
   const playing = choice === "playing" || (choice === "auto" && !reducedMotion && !oneColumn);
   // A back the visitor opened holds the slideshow, wherever focus or the pointer goes, until they close it.
   const [openBack, setOpenBack] = useState<string>();
@@ -61,10 +63,12 @@ export function ProductExample({ examples }: { examples: readonly HomepageExampl
   const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([index, upcoming]));
   if (!revealed.has(index) || !revealed.has(upcoming)) setRevealed(new Set([...revealed, index, upcoming]));
 
-  // In one column the row is held at the screen's foot while any of the card is on screen; a pick from it brings the new card's
-  // top into view when it is above the screen or below its middle, so the name just tapped doesn't move.
-  // The examples sit in a phone's first screen, so the row is held from the first paint until the browser says they've left it.
-  const held = oneColumn && seen !== false;
+  // In one column the row is held at the screen's foot while the card reaches below the screen's top quarter; a pick from it brings
+  // the new card's top into view when it is above the screen or below its middle, so the name just tapped doesn't move.
+  // The examples sit in a phone's first screen, so the row is held from the first paint. Once the card has scrolled up into the
+  // screen's top quarter it is let go, back in its place under the card, so it never sits over the copy and buttons below.
+  const reaching = useInView(stageRef, HOLD_ZONE);
+  const held = oneColumn && reaching !== false;
   const pickedRef = useRef(false);
   useEffect(() => {
     if (!pickedRef.current) return;

@@ -743,12 +743,31 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px picking 
     expect(Math.abs((await toggle.boundingBox())!.y - before), name).toBeLessThanOrEqual(MAX_CHOOSER_SHIFT_PX);
   };
   for (const name of ["n8n", "Context.dev", "Clay"]) await pick(name);
-  // Read down a long card, then pick another: the new card's top comes into view and the row stays under the thumb.
+  // Read down a card, then pick another: the new card's top comes into view and the row stays under the thumb.
   await page.evaluate(() => scrollBy(0, 600));
   await pick("GitHub");
-  await page.evaluate(() => scrollBy(0, 400));
+  await page.evaluate(() => scrollBy(0, 300));
   await pick("Cloudflare");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px the held row lets go once the card has scrolled up, so it never covers the copy and buttons below`, async ({ page }) => {
+  await page.setViewportSize({ width, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const card = carousel.getByRole("article", { name: "Clay card" });
+  // Only the card's last 60px at the screen's top.
+  await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().bottom - 60));
+  const chooser = carousel.getByRole("group", { name: "Choose a product example" });
+  const [rowBox, cardBox] = [(await chooser.boundingBox())!, (await card.boundingBox())!];
+  expect(rowBox.y).toBeGreaterThanOrEqual(cardBox.y + cardBox.height);
+  expect(rowBox.y + rowBox.height).toBeLessThan(PHONE_HEIGHT / 2);
+  const start = page.getByRole("link", { name: "Start your collection", exact: true }).first();
+  await start.scrollIntoViewIfNeeded();
+  // The row never covers the call to action: a real click lands on it.
+  const box = (await start.boundingBox())!;
+  expect(await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.closest("a")?.textContent, [box.x + box.width / 2, box.y + box.height / 2])).toBe("Start your collection");
 });
 
 const MIN_TEXT_PX = 12;

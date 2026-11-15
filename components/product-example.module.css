@@ -41,7 +41,7 @@
 /* A phone's tap targets: every chooser toggle and control at least 44px. */
 @media (max-width: 480px) { .choices button, .controls button, .moreTrigger { min-height: 44px; min-width: 44px; } }
 /* One column (homepage.module.css): the card comes first, right under the heading, and the chooser with its controls is one row.
-   While any of the card is on screen the row is held at the foot of the screen, so a picked name stays where it was tapped and the
+   While the card reaches below the screen's top quarter the row is held at the foot of the screen, so a picked name stays where it was tapped and the
    new card's top is brought into view above it; its place under the card stays reserved, so nothing moves when it is let go.
    The row scrolls sideways inside itself, never the page. */
 @media (max-width: 900px) {
