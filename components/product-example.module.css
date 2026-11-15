@@ -28,7 +28,8 @@
    The others stay laid out at no height, so the next one's brand fonts load before it is shown. */
 .slide[data-current="false"] { height: 0; inset: 0 0 auto; overflow: hidden; position: absolute; visibility: hidden; }
 .slide :global(.product-card) { width: 100%; margin: 0; animation: none; }
-.slide :global(.card-activity-preview > p:first-child strong) { font-size: 2rem; line-height: 1.1; }
+/* Each card leads with one number, so it is the largest thing on the front, published or drawn from activity alike. */
+.slide :global(:is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong)) { font-size: clamp(2.5rem, 9vw, 3.25rem); line-height: 1.05; }
 .slide :global(.card-activity-preview > p:first-child) { display: flex; flex-direction: column; gap: .3rem; }
 .slide :global(.activity-preview-metrics) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; margin: 1rem 0; }
 .slide :global(.activity-preview-metrics dt) { font-size: .75rem; }
