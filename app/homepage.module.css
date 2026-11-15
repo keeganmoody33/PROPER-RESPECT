@@ -3,12 +3,15 @@
 .homepage a:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 5px; }
 .label, .privacy, .figure figcaption, .stepNumber { font-family: var(--homepage-mono), monospace; }
 .main { min-height: auto; }
-.hero { max-width: 1600px; margin: auto; padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 4vw, 5rem); display: grid; grid-template-columns: 1fr 1.08fr; align-items: start; gap: clamp(2rem, 4vw, 4.5rem); }
+.hero { max-width: 1600px; margin: auto; padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 4vw, 5rem); display: grid; grid-template-columns: 1fr 1.08fr; align-items: start; gap: 0 clamp(2rem, 4vw, 4.5rem); }
+/* The heading, then the examples, then the copy, in reading order; a wide screen sets the examples beside both, and the copy's row takes what is left. */
+.hero { grid-template-rows: auto 1fr; grid-template-areas: "intro example" "rest example"; }
+.intro { grid-area: intro; }
+.example { grid-area: example; }
+.introRest { grid-area: rest; margin-top: 1.8rem; }
 .label { font-size: .68rem; line-height: 1.6; margin: 0 0 1.8rem; }
 .intro h1 { font-size: clamp(3.5rem, 5.8vw, 6.4rem); font-weight: 900; letter-spacing: -.055em; line-height: .94; text-transform: uppercase; margin: 0; }
 .intro h1 span { color: var(--home-red); }
-.facts { max-width: 46ch; margin: 1.8rem 0; padding: 0; list-style: none; display: grid; gap: .85rem; }
-.facts li { margin: 0; font-size: 1.05rem; line-height: 1.65; }
 .actions { display: flex; align-items: flex-start; gap: 1rem; flex-direction: column; }
 .primary { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; padding: .9rem 1.3rem; border: 1.5px solid var(--ink); font-weight: 700; text-decoration: none; }
 .primary { background: var(--ink); color: var(--action-text); }
@@ -42,16 +45,23 @@
 .close h2 span { color: var(--home-red); }
 @media (max-width: 900px) {
   .hero, .respectInner { grid-template-columns: 1fr; }
+  .hero { grid-template-rows: none; grid-template-areas: "intro" "example" "rest"; row-gap: 1.25rem; }
+  .introRest { margin-top: 0; }
   .intro h1 { font-size: clamp(3.35rem, 9vw, 6rem); }
-  .facts { max-width: 52ch; }
   .figure { max-width: 760px; }
   .sectionHeading { flex-direction: column; align-items: flex-start; }
   .sectionHeading > p { max-width: 45ch; }
 }
+/* A phone's first screen says what the site is, then the heading on two or three short lines, then the card close under it,
+   so the card's number starts above the examples row. */
 @media (max-width: 600px) {
-  .hero { padding-top: 2.8rem; }
+  .hero { padding-top: .75rem; grid-template-areas: "tagline" "title" "example" "rest"; row-gap: .45rem; }
+  .intro { display: contents; }
+  .intro h1 { grid-area: title; }
   .label { font-size: .62rem; }
-  .intro h1 { font-size: clamp(2.65rem, 12.5vw, 4.6rem); }
+  .intro .label { grid-area: tagline; margin: 0; }
+  .hero .example { padding: .5rem; }
+  .intro h1 { font-size: clamp(1.6rem, 7.4vw, 2.4rem); letter-spacing: -.03em; word-spacing: .08em; }
   .actions, .primary { width: 100%; }
   .figure figcaption { font-size: .55rem; padding: .65rem; }
   .steps { grid-template-columns: 1fr; }

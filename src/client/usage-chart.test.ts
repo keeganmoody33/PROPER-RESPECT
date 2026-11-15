@@ -134,11 +134,43 @@ test("a zero bar is marked as zero, so it draws as a stub on the baseline instea
     label: "pages crawled", unit: "per week",
   })));
   expect($(".activity-bars > span").map((_, bar) => $(bar).attr("data-zero") ?? "no").get()).toEqual(["", "no", ""]);
-  expect($(".visually-hidden td").map((_, cell) => $(cell).text()).get().filter((_, index) => index % 3 === 2)).toEqual(["0 per week", "9,200 per week", "0 per week"]);
+  expect($(".visually-hidden tbody tr").map((_, row) => $(row).children().last().text()).get()).toEqual(["0 per week", "9,200 per week", "0 per week"]);
+  // Each row is headed by when it starts, so a screen reader names the row as it reads its value.
+  expect($(".visually-hidden tbody th[scope=row]").map((_, cell) => $(cell).text()).get()).toEqual(["3 Aug 2026", "10 Aug 2026", "17 Aug 2026"]);
 });
 
 test("a bar's title and table row read in plain dates and grouped numbers", () => {
   const $ = load(renderToStaticMarkup(createElement(UsageChart, { points: [{ date: "2026-08-01", value: 2840 }], label: "requests served", unit: "per day" })));
   expect($(".activity-bars > span").attr("title")).toBe("1 Aug 2026: 2,840 per day");
-  expect($(".visually-hidden tbody td").toArray().map(cell => $(cell).text())).toEqual(["1 Aug 2026", "1 Aug 2026", "2,840 per day"]);
+  // A one-day bar is one date, not a From and a To that are the same.
+  expect($(".visually-hidden tbody tr").children().toArray().map(cell => [cell.tagName, $(cell).text()])).toEqual([["th", "1 Aug 2026"], ["td", "2,840 per day"]]);
+});
+
+const barHeights = ($: ReturnType<typeof load>) => $(".activity-bars > span").map((_, bar) => $(bar).attr("style")!.match(/--bar-height:\s*([\d.]+)%/)![1]).get().map(Number);
+
+test("a series of values all below one scales to its own largest value, so its bars stand tall", () => {
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, {
+    points: [0.001, 0.002, 0.004].map((value, index) => ({ date: `2026-08-0${index + 1}`, value })), label: "latency", unit: "s per day",
+  })));
+  expect(barHeights($)).toEqual([25, 50, 100]);
+});
+
+test("a value below zero draws as a stub on the baseline, and the table says so", () => {
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, {
+    points: [{ date: "2026-08-03", value: -3 }, { date: "2026-08-10", value: 6 }], label: "net signups", unit: "per week",
+  })));
+  expect($(".activity-bars > span").map((_, bar) => $(bar).attr("data-below-zero") ?? "no").get()).toEqual(["", "no"]);
+  expect(barHeights($)).toEqual([0, 100]);
+  expect($(".visually-hidden caption").text()).toBe("net signups, one row per bar. A value below zero is drawn as a stub on the baseline.");
+  expect($(".visually-hidden tbody tr").first().children().last().text()).toBe("-3 per week");
+});
+
+test("an average below one keeps its significant digits, so 62 days of 0.004 s never read as zero", () => {
+  const points = Array.from({ length: 62 }, (_, index) => ({ date: new Date(Date.UTC(2026, 6, 1 + index)).toISOString().slice(0, 10), value: 0.004 }));
+  const $ = load(renderToStaticMarkup(createElement(UsageChart, { points, label: "latency", unit: "s" })));
+  expect($(".activity-bars > span").first().attr("title")).toBe("1 Jul 2026 to 2 Jul 2026: 0.004 s on average");
+  expect($(".visually-hidden tbody tr").first().children().last().text()).toBe("0.004 s on average");
+  // An average of one or more still reads to one decimal place.
+  const busy = load(renderToStaticMarkup(createElement(UsageChart, { points: points.map((point, index) => ({ ...point, value: index % 2 ? 2 : 1 })), unit: "s" })));
+  expect(busy(".visually-hidden tbody tr").first().children().last().text()).toBe("1.5 s on average");
 });

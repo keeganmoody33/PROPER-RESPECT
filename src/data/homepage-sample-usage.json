@@ -1,30 +1,20 @@
 {
   "coding": {
-    "claude-code": {
-      "label": "sessions", "start": "2026-08-01",
-      "sessions": [0, 1, 4, 6, 5, 7, 3, 0, 0, 5, 4, 6, 8, 2, 1, 0, 3, 5, 7, 4, 0, 2, 0, 6, 5, 4, 6, 3, 0, 1, 5],
-      "supporting": [{ "label": "Pull requests", "value": 18 }, { "label": "Lines changed", "value": 4200 }]
-    }
+    "claude-code": { "label": "sessions", "start": "2026-08-01", "sessions": [0, 1, 4, 6, 5, 7, 3, 0, 0, 5, 4, 6, 8, 2, 1, 0, 3, 5, 7, 4, 0, 2, 0, 6, 5, 4, 6, 3, 0, 1, 5], "supporting": [{ "label": "Lines changed", "value": 41800 }] }
   },
   "series": {
-    "cloudflare": {
-      "label": "requests served", "unit": "per day", "start": "2026-08-01",
-      "values": [2840, 2610, 7120, 7480, 7690, 7350, 6210, 3020, 2750, 7310, 7820, 8040, 7930, 6480, 3110, 2690, 7560, 7710, 8120, 7880, 6620, 3240, 2930, 7690, 8010, 8270, 8150, 6870, 3380, 3050, 7940]
-    },
-    "firecrawl": { "label": "pages scraped", "unit": "per week", "start": "2026-06-08", "values": [120, 160, 150, 240, 310, 290, 420, 510, 640, 700, 880, 1100] },
-    "exa": { "label": "searches run", "unit": "per week", "start": "2026-06-08", "values": [260, 310, 180, 290, 340, 300, 250, 380, 330, 410, 280, 360] },
-    "spider": { "label": "pages crawled", "unit": "per week", "start": "2026-06-08", "values": [0, 0, 0, 9200, 0, 0, 0, 0, 0, 14000, 0, 3100] },
-    "open-places": { "label": "businesses exported", "unit": "per week", "start": "2026-06-08", "values": [0, 140, 0, 0, 0, 0, 320, 0, 0, 0, 0, 85] },
-    "elicit": { "label": "papers screened", "unit": "per week", "start": "2026-01-05", "values": [38, 45, 41, 36, 30, 22, 15, 9, 4, 1, 0, 0] },
-    "context-dev": { "label": "domains looked up", "unit": "per week", "start": "2026-07-20", "values": [0, 14, 0, 31, 9, 22] },
-    "n8n": { "label": "workflow runs", "unit": "per week", "start": "2025-01-13", "values": [312, 298, 335, 320, 341, 306, 289, 264, 180, 72, 0, 0] }
+    "cloudflare": { "label": "requests", "unit": "per day", "start": "2026-08-01", "values": [28400, 26100, 71200, 74800, 76900, 73500, 62100, 30200, 27500, 73100, 78200, 80400, 79300, 64800, 31100, 26900, 75600, 77100, 81200, 78800, 66200, 32400, 29300, 76900, 80100, 82700, 81500, 68700, 33800, 30500, 79400] },
+    "firecrawl": { "label": "pages scraped", "unit": "per week", "start": "2026-06-08", "values": [1200, 1600, 1500, 2400, 3100, 2900, 4200, 5100, 6400, 7000, 8800, 11000] },
+    "exa": { "label": "search requests", "unit": "per week", "start": "2026-06-08", "values": [2600, 3100, 1800, 2900, 3400, 3000, 2500, 3800, 3300, 4100, 2800, 3600] },
+    "spider": { "label": "pages crawled", "unit": "per week", "start": "2026-06-08", "values": [0, 0, 0, 92000, 0, 0, 0, 0, 0, 140000, 0, 31000] },
+    "open-places": { "label": "places exported", "unit": "per week", "start": "2026-06-08", "values": [0, 1400, 0, 0, 0, 0, 3200, 0, 0, 0, 0, 850] },
+    "elicit": { "label": "papers screened", "unit": "per week", "start": "2026-01-05", "values": [380, 450, 410, 360, 300, 220, 150, 90, 40, 10, 0, 0] },
+    "context-dev": { "label": "credits used", "unit": "per week", "start": "2026-07-20", "values": [0, 140, 0, 310, 90, 220] },
+    "n8n": { "label": "executions", "unit": "per week", "start": "2025-01-13", "values": [936, 894, 1005, 960, 1023, 918, 867, 792, 540, 216, 0, 0] }
   },
   "totals": {
-    "porkbun": {
-      "primary": { "label": "domains registered", "value": 23 },
-      "supporting": [{ "label": "Renewals", "value": 41 }, { "label": "Email forwards", "value": 5 }],
-      "period": { "start": "2021-03-01", "end": "2026-08-31" }
-    },
-    "grok-bot": { "primary": { "label": "tasks handed off", "value": 12 }, "supporting": [{ "label": "Tasks finished", "value": 9 }] }
+    "docker": { "primary": { "label": "image pulls", "value": 48200 }, "supporting": [], "period": { "start": "2024-01-01", "end": "2026-08-31" } },
+    "porkbun": { "primary": { "label": "domains registered", "value": 23 }, "supporting": [], "period": { "start": "2021-03-01", "end": "2026-08-31" } },
+    "grok-bot": { "primary": { "label": "tasks handed off", "value": 38 }, "supporting": [] }
   }
 }

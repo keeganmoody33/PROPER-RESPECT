@@ -185,7 +185,7 @@ test("sharing preview renders only the server-projected profile and requires a s
   };
   const html = renderToString(createElement(SharingPreview, { profile, current: true, busy: false, onPublish: vi.fn() }));
   expect(html).toContain("Approved explanation");
-  expect(html).toContain("Owner-selected go-to");
+  expect(html).toContain(">Go-to<");
   expect(html).toContain("An explicitly shared footer.");
   expect(html).toMatch(/<button[^>]*disabled[^>]*>Publish this preview/);
   expect(html).not.toContain("Private candidate");

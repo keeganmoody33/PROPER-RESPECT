@@ -5,7 +5,8 @@ type Contributions = Extract<ActivityModule, { kind: "contributionCalendar" }>;
 
 export function contributionCalendarCoverage(activity: Contributions) {
   if (activity.days.length === 0) return undefined;
-  const days = [...activity.days].sort((a, b) => a.date.localeCompare(b.date));
+  // One day per date, as the grid draws one cell for it: a repeated date's later entry wins, as the newer record.
+  const days = [...new Map(activity.days.map(day => [day.date, day])).values()].sort((a, b) => a.date.localeCompare(b.date));
   const firstSupplied = new Date(`${days[0].date}T00:00:00Z`);
   const lastSupplied = new Date(`${days.at(-1)!.date}T00:00:00Z`);
   const periodStart = new Date(`${activity.period?.start}T00:00:00Z`);
@@ -22,4 +23,20 @@ export function contributionCalendarCoverage(activity: Contributions) {
   const gapNote = missingDays > 0
     ? `${missingDays} ${missingDays === 1 ? "day has" : "days have"} no supplied count; blank spaces are not zero activity.` : undefined;
   return { days, first, last, suppliedRange, gapNote };
+}
+
+export type MonthTotal = Readonly<{ month: string; total: number; activeDays: number; days: number; first: string; last: string }>;
+
+/**
+ * The days' counts added up per calendar month ("2026-08"), in date order, with how many of each month's drawn days had any
+ * and the first and last day drawn, so a month covered only in part can be named by those days.
+ */
+export function monthlyTotals(days: readonly Readonly<{ date: string; count: number }>[]): MonthTotal[] {
+  const months = new Map<string, MonthTotal>();
+  for (const day of [...days].sort((a, b) => a.date.localeCompare(b.date))) {
+    const month = day.date.slice(0, 7);
+    const sofar = months.get(month) ?? { month, total: 0, activeDays: 0, days: 0, first: day.date, last: day.date };
+    months.set(month, { ...sofar, total: sofar.total + day.count, activeDays: sofar.activeDays + (day.count > 0 ? 1 : 0), days: sofar.days + 1, last: day.date });
+  }
+  return [...months.values()];
 }

@@ -90,7 +90,9 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   await expect(result.getByText("0", { exact: true })).toBeVisible();
   await expect(result.getByText("Unknown", { exact: true })).toBeVisible();
   await expect(result).toContainText("Scope: device · Coverage: partial");
-  await expect(result).toContainText("2026-10-01 to 2026-10-05");
+  // Plain dates, the exact stored value kept in each <time datetime>.
+  await expect(result).toContainText("1 Oct 2026 to 5 Oct 2026");
+  await expect(result.locator("time[datetime='2026-10-01']").first()).toHaveText("1 Oct 2026");
   await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
   await result.screenshot({ path: testInfo.outputPath(`first-result-exact-${width}.png`) });
@@ -176,7 +178,8 @@ test("GitHub response opens the returned relationship and its exact private coun
   await expect(page).toHaveURL(/#relationship=github-result$/);
   const result = page.getByRole("region", { name: "GitHub", exact: true });
   await expect(result.getByText("12,345", { exact: true })).toBeVisible();
-  await expect(result).toContainText("2026-01-01 to 2026-10-06");
+  await expect(result).toContainText("1 Jan 2026 to 6 Oct 2026");
+  await expect(result.locator("time[datetime='2026-01-01']").first()).toHaveText("1 Jan 2026");
   await expect(result.getByRole("button", { name: "Confirm and save privately", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
 });

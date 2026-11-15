@@ -12,6 +12,7 @@ import n8n from "./n8n.json";
 import openPlaces from "./open-places.json";
 import porkbun from "./porkbun.json";
 import spider from "./spider.json";
+import claudeCodeSite from "./claude-code.site.json";
 import claySite from "./clay.site.json";
 import cloudflareSite from "./cloudflare.site.json";
 import contextDevSite from "./context-dev.site.json";
@@ -27,7 +28,7 @@ import spiderSite from "./spider.site.json";
 /**
  * Brands for the homepage examples, pulled once from Context.dev and normalized by the same code that
  * stores a card's brand (scripts/pull-homepage-brands.mjs). Claude Code and Grok Bot have none: their
- * listed domains belong to a parent company, so the brand gate refuses them.
+ * listed domains belong to a parent company, so the brand gate refuses them. Their look comes from their own page (site-only.ts).
  */
 const SNAPSHOTS: Readonly<Record<string, unknown>> = {
   clay, cloudflare, "context-dev": contextDev, docker, elicit, exa, firecrawl, github, n8n, "open-places": openPlaces, porkbun, spider,
@@ -42,11 +43,11 @@ export const HOMEPAGE_BRANDS: Readonly<Record<string, ProductBrandSnapshot>> = O
 );
 
 /**
- * What measuring each product's own site added, by scripts/pull-homepage-site-traits.mjs. Porkbun has none:
- * porkbun.com answered the measurement with a 403 bot-block page, and it is not asked again.
+ * What measuring each product's own site added, by scripts/pull-homepage-site-traits.mjs. Porkbun and Grok Bot have none:
+ * porkbun.com and x.ai answered the measurement with a 403 bot-block page, and they are not asked again.
  */
 const SITES: Readonly<Record<string, unknown>> = {
-  clay: claySite, cloudflare: cloudflareSite, "context-dev": contextDevSite, docker: dockerSite, elicit: elicitSite, exa: exaSite,
+  "claude-code": claudeCodeSite, clay: claySite, cloudflare: cloudflareSite, "context-dev": contextDevSite, docker: dockerSite, elicit: elicitSite, exa: exaSite,
   firecrawl: firecrawlSite, github: githubSite, n8n: n8nSite, "open-places": openPlacesSite, spider: spiderSite,
 };
 

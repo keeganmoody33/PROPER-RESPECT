@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { expect, it } from "vitest";
-import { homepageProvenFacts } from "./agent-discovery";
+import { publicProfileFacts } from "./agent-discovery";
 import { agentInstructions } from "./agent-instructions";
 
 const forbidden = /Wispr|Clay|token spend|live site|already shows|finds affiliate|find affiliate|unstored/i;
@@ -23,7 +23,7 @@ it("states the three proven profile facts where an agent is told what a publishe
   );
   let profileCursor = 0;
   let skillCursor = 0;
-  for (const fact of homepageProvenFacts) {
+  for (const fact of Object.values(publicProfileFacts)) {
     const profileAt = profile.indexOf(fact, profileCursor);
     const skillAt = skill.indexOf(fact, skillCursor);
     expect(profileAt, fact).toBeGreaterThanOrEqual(profileCursor);

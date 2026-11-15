@@ -11,7 +11,12 @@ for (const width of widths) {
   await page.evaluate(() => document.fonts.ready);
   const stageAt = () => carousel.evaluate(element => Math.round(element.querySelector("[aria-roledescription=slide]").parentElement.getBoundingClientRect().height));
   const atLoad = await stageAt();
-  const names = await page.getByRole("group", { name: "Choose a product example" }).getByRole("button").evaluateAll(buttons => buttons.map(button => button.firstChild?.textContent ?? ""));
+  const chooser = page.getByRole("group", { name: "Choose a product example" });
+  const featured = await chooser.getByRole("button").count();
+  await carousel.getByRole("button", { name: "More examples" }).click();
+  await carousel.locator("[aria-expanded=true]", { hasText: "More examples" }).waitFor();
+  await chooser.getByRole("button").nth(featured).waitFor();
+  const names = await chooser.getByRole("button").evaluateAll(buttons => buttons.map(button => button.firstChild?.textContent ?? ""));
   const rows = [];
   for (const name of names) {
     await carousel.getByRole("button", { name, exact: true }).click();
@@ -24,7 +29,7 @@ for (const width of widths) {
       return `${name}:${Math.round(bottom - stage.top)}/${Math.round(stage.height)}`;
     }, name));
   }
-  console.log(width, `frame at load ${atLoad}, after all ${await stageAt()}`, rows.join(" "));
+  console.log(width, `frame at load ${atLoad}, after all ${await stageAt()}, ${names.length} examples`, rows.join(" "));
   await page.close();
 }
 await browser.close();

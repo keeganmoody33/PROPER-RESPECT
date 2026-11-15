@@ -5,7 +5,7 @@ test("a period reads as months a visitor knows, in UTC whatever the reader's tim
   expect(formatPeriod("2026-08-01", "2026-08-31")).toBe("Aug 2026");
   expect(formatPeriod("2026-06-08", "2026-08-30")).toBe("Jun–Aug 2026");
   expect(formatPeriod("2023-03-01", "2026-08-31")).toBe("Mar 2023 – Aug 2026");
-  expect(formatPeriod("2025-12-29", "2026-01-04")).toBe("Dec 2025 – Jan 2026");
+  expect(formatPeriod("2025-12-01", "2026-01-31")).toBe("Dec 2025 – Jan 2026");
   expect(monthYear("2026-09-01T00:00:00.000Z")).toBe("Sep 2026");
 });
 
@@ -26,4 +26,27 @@ test("a day reads as a visitor writes it, in UTC: the exact day, so its age is p
   expect(dayMonthYear("2023-01-01")).toBe("1 Jan 2023");
   expect(dayMonthYear("2026-02-30")).toBe("2026-02-30");
   expect([yearOf("2023-01-01"), yearOf("nonsense")]).toEqual(["2023", "nonsense"]);
+});
+
+test("a period under 28 days reads as its days, not as a whole month", () => {
+  expect(formatPeriod("2026-08-30", "2026-08-31")).toBe("30–31 Aug 2026");
+  expect(formatPeriod("2026-08-31", "2026-08-31")).toBe("31 Aug 2026");
+  expect(formatPeriod("2026-07-30", "2026-08-02")).toBe("30 Jul – 2 Aug 2026");
+  expect(formatPeriod("2025-12-29", "2026-01-04")).toBe("29 Dec 2025 – 4 Jan 2026");
+  expect(formatPeriod("2026-02-01", "2026-02-28")).toBe("Feb 2026");
+  expect(formatPeriod("2026-08-02", "2026-08-28")).toBe("2–28 Aug 2026");
+  expect(formatPeriod("2026-08-02", "2026-08-29")).toBe("Aug 2026");
+});
+
+test("a fresh snapshot ages: past 30 days before today it says when it was last updated", () => {
+  const captured = "2026-07-26T18:00:00.000Z";
+  expect(freshnessNote("FRESH", captured, { today: "2026-08-25" })).toBeUndefined();
+  expect(freshnessNote("FRESH", captured, { today: "2026-08-26" })).toBe("last updated 26 Jul 2026");
+  expect(freshnessNote("FRESH", captured, { today: "2027-07-26" })).toBe("last updated 26 Jul 2026");
+  expect(freshnessNote("STALE", captured, { today: "2026-07-27" })).toBe("last updated 26 Jul 2026");
+});
+
+test("a reversed period reads with its ends in order, never as one day", () => {
+  expect(formatPeriod("2026-08-05", "2026-08-01")).toBe("1–5 Aug 2026");
+  expect(formatPeriod("2026-08-31", "2026-06-01")).toBe("Jun–Aug 2026");
 });

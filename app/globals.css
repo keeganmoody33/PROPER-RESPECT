@@ -191,9 +191,9 @@ main {
 }
 
 .product-card :is(.card-footer > span, .card-uses li) {
-  font-family: var(--brand-card-label-font);
+  font-family: var(--brand-card-chip-font, var(--brand-card-label-font));
   letter-spacing: var(--brand-card-label-tracking);
-  text-transform: var(--brand-card-label-case);
+  text-transform: var(--brand-card-chip-case, var(--brand-card-label-case));
 }
 
 .product-card:nth-child(4n + 2),
@@ -218,18 +218,32 @@ main {
   min-width: 0;
 }
 
+/* The incoming face settles in: it fades up from a slightly smaller size in 260ms, so it reads as a turn without ever reaching past
+   the card's edge, where a rotated face was cut off. Reduced motion has no turn at all. */
 .product-card[data-side="front"] .card-front,
 .product-card[data-side="back"] .card-back {
-  animation: card-turn-reveal 180ms ease-out both;
+  animation: card-turn-over 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transform-origin: center;
 }
 
+/* Turned over, the front stays laid out but unseen, so the card keeps its height and re-measures it when the width changes. */
 .product-card[data-side="back"] .card-front {
-  display: none;
+  inset: 1rem 1rem auto;
+  pointer-events: none;
+  position: absolute;
+  visibility: hidden;
 }
 
-@keyframes card-turn-reveal {
-  from { opacity: 0.45; transform: rotateY(65deg); }
-  to { opacity: 1; transform: rotateY(0); }
+/* A face turning toward the viewer briefly projects past the card's edge; clipped there, it never makes the page scroll sideways.
+   The margin keeps focus outlines (2px at a 3px offset) visible. */
+.product-card {
+  overflow: clip;
+  overflow-clip-margin: 6px;
+}
+
+@keyframes card-turn-over {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
 }
 
 .card-topline {
@@ -343,6 +357,28 @@ main {
   margin: 0 0 0.35rem;
 }
 
+/* An invented example says so beside its status line, on the card itself. */
+.card-eyebrow-row {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  margin: 0 0 0.35rem;
+}
+
+.card-eyebrow-row .eyebrow {
+  margin: 0;
+}
+
+.card-sample-tag {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  padding: 0 0.45rem;
+}
+
 .card-title h2,
 .card-back h2 {
   font-family: var(--brand-card-heading-font, var(--brand-card-body-font, Arial, Helvetica, sans-serif));
@@ -368,6 +404,12 @@ main {
   font-size: 0.7rem;
   font-weight: 400;
   line-height: 1.3;
+}
+
+/* On a phone the paid-link tag takes its own row under the arrow, so the title beside the logo keeps the arrow's width only. */
+@media (max-width: 480px) {
+  .card-topline > .card-destination:has(.card-link-disclosure) { display: contents; }
+  .card-topline > .card-destination > .card-link-disclosure { margin: -0.75rem 0 0 auto; order: 1; }
 }
 
 /* A paid link says so under its arrow, as a tag a visitor reads before they press it. */
@@ -494,7 +536,8 @@ main {
   min-height: 0;
 }
 
-.card-activity-coverage {
+.card-activity-coverage,
+.card-activity-reported {
   font-size: 0.75rem;
   line-height: 1.5;
 }
@@ -675,8 +718,8 @@ main {
   transform: scaleY(0);
 }
 
-/* A zero is a stub on the baseline, so an empty week reads as zero rather than as a missing one. Its height marks it; its colour stays opaque to hold the chart's contrast. */
-.usage-chart[data-state="resolved"] .activity-bars > span[data-zero] {
+/* A zero, or a value below zero, is a stub on the baseline, so an empty week reads as zero rather than as a missing one. Its height marks it; its colour stays opaque to hold the chart's contrast. */
+.usage-chart[data-state="resolved"] .activity-bars > span:is([data-zero], [data-below-zero]) {
   height: 2px;
 }
 
@@ -839,15 +882,29 @@ main {
 
 .artifact-list {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.25rem;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
+/* A linked work and its line make one target, at least 44px tall on a phone; only the work's title is underlined. */
 .artifact-list a {
+  display: flex;
+  flex-direction: column;
   font-size: 0.85rem;
   font-weight: 700;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.artifact-list a > span:first-child {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.artifact-list a .artifact-description {
+  font-weight: 400;
 }
 
 .activity-meta {
@@ -884,8 +941,15 @@ main {
   padding-top: 0.65rem;
 }
 
+/* The label wraps between words, never inside one ("go-/to"); short of room even for its longest word, Details moves under it. */
+.card-footer {
+  flex-wrap: wrap;
+}
+
 .card-footer > span {
+  flex: 1 1 min-content;
   font-size: 0.75rem;
+  overflow-wrap: normal;
 }
 
 .card-button,
@@ -910,9 +974,115 @@ main {
 .card-back {
   background: inherit;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.8rem;
   min-width: 0;
+}
+
+/* The back's content fills the card: its links sit on the card's bottom edge, and any spare height is shared between its lines,
+   so no one stretch of it stands empty. */
+.card-back-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Level, link, go-to and start year share one line where they fit. */
+.card-back-facts {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.9rem;
+}
+
+.card-back-content .card-back-facts > p {
+  margin: 0;
+}
+
+/* The work sample takes its own row; the product's site and How evidence works share the next where the card has room. */
+.card-back-links {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.2rem;
+}
+
+.card-back-links > .usage-link {
+  flex-basis: 100%;
+}
+
+.product-card .card-back-links > :is(.usage-link, .outbound-link, .evidence-link) {
+  margin: 0;
+}
+
+.card-back-content > :last-child {
+  margin-bottom: 0;
+}
+
+/* A series' every value, in columns: the numbers the front's bars stand for. A pair never breaks inside a date or a number,
+   so a narrow card takes fewer columns rather than splitting "1,100" across two lines. */
+.card-back-values {
+  columns: 6 5.4rem;
+  column-gap: 0.9rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Month names alone ("Sep 84") take narrower columns. */
+.card-back-values[data-short] {
+  column-gap: 0.7rem;
+  columns: 6 3.6rem;
+}
+
+/* A pair wider than its column puts its value under its label rather than past the card's edge. */
+.card-back-values li {
+  break-inside: avoid;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+  justify-content: space-between;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.product-card .whole-word {
+  white-space: nowrap;
+}
+
+/* A long daily series: every day where the card is wide, its highest days and a press for the rest where it is narrow. */
+.series-values { container-type: inline-size; }
+.series-values-narrow { display: none; }
+@container (max-width: 30rem) {
+  .series-values-wide { display: none; }
+  .series-values-narrow { display: grid; }
+}
+/* Its caption and the press for every day share a row over the highest days; every day opens under them. */
+.series-values-narrow { align-items: center; column-gap: 1rem; grid-template-areas: "caption every" "highest highest" "panel panel"; grid-template-columns: 1fr auto; }
+.series-values-narrow > .card-back-values-caption { grid-area: caption; margin: 0; }
+.series-values-narrow > .card-back-values { grid-area: highest; }
+.series-values-every { display: contents; }
+.series-values-every > .card-provenance-trigger { grid-area: every; }
+.series-values-every > :not(button) { grid-area: panel; margin-top: 0.4rem; }
+
+.card-back-values-caption,
+.card-back-busiest {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.card-back-values strong {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.artifact-description {
+  display: block;
+  font-size: 0.8rem;
 }
 
 .card-back[hidden] {
@@ -929,8 +1099,17 @@ main {
   padding-bottom: 0.75rem;
 }
 
-.card-back-topline .card-title {
-  flex: 1;
+/* The name keeps its words whole on both faces: short of room beside the logo, the link or Close details moves to its own line. */
+.product-card :is(.card-topline, .card-back-topline) {
+  flex-wrap: wrap;
+}
+
+.product-card :is(.card-topline, .card-back-topline) > .card-title {
+  flex: 1 1 min-content;
+}
+
+.product-card .card-title :is(h2, .eyebrow, .card-sample-tag) {
+  overflow-wrap: normal;
 }
 
 .card-back-topline h2 {
@@ -1014,9 +1193,6 @@ main {
   padding-block: 0.6rem 0;
 }
 
-.card-back-content > .usage-link {
-  margin-top: 0.6rem;
-}
 
 .card-provenance-panel .usage-measurement-public {
   border-top: 0;
@@ -1034,7 +1210,7 @@ main {
   border-left: 2px solid var(--brand-card-accent, currentColor);
   font-size: 1rem;
   line-height: 1.5;
-  margin: 1rem 0;
+  margin: 0.4rem 0 0;
   padding-left: 0.8rem;
   white-space: pre-wrap;
 }
@@ -1050,8 +1226,8 @@ main {
   padding: 0.55rem 0.7rem;
 }
 
-/* A branded card's own button: the product's fill, label, outline, corners, type and weight. */
-.product-card .card-button {
+/* A branded card's own button, on both faces: the product's fill, label, outline, corners, type and weight. */
+.product-card :is(.card-button, .close-button) {
   background: var(--brand-card-button-fill, transparent);
   border-color: var(--brand-card-button-border, var(--brand-card-button-fill, currentColor));
   color: var(--brand-card-button-text, inherit);
@@ -1061,18 +1237,24 @@ main {
   text-transform: var(--brand-card-button-case, uppercase);
 }
 
+/* Hovered or focused, a branded button keeps the brand's own fill and label, as its site's controls do; an unbranded one inverts. */
 .product-card .card-button:hover,
 .product-card .card-button:focus-visible,
-.product-card .close-button:hover {
-  background: var(--brand-card-text, var(--paper));
-  border-color: var(--brand-card-text, var(--paper));
-  color: var(--brand-card-background, var(--ink));
+.product-card .close-button:hover,
+.product-card .close-button:focus-visible {
+  background: var(--brand-card-button-fill, var(--brand-card-text, var(--paper)));
+  border-color: var(--brand-card-button-border, var(--brand-card-button-fill, var(--brand-card-text, var(--paper))));
+  color: var(--brand-card-button-text, var(--brand-card-background, var(--ink)));
 }
 
 .product-card :is(a, button, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--brand-card-text, var(--paper));
+  outline: 2px solid var(--card-focus-ring, var(--brand-card-text, var(--paper)));
   outline-offset: 3px;
 }
+
+/* A ring on a slab or a data panel takes that region's own text colour, so it stands off the fill it sits on. */
+.product-card[data-slab] :is(.card-front > .card-topline, .card-back-topline) { --card-focus-ring: var(--brand-card-band-text); }
+.product-card[data-panel] :is(.contribution-calendar, .card-artifact-links, .usage-chart, .card-back-values) { --card-focus-ring: var(--brand-card-panel-text, var(--brand-card-text)); }
 
 .card-brand-provenance {
   border-top: 1px solid var(--card-line);
@@ -1171,12 +1353,15 @@ main {
   margin: 3rem 0 1rem;
 }
 
+/* The work sample's label and its site on one line where they fit. */
 .usage-link {
+  align-items: baseline;
   border: 1px solid var(--card-line);
   border-radius: 0.45rem;
   color: inherit;
-  display: grid;
-  gap: 0.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
   margin: 1.5rem 0 0;
   padding: 0.7rem 0.8rem;
   text-decoration: none;
@@ -1615,23 +1800,23 @@ main {
 
 /* Contribution calendars retain GitHub's activity palette inside the product card. */
 /* Cells shrink from GitHub's 10px with 3px gaps to fit every week inside the card, down to 7px with 2px gaps; below that the calendar scrolls, opened at the newest week.
-   50px is the weekday column, its gap and the end padding of .contribution-calendar-layout. */
+   27px is the weekday column and its gap, less a pixel of slack: at 1440 a 558px card fits 53 weeks of 8px days with 2px gaps. */
 .contribution-calendar { container-type: inline-size; min-width: 0; }
 .contribution-scroll {
-  --contribution-pitch: calc((100cqi - 50px) / var(--contribution-weeks, 53));
+  --contribution-pitch: calc((100cqi - 27px) / var(--contribution-weeks, 53));
   --contribution-cell: clamp(7px, round(down, calc(var(--contribution-pitch) - 2px), 1px), 10px);
   --contribution-gap: clamp(2px, round(down, calc(var(--contribution-pitch) - var(--contribution-cell)), 1px), 3px);
 }
 .contribution-scroll { max-width: 100%; overflow-x: auto; padding: 0 0 .4rem; scrollbar-width: thin; scrollbar-color: #6e7681 #0d1117; color-scheme: dark; }
 .contribution-scroll:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.contribution-calendar-layout { display: grid; grid-template-columns: 30px max-content; grid-template-rows: 16px auto; gap: 4px 6px; width: max-content; padding-right: 14px; }
+.contribution-calendar-layout { display: grid; grid-template-columns: 24px max-content; grid-template-rows: 16px auto; gap: 4px; width: max-content; }
 .contribution-months { grid-column: 2; display: grid; gap: var(--contribution-gap); font-size: 12px; line-height: 16px; }
 /* A month label the scroll has cut at the card's edge is hidden rather than read as "b" for "Feb". */
 .contribution-months span[data-clipped] { visibility: hidden; }
 .contribution-months span { grid-row: 1; white-space: nowrap; }
 /* The weekday labels stay at the left edge while a narrow card's year scrolls under them. */
 .contribution-weekdays { grid-row: 2; display: grid; grid-template-rows: repeat(7, var(--contribution-cell)); gap: var(--contribution-gap); font-size: 12px; line-height: var(--contribution-cell);
-  background: var(--brand-card-background, var(--ink)); left: 0; margin-right: -6px; padding-right: 6px; position: sticky; z-index: 1; }
+  background: var(--brand-card-panel, var(--brand-card-background, var(--ink))); left: 0; margin-right: -4px; padding-right: 4px; position: sticky; z-index: 1; }
 .contribution-weekdays span { align-self: center; white-space: nowrap; }
 .contribution-grid { grid-column: 2; grid-row: 2; display: grid; gap: var(--contribution-gap); grid-template-rows: repeat(7, var(--contribution-cell)); margin-top: 0; }
 .contribution-grid span { background: #161b22; border: 1px solid #30363d; width: var(--contribution-cell); height: var(--contribution-cell); border-radius: 2px; }
@@ -1653,7 +1838,10 @@ main {
 .profile-links-fields .profile-link-choice { flex-direction: row; align-items: center; }
 .profile-links-fields input[type="radio"] { width: auto; flex: 0 0 auto; padding: 0; }
 
-.contribution-legend { display: flex; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.75rem; margin-top: 0.4rem; }
+.contribution-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.2rem; font-size: 0.75rem; margin-top: 0.4rem; white-space: nowrap; }
+/* Shown only where the weeks are wider than the card, so a phone says the calendar scrolls, not just a screen reader. */
+.contribution-scroll-hint { display: none; margin-right: auto; }
+.contribution-calendar[data-scrolls] .contribution-scroll-hint { display: inline; }
 .contribution-legend i { display: block; width: 0.45rem; height: 0.45rem; border-radius: 1px; border: 1px solid #30363d; background: #161b22; }
 
 .site-mark { display: inline-flex; flex: 0 0 auto; background: currentColor; mask: url("/brand/homepage/PR-mark-black.png") center / contain no-repeat; }
@@ -1722,40 +1910,17 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .usage-measurement-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.25rem), 1fr)); gap: .6rem .75rem; list-style: none; margin: 0; padding: 0; }
 .usage-measurement-stats li { display: flex; flex-direction: column; min-width: 0; }
 .usage-measurement-stats strong { font-size: clamp(1.05rem, 2.4vw, 1.5rem); font-variant-numeric: tabular-nums; line-height: 1.15; overflow-wrap: anywhere; }
+/* A big number's group separator: the font's own comma at the number's size (the stats' small-span rule had set Clay's at 0.8rem,
+   a speck under 1,500,000), never crushed by the number's tracking, with a little room each side. It stays inline, so the number
+   gains no place to break. */
+.figure-separator, .usage-measurement-stats .figure-separator {
+  font-size: inherit; font-variant-numeric: normal; letter-spacing: normal; line-height: inherit; padding-inline: .03em;
+}
 .usage-measurement-stats span { font-size: .8rem; line-height: 1.3; }
 .usage-measurement-stats small { font-size: .75rem; line-height: 1.4; opacity: .75; }
 .usage-measurement-stats .usage-measurement-sample { align-self: flex-start; border: 1px solid currentColor; border-radius: .25rem; font-size: .75rem; font-style: normal; font-weight: 650; line-height: 1.3; margin-top: .2rem; padding: 0 .3rem; }
 .usage-measurement-public .usage-measurement-note { font-size: .75rem; margin: .5rem 0 0; opacity: .8; }
 
-/* A few rows of a table the product makes. It scrolls inside its own box on a narrow card, with the first column kept in view. */
-/* The table fits its card rather than scrolling: fixed columns, long cells cut short (their full text is still read out), and on a narrow card the droppable columns left out. */
-.card-table-preview { border: 1px solid var(--card-line); border-radius: var(--brand-card-button-radius, .45rem); container-type: inline-size; max-width: 100%; min-width: 0; overflow-x: auto; }
-.card-table-preview:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.card-table-preview table { border-collapse: collapse; counter-reset: preview-row; font-size: .75rem; line-height: 1.35; table-layout: fixed; width: 100%; }
-.card-table-preview caption { caption-side: top; font-size: .75rem; font-weight: 650; padding: .45rem .6rem; text-align: left; }
-.card-table-preview :is(th, td) { border-top: 1px solid var(--card-line); overflow: hidden; padding: .4rem .5rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.card-table-preview thead th { font-size: .75rem; font-weight: 600; }
-.card-table-preview thead th:first-child { width: 30%; }
-.card-table-preview thead th:last-child { width: 5.5rem; }
-/* A grid's row numbers, in a gutter beside the row's name; drawn, not read out. */
-.card-table-preview tr > :first-child::before { content: ""; display: inline-block; font-variant-numeric: tabular-nums; font-weight: 400; margin-right: .35rem; opacity: .75; width: 1.1rem; }
-.card-table-preview tbody tr { counter-increment: preview-row; }
-.card-table-preview tbody tr > :first-child::before { content: counter(preview-row) / ""; }
-/* A column the product fills in has its header tinted in the brand's colour, the way an enrichment grid marks it. */
-.card-table-preview thead th[data-enriched] { background: color-mix(in srgb, var(--brand-card-band, currentColor) 16%, var(--brand-card-background, var(--ink))); }
-.card-table-preview tbody th { background: var(--brand-card-background, var(--ink)); font-weight: 600; }
-.card-table-preview [data-state="filled"] { background: color-mix(in srgb, var(--brand-card-band, currentColor) 9%, var(--brand-card-background, var(--ink))); }
-.card-table-preview td[data-state="filled"]:last-child { color: var(--brand-card-band, inherit); font-weight: 650; }
-.card-table-preview [data-state="pending"] { font-style: italic; opacity: .6; }
-.card-table-preview [data-state="empty"] { opacity: .5; }
-@container (max-width: 27.5rem) {
-  .card-table-preview [data-droppable] { display: none; }
-  .card-table-preview :is(th, td) { padding: .4rem .35rem; }
-  .card-table-preview tr > :first-child::before { margin-right: .2rem; width: .8rem; }
-  .card-table-preview thead th:first-child { width: 34%; }
-  .card-table-preview thead th:last-child { width: 4.75rem; }
-}
-@media (prefers-reduced-motion: no-preference) { .card-table-preview :is(th, td) { transition: background-color .4s ease, color .4s ease, opacity .4s ease; } }
 .usage-measurement-panel { padding: 1.25rem 0; min-width: 0; }
 .usage-measurement-sources { display: grid; gap: 1rem; }
 .usage-measurement-source { border: 1px solid var(--border, #999); border-radius: .5rem; padding: 1rem; min-width: 0; }
@@ -1771,8 +1936,24 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   font-size: 0.75rem;
 }
 
-/* A phone's tap targets: the back's links and the front's linked works are at least 44px tall. */
+/* A phone's tap targets: the back's links and the front's linked works are at least 44px tall, the back's one under another. */
 @media (max-width: 480px) {
+  .card-back-links { align-items: flex-start; column-gap: 0.9rem; font-size: 0.8rem; row-gap: 0; }
+  .artifact-list { gap: 0.15rem; }
+  .artifact-list a { min-height: 2.75rem; }
+  .card-back-links > .usage-link { flex-basis: 100%; margin-bottom: 0.6rem; min-height: 44px; }
+  /* A phone's back keeps to its front's height: Close details stacks its two words beside the name rather than taking a row, and
+     the back's lines sit closer, their 44px targets keeping the room a finger needs. */
+  .product-card .close-button { line-height: 1.15; overflow-wrap: normal; white-space: normal; width: min-content; }
+  /* One even step between the back's lines, and an empty first line under the header, so a back shorter than its front shares
+     its spare height evenly from the header down, and its last line still sits on the card's foot. */
+  .card-back-content { gap: 0.35rem; padding-block: 0 0; }
+  .card-back-content::before { content: ""; }
+  .product-card .card-back-content > *, .product-card[data-slab] .card-back .card-back-content > blockquote { margin-block: 0; }
+  .card-back { gap: 0; }
+  .card-back .activity-module { gap: 0.35rem; padding-block: 0.3rem 0; }
+  .card-back-values { column-gap: 0.8rem; columns: 6 5rem; }
+  .card-back .activity-summary { font-size: 0.75rem; }
   .product-card :is(.outbound-link, .evidence-link, .card-artifact-links a) {
     align-items: center;
     column-gap: 0.5rem;
@@ -1781,4 +1962,86 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
     min-height: 44px;
     width: fit-content;
   }
+}
+
+/*
+ * A measured site's feel, beyond its kit (brand-kit siteFeel): its big numbers in its number face and colour, its second surface
+ * (a light fill, or a dark inverse panel with its own text, border and marks) behind the card's data, its rule between parts and
+ * its secondary text for captions. Each variable is set only where it keeps the card's contrast floors.
+ */
+.product-card :is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong) {
+  color: var(--brand-card-number-colour, inherit);
+  font-family: var(--brand-card-number-font, inherit);
+  font-variant-numeric: tabular-nums;
+}
+/* The back's every value is the front's chart in numbers, so it sits in the same frame. */
+.product-card[data-panel] .card-front :is(.contribution-calendar, .card-artifact-links, .card-activity-preview .usage-chart),
+.product-card[data-panel] .card-back .card-back-values {
+  background-color: var(--brand-card-panel);
+  /* A site that frames its content in a coloured panel (Context.dev's blue) frames the data thick in that colour; others in a 1px rule. */
+  border: var(--brand-card-panel-frame, 1px) solid var(--brand-card-panel-border, transparent);
+  border-radius: var(--brand-card-panel-radius, min(var(--brand-card-radius, 12px), 14px));
+  color: var(--brand-card-panel-text, inherit);
+  padding: .7rem .75rem;
+}
+/* The calendar's frame sits in the card's padding, so framing it costs its days no width. */
+.product-card[data-panel] .card-front .contribution-calendar { margin-inline: calc(-.75rem - var(--brand-card-panel-frame, 1px)); }
+.product-card[data-panel] .card-front .card-artifact-links a { color: inherit; }
+.product-card[data-panel] .card-front .activity-bars span { background: var(--brand-card-panel-chart, var(--brand-card-chart, var(--brand-card-accent, currentColor))); }
+.product-card .card-front :is(.contribution-calendar, .card-activity-preview .usage-chart) {
+  background-image: radial-gradient(circle, var(--brand-card-pattern-dot, transparent) 1px, transparent 1.5px),
+    linear-gradient(var(--brand-card-pattern-line, transparent) 1px, transparent 1px), linear-gradient(90deg, var(--brand-card-pattern-line, transparent) 1px, transparent 1px);
+  background-size: var(--brand-card-pattern-pitch, 10px) var(--brand-card-pattern-pitch, 10px);
+}
+/* The back's values are the front's chart in numbers, in the front's number colour where it reads on their panel. */
+.product-card .card-back-values strong { color: var(--brand-card-value-colour, inherit); }
+/* A brand that draws in its colour rather than filling boxes with it (Spider's thin green lines) draws its bars as outlines, tinted inside. */
+.product-card[data-marks="line"] .card-front .activity-bars > span:not([data-zero], [data-below-zero]) {
+  background: var(--brand-card-chart-tint);
+  border: 1.5px solid var(--brand-card-chart);
+}
+/* A number the site sets on a highlight that hugs it (Open Places' yellow) sits on that highlight. */
+.product-card[data-number-backdrop] :is(.card-activity-preview > p:first-child strong, .usage-measurement-stats strong) {
+  background: var(--brand-card-number-backdrop);
+  border-radius: .3rem;
+  box-decoration-break: clone;
+  padding: 0 .2em;
+  width: fit-content;
+}
+.product-card .card-footer { border-top: 1px var(--brand-card-rule-style, solid) var(--brand-card-rule, var(--card-line)); }
+.product-card :is(.card-activity-coverage, .usage-measurement-note, .contribution-range) { color: var(--brand-card-muted, inherit); }
+
+/*
+ * A hero that runs flush to its site's edge (Clay's green): one slab of it covers the card's header, logo row and headline, in
+ * the text that reads on it, on both faces. The body under it takes the site's second surface, and the data's panel the page white.
+ */
+.product-card[data-slab] { background: var(--brand-card-slab-body, var(--brand-card-background)); }
+.product-card[data-slab] :is(.card-front > .card-topline, .card-back-topline) {
+  background: var(--brand-card-slab);
+  color: var(--brand-card-band-text);
+  margin: -1rem -1rem 0;
+  padding: 1rem;
+}
+.product-card[data-slab] .card-front > .card-topline { padding-bottom: 0; }
+.product-card[data-slab] .card-front > .card-headline { margin-top: -0.8rem; padding-top: 0.6rem; }
+.product-card[data-slab] .card-back > .card-back-topline { border-bottom: 0; padding-bottom: .75rem; }
+.product-card[data-slab] .card-visit { border-color: currentColor; color: inherit; }
+/* A large headline on the slab takes its large-text colour (white on Cloudflare's orange, 3:1 at 24px); smaller ones keep the label's. */
+.product-card[data-band] .card-headline[data-length="short"] { color: var(--brand-card-band-large-text, var(--brand-card-band-text)); }
+/* A logo drawn in the slab's own colour sits on a tile of the card's surface, as it sits on the site's own page. */
+.product-card[data-logo-tile] .product-logo { background: var(--brand-card-logo-tile); border-radius: .5rem; padding: .3rem .55rem; width: fit-content; }
+.product-card[data-logo-tile] .product-logo img { width: auto; }
+/* So does a button filled in the slab's own colour: on the slab it takes the card's surface, as the site's hero button does. */
+.product-card[data-slab-button] .card-back-topline .close-button:is(*, :hover, :focus-visible) {
+  background: var(--brand-card-slab-button-fill);
+  border-color: var(--brand-card-slab-button-fill);
+  color: var(--brand-card-slab-button-text);
+}
+/* The back's slab is its header; its note under the status line keeps the house rule in the slab's colour, not a second band of it. */
+.product-card[data-slab] .card-back blockquote { background: none; border-left: 2px solid var(--brand-card-slab); color: inherit; margin: .4rem 0 0; padding: 0 0 0 .8rem; }
+
+/* The back's work-sample link lights up in the brand's button colours, as the site's own controls do, not in the card's text colour. */
+.product-card .usage-link:is(:hover, :focus-visible) {
+  background: var(--brand-card-button-fill, var(--brand-card-text, var(--paper)));
+  color: var(--brand-card-button-text, var(--brand-card-background, var(--ink)));
 }

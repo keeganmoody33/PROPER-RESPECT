@@ -33,6 +33,11 @@ async function pipeline(commands: unknown[][], env?: Env): Promise<unknown[] | n
   return results.map(r => r.result);
 }
 
+/** Whether this environment keeps a tally at all: the synthetic fixture and an unconfigured deploy don't. */
+export function tallyStoreConfigured(env: Env = process.env): boolean {
+  return config(env) !== null;
+}
+
 /** Adds one page request to the running total. Never throws: counting must not break a page. */
 export async function recordHit(category: TallyCategory, env?: Env): Promise<void> {
   try {

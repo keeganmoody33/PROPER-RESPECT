@@ -58,3 +58,13 @@ test("a 90-day snapshot becomes 31 bars that cover every day and end on its last
 test("no points draw no bars", () => {
   expect(chartBars([])).toEqual([]);
 });
+
+test("points stored out of order, or twice for one date, draw by date with the last entry for a date kept", () => {
+  const forward = days(Array.from({ length: 62 }, (_, index) => index).join(" "));
+  expect(shown(chartBars([...forward].reverse()))).toEqual(shown(chartBars(forward)));
+  expect(shown(chartBars([...forward].reverse())).slice(0, 2)).toEqual(["2026-07-01..2026-07-02 = 0.5 (2)", "2026-07-03..2026-07-04 = 2.5 (2)"]);
+  expect(shown(chartBars([{ date: "2026-07-02", value: 9 }, { date: "2026-07-01", value: 1 }, { date: "2026-07-02", value: 4 }]))).toEqual([
+    "2026-07-01..2026-07-01 = 1 (1)",
+    "2026-07-02..2026-07-02 = 4 (1)",
+  ]);
+});

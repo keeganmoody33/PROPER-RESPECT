@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brandCardKit, brandMark } from "./brand-kit";
+import { brandCardKit, brandMark, contrast, slabLogo } from "./brand-kit";
 import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "@/src/data/homepage-brands";
 
 /** Each homepage brand's kit with its measured site file, on the card colours the provider gave it. */
@@ -13,31 +13,51 @@ const kits = (key: string) => Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).ma
 
 describe("a brand without a site file", () => {
   it("gets exactly the kit it got before site files existed", () => {
-    // Recorded at 2ba6aa8, before any rule read a site file.
+    // Recorded at 2ba6aa8, before any rule read a site file. Since then three rules reach a card with no site file: Firecrawl's stored
+    // white label, 3.3:1 on its orange, keeps its colour on that orange deepened 16%, rather than giving way to the card's text colour;
+    // an accent too pale or dark for bars moves in lightness, hue kept, to 3:1 (n8n's and Porkbun's pinks) before the text colour takes
+    // them; and the figures take the accent, moved the same way to 4.5:1 where it must be (Cloudflare's, Firecrawl's and Porkbun's).
     expect(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, kit(slug, false)]))).toEqual({
-    "clay": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "18px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "500", "--brand-card-chart": "#3859f9", "--brand-card-quiet-fill": "#f3f2ed", "--brand-card-quiet-text": "#000000" },
-    "cloudflare": { "--brand-card-border": "#cfcfcf", "--brand-card-radius": "4px", "--brand-card-button-fill": "#ff5e1f", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "500", "--brand-card-chart": "#ff5e1f" },
-    "context-dev": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "7.2px", "--brand-card-button-fill": "#2563eb", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#2563eb" },
-    "docker": { "--brand-card-border": "#ccced2", "--brand-card-radius": "18px", "--brand-card-button-fill": "#2560ff", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "500", "--brand-card-chart": "#2560ff", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#000000" },
-    "elicit": { "--brand-card-border": "#c5c5c1", "--brand-card-radius": "8px", "--brand-card-button-fill": "#083d44", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "400", "--brand-card-chart": "#083d44" },
-    "exa": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "4px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "4px", "--brand-card-button-weight": "500", "--brand-card-chart": "#1f40ed", "--brand-card-quiet-fill": "#1f40ed", "--brand-card-quiet-text": "#ffffff" },
-    "firecrawl": { "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ff4c00", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450", "--brand-card-chart": "#ff4c00", "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff" },
-    "github": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "8px", "--brand-card-button-fill": "#08872b", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "6px", "--brand-card-button-weight": "500", "--brand-card-chart": "#0d6731" },
-    "n8n": { "--brand-card-border": "#c8c8c8", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ffbcca", "--brand-card-button-text": "#212121", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#161616", "--brand-card-quiet-fill": "#d9d9d9", "--brand-card-quiet-text": "#161616" },
-    "open-places": { "--brand-card-border": "#c8c7c1", "--brand-card-radius": "22px", "--brand-card-button-fill": "#3f5a2c", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "600", "--brand-card-chart": "#3f5a2c" },
-    "porkbun": { "--brand-card-border": "#c6c2c2", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ef7878", "--brand-card-button-text": "#000000", "--brand-card-button-radius": "3px", "--brand-card-button-weight": "400", "--brand-card-chart": "#000000", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#222222" },
-    "spider": { "--brand-card-border": "#374151", "--brand-card-radius": "8px", "--brand-card-button-fill": "#f8fafc", "--brand-card-button-text": "#0c0e13", "--brand-card-button-radius": "0px", "--brand-card-button-weight": "400", "--brand-card-chart": "#24c45c" },
+    "clay": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "18px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "500", "--brand-card-chart": "#3859f9", "--brand-card-quiet-fill": "#f3f2ed", "--brand-card-quiet-text": "#000000", "--brand-card-number-colour": "#3859f9", "--brand-card-value-colour": "#3859f9" },
+    "cloudflare": { "--brand-card-border": "#cfcfcf", "--brand-card-radius": "4px", "--brand-card-button-fill": "#ff5e1f", "--brand-card-button-text": "#262626", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "500", "--brand-card-chart": "#ff5e1f", "--brand-card-number-colour": "#d44500", "--brand-card-value-colour": "#d44500" },
+    "context-dev": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "7.2px", "--brand-card-button-fill": "#2563eb", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#2563eb", "--brand-card-number-colour": "#2563eb", "--brand-card-value-colour": "#2563eb" },
+    "docker": { "--brand-card-border": "#ccced2", "--brand-card-radius": "18px", "--brand-card-button-fill": "#2560ff", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "500", "--brand-card-chart": "#2560ff", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#000000", "--brand-card-number-colour": "#2560ff", "--brand-card-value-colour": "#2560ff" },
+    "elicit": { "--brand-card-border": "#c5c5c1", "--brand-card-radius": "8px", "--brand-card-button-fill": "#083d44", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "8px", "--brand-card-button-weight": "400", "--brand-card-chart": "#083d44", "--brand-card-number-colour": "#083d44", "--brand-card-value-colour": "#083d44" },
+    "exa": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "4px", "--brand-card-button-fill": "#000000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "4px", "--brand-card-button-weight": "500", "--brand-card-chart": "#1f40ed", "--brand-card-quiet-fill": "#1f40ed", "--brand-card-quiet-text": "#ffffff", "--brand-card-number-colour": "#1f40ed", "--brand-card-value-colour": "#1f40ed" },
+    "firecrawl": { "--brand-card-border": "#cbcbcb", "--brand-card-radius": "8px", "--brand-card-button-fill": "#d64000", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "20px", "--brand-card-button-weight": "450", "--brand-card-chart": "#ff4c00", "--brand-card-quiet-fill": "#000000", "--brand-card-quiet-text": "#ffffff", "--brand-card-number-colour": "#d23d00", "--brand-card-value-colour": "#d23d00" },
+    "github": { "--brand-card-border": "#c7c7c7", "--brand-card-radius": "8px", "--brand-card-button-fill": "#08872b", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "6px", "--brand-card-button-weight": "500", "--brand-card-chart": "#0d6731", "--brand-card-number-colour": "#0d6731", "--brand-card-value-colour": "#0d6731" },
+    "n8n": { "--brand-card-border": "#c8c8c8", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ffbcca", "--brand-card-button-text": "#212121", "--brand-card-button-radius": "9999px", "--brand-card-button-weight": "400", "--brand-card-chart": "#be7f8d", "--brand-card-quiet-fill": "#d9d9d9", "--brand-card-quiet-text": "#161616" },
+    "open-places": { "--brand-card-border": "#c8c7c1", "--brand-card-radius": "22px", "--brand-card-button-fill": "#3f5a2c", "--brand-card-button-text": "#ffffff", "--brand-card-button-radius": "12px", "--brand-card-button-weight": "600", "--brand-card-chart": "#3f5a2c", "--brand-card-number-colour": "#3f5a2c", "--brand-card-value-colour": "#3f5a2c" },
+    "porkbun": { "--brand-card-border": "#c6c2c2", "--brand-card-radius": "8px", "--brand-card-button-fill": "#ef7878", "--brand-card-button-text": "#000000", "--brand-card-button-radius": "3px", "--brand-card-button-weight": "400", "--brand-card-chart": "#e36d6e", "--brand-card-quiet-fill": "#ffffff", "--brand-card-quiet-text": "#222222", "--brand-card-number-colour": "#c04e51", "--brand-card-value-colour": "#c04e51" },
+    "spider": { "--brand-card-border": "#374151", "--brand-card-radius": "8px", "--brand-card-button-fill": "#f8fafc", "--brand-card-button-text": "#0c0e13", "--brand-card-button-radius": "0px", "--brand-card-button-weight": "400", "--brand-card-chart": "#24c45c", "--brand-card-number-colour": "#24c45c", "--brand-card-value-colour": "#24c45c" },
     });
+  });
+});
+
+describe("a card with no measured site", () => {
+  it("sets its figures in the brand's accent, moved in lightness, hue kept, until they read 4.5:1 at any size, and else leaves them", () => {
+    // Porkbun's salmon is 2.6:1 on its blush card: a deeper salmon reads 4.5:1. n8n's pale pink is too far from 4.5:1 to move there.
+    const porkbun = kit("porkbun", false);
+    expect([porkbun["--brand-card-number-colour"], porkbun["--brand-card-value-colour"]]).toEqual(["#c04e51", "#c04e51"]);
+    expect(contrast(porkbun["--brand-card-number-colour"]!, "#fef9f9")).toBeGreaterThanOrEqual(TEXT_CONTRAST);
+    expect(kit("n8n", false)["--brand-card-number-colour"]).toBeUndefined();
+    // An accent that already reads keeps its own colour: GitHub's green.
+    expect(kit("github", false)["--brand-card-number-colour"]).toBe("#0d6731");
   });
 });
 
 describe("corners", () => {
   it("take the site's measured panel and button corners, square included, with a pill kept a pill", () => {
     expect(kits("--brand-card-radius")).toEqual({
-      // Clay's 48px, Context.dev's 25.2px and n8n's 34px panels are held to the card's 24px most.
-      clay: "24px", "context-dev": "24px", n8n: "24px", docker: "0px", spider: "0px", exa: "6px", firecrawl: "20px", github: "8px", "open-places": "18px",
-      // No bordered panel was measured on Cloudflare's or Elicit's first screen, and Porkbun has no site file: the stored radius stays.
-      cloudflare: "4px", elicit: "8px", porkbun: "8px",
+      // Each takes the radius most of its boxed or shadowed panels' area (220px+ wide) is drawn with, measured 2026-11-15: Clay's
+      // 48px held to the card's 24px most, Docker's big 18px cards over its many small square boxes, Context.dev's 7px, GitHub 6px.
+      clay: "24px", "context-dev": "7px", docker: "18px", exa: "4px", firecrawl: "20px", github: "6px", "open-places": "18px", elicit: "20px",
+      // Spider's page has no boxed panel; its buttons are square, so its card is.
+      spider: "0px",
+      // Cloudflare's panels are square, but its orange hero is a slab inset from the page with 16px corners: the card is that slab.
+      cloudflare: "16px",
+      // n8n's page has no boxed panel and its buttons are pills, and Porkbun has no site file: the stored radius stays.
+      n8n: "8px", porkbun: "8px",
     });
     expect(kits("--brand-card-button-radius")).toEqual({
       clay: "12px", "context-dev": "999px", n8n: "999px", docker: "8px", spider: "0px", exa: "4px", firecrawl: "10px", github: "6px", "open-places": "999px",
@@ -53,8 +73,8 @@ describe("the button", () => {
       // The site's own call-to-action: Clay's lime, Context.dev's black pill, Elicit's lighter teal.
       clay: ["#cbd810", "#000000"], "context-dev": ["#000000", "#ffffff"], elicit: ["#026370", "#fcfcf8"],
       docker: ["#2560ff", "#ffffff"], exa: ["#000000", "#ffffff"], github: ["#08872b", "#ffffff"], n8n: ["#ffbcca", "#212121"], "open-places": ["#3f5a2c", "#ffffff"], spider: ["#f8fafc", "#0c0e13"],
-      // White on Firecrawl's orange is 3.3:1, under the 4.5:1 floor, so the label stays the card's text colour.
-      firecrawl: ["#ff4c00", "#262626"],
+      // White on Firecrawl's orange is 3.3:1, under the 4.5:1 floor: the site's white label stays, on its orange deepened 16% to 4.5:1.
+      firecrawl: ["#d64000", "#ffffff"],
       // Cloudflare's call-to-action is white on its orange hero and would vanish on the white card, so the fallback holds.
       cloudflare: ["#ff5e1f", "#262626"],
       porkbun: ["#ef7878", "#000000"],
@@ -88,9 +108,11 @@ describe("the signature colour", () => {
       // Clay's lime call-to-action is 1.6:1 on its white card, under the 3:1 bars need, so the bars take its green hero.
       clay: "#035d44",
       // Cloudflare's logo orange is the provider's accent within 0.05, so the provider's stays.
-      cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", exa: "#1f40ed", firecrawl: "#ff4c00", "open-places": "#3f5a2c",
-      // n8n's signature is the provider's pink, 1.5:1 on the card: the bars keep the card's text colour, and Porkbun has no site file.
-      n8n: "#161616", porkbun: "#000000",
+      cloudflare: "#ff5e1f", "context-dev": "#2563eb", docker: "#2560ff", firecrawl: "#ff4c00", "open-places": "#3f5a2c",
+      // Exa's site shows no colour of its own and none of the provider's blue, so its bars are the card's text colour, as the site is ink on white.
+      exa: "#000000",
+      // n8n's pink is 1.5:1 on its grey panel: deepened, hue kept, it reads 3:1. Porkbun has no site file; its salmon deepens a little on its card.
+      n8n: "#b77987", porkbun: "#e36d6e",
     });
   });
 
@@ -107,18 +129,22 @@ describe("the small labels", () => {
   it("take the site's small-label type, case and letter-spacing", () => {
     const mono = 'ui-monospace, "SF Mono", Menlo, monospace', body = "var(--brand-card-body-font)";
     expect(kits("--brand-card-label-font")).toEqual({
-      spider: mono, n8n: mono,
-      clay: body, "context-dev": body, docker: body, exa: body, firecrawl: body, github: body, "open-places": body,
-      // No small labels were measured on Cloudflare's or Elicit's first screen.
+      // Monospace where 10%+ of the small text in the first screen, outside the header, is: Firecrawl's; Docker's is Inter there,
+      // and Cloudflare's first screen has no small labels at all (measured 2026-11-15), so its labels stay in its body face.
+      // Exa's first screen labels its controls in GeistMono capitals (LATENCY, CATEGORY), which the card can't load.
+      spider: mono, n8n: mono, firecrawl: mono, exa: mono,
+      clay: body, "context-dev": body, docker: body, github: body, "open-places": body,
       cloudflare: undefined, elicit: undefined, porkbun: undefined,
     });
     expect(kits("--brand-card-label-case")).toEqual({
-      spider: "uppercase", n8n: "uppercase",
-      clay: "none", "context-dev": "none", docker: "none", exa: "none", firecrawl: "none", github: "none", "open-places": "none",
-      cloudflare: undefined, elicit: undefined, porkbun: undefined,
+      spider: "uppercase", n8n: "uppercase", exa: "uppercase",
+      // Clay's first screen sets its small labels as typed; the capitals measured before came from the whole page, further down.
+      clay: "none", "context-dev": "none", docker: "none", firecrawl: "none", github: "none", "open-places": "none", cloudflare: "none",
+      // Elicit's site was measured but no label case: as typed, not the house uppercase. Porkbun has no site file.
+      elicit: "none", porkbun: undefined,
     });
     expect(kits("--brand-card-label-tracking")).toEqual({
-      spider: "0.14em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "-0.011em", exa: "-0.02em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
+      spider: "0.16em", n8n: "0.02em", clay: "0em", "context-dev": "0em", docker: "-0.011em", exa: "0.08em", firecrawl: "0em", github: "0.015em", "open-places": "0em",
       cloudflare: undefined, elicit: undefined, porkbun: undefined,
     });
   });
@@ -132,7 +158,60 @@ describe("the hero band", () => {
     }));
     // Clay's heading sits on its green hero section; black on it is 2.6:1, so its label is white.
     // Cloudflare's sits on a 99%-wide orange panel, where its #262626 text is 5.1:1.
-    // Docker's dark hero panel is 81% of the width, so it is no band.
-    expect(bands).toEqual({ clay: ["#035d44", "#ffffff"], cloudflare: ["#ff5e1f", "#262626"] });
+    // Docker's dark hero panel is 81% of the width, inside its ruled page frame: a band.
+    expect(bands).toEqual({ clay: ["#035d44", "#ffffff"], cloudflare: ["#ff5e1f", "#262626"], docker: ["#0f1117", "#ffffff"] });
+  });
+
+  it("covers the card's whole header, rounded or square, and the body then takes the site's second surface", () => {
+    const slabs = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).flatMap(slug => {
+      const { "--brand-card-slab": slab, "--brand-card-slab-body": body } = kit(slug);
+      return slab ? [[slug, [slab, body]]] : [];
+    }));
+    // Under Clay's green the body is its warm grey second surface; Docker and Cloudflare measured none, so theirs stays as is.
+    expect(slabs).toEqual({ clay: ["#035d44", "#f4f3f0"], cloudflare: ["#ff5e1f", undefined], docker: ["#0f1117", undefined] });
+  });
+
+  it("sets its large headline in white wherever white passes 3:1 as large text, and its small text in the label that passes 4.5:1", () => {
+    const large = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).flatMap(slug => {
+      const { "--brand-card-band": band, "--brand-card-band-large-text": text, "--brand-card-band-text": label } = kit(slug);
+      return band ? [[slug, [text, label, Math.floor(contrast(text!, band) * 100) / 100]]] : [];
+    }));
+    // White on Cloudflare's orange is 3.05:1: its hero heading's white, at a headline's size; the eyebrow and buttons keep #262626.
+    expect(large).toEqual({ clay: ["#ffffff", "#ffffff", 7.91], cloudflare: ["#ffffff", "#262626", 3.05], docker: ["#ffffff", "#ffffff", 18.87] });
+    // A pale hero that white can't read on at any size keeps its label colour for the headline too.
+    const pale = { ...HOMEPAGE_SITE_TRAITS.cloudflare!, traits: { ...HOMEPAGE_SITE_TRAITS.cloudflare!.traits, hero: { value: { kind: "colour" as const, hex: "#ffd84d", radiusPx: 16 }, from: "backdrop behind the first heading" as const } } };
+    const paleKit = brandCardKit(HOMEPAGE_BRANDS.cloudflare, "#ffffff", "#262626", pale);
+    expect([paleKit["--brand-card-band-large-text"], paleKit["--brand-card-band-text"]]).toEqual(["#262626", "#262626"]);
+  });
+
+  it("needs no logo tile on any homepage slab", () => {
+    // Cloudflare's cloud is #ff5f08 on a #ff5e1f slab, but its stored wordmark alone reads there (below); Clay's and Docker's logos read on theirs.
+    expect(kits("--brand-card-logo-tile")).toEqual(Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).map(slug => [slug, undefined])));
+  });
+
+  it("gives a button on the slab the card's surface when the brand's own fill would vanish into it, as Cloudflare's hero button is white", () => {
+    const onSlab = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).flatMap(slug => {
+      const { "--brand-card-slab-button-fill": fill, "--brand-card-slab-button-text": label } = kit(slug);
+      return fill ? [[slug, [fill, label]]] : [];
+    }));
+    expect(onSlab).toEqual({ cloudflare: ["#ffffff", "#262626"] });
+  });
+});
+
+describe("the logo on the slab", () => {
+  const WORDMARK_ONLY = "https://media.brand.dev/fa417a46-2a7a-4fef-b0fa-3dda3d2bb3c8.svg";
+  it("shows a stored wordmark straight on the slab where its inks read 3:1 there: Cloudflare's black wordmark on its orange, with no tile", () => {
+    expect(slabLogo(HOMEPAGE_BRANDS.cloudflare, HOMEPAGE_SITE_TRAITS.cloudflare)?.url).toBe(WORDMARK_ONLY);
+    expect(kit("cloudflare")["--brand-card-logo-tile"]).toBeUndefined();
+  });
+
+  it("keeps the logo's tile where no stored wordmark reads on the slab", () => {
+    const site = HOMEPAGE_SITE_TRAITS.cloudflare;
+    const withoutWordmark = { ...site, traits: { ...site.traits, logoInks: { ...site.traits.logoInks!, value: site.traits.logoInks!.value.filter(logo => logo.width !== 719) } } };
+    expect(slabLogo(HOMEPAGE_BRANDS.cloudflare, withoutWordmark)).toBeUndefined();
+    const brand = HOMEPAGE_BRANDS.cloudflare, { background, text } = brand.styleguide!.colors;
+    expect(brandCardKit(brand, background!, text!, withoutWordmark)["--brand-card-logo-tile"]).toBe("#ffffff");
+    // A site with no colour slab shows no slab logo.
+    expect(slabLogo(HOMEPAGE_BRANDS.github, HOMEPAGE_SITE_TRAITS.github)).toBeUndefined();
   });
 });

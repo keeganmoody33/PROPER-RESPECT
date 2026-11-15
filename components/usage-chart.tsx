@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { chartBars, type ChartBar } from "@/src/domain/chart-bars";
-import { fullNumber } from "@/src/domain/format-activity-number";
+import { compactNumber, fullNumber } from "@/src/domain/format-activity-number";
 import { dayMonthYear } from "@/src/domain/format-period";
 import { cadenceEnd, seriesCadence } from "@/src/domain/activity-headline";
 
@@ -97,9 +97,10 @@ export function MeasuredBlueprint({
   );
 }
 
-/** A bar's value as a person reads it: one point as recorded, a run of points as their average to one decimal place. */
+/** A bar's value as a person reads it: one point as recorded, a run of points as their average to one decimal place, or two significant digits below one. */
 function barValue(bar: ChartBar, unit?: string): string {
-  const shown = bar.points === 1 ? fullNumber(bar.value) : fullNumber(Number(bar.value.toFixed(1)));
+  const average = Math.abs(bar.value) < 1 ? compactNumber(bar.value) : fullNumber(Number(bar.value.toFixed(1)));
+  const shown = bar.points === 1 ? fullNumber(bar.value) : average;
   return `${shown}${unit ? ` ${unit}` : ""}${bar.points === 1 ? "" : " on average"}`;
 }
 
@@ -115,14 +116,17 @@ function barTitle(bar: ChartBar, unit?: string): string {
 
 /** The bars again as rows, for a screen reader: the chart itself is one image, and its dates and values live only in hover titles. */
 function BarTable({ bars, label, unit }: { bars: readonly ChartBar[]; label?: string; unit?: string }) {
+  const rows = bars.map(bar => ({ key: bar.start, ...barDays(bar, unit), value: barValue(bar, unit) }));
+  // Bars of one day each read as one date, not a From and a To that are the same.
+  const daily = rows.every(row => row.from === row.to);
   return (
     // A table grows to fit its cells whatever its width, so the 1px clip goes on a box around it.
     <div className="visually-hidden">
       <table>
-        <caption>{label ?? "Activity"}, one row per bar</caption>
-        <thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Value</th></tr></thead>
+        <caption>{label ?? "Activity"}, one row per bar{bars.some(bar => bar.value < 0) ? ". A value below zero is drawn as a stub on the baseline." : ""}</caption>
+        <thead><tr>{daily ? <th scope="col">Date</th> : <><th scope="col">From</th><th scope="col">To</th></>}<th scope="col">Value</th></tr></thead>
         <tbody>
-          {bars.map(bar => { const { from, to } = barDays(bar, unit); return <tr key={bar.start}><td>{from}</td><td>{to}</td><td>{barValue(bar, unit)}</td></tr>; })}
+          {rows.map(row => <tr key={row.key}><th scope="row">{row.from}</th>{!daily && <td>{row.to}</td>}<td>{row.value}</td></tr>)}
         </tbody>
       </table>
     </div>
@@ -166,7 +170,8 @@ export function UsageChart({
   }, [resolved]);
 
   const bars = resolved && points ? chartBars(points) : [];
-  const maximum = Math.max(...bars.map((bar) => bar.value), 1);
+  // The bars scale to the largest value above zero, however small; a series with none draws only stubs.
+  const maximum = Math.max(...bars.map((bar) => bar.value), 0) || 1;
   return (
     <div
       ref={ref}
@@ -183,6 +188,7 @@ export function UsageChart({
             <span
               key={bar.start}
               data-zero={bar.value === 0 ? "" : undefined}
+              data-below-zero={bar.value < 0 ? "" : undefined}
               style={{
                 "--bar-height": `${Math.max(0, (bar.value / maximum) * PERCENT)}%`,
                 "--bar-delay": `${index * BAR_STAGGER_MS}ms`,

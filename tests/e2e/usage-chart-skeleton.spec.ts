@@ -109,7 +109,7 @@ for (const theme of ["light", "dark"] as const) {
     // The back doesn't draw the chart again.
     await card.getByRole("button", { name: "Details", exact: true }).click();
     await expect(card.locator(".card-back .usage-chart")).toHaveCount(0);
-    await expect(card.locator(".activity-meta")).toContainText("Snapshot recorded 2026-10-01");
+    await expect(card.locator(".activity-meta")).toContainText("Snapshot recorded 1 Oct 2026");
     await expect(card).not.toContainText(/score|rank|rating/i);
 
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
@@ -149,7 +149,9 @@ PHONE_WIDTHS.forEach(width => test(`a 90-day series fits a ${width}px card as ${
   // A screen reader reads the same bars as rows, with the dates and averages the chart keeps in hover titles.
   const rows = card.locator(".card-front").getByRole("table", { name: "Sessions, one row per bar" }).getByRole("row");
   await expect(rows).toHaveCount(MAX_BARS + 1);
-  await expect(rows.nth(1).getByRole("cell")).toHaveText(["3 Jul 2026", "4 Jul 2026", "18 sessions on average"]);
+  // Each row is headed by the day its bar starts.
+  await expect(rows.nth(1).getByRole("rowheader")).toHaveText("3 Jul 2026");
+  await expect(rows.nth(1).getByRole("cell")).toHaveText(["4 Jul 2026", "18 sessions on average"]);
   await card.getByRole("button", { name: "Details", exact: true }).click();
   await expect(card.locator(".card-back .activity-bars")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

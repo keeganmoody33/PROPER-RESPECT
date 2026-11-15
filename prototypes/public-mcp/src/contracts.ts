@@ -21,7 +21,7 @@ const activityMeta = {
   provenanceLabel: z.string(), period: period.optional(), note: z.string().optional(),
 };
 const activity = z.discriminatedUnion("kind", [
-  z.strictObject({ ...activityMeta, kind: z.literal("contributionCalendar"), total: metric, memberSinceYear: z.string().optional(), days: z.array(day), coverageNote: z.string().optional(), suppliedRange: z.string().optional(), emptyNote: z.string().optional() }),
+  z.strictObject({ ...activityMeta, kind: z.literal("contributionCalendar"), total: metric, reportedTotal: metric.optional(), memberSinceYear: z.string().optional(), days: z.array(day), coverageNote: z.string().optional(), suppliedRange: z.string().optional(), emptyNote: z.string().optional() }),
   z.strictObject({ ...activityMeta, kind: z.literal("headlineMetrics"), primary: metric, supporting: z.array(metric) }),
   z.strictObject({ ...activityMeta, kind: z.literal("timeSeries"), label: z.string().optional(), unit: z.string().optional(), points: z.array(z.strictObject({ date: z.string(), value: z.number() })), emptyNote: z.string().optional() }),
   z.strictObject({ ...activityMeta, kind: z.literal("artifactCollection"), total: metric, artifacts: z.array(z.strictObject({ title: z.string(), url: z.string() })), emptyNote: z.string().optional() }),
@@ -43,6 +43,13 @@ export const visiblePublicProfileSchema = z.strictObject({
     usageLink: z.strictObject({ label: z.string(), url: z.string() }).optional(),
   })), emptyNote: z.string().optional(),
 }) satisfies z.ZodType<VisiblePublicProfile>;
+/** Every field path a value of T can carry, through arrays and each arm of a union. */
+type FieldPaths<T> = T extends readonly (infer Item)[] ? FieldPaths<Item>
+  : T extends object ? { [K in keyof T & string]-?: K | `${K}.${FieldPaths<NonNullable<T[K]>>}` }[keyof T & string] : never;
+type UncoveredFields = Exclude<FieldPaths<VisiblePublicProfile>, FieldPaths<z.infer<typeof visiblePublicProfileSchema>>>;
+// `satisfies` lets the schema leave out a field the projection may emit, and the strict schema then refuses the whole profile.
+// A field the schema misses fails the typecheck here.
+export const contractCoversProjection: [UncoveredFields] extends [never] ? true : UncoveredFields = true;
 export const bundledBrandKeySchema = z.enum(["github", "wispr-flow"]);
 export type BundledBrandKey = z.infer<typeof bundledBrandKeySchema>;
 const color = z.string().regex(/^#[0-9a-f]{6}$/i);

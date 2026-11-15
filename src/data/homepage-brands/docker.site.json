@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "productSlug": "docker",
   "canonicalDomain": "docker.com",
-  "measuredAt": "2026-11-14T12:33:12.902Z",
+  "measuredAt": "2026-11-15T09:31:58.209Z",
   "url": "https://docker.com/",
   "viewport": {
     "width": 1440,
@@ -79,7 +79,7 @@
       "from": "secondary call-to-action"
     },
     "panelRadiusPx": {
-      "value": 0,
+      "value": 18,
       "from": "bordered panels"
     },
     "signature": {
@@ -88,9 +88,135 @@
     },
     "hero": {
       "value": {
-        "kind": "none"
+        "kind": "colour",
+        "hex": "#0f1117",
+        "radiusPx": 0
       },
       "from": "backdrop behind the first heading"
+    },
+    "numberFont": {
+      "value": {
+        "family": "Repro",
+        "generic": "sans-serif"
+      },
+      "from": "largest number"
+    },
+    "numberColour": {
+      "value": "#000000",
+      "from": "largest number"
+    },
+    "fills": {
+      "value": [
+        {
+          "hex": "#0f1117",
+          "areaPx": 537751
+        },
+        {
+          "hex": "#ffffff",
+          "areaPx": 108605
+        },
+        {
+          "hex": "#00084d",
+          "areaPx": 41760
+        },
+        {
+          "hex": "#2560ff",
+          "areaPx": 9314
+        },
+        {
+          "hex": "#000000",
+          "areaPx": 1520
+        }
+      ],
+      "from": "first screen"
+    },
+    "logoInks": {
+      "value": [
+        {
+          "mode": "dark",
+          "type": "logo",
+          "width": 54,
+          "height": 16,
+          "inks": [
+            {
+              "hex": "#fad8a5",
+              "share": 0.163
+            },
+            {
+              "hex": "#ea867c",
+              "share": 0.138
+            },
+            {
+              "hex": "#ca67a0",
+              "share": 0.122
+            },
+            {
+              "hex": "#e5a299",
+              "share": 0.114
+            },
+            {
+              "hex": "#8ad5c0",
+              "share": 0.114
+            },
+            {
+              "hex": "#d0dcb2",
+              "share": 0.081
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 512,
+          "height": 512,
+          "inks": [
+            {
+              "hex": "#1d63ed",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "icon",
+          "width": 512,
+          "height": 512,
+          "inks": [
+            {
+              "hex": "#1d63ed",
+              "share": 1
+            }
+          ]
+        },
+        {
+          "mode": "light",
+          "type": "logo",
+          "width": 38,
+          "height": 30,
+          "inks": [
+            {
+              "hex": "#000000",
+              "share": 1
+            }
+          ]
+        }
+      ],
+      "from": "stored logos"
+    },
+    "inversePanel": {
+      "value": {
+        "fill": "#0e1217",
+        "text": "#d6dce6",
+        "radiusPx": 14
+      },
+      "from": "dark panel"
+    },
+    "rule": {
+      "value": {
+        "style": "solid",
+        "hex": "#c8cfda"
+      },
+      "from": "most common border"
     }
   }
 }

@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+/** Tab stops from the skip link to the call to action: the slideshow's controls, chooser and shown card come first. */
+const MAX_TAB_STOPS_TO_START = 30;
 for (const width of [1440, 390, 320]) test(`homepage preserves collection and profile entry at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 1000 });
   const errors: string[] = [];
@@ -28,7 +30,7 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your tools.Your track record.");
   await expect(page.getByRole("img", { name: /Blueprint/ })).toHaveCount(0);
   await expect(page.getByRole("article", { name: "Clay card" })).toBeVisible();
-  await expect(page.getByText("Inside a card / Illustrative examples")).toBeVisible();
+  await expect(page.getByText("Inside a card", { exact: true })).toBeVisible();
   const bump = page.getByRole("img", { name: "Two fists meeting at a bright red diamond" });
   await bump.scrollIntoViewIfNeeded();
   await expect(bump).toBeVisible();
@@ -39,8 +41,13 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#page-content")).toBeFocused();
+  // The examples come right after the heading, in the page's order as on a phone's screen; the call to action follows them.
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toBeFocused();
+  // A phone's examples row starts at Play; a wider screen's controls start at the arrows.
+  await expect(page.getByRole("button", { name: width > 600 ? "Previous example" : "Play slideshow" })).toBeFocused();
+  const start = page.getByRole("link", { name: "Start your collection", exact: true }).first();
+  for (let stops = 0; stops < MAX_TAB_STOPS_TO_START && !(await start.evaluate(link => link === document.activeElement)); stops++) await page.keyboard.press("Tab");
+  await expect(start).toBeFocused();
   await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toHaveAttribute("href", "/app/collection");
   await expect(page.getByRole("link", { name: "View Keegan’s shared collection" })).toHaveAttribute("href", "/lecturesfrom");
   expect(external).toEqual([]);

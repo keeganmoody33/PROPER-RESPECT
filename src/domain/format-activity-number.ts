@@ -5,7 +5,11 @@ const ALL_FRACTION_DIGITS = 20;
 const fullNumberFormat = new Intl.NumberFormat("en", { maximumFractionDigits: ALL_FRACTION_DIGITS });
 const groupedWhole = new Intl.NumberFormat("en");
 
+/** Two significant digits for a number below one, so 0.004 never rounds to "0". */
+const smallNumber = new Intl.NumberFormat("en", { maximumSignificantDigits: 2 });
+
 export function compactNumber(value: number): string {
+  if (value !== 0 && Math.abs(value) < 1) return smallNumber.format(value);
   return (value >= 10_000 ? abbreviatedNumber : standardNumber).format(value);
 }
 

@@ -67,7 +67,7 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   await expect(first.locator(".card-brand-provenance")).toHaveCount(0);
   await expect(first.locator(".card-back")).not.toContainText("Context.dev");
   await expect(first.locator(".activity-meta")).not.toContainText("Updated");
-  await expect(first.locator(".activity-meta")).toContainText("Snapshot recorded 2026-09-19");
+  await expect(first.locator(".activity-meta")).toContainText("Snapshot recorded 19 Sep 2026");
   const content = first.locator(".card-back-content");
   await expect(content).toHaveCSS("overflow-y", "visible");
   expect((await first.boundingBox())!.height).toBeGreaterThan(frontHeight);
@@ -85,10 +85,10 @@ for (const width of [1280, 390]) test(`card typography and natural disclosure la
   const calendarCard = page.locator(".product-card").nth(2);
   const frontCalendar = calendarCard.locator(".card-front .activity-calendar");
   await expect(frontCalendar).toBeVisible();
-  await expect(frontCalendar.getByRole("img")).toHaveCount(371);
+  await expect(frontCalendar.locator("[data-date]")).toHaveCount(371);
   await expect(frontCalendar.locator('[data-date="2025-01-01"]')).toHaveCSS("grid-row-start", "4");
   await expect(frontCalendar.locator('[data-date="2025-01-05"]')).toHaveCSS("grid-column-start", "2");
-  await expect(frontCalendar.getByRole("img", { name: "1 Jan 2025: 1 contribution", exact: true })).toBeVisible();
+  await expect(frontCalendar.locator(`[title=${JSON.stringify("1 Jan 2025: 1 contribution")}]`)).toBeVisible();
   await calendarCard.getByRole("button", { name: "Details", exact: true }).click();
   // The back doesn't draw the calendar again; it says where the counts came from.
   await expect(calendarCard.locator(".card-back .activity-calendar")).toHaveCount(0);
@@ -249,10 +249,10 @@ for (const width of [320, 1280]) test(`contribution calendar preserves supplied 
   await page.addStyleTag({ content: readFileSync("app/globals.css", "utf8") });
   await page.addScriptTag({ content: bundle.outputFiles[0].text });
   const front = page.locator(".card-front");
-  await expect(front.getByRole("img")).toHaveCount(2);
-  await expect(front.getByRole("img", { name: "1 Sep 2026: 0 contributions" })).toHaveAttribute("data-level", "0");
-  await expect(front.getByRole("img", { name: "4 Sep 2026: 4 contributions" })).toHaveCSS("grid-row-start", "6");
-  const cell = await front.getByRole("img", { name: "4 Sep 2026: 4 contributions" }).boundingBox();
+  await expect(front.locator("[data-date]")).toHaveCount(2);
+  await expect(front.locator(`[title=${JSON.stringify("1 Sep 2026: 0 contributions")}]`)).toHaveAttribute("data-level", "0");
+  await expect(front.locator(`[title=${JSON.stringify("4 Sep 2026: 4 contributions")}]`)).toHaveCSS("grid-row-start", "6");
+  const cell = await front.locator(`[title=${JSON.stringify("4 Sep 2026: 4 contributions")}]`).boundingBox();
   expect(cell).not.toBeNull();
   expect(Math.abs(cell!.width - cell!.height)).toBeLessThanOrEqual(1);
   expect(cell!.width).toBeLessThanOrEqual(12);
@@ -282,9 +282,9 @@ for (const width of [320, 1280]) test(`contribution calendar retains missing per
   for (const side of [".card-front"]) {
     const face = page.locator(side);
     const grid = face.locator(".activity-calendar");
-    await expect(grid.getByRole("img")).toHaveCount(2);
-    await expect(grid.getByRole("img", { name: "15 Sep 2026: 0 contributions" })).toHaveCSS("grid-column-start", "3");
-    await expect(grid.getByRole("img", { name: "25 Sep 2026: 4 contributions" })).toHaveCSS("grid-column-start", "4");
+    await expect(grid.locator("[data-date]")).toHaveCount(2);
+    await expect(grid.locator(`[title=${JSON.stringify("15 Sep 2026: 0 contributions")}]`)).toHaveCSS("grid-column-start", "3");
+    await expect(grid.locator(`[title=${JSON.stringify("25 Sep 2026: 4 contributions")}]`)).toHaveCSS("grid-column-start", "4");
     await expect(face).toContainText("28 days have no supplied count; blank spaces are not zero activity.");
     await expect(face).toContainText("Daily counts: 15 Sep 2026 – 25 Sep 2026");
     await expect(grid.locator('[data-date="2026-09-01"], [data-date="2026-09-30"]')).toHaveCount(0);
@@ -327,4 +327,71 @@ for (const width of [320, 1280]) test(`a headline is set large in the heading fa
   expect(shown.map(({ size }) => size)).toEqual([24, 20.8, 18.4]);
   expect(shown.every(({ family, fits }) => family === '"Trebuchet MS", sans-serif' && fits)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+/** The longest value a published measurement can carry, and one below one, beside each other on a card. */
+const LONG_VALUE_DIGITS = 650;
+const measured = {
+  capturedAt: "2026-09-19T09:00:00.000Z", status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
+  scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE", unit: "rows", period: { kind: "date", start: "2026-01-01", end: "2026-08-31", timezone: "UTC" },
+} as const;
+const longValueCard = { ...card, activity: undefined, measurements: [{ ...measured, metric: "enriched", value: "9".repeat(LONG_VALUE_DIGITS) }, { ...measured, metric: "used", value: "0.004" }] };
+const longValueBundle = buildSync({
+  stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement("div", { className: "card-grid" }, createElement(ProductCard, { card: ${JSON.stringify(longValueCard)}, index: 0 })));`, resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"production"' },
+});
+
+test("at 390px a 650-digit published value wraps inside its card, front and back, and a value below one keeps its digits", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.setContent('<main id="root"></main>');
+  await page.addStyleTag({ content: readFileSync(process.env.CARD_LAYOUT_STYLESHEET ?? "app/globals.css", "utf8") });
+  await page.addScriptTag({ content: longValueBundle.outputFiles[0].text });
+  const article = page.locator(".product-card");
+  await expect(article).toBeVisible();
+  const inside = () => article.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    const face = element.querySelector(element.getAttribute("data-side") === "back" ? ".card-back" : ".card-front")!;
+    return [...face.querySelectorAll("*")].filter(node => node.checkVisibility())
+      .filter(node => node.getBoundingClientRect().right > box.right + 1 || node.scrollWidth > node.clientWidth + 1 && getComputedStyle(node).overflowX === "visible").length;
+  });
+  await expect(article.locator(".card-front")).toContainText("0.004");
+  expect(await inside()).toBe(0);
+  await article.getByRole("button", { name: "Details", exact: true }).click();
+  await article.getByRole("button", { name: "How this was measured" }).click();
+  expect(await inside()).toBe(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+/** A brand whose mark is the colour given, on a white card with near-black text. */
+const markedBrand = (accent: string) => normalizeProductBrand({
+  productSlug: "synthetic-card", canonicalDomain: "example.com", retrievalId: "synthetic-accent-2026-11-14",
+  retrievedAt: "2026-11-14T09:00:00.000Z", responseHash: "b".repeat(64),
+}, {
+  brand: { status: "ok", brand: { domain: "example.com", logos: [], colors: [] } },
+  styleguide: { status: "ok", domain: "example.com", styleguide: { mode: "light", colors: { accent, background: "#ffffff", text: "#111111" } } },
+});
+// Yellow is 1.4:1 on white, short of the 3:1 large text needs; burnt orange is 5.2:1.
+const accentCards = [["#ffd400", "Yellow"], ["#c2410c", "Orange"]].map(([accent, name]) => ({
+  ...card, activity: undefined, headline: "Turns pages into clean Markdown.", product: { ...card.product, name, brand: markedBrand(accent) },
+}));
+const accentBundle = buildSync({
+  stdin: { contents: `import { createElement } from "react"; import { createRoot } from "react-dom/client"; import { ProductCard } from "./components/product-card";
+    createRoot(document.getElementById("root")).render(createElement("div", { className: "card-grid" },
+      ${JSON.stringify(accentCards)}.map((card, index) => createElement(ProductCard, { key: index, card, index, headlineAccent: "clean Markdown" }))));`, resolveDir: process.cwd() },
+  bundle: true, write: false, platform: "browser", format: "iife", jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"production"' },
+});
+
+test("a large headline's phrase takes the brand's mark where it reads 3:1, and stays in the headline's colour where it doesn't", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await page.setContent('<main id="root"></main>');
+  await page.addStyleTag({ content: readFileSync(process.env.CARD_LAYOUT_STYLESHEET ?? "app/globals.css", "utf8") });
+  await page.addScriptTag({ content: accentBundle.outputFiles[0].text });
+  const shown = (name: string) => page.getByRole("article", { name: `${name} card` }).locator(".card-headline").evaluate(headline => ({
+    size: getComputedStyle(headline).fontSize, headline: getComputedStyle(headline).color, phrase: getComputedStyle(headline.querySelector(".card-headline-accent")!).color,
+  }));
+  expect(await shown("Yellow")).toEqual({ size: "24px", headline: "rgb(17, 17, 17)", phrase: "rgb(17, 17, 17)" });
+  expect(await shown("Orange")).toEqual({ size: "24px", headline: "rgb(17, 17, 17)", phrase: "rgb(194, 65, 12)" });
 });

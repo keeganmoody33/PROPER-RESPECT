@@ -27,7 +27,7 @@ export function RequestTally() {
   useEffect(() => {
     let cancelled = false;
     fetch("/api/tally", { cache: "no-store" })
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then(r => (r.ok && r.status !== 204 ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data: TallySnapshot) => { if (!cancelled) setLoad({ state: "ready", data }); })
       .catch(() => { if (!cancelled) setLoad({ state: "error" }); });
     return () => { cancelled = true; };

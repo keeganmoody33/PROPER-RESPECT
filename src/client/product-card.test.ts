@@ -46,10 +46,11 @@ const brand: ProductBrandSnapshot = {
   responseHash: "a".repeat(64),
 };
 
-function renderCard(overrides: Partial<Card> = {}) {
+function renderCard(overrides: Partial<Card> = {}, today?: string) {
   return load(renderToStaticMarkup(createElement(ProductCard, {
     card: { ...baseCard, ...overrides },
     index: 0,
+    today,
   })));
 }
 
@@ -81,6 +82,9 @@ test.each([
     expect($(".product-logo").attr("data-logo-layout")).toBe("app-icon");
     expect($(".product-logo img").attr("width")).toBe("512");
     expect($(".product-logo img").attr("height")).toBe("512");
+    // The 512px original stays the src a failed rendition falls back from; the browser picks a rendition the app resizes for its 48px slot.
+    const rendition = (width: number) => `/_next/image?url=${encodeURIComponent(path)}&w=${width}&q=75`;
+    expect($(".product-logo img").attr("srcset")).toBe(`${rendition(48)} 1x, ${rendition(96)} 2x, ${rendition(256)} 3x`);
   }
 });
 
@@ -201,7 +205,8 @@ test("draws a branded card's edge and button from the product's stored card and 
     },
   } } });
   const style = $(".product-card").attr("style") ?? "";
-  for (const rule of ["--brand-card-border:#9aa0a6", "--brand-card-radius:8px", "--brand-card-button-fill:#ff4c00", "--brand-card-button-text:#262626", "--brand-card-button-radius:20px", "--brand-card-button-weight:450"]) {
+  // The stored white label is 3.3:1 on #ff4c00: it stays, on that orange deepened 16% to 4.5:1.
+  for (const rule of ["--brand-card-border:#9aa0a6", "--brand-card-radius:8px", "--brand-card-button-fill:#d64000", "--brand-card-button-text:#ffffff", "--brand-card-button-radius:20px", "--brand-card-button-weight:450"]) {
     expect(style).toContain(rule);
   }
 });
@@ -360,8 +365,8 @@ test("a go-to card keeps its go-to badge whatever its level", () => {
   })));
 
   expect($(".card-title .eyebrow").text()).toBe("Occasionally · since 2023");
-  expect($(".card-footer .card-go-to").text()).toBe("Owner-selected go-to");
-  expect($(".card-back .card-go-to").text()).toBe("Owner-selected go-to");
+  expect($(".card-footer .card-go-to").text()).toBe("Go-to");
+  expect($(".card-back .card-go-to").text()).toBe("Go-to");
 });
 
 const activityEvidence = {
@@ -390,8 +395,8 @@ for (const audience of ["owner", "visitor"] as const) {
 
     const meta = $(".activity-meta");
     expect(meta.text()).not.toContain("Updated");
-    expect(meta.text()).toContain("Snapshot recorded 2026-09-18");
-    expect(meta.text()).toContain("2026-09-01 to 2026-09-15");
+    expect(meta.text()).toContain("Snapshot recorded 18 Sep 2026");
+    expect(meta.text()).toContain("1 Sep 2026 to 15 Sep 2026");
     expect(meta.text()).toContain(activity.provenanceLabel);
     expect($(".status-row").text()).toContain("Used before");
     expect($(".product-card").text()).not.toContain("ARCHIVED");
@@ -407,7 +412,7 @@ test.each([
   expect($(".card-front [data-freshness]").text()).toBe(` · ${front}`);
   expect($(".card-front").text()).not.toContain(freshness.toLowerCase() === "stale" ? "stale" : "error");
   expect($(".activity-meta [data-freshness]").text()).toBe(freshness.toLowerCase());
-  expect($(".activity-meta").text()).toContain("Snapshot recorded 2026-09-18");
+  expect($(".activity-meta").text()).toContain("Snapshot recorded 18 Sep 2026");
   expect($(".status-row").text()).toContain("Testing");
 });
 
@@ -419,7 +424,7 @@ test("the compact front leads with the owner relationship and leaves full eviden
   expect(front.text().indexOf(baseCard.headline)).toBeLessThan(front.text().indexOf("120"));
   expect(front.find(".metric-row, .activity-calendar, .activity-bars, .activity-meta")).toHaveLength(0);
   expect(front.find(".card-activity-preview").text()).toContain("120");
-  expect(front.find(".card-activity-coverage").text()).toBe("Sep 2026 · last updated 18 Sep 2026");
+  expect(front.find(".card-activity-coverage").text()).toBe("1–15 Sep 2026 · last updated 18 Sep 2026");
   expect($(".card-back").text()).toContain(baseCard.note);
 });
 
@@ -464,8 +469,8 @@ test.each(activityExamples)("$kind keeps the complete supplied activity and prov
   expect(reverse.find(".activity-module")).toHaveLength(1);
   expect(reverse.find(".activity-meta").text()).toContain(activity.provenanceLabel);
   expect(reverse.find(".activity-meta").text()).toContain("personal activity");
-  expect(reverse.find(".activity-meta").text()).toContain("2026-09-01 to 2026-09-15");
-  expect(reverse.find(".activity-meta").text()).toContain("Snapshot recorded 2026-09-18");
+  expect(reverse.find(".activity-meta").text()).toContain("1 Sep 2026 to 15 Sep 2026");
+  expect(reverse.find(".activity-meta").text()).toContain("Snapshot recorded 18 Sep 2026");
 });
 
 test("an empty time series does not turn missing observations into zero activity", () => {
@@ -507,7 +512,7 @@ test("a supplied time series draws its bars on the front, and the back says wher
   expect($(".card-front .usage-chart-log, .card-front .blueprint-dim")).toHaveLength(0);
   // The back doesn't draw the chart again: it says where the series came from, in one plain line, without a score.
   expect($(".card-back .activity-bars, .card-back .usage-chart")).toHaveLength(0);
-  expect($(".card-back .activity-summary").text()).toBe("Synthetic owner-approved evidence · the owner's own use · Sep 2026 · last updated 18 Sep 2026");
+  expect($(".card-back .activity-summary").text()).toBe("Synthetic owner-approved evidence · the owner's own use · 1–15 Sep 2026 · last updated 18 Sep 2026");
   expect($(".card-back").text()).not.toMatch(/score|rank/i);
 });
 
@@ -572,7 +577,7 @@ test.each(["ACTIVE", "TESTING", "ARCHIVED"] as const)(
     expect($.text().toLowerCase()).not.toContain(status.toLowerCase());
     expect($.text()).not.toContain("2024-06-03");
     expect($.text()).not.toContain("since");
-    expect($.text()).not.toContain("Owner-selected go-to");
+    expect($(".card-go-to")).toHaveLength(0);
   },
 );
 
@@ -584,8 +589,8 @@ test("unconfirmed discoveries keep supplied measurements and provenance visibly 
 
   expect($(".card-activity-preview").text()).toContain("Unreviewed evidence");
   expect($(".card-activity-preview strong").text()).toBe("120");
-  expect($(".card-activity-coverage").text()).toBe("Sep 2026 · last updated 18 Sep 2026");
-  expect($(".card-back .activity-meta").text()).toContain("2026-09-01 to 2026-09-15");
+  expect($(".card-activity-coverage").text()).toBe("1–15 Sep 2026 · last updated 18 Sep 2026");
+  expect($(".card-back .activity-meta").text()).toContain("1 Sep 2026 to 15 Sep 2026");
   expect($(".card-back").text()).toContain("Unreviewed evidence");
   expect($(".card-back .activity-meta").text()).toContain(activity.provenanceLabel);
   // The back keeps the supporting numbers the compact front leaves out, not the front's 120 again.
@@ -598,11 +603,13 @@ test("the go-to designation requires an explicit prop for a confirmed relationsh
   })));
 
   expect($(".card-title .eyebrow").text()).toBe("Testing");
-  expect($(".card-footer > span").text()).toBe("Owner-selected go-to");
+  expect($(".card-footer > span").text()).toBe("Go-to");
   expect($.text()).not.toContain("Unreviewed evidence");
   const ordinary = renderCard();
   expect(ordinary(".card-title .eyebrow").text()).toBe("Testing");
-  expect(ordinary(".card-footer > span").text()).toBe("Relationship & evidence");
+  // The footer says, in a visitor's words, what Details adds: how long, and how much where the card has numbers.
+  expect(ordinary(".card-footer > span").text()).toBe("How long I've used it");
+  expect(renderCard({ activity: activityExamples[2] })(".card-footer > span").text()).toBe("How long and how much");
 });
 
 test("brand preview suppresses private discovery and go-to state", () => {
@@ -615,7 +622,7 @@ test("brand preview suppresses private discovery and go-to state", () => {
   expect($(".card-footer > span").text()).toBe("Brand identity");
   expect($.text()).not.toContain("Private discovery");
   expect($.text()).not.toContain("Needs your review");
-  expect($.text()).not.toContain("Owner-selected go-to");
+  expect($(".card-go-to")).toHaveLength(0);
   expect($.text()).not.toContain("Unreviewed evidence");
   expect($(".activity-module, .card-activity-preview")).toHaveLength(0);
 });
@@ -635,10 +642,13 @@ test("a contribution calendar renders only supplied days and never relabels cont
     const days = $(`${side} .activity-calendar span`);
     expect(days).toHaveLength(1);
     expect(days.attr("title")).toBe("15 Sep 2026: 3 contributions");
-    expect(days.attr("aria-label")).toBe("15 Sep 2026: 3 contributions");
+    // The days are drawn for sight; a screen reader gets the calendar's one-line summary instead.
+    expect($(`${side} .contribution-calendar .contribution-summary`).text()).toBe("3 contributions from 15 Sep 2026 to 15 Sep 2026, on 1 of 1 days; the most in a day was 3, on 15 Sep 2026.");
     expect(days.attr("data-date")).toBe("2026-09-15");
   }
-  expect($(".card-front .card-activity-preview > p").first().text()).toBe("37 contributions");
+  // It leads with the one day it draws; the stored 37 disagrees, so it stands apart, named as reported.
+  expect($(".card-front .card-activity-preview > p").first().text()).toBe("3 contributions");
+  expect($(".card-front .card-activity-reported").text()).toBe("37 contributions · as reported");
   // The back doesn't draw the calendar again.
   expect($(".card-back .activity-calendar")).toHaveLength(0);
   expect($.text()).not.toContain("commits");
@@ -750,53 +760,21 @@ test("published numbers say how they were recorded on the back, where every row 
     status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
   } as const;
   const $ = renderCard({ measurements: [row, { ...row, metric: "built", value: "86", unit: "tables" }] });
-  const recorded = ["Scope: workspace · Coverage: complete", "cumulative · Do not add to other views", "Source-reported value", "Captured 2026-09-01T00:00:00.000Z"];
+  // An invented sample claims no source and no coverage; a date reads plainly, with the exact value in its markup.
+  const recorded = ["Scope: workspace", "Running total · not to be added to other numbers", "Synthetic sample. Not real account activity.", "Captured 1 Sep 2026"];
   expect(recorded.filter(text => $(".card-front").text().includes(text))).toEqual([]);
   expect($(".card-back .usage-measurement-measurement").toArray().map(element => recorded.filter(text => $(element).text().includes(text)).length)).toEqual([recorded.length, recorded.length]);
   // The front is one row of numbers, each named by what it counts; the disclosures and exact periods are on the back.
   expect($(".card-front .usage-measurement-stats li").map((_, item) => $(item).text()).get()).toEqual([
-    "2,140,000rows enrichedMar 2023 – Aug 2026", "86tables builtMar 2023 – Aug 2026",
+    "2,140,000rows enriched", "86tables built",
   ]);
   expect($(".card-front .usage-measurement-public").text()).not.toMatch(/Synthetic sample|Owner-supplied evidence|more reported measurements/);
-  expect($(".card-front .usage-measurement-note").text()).toBe("Sample numbers · how each was measured is in Details");
-  expect($(".card-back .usage-measurement-measurement").first().text()).toContain("2023-03-01 to 2026-08-31 · UTC");
+  // One period for both numbers, said once at the head of the note.
+  expect($(".card-front .usage-measurement-note").text()).toBe("Mar 2023 – Aug 2026 · Sample numbers · how each was measured is in Details");
+  expect($(".card-back .usage-measurement-measurement").first().text()).toContain("1 Mar 2023 to 31 Aug 2026 · UTC");
   expect($(".card-back").text()).toContain("Synthetic sample. Not real account activity.");
   expect($(".card-back").text()).toContain("Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown.");
   expect($(".card-back .usage-measurement-value").toArray().map(value => $(value).text())).toEqual(["2,140,000", "86"]);
-});
-
-const leads = {
-  caption: "Lead list, sample rows",
-  columns: ["Company", { label: "Domain", droppable: true }, { label: "Work email", enriched: true }, { label: "Status", enriched: true }],
-  rows: [
-    [{ text: "Northwind Labs" }, { text: "northwindlabs.example" }, { text: "a.lindqvist@northwindlabs.example", state: "filled" }, { text: "Enriched", state: "filled" }],
-    [{ text: "Quillon Health" }, { text: "quillon.example" }, { text: "Finding…", state: "pending", fillsIn: { text: "d.reyes@quillon.example", state: "filled" } },
-      { text: "Running", state: "pending", fillsIn: { text: "Enriched", state: "filled" } }],
-  ],
-} as const;
-
-test("a table preview draws as a real table on the front: a caption, column headers, each row named by its first cell", () => {
-  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: leads })));
-  const box = $(".card-front .card-table-preview");
-  expect([box.attr("role"), box.attr("tabindex"), box.attr("aria-labelledby")]).toEqual(["region", "0", box.find("caption").attr("id")]);
-  expect(box.find("caption").text()).toBe("Lead list, sample rows");
-  // An enriched column's header is marked for its tint; a droppable column's cells are marked so a narrow card leaves them out.
-  const marks = (cell: Parameters<typeof $>[0]) => ["data-enriched", "data-droppable"].filter(name => $(cell).attr(name) !== undefined).join("+") || "-";
-  expect(box.find("thead th").map((_, cell) => `${$(cell).attr("scope")}:${$(cell).text()}:${marks(cell)}`).get()).toEqual([
-    "col:Company:-", "col:Domain:data-droppable", "col:Work email:data-enriched", "col:Status:data-enriched",
-  ]);
-  // The row still running is drawn pending until the card is shown; it fills in on the visitor's screen, not on the server.
-  expect(box.find("tbody tr").map((_, row) => $(row).children().map((_, cell) => `${cell.tagName}/${$(cell).attr("data-state") ?? "-"}/${marks(cell)}/${$(cell).text()}`).get().join(" | ")).get()).toEqual([
-    "th/-/-/Northwind Labs | td/-/data-droppable/northwindlabs.example | td/filled/-/a.lindqvist@northwindlabs.example | td/filled/-/Enriched",
-    "th/-/-/Quillon Health | td/-/data-droppable/quillon.example | td/pending/-/Finding… | td/pending/-/Running",
-  ]);
-  expect($(".card-back .card-table-preview")).toHaveLength(0);
-});
-
-test("a table preview past its caps, or on a brand preview, is not drawn", () => {
-  const tooWide = { ...leads, columns: ["A", "B", "C", "D", "E"], rows: [["a", "b", "c", "d", "e"].map(text => ({ text }))] };
-  expect(load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: tooWide })))(".card-table-preview")).toHaveLength(0);
-  expect(load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, tablePreview: leads, displayMode: "brand-preview" })))(".card-table-preview")).toHaveLength(0);
 });
 
 test("a hint names what the back holds in the footer, and describes the Details button with it", () => {
@@ -805,7 +783,7 @@ test("a hint names what the back holds in the footer, and describes the Details 
   expect(hint.text()).toBe("Numbers and a work sample inside");
   expect($(".card-button").attr("aria-describedby")).toBe(hint.attr("id"));
   const plain = renderCard();
-  expect(plain(".card-footer > span").text()).toBe("Relationship & evidence");
+  expect(plain(".card-footer > span").text()).toBe("How long I've used it");
   expect(plain(".card-button").attr("aria-describedby")).toBeUndefined();
 });
 
@@ -847,8 +825,8 @@ test.each(["javascript:alert(1)", "data:text/html,x", "ftp://x.example/file", "h
   } });
   expect($("a").filter((_, element) => $(element).attr("href") === url)).toHaveLength(0);
   expect($("a").filter((_, element) => $(element).text().includes("Bad artifact"))).toHaveLength(0);
-  // The front links the good one; the back lists the one it couldn't link, as text.
-  expect($(".card-back .artifact-list").text()).toBe("Bad artifact");
+  // The front links the good one; the back lists every work, the one it couldn't link as text.
+  expect($(".card-back .artifact-list li").map((_, item) => $(item).text()).get()).toEqual(["Bad artifact", "Good artifact ↗"]);
   expect($(".card-front .card-artifact-links a").filter((_, element) => $(element).attr("href") === "https://example.com/good")).toHaveLength(1);
 });
 
@@ -882,7 +860,8 @@ test("a paused or stopped card says why on its front, under the headline; a card
 });
 
 test("a published cost shows on the front in a few words, with the full record kept on the back", () => {
-  const $ = renderCard({ cost: { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" } });
+  // Read on a fixed day soon after the price, so the test does not age with the clock.
+  const $ = renderCard({ cost: { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" } }, "2026-10-01");
   expect($(".card-front .card-cost").text()).toBe("Costs $5/month · owner-reported");
   expect($(".card-front .card-cost").next().hasClass("card-footer")).toBe(true);
   expect($(".card-back").text()).toContain("Owner-reported cost: $5/month · as of 1 Sep 2026");
@@ -989,17 +968,19 @@ test("a card whose site's heading sits on a full-bleed colour marks itself for t
   const render = (slug: string, domain: string, withSite = true) => load(renderToStaticMarkup(createElement(ProductCard, {
     card: { ...baseCard, product: { name: slug, slug, domain, description: "Example.", brand: HOMEPAGE_BRANDS[slug] } }, index: 0, siteTraits: withSite ? HOMEPAGE_SITE_TRAITS[slug] : undefined,
   })))("article");
-  expect([render("clay", "clay.com").attr("data-band"), render("docker", "docker.com").attr("data-band"), render("clay", "clay.com", false).attr("data-band")]).toEqual(["", undefined, undefined]);
+  expect([render("clay", "clay.com").attr("data-band"), render("docker", "docker.com").attr("data-band"), render("clay", "clay.com", false).attr("data-band")]).toEqual(["", "", undefined]);
   expect(render("clay", "clay.com").attr("style")).toContain("--brand-card-band:#035d44;--brand-card-band-text:#ffffff");
 });
 
 test("a time series leads with its period's total, or its peak once the card is paused, on the front only", () => {
-  const weekly = { ...activityEvidence, kind: "timeSeries" as const, label: "workflow runs", unit: "per week", points: [312, 341, 0].map((value, index) => ({ date: `2026-08-0${index + 1}`, value })) };
-  const hero = (card: Partial<typeof baseCard>) => {
-    const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, ...card }, index: 0, expandedActivity: true })));
+  const weekly = { ...activityEvidence, kind: "timeSeries" as const, label: "workflow runs", unit: "per week", points: [312, 341, 0].map((value, index) => ({ date: `2026-08-${String(3 + index * 7).padStart(2, "0")}`, value })) };
+  const hero = (card: Partial<typeof baseCard>, countsPerPeriod = true) => {
+    const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, ...card }, index: 0, expandedActivity: true, countsPerPeriod })));
     return [$(".card-front .card-activity-preview > p").first().text(), $(".card-back .activity-hero").text()];
   };
   expect(hero({ activity: weekly })).toEqual(["653 workflow runs over 3 weeks", ""]);
+  // A stored card can't say its points are counts, so it reads its latest week.
+  expect(hero({ activity: weekly }, false)).toEqual(["0 workflow runs · per week · as of 17 Aug 2026", ""]);
   expect(hero({ activity: weekly, level: "PAUSED", status: "ARCHIVED" })).toEqual(["341 workflow runs a week at its peak", ""]);
 });
 
@@ -1026,7 +1007,8 @@ const FRONT_ARTIFACTS = [
 test("an artifact collection's front names its count and links up to three of its works, dropping a bad link quietly", () => {
   const $ = renderCard({ activity: { ...activityEvidence, kind: "artifactCollection", total: FRONT_ARTIFACTS.length, artifacts: FRONT_ARTIFACTS } });
   const front = $(".card-front .card-activity-preview");
-  expect(front.children("p").first().text()).toBe("8 linked works");
+  // Eight stored, four with an address that can be opened, three linked on the front: the four dropped are not counted.
+  expect(front.children("p").first().text()).toBe("4 linked works · 3 shown");
   expect(front.find(".card-artifact-links a").toArray().map(link => [$(link).text(), $(link).attr("href"), $(link).attr("target"), $(link).attr("rel")])).toEqual([
     ["Compose apps ↗", "https://example.com/compose", "_blank", "noopener noreferrer"],
     ["Postgres image ↗", "https://example.com/postgres", "_blank", "noopener noreferrer"],
@@ -1064,14 +1046,183 @@ test("the back is the same branded object, shorter: its logo and name, plain pro
   // Plain words outside the disclosure.
   expect(back.find(".relationship-date").text()).toBe("Since 2023");
   expect(back.text()).toContain("Owner-reported cost: $149/month · as of 1 Sep 2026");
-  expect(back.find(".usage-measurement-lines li").text()).toBe("38,400 rows enriched · Mar 2023 – Aug 2026 · workspace · sample, not account data");
+  // The front shows the one number, so the back doesn't say it again; its record is in the disclosure.
+  expect(back.find(".usage-measurement-lines")).toHaveLength(0);
   // Folded, not removed: the panel is closed and holds the exact start date, the activity's stored record and how each number was recorded.
   const panel = back.find(".card-provenance [data-slot=collapsible-panel]");
   expect([back.find(".card-provenance-trigger").text(), back.find(".card-provenance-trigger").attr("aria-expanded"), panel.attr("hidden")]).toEqual(["How this was measured", "false", "hidden"]);
-  expect(["Relationship started 2023-01-01", "personal activity", "2026-09-01 to 2026-09-15", "stale", "Snapshot recorded 2026-09-18", "2023-03-01 to 2026-08-31 · UTC",
-    "Captured 2026-09-01T00:00:00.000Z", "Synthetic sample. Not real account activity.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown."]
+  expect(["Using since 1 Jan 2023", "personal activity", "1 Sep 2026 to 15 Sep 2026", "stale", "Snapshot recorded 18 Sep 2026", "1 Mar 2023 to 31 Aug 2026 · UTC",
+    "Captured 1 Sep 2026", "Synthetic sample. Not real account activity.", "Owner-supplied evidence. Account identity is not authenticated. Activity actor is unknown."]
     .filter(text => !panel.text().includes(text))).toEqual([]);
   // Outside the panel, no raw date or status word.
   panel.remove();
   expect(back.text()).not.toMatch(/\d{4}-\d{2}-\d{2}|stale|observ/i);
+});
+
+/** Every word that marks a card as invented, which a visitor should meet once on a sample's front. */
+const SAMPLE_WORDS = /sample|synthetic|illustrative|invented/gi;
+
+test("How this was measured says since when in a visitor's words: Using since while the tool is in use, Started once it is paused or stopped", () => {
+  const started = (card: Partial<Card>) => renderCard({ startedAt: "2023-01-01", ...card })(".card-provenance-panel p").first().text();
+  expect([started({ status: "ACTIVE", level: "DAILY" }), started({ status: "ARCHIVED", level: "PAUSED" }), started({ status: "ARCHIVED", level: "STOPPED" })])
+    .toEqual(["Using since 1 Jan 2023", "Started 1 Jan 2023", "Started 1 Jan 2023"]);
+});
+
+test("a sample card says Sample once on its front and nowhere on its back outside How this was measured; a real card keeps its provenance words", () => {
+  const measured = {
+    metric: "enriched", value: "1500000", unit: "rows", period: { kind: "date", start: "2023-01-01", end: "2026-08-31", timezone: "UTC" },
+    scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE", capturedAt: "2026-09-01T00:00:00.000Z",
+    status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
+  } as const;
+  const cost = { amount: 5, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" } as const;
+  const sampleActivity = { ...activityExamples[2], provenanceLabel: "Illustrative sample, not account data" };
+  const render = (card: Partial<Card>, sample: boolean) => load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, product: { ...baseCard.product, description: "A product for rendering checks." }, note: "I use it daily.", ...card }, index: 0, sample })));
+  const words = ($: ReturnType<typeof render>) => {
+    const front = $(".card-front").text().match(SAMPLE_WORDS) ?? [];
+    const panel = $(".card-back .card-provenance").text().match(SAMPLE_WORDS) ?? [];
+    $(".card-back .card-provenance").remove();
+    return { front, back: $(".card-back").text().match(SAMPLE_WORDS) ?? [], panel: panel.length > 0 };
+  };
+  for (const card of [{ measurements: [measured], cost }, { activity: sampleActivity, cost }]) {
+    const $ = render(card, true);
+    expect(words($)).toEqual({ front: ["Sample"], back: [], panel: true });
+    expect([$(".card-front .card-cost").text(), $(".card-back").text().includes("Cost: $5/month · as of 1 Sep 2026")]).toEqual(["Costs $5/month", true]);
+  }
+  // A published card is no sample: its front keeps whose the numbers are, and its back keeps where its activity came from.
+  const real = render({ measurements: [{ ...measured, sample: "owner-supplied" }], cost }, false);
+  expect([real(".card-front .usage-measurement-note").text(), real(".card-front .card-cost").text()])
+    .toEqual(["Jan 2023 – Aug 2026 · Owner-reported, not verified · how each was measured is in Details", "Costs $5/month · owner-reported"]);
+  expect(render({ activity: activityExamples[2] }, false)(".card-back .activity-summary").text()).toMatch(/^Synthetic owner-approved evidence · the owner's own use · /);
+});
+
+test("a daily chart's screen-reader table has one Date column, since each bar is one day", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "timeSeries", label: "Requests served", unit: "per day", points: [{ date: "2026-08-01", value: 3 }, { date: "2026-08-02", value: 5 }] } });
+  const table = $(".card-front .usage-chart > .visually-hidden > table");
+  expect(table.find("tr").toArray().map(row => $(row).children().toArray().map(cell => $(cell).text()))).toEqual([
+    ["Date", "Value"], ["1 Aug 2026", "3 per day"], ["2 Aug 2026", "5 per day"],
+  ]);
+});
+
+test("a card read today ages a fresh snapshot past 30 days, and never shows a price dated after today as current", () => {
+  const card = { ...baseCard, activity: { ...activityEvidence, freshness: "FRESH" as const, capturedAt: "2026-07-26T18:00:00.000Z", kind: "headlineMetrics" as const, primary: { label: "words", value: 12 }, supporting: [] },
+    cost: { amount: 5, currency: "USD", cadence: "MONTHLY" as const, basis: "OWNER_REPORTED" as const, asOf: "2027-01-01" } };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, today: "2026-11-14" })));
+  expect($(".card-front .card-activity-coverage").text()).toBe("1–15 Sep 2026 · last updated 26 Jul 2026");
+  expect($(".card-front .card-cost")).toHaveLength(0);
+  expect($(".card-back").text()).toContain("Owner-reported cost: $5/month · dated 1 Jan 2027, after today");
+  // A day inside the 30 keeps a fresh snapshot quiet.
+  const recent = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, today: "2026-08-01" })));
+  expect(recent(".card-front .card-activity-coverage").text()).toBe("1–15 Sep 2026");
+});
+
+test("a weekly series' back lists each week by its first day under one caption, so a narrow card fits more columns", () => {
+  const weekly = { ...activityEvidence, kind: "timeSeries" as const, label: "pages scraped", unit: "per week", points: [{ date: "2026-08-17", value: 880 }, { date: "2026-08-24", value: 1100 }] };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, activity: weekly }, index: 0 })));
+  expect($(".card-back .card-back-values-caption").text()).toBe("Each week, from the day it starts");
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["17 Aug880", "24 Aug1,100"]);
+});
+
+test("a month of days on the back reads, on a narrow card, as its four highest days with every day one press away", () => {
+  const values = [2840, 2610, 7120, 8040, 7880, 3110];
+  const daily = { ...activityEvidence, kind: "timeSeries" as const, label: "requests served", unit: "per day",
+    points: Array.from({ length: 31 }, (_, index) => ({ date: `2026-08-${String(index + 1).padStart(2, "0")}`, value: values[index % values.length] + index })) };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, activity: daily }, index: 0 })));
+  const narrow = $(".card-back .series-values-narrow");
+  // Highest first; the full month is behind a disclosure, so the back is no taller than the front on a phone.
+  expect(narrow.find(".card-back-values-caption").first().text()).toBe("Highest days");
+  expect(narrow.find("ol[aria-label='Highest days'] li").map((_, item) => $(item).text()).get()).toEqual(["28 Aug8,067", "22 Aug8,061", "16 Aug8,055", "10 Aug8,049"]);
+  expect(narrow.find("button").text()).toBe("All 31 days");
+  expect(narrow.find("ol[aria-label='requests served, each day'] li")).toHaveLength(31);
+  // A wide card lists every day at once, as before.
+  expect($(".card-back .series-values-wide ol[aria-label='requests served, each day'] li")).toHaveLength(31);
+  // A short run of days, or weeks, keeps the one list.
+  const week = { ...daily, points: daily.points.slice(0, 7) };
+  expect(load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, activity: week }, index: 0 })))(".series-values-narrow")).toHaveLength(0);
+});
+
+test("a hyphenated word on a card never breaks at its hyphen: \"go-to-market\" and \"(awesome-compose)\" each stay on one line", () => {
+  const card = { ...baseCard, product: { ...baseCard.product, description: "A go-to-market tool." },
+    activity: { ...activityEvidence, kind: "artifactCollection" as const, total: 1, artifacts: [{ title: "Sample apps (awesome-compose)", url: "https://example.com/a" }] } };
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0 })));
+  expect($(".card-back .whole-word").map((_, word) => $(word).text()).get()).toEqual(["go-to-market", "(awesome-compose)"]);
+  expect($(".card-front .card-artifact-links .whole-word").text()).toBe("(awesome-compose)");
+  expect($(".card-front .card-artifact-links a").text()).toBe("Sample apps (awesome-compose) ↗");
+});
+
+test("a calendar's back lists each month's contributions, and its front gives a screen reader the same months as a table", () => {
+  const days = [{ date: "2026-07-30", count: 3, level: 2 }, { date: "2026-07-31", count: 0, level: 0 }, { date: "2026-08-01", count: 5, level: 3 }];
+  const $ = renderCard({ activity: { ...activityEvidence, period: { start: "2026-07-30", end: "2026-08-01" }, kind: "contributionCalendar", total: 8, days } });
+  expect($(".card-back .card-back-values-caption").text()).toBe("Contributions each month");
+  // A month the calendar covers only in part is named by the days it covers, never as the whole month.
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["30–31 Jul 20263", "1 Aug 20265"]);
+  expect($(".card-back .card-back-busiest").text()).toBe("Most contributions: 1 Aug 2026, with 5, on 1 of 1 day drawn.");
+  const table = $(".card-front .contribution-calendar .visually-hidden table");
+  expect(table.find("caption").text()).toBe("Contributions each month");
+  expect(table.find("thead th").map((_, cell) => $(cell).text()).get()).toEqual(["Month", "Contributions", "Days with any, of the days drawn"]);
+  expect(table.find("tbody tr").map((_, row) => $(row).find("th[scope=row], td").map((__, cell) => $(cell).text()).get().join("|")).get())
+    .toEqual(["30–31 Jul 2026|3|1 of 2", "1 Aug 2026|5|1 of 1"]);
+});
+
+test("coding activity's back lists the active days in each week its bars cover, counting days rather than adding up an unnamed count", () => {
+  const days = Array.from({ length: 9 }, (_, index) => ({ date: `2026-08-${String(index + 1).padStart(2, "0")}`, count: index % 3 === 0 ? 0 : 4, level: 2 }));
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "codingActivity", primary: { label: "active days", value: 6 }, supporting: [], days } });
+  expect($(".card-back .card-back-values-caption").text()).toBe("Active days each week, from the day it starts");
+  // The last week is two days long, and says so, without the year its neighbours leave out too.
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["1 Aug4 of 7", "8–9 Aug2 of 2"]);
+  const across = Array.from({ length: 10 }, (_, index) => ({ date: new Date(Date.UTC(2026, 7, 23 + index)).toISOString().slice(0, 10), count: 1, level: 1 }));
+  const turn = renderCard({ activity: { ...activityEvidence, kind: "codingActivity", primary: { label: "active days", value: 10 }, supporting: [], days: across } });
+  expect(turn(".card-back .card-back-values li").map((_, item) => turn(item).text()).get()).toEqual(["23 Aug7 of 7", "30 Aug–1 Sep3 of 3"]);
+});
+
+test("a calendar's month label has room for its name: it spans up to three weeks, never past the calendar's last week", () => {
+  const days = Array.from({ length: 70 }, (_, index) => ({ date: new Date(Date.UTC(2026, 6, 1 + index)).toISOString().slice(0, 10), count: 1, level: 1 }));
+  const $ = renderCard({ activity: { ...activityEvidence, period: { start: days[0].date, end: days.at(-1)!.date }, kind: "contributionCalendar", total: 70, days } });
+  expect($(".card-front .contribution-months span").map((_, label) => $(label).attr("style")).get())
+    .toEqual(["grid-column:1 / span 3", "grid-column:5 / span 3", "grid-column:10 / span 2"]);
+});
+
+test("a calendar of whole months lists them by name under a caption that carries the years, so a narrow card fits more columns", () => {
+  const days = Array.from({ length: 62 }, (_, index) => ({ date: new Date(Date.UTC(2025, 11, 1 + index)).toISOString().slice(0, 10), count: index % 2, level: 1 }));
+  const $ = renderCard({ activity: { ...activityEvidence, period: { start: "2025-12-01", end: "2026-01-31" }, kind: "contributionCalendar", total: 31, days } });
+  expect($(".card-back .card-back-values-caption").text()).toBe("Contributions each month, Dec 2025 – Jan 2026");
+  expect($(".card-back .card-back-values").attr("data-short")).toBe("");
+  expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["Dec15", "Jan16"]);
+});
+
+test("a big number's group separator is set apart from its tabular figures, so a font whose comma is figure-wide never reads 3 , 690", () => {
+  const $ = renderCard({ activity: { ...activityEvidence, kind: "timeSeries", label: "Searches run", points: [{ date: "2026-09-15", value: 3690 }] } });
+  const number = $(".card-front .card-activity-preview > p").first().find("strong");
+  expect([number.text(), number.find(".figure-separator").map((_, mark) => $(mark).text()).get()]).toEqual(["3,690", [","]]);
+});
+
+test("a headline's phrase set apart takes the brand's mark only where it reads as large text, and keeps the headline's colour otherwise", async () => {
+  const { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } = await import("../data/homepage-brands");
+  const firecrawl = { ...baseCard, headline: "Turns pages into clean Markdown for my agents.", product: { name: "Firecrawl", slug: "firecrawl", domain: "firecrawl.dev", description: "Scraper.", brand: HOMEPAGE_BRANDS.firecrawl } };
+  const phrase = (card: Card, headlineAccent: string) => {
+    const $ = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, siteTraits: HOMEPAGE_SITE_TRAITS.firecrawl, headlineAccent })));
+    return [$(".card-front .card-headline").text(), $(".card-front .card-headline-accent").text(), $(".card-front .card-headline-accent").attr("style")];
+  };
+  expect(phrase(firecrawl, "clean Markdown")).toEqual(["Turns pages into clean Markdown for my agents.", "clean Markdown", "color:#ff4c00"]);
+  // Past 60 characters the headline steps down to 20.8px, under large text at Firecrawl's weight.
+  const long = "Turns docs, product pages and changelogs into clean Markdown for my agents.";
+  expect(phrase({ ...firecrawl, headline: long }, "clean Markdown")).toEqual([long, "clean Markdown", undefined]);
+  // A phrase the headline doesn't hold sets nothing apart.
+  expect(phrase(firecrawl, "LLM-ready data")).toEqual(["Turns pages into clean Markdown for my agents.", "", undefined]);
+});
+
+test("a product with no stored brand takes its look from its own measured page alone, and only from its own", async () => {
+  const { HOMEPAGE_SITE_TRAITS } = await import("../data/homepage-brands");
+  const claudeCode = { ...baseCard, product: { name: "Claude Code", slug: "claude-code", domain: "claude.com", description: "Coding agent." } };
+  const render = (card: Card, siteTraits?: typeof HOMEPAGE_SITE_TRAITS[string]) => load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, siteTraits })))("article");
+  const style = render(claudeCode, HOMEPAGE_SITE_TRAITS["claude-code"]).attr("style") ?? "";
+  // claude.com's ivory page and its grey text, its near-black button and its serif heading in a system serif (no font file is stored).
+  expect(style).toContain("--brand-card-background:#faf9f5;--brand-card-text:#5e5d59");
+  expect(style).toContain("--brand-card-button-fill:#141413");
+  expect(style).toContain('--brand-card-heading-font:ui-serif, Georgia, "Times New Roman", serif');
+  // Its big number is set in the page's sans, as claude.com sets its numbers, not in the serif heading.
+  expect(style).toContain('--brand-card-number-font:system-ui, -apple-system, "Segoe UI", Arial, sans-serif');
+  expect(render(claudeCode, HOMEPAGE_SITE_TRAITS["claude-code"]).attr("data-surface")).toBe("light");
+  // Another product's page, or none, leaves the house card.
+  expect(render(claudeCode, HOMEPAGE_SITE_TRAITS.exa).attr("style") ?? "").not.toContain("--brand-card-background");
+  expect(render(claudeCode).attr("style") ?? "").not.toContain("--brand-card-background");
 });

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { publicSiteOrigin } from "./public-site";
-import { creatorBusinessIdentity, markdownResponse, repositoryUrl } from "./agent-discovery";
+import { creatorBusinessIdentity, markdownResponse, publicProfileFacts, repositoryUrl } from "./agent-discovery";
 import { evidenceRules } from "@/src/domain/evidence-rules";
 
 export type TrustSlug = "origins" | "contact" | "privacy" | "terms" | "methodology";
@@ -78,7 +78,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     title: "How your data is handled",
     description: "Current account, evidence, connection, publication and aggregate request tally behavior in Proper Respect, including retention and deletion limits.",
     eyebrow: "Privacy / Current practices",
-    updatedAt: "2026-10-06",
+    updatedAt: "2026-11-15",
     introduction: [
       "This page describes how Proper Respect handles accounts, evidence and publication as of October 6, 2026.",
       "Proper Respect is created by lecturesfrom, a business in the United States, and operated by Keegan Moody. Contact 33@lecturesfrom.com with questions about your data.",
@@ -113,12 +113,14 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         heading: "What becomes public",
         paragraphs: [
           "Saving a collection and publishing it are separate actions. You select saved cards and details, review an exact preview, then approve publication. Visitors and browser agents can read the resulting public profile without signing in. Raw mailbox evidence and credentials are not part of that public profile.",
+          publicProfileFacts.publishedAmount,
           "Review your display name, biography and links as well as the cards in the preview. A display name may initially come from your sign-in identity, including an email address. Removing every public card can leave your public name, profile information and an empty collection visible; it does not delete the published identity.",
         ],
       },
       {
         heading: "Disconnecting and deleting are different",
         paragraphs: [
+          publicProfileFacts.mailboxes,
           "Disconnecting a mailbox removes its saved credentials and stops future reads through that connection. Existing private evidence, source history and relationship history are retained. Disconnecting a Gmail account also asks Google to revoke this app's access. If that request fails, the local disconnect still completes, and you can revoke the app yourself in your Google Account permissions.",
           "Activity-connector disconnection removes the local saved secret and stops that connection's updates. Existing snapshots, relationships and published cards can remain. It does not establish that a linked provider account or its grant has been removed.",
           "Deleting an original evidence payload does not erase all information derived from it. Observations, excerpts, source identifiers, hashes, provenance, relationships and published records may remain. A complete self-service account deletion workflow and automatic evidence-expiry schedule are not implemented. Disconnecting or deleting an original does not fully erase your data.",
@@ -154,7 +156,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     title: "Terms of use",
     description: "The rules for using Proper Respect and publishing a public profile, including what may be removed and how.",
     eyebrow: "Terms / Using Proper Respect",
-    updatedAt: "2026-09-28",
+    updatedAt: "2026-11-15",
     introduction: [
       "These terms apply when you use Proper Respect, including when you keep a private collection or publish a public profile. Proper Respect is created by lecturesfrom, a business in the United States, and operated by Keegan Moody.",
       "By creating an account or publishing a profile, you agree to these terms. If you do not agree, do not use the service.",
@@ -188,6 +190,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         paragraphs: [
           "If you earn money, credit or another benefit when someone uses a link on your profile, or if you are paid by, employed by or otherwise connected to a product you share, say so plainly on that card. Follow the rules on endorsements and advertising that apply where you live.",
           "We may remove a link or card that hides a paid relationship.",
+          publicProfileFacts.disclosedLinks,
         ],
       },
       {
