@@ -111,6 +111,10 @@ test(`at ${PHONE_WIDTH}px a calendar that fits its card says nothing about scrol
   // The fixture's one week fits the card, so there is nothing earlier to scroll to.
   expect(await calendar.locator(".contribution-scroll").evaluate(scroll => scroll.scrollWidth > scroll.clientWidth)).toBe(false);
   await expect(calendar.getByText("Scroll for earlier months")).toBeHidden();
+  // Nor does a screen reader or the Tab key hear that it scrolls.
+  const region = calendar.getByRole("region", { name: "Contribution calendar", exact: true });
+  await expect(region).toBeVisible();
+  await expect(region).not.toHaveAttribute("tabindex");
 });
 
 /** How far turning a card in view may move the page or the card: its back may run longer below, never shift what is read. */

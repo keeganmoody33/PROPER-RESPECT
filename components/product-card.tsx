@@ -227,7 +227,9 @@ function ContributionCalendar({ activity }: { activity: Extract<ActivityModule, 
   const columns = { gridTemplateColumns: `repeat(${weeks}, var(--contribution-cell))` };
   return (
     <div className="contribution-calendar" data-scrolls={scrolls ? "" : undefined}>
-      <div ref={scrollRef} className="contribution-scroll" tabIndex={0} role="region" aria-label="Contribution calendar; scroll horizontally to see the full period"
+      {/* Only a calendar wider than its card is a tab stop that says it scrolls. */}
+      <div ref={scrollRef} className="contribution-scroll" tabIndex={scrolls ? 0 : undefined} role="region"
+        aria-label={scrolls ? "Contribution calendar; scroll horizontally to see the full period" : "Contribution calendar"}
         style={{ "--contribution-weeks": weeks } as CSSProperties}>
         <div className="contribution-calendar-layout">
           <div className="contribution-months" aria-hidden="true" style={columns}>
