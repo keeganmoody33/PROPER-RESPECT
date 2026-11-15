@@ -26,7 +26,7 @@ import { resolvePublishedCardPropIds } from "./publication";
 import { shareAllSelections } from "../src/domain/share-all";
 import { listedUses } from "../src/domain/product-uses";
 import { CREDIT_PLATFORMS, listedCredit, type PropsCredit } from "../src/domain/props-credit";
-import { readPublishedProfile } from "./publicProfiles";
+import { publicPublication } from "./publicProfiles";
 import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
 import {
   profileLinkValidator,
@@ -810,9 +810,18 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   for (const selection of selections) if (selection.publish && selection.measurementEvidenceIds?.length) {
     measurementProjection.set(selection.propId, await reviewedMeasurementsForPublication(ctx, user._id, selection.propId, selection.measurementEvidenceIds));
   }
+  // Each credited Proper Respect handle is looked up once, however many cards credit it.
+  const creditedHandles = new Map<string, Promise<string | undefined>>();
+  const publishedHandle = (handle: string) => {
+    const known = creditedHandles.get(handle);
+    if (known) return known;
+    const found = publicPublication(ctx, handle).then(publication => publication?.profile.handle);
+    creditedHandles.set(handle, found);
+    return found;
+  };
   const credits = new Map(await Promise.all(selections.filter(selection => selection.publish).map(async selection => {
     const prop = propsById.get(selection.propId)!;
-    return [prop._id, await publishedCredit(ctx, prop.credit, productById.get(prop.productId)?.name ?? "this product")] as const;
+    return [prop._id, await publishedCredit(prop.credit, productById.get(prop.productId)?.name ?? "this product", publishedHandle)] as const;
   })));
   const replacements = selections.filter(selection => selection.publish).flatMap(selection => {
     const prop = propsById.get(selection.propId)!;
@@ -870,7 +879,9 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
 
 // The owner chose this credit, so one that no longer fits its platform's rule stops the publish rather than vanishing.
 // A Proper Respect handle links only when it names a published profile now; the card keeps that answer as published.
-async function publishedCredit(ctx: QueryCtx | MutationCtx, stored: Doc<"props">["credit"], productName: string): Promise<PropsCredit | undefined> {
+// Only the credited profile's handle is read, never its cards, so many credits stay within one transaction's limits.
+async function publishedCredit(stored: Doc<"props">["credit"], productName: string,
+  publishedHandle: (handle: string) => Promise<string | undefined>): Promise<PropsCredit | undefined> {
   if (!stored) return undefined;
   // A link is decided here, never carried over from what was saved.
   const saved = { platform: stored.platform, handle: stored.handle, platformName: stored.platformName };
@@ -880,8 +891,8 @@ async function publishedCredit(ctx: QueryCtx | MutationCtx, stored: Doc<"props">
     throw new Error(`Who put you on ${productName} no longer fits ${platform}'s handle rule. Edit it in your collection, then preview again.`);
   }
   if (credit.platform !== "PROPER_RESPECT") return credit;
-  const profile = await readPublishedProfile(ctx, credit.handle);
-  return profile ? { ...credit, handle: profile.handle, linked: true } : credit;
+  const handle = await publishedHandle(credit.handle);
+  return handle ? { ...credit, handle, linked: true } : credit;
 }
 
 async function shareAllFromSavedState(ctx: QueryCtx | MutationCtx, allProps: Doc<"props">[],

@@ -25,7 +25,8 @@ const publicProfileV1Validator = v.object({
   })),
 });
 
-export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
+/** The publication a handle shows, directly or through an alias, or null when it shows none (missing, taken down or a stale alias). */
+export async function publicPublication(ctx: QueryCtx, handle: string) {
   const alias = await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).unique();
   if (alias && await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", alias.targetHandle)).first()) return null;
   const published = await ctx.db
@@ -35,6 +36,12 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
 
   if (!published || (alias && alias.publicationId !== published._id)) return null;
   if (published.takenDownAt) return null;
+  return published;
+}
+
+export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
+  const published = await publicPublication(ctx, handle);
+  if (!published) return null;
   // Only presentation is refreshed. The owner's published evidence and
   // relationship projection stays byte-for-byte unchanged in storage.
   // Read only the products in this profile, once per slug. Avoid scanning the

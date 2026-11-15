@@ -509,6 +509,31 @@ test("a Proper Respect credit links only when its handle names a published profi
   ]);
 });
 
+test("a Proper Respect credit follows an alias to its profile's handle, and a taken-down or missing profile leaves it unlinked", async () => {
+  const { t, owner, propIds, selection, published } = await fixture(4);
+  const [a, b, c, d] = propIds;
+  const friend = await publishProfileFor(t, "friend");
+  await publishProfileFor(t, "gone");
+  await t.run(async ctx => {
+    const ownerId = (await ctx.db.query("users").first())!._id;
+    await ctx.db.insert("publicProfileAliases", { handle: "old-friend", targetHandle: "friend", ownerId, publicationId: friend, createdAt: capturedAt });
+    const gone = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", "gone")).unique();
+    await ctx.db.patch(gone!._id, { takenDownAt: capturedAt, takedownReason: "test" });
+    // Two cards crediting the same person both link.
+    await ctx.db.patch(a, { credit: { platform: "PROPER_RESPECT", handle: "old-friend" } });
+    await ctx.db.patch(b, { credit: { platform: "PROPER_RESPECT", handle: "friend" } });
+    await ctx.db.patch(c, { credit: { platform: "PROPER_RESPECT", handle: "gone" } });
+    await ctx.db.patch(d, { credit: { platform: "PROPER_RESPECT", handle: "nobody" } });
+  });
+  await owner.mutation(api.onboarding.publishSelected, await reviewedPublication(owner, { selections: await Promise.all(propIds.map(id => selection(id))) }));
+  expect((await published()).profile.cards.map(card => card.credit)).toEqual([
+    { platform: "PROPER_RESPECT", handle: "friend", linked: true },
+    { platform: "PROPER_RESPECT", handle: "friend", linked: true },
+    { platform: "PROPER_RESPECT", handle: "gone" },
+    { platform: "PROPER_RESPECT", handle: "nobody" },
+  ]);
+});
+
 test("a saved credit that no longer fits its platform's rule stops the publish with a message, and nothing goes out", async () => {
   const { t, owner, propIds: [a], selection } = await fixture(1);
   await t.run(ctx => ctx.db.patch(a, { credit: { platform: "X", handle: TAMPERED_HANDLES[0] } }));
