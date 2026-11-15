@@ -605,14 +605,22 @@ export function ProductCard({
     .slice(0, 2)
     .toUpperCase();
 
-  // Focus follows the turn without scrolling the page: the card stays where the visitor pressed it.
+  // Focus follows the turn. A card in view stays where the visitor pressed it; one whose top is above the screen (Details pressed
+  // at its foot) brings its back's top into view, and closing brings Details back into view.
+  const reducedMotion = useReducedMotion();
   useEffect(() => {
+    const behavior = reducedMotion ? "instant" : "smooth";
     if (isFlipped) {
       backHeadingRef.current?.focus({ preventScroll: true });
       hasFlippedRef.current = true;
+      const top = articleRef.current?.getBoundingClientRect().top ?? 0;
+      if (top < 0) scrollBy({ top, behavior });
     } else if (hasFlippedRef.current) {
       triggerRef.current?.focus({ preventScroll: true });
+      triggerRef.current?.scrollIntoView({ block: "nearest", behavior });
     }
+    // Only a turn moves the page, not a change of motion preference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFlipped]);
 
   // The front stays laid out, unseen, while the back shows, so a resize or a turned phone re-measures the height the card keeps.

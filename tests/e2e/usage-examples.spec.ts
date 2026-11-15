@@ -56,7 +56,8 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("A year of contributions");
-  await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
+  // The screen, not the whole carousel: capturing past the screen resizes it, which lets go of a phone's held row mid-test.
+  await page.screenshot({ path: testInfo.outputPath(`2026-09-21-github-${width}.png`) });
   // Picking another example never moves the controls on the screen: above the card on a wide one, held at the foot on a phone.
   const controlsTop = () => carousel.getByRole("button", { name: "Pause slideshow" }).or(carousel.getByRole("button", { name: "Play slideshow" }))
     .evaluate((element, phone) => Math.round(element.getBoundingClientRect().top + (phone ? 0 : scrollY)), !arrows);
@@ -80,6 +81,9 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     const toggle = carousel.getByRole("button", { name, exact: true });
     // The chooser says what each example shows, as the toggle's description, so its name stays the product's.
     await expect(toggle).toHaveAccessibleDescription(CAPABILITIES[name]);
+    // A phone's row is held on the screen while the card is in view: it stays put across the pick itself.
+    await toggle.scrollIntoViewIfNeeded();
+    const controlsBefore = arrows ? githubControls : await controlsTop();
     await toggle.click();
     await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText(CAPABILITIES[name]);
     const card = carousel.getByRole("article", { name: `${name} card` });
@@ -89,9 +93,9 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
     await expect(card.locator(".card-button")).toHaveCSS("text-transform", buttonCase);
     await expect(card).not.toContainText("contributions");
     await expect(carousel.locator("[data-current=true]")).toContainText("Sample data / No account connected");
-    expect(await controlsTop()).toBe(githubControls);
+    expect(await controlsTop()).toBe(controlsBefore);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await carousel.screenshot({ path: testInfo.outputPath(`2026-09-21-${name.toLowerCase().replaceAll(" ", "-")}-${width}.png`) });
+    await page.screenshot({ path: testInfo.outputPath(`2026-09-21-${name.toLowerCase().replaceAll(" ", "-")}-${width}.png`) });
     await expect(card.locator(".card-front .card-link-disclosure")).toHaveText(FRONT_DISCLOSURE[name] ?? []);
     await Promise.all((FRONT_TEXT[name] ?? []).map(text => expect(card.locator(".card-front")).toContainText(text)));
     const back = BACK_TEXT[name];
@@ -991,13 +995,14 @@ test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone 
 });
 
 const MAX_FLIP_SCROLL_PX = 20;
-test(`at ${PHONE_WIDTH}px turning a card over moves neither the page nor the card`, async ({ page }) => {
+test(`at ${PHONE_WIDTH}px turning a card that is already in view over moves neither the page nor the card`, async ({ page }) => {
   await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
   await expect(card).toBeVisible();
-  await card.getByRole("button", { name: "Details", exact: true }).scrollIntoViewIfNeeded();
+  // The whole card on screen, its top just under the screen's top.
+  await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().top - 10));
   const before = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top }));
   await card.getByRole("button", { name: "Details", exact: true }).click();
   await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
@@ -1005,6 +1010,35 @@ test(`at ${PHONE_WIDTH}px turning a card over moves neither the page nor the car
   expect(Math.abs(after.scroll - before.scroll)).toBeLessThanOrEqual(MAX_FLIP_SCROLL_PX);
   expect(Math.abs(after.top - before.top)).toBeLessThanOrEqual(MAX_FLIP_SCROLL_PX);
   expect(after.focused).toBe("H2");
+});
+
+for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px turning a long card over from its foot shows the back's top, and closing it shows Details again`, async ({ page }) => {
+  await page.setViewportSize({ width, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const card = carousel.getByRole("article", { name: "Clay card" });
+  const details = card.getByRole("button", { name: "Details", exact: true });
+  // Read to the card's foot, so Details sits low on the screen and the card's top is above it.
+  await details.evaluate(button => scrollBy(0, button.getBoundingClientRect().bottom - innerHeight + 120));
+  expect(await card.evaluate(article => article.getBoundingClientRect().top)).toBeLessThan(0);
+  await details.click();
+  const close = card.getByRole("button", { name: "Close details" });
+  await expect(close).toBeVisible();
+  const turned = await card.evaluate(article => ({ top: Math.round(article.getBoundingClientRect().top),
+    close: Math.round(article.querySelector(".close-button")!.getBoundingClientRect().top), focused: document.activeElement?.tagName }));
+  expect(turned.top).toBeGreaterThanOrEqual(0);
+  expect(turned.top).toBeLessThanOrEqual(MAX_FLIP_SCROLL_PX);
+  expect(turned.close).toBeGreaterThanOrEqual(0);
+  expect(turned.focused).toBe("H2");
+  // Closing from the back's top brings Details into view, clear of the row held at the screen's foot.
+  await close.click();
+  await expect(details).toBeFocused();
+  const box = (await details.boundingBox())!;
+  const row = (await carousel.getByRole("group", { name: "Choose a product example" }).boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(row.y);
 });
 
 /** The most a back's last line may sit above the card's bottom edge: its padding and a little. */
