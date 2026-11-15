@@ -1,0 +1,344 @@
+[
+  {
+    "capture": "editor-1440",
+    "handleValue": "jack",
+    "floors": {
+      "text": "Props to @jack · X",
+      "fontPx": [
+        12.8,
+        12.8
+      ],
+      "colours": [
+        [
+          "rgb(240, 238, 231)",
+          "rgb(37, 37, 31)"
+        ],
+        [
+          "rgb(240, 238, 231)",
+          "rgb(37, 37, 31)"
+        ]
+      ],
+      "links": [
+        {
+          "name": "@jack on X (opens in a new tab)",
+          "h": 15,
+          "href": "https://x.com/jack"
+        }
+      ],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        13.27,
+        13.27
+      ]
+    },
+    "sideways": false
+  },
+  {
+    "capture": "home-Clay-1440",
+    "floors": {
+      "text": "Props to @lecturesfrom · Proper Respect",
+      "fontPx": [
+        12.8,
+        12.8
+      ],
+      "colours": [
+        [
+          "rgb(0, 0, 0)",
+          "rgb(244, 243, 240)"
+        ],
+        [
+          "rgb(0, 0, 0)",
+          "rgb(244, 243, 240)"
+        ]
+      ],
+      "links": [
+        {
+          "name": "@lecturesfrom",
+          "h": 15,
+          "href": "https://proper-respect.com/lecturesfrom"
+        }
+      ],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        18.93,
+        18.93
+      ]
+    }
+  },
+  {
+    "capture": "home-n8n-1440",
+    "floors": {
+      "text": "Props to @keeganmoody33 · GitHub",
+      "fontPx": [
+        12.8,
+        12.8
+      ],
+      "colours": [
+        [
+          "rgb(22, 22, 22)",
+          "rgb(250, 250, 250)"
+        ],
+        [
+          "rgb(22, 22, 22)",
+          "rgb(250, 250, 250)"
+        ]
+      ],
+      "links": [
+        {
+          "name": "@keeganmoody33 on GitHub (opens in a new tab)",
+          "h": 15,
+          "href": "https://github.com/keeganmoody33"
+        }
+      ],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        17.34,
+        17.34
+      ]
+    }
+  },
+  {
+    "capture": "home-Spider-1440",
+    "floors": {
+      "text": "Props to a teammate · Slack",
+      "fontPx": [
+        12.8
+      ],
+      "colours": [
+        [
+          "rgb(248, 250, 252)",
+          "rgb(12, 14, 19)"
+        ]
+      ],
+      "links": [],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        18.45
+      ]
+    }
+  },
+  {
+    "capture": "keegan-1440",
+    "floors": {
+      "text": "Props to @lecturesfrom · Proper Respect",
+      "fontPx": [
+        12.8,
+        12.8,
+        12
+      ],
+      "colours": [
+        [
+          "rgb(240, 238, 231)",
+          "rgb(23, 23, 19)"
+        ],
+        [
+          "rgb(240, 238, 231)",
+          "rgb(23, 23, 19)"
+        ],
+        [
+          "rgb(240, 238, 231)",
+          "rgb(23, 23, 19)"
+        ]
+      ],
+      "links": [
+        {
+          "name": "@lecturesfrom",
+          "h": 15,
+          "href": "https://proper-respect.com/lecturesfrom"
+        },
+        {
+          "name": "Not you? Report",
+          "h": 19.2,
+          "href": "mailto:33@lecturesfrom.com?subject=Report%20credit%20on%20proper-respect.com%2Fkeegan%20%C2%B7%20GitHub"
+        }
+      ],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        15.48,
+        15.48,
+        15.48
+      ]
+    }
+  },
+  {
+    "capture": "editor-390",
+    "handleValue": "jack",
+    "floors": {
+      "text": "Props to @jack · X",
+      "fontPx": [
+        12.8,
+        12.8
+      ],
+      "colours": [
+        [
+          "rgb(240, 238, 231)",
+          "rgb(37, 37, 31)"
+        ],
+        [
+          "rgb(240, 238, 231)",
+          "rgb(37, 37, 31)"
+        ]
+      ],
+      "links": [
+        {
+          "name": "@jack on X (opens in a new tab)",
+          "h": 44,
+          "href": "https://x.com/jack"
+        }
+      ],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        13.27,
+        13.27
+      ]
+    },
+    "sideways": false
+  },
+  {
+    "capture": "home-Clay-390",
+    "floors": {
+      "text": "Props to @lecturesfrom · Proper Respect",
+      "fontPx": [
+        12.8,
+        12.8
+      ],
+      "colours": [
+        [
+          "rgb(0, 0, 0)",
+          "rgb(244, 243, 240)"
+        ],
+        [
+          "rgb(0, 0, 0)",
+          "rgb(244, 243, 240)"
+        ]
+      ],
+      "links": [
+        {
+          "name": "@lecturesfrom",
+          "h": 44,
+          "href": "https://proper-respect.com/lecturesfrom"
+        }
+      ],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        18.93,
+        18.93
+      ]
+    }
+  },
+  {
+    "capture": "home-n8n-390",
+    "floors": {
+      "text": "Props to @keeganmoody33 · GitHub",
+      "fontPx": [
+        12.8,
+        12.8
+      ],
+      "colours": [
+        [
+          "rgb(22, 22, 22)",
+          "rgb(250, 250, 250)"
+        ],
+        [
+          "rgb(22, 22, 22)",
+          "rgb(250, 250, 250)"
+        ]
+      ],
+      "links": [
+        {
+          "name": "@keeganmoody33 on GitHub (opens in a new tab)",
+          "h": 44,
+          "href": "https://github.com/keeganmoody33"
+        }
+      ],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        17.34,
+        17.34
+      ]
+    }
+  },
+  {
+    "capture": "home-Spider-390",
+    "floors": {
+      "text": "Props to a teammate · Slack",
+      "fontPx": [
+        12.8
+      ],
+      "colours": [
+        [
+          "rgb(248, 250, 252)",
+          "rgb(12, 14, 19)"
+        ]
+      ],
+      "links": [],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        18.45
+      ]
+    }
+  },
+  {
+    "capture": "keegan-390",
+    "floors": {
+      "text": "Props to @lecturesfrom · Proper Respect",
+      "fontPx": [
+        12.8,
+        12.8,
+        12
+      ],
+      "colours": [
+        [
+          "rgb(240, 238, 231)",
+          "rgb(23, 23, 19)"
+        ],
+        [
+          "rgb(240, 238, 231)",
+          "rgb(23, 23, 19)"
+        ],
+        [
+          "rgb(240, 238, 231)",
+          "rgb(23, 23, 19)"
+        ]
+      ],
+      "links": [
+        {
+          "name": "@lecturesfrom",
+          "h": 44,
+          "href": "https://proper-respect.com/lecturesfrom"
+        },
+        {
+          "name": "Not you? Report",
+          "h": 44,
+          "href": "mailto:33@lecturesfrom.com?subject=Report%20credit%20on%20proper-respect.com%2Fkeegan%20%C2%B7%20GitHub"
+        }
+      ],
+      "gapToFooter": 12.8,
+      "overflow": false,
+      "sidewaysScroll": false,
+      "contrast": [
+        15.48,
+        15.48,
+        15.48
+      ]
+    }
+  }
+]
