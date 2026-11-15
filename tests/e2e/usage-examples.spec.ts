@@ -1041,6 +1041,25 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px turning 
   expect(box.y + box.height).toBeLessThanOrEqual(row.y);
 });
 
+test(`at ${DESKTOP_WIDTH}px no featured card grows when it turns: each back fits the front's height`, async ({ page }) => {
+  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  const growth: Record<string, number> = {};
+  for (const name of FEATURED) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    const front = (await card.boundingBox())!.height;
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
+    growth[name] = Math.max(0, Math.round((await card.boundingBox())!.height - front));
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+  expect(growth).toEqual(Object.fromEntries(FEATURED.map(name => [name, 0])));
+});
+
 /** The most a back's last line may sit above the card's bottom edge: its padding and a little. */
 const MAX_BACK_GAP_PX = 24;
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds what its front cannot, fills its card and closes with the brand's button at ${width}px`, async ({ page }) => {
@@ -1127,6 +1146,30 @@ test("a sample's How this was measured speaks in plain dates, keeps the exact va
   expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}|Source-reported value|Coverage: complete/);
   expect(text).toContain("Synthetic sample. Not real account activity.");
   await expect(panel.locator("time[datetime='2026-09-01T00:00:00.000Z']").first()).toHaveText("1 Sep 2026");
+});
+
+test("mid-turn, the incoming face stays inside the card's edge, so none of it is cut off", async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/");
+  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().top - 10));
+  await card.getByRole("button", { name: "Details", exact: true }).click();
+  // Every moment of the turn, the incoming back's drawn box against the card's.
+  const overhang = await card.evaluate(article => {
+    const back = article.querySelector<HTMLElement>(".card-back")!;
+    const turn = back.getAnimations()[0];
+    if (!turn) return [];
+    turn.pause();
+    const total = Number(turn.effect!.getComputedTiming().duration);
+    const outer = article.getBoundingClientRect();
+    return Array.from({ length: 11 }, (_, step) => {
+      turn.currentTime = (total * step) / 10;
+      const face = back.getBoundingClientRect();
+      return Math.round(Math.max(outer.left - face.left, face.right - outer.right, outer.top - face.top, face.bottom - outer.bottom));
+    }).filter(over => over > 0);
+  });
+  expect(overhang).toEqual([]);
 });
 
 test("with motion allowed the card visibly turns over, in under 300ms; with reduced motion it does not move", async ({ page }) => {

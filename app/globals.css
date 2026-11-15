@@ -218,7 +218,8 @@ main {
   min-width: 0;
 }
 
-/* The incoming face turns in from edge-on, a quarter turn in 260ms; the card's own perspective makes it read as a turn. */
+/* The incoming face settles in: it fades up from a slightly smaller size in 260ms, so it reads as a turn without ever reaching past
+   the card's edge, where a rotated face was cut off. Reduced motion has no turn at all. */
 .product-card[data-side="front"] .card-front,
 .product-card[data-side="back"] .card-back {
   animation: card-turn-over 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -241,8 +242,8 @@ main {
 }
 
 @keyframes card-turn-over {
-  from { transform: rotateY(-90deg); }
-  to { transform: rotateY(0); }
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
 }
 
 .card-topline {
@@ -875,20 +876,25 @@ main {
 
 .artifact-list {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.25rem;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-/* A linked work and its line make one target at least 44px tall. */
+/* A linked work and its line make one target, at least 44px tall on a phone; only the work's title is underlined. */
 .artifact-list a {
   display: flex;
   flex-direction: column;
   font-size: 0.85rem;
   font-weight: 700;
   justify-content: center;
-  min-height: 2.75rem;
+  text-decoration: none;
+}
+
+.artifact-list a > span:first-child {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .artifact-list a .artifact-description {
@@ -929,13 +935,13 @@ main {
   padding-top: 0.65rem;
 }
 
-/* The label wraps between words, never inside one ("go-/to"); short of room, Details moves under it. */
+/* The label wraps between words, never inside one ("go-/to"); short of room even for its longest word, Details moves under it. */
 .card-footer {
   flex-wrap: wrap;
 }
 
 .card-footer > span {
-  flex: 1 1 9.5rem;
+  flex: 1 1 min-content;
   font-size: 0.75rem;
   overflow-wrap: normal;
 }
@@ -977,8 +983,32 @@ main {
   justify-content: space-between;
 }
 
-.product-card .card-back-content > .usage-link ~ .outbound-link {
-  margin-top: 0.6rem;
+/* Level, link, go-to and start year share one line where they fit. */
+.card-back-facts {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.9rem;
+}
+
+.card-back-content .card-back-facts > p {
+  margin: 0;
+}
+
+/* The work sample takes its own row; the product's site and How evidence works share the next where the card has room. */
+.card-back-links {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.2rem;
+}
+
+.card-back-links > .usage-link {
+  flex-basis: 100%;
+}
+
+.product-card .card-back-links > :is(.usage-link, .outbound-link, .evidence-link) {
+  margin: 0;
 }
 
 .card-back-content > :last-child {
@@ -1010,7 +1040,8 @@ main {
   white-space: nowrap;
 }
 
-.card-back-values-caption {
+.card-back-values-caption,
+.card-back-busiest {
   font-size: 0.75rem;
   line-height: 1.5;
 }
@@ -1133,9 +1164,6 @@ main {
   padding-block: 0.6rem 0;
 }
 
-.card-back-content > .usage-link {
-  margin-top: 0.6rem;
-}
 
 .card-provenance-panel .usage-measurement-public {
   border-top: 0;
@@ -1291,12 +1319,15 @@ main {
   margin: 3rem 0 1rem;
 }
 
+/* The work sample's label and its site on one line where they fit. */
 .usage-link {
+  align-items: baseline;
   border: 1px solid var(--card-line);
   border-radius: 0.45rem;
   color: inherit;
-  display: grid;
-  gap: 0.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
   margin: 1.5rem 0 0;
   padding: 0.7rem 0.8rem;
   text-decoration: none;
@@ -1919,8 +1950,12 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   font-size: 0.75rem;
 }
 
-/* A phone's tap targets: the back's links and the front's linked works are at least 44px tall. */
+/* A phone's tap targets: the back's links and the front's linked works are at least 44px tall, the back's one under another. */
 @media (max-width: 480px) {
+  .card-back-links { align-items: flex-start; flex-direction: column; gap: 0; }
+  .artifact-list { gap: 0.15rem; }
+  .artifact-list a { min-height: 2.75rem; }
+  .card-back-links > .usage-link { flex-basis: auto; margin-bottom: 0.6rem; }
   .product-card :is(.outbound-link, .evidence-link, .card-artifact-links a) {
     align-items: center;
     column-gap: 0.5rem;

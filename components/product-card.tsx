@@ -389,11 +389,14 @@ const POINT_WORDS: Readonly<Record<"day" | "week" | "month" | "level", (date: st
 function MonthValues({ activity }: { activity: Extract<ActivityModule, { kind: "contributionCalendar" }> }) {
   const coverage = contributionCalendarCoverage(activity);
   if (!coverage) return null;
+  const months = monthlyTotals(coverage.days);
+  const busiest = months.reduce((best, month) => (month.total > best.total ? month : best), months[0]);
   return <>
     <p className="card-back-values-caption">Contributions each month</p>
     <ol className="card-back-values" aria-label="Contributions each month">
-      {monthlyTotals(coverage.days).map(month => <li key={month.month}><span>{monthYearOf(`${month.month}-01`)}</span><strong>{fullNumber(month.total)}</strong></li>)}
+      {months.map(month => <li key={month.month}><span>{monthYearOf(`${month.month}-01`)}</span><strong>{fullNumber(month.total)}</strong></li>)}
     </ol>
+    <p className="card-back-busiest">The busiest month was {monthYearOf(`${busiest.month}-01`)}, with {fullNumber(busiest.total)} {busiest.total === 1 ? "contribution" : "contributions"} on {busiest.activeDays} of its {busiest.days} days.</p>
   </>;
 }
 
@@ -708,7 +711,7 @@ export function ProductCard({
         {cost && <p className="card-cost">{cost}</p>}
 
         <div className="card-footer">
-          <span id={`${cardId}-footer`} className={ownerGoTo ? "card-go-to" : undefined}>{footerLabel}</span>
+          <span id={`${cardId}-footer`} className={ownerGoTo ? "card-go-to" : undefined}><WholeWords text={footerLabel} /></span>
           <button
             ref={triggerRef}
             type="button"
@@ -742,18 +745,21 @@ export function ProductCard({
           </button>
         </div>
         <div className="card-back-content" role="group" aria-label="Card evidence">
-          <div className="status-row">
-            <span>{cardStatus}</span>
-            {card.primaryLink && <> · <span>{linkTypeLabel(card.primaryLink.type)}</span></>}
+          {/* The relationship in one line: its level and link, whether it is the owner's go-to, and since when. */}
+          <div className="card-back-facts">
+            <div className="status-row">
+              <span>{cardStatus}</span>
+              {card.primaryLink && <> · <span>{linkTypeLabel(card.primaryLink.type)}</span></>}
+            </div>
+            {!brandPreview && <>
+              {ownerGoTo && <p className="card-go-to">Owner-selected go-to</p>}
+              {!relationshipConfirmed && <p>Needs your review</p>}
+              <p className="relationship-date">
+                {!relationshipConfirmed ? "Relationship not confirmed" : card.startedAt ? `Since ${yearOf(card.startedAt)}` : "Start date not supplied"}
+              </p>
+            </>}
           </div>
-          {!brandPreview && <>
-            {ownerGoTo && <p className="card-go-to">Owner-selected go-to</p>}
-            {!relationshipConfirmed && <p>Needs your review</p>}
-            {card.note ? <blockquote>{card.note}</blockquote> : <p>{notePlaceholder}</p>}
-            <p className="relationship-date">
-              {!relationshipConfirmed ? "Relationship not confirmed" : card.startedAt ? `Since ${yearOf(card.startedAt)}` : "Start date not supplied"}
-            </p>
-          </>}
+          {!brandPreview && (card.note ? <blockquote>{card.note}</blockquote> : <p>{notePlaceholder}</p>)}
           <p><WholeWords text={card.product.description} /></p>
           {!brandPreview && card.cost && <p>{costDetail(card.cost, { today, sample })}</p>}
           {!brandPreview && card.activity && <>
@@ -774,16 +780,6 @@ export function ProductCard({
               {!card.activity && !card.measurements?.length && <p>No activity or published numbers on this card.</p>}
             </CollapsiblePanel>
           </Collapsible>}
-          {usageLink && <a
-            className="usage-link"
-            href={usageLink.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`${usageLinkLabelText(usageLink.label)}, on ${usageLinkHost(usageLink.url)} (opens in a new tab)`}
-          >
-            <span>{usageLinkLabelText(usageLink.label)} ↗</span>
-            <span className="usage-link-host">{usageLinkHost(usageLink.url)}</span>
-          </a>}
           {brandPreview && brand && <details className="card-brand-provenance" open>
             <summary>Brand provenance</summary>
             <ProductBrandDetails snapshot={brand} />
@@ -803,18 +799,31 @@ export function ProductCard({
               </dl>
             </section>
           </details>}
-          {webLink ? <a
-            className="outbound-link"
-            href={webLink.url}
-            rel={linkRel}
-            target="_blank"
-          >
-            {webLink.label} ↗
-            {disclosure && <span className="card-link-disclosure">{disclosure}</span>}
-          </a> : card.primaryLink && <span className="outbound-link">{card.primaryLink.label}</span>}
-          {/* The card also renders without a Next.js router (standalone bundles), so a plain link. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          {!brandPreview && <a className="evidence-link" href="/about/methodology">How evidence works</a>}
+          {/* The way out: a work sample, the product's site and how evidence works, on one row where the card has room. */}
+          <div className="card-back-links">
+            {usageLink && <a
+              className="usage-link"
+              href={usageLink.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${usageLinkLabelText(usageLink.label)}, on ${usageLinkHost(usageLink.url)} (opens in a new tab)`}
+            >
+              <span>{usageLinkLabelText(usageLink.label)} ↗</span>
+              <span className="usage-link-host">{usageLinkHost(usageLink.url)}</span>
+            </a>}
+            {webLink ? <a
+              className="outbound-link"
+              href={webLink.url}
+              rel={linkRel}
+              target="_blank"
+            >
+              {webLink.label} ↗
+              {disclosure && <span className="card-link-disclosure">{disclosure}</span>}
+            </a> : card.primaryLink && <span className="outbound-link">{card.primaryLink.label}</span>}
+            {/* The card also renders without a Next.js router (standalone bundles), so a plain link. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            {!brandPreview && <a className="evidence-link" href="/about/methodology">How evidence works</a>}
+          </div>
         </div>
       </section>
     </article>

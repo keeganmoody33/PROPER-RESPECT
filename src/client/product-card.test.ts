@@ -1127,6 +1127,7 @@ test("a calendar's back lists each month's contributions, and its front gives a 
   const $ = renderCard({ activity: { ...activityEvidence, period: { start: "2026-07-30", end: "2026-08-01" }, kind: "contributionCalendar", total: 8, days } });
   expect($(".card-back .card-back-values-caption").text()).toBe("Contributions each month");
   expect($(".card-back .card-back-values li").map((_, item) => $(item).text()).get()).toEqual(["Jul 20263", "Aug 20265"]);
+  expect($(".card-back .card-back-busiest").text()).toBe("The busiest month was Aug 2026, with 5 contributions on 1 of its 1 days.");
   const table = $(".card-front .contribution-calendar .visually-hidden table");
   expect(table.find("caption").text()).toBe("Contributions each month");
   expect(table.find("thead th").map((_, cell) => $(cell).text()).get()).toEqual(["Month", "Contributions", "Days with any"]);
