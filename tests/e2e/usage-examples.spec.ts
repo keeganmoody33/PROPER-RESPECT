@@ -811,7 +811,7 @@ test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a 
   await openMoreExamples(carousel);
   const short = async (scope: Locator, selector: string) => (await scope.locator(selector).evaluateAll(elements => elements
     .filter(element => element.getBoundingClientRect().width > 0)
-    .map(element => ({ text: element.textContent!.trim().slice(0, 24), height: Math.round(element.getBoundingClientRect().height), width: Math.round(element.getBoundingClientRect().width) }))))
+    .map(element => ({ text: element.textContent!.trim().slice(0, 24), height: Math.floor(element.getBoundingClientRect().height), width: Math.floor(element.getBoundingClientRect().width) }))))
     .filter(({ height, width }) => height < MIN_TAP_PX || width < MIN_TAP_PX);
   expect(await short(carousel, ":scope > div button")).toEqual([]);
   await carousel.getByRole("button", { name: "Docker", exact: true }).click();
@@ -821,6 +821,17 @@ test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a 
   // Every link on the back: each linked work, the work sample, the product's site and How evidence works.
   expect((await short(docker, ".card-back a")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
   expect(await docker.locator(".card-back .artifact-list a").count()).toBe(3);
+  // A work sample's link, on its own line or beside its site, is a target too.
+  await docker.getByRole("button", { name: "Close details" }).click();
+  for (const name of ["Exa", "Clay"]) {
+    await carousel.getByRole("button", { name, exact: true }).click();
+    const card = carousel.getByRole("article", { name: `${name} card` });
+    await card.getByRole("button", { name: "Details", exact: true }).click();
+    expect((await short(card, ".card-back a")).filter(({ height }) => height < MIN_TAP_PX), name).toEqual([]);
+    await card.getByRole("button", { name: "Close details" }).click();
+  }
+  await carousel.getByRole("button", { name: "Docker", exact: true }).click();
+  await docker.getByRole("button", { name: "Details", exact: true }).click();
   // Taller, the back's two links still sit one under the other, not run together on one line.
   const [open, evidence] = await Promise.all([".outbound-link", ".evidence-link"].map(selector => docker.locator(`.card-back ${selector}`).boundingBox()));
   expect(evidence!.y).toBeGreaterThanOrEqual(open!.y + open!.height);
