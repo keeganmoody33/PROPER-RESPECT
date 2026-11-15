@@ -2,7 +2,6 @@ import { HOMEPAGE_BRANDS, HOMEPAGE_SITE_TRAITS } from "@/src/data/homepage-brand
 import type { BrandSiteTraits } from "@/src/domain/brand-site-traits";
 import sampleUsage from "@/src/data/homepage-sample-usage.json";
 import { directoryEntry } from "@/src/domain/product-directory";
-import type { ProductUses } from "@/src/domain/product-uses";
 import type { Cost } from "@/src/domain/cost";
 import type { PublicMeasurement } from "@/src/domain/measurements";
 import type { ActivityModule, PublicProfile } from "@/src/domain/public-profile";
@@ -104,38 +103,19 @@ function sampleActivity(slug: string): ActivityModule | undefined {
   return { ...SAMPLE, period, kind: "headlineMetrics", primary, supporting: [...supporting] };
 }
 
-/** Each work with the owner's line about it, which the back shows under its link. */
-const dockerArtifacts = [
-  { title: "Sample Compose apps (awesome-compose)", url: "https://github.com/docker/awesome-compose", label: "Compose stacks I start new services from" },
-  { title: "Official Postgres image", url: "https://hub.docker.com/_/postgres", label: "The database every scraper writes to" },
-  { title: "Multi-stage build guide", url: "https://docs.docker.com/build/building/multi-stage/", label: "How I keep agent images small" },
-];
-const dockerActivity: ActivityModule = {
-  ...SAMPLE, period: { start: "2024-01-01", end: "2026-08-31" }, kind: "artifactCollection", total: dockerArtifacts.length, artifacts: dockerArtifacts,
-};
 /** Owner-reported monthly prices: Cloudflare's Workers Paid plan. */
 const CLOUDFLARE_MONTHLY_USD = 5;
 /**
- * Clay's Launch plan as clay.com/pricing showed it on 14 Nov 2026, billed annually: $54/mo for 180,000 actions a year and
- * $113/mo for 30,000 data credits a year. The sample's year of use stays inside both.
+ * A daily user's rows since 2023, about 1,600 a working day. clay.com/pricing (15 Nov 2026) names no per-row credit cost, so the card
+ * states no price or credits: it couldn't show that one plan covers this many rows.
  */
-const CLAY_LAUNCH_MONTHLY_USD = 167;
-const SAMPLE_YEAR = { start: "2025-09-01", end: "2026-08-31" } as const;
-
-const CLAY_ROWS_ENRICHED = 11_800, CLAY_TABLES_BUILT = 52, CLAY_DATA_CREDITS_USED = 27_600;
-
-/** Exact numbers an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. Each metric is a verb, since its unit already names what was counted. */
-const CLAY_MEASURED = {
+const CLAY_ROWS_ENRICHED = 1_500_000;
+/** An exact number an owner chose to publish. "synthetic" is the schema's word for a sample that is not anyone's account. The metric is a verb, since its unit already names what was counted. */
+const clayMeasurements: PublicMeasurement[] = [{
   capturedAt: SAMPLE.capturedAt, status: "measured", identityBasis: "OWNER_SUPPLIED", activityActor: "UNKNOWN", sample: "synthetic", derivation: "SOURCE_REPORTED",
   scope: "WORKSPACE", coverage: "COMPLETE", temporality: "CUMULATIVE", aggregation: "NON_ADDITIVE",
-} as const;
-const CLAY_YEAR = { kind: "date", ...SAMPLE_YEAR, timezone: "UTC" } as const;
-/** A daily user's year on Launch: about 45 rows a working day, a table a week, and data credits inside the plan's 30,000. */
-const clayMeasurements: PublicMeasurement[] = [
-  { ...CLAY_MEASURED, metric: "enriched", value: String(CLAY_ROWS_ENRICHED), unit: "rows", period: CLAY_YEAR },
-  { ...CLAY_MEASURED, metric: "built", value: String(CLAY_TABLES_BUILT), unit: "tables", period: CLAY_YEAR },
-  { ...CLAY_MEASURED, metric: "used", value: String(CLAY_DATA_CREDITS_USED), unit: "data_credits", period: CLAY_YEAR },
-];
+  metric: "enriched", value: String(CLAY_ROWS_ENRICHED), unit: "rows", period: { kind: "date", start: "2023-01-01", end: "2026-08-31", timezone: "UTC" },
+}];
 
 type ExampleSource = Readonly<{
   slug: string;
@@ -148,9 +128,9 @@ type ExampleSource = Readonly<{
   headline: string;
   /** A phrase within the headline to set apart, where the product's site sets part of its own heading in its colour. */
   headlineAccent?: string;
+  /** The owner's one plain line about the tool, shown on the back. */
   note: string;
-  uses: readonly string[];
-  /** GitHub keeps its contribution calendar and Docker lists its links; every other example reads homepage-sample-usage.json. */
+  /** GitHub keeps its contribution calendar; every other example reads homepage-sample-usage.json. */
   activity?: ActivityModule;
   /** A paid link, sent to the product's own site: a real card would carry the owner's own code. */
   linkType?: "AFFILIATE" | "REFERRAL";
@@ -165,74 +145,63 @@ type ExampleSource = Readonly<{
 /**
  * A go-to-market engineer's stack as it changes. Only what a card owner would add lives here;
  * every name, domain and link comes from the directory, and every brand from HOMEPAGE_BRANDS.
- * Every number is an illustrative sample, labelled so on the card.
+ * Each card is its tool's own meter: one number in the unit the tool reports, over a stated period, read like a heavy current user's.
+ * The headline is the one line saying what it is used for. Every number is an illustrative sample, labelled so on the card.
  */
 const EXAMPLES: readonly ExampleSource[] = [
   {
-    slug: "clay", featured: true, capability: "Published usage numbers", level: "DAILY", since: "2023", headline: "My lead lists, enriched.", note: "Lists that took a week of spreadsheets take an hour.",
-    uses: ["enrich-leads", "find-contacts"], measurements: clayMeasurements,
-    cost: { amount: CLAY_LAUNCH_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01", period: SAMPLE_YEAR },
-    usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
-    caveat: "Its work-sample link opens Clay's public templates.", backHint: "Periods, sources and a work sample inside",
+    slug: "clay", featured: true, capability: "One published number", level: "DAILY", since: "2023", headline: "Contact enrichment for my sales team.", note: "Lists that took a week of spreadsheets take an hour.",
+    measurements: clayMeasurements, usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
+    caveat: "Its work-sample link opens Clay's public templates.", backHint: "The period and a work sample inside",
   },
   {
     slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.", headlineAccent: "every project's code",
-    note: "Contribution counts don't measure quality or hours.", uses: ["host-code", "review-pull-requests", "run-ci"], activity: githubActivity,
+    note: "Contribution counts don't measure quality or hours.", activity: githubActivity,
     caveat: "A captured contribution calendar. Contributions include more than commits; coverage follows the source account and date range.",
     source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
   },
   {
     slug: "cloudflare", featured: true, capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
-    uses: ["manage-dns", "run-workers", "cache-and-protect"],
     cost: { amount: CLOUDFLARE_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
   },
   {
-    slug: "docker", featured: true, capability: "A list of linked work", level: "WEEKLY", since: "2024", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
-    uses: ["run-local-services", "package-apps"], activity: dockerActivity,
-    caveat: "The listed links go to public Docker pages, standing in for an owner's own repositories and images.",
+    slug: "docker", featured: true, capability: "A running total", level: "WEEKLY", since: "2024", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
   },
   {
     slug: "firecrawl", featured: true, capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", headlineAccent: "clean Markdown", note: "I pull docs and product pages through it.",
-    uses: ["scrape-pages", "crawl-sites"], linkType: "REFERRAL",
+    linkType: "REFERRAL",
     caveat: "A real card's referral link carries its owner's code. This sample's goes to Firecrawl's home page and credits nobody.",
   },
   {
     slug: "n8n", capability: "Paused, and why", level: "PAUSED", since: "2024", headline: "Scheduled jobs and webhooks.", note: "Paused while my nightly jobs move to plain cron.",
-    uses: ["schedule-jobs", "move-data"],
   },
   {
     slug: "claude-code", capability: "Coding days", level: "DAILY", since: "2025", headline: "Writes and fixes my scrapers and scripts.", note: "I use it daily on enrichment and agent code.",
-    uses: ["write-features", "fix-bugs", "automate-chores"],
   },
   {
     slug: "exa", capability: "A demo link on the back", level: "WEEKLY", since: "2025", headline: "Search my agents can call.", note: "I use it to find company pages and recent news.",
-    uses: ["search-for-agents", "find-companies"], usageLink: { url: "https://exa.ai/search", label: "DEMO" },
+    usageLink: { url: "https://exa.ai/search", label: "DEMO" },
     caveat: "The demo link goes to Exa's own public search page, standing in for an owner's recording.", backHint: "A demo link inside",
   },
   {
-    slug: "porkbun", capability: "Running totals", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Where every side project's domain starts.", note: "I buy most of my domains here.",
-    uses: ["register-domains", "manage-dns"],
+    slug: "porkbun", capability: "Go-to, now and then", level: "OCCASIONAL", goTo: true, since: "2021", headline: "Domains for my side projects.", note: "I buy most of my domains here.",
   },
   {
     slug: "spider", capability: "Affiliate link, disclosed", level: "OCCASIONAL", since: "2026", headline: "Crawls whole sites for my agents.", note: "I run the large crawls on it.",
-    uses: ["crawl-sites", "feed-agents"], linkType: "AFFILIATE",
+    linkType: "AFFILIATE",
     caveat: "A real card's affiliate link carries its owner's code. This sample's goes to Spider's home page and credits nobody.",
   },
   {
     slug: "open-places", capability: "Used now and then", level: "OCCASIONAL", since: "2026", headline: "Local business lists by category and city.", note: "I start local prospect lists here.",
-    uses: ["build-business-lists", "target-by-area"],
   },
   {
-    slug: "grok-bot", capability: "Still testing", level: "TESTING", since: "2026", headline: "An agent with its own cloud computer.", note: "I'm testing it on research and outreach chores.",
-    uses: ["delegate-tasks", "research-topics"],
+    slug: "grok-bot", capability: "Still testing", level: "TESTING", since: "2026", headline: "Research and outreach chores.", note: "I'm testing it to see what it can take off my plate.",
   },
   {
-    slug: "elicit", capability: "Stopped using, and why", level: "STOPPED", since: "2026", headline: "Reading research papers faster.", note: "I stopped once my market study was done.",
-    uses: ["find-papers", "extract-study-data"],
+    slug: "elicit", capability: "Stopped using, and why", level: "STOPPED", since: "2026", headline: "Screening papers for a market study.", note: "I stopped once my market study was done.",
   },
   {
-    slug: "context-dev", capability: "Testing, week by week", level: "TESTING", since: "2026", headline: "Brand and company data from a domain.", note: "I'm testing it for logos and company details.",
-    uses: ["pull-brand-data", "enrich-companies"],
+    slug: "context-dev", capability: "Testing, week by week", level: "TESTING", since: "2026", headline: "Logos and company details by domain.", note: "I'm testing it to fill in company details on cards.",
   },
 ];
 
@@ -242,7 +211,6 @@ export function homepageExamples(): HomepageExample[] {
     if (!entry) throw new Error(`Homepage example "${example.slug}" is not in the product directory.`);
     if (example.headlineAccent && !example.headline.includes(example.headlineAccent)) throw new Error(`Homepage example "${example.slug}" sets apart a phrase its headline doesn't hold.`);
     const brand = HOMEPAGE_BRANDS[entry.slug], site = HOMEPAGE_SITE_TRAITS[entry.slug];
-    const uses: ProductUses = { picks: [...example.uses] };
     const activity = example.activity ?? sampleActivity(entry.slug);
     return {
       id: entry.slug,
@@ -251,7 +219,7 @@ export function homepageExamples(): HomepageExample[] {
       card: {
         product: { name: entry.name, slug: entry.slug, domain: entry.domain, description: entry.description, ...(brand ? { brand } : {}) },
         status: levelStatus(example.level), level: example.level, ...(example.goTo ? { goTo: true } : {}), headline: example.headline, note: example.note, startedAt: `${example.since}-01-01`,
-        uses, primaryLink: { type: example.linkType ?? "CANONICAL", url: entry.website, label: `Open ${entry.name}` },
+        primaryLink: { type: example.linkType ?? "CANONICAL", url: entry.website, label: `Open ${entry.name}` },
         ...(activity ? { activity } : {}),
         ...(example.measurements ? { measurements: example.measurements } : {}),
         ...(example.cost ? { cost: example.cost } : {}),

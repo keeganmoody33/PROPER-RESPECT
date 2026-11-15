@@ -3,10 +3,11 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import { ProductExample } from "@/components/product-example";
+import { ProductCard } from "@/components/product-card";
 import { isHttpsUrl, isHttpUrl } from "@/src/domain/http-url";
 import { productBrandSnapshotSchema } from "@/src/domain/product-brand";
 import { directoryEntry } from "@/src/domain/product-directory";
-import { listedUses, productUseLabels } from "@/src/domain/product-uses";
+import { productUseLabels } from "@/src/domain/product-uses";
 import { activityModuleSchema, publicProfileSchema } from "@/src/domain/public-profile";
 import { usageLinkHost, usageLinkLabelText } from "@/src/domain/usage-links";
 import { activityHeadline } from "@/src/domain/activity-headline";
@@ -55,19 +56,18 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
 });
 
 const CAPABILITY_LIMIT = 28;
-const CLAY_MEASUREMENTS = 3;
 
 test("each example names the part of a card it shows, in a few words no other example uses", () => {
   expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
-    ["clay", "Published usage numbers"],
+    ["clay", "One published number"],
     ["github", "A year of contributions"],
     ["cloudflare", "Go-to, with what it costs"],
-    ["docker", "A list of linked work"],
+    ["docker", "A running total"],
     ["firecrawl", "Referral link, disclosed"],
     ["n8n", "Paused, and why"],
     ["claude-code", "Coding days"],
     ["exa", "A demo link on the back"],
-    ["porkbun", "Running totals"],
+    ["porkbun", "Go-to, now and then"],
     ["spider", "Affiliate link, disclosed"],
     ["open-places", "Used now and then"],
     ["grok-bot", "Still testing"],
@@ -94,19 +94,19 @@ function frontDrawing({ card }: (typeof examples)[number]): string {
   return activity?.kind ?? "numbers";
 }
 
-test("the five featured fronts each draw something different, and between them show go-to, cost and a disclosed referral link", () => {
+test("the five featured fronts show go-to, cost and a disclosed referral link between them; two of them are a number alone", () => {
   const featured = examples.filter(example => example.featured);
   expect(featured.map(example => [example.id, frontDrawing(example), example.card.goTo === true, Boolean(example.card.cost), example.card.primaryLink?.type])).toEqual([
-    ["clay", "numbers", false, true, "CANONICAL"],
+    ["clay", "numbers", false, false, "CANONICAL"],
     ["github", "contributionCalendar", true, false, "CANONICAL"],
     ["cloudflare", "per day bars", true, true, "CANONICAL"],
-    ["docker", "artifactCollection", false, false, "CANONICAL"],
+    ["docker", "headlineMetrics", false, false, "CANONICAL"],
     ["firecrawl", "per week bars", false, false, "REFERRAL"],
   ]);
 });
 
 test("Clay's and Exa's cards say what is behind Details: Clay's back holds the most, and Exa's holds the demo its label names", () => {
-  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "Periods, sources and a work sample inside"], ["exa", "A demo link inside"]]);
+  expect(examples.filter(({ backHint }) => backHint).map(({ id, backHint }) => [id, backHint])).toEqual([["clay", "The period and a work sample inside"], ["exa", "A demo link inside"]]);
 });
 
 test("every headline and note is a short line under the card's limit", () => {
@@ -117,10 +117,10 @@ test("every headline and note is a short line under the card's limit", () => {
 test("each example shows a different part of a card: its link, cost, work sample, published numbers and kind of activity", () => {
   expect(examples.map(({ id, card }) => [id, card.primaryLink?.type, card.cost && `${card.cost.amount} ${card.cost.currency} ${card.cost.cadence} ${card.cost.basis}`,
     card.usageLink && `${usageLinkLabelText(card.usageLink.label)} / ${usageLinkHost(card.usageLink.url)}`, card.measurements?.length, card.activity?.kind])).toEqual([
-    ["clay", "CANONICAL", "167 USD MONTHLY OWNER_REPORTED", "See how I use it / clay.com", CLAY_MEASUREMENTS, undefined],
+    ["clay", "CANONICAL", undefined, "See how I use it / clay.com", 1, undefined],
     ["github", "CANONICAL", undefined, undefined, undefined, "contributionCalendar"],
     ["cloudflare", "CANONICAL", "5 USD MONTHLY OWNER_REPORTED", undefined, undefined, "timeSeries"],
-    ["docker", "CANONICAL", undefined, undefined, undefined, "artifactCollection"],
+    ["docker", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
     ["firecrawl", "REFERRAL", undefined, undefined, undefined, "timeSeries"],
     ["n8n", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["claude-code", "CANONICAL", undefined, undefined, undefined, "codingActivity"],
@@ -144,29 +144,16 @@ test("every sample is labelled illustrative, never account data: activity as a s
 });
 
 /**
- * Clay's Launch plan as clay.com/pricing showed it on 14 Nov 2026, billed annually: 180,000 actions a year ($54/mo) and
- * 30,000 data credits a year ($113/mo), $167/mo together.
+ * clay.com/pricing on 15 Nov 2026 lists Launch at $167/mo billed annually with 30,000 data credits a year, the largest Launch tier at
+ * 600,000 a year, and no per-row credit cost. About 410,000 rows a year is past what one plan's price can be shown to cover, so the card states no cost.
  */
-const CLAY_LAUNCH = { monthlyUsd: 167, actionsUsd: 54, dataCreditsUsd: 113, dataCreditsPerYear: 30_000 } as const;
-const SAMPLE_YEAR = "2025-09-01 to 2026-08-31";
-
-test("Clay's three numbers and its price fit one plan over one stated year: a daily user's rows, tables and data credits on Launch", () => {
+test("Clay leads with one number a heavy user earns, about 1.5M rows enriched since 2023, and claims no price or credits it can't back", () => {
   const clay = examples.find(({ id }) => id === "clay")!.card;
   expect(clay.measurements?.map(row => [row.metric, row.value, row.unit, row.period.kind === "date" ? `${row.period.start} to ${row.period.end}` : row.period.kind]))
-    .toEqual([
-      ["enriched", "11800", "rows", SAMPLE_YEAR],
-      ["built", "52", "tables", SAMPLE_YEAR],
-      ["used", "27600", "data_credits", SAMPLE_YEAR],
-    ]);
-  expect(clay.cost).toEqual({ amount: CLAY_LAUNCH.monthlyUsd, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01", period: { start: "2025-09-01", end: "2026-08-31" } });
-  expect(CLAY_LAUNCH.actionsUsd + CLAY_LAUNCH.dataCreditsUsd).toBe(CLAY_LAUNCH.monthlyUsd);
+    .toEqual([["enriched", "1500000", "rows", "2023-01-01 to 2026-08-31"]]);
+  expect([clay.startedAt, clay.level, clay.cost, clay.headline]).toEqual(["2023-01-01", "DAILY", undefined, "Contact enrichment for my sales team."]);
   expect(clay.usageLink).toEqual({ url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" });
   expect(clay.note).toBe("Lists that took a week of spreadsheets take an hour.");
-  const [rows, tables, credits] = clay.measurements!.map(row => Number(row.value));
-  // A found address costs at least a data credit, the year's credits fit the plan's, and a daily user builds about a table a week.
-  expect(credits).toBeGreaterThanOrEqual(rows);
-  expect(credits).toBeLessThanOrEqual(CLAY_LAUNCH.dataCreditsPerYear);
-  expect(tables).toBeGreaterThanOrEqual(26);
 });
 
 test("Clay's card is no tutorial: neither face draws a lead list, a provider waterfall or a match rate", () => {
@@ -176,15 +163,7 @@ test("Clay's card is no tutorial: neither face draws a lead list, a provider wat
   expect([clay.find("table").length, clay.text().match(/waterfall|emails found|job change|invented rows|provider/gi)]).toEqual([0, null]);
 });
 
-test("Docker lists three things as links to public pages, and every outbound link on every example is https", () => {
-  const docker = examples.find(({ id }) => id === "docker")!.card.activity;
-  if (docker?.kind !== "artifactCollection") throw new Error("Docker artifacts missing");
-  expect(docker.total).toBe(docker.artifacts.length);
-  expect(docker.artifacts.map(({ title, url }) => [title, url])).toEqual([
-    ["Sample Compose apps (awesome-compose)", "https://github.com/docker/awesome-compose"],
-    ["Official Postgres image", "https://hub.docker.com/_/postgres"],
-    ["Multi-stage build guide", "https://docs.docker.com/build/building/multi-stage/"],
-  ]);
+test("every outbound link on every example is https", () => {
   const urls = examples.flatMap(({ card }) => [card.primaryLink?.url, card.usageLink?.url, ...(card.activity?.kind === "artifactCollection" ? card.activity.artifacts.map(({ url }) => url) : [])]).filter(url => url !== undefined);
   expect(urls.filter(url => !isHttpsUrl(url))).toEqual([]);
 });
@@ -199,14 +178,14 @@ test("a stopped and a paused example each say why in their note", () => {
 test("each sample series is drawn as written, one point a day or a week, and its period covers exactly those points", () => {
   const series = examples.flatMap(({ id, card }) => card.activity?.kind === "timeSeries" ? [{ id, activity: card.activity }] : []);
   expect(series.map(({ id, activity }) => [id, activity.label, activity.unit, activity.points.length, activity.period, activity.points.at(-1)?.value])).toEqual([
-    ["cloudflare", "requests served", "per day", 31, { start: "2026-08-01", end: "2026-08-31" }, 7940],
-    ["firecrawl", "pages scraped", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 1100],
-    ["n8n", "workflow runs", "per week", 12, { start: "2025-01-13", end: "2025-04-06" }, 0],
-    ["exa", "searches run", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 360],
-    ["spider", "pages crawled", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 3100],
-    ["open-places", "businesses exported", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 85],
+    ["cloudflare", "requests", "per day", 31, { start: "2026-08-01", end: "2026-08-31" }, 79400],
+    ["firecrawl", "pages scraped", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 11000],
+    ["n8n", "executions", "per week", 12, { start: "2025-01-13", end: "2025-04-06" }, 0],
+    ["exa", "search requests", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 3600],
+    ["spider", "pages crawled", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 31000],
+    ["open-places", "places exported", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 850],
     ["elicit", "papers screened", "per week", 12, { start: "2026-01-05", end: "2026-03-29" }, 0],
-    ["context-dev", "domains looked up", "per week", 6, { start: "2026-07-20", end: "2026-08-30" }, 22],
+    ["context-dev", "credits used", "per week", 6, { start: "2026-07-20", end: "2026-08-30" }, 220],
   ]);
   const steps = series.map(({ id, activity }) => [id, [...new Set(activity.points.slice(1).map((point, index) => (Date.parse(point.date) - Date.parse(activity.points[index].date)) / DAY_MS))]]);
   expect(steps).toEqual(series.map(({ id, activity }) => [id, [activity.unit === "per day" ? 1 : DAYS_PER_WEEK]]));
@@ -250,7 +229,8 @@ test("no two sample charts share a shape, and each shape tells its example's sto
 });
 
 test("running totals cover the years since the owner started, not one month", () => {
-  const porkbun = examples.find(({ id }) => id === "porkbun")!.card;
+  const [docker, porkbun] = ["docker", "porkbun"].map(slug => examples.find(({ id }) => id === slug)!.card);
+  expect([docker.startedAt, docker.activity?.period]).toEqual(["2024-01-01", { start: "2024-01-01", end: "2026-08-31" }]);
   expect([porkbun.startedAt, porkbun.activity?.period]).toEqual(["2021-01-01", { start: "2021-03-01", end: "2026-08-31" }]);
 });
 
@@ -272,24 +252,24 @@ test("Claude Code leads with the coding days it draws, and its sessions are thei
   expect(activity.period).toEqual({ start: "2026-08-01", end: "2026-08-31" });
 });
 
-test("every example says what it is used for, in two or three of its product's own listed uses", () => {
-  expect(examples.map(({ id, card }) => [id, productUseLabels(id, card.uses)])).toEqual([
-    ["clay", ["enrich lead and account lists", "find contact details"]],
-    ["github", ["host my code and its history", "review and merge pull requests", "run tests and deploys on every push"]],
-    ["cloudflare", ["run DNS for my domains", "run code at the edge with Workers", "cache and protect my sites"]],
-    ["docker", ["run databases and services locally", "package apps to run anywhere"]],
-    ["firecrawl", ["turn web pages into Markdown", "crawl whole sites"]],
-    ["n8n", ["run jobs on a schedule", "move data between systems"]],
-    ["claude-code", ["build features from a description", "find and fix bugs", "automate repetitive engineering work"]],
-    ["exa", ["give my agents web search", "find companies and people that fit a description"]],
-    ["porkbun", ["register and renew domains", "manage DNS records"]],
-    ["spider", ["crawl sites quickly at volume", "feed web data to my agents"]],
-    ["open-places", ["build lists of local businesses", "find businesses in one area or category"]],
-    ["grok-bot", ["hand off tasks to an agent", "research a topic for me"]],
-    ["elicit", ["find papers on a question", "pull data out of studies into a table"]],
-    ["context-dev", ["pull a company's logo, colors and fonts", "look up company details by domain"]],
+test("every example says what it is used for in one short plain line, its headline, and adds no list of uses beside it", () => {
+  expect(examples.map(({ id, card }) => [id, card.headline])).toEqual([
+    ["clay", "Contact enrichment for my sales team."],
+    ["github", "Where every project's code lives."],
+    ["cloudflare", "DNS, Workers and caching for my projects."],
+    ["docker", "Packs scrapers and agents to run anywhere."],
+    ["firecrawl", "Turns pages into clean Markdown for my agents."],
+    ["n8n", "Scheduled jobs and webhooks."],
+    ["claude-code", "Writes and fixes my scrapers and scripts."],
+    ["exa", "Search my agents can call."],
+    ["porkbun", "Domains for my side projects."],
+    ["spider", "Crawls whole sites for my agents."],
+    ["open-places", "Local business lists by category and city."],
+    ["grok-bot", "Research and outreach chores."],
+    ["elicit", "Screening papers for a market study."],
+    ["context-dev", "Logos and company details by domain."],
   ]);
-  expect(examples.filter(({ id, card }) => listedUses(id, card.uses)?.picks.length !== card.uses?.picks.length).map(({ id }) => id)).toEqual([]);
+  expect(examples.filter(({ card }) => productUseLabels(card.product.slug, card.uses).length).map(({ id }) => id)).toEqual([]);
 });
 
 test("every example with a committed brand carries it, matched to its own product", () => {
@@ -315,25 +295,51 @@ test("GitHub's sample contribution calendar covers one year", () => {
   expect(github.source?.href).toBe("https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference");
 });
 
-test("each example's card leads with a number that means something: a period's total, or the peak of one paused or stopped, never a zero", () => {
-  expect(examples.flatMap(({ id, card, countsPerPeriod }) => {
-    const headline = card.activity && activityHeadline(card.activity, noLongerInUse(card), { countsPerPeriod });
-    return headline ? [[id, headline.value, headline.label]] : [];
-  })).toEqual([
-    ["github", 1121, "contributions"],
-    ["cloudflare", 187870, "requests served over 31 days"],
-    ["docker", 3, "linked works"],
-    ["firecrawl", 5520, "pages scraped over 12 weeks"],
-    ["n8n", 341, "workflow runs a week at its peak"],
-    ["claude-code", 24, "active days"],
-    ["exa", 3690, "searches run over 12 weeks"],
-    ["porkbun", 23, "domains registered"],
-    ["spider", 26300, "pages crawled over 12 weeks"],
-    ["open-places", 545, "businesses exported over 12 weeks"],
-    ["grok-bot", 12, "tasks handed off"],
-    ["elicit", 45, "papers screened a week at its peak"],
-    ["context-dev", 76, "domains looked up over 6 weeks"],
+/** The one big number a card's front leads with, in its tool's own unit, the period it covers, and the tool's own supporting counts. */
+function meter({ card, countsPerPeriod }: (typeof examples)[number]) {
+  const measured = card.measurements?.[0];
+  if (measured) {
+    const period = measured.period.kind === "date" ? measured.period : undefined;
+    return [Number(measured.value), `${measured.unit} ${measured.metric}`, period?.start, period?.end, []];
+  }
+  const activity = card.activity!;
+  const headline = activityHeadline(activity, noLongerInUse(card), { countsPerPeriod })!;
+  const supporting = activity.kind === "headlineMetrics" || activity.kind === "codingActivity" ? activity.supporting.map(({ label }) => label) : [];
+  return [headline.value, headline.label, activity.period?.start, activity.period?.end, supporting];
+}
+
+test("every card is its tool's own meter: one big number in the tool's unit over a stated period, and at most two counts the tool reports beside it", () => {
+  expect(examples.map(example => [example.id, ...meter(example)])).toEqual([
+    ["clay", 1_500_000, "rows enriched", "2023-01-01", "2026-08-31", []],
+    ["github", 1121, "contributions", "2025-09-01", "2026-08-31", []],
+    ["cloudflare", 1_878_700, "requests over 31 days", "2026-08-01", "2026-08-31", []],
+    ["docker", 48_200, "image pulls", "2024-01-01", "2026-08-31", []],
+    ["firecrawl", 55_200, "pages scraped over 12 weeks", "2026-06-08", "2026-08-30", []],
+    ["n8n", 1023, "executions a week at its peak", "2025-01-13", "2025-04-06", []],
+    ["claude-code", 24, "active days", "2026-08-01", "2026-08-31", ["Sessions", "Lines changed"]],
+    ["exa", 36_900, "search requests over 12 weeks", "2026-06-08", "2026-08-30", []],
+    ["porkbun", 23, "domains registered", "2021-03-01", "2026-08-31", []],
+    ["spider", 263_000, "pages crawled over 12 weeks", "2026-06-08", "2026-08-30", []],
+    ["open-places", 5450, "places exported over 12 weeks", "2026-06-08", "2026-08-30", []],
+    ["grok-bot", 38, "tasks handed off", "2026-08-01", "2026-08-31", []],
+    ["elicit", 450, "papers screened a week at its peak", "2026-01-05", "2026-03-29", []],
+    ["context-dev", 760, "credits used over 6 weeks", "2026-07-20", "2026-08-30", []],
   ]);
+  // A card publishes numbers or draws activity, never both, so its front can't show two big numbers.
+  expect(examples.filter(({ card }) => card.measurements?.length && card.activity).map(({ id }) => id)).toEqual([]);
+  expect(examples.filter(({ card }) => (card.measurements?.length ?? 0) > 1).map(({ id }) => id)).toEqual([]);
+});
+
+/** The numbers a front sets large: its lead number, and the tool's own counts beside it. */
+const BIG_NUMBER = ".card-front :is(.usage-measurement-stats strong, .card-activity-preview > p:first-child strong)";
+const SUPPORTING = ".card-front .activity-preview-metrics dd";
+
+test("each of the fourteen fronts, as the homepage draws it, sets exactly one big number and no more than two supporting counts", () => {
+  const counts = examples.map(example => {
+    const $ = load(renderToStaticMarkup(createElement(ProductCard, { card: example.card, index: 0, sample: true, expandedActivity: true, countsPerPeriod: example.countsPerPeriod })));
+    return [example.id, $(BIG_NUMBER).length, $(SUPPORTING).length <= 2];
+  });
+  expect(counts).toEqual(examples.map(({ id }) => [id, 1, true]));
 });
 
 test("Firecrawl's headline sets its phrase apart as its site does, and every phrase set apart is in its own headline", () => {
