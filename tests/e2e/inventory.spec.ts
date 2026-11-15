@@ -198,7 +198,7 @@ for (const width of [1280, 390]) test(`private collection interaction and revers
   await page.getByLabel("How it fits").selectOption("WEEKLY");
   await page.getByLabel("One of my go-to tools").check();
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
-  await expect(page.getByText("Go-to", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".card-go-to").first()).toHaveText("Go-to");
   await page.getByRole("button", { name: "Go-to", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Example Tool", exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "History", exact: true }).click();
@@ -218,7 +218,7 @@ for (const width of [1280, 390]) test(`private collection interaction and revers
   await page.getByLabel("How it fits").selectOption("WEEKLY");
   await page.getByRole("button", { name: "Save privately", exact: true }).click();
   await page.getByRole("button", { name: "Current", exact: true }).click();
-  await expect(page.getByText("Go-to", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".card-go-to").first()).toHaveText("Go-to");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);

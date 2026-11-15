@@ -9,7 +9,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
-  await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("Published usage numbers");
+  await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("One published number");
   // A phone's row keeps the names and Play; the arrows and count are for wider screens, where the row has room.
   const arrows = width > PHONE_ONLY_MAX_PX;
   const count = carousel.getByText("1 / 5", { exact: true });
@@ -138,14 +138,14 @@ const SHOWN_EXAMPLE = '[aria-label="Product usage examples"] [data-current="true
 
 /** What each example shows, named above its card and as its chooser toggle's description. */
 const CAPABILITIES: Readonly<Record<string, string>> = {
-  Clay: "Published usage numbers",
+  Clay: "One published number",
   "Claude Code": "Coding days",
   Firecrawl: "Referral link, disclosed",
   Exa: "A demo link on the back",
   Cloudflare: "Go-to, with what it costs",
-  Porkbun: "Running totals",
+  Porkbun: "Go-to, now and then",
   Spider: "Affiliate link, disclosed",
-  Docker: "A list of linked work",
+  Docker: "A running total",
   "Open Places": "Used now and then",
   "Grok Bot": "Still testing",
   Elicit: "Stopped using, and why",
@@ -154,25 +154,22 @@ const CAPABILITIES: Readonly<Record<string, string>> = {
 };
 /** What each label promises, said on the card's front: its cost, why it was paused or stopped, and where its demo is. */
 const FRONT_TEXT: Readonly<Record<string, readonly string[]>> = {
-  Clay: ["Costs $167/month · sample"],
-  Cloudflare: ["Costs $5/month · sample", "Owner-selected go-to"],
+  Clay: ["1,500,000rows enriched", "The period and how I use it, inside"],
+  Cloudflare: ["Costs $5/month", "Go-to"],
+  Docker: ["48,200 image pulls"],
   Exa: ["A demo link inside"],
-  n8n: ["Paused while my nightly jobs move to plain cron.", "I used it to"],
-  Elicit: ["I stopped once my market study was done.", "I used it to"],
+  n8n: ["Paused while my nightly jobs move to plain cron."],
+  Elicit: ["I stopped once my market study was done."],
 };
 /** What a card discloses next to its outbound arrow, and what its back shows beyond the front: one capability per example. */
 const FRONT_DISCLOSURE: Readonly<Record<string, string>> = { Firecrawl: "Referral link", Spider: "Affiliate link" };
-/** The linked work a card's front lists: only Docker's sample collects any. */
-const FRONT_LINKS: Readonly<Record<string, readonly string[]>> = {
-  Docker: ["Sample Compose apps (awesome-compose) ↗", "Official Postgres image ↗", "Multi-stage build guide ↗"],
-};
 const BACK_TEXT: Readonly<Record<string, readonly string[]>> = {
   Firecrawl: ["Weekly · Referral link", "Open Firecrawl ↗Referral link"],
   Exa: ["Weekly · Direct link", "Demo ↗exa.ai"],
-  Cloudflare: ["Owner-selected go-to", "Sample cost: $5/month · as of 1 Sep 2026"],
-  Docker: ["Weekly · Direct link", "Illustrative sample, not account data · the owner's own use · Jan 2024 – Aug 2026 · last updated 1 Sep 2026"],
+  Cloudflare: ["Go-to", "Cost: $5/month · as of 1 Sep 2026"],
+  Docker: ["Weekly · Direct link", "the owner's own use · Jan 2024 – Aug 2026 · last updated 1 Sep 2026"],
   n8n: ["Paused · Direct link", "Paused while my nightly jobs move to plain cron."],
-  Clay: ["Daily · Direct link", "Sample cost: $167/month · as of 1 Sep 2026 · 1 Sep 2025 to 31 Aug 2026", "See how I use it ↗clay.com", "How this was measured"],
+  Clay: ["Daily · Direct link", "See how I use it ↗clay.com", "How this was measured"],
 };
 
 const DESKTOP_WIDTH = 1440;
@@ -213,7 +210,7 @@ const BRANDED = [
 const CODING_DAYS = 31;
 const NARROWEST_WIDTH = 320;
 
-[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`branded example cards wear their brand, say what they're used for and show a sample chart or metrics at ${width}px`, async ({ page }) => {
+[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`branded example cards wear their brand, say what they're used for in one line and show a sample chart or number at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -233,23 +230,23 @@ const NARROWEST_WIDTH = 320;
     await expect(card.getByRole("heading", { level: 2, name: brand.name, exact: true })).toHaveCount(1);
     const slot = { square: ".card-topline > .product-logo:not([data-logo-layout])", "app-icon": ".card-topline > .product-logo[data-logo-layout=app-icon]", wordmark: ".card-title .product-logo[data-logo-layout=wordmark]" };
     await expect(card.locator(".card-front").locator(slot[brand.logo])).toBeVisible();
-    // n8n is paused, so its uses are in the past tense.
-    const [lead, list] = brand.name === "n8n" ? ["I used it to", "What I used it for"] : ["I use it to", "What I use it for"];
-    await expect(card.getByText(lead)).toBeVisible();
-    expect(await card.getByRole("list", { name: list }).getByRole("listitem").count()).toBeGreaterThanOrEqual(2);
+    // Its headline is its one use line; no list of uses sits beside it.
+    await expect(card.locator(".card-uses")).toHaveCount(0);
     if (brand.bars) {
       const bars = card.locator(".card-front .activity-bars > span:not([data-zero])");
       await expect(card.locator(".card-front .activity-bars > span")).toHaveCount(brand.bars.count);
       await expect(bars.last()).toHaveCSS("background-color", brand.bars.color);
       await expect(card.locator(".card-front .activity-bars")).toHaveAttribute("role", "img");
     } else {
-      // Clay publishes its numbers and nothing else: no table, no tool craft.
+      // Clay publishes one number and nothing else: no table, no tool craft, and its note says Sample no more than the card's tag does.
       await expect(card.locator(".card-front table, .card-back table")).toHaveCount(0);
+      await expect(card.locator(".card-front .usage-measurement-stats li")).toHaveText(["1,500,000rows enriched"]);
+      await expect(card.locator(".card-front .usage-measurement-note")).toHaveText("Jan 2023 – Aug 2026 · how each was measured is in Details");
       // The disclosures are above the card and on its back, not on its front.
       await expect(card.locator(".card-front")).not.toContainText(/Synthetic sample|Owner-supplied evidence|more reported measurements/);
       // Its footer says what is behind Details, and the button carries the same words.
-      await expect(card.locator(".card-footer > span")).toHaveText("Periods, sources and a work sample inside");
-      await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("Periods, sources and a work sample inside");
+      await expect(card.locator(".card-footer > span")).toHaveText("The period and how I use it, inside");
+      await expect(card.getByRole("button", { name: "Details", exact: true })).toHaveAccessibleDescription("The period and how I use it, inside");
       continue;
     }
     // Every sample was captured on 2026-09-01: the front says when, in words, not "stale".
@@ -270,7 +267,6 @@ const NARROWEST_WIDTH = 320;
     await carousel.getByRole("button", { name, exact: true }).click();
     const card = carousel.getByRole("article", { name: `${name} card` });
     await expect(card).toBeVisible();
-    await expect(card.locator(".card-front .card-artifact-links a")).toHaveText(FRONT_LINKS[name] ?? []);
     // Consecutive parts of the front sit at the front's own row spacing plus their margins: nothing holds space open.
     const overflows = await card.locator(".card-front").evaluate(front => {
       const rowGap = parseFloat(getComputedStyle(front).rowGap);
@@ -594,7 +590,7 @@ test("on a phone Firecrawl's Referral link tag takes its own row under the arrow
 
 /** The most of a figure's width a group separator may take; Exa's tabular comma took all of it. */
 const MAX_SEPARATOR_SHARE = 0.7;
-test("Exa's 3,690 sets its comma at the font's own width, not a tabular figure's, so it never reads 3 , 690", async ({ page }) => {
+test("Exa's 36,900 sets its comma at the font's own width, not a tabular figure's, so it never reads 36 , 900", async ({ page }) => {
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -603,7 +599,7 @@ test("Exa's 3,690 sets its comma at the font's own width, not a tabular figure's
   await openMoreExamples(carousel);
   await carousel.getByRole("button", { name: "Exa", exact: true }).click();
   const number = carousel.getByRole("article", { name: "Exa card" }).locator(".card-front .card-activity-preview > p").first().locator("strong");
-  await expect(number).toHaveText("3,690");
+  await expect(number).toHaveText("36,900");
   // Measured against a figure in the same face, so the check holds whatever fonts the machine has: a tabular comma is a figure's width.
   const ratios = await number.evaluate(element => {
     const figure = document.createRange();
@@ -665,13 +661,13 @@ test("the slideshow waits for the visitor to reach it before it moves on, then m
   // Longer than a slide's turn at the top of the page, with the slideshow below the fold.
   await page.clock.runFor(ADVANCE_MS * 2);
   await carousel.locator("[data-current=true] article").scrollIntoViewIfNeeded();
-  await expect(current).toHaveText("Published usage numbers");
+  await expect(current).toHaveText("One published number");
   // In view, it starts playing (its slides stop announcing themselves) and gets a whole turn before moving on.
   await expect(carousel.locator("[data-slide-status]")).toHaveAttribute("aria-live", "off");
   await page.clock.runFor(ADVANCE_MS - TURN_MARGIN_MS);
-  await expect(current).toHaveText("Published usage numbers");
+  await expect(current).toHaveText("One published number");
   await page.clock.runFor(TURN_MARGIN_MS * 2);
-  await expect(current).not.toHaveText("Published usage numbers");
+  await expect(current).not.toHaveText("One published number");
 });
 
 test("a screen reader finds one heading per card: the face it shows, never the hidden one's", async ({ page }) => {
@@ -821,15 +817,18 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
   await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
   expect(first.numberBottom).toBeLessThanOrEqual(PHONE_HEIGHT);
-  // In reading order the examples follow the heading, and the owner's copy and the call to action follow the examples.
+  // In reading order the line about the site, the heading, the examples, then the call to action.
   const order = await page.evaluate(() => {
     const [heading, examples] = ["#homepage-title", "#example"].map(selector => document.querySelector(selector)!);
-    const copy = [...document.querySelectorAll("main li")].find(item => item.textContent!.startsWith("A public profile"))!;
+    const tagline = [...document.querySelectorAll("main p")].find(line => line.textContent === "A personal record of the tools you use.")!;
     const start = [...document.querySelectorAll("main a")].find(link => link.textContent === "Start your collection")!;
     const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    return { headingThenExamples: before(heading, examples), examplesThenCopy: before(examples, copy), examplesThenStart: before(examples, start) };
+    // The one line saying what the site is sits in the first screen, above the heading and the card.
+    const line = tagline.getBoundingClientRect();
+    return { taglineThenHeading: before(tagline, heading), headingThenExamples: before(heading, examples), examplesThenStart: before(examples, start),
+      taglineShown: line.top >= 0 && line.bottom <= innerHeight && line.bottom <= heading.getBoundingClientRect().top };
   });
-  expect(order).toEqual({ headingThenExamples: true, examplesThenCopy: true, examplesThenStart: true });
+  expect(order).toEqual({ taglineThenHeading: true, headingThenExamples: true, examplesThenStart: true, taglineShown: true });
   // On a phone the slideshow is in view from the start, so it waits for play rather than reflowing the copy under it.
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await page.clock.runFor(ADVANCE_MS * 2);
@@ -852,13 +851,13 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`at ${width}px Firecrawl'
 });
 
 const NARROWEST_HEIGHT = 700;
-test(`at ${NARROWEST_WIDTH}x${NARROWEST_HEIGHT} the card's three numbers are above the examples row in the first screen`, async ({ page }) => {
+test(`at ${NARROWEST_WIDTH}x${NARROWEST_HEIGHT} the card's number is above the examples row in the first screen`, async ({ page }) => {
   await page.setViewportSize({ width: NARROWEST_WIDTH, height: NARROWEST_HEIGHT });
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   const numbers = carousel.getByRole("article", { name: "Clay card" }).locator(".card-front .usage-measurement-stats strong");
-  await expect(numbers).toHaveCount(3);
+  await expect(numbers).toHaveCount(1);
   const barTop = await carousel.getByRole("group", { name: "Choose a product example" }).evaluate(group => group.parentElement!.getBoundingClientRect().top);
   const bottoms = await numbers.evaluateAll(strongs => strongs.map(strong => strong.getBoundingClientRect().bottom));
   expect(bottoms.filter(bottom => bottom > barTop)).toEqual([]);
@@ -894,7 +893,7 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px picking 
   };
   for (const name of ["n8n", "Context.dev", "Clay"]) await pick(name);
   // Read down a card, then pick another: the new card's top comes into view and the row stays under the thumb.
-  await page.evaluate(() => scrollBy(0, 600));
+  await page.evaluate(() => scrollBy(0, 200));
   await pick("GitHub");
   await page.evaluate(() => scrollBy(0, 300));
   await pick("Cloudflare");
@@ -1012,11 +1011,9 @@ test(`at ${PHONE_WIDTH}px every carousel control, back link and front link is a 
   expect(await short(carousel, ":scope > div button")).toEqual([]);
   await carousel.getByRole("button", { name: "Docker", exact: true }).click();
   const docker = carousel.getByRole("article", { name: "Docker card" });
-  expect((await short(docker, ".card-front .card-artifact-links a")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
   await docker.getByRole("button", { name: "Details", exact: true }).click();
-  // Every link on the back: each linked work, the work sample, the product's site and How evidence works.
+  // Every link on the back: the product's site and How evidence works.
   expect((await short(docker, ".card-back a")).filter(({ height }) => height < MIN_TAP_PX)).toEqual([]);
-  expect(await docker.locator(".card-back .artifact-list a").count()).toBe(3);
   // A work sample's link, on its own line or beside its site, is a target too.
   await docker.getByRole("button", { name: "Close details" }).click();
   for (const name of ["Exa", "Clay"]) {
@@ -1092,7 +1089,7 @@ const FEATURED_LOOK = [
   { name: "Clay", slug: "clay", surface: "rgb(244, 243, 240)", band: "rgb(3, 93, 68)", draws: "numbers" },
   { name: "GitHub", slug: "github", surface: "rgb(255, 255, 255)", band: null, draws: "calendar" },
   { name: "Cloudflare", slug: "cloudflare", surface: "rgb(255, 255, 255)", band: "rgb(255, 94, 31)", draws: "per day bars" },
-  { name: "Docker", slug: "docker", surface: "rgb(249, 250, 251)", band: "rgb(15, 17, 23)", draws: "linked works" },
+  { name: "Docker", slug: "docker", surface: "rgb(249, 250, 251)", band: "rgb(15, 17, 23)", draws: "number" },
   { name: "Firecrawl", slug: "firecrawl", surface: "rgb(249, 249, 249)", band: null, draws: "per week bars" },
 ] as const;
 const MAX_FACE_DIFFERENCE_PX = 80;
@@ -1122,7 +1119,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
       const headline = getComputedStyle(face.querySelector(".card-headline")!);
       const bars = [...face.querySelectorAll(".activity-bars > span")];
       const draws = face.querySelector(".usage-measurement-stats") ? "numbers" : face.querySelector(".contribution-calendar") ? "calendar"
-        : face.querySelector(".card-artifact-links") ? "linked works" : bars.length ? `${bars[0].getAttribute("title")!.match(/per (day|week)/)![0]} bars` : "nothing";
+        : bars.length ? `${bars[0].getAttribute("title")!.match(/per (day|week)/)![0]} bars` : face.querySelector(".card-activity-preview strong") ? "number" : "nothing";
       // Every bit of visible text on the front, at its rendered size; the screen-reader table is not drawn.
       const walker = document.createTreeWalker(face, NodeFilter.SHOW_TEXT);
       const sizes: number[] = [];
@@ -1167,8 +1164,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the five featured cards 
     name: look.name, surface: look.surface, band: look.band, draws: look.draws, faces: true, bandReadable: true,
     textAtLeast12: true, leadsWithZero: false, faceDifference: true, backLogo: true, shortTargets: 0,
   })));
-  // No two featured fronts draw the same thing.
-  expect(new Set(looks.map(({ draws }) => draws)).size).toBe(FEATURED_LOOK.length);
+  // Each card leads with its tool's own number, so two featured fronts are a number alone: Clay's published one and Docker's running total.
 });
 
 /** What each featured card takes from its measured site beyond the kit: case, number face, second surface. */
@@ -1188,7 +1184,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the featured cards carry
         eyebrowCase: style(".card-front .eyebrow")!.textTransform,
         numberFont: style(".card-front .card-activity-preview > p:first-child strong, .card-front .usage-measurement-stats strong")!.fontFamily.split(",")[0].replaceAll('"', ""),
         numberColour: style(".card-front .card-activity-preview > p:first-child strong, .card-front .usage-measurement-stats strong")!.color,
-        panel: style(".card-front :is(.contribution-calendar, .card-artifact-links, .usage-chart)")?.backgroundColor,
+        panel: style(".card-front :is(.contribution-calendar, .usage-chart)")?.backgroundColor,
       };
     });
   };
@@ -1199,8 +1195,8 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the featured cards carry
   // GitHub's biggest number is green, as on github.com, in GitHub's own served face: the card serves no Mona Sans Mono, and a system mono spaced it like code.
   expect(looks.GitHub.numberFont).toMatch(/^PRBrand-github-\w+-heading$/);
   expect(looks.GitHub.numberColour).toBe("rgb(8, 135, 43)");
-  // Clay draws no panel, only its number; Docker's linked work on its dark terminal panel; GitHub's calendar framed on white.
-  expect([looks.Clay.panel, looks.Docker.panel, looks.GitHub.panel]).toEqual([undefined, "rgb(14, 18, 23)", "rgb(255, 255, 255)"]);
+  // Clay and Docker draw no panel, only their number; GitHub's calendar framed on white.
+  expect([looks.Clay.panel, looks.Docker.panel, looks.GitHub.panel]).toEqual([undefined, undefined, "rgb(255, 255, 255)"]);
 });
 
 test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone that it scrolls, and reads as one summary line", async ({ page }) => {
@@ -1310,8 +1306,8 @@ test("Clay's Details and Close details keep Clay's lime and black on hover, not 
 });
 
 const MAX_FLIP_SCROLL_PX = 20;
-for (const name of ["Clay", "GitHub", "Cloudflare"]) test(`at ${PHONE_WIDTH}px turning ${name}'s card while it is in view moves neither the page nor the card`, async ({ page }) => {
-  await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH, NARROWEST_WIDTH]) for (const name of FEATURED) test(`at ${width}px turning ${name}'s card while it is in view moves neither the page nor the card`, async ({ page }) => {
+  await page.setViewportSize({ width, height: width === DESKTOP_WIDTH ? VIEWPORT_HEIGHT : PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
@@ -1330,7 +1326,7 @@ for (const name of ["Clay", "GitHub", "Cloudflare"]) test(`at ${PHONE_WIDTH}px t
   expect(after.focused).toBe("H2");
 });
 
-for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px turning a long card over from its foot shows the back's top, and closing it shows Details again`, async ({ page }) => {
+for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px turning a card over from its foot, its top scrolled above the screen, shows the back's top, and closing it shows Details again`, async ({ page }) => {
   await page.setViewportSize({ width, height: PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -1338,8 +1334,8 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px turning 
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   const card = carousel.getByRole("article", { name: "Clay card" });
   const details = card.getByRole("button", { name: "Details", exact: true });
-  // Read to the card's foot, so Details sits low on the screen and the card's top is above it.
-  await details.evaluate(button => scrollBy(0, button.getBoundingClientRect().bottom - innerHeight + 120));
+  // Read to the card's foot, so the card's top is above the screen and Details is still on it.
+  await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().top + 40));
   expect(await card.evaluate(article => article.getBoundingClientRect().top)).toBeLessThan(0);
   await details.click();
   const close = card.getByRole("button", { name: "Close details" });
@@ -1359,48 +1355,12 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px turning 
   expect(box.y + box.height).toBeLessThanOrEqual(row.y);
 });
 
-test(`at ${DESKTOP_WIDTH}px no featured card grows when it turns: each back fits the front's height`, async ({ page }) => {
-  await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await page.evaluate(() => document.fonts.ready);
-  const carousel = page.getByRole("region", { name: "Product usage examples" });
-  const growth: Record<string, number> = {};
-  for (const name of FEATURED) {
-    await carousel.getByRole("button", { name, exact: true }).click();
-    const card = carousel.getByRole("article", { name: `${name} card` });
-    const front = (await card.boundingBox())!.height;
-    await card.getByRole("button", { name: "Details", exact: true }).click();
-    await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
-    growth[name] = Math.max(0, Math.round((await card.boundingBox())!.height - front));
-    await card.getByRole("button", { name: "Close details" }).click();
-  }
-  expect(growth).toEqual(Object.fromEntries(FEATURED.map(name => [name, 0])));
-});
-
-/** How much a featured card may grow when it turns on a phone: the page under it barely moves. */
-const MAX_PHONE_TURN_GROWTH_PX = 20;
-for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px no featured card grows more than ${MAX_PHONE_TURN_GROWTH_PX}px when it turns`, async ({ page }) => {
-  await page.setViewportSize({ width, height: PHONE_HEIGHT });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await page.evaluate(() => document.fonts.ready);
-  const carousel = page.getByRole("region", { name: "Product usage examples" });
-  const growth: Record<string, number> = {};
-  for (const name of FEATURED) {
-    await carousel.getByRole("button", { name, exact: true }).click();
-    const card = carousel.getByRole("article", { name: `${name} card` });
-    // Each card's brand fonts load when it is shown, so its front is measured in them.
-    await page.evaluate(() => document.fonts.ready);
-    const front = (await card.boundingBox())!.height;
-    await card.getByRole("button", { name: "Details", exact: true }).click();
-    await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
-    growth[name] = Math.max(0, Math.round((await card.boundingBox())!.height - front));
-    await card.getByRole("button", { name: "Close details" }).click();
-  }
-  expect(Object.entries(growth).filter(([, grown]) => grown > MAX_PHONE_TURN_GROWTH_PX)).toEqual([]);
-});
-
+/*
+ * No test holds a back to its front's height any more. Each front now leads with one number and a use line (no uses list, no table),
+ * so a back that lists a chart's every value runs longer: at 1440 Clay, Cloudflare and Firecrawl grow 19-30px when they turn, and at
+ * 320 GitHub grows 111px (measured on macOS, 15 Nov 2026). What a visitor feels is the page moving, and the test above holds every
+ * featured card's top and the page still across the turn at every width.
+ */
 /** The most a back's last line may sit above the card's bottom edge: its padding and a little. */
 const MAX_BACK_GAP_PX = 24;
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds what its front cannot, fills its card and closes with the brand's button at ${width}px`, async ({ page }) => {
@@ -1428,24 +1388,19 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`each featured back holds
     expect(await close.evaluate(button => getComputedStyle(button).backgroundColor), name).toBe(name === "Cloudflare" ? "rgb(255, 255, 255)" : detailsFill);
     await close.click();
   }
-  // What only the back holds: Cloudflare's day-by-day values, Docker's links with what each one is.
+  // What only the back holds: Cloudflare's day-by-day values.
   await carousel.getByRole("button", { name: "Cloudflare", exact: true }).click();
   const cloudflare = carousel.getByRole("article", { name: "Cloudflare card" });
   await cloudflare.getByRole("button", { name: "Details", exact: true }).click();
   // Every day, at once where the card is wide; on a phone its highest days, and every day one press away.
-  const everyDay = cloudflare.getByRole("list", { name: "requests served, each day" });
+  const everyDay = cloudflare.getByRole("list", { name: "requests, each day" });
   if (width !== DESKTOP_WIDTH) {
     await expect(cloudflare.getByRole("list", { name: "Highest days" }).getByRole("listitem")).toHaveCount(4);
     await cloudflare.getByRole("button", { name: "All 31 days" }).click();
   }
   await expect(everyDay.getByRole("listitem")).toHaveCount(31);
-  await expect(everyDay.getByRole("listitem").first()).toHaveText("1 Aug2,840");
+  await expect(everyDay.getByRole("listitem").first()).toHaveText("1 Aug28,400");
   await cloudflare.getByRole("button", { name: "Close details" }).click();
-  await carousel.getByRole("button", { name: "Docker", exact: true }).click();
-  const docker = carousel.getByRole("article", { name: "Docker card" });
-  await docker.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(docker.locator(".card-back .artifact-list li")).toHaveCount(3);
-  await expect(docker.locator(".card-back .artifact-list li").first()).toContainText("Compose stacks");
 });
 
 for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`no back of the fourteen leaves an empty band over ${MAX_BACK_GAP_PX}px between its lines or under them at ${width}px`, async ({ page }) => {
@@ -1526,7 +1481,7 @@ test("with motion allowed the card visibly turns over, in under 300ms; with redu
   }
 });
 
-for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`all fourteen fronts say Sample, set no text under 12px and draw bars that stand 3:1 off their backdrop at ${width}px`, async ({ page }) => {
+for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`all fourteen fronts say Sample once, set no text under 12px and draw bars that stand 3:1 off their backdrop at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -1538,6 +1493,19 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`all fourteen fronts say 
     const card = carousel.getByRole("article", { name: `${name} card` });
     await expect(card).toBeVisible();
     await expect(card.locator(".card-front .card-sample-tag"), name).toHaveText("Sample");
+    // Sample once: the card's tag, and on a wide screen the one line above the card; never again on what a visitor sees of the slide.
+    const marks = await carousel.locator("[data-current=true]").evaluate(slide => {
+      const words: string[] = [];
+      const walker = document.createTreeWalker(slide, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const parent = node.parentElement!;
+        if (parent.closest(".card-back, .visually-hidden") || !parent.checkVisibility()) continue;
+        const where = parent.classList.contains("card-sample-tag") ? "tag" : parent.closest(".product-card") ? "card" : "slide";
+        words.push(...(node.textContent!.match(/sample|synthetic|illustrative|invented/gi) ?? []).map(word => `${where}:${word}`));
+      }
+      return words;
+    });
+    expect(marks, name).toEqual(width > PHONE_ONLY_MAX_PX ? ["slide:Sample", "tag:Sample"] : ["tag:Sample"]);
     const front = await card.evaluate(article => {
       const luminance = (colour: string) => {
         const scale = colour.startsWith("color(") ? 1 : 255;
