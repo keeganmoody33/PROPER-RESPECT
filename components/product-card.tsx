@@ -583,6 +583,7 @@ export function ProductCard({
       style={{ ...appearance.style, ...(verifiedAssets ? verifiedProductTypography(verifiedAssets) : productBrandTypography(brand)), ...(isFlipped && frontHeight ? { minHeight: frontHeight } : {}) }}
       data-surface={appearance.surface}
       data-band={appearance.style["--brand-card-band"] ? "" : undefined}
+      data-slab={appearance.style["--brand-card-slab"] ? "" : undefined}
       data-panel={appearance.style["--brand-card-panel"] ? "" : undefined}
       data-verified-brand={verifiedAssets?.productSlug}
       data-brand-revision={verifiedAssets?.revision}

@@ -38,7 +38,8 @@ describe("corners", () => {
       // their boxed or shadowed panels' area (220px+ wide) is drawn with, measured 2026-11-15: Clay's 48px held to 24px, Docker's
       // big 18px cards over its many small square boxes, Cloudflare square, GitHub 6px.
       clay: "24px", "context-dev": "24px", n8n: "24px", docker: "18px", spider: "0px", exa: "6px", firecrawl: "20px", github: "6px", "open-places": "18px",
-      cloudflare: "0px",
+      // Cloudflare's panels are square, but its orange hero is a slab inset from the page with 16px corners: the card is that slab.
+      cloudflare: "16px",
       // No bordered panel was measured on Elicit's first screen, and Porkbun has no site file: the stored radius stays.
       elicit: "8px", porkbun: "8px",
     });
@@ -140,5 +141,15 @@ describe("the hero band", () => {
     // Cloudflare's sits on a 99%-wide orange panel, where its #262626 text is 5.1:1.
     // Docker's dark hero panel is 81% of the width, inside its ruled page frame: a band.
     expect(bands).toEqual({ clay: ["#035d44", "#ffffff"], cloudflare: ["#ff5e1f", "#262626"], docker: ["#0f1117", "#ffffff"] });
+  });
+
+  it("covers the card's whole header when the hero runs flush to the page, and the body then takes the site's second surface", () => {
+    const slabs = Object.fromEntries(Object.keys(HOMEPAGE_BRANDS).flatMap(slug => {
+      const { "--brand-card-slab": slab, "--brand-card-slab-body": body } = kit(slug);
+      return slab ? [[slug, [slab, body]]] : [];
+    }));
+    // Clay's green and Docker's dark hero run square to the edge of what holds them; Cloudflare's rounded, inset slab stays a band.
+    // Under Clay's green the body is its warm grey second surface; Docker measured no light second surface, so its body stays as is.
+    expect(slabs).toEqual({ clay: ["#035d44", "#f4f3f0"], docker: ["#0f1117", undefined] });
   });
 });

@@ -1921,3 +1921,20 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .product-card .card-footer { border-top: 1px var(--brand-card-rule-style, solid) var(--brand-card-rule, var(--card-line)); }
 .product-card :is(.card-activity-coverage, .usage-measurement-note, .contribution-range) { color: var(--brand-card-muted, inherit); }
 .product-card .card-table-preview { --table-ink: var(--brand-card-muted, color-mix(in srgb, var(--brand-card-text, currentColor) 74%, var(--brand-card-background, #fff))); }
+
+/*
+ * A hero that runs flush to its site's edge (Clay's green): one slab of it covers the card's header, logo row and headline, in
+ * the text that reads on it, on both faces. The body under it takes the site's second surface, and the data's panel the page white.
+ */
+.product-card[data-slab] { background: var(--brand-card-slab-body, var(--brand-card-background)); }
+.product-card[data-slab] :is(.card-front > .card-topline, .card-back-topline) {
+  background: var(--brand-card-slab);
+  color: var(--brand-card-band-text);
+  margin: -1rem -1rem 0;
+  padding: 1rem;
+}
+.product-card[data-slab] .card-front > .card-topline { padding-bottom: 0; }
+.product-card[data-slab] .card-front > .card-headline { margin-top: -0.8rem; padding-top: 0.6rem; }
+.product-card[data-slab] .card-back-topline { border-bottom: 0; }
+.product-card[data-slab] .card-visit { border-color: currentColor; color: inherit; }
+.product-card[data-slab] .card-table-preview { background: var(--brand-card-background); border: 1px solid var(--brand-card-rule, var(--card-line)); }

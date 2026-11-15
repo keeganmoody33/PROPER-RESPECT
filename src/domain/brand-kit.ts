@@ -14,7 +14,8 @@ export type BrandCardKit = Partial<Record<
   | "--brand-card-quiet-fill" | "--brand-card-quiet-text" | "--brand-card-chart"
   | "--brand-card-number-font" | "--brand-card-number-colour" | "--brand-card-panel" | "--brand-card-panel-text" | "--brand-card-panel-border"
   | "--brand-card-panel-radius" | "--brand-card-panel-chart" | "--brand-card-pattern-line" | "--brand-card-pattern-pitch"
-  | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font", string>>;
+  | "--brand-card-rule" | "--brand-card-rule-style" | "--brand-card-muted" | "--brand-card-chip-case" | "--brand-card-chip-font"
+  | "--brand-card-slab" | "--brand-card-slab-body", string>>;
 
 // A six-digit hex colour. Accepts "#ff4c00"; rejects "#ff4c0080" (translucent, so its contrast is unknown) and "tomato".
 const SOLID_HEX = /^#[0-9a-f]{6}$/i;
@@ -149,7 +150,10 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
 
   const border = solid(parts?.card?.border);
   kit["--brand-card-border"] = border && contrast(border, surface) >= MIN_BORDER_CONTRAST ? border : derivedBorder(surface, text);
-  const cardRadius = measured?.panelRadiusPx?.value ?? parts?.card?.radiusPx;
+  // A hero drawn as a rounded slab inset from the page (Cloudflare's) is what the card echoes: its corners are the card's.
+  const hero = measured?.hero?.value;
+  const insetRadius = hero?.kind === "colour" && hero.radiusPx ? hero.radiusPx : undefined;
+  const cardRadius = insetRadius ?? measured?.panelRadiusPx?.value ?? parts?.card?.radiusPx;
   if (cardRadius !== undefined) kit["--brand-card-radius"] = `${Math.min(RADIUS.max, Math.max(RADIUS.min, cardRadius))}px`;
 
   // The stored "primary" is whichever button came first on the product's site. On a coloured hero that can be
@@ -188,10 +192,16 @@ export function brandCardKit(snapshot: ProductBrandSnapshot | undefined, surface
   if (chipFont) kit["--brand-card-chip-font"] = measuredFace(chipFont, guide);
 
   // A site whose heading sits on a full-bleed colour shows that colour as a band across the card's top, not as its whole surface.
-  const hero = measured?.hero?.value;
+  // A hero that runs flush to the page's edge (Clay's) covers the card's whole header as one slab, and the body under it takes
+  // the site's second surface where its text still reads; a rounded, inset hero stays a band under the header.
   if (hero?.kind === "colour") {
     kit["--brand-card-band"] = hero.hex;
     kit["--brand-card-band-text"] = readableOn(hero.hex, undefined, text);
+    if (!insetRadius) {
+      kit["--brand-card-slab"] = hero.hex;
+      const body = measured?.panelFill?.value;
+      if (body && contrast(text, body) >= MIN_LABEL_CONTRAST) kit["--brand-card-slab-body"] = body;
+    }
   }
 
   kit["--brand-card-chart"] = brandMark(snapshot, surface, MIN_CHART_CONTRAST, site) ?? text;
