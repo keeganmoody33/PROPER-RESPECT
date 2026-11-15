@@ -1,5 +1,5 @@
 {
- "clay@1440": {
+ "Clay@1440": {
   "front": {
    "sideways": false,
    "small": [],
@@ -8,7 +8,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 24
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -18,10 +18,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "github@1440": {
+ "GitHub@1440": {
   "front": {
    "sideways": false,
    "small": [],
@@ -30,7 +30,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -40,32 +40,36 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "cloudflare@1440": {
+ "Cloudflare@1440": {
   "front": {
    "sideways": false,
    "small": [],
    "targets": [],
-   "cut": [],
+   "cut": [
+    "Cloudflare"
+   ],
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
    "small": [],
    "targets": [],
-   "cut": [],
+   "cut": [
+    "Cloudflare"
+   ],
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "docker@1440": {
+ "Docker@1440": {
   "front": {
    "sideways": false,
    "small": [],
@@ -74,7 +78,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -84,10 +88,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "firecrawl@1440": {
+ "Firecrawl@1440": {
   "front": {
    "sideways": false,
    "small": [],
@@ -96,7 +100,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -106,7 +110,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
  "n8n@1440": {
@@ -114,232 +118,28 @@
    "sideways": false,
    "small": [],
    "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "claude-code@1440": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "exa@1440": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "porkbun@1440": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "spider@1440": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "open-places@1440": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "grok-bot@1440": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "elicit@1440": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "context-dev@1440": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "clay@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
    "cut": [
-    "Person",
-    "Work email",
-    "Waterfall",
-    "Job change"
+    "n8n"
    ],
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 16.8
+   "frameFails": []
   },
   "back": {
    "sideways": false,
    "small": [],
    "targets": [],
    "cut": [
-    "Person",
-    "Work email",
-    "Waterfall",
-    "Job change"
+    "n8n"
    ],
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "github@390": {
+ "Claude Code@1440": {
   "front": {
    "sideways": false,
    "small": [],
@@ -348,7 +148,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -358,10 +158,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "cloudflare@390": {
+ "Exa@1440": {
   "front": {
    "sideways": false,
    "small": [],
@@ -370,7 +170,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -380,10 +180,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "docker@390": {
+ "Porkbun@1440": {
   "front": {
    "sideways": false,
    "small": [],
@@ -392,7 +192,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -402,10 +202,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "firecrawl@390": {
+ "Spider@1440": {
   "front": {
    "sideways": false,
    "small": [],
@@ -414,7 +214,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -424,7 +224,209 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
+  }
+ },
+ "Open Places@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Grok Bot@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Elicit@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Context.dev@1440": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Clay@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "GitHub@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Cloudflare@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Docker@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Firecrawl@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
   }
  },
  "n8n@390": {
@@ -432,232 +434,28 @@
    "sideways": false,
    "small": [],
    "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "claude-code@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "exa@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "porkbun@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "spider@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "open-places@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "grok-bot@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "elicit@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "context-dev@390": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": 32
-  },
-  "back": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
-   "cut": [],
-   "split": [],
-   "textFails": [],
-   "barFails": [],
-   "numberPx": null
-  }
- },
- "clay@320": {
-  "front": {
-   "sideways": false,
-   "small": [],
-   "targets": [],
    "cut": [
-    "Person",
-    "Work email",
-    "Waterfall",
-    "Job change"
+    "n8n"
    ],
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 16.8
+   "frameFails": []
   },
   "back": {
    "sideways": false,
    "small": [],
    "targets": [],
    "cut": [
-    "Person",
-    "Work email",
-    "Waterfall",
-    "Job change"
+    "n8n"
    ],
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "github@320": {
+ "Claude Code@390": {
   "front": {
    "sideways": false,
    "small": [],
@@ -666,7 +464,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -676,10 +474,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "cloudflare@320": {
+ "Exa@390": {
   "front": {
    "sideways": false,
    "small": [],
@@ -688,7 +486,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -698,10 +496,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "docker@320": {
+ "Porkbun@390": {
   "front": {
    "sideways": false,
    "small": [],
@@ -710,7 +508,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -720,10 +518,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "firecrawl@320": {
+ "Spider@390": {
   "front": {
    "sideways": false,
    "small": [],
@@ -732,7 +530,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -742,7 +540,209 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
+  }
+ },
+ "Open Places@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Grok Bot@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Elicit@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Context.dev@390": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Clay@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "GitHub@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Cloudflare@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [
+    "Cloudflare"
+   ],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Docker@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  }
+ },
+ "Firecrawl@320": {
+  "front": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
+  },
+  "back": {
+   "sideways": false,
+   "small": [],
+   "targets": [],
+   "cut": [],
+   "split": [],
+   "textFails": [],
+   "barFails": [],
+   "frameFails": []
   }
  },
  "n8n@320": {
@@ -750,24 +750,28 @@
    "sideways": false,
    "small": [],
    "targets": [],
-   "cut": [],
+   "cut": [
+    "n8n"
+   ],
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
    "small": [],
    "targets": [],
-   "cut": [],
+   "cut": [
+    "n8n"
+   ],
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "claude-code@320": {
+ "Claude Code@320": {
   "front": {
    "sideways": false,
    "small": [],
@@ -776,7 +780,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -786,10 +790,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "exa@320": {
+ "Exa@320": {
   "front": {
    "sideways": false,
    "small": [],
@@ -798,7 +802,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -808,10 +812,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "porkbun@320": {
+ "Porkbun@320": {
   "front": {
    "sideways": false,
    "small": [],
@@ -820,7 +824,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -830,10 +834,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "spider@320": {
+ "Spider@320": {
   "front": {
    "sideways": false,
    "small": [],
@@ -842,7 +846,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -852,10 +856,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "open-places@320": {
+ "Open Places@320": {
   "front": {
    "sideways": false,
    "small": [],
@@ -864,7 +868,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -874,10 +878,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "grok-bot@320": {
+ "Grok Bot@320": {
   "front": {
    "sideways": false,
    "small": [],
@@ -886,7 +890,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -896,10 +900,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "elicit@320": {
+ "Elicit@320": {
   "front": {
    "sideways": false,
    "small": [],
@@ -908,7 +912,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -918,10 +922,10 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  },
- "context-dev@320": {
+ "Context.dev@320": {
   "front": {
    "sideways": false,
    "small": [],
@@ -930,7 +934,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": 32
+   "frameFails": []
   },
   "back": {
    "sideways": false,
@@ -940,7 +944,7 @@
    "split": [],
    "textFails": [],
    "barFails": [],
-   "numberPx": null
+   "frameFails": []
   }
  }
 }
