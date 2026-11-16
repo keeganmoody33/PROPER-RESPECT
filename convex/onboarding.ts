@@ -812,6 +812,10 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);
     if (!product) throw new Error("The product for this relationship is unavailable.");
+    const memberSince = selection.activity?.kind === "contributionCalendar" ? selection.activity.memberSince : undefined;
+    if (prop.startedAt && memberSince && prop.startedAt < memberSince) {
+      throw new Error(`The ${product.name} card starts on ${prop.startedAt}, before its account was created on ${memberSince}. Change the start date to ${memberSince} or later, save it privately, then preview again.`);
+    }
     const projection = measurementProjection.get(prop._id);
     const measurements = projection
       ? projectPublishedMeasurements(selection.publish ? "PUBLIC" : "PRIVATE", projection.retained, projection.publishedIds)
