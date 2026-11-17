@@ -1,9 +1,15 @@
 import Link from "next/link";
-import type { TrustDocument } from "@/src/server/trust-pages";
+import { trustDocuments, type TrustDocument, type TrustSlug } from "@/src/server/trust-pages";
 import styles from "./trust-article.module.css";
+
+/** The About pages by the names the footer gives them, in the order the rail lists them. */
+const RAIL: Readonly<Record<TrustSlug, string>> = { origins: "Origins", methodology: "How evidence works", privacy: "Privacy", terms: "Terms", contact: "Contact" };
 
 export function TrustArticle({ document }: { document: TrustDocument }) {
   return <main className={styles.shell}>
+    <nav className={styles.rail} aria-label="About Proper Respect">
+      <ul>{(Object.keys(RAIL) as TrustSlug[]).map(slug => <li key={slug}><Link href={`/about/${slug}`} aria-current={trustDocuments[slug] === document ? "page" : undefined}>{RAIL[slug]}</Link></li>)}</ul>
+    </nav>
     <article>
       <header>
         <p className="eyebrow">{document.eyebrow}</p>

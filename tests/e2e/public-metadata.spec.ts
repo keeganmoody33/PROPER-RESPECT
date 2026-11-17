@@ -4,7 +4,7 @@ for (const width of [1280, 390]) test(`homepage titles match the approved brand 
   await page.setViewportSize({ width, height: 844 });
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
-  const title = "Proper Respect: Your tools. Your track record.";
+  const title = "Proper Respect: Earn your respect.";
   await expect.soft(page).toHaveTitle(title);
   await expect.soft(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
   await expect.soft(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", title);
@@ -24,7 +24,7 @@ test("published fixture uses canonical metadata on desktop and mobile", async ({
     await page.goto("/keegan");
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/keegan");
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", "https://public.example/keegan");
-    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", "https://public.example/share-image.png?v=20260922");
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", "https://public.example/share-image.png?v=20261116");
     await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
     await expect(page.getByRole("heading", { level: 1, name: "Keegan Moody" })).toBeVisible();
     await expect(page.getByText("Private source record")).toHaveCount(0);

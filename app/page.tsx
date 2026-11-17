@@ -4,11 +4,11 @@ import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
 import { PublicSiteGuideWebMcp } from "@/components/public-site-guide-webmcp";
 import { homepageExamples } from "@/src/data/homepage-examples";
-import { homepageSteps, productIdentity, publicSiteGuide } from "@/src/server/agent-discovery";
+import { homepageSteps, productIdentity, publicSiteGuide, siteDescription, siteLine } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
-  const metadata = publicPageMetadata("Proper Respect: Your tools. Your track record.", "What you use, test, and come back to, with the history and context behind your choices.");
+  const metadata = publicPageMetadata(`Proper Respect: ${siteLine}`, siteDescription);
   return { ...metadata, alternates: { ...metadata.alternates, types: { "text/markdown": "/index.md" } } };
 }
 
@@ -19,47 +19,39 @@ export default function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productIdentity()).replace(/</g, "\\u003c") }} />
       <main id="homepage-content" className={styles.main} tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="homepage-title">
-          <div className={styles.intro}>
-            <p className={styles.label}>A personal record of the tools you use.</p>
-            <h1 id="homepage-title">Your tools.<br /><span>Your track record.</span></h1>
-          </div>
-          {/* Right after the heading, so a phone shows a card in its first screen; a wide screen puts it in the second column. */}
+          <h1 id="homepage-title" className={styles.title}>{siteLine}</h1>
+          {/* Right after the heading, so a phone shows a card in its first screen; a wide screen sets the art and the actions beside it. */}
           <div className={styles.example} id="example"><ProductExample examples={homepageExamples()} /></div>
-          <div className={`${styles.introRest} ${styles.actions}`}>
-            <Link className={styles.primary} href="/app/collection">Start your collection</Link>
-            <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
+          <div className={styles.side}>
+            <Image className={styles.bump} src="/brand/homepage/bump-art.png" alt="Two fists meeting at a bright red diamond" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 45vw" priority />
+            <div className={styles.actions}>
+              <Link className={styles.primary} href="/app/collection">Start your collection</Link>
+              <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
+            </div>
           </div>
         </section>
         <section id="how-it-works" className={styles.journey} aria-labelledby="journey-title">
-          <div className={styles.sectionHeading}>
-            <h2 id="journey-title">A collection that<br />tells your story.</h2>
-            <p>From a tool you are trying to one you keep coming back to.</p>
-          </div>
+          <h2 id="journey-title" className={styles.statement}>A résumé says where you worked.<br />This shows what you run.</h2>
           <ol className={styles.steps}>
-            {homepageSteps.map(step => <li key={step.label}><span className={styles.stepNumber} aria-hidden="true">{step.label}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}
+            {homepageSteps.map(step => <li key={step.title}><h3>{step.title}</h3><p>{step.body}</p></li>)}
           </ol>
         </section>
         <section className={styles.respect} aria-labelledby="respect-title">
           <div className={styles.respectInner}>
-            <figure className={styles.bump}>
-              <Image src="/brand/homepage/bump-art.png" alt="Two fists meeting at a bright red diamond" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 45vw" />
-              <figcaption>Fig. 02 / Credit changes hands</figcaption>
-            </figure>
+            <h2 id="respect-title" className={styles.statement}>Give props.<br />Get props.</h2>
             <div className={styles.respectCopy}>
-              <p className={styles.label}>Respect / Goes both ways</p>
-              <h2 id="respect-title">Give props.<br /><span>Get props.</span></h2>
-              <p>Record why you use a tool and what changed when you tried it. Add notes or supporting evidence. Choose which saved cards and details appear on your public page.</p>
-              <p className={styles.kicker}>Your tools. Your point of view.</p>
+              <p>Proper Respect takes its name from giving someone their props. Here the props are for what you run and how long you have run it, on a record your peers can read.</p>
+              <Link className={styles.onDark} href="/about/origins">Where the name comes from</Link>
             </div>
           </div>
         </section>
         <section className={styles.close} aria-labelledby="start-title">
-          <h2 id="start-title">Make it<br /><span>your collection.</span></h2>
+          <h2 id="start-title" className={styles.statement}>Make it yours.</h2>
           <div className={styles.actions}>
             <Link className={styles.primary} href="/app/collection">Start your collection</Link>
-            <Link className={styles.secondary} href="/lecturesfrom">See the shared collection →</Link>
-            <p className={styles.privacy}>Private by default. Shared by choice.</p>
+            <Link className={styles.secondary} href="/lecturesfrom">See the shared collection</Link>
           </div>
+          <p className={styles.privacy}>Private by default. Shared by choice.</p>
           <p className={styles.privacy}>Created by lecturesfrom, a business in the United States. <Link href="/about/contact">Contact: 33@lecturesfrom.com</Link>.</p>
         </section>
       </main>

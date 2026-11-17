@@ -57,9 +57,8 @@ export function SiteFooter() {
 export function AuthFrame({ children }: { children: React.ReactNode }) {
   return <main className="auth-shell">
     <section className="auth-intro" aria-labelledby="auth-intro-title">
-      <p className="eyebrow">Your collection / Your point of view</p>
-      <h1 id="auth-intro-title">Your tools.<br /><span>Your track record.</span></h1>
-      <p>Keep what you use, what you are testing, and the context behind your choices. Start in private. Share when you choose.</p>
+      <h1 id="auth-intro-title">Earn your respect.</h1>
+      <p>Keep what you run, how much, and since when. Start in private. Share when you choose.</p>
       <ol className="auth-steps">
         <li>Create your private collection.</li>
         <li>Add a tool and record your experience.</li>

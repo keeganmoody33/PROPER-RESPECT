@@ -195,7 +195,7 @@ test("Next Link navigation unregisters old native handles and remounts exactly o
 
 test("native homepage guide returns canonical public documentation without networking", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Your tools.");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Earn your respect.");
   await expect.poll(async () => (await tools(page)).map(tool => tool.name)).toEqual([guideName]);
   const [guide] = await tools(page);
   expect(guide.description).toBe("Explains Proper Respect, links to public documentation, and describes how to read a supplied published profile.");

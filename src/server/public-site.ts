@@ -26,7 +26,7 @@ export function publicPageMetadata(title: string, description: string, handle?: 
   const origin = publicSiteOrigin();
   const path = handle === undefined ? "/" : `/${handleSchema.parse(handle)}`;
   const url = new URL(path, origin).href;
-  const image = new URL("/share-image.png?v=20260922", origin).href;
+  const image = new URL("/share-image.png?v=20261116", origin).href;
   return {
     title,
     description,
@@ -37,7 +37,7 @@ export function publicPageMetadata(title: string, description: string, handle?: 
       title,
       description,
       url,
-      images: [{ url: image, width: 1200, height: 630, alt: "PROPER—RESPECT. Your tools. Your track record." }],
+      images: [{ url: image, width: 1200, height: 630, alt: "Proper Respect. Earn your respect." }],
     },
     twitter: { card: "summary_large_image", title, description, images: [image] },
   };

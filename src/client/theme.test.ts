@@ -27,7 +27,7 @@ describe("theme preference boundary and prepaint parity", () => {
     expect(root.dataset).toEqual({ theme: "dark", themePreference: "system" });
   });
   it("gives Clerk concrete contrasting input and action colors", () => {
-    expect(clerkAppearance("dark").variables).toMatchObject({ colorInput: "#171713", colorInputForeground: "#f0eee7", colorPrimary: "#f0eee7", colorPrimaryForeground: "#171713" });
-    expect(clerkAppearance("light").variables).toMatchObject({ colorInput: "#ffffff", colorInputForeground: "#171713" });
+    expect(clerkAppearance("dark").variables).toMatchObject({ colorInput: "#000000", colorInputForeground: "#ffffff", colorPrimary: "#ffffff", colorPrimaryForeground: "#000000" });
+    expect(clerkAppearance("light").variables).toMatchObject({ colorInput: "#ffffff", colorInputForeground: "#000000" });
   });
 });

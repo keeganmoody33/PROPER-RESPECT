@@ -1,73 +1,57 @@
-.homepage { --home-red: var(--respect-red); font-family: var(--homepage-sans), Arial, sans-serif; color: var(--ink); background: var(--paper); }
+/* A show poster: one pale field, wood type set as narrow and heavy as the face goes, and the card as the act on the bill. */
+.homepage { font-family: var(--homepage-sans), Arial, sans-serif; color: var(--ink); background: var(--paper); }
 .homepage a { text-underline-offset: .22em; }
-.homepage a:focus-visible { outline: 3px solid var(--respect-red); outline-offset: 5px; }
-.label, .privacy, .figure figcaption, .stepNumber { font-family: var(--homepage-mono), monospace; }
+.homepage a:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
 .main { min-height: auto; }
-.hero { max-width: 1600px; margin: auto; padding: clamp(3rem, 7vw, 7rem) clamp(1.25rem, 4vw, 5rem); display: grid; grid-template-columns: 1fr 1.08fr; align-items: start; gap: 0 clamp(2rem, 4vw, 4.5rem); }
-/* The heading, then the examples, then the copy, in reading order; a wide screen sets the examples beside both, and the copy's row takes what is left. */
-.hero { grid-template-rows: auto 1fr; grid-template-areas: "intro example" "rest example"; }
-.intro { grid-area: intro; }
-.example { grid-area: example; }
-.introRest { grid-area: rest; margin-top: 1.8rem; }
-.label { font-size: .68rem; line-height: 1.6; margin: 0 0 1.8rem; }
-.intro h1 { font-size: clamp(3.5rem, 5.8vw, 6.4rem); font-weight: 900; letter-spacing: -.055em; line-height: .94; text-transform: uppercase; margin: 0; }
-.intro h1 span { color: var(--home-red); }
-.actions { display: flex; align-items: flex-start; gap: 1rem; flex-direction: column; }
-.primary { display: inline-flex; justify-content: center; align-items: center; min-height: 48px; padding: .9rem 1.3rem; border: 1.5px solid var(--ink); font-weight: 700; text-decoration: none; }
-.primary { background: var(--ink); color: var(--action-text); }
-.primary:hover { background: var(--home-red); border-color: var(--home-red); }
-.secondary { font-size: .9rem; line-height: 1.5; padding-block: .35rem; }
-.privacy { font-size: .65rem; line-height: 1.6; max-width: 45ch; margin: 1.3rem 0 0; }
-.figure { margin: 0; border: 1.5px solid var(--ink); background: var(--panel); }
-.figure > img { display: block; width: 100%; height: auto; }
-.figure figcaption { display: flex; justify-content: space-between; gap: 1rem; padding: .9rem; font-size: .6rem; line-height: 1.5; border-top: 1px solid var(--ink); }
-.journey { border-top: 1.5px solid var(--ink); padding: clamp(2.5rem, 5vw, 5rem) clamp(1.25rem, 4vw, 5rem); }
-.sectionHeading { display: flex; justify-content: space-between; align-items: flex-end; gap: 2rem; max-width: 1440px; margin: 0 auto 3rem; }
-.sectionHeading h2 { margin: 0; font-size: clamp(2.4rem, 4vw, 4rem); font-weight: 900; line-height: 1; letter-spacing: -.045em; text-transform: uppercase; }
-.sectionHeading > p { max-width: 28ch; margin: 0; line-height: 1.6; }
-.steps { display: grid; grid-template-columns: repeat(3, 1fr); list-style: none; padding: 0; max-width: 1440px; margin: auto; }
-.steps li { border-top: 1px solid var(--ink); padding: 1.5rem 2rem 0 0; }
-.steps li + li { border-left: 1px solid var(--line); padding-left: 2rem; }
-.stepNumber { font-size: .7rem; color: var(--home-red); }
-.steps h3 { font-size: 1.45rem; margin: 1.4rem 0 .6rem; letter-spacing: -.025em; }
-.steps p { line-height: 1.65; margin: 0; max-width: 42ch; }
-.respect { background: var(--feature-background); color: var(--feature-text); padding: clamp(3rem, 6vw, 6rem) clamp(1.25rem, 4vw, 5rem); }
-.respectInner { max-width: 1440px; margin: auto; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(2rem, 5vw, 5rem); align-items: center; }
-.bump { margin: 0; border: 1.5px solid var(--feature-line); }
-.bump img { display: block; width: 100%; height: auto; }
-.bump figcaption { border-top: 1px solid var(--feature-line); padding: .85rem 1rem; font: .65rem/1.5 var(--homepage-mono), monospace; color: var(--feature-muted); }
-.respectCopy h2 { font-size: clamp(3rem, 5.8vw, 5.8rem); line-height: .95; letter-spacing: -.045em; text-transform: uppercase; margin: 0 0 1.6rem; font-weight: 900; }
-.respectCopy h2 span { color: var(--feature-accent); }
-.respectCopy > p:not(.label):not(.kicker) { max-width: 42ch; line-height: 1.65; font-size: 1.05rem; }
-.kicker { font: .7rem/1.6 var(--homepage-mono), monospace; color: var(--feature-muted); margin-top: 1.8rem; }
-.close { padding: clamp(3.5rem, 7vw, 7rem) clamp(1.25rem, 4vw, 5rem); max-width: 1600px; margin: auto; }
-.close h2 { font-size: clamp(2.3rem, 6.6vw, 6.5rem); line-height: .94; letter-spacing: -.045em; text-transform: uppercase; font-weight: 900; margin: 0 0 2rem; }
-.close h2 span { color: var(--home-red); }
-@media (max-width: 900px) {
-  .hero, .respectInner { grid-template-columns: 1fr; }
-  .hero { grid-template-rows: none; grid-template-areas: "intro" "example" "rest"; row-gap: 1.25rem; }
-  .introRest { margin-top: 0; }
-  .intro h1 { font-size: clamp(3.35rem, 9vw, 6rem); }
-  .figure { max-width: 760px; }
-  .sectionHeading { flex-direction: column; align-items: flex-start; }
-  .sectionHeading > p { max-width: 45ch; }
-}
-/* A phone's first screen says what the site is, then the heading on two or three short lines, then the card close under it,
-   so the card's number starts above the examples row. */
-@media (max-width: 600px) {
-  .hero { padding-top: .75rem; grid-template-areas: "tagline" "title" "example" "rest"; row-gap: .45rem; }
-  .intro { display: contents; }
-  .intro h1 { grid-area: title; }
-  .label { font-size: .62rem; }
-  .intro .label { grid-area: tagline; margin: 0; }
-  .hero .example { padding: .5rem; }
-  .intro h1 { font-size: clamp(1.6rem, 7.4vw, 2.4rem); letter-spacing: -.03em; word-spacing: .08em; }
-  .actions, .primary { width: 100%; }
-  .figure figcaption { font-size: .55rem; padding: .65rem; }
-  .steps { grid-template-columns: 1fr; }
-  .steps li, .steps li + li { border-left: 0; padding: 1.5rem 0; }
-  .steps h3 { margin-top: 1rem; }
-}
 
-.example { min-width: 0; padding: clamp(1rem, 3vw, 2rem); background: var(--example-panel); border: 1px solid var(--ink); }
+.title, .statement { font-stretch: 62%; font-weight: 900; text-transform: uppercase; margin: 0; }
+
+.hero { background: var(--poster-field); color: var(--poster-ink); border-bottom: 1px solid var(--line); padding: clamp(.75rem, 2vw, 1.75rem) clamp(1rem, 4vw, 5rem) clamp(2rem, 4vw, 4rem);
+  display: grid; grid-template-columns: minmax(0, 42rem) minmax(0, 1fr); grid-template-areas: "title title" "example side"; gap: clamp(.75rem, 1.6vw, 1.5rem) clamp(1.5rem, 3vw, 3rem); align-items: start; }
+.hero a:focus-visible, .hero :global(button:focus-visible) { outline-color: var(--poster-ink); }
+/* One line across the sheet at every width: eighteen characters of this face run about 7.6 times its size. */
+.title { grid-area: title; font-size: clamp(2rem, 11.6vw, 13rem); line-height: .84; letter-spacing: -.005em; white-space: nowrap; }
+.example { grid-area: example; min-width: 0; padding: clamp(.75rem, 1.6vw, 1.5rem); background: var(--example-panel); color: var(--ink); border: 2px solid var(--ink); box-shadow: 10px 10px 0 var(--poster); }
 .example :global(.product-card) { width: 100%; }
+.side { grid-area: side; display: flex; flex-direction: column; gap: clamp(1.25rem, 2vw, 2rem); }
+
+.actions { display: flex; align-items: flex-start; gap: .9rem; flex-direction: column; }
+.primary { display: inline-flex; justify-content: center; align-items: center; min-height: 52px; padding: .9rem 1.4rem; border: 3px solid var(--ink); background: var(--ink); color: var(--action-text); font-weight: 800; font-size: 1.05rem; text-decoration: none; }
+/* The accent is dark on a light page and light on a dark one, so the label follows the theme with it. */
+.primary:hover { background: var(--respect-red); border-color: var(--respect-red); color: var(--action-text); }
+.hero .primary { background: var(--poster-ink); border-color: var(--poster-ink); color: var(--poster-field); }
+.hero .primary:hover { background: transparent; color: var(--poster-ink); }
+.hero .secondary { color: var(--poster-ink); }
+.secondary { font-size: .95rem; font-weight: 600; line-height: 1.5; padding-block: .35rem; }
+
+.journey, .close { padding: clamp(3rem, 7vw, 7rem) clamp(1rem, 4vw, 5rem); }
+.statement { font-size: clamp(2.5rem, 6.6vw, 7rem); line-height: .88; text-wrap: balance; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 clamp(1.5rem, 3vw, 3rem); list-style: none; counter-reset: step; padding: 0; margin: clamp(2rem, 4vw, 4rem) 0 0; }
+.steps li { counter-increment: step; border-top: 3px solid var(--ink); padding-top: 1rem; }
+.steps li::before { content: counter(step); display: block; font-stretch: 62%; font-weight: 900; font-size: 3rem; line-height: 1; color: var(--respect-red); }
+.steps h3 { font-size: 1.45rem; font-weight: 800; letter-spacing: -.02em; margin: .8rem 0 .5rem; }
+.steps p { line-height: 1.6; margin: 0; max-width: 40ch; }
+
+.respect { background: var(--feature-background); color: var(--feature-text); padding: clamp(3rem, 7vw, 7rem) clamp(1rem, 4vw, 5rem); }
+.respect a:focus-visible { outline-color: var(--poster); }
+.respectInner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 5rem); align-items: end; }
+.respect .statement { color: var(--poster); }
+.respectCopy > p { max-width: 46ch; line-height: 1.65; font-size: 1.15rem; margin: 0 0 1.25rem; }
+.onDark { font-weight: 700; }
+.bump { display: block; width: 100%; height: auto; border: 2px solid var(--ink); }
+
+.close .actions { margin-top: 2rem; }
+.privacy { font-size: .85rem; line-height: 1.6; color: var(--secondary); max-width: 52ch; margin: 1.5rem 0 0; }
+.privacy + .privacy { margin-top: .4rem; }
+
+@media (max-width: 900px) {
+  .hero { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "example" "side"; }
+  .respectInner { grid-template-columns: minmax(0, 1fr); }
+  .steps { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
+}
+@media (max-width: 600px) {
+  .hero { padding-top: .5rem; row-gap: .5rem; }
+  .hero .example { padding: .5rem; }
+  .side { margin-top: .75rem; flex-direction: column-reverse; }
+  .actions, .primary { width: 100%; }
+}

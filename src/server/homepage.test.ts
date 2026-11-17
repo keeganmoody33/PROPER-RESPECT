@@ -11,12 +11,12 @@ const statements = [
   "A stored affiliate or referral link is disclosed on the card.",
 ];
 
-it("the hero has no copy: outside the examples it says what the site is, its headline and two actions, and nothing else", () => {
+it("the hero has no copy: outside the examples it has its one line and two actions, and nothing else", () => {
   const $ = load(renderToStaticMarkup(HomePage()));
   const hero = $("section[aria-labelledby=homepage-title]").clone();
   hero.find("#example").remove();
   const lines = hero.find("p, h1, a, li").toArray().filter(element => !$(element).find("p, h1, a, li").length).map(element => $(element).text().trim());
-  expect(lines).toEqual(["A personal record of the tools you use.", "Your tools.Your track record.", "Start your collection", "View Keegan’s shared collection"]);
+  expect(lines).toEqual(["Earn your respect.", "Start your collection", "View Keegan’s shared collection"]);
   // The examples carry no line of their own below the card either.
   expect($("#example").text()).not.toMatch(/Keep your usage private|Choose what to share/);
 });
@@ -35,11 +35,11 @@ it("keeps the facts the hero dropped on the pages they belong to, and leaves the
 });
 
 const steps = [
-  ["Pick your tools.", "Start from a role or search by name. Add anything that is missing by its name."],
+  ["Add your tools.", "Search by name. Add anything that is missing by its name."],
   ["Say how you use each one.", "Pick how often you use each one, from tried and dropped to daily. Save the whole list privately in one step."],
   ["Preview once, then share.", "See exactly what visitors will see. Approve that preview once to share your confirmed tools on your public page."],
 ];
-const retired = ["Start with one tool", "connect a supported source", "measurement packet", "Wispr", "NotebookLM", "TIDAL"];
+const retired = ["Start from a role", "Start with one tool", "connect a supported source", "measurement packet", "Wispr", "NotebookLM", "TIDAL"];
 
 it("describes the same three steps of the flow that exists, on the page and in its markdown", () => {
   const html = renderToStaticMarkup(HomePage());

@@ -22,8 +22,8 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
   origins: {
     title: "Giving credit its context",
     description: "Why Proper Respect keeps experience and evidence alongside the tools we use.",
-    eyebrow: "Origins / Lineage",
-    updatedAt: "2026-09-22",
+    eyebrow: "Origins",
+    updatedAt: "2026-11-16",
     introduction: [
       "Proper Respect takes its name from the idea behind giving someone their props: recognizing what they have contributed.",
     ],
@@ -34,6 +34,13 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
           'Aretha Franklin offered a clear statement of the principle. Speaking to Vogue in 2016 about Respect, she said: "As people, we deserve respect from one another."',
         ],
         links: [{ label: "Aretha Franklin interviewed by Alex Frank, Vogue", href: "https://www.vogue.com/article/aretha-franklin-interview-carole-king" }],
+      },
+      {
+        heading: "A record apart from your work history",
+        paragraphs: [
+          "A work history lists employers and titles. It says little about what you can build. The tools you run say more: which ones, how much, and since when.",
+          "Proper Respect keeps that as its own record. People who use the same tools can read it and know what it took. That is how you earn your respect here, and how you give someone else their props.",
+        ],
       },
       {
         heading: "What it means here",

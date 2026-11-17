@@ -825,18 +825,17 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
   await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
   expect(first.numberBottom).toBeLessThanOrEqual(PHONE_HEIGHT);
-  // In reading order the line about the site, the heading, the examples, then the call to action.
+  // In reading order the heading, the examples, then the call to action. The heading is one line, inside the first screen.
   const order = await page.evaluate(() => {
     const [heading, examples] = ["#homepage-title", "#example"].map(selector => document.querySelector(selector)!);
-    const tagline = [...document.querySelectorAll("main p")].find(line => line.textContent === "A personal record of the tools you use.")!;
     const start = [...document.querySelectorAll("main a")].find(link => link.textContent === "Start your collection")!;
     const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    // The one line saying what the site is sits in the first screen, above the heading and the card.
-    const line = tagline.getBoundingClientRect();
-    return { taglineThenHeading: before(tagline, heading), headingThenExamples: before(heading, examples), examplesThenStart: before(examples, start),
-      taglineShown: line.top >= 0 && line.bottom <= innerHeight && line.bottom <= heading.getBoundingClientRect().top };
+    const line = heading.getBoundingClientRect();
+    const oneLine = line.height <= parseFloat(getComputedStyle(heading).lineHeight) * 1.5;
+    return { headingThenExamples: before(heading, examples), examplesThenStart: before(examples, start),
+      headingShown: line.top >= 0 && line.right <= innerWidth && line.bottom <= examples.getBoundingClientRect().top, oneLine };
   });
-  expect(order).toEqual({ taglineThenHeading: true, headingThenExamples: true, examplesThenStart: true, taglineShown: true });
+  expect(order).toEqual({ headingThenExamples: true, examplesThenStart: true, headingShown: true, oneLine: true });
   // On a phone the slideshow is in view from the start, so it waits for play rather than reflowing the copy under it.
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await page.clock.runFor(ADVANCE_MS * 2);

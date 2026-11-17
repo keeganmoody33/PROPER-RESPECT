@@ -25,9 +25,9 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   }));
   expect(fontFaces[0].family).toMatch(/archivo/i);
   expect(await page.locator("body").evaluate(element => getComputedStyle(element).fontFamily)).toMatch(/archivo/i);
-  expect(fontFaces[1].family).toMatch(/mono/i);
+  expect(fontFaces[1].family).toMatch(/archivo/i);
   for (const face of fontFaces) expect(face.statuses).toEqual(["loaded"]);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Your tools.Your track record.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Earn your respect.");
   await expect(page.getByRole("img", { name: /Blueprint/ })).toHaveCount(0);
   await expect(page.getByRole("article", { name: "Clay card" })).toBeVisible();
   await expect(page.getByText("Inside a card", { exact: true })).toBeVisible();
