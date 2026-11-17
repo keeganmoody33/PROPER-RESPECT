@@ -115,7 +115,7 @@ export function RapidFire({ queue, cards, onFinish, onLeave }: {
       if (plan.kind === "error") { setCard(propId, value => ({ ...value, status: "notSaved", error: plan.message })); return; }
       if (card.savedBody === plan.body && card.status === "saved") return;
       // A retry of the same answers reuses its operation id, so it can't save twice; different answers get a new one.
-      const key = `${propId}:${plan.body}`;
+      const key = `${propId}:${card.version}:${plan.body}`;
       const operationId = operations.current.get(key) ?? crypto.randomUUID();
       operations.current.set(key, operationId);
       setCard(propId, value => ({ ...value, status: "saving", error: undefined }));

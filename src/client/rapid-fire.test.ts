@@ -65,7 +65,9 @@ describe("moving on from a card", () => {
     expect(plan.kind).toBe("save");
     if (plan.kind !== "save") return;
     expect(plan.args).toMatchObject({ level: "WEEKLY", status: "ACTIVE", startedAt: "2023", headline: "", note: "Where my lists start.", expectedVersion: 4 });
-    expect(JSON.parse(plan.body)).toEqual(JSON.parse(JSON.stringify(plan.args)));
+    // What moving on compares: the answers, not the version they name.
+    expect(JSON.parse(plan.body)).toEqual(JSON.parse(JSON.stringify({ ...plan.args, expectedVersion: undefined })));
+    expect(plan.body).not.toContain("expectedVersion");
   });
 
   it("saves the owner's own line, and names the version its last save made", () => {

@@ -88,7 +88,8 @@ export function rapidFireSave(card: RapidFireCard) {
   const result = walkthroughSave(item.card, { ...answer, openedVersion: card.version }, answer.ownerLine?.trim() ? answer.ownerLine : "");
   if (!result.ok) return { kind: "error" as const, message: result.message };
   const args = { ...result.args, note: rapidFireNote(item, answer.comment) };
-  return { kind: "save" as const, args, body: JSON.stringify(args) };
+  // The answers alone, without the version they name, so going back and on again unchanged saves nothing new.
+  return { kind: "save" as const, args, body: JSON.stringify({ ...args, expectedVersion: undefined }) };
 }
 
 /** A year or a full date, as heard. A month or day that wasn't said is never filled in (decision 6). */

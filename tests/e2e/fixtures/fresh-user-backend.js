@@ -226,6 +226,12 @@ export function useQuery(ref, args) {
     default: return undefined;
   }
 }
+// Rapid fire reads each tool's first sources at once (components/rapid-fire.tsx). This fixture stores none.
+export function useQueries(requests) {
+  useSyncExternalStore(subscribe, snapshot, snapshot);
+  return Object.fromEntries(Object.entries(requests).map(([key, request]) =>
+    [key, getFunctionName(request.query) === "inventory:evidence" ? { page: empty, isDone: true, continueCursor: "" } : undefined]));
+}
 function located(card) {
   return { propId: card.prop._id, productId: card.product._id, name: card.product.name, domain: card.product.domain,
     status: card.prop.status, level: card.prop.level, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT", goTo: card.prop.goTo ?? false, headline: card.prop.headline };
