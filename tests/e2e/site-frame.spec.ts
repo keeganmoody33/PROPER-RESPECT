@@ -56,6 +56,8 @@ for (const width of [390, 320]) test(`every header link reads in full and is tap
   const footer = page.getByRole("navigation", { name: "Footer navigation" });
   await expect(footer.getByRole("link", { name: "How it works", exact: true })).toHaveAttribute("href", "/#how-it-works");
   await expect(footer.getByRole("link", { name: "Usage examples", exact: true })).toHaveAttribute("href", "/#example");
+  // Every page reaches search, so a visitor can go from one person's page to the next.
+  await expect(footer.getByRole("link", { name: "Search people and tools", exact: true })).toHaveAttribute("href", "/search");
   testInfo.annotations.push({ type: "widest header link", description: `${widest.name} ${widest.width}px of ${Math.round(frame.width)}px` });
 });
 
