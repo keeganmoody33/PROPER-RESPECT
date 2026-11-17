@@ -1,12 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Two checkouts can run the suite at once when each sets its own port.
+const port = process.env.PROPER_RESPECT_E2E_PORT ?? "3000";
+const origin = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: origin,
     trace: "on-first-retry",
     launchOptions: {
       args: ["--no-sandbox"],
@@ -28,8 +32,8 @@ export default defineConfig({
       PUBLIC_SITE_ORIGIN: "https://public.example",
     },
     command:
-      "PROPER_RESPECT_E2E_REFERENCE=1 npm run dev -- --hostname 127.0.0.1",
-    url: "http://127.0.0.1:3000",
+      `PROPER_RESPECT_E2E_REFERENCE=1 npm run dev -- --hostname 127.0.0.1 --port ${port}`,
+    url: origin,
     reuseExistingServer: false,
     timeout: 120_000,
   },
