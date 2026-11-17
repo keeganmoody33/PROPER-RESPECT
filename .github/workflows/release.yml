@@ -1,8 +1,9 @@
 name: Release
 # A v* tag pushed by the repository owner deploys the backend, then the
-# frontend. Pushing the tag is the owner's approval: GitHub offers required
-# reviewers on a private repository only on Enterprise, so the environments
-# can't hold a deploy for review (R10, changed 2026-11-12).
+# frontend. While the repository is public, each deploy environment also holds
+# its job for the owner's review. GitHub offers required reviewers on a private
+# repository only on Enterprise, so this workflow doesn't rely on that hold
+# (R10, changed 2026-11-12; see docs/DEPLOYMENT.md, Who can release).
 on:
   push:
     tags: ["v*"]

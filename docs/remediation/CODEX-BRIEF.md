@@ -76,8 +76,9 @@ when a test, a check or a live observation proves it, not when code exists.
   There is no second user yet.
 - Release model (approved):
   - Production deploys only from a version tag on main.
-  - Backend deploys first. The owner's tag push is the approval for both steps
-    (changed 2026-11-12; before that, each step waited for an owner approval).
+  - Backend deploys first. Each step waits for an owner approval while the
+    repository is public; while it is private, the owner's tag push is the
+    only approval (`docs/DEPLOYMENT.md`, "Who can release").
   - Pull requests get preview deployments once a synthetic backend exists
     (K10, then R30). Until then, no Git push deploys anything.
   - Task pull requests merge without a human review when the autopilot's

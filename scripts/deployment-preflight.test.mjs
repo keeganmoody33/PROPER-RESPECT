@@ -170,7 +170,7 @@ test("the production-domain check reads the deployment's aliases and says why it
 
 test("the release gate stops unless the repository owner pushed the tag and started this attempt", () => {
   // Required reviewers aren't offered on a private repository below Enterprise,
-  // so the tag push is the owner's approval (2026-11-12).
+  // so the workflow doesn't read them: the gate has to hold without them (2026-11-12).
   assert.doesNotMatch(releaseWorkflow(), /required_reviewers/);
   assert.match(releaseWorkflow(), /\non:\n  push:\n    tags: \["v\*"\]\npermissions:/);
   const pushedByBot = runReleaseGate({ actor: "devin-ai-integration[bot]" });
