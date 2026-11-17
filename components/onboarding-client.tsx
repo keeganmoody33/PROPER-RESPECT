@@ -66,9 +66,9 @@ function CollectionBrandPreparation({ propIds }: { propIds: Id<"props">[] }) {
   const ready = progress.items.filter(item => item.status === "READY").length;
   const pending = progress.items.filter(item => ["PENDING", "RUNNING", "NOT_REQUESTED"].includes(item.status)).length;
   const failed = progress.items.filter(item => item.status === "FAILED").length;
-  const unverified = progress.items.length - ready - pending - failed;
+  const unmatched = progress.items.length - ready - pending - failed;
   return <div className="product-brand-controls" aria-label="Collection appearance">
-    <p role="status">Card appearance: {ready} ready, {pending} pending, {failed} unavailable{unverified ? `, ${unverified} awaiting verified product identity` : ""}.</p>
+    <p role="status">Card appearance: {ready} ready, {pending} pending, {failed} unavailable{unmatched ? `, ${unmatched} waiting for a confirmed product match` : ""}.</p>
     {(pending > 0 || failed > 0) && <p>Your products remain available while their appearance is prepared.</p>}
     {progress.done && (failed > 0 || pending > 0) && <><p>Unavailable appearance can be retried after one minute.</p><button type="button" className="secondary-action" onClick={() => setAttempt(value => value + 1)}>Retry unfinished appearance</button></>}
   </div>;
@@ -97,7 +97,7 @@ export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProduc
       if (typeof propId === "string") onAdded?.(propId, values.status);
       setNotice({ kind: "saved", text: choice === "LATER"
         ? "Saved privately. Review the card when you're ready to choose how you use this tool. Existing products keep their saved choices and notes."
-        : "Saved privately. New tools keep your chosen relationship. Existing products keep their saved choices and notes. Your public profile has not changed." });
+        : "Saved privately. New tools keep your chosen relationship. Existing products keep their saved choices and notes. Your public page has not changed." });
       retry.current = null;
       form.reset();
     } catch (error) {
@@ -425,132 +425,74 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const publicProfileUrl = publicOrigin ? new URL(publicProfilePath, publicOrigin).href : publicProfilePath;
   const heldSlugs = state.cards.flatMap(card => card.product && isRelationshipConfirmed(card.prop) ? [card.product.slug] : []);
   const shareAllBasis = JSON.stringify({ cards: state.cards, user: state.user });
-  const openIdentity = () => {
-    const identity = document.getElementById("collection-profile");
-    identity?.setAttribute("open", "");
-    identity?.querySelector<HTMLInputElement>("input[name='handle']")?.focus();
+  const hasAddress = handleState === "published" || publicIdentityClaimed === true;
+  const firstResult = Boolean(state.privateInventoryAvailable && (source || state.cards.length === 0));
+  const identityExtras = <>
+    <label className="full">Short footer bio (optional)<textarea name="bio" defaultValue={state.user.bio} rows={2} /></label>
+    <ProfileLinksFields links={state.user.profileLinks} preferredLinkUrl={state.user.preferredLinkUrl} />
+  </>;
+  // One form keeps every claimHandle field, so saving a handle never blanks the bio or links folded below it.
+  const identityForm = <form onSubmit={event => { event.preventDefault(); void submitProfile(new FormData(event.currentTarget)); }}
+    onInvalidCapture={event => (event.target as HTMLElement).closest("details")?.setAttribute("open", "")} className="form-grid">
+    <label>Handle<input key={`${handleState}:${state.user.handle}`} name="handle" defaultValue={handleState === "draft" && publicIdentityClaimed === false ? "" : state.user.handle} readOnly={handleState !== "draft"} aria-describedby="identity-handle-guidance" placeholder="your-handle" required /></label>
+    <label>Display name<input name="displayName" defaultValue={state.user.displayName ?? clerkUser?.fullName ?? ""} required pattern={"[\\s\\S]*\\S[\\s\\S]*"} title="Enter a display name with at least one non-space character." /></label>
+    {hasAddress ? identityExtras : <details className="full identity-more"><summary>Add a bio and links (optional)</summary><div className="form-grid">{identityExtras}</div></details>}
+    <div className="action-row full"><button className="secondary-action" disabled={busy || handleState === "unknown"}>Save public identity</button></div>
+  </form>;
+  const focusHandle = () => {
+    const handle = document.querySelector<HTMLInputElement>("#collection-profile input[name='handle']");
+    handle?.closest("details")?.setAttribute("open", "");
+    handle?.focus();
   };
 
   return (
     <main className="onboarding-shell">
       <div className="onboarding-intro">
         <div>
-          <p className="onboarding-kicker">PROPER—RESPECT / YOUR COLLECTION</p>
+          <p className="onboarding-kicker">PROPER RESPECT / YOUR COLLECTION</p>
           <h1>Your collection</h1>
         </div>
         <div>
           <UserButton appearance={{ elements: { avatarBox: { width: "3rem", height: "3rem" } } }} />
         </div>
         <p>
-          Your tools, reported usage, and saved decisions. Everything starts private.
+          Build your stack, check your collection, then choose a handle and what to share. Everything starts private.
         </p>
       </div>
 
       <nav className="collection-navigation" aria-label="Your collection workspace">
-        <a href="#private-collection-title">Collection</a>
         <a href="#build-stack">Build your stack</a>
+        <a href="#private-collection-title">Collection</a>
         <a href="#add-product">Add a tool</a>
-        <a href="#collection-sources">Sources</a>
-        <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Profile and links</a>
+        <a href="#collection-profile">Your handle</a>
         <a href="#collection-sharing">Sharing</a>
+        <a href="#collection-sources">Sources</a>
       </nav>
       {message && <p className="message" role="status">{message}</p>}
-      {state.privateInventoryAvailable && (source || state.cards.length === 0) && <FirstResultPanel source={source} busy={busy} onConnectGithub={connectGithub} />}
       <StackPicker mode={{ kind: "signed-in", held: heldSlugs }} />
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />
 
-      <section className="onboarding-panel" id="collection-sources" aria-labelledby="collection-sources-title">
-        <p className="onboarding-kicker">SOURCES / PRIVATE DISCOVERY</p>
-        <h2 id="collection-sources-title">Bring in supporting context</h2>
-        <p>We ask what the evidence cannot answer. Signup, payment, and observed use are different claims—not proof of continuous use.</p>
-        <p>Gmail discovery uses separately authorized read-only access when this environment is configured. Signing in with Google does not grant mailbox access. Microsoft mailbox connection is not available yet.</p>
-        <p>Sources bring discoveries and supporting context into your private collection. Your relationship and go-to choices remain yours.</p>
-        {!source && state.cards.length > 0 && <FirstResultPanel mode="additional" source={null} busy={busy} onConnectGithub={connectGithub} />}
-        <div className="connector-grid">
-          <MailboxManagement available={state.mailboxAvailable === true} />
-          <div className="connector-card">
-            <strong>GitHub</strong>
-            <p>Authorized account contributions. Account creation is separate from first use. A capture is a snapshot; no continuous coverage is implied.</p>
-            {connectorStatus("GITHUB")}
-            <button
-              className="secondary-action"
-              type="button"
-              onClick={connectGithub}
-              disabled={busy}
-            >
-              {state.connectors.some(connector => connector.provider === "GITHUB" && connector.status !== "REVOKED") ? "Refresh GitHub evidence" : "Connect GitHub"}
-            </button>
-          </div>
-          <form className="connector-card" action={submitDevin}>
-            <strong>Devin</strong>
-            <p>Optional organization-scoped sessions, searches, and PRs.</p>
-            {connectorStatus("DEVIN")}
-            <label className="review-field">
-              Organization ID
-              <input name="organizationId" required />
-            </label>
-            <label className="review-field">
-              Service token
-              <input name="devinToken" type="password" required />
-            </label>
-            <button className="secondary-action" disabled={busy}>
-              Connect Devin
-            </button>
-          </form>
-          <form className="connector-card" action={uploadEvidence}>
-            <strong>Upload an export or screenshot</strong>
-            <p>Retain an original privately, up to 19 MiB. Supports PNG/JPEG/WebP/HEIC/HEIF, CSV/TSV, JSON/JSONL/NDJSON, PDF, XLS/XLSX/ODS, TXT/XML/HTML, and ZIP. Files are not parsed or unpacked automatically. Add selected observations with their period and scope from the product’s supporting details.</p>
-            <label className="review-field">
-              Product
-              <select name="vendor" required defaultValue="Wispr Flow">
-                <option>Wispr Flow</option>
-                <option>NotebookLM</option>
-                <option value="Devin">Devin (cloud)</option>
-                <option>Devin Desktop</option>
-                <option>Windsurf</option>
-                <option>Greptile</option>
-              </select>
-            </label>
-            <label className="review-field">
-              Evidence file
-              <input
-                name="evidence"
-                type="file"
-                accept={EVIDENCE_UPLOAD_ACCEPT}
-                required
-              />
-            </label>
-            <button className="secondary-action" disabled={busy}>
-              Upload privately
-            </button>
-          </form>
-        </div>
-
+      <section className="onboarding-panel collection-identity" id="collection-profile" aria-labelledby="collection-profile-title">
+        <p className="onboarding-kicker">BEFORE YOU SHARE / YOUR HANDLE</p>
+        <h2 id="collection-profile-title">{hasAddress ? "Your page address" : "Choose your handle"}</h2>
+        {!hasAddress && <p>Your handle is the address of your public page. Your collection stays private while you choose it.</p>}
+        {handleState === "published" && <p className="identity-address">Your page: <a href={publicProfileUrl} target="_blank" rel="noreferrer">{publicProfileUrl}</a></p>}
+        {hasAddress && handleState !== "published" && <p className="identity-address">Your page address: <strong>{publicProfileUrl}</strong>{handleState === "draft" ? ". Nothing is public there until you share." : ""}</p>}
+        <p id="identity-handle-guidance">{handleState === "published"
+          ? "Changing a published handle needs a migration that the site owner checks first. You can still change your display name, bio and links here."
+          : handleState === "unknown" ? "Public identity status is unavailable. Reload before saving."
+            : publicIdentityClaimed ? "Your page is not published yet. You can change this handle until you share."
+              : "You need a handle only to share. Pick one you are happy to show publicly."}</p>
+        {hasAddress ? <details className="identity-change"><summary>{handleState === "published" ? "Change your name, bio or links" : "Change your handle or name"}</summary>{identityForm}</details> : identityForm}
       </section>
 
       <section className="onboarding-panel" id="collection-sharing" aria-labelledby="collection-sharing-title">
         <p className="onboarding-kicker">SHARING / YOUR CHOICE</p>
         <h2 id="collection-sharing-title">Choose what to share</h2>
         <p>Private saving never publishes. Select saved cards, preview the information a visitor will see, and approve that version. Existing public cards stay unchanged unless you include or remove them here.</p>
-        <details id="collection-profile" className="collection-identity">
-          <summary>Public identity</summary>
-          <p>A handle is needed only when you choose to share. It is not required to build your private collection.</p>
-          <p id="identity-handle-guidance">{handleState === "published"
-            ? "Changing a published handle requires an owner-verified migration. You can still edit your display name, bio and links here."
-            : handleState === "draft" ? "Your profile is not published. You can change this handle before publishing."
-              : "Public identity status is unavailable. Reload before saving."}</p>
-          {handleState === "published" && <p className="identity-address">Published profile: <a href={publicProfileUrl} target="_blank" rel="noreferrer">{publicProfileUrl}</a></p>}
-          <form onSubmit={event => { event.preventDefault(); void submitProfile(new FormData(event.currentTarget)); }} className="form-grid">
-            <label>Handle<input key={`${handleState}:${state.user.handle}`} name="handle" defaultValue={handleState === "draft" && publicIdentityClaimed === false ? "" : state.user.handle} readOnly={handleState !== "draft"} aria-describedby="identity-handle-guidance" placeholder="your-handle" required /></label>
-            <label>Display name<input name="displayName" defaultValue={state.user.displayName ?? clerkUser?.fullName ?? ""} required pattern={"[\\s\\S]*\\S[\\s\\S]*"} title="Enter a display name with at least one non-space character." /></label>
-            <label className="full">Short footer bio (optional)<textarea name="bio" defaultValue={state.user.bio} rows={2} /></label>
-            <ProfileLinksFields links={state.user.profileLinks} preferredLinkUrl={state.user.preferredLinkUrl} />
-            <div className="action-row full"><button className="secondary-action" disabled={busy || handleState === "unknown"}>Save public identity</button></div>
-          </form>
-        </details>
-        <ShareAllSection identityClaimed={publicIdentityClaimed} basis={shareAllBasis} profileUrl={publicProfileUrl} onSetUpIdentity={openIdentity} />
+        <ShareAllSection identityClaimed={publicIdentityClaimed} basis={shareAllBasis} profileUrl={publicProfileUrl} onSetUpIdentity={focusHandle} />
         <fieldset>
           <legend>Cost visibility</legend>
           <p>Apply cost choices to selected cards, then review before publishing. Unmatched older public cards stay unchanged unless you explicitly select their saved relationships.</p>
@@ -694,12 +636,16 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                     Link purpose
                     <select value={edit.linkType} onChange={event => updateReview(card.prop._id, edit, { linkType: event.target.value as ReviewEdit["linkType"] })}>
                       <option value="CANONICAL">Product or account page</option>
-                      <option value="AFFILIATE">My affiliate link</option>
+                      {edit.linkType === "AFFILIATE" && <option value="AFFILIATE">My affiliate link</option>}
                       <option value="REFERRAL">My referral link</option>
                       <option value="INVITE">My invite link</option>
                     </select>
                   </label>
-                  <p>Use your own affiliate or referral URL. It appears publicly only after you approve the sharing preview.</p>
+                  <p>Use your own referral or invite URL. It appears publicly only after you approve the sharing preview.</p>
+                  {edit.linkType !== "AFFILIATE" && <details><summary>More options</summary>
+                    <p>If this link pays you a commission, mark it. The card then shows the label Affiliate link.</p>
+                    <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, { linkType: "AFFILIATE" })}>Mark this as my affiliate link</button>
+                  </details>}
                   {publicationOffer && publicationOffer.url !== edit.linkUrl && <>
                     <p>Your private card opens {publicationOffer.url}. Visitors will use the primary link above until you choose otherwise and approve a preview.</p>
                     <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, {
@@ -822,7 +768,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
           {state.hasPublicationAtCurrentHandle === true && <a href={`/${state.user.handle}`} target="_blank" rel="noreferrer">Open current public page ↗</a>}
           {state.hasPublicationAtCurrentHandle === true && publicOrigin && <CopyProfileLink key={state.user.handle} url={new URL(`/${encodeURIComponent(state.user.handle)}`, publicOrigin).href} />}
         </div>
-        {publicIdentityClaimed === false && <p>Ready to preview a public page? <a href="#collection-profile" onClick={() => document.getElementById("collection-profile")?.setAttribute("open", "")}>Set up your public identity</a> with a handle and display name. Social links are optional.</p>}
+        {publicIdentityClaimed === false && <p>Ready to preview a public page? <a href="#collection-profile" onClick={focusHandle}>Set up your public identity</a> with a handle and display name. Social links are optional.</p>}
         {publicIdentityClaimed === null && <p>Public identity status is unavailable. Reload before previewing sharing.</p>}
         {state.hasPublicationAtCurrentHandle === false && <p>{publicIdentityClaimed === true ? `Nothing is published at /${state.user.handle} yet.` : "Nothing is published yet."}</p>}
         {state.hasPublicationAtCurrentHandle === true && <section className="unpublish-all" aria-labelledby="unpublish-all-title">
@@ -836,6 +782,75 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
         {/* A different preview (a new hash) starts unapproved. */}
         {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} refreshAccounts={preview.refreshAccounts} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
       </section>
+      <section className="onboarding-panel" id="collection-sources" aria-labelledby="collection-sources-title">
+        <p className="onboarding-kicker">SOURCES / OPTIONAL</p>
+        <h2 id="collection-sources-title">Bring in supporting context</h2>
+        <p>We ask what the evidence cannot answer. Signup, payment and observed use are different claims, and none of them proves continuous use.</p>
+        <p>Gmail discovery uses separately authorized read-only access when this environment is configured. Signing in with Google does not grant mailbox access. Microsoft mailbox connection is not available yet.</p>
+        <p>Sources bring discoveries and supporting context into your private collection. Your relationship and go-to choices remain yours.</p>
+        {(firstResult || (!source && state.cards.length > 0)) && <FirstResultPanel mode={firstResult ? "first" : "additional"} source={firstResult ? source : null} busy={busy} onConnectGithub={connectGithub} />}
+        <div className="connector-grid">
+          <MailboxManagement available={state.mailboxAvailable === true} />
+          <div className="connector-card">
+            <strong>GitHub</strong>
+            <p>Authorized account contributions. Account creation is separate from first use. A capture is a snapshot; no continuous coverage is implied.</p>
+            {connectorStatus("GITHUB")}
+            <button
+              className="secondary-action"
+              type="button"
+              onClick={connectGithub}
+              disabled={busy}
+            >
+              {state.connectors.some(connector => connector.provider === "GITHUB" && connector.status !== "REVOKED") ? "Refresh GitHub evidence" : "Connect GitHub"}
+            </button>
+          </div>
+          <form className="connector-card" action={submitDevin}>
+            <strong>Devin</strong>
+            <p>Optional organization-scoped sessions, searches, and PRs.</p>
+            {connectorStatus("DEVIN")}
+            <label className="review-field">
+              Organization ID
+              <input name="organizationId" required />
+            </label>
+            <label className="review-field">
+              Service token
+              <input name="devinToken" type="password" required />
+            </label>
+            <button className="secondary-action" disabled={busy}>
+              Connect Devin
+            </button>
+          </form>
+          <form className="connector-card" action={uploadEvidence}>
+            <strong>Upload an export or screenshot</strong>
+            <p>Retain an original privately, up to 19 MiB. Supports PNG/JPEG/WebP/HEIC/HEIF, CSV/TSV, JSON/JSONL/NDJSON, PDF, XLS/XLSX/ODS, TXT/XML/HTML, and ZIP. Files are not parsed or unpacked automatically. Add selected observations with their period and scope from the product’s supporting details.</p>
+            <label className="review-field">
+              Product
+              <select name="vendor" required defaultValue="Wispr Flow">
+                <option>Wispr Flow</option>
+                <option>NotebookLM</option>
+                <option value="Devin">Devin (cloud)</option>
+                <option>Devin Desktop</option>
+                <option>Windsurf</option>
+                <option>Greptile</option>
+              </select>
+            </label>
+            <label className="review-field">
+              Evidence file
+              <input
+                name="evidence"
+                type="file"
+                accept={EVIDENCE_UPLOAD_ACCEPT}
+                required
+              />
+            </label>
+            <button className="secondary-action" disabled={busy}>
+              Upload privately
+            </button>
+          </form>
+        </div>
+
+      </section>
+
       <section className="onboarding-panel" id="collection-data" aria-labelledby="collection-data-title">
         <p className="onboarding-kicker">YOUR DATA</p>
         <h2 id="collection-data-title">Download your data</h2>

@@ -31,7 +31,7 @@ export function FirstResultPanel({ source, busy, onConnectGithub, mode = "first"
     <p className="onboarding-kicker">PRIVATE FIRST</p>
     <h2 ref={heading} tabIndex={-1} id="first-result-title">{source === "github" ? "Connect GitHub activity" : source === "claude-code" ? "Import Claude Code usage" : source === "codex" ? "Import Codex usage" : source === "metric-packet" ? "Import another product’s measurements" : source === "manual" ? "Start with one tool" : mode === "additional" ? "Add another source" : "See your first private result"}</h2>
     {source ? <button type="button" className="text-link" onClick={() => selectFirstResultSource(null)}>Change source</button> : <>
-      <p>Choose one source. See what it reports, then decide what belongs in your collection. No mailbox or public profile required.</p>
+      <p>Choose one source. See what it reports, then decide what belongs in your collection. No mailbox or public page required.</p>
       <SourcePicker selected={null} />
     </>}
     {source === "github" && <>
@@ -41,7 +41,7 @@ export function FirstResultPanel({ source, busy, onConnectGithub, mode = "first"
     </>}
     {(source === "claude-code" || source === "codex" || source === "metric-packet") && <MeasurementImport key={source} source={source} />}
     {source === "manual" && <><p>Name a tool and choose how you use it. Usage measurements can wait.</p><a className="primary-action" href="#add-product" onClick={event => { event.preventDefault(); selectFirstResultSource(null); window.location.hash = "add-product"; }}>Add your first tool</a></>}
-    {!source && <a className="text-link" href="#add-product">Add your first tool manually</a>}
+    {!source && <a className={`text-link ${styles.manual}`} href="#add-product">Add your first tool manually</a>}
   </section>;
 }
 

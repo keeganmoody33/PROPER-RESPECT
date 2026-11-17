@@ -115,11 +115,11 @@ for (const width of [1280, 390]) for (const claimed of [true, false, undefined])
   }, claimed);
   await page.reload();
   const identity = page.locator("#collection-profile");
-  await identity.locator("summary").click();
+  await identity.getByText("Change your name, bio or links", { exact: true }).click();
   await expect(identity.getByLabel("Handle", { exact: true })).not.toBeEditable();
   await expect(identity.getByLabel("Handle", { exact: true })).toHaveValue("maya-ops");
   await expect(identity.getByRole("link", { name: "https://public.example/maya-ops", exact: true })).toHaveAttribute("href", "https://public.example/maya-ops");
-  await expect(identity).toContainText("Changing a published handle requires an owner-verified migration.");
+  await expect(identity).toContainText("Changing a published handle needs a migration that the site owner checks first.");
   await identity.getByLabel("Display name", { exact: true }).fill("Maya Chen · GTM");
   await identity.getByLabel("Short footer bio (optional)").fill("I build sales workflows and keep the receipts.");
   await identity.getByRole("button", { name: "Add a profile link" }).click();
@@ -135,7 +135,7 @@ for (const width of [1280, 390]) for (const claimed of [true, false, undefined])
   }]);
   expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toEqual([]);
   await page.reload();
-  await identity.locator("summary").click();
+  await identity.getByText("Change your name, bio or links", { exact: true }).click();
   await expect(identity.getByLabel("Display name", { exact: true })).toHaveValue("Maya Chen · GTM");
   await expect(identity.getByLabel("Handle", { exact: true })).not.toBeEditable();
   await expect(identity.getByLabel("Link 1 URL")).toHaveValue("https://maya.example");
@@ -149,7 +149,7 @@ for (const width of [1280, 390]) test(`blank display name preserves the saved id
     ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
   await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
   const identity = page.locator("#collection-profile");
-  await identity.locator("summary").click();
+  await expect(identity.getByLabel("Handle", { exact: true })).toBeVisible();
   await identity.getByLabel("Handle", { exact: true }).fill("synthetic-owner");
   const name = identity.getByLabel("Display name", { exact: true });
   for (const blank of ["   ", "\u2028\u2029"]) {
@@ -191,7 +191,7 @@ test("unknown publication state explains why identity saving is unavailable", as
   });
   await page.reload();
   const identity = page.locator("#collection-profile");
-  await identity.locator("summary").click();
+  await identity.getByText("Change your handle or name", { exact: true }).click();
   await expect(identity).toContainText("Public identity status is unavailable. Reload before saving.");
   await expect(identity.getByLabel("Handle", { exact: true })).not.toBeEditable();
   await expect(identity.getByRole("button", { name: "Save public identity" })).toBeDisabled();
@@ -271,7 +271,7 @@ for (const width of [1280, 390]) test(`first private manual card reaches exact p
     ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
   await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
   await expect(page.getByRole("heading", { name: "See your first private result" })).toBeVisible();
-  await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
+  await expect(page.locator("#collection-profile").getByLabel("Handle", { exact: true })).toHaveValue("");
   await page.screenshot({ path: testInfo.outputPath(`fresh-user-empty-${width}.png`), fullPage: false });
   await page.getByRole("link", { name: "Add your first tool manually", exact: true }).click();
   const add = page.locator("#add-product");
@@ -299,7 +299,7 @@ for (const width of [1280, 390]) test(`first private manual card reaches exact p
   await page.reload();
   await expect(page.getByRole("heading", { name: "See your first private result" })).toHaveCount(0);
   await expect(inventory.getByLabel("What it helps you do (optional)")).toHaveValue("My research log");
-  await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
+  await expect(page.locator("#collection-profile").getByLabel("Handle", { exact: true })).toHaveValue("");
   expect(await page.evaluate(() => localStorage.getItem("proper-respect-fresh-user-fixture"))).toBe(beforeReload);
   await page.getByRole("link", { name: "Set up your public identity", exact: true }).click();
   const identity = page.locator("#collection-profile");
@@ -345,8 +345,8 @@ for (const identityState of ["claimed", "unclaimed-after-upload", "unknown"] as 
   }, identityState);
   await page.reload();
   const identity = page.locator("#collection-profile");
-  await expect(identity).not.toHaveAttribute("open");
-  await identity.locator("summary").click();
+  if (identityState === "claimed") await identity.getByText("Change your handle or name", { exact: true }).click();
+  else await expect(identity.getByLabel("Handle", { exact: true })).toBeVisible();
   const preview = page.getByRole("button", { name: "Preview sharing", exact: true });
   if (identityState === "claimed") {
     await expect(identity.getByLabel("Handle", { exact: true })).toHaveValue("pending-victim123");

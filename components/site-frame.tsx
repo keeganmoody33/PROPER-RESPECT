@@ -11,8 +11,8 @@ export function SiteHeader() {
     </Link>
     <div className="site-theme"><ThemeSelector /></div>
     <nav className="site-navigation" aria-label="Main navigation">
-      <Link href="/#how-it-works">How it works</Link>
-      <Link href="/#example">Example</Link>
+      <Link className="site-nav-wide" href="/#how-it-works">How it works</Link>
+      <Link className="site-nav-wide" href="/#example">Example</Link>
       <Link href="/about/origins">Origins</Link>
       <Link href="/sign-in">Sign in</Link>
       <Link className="site-start" href="/app/collection">Your collection</Link>

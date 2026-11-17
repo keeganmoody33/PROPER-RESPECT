@@ -43,7 +43,7 @@ for (const width of [1280, 390]) for (const mode of ["signin", "signup"]) test(`
   await expect(page).toHaveURL(/\/app\/collection\?source=claude-code$/);
   await expect(page.getByRole("heading", { name: "Import Claude Code usage", exact: true })).toBeVisible();
   await expect(page.getByText("Earn your respect.", { exact: true })).toHaveCount(0);
-  await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
+  await expect(page.locator("#collection-profile").getByLabel("Handle", { exact: true })).toHaveValue("");
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath(`first-result-source-${width}.png`), fullPage: false });
@@ -93,7 +93,7 @@ for (const width of [1280, 390]) test(`exact first result survives malformed upl
   // Plain dates, the exact stored value kept in each <time datetime>.
   await expect(result).toContainText("1 Oct 2026 to 5 Oct 2026");
   await expect(result.locator("time[datetime='2026-10-01']").first()).toHaveText("1 Oct 2026");
-  await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
+  await expect(page.locator("#collection-profile").getByLabel("Handle", { exact: true })).toHaveValue("");
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
   await result.screenshot({ path: testInfo.outputPath(`first-result-exact-${width}.png`) });
   await page.reload();
@@ -245,4 +245,68 @@ for (const width of [1280, 390]) test(`manual source hands off and finishes afte
   expect(state.cards[0].prop.visibility).toBe("PRIVATE");
   const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
   expect(calls.filter((call: { name: string }) => call.name === "publishSelected")).toHaveLength(0);
+});
+
+const ORDER_SCREENSHOTS = process.env.ONBOARDING_ORDER_SCREENSHOTS;
+const TAP_TARGET = 44;
+const orderSeed = (claimed: boolean) => ({
+  user: { _id: "synthetic-owner", handle: claimed ? "synthetic-stack" : "pending-owner", displayName: "Synthetic owner", bio: "" },
+  connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true, brandEnrichmentAvailable: false,
+  hasPublicationAtCurrentHandle: false, hasClaimedPublicIdentity: claimed,
+  cards: ["Field Notes", "Sketchpad"].map((name, index) => ({
+    product: { _id: `product-${index}`, _creationTime: 1, name, slug: `synthetic-${index}`, domain: `synthetic-${index}.example`, description: "Synthetic" },
+    prop: { _id: `prop-${index}`, _creationTime: 1, userId: "synthetic-owner", productId: `product-${index}`, status: "ACTIVE", visibility: "PRIVATE", headline: `Synthetic line ${index + 1}`, note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
+    links: [], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false,
+  })),
+});
+
+for (const [width, height] of [[1280, 900], [390, 844]]) for (const claimed of [false, true]) test(`signed in, the page reads stack, collection, handle, sharing, then sources at ${width}px with${claimed ? "" : " no"} handle`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height });
+  await page.addInitScript(state => { localStorage.setItem("fixture-signed-in", "true"); localStorage.setItem("proper-respect-fresh-user-fixture", JSON.stringify(state)); }, orderSeed(claimed));
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8883/")
+    ? route.fulfill({ contentType: "text/html", body: fixtureHtml }) : route.abort());
+  await page.goto("http://127.0.0.1:8883/app/collection");
+  await expect(page.getByRole("heading", { name: "Add another source", exact: true })).toBeVisible();
+  const order = await page.evaluate(() => [...document.querySelector("main.onboarding-shell")!.children].flatMap(element => {
+    const heading = element.matches("h1, h2") ? element : element.querySelector("h1, h2");
+    return heading && !element.matches("nav") ? [heading.textContent!.trim()] : [];
+  }));
+  testInfo.annotations.push({ type: "page order", description: order.join(" > ") });
+  expect(order).toEqual(["Your collection", "Build your stack", "My collection", "Add a tool", claimed ? "Your page address" : "Choose your handle", "Choose what to share", "Bring in supporting context", "Download your data"]);
+  await expect(page.locator(".collection-navigation a")).toHaveText(["Build your stack", "Collection", "Add a tool", "Your handle", "Sharing", "Sources"]);
+  const identity = page.locator("#collection-profile");
+  if (claimed) {
+    await expect(identity).toContainText("Your page address: /synthetic-stack. Nothing is public there until you share.");
+    await identity.getByText("Change your handle or name", { exact: true }).click();
+    await expect(identity.getByLabel("Handle", { exact: true })).toBeEditable();
+  } else {
+    await expect(identity.getByLabel("Handle", { exact: true })).toBeVisible();
+    await expect(identity.getByLabel("Display name", { exact: true })).toBeVisible();
+    await expect(identity.getByLabel("Short footer bio (optional)")).toBeHidden();
+    await expect(identity).not.toContainText("pending-owner");
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  // Every control a thumb lands on, except links running inside a sentence.
+  const small = await page.evaluate(minimum => [...document.querySelectorAll("main :is(a, button, select, summary, input:not([type=checkbox], [type=radio], [type=hidden]), textarea)")].flatMap(element => {
+    const box = element.getBoundingClientRect();
+    const inProse = element.matches("a") && element.parentElement!.matches("p, li, small, span, strong");
+    return element.checkVisibility() && box.height < minimum - 0.5 && !inProse ? [`${element.tagName.toLowerCase()} "${(element.textContent || element.getAttribute("aria-label") || element.getAttribute("name") || "").trim().slice(0, 40)}" ${Math.round(box.height)}px`] : [];
+  }), TAP_TARGET);
+  expect(small).toEqual([]);
+  if (ORDER_SCREENSHOTS) await page.screenshot({ path: `${ORDER_SCREENSHOTS}/collection-${claimed ? "with" : "no"}-handle-${width}x${height}.png`, fullPage: true, animations: "disabled" });
+  const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls") ?? "[]"));
+  expect(calls.filter((call: { name: string }) => ["claimHandle", "publishSelected"].includes(call.name))).toEqual([]);
+});
+
+for (const width of [1280, 390]) test(`a source deep link lands on its import below sharing at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.addInitScript(state => { localStorage.setItem("fixture-signed-in", "true"); localStorage.setItem("proper-respect-fresh-user-fixture", JSON.stringify(state)); }, orderSeed(false));
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8883/")
+    ? route.fulfill({ contentType: "text/html", body: fixtureHtml }) : route.abort());
+  await page.goto("http://127.0.0.1:8883/app/collection?source=claude-code");
+  const heading = page.getByRole("heading", { name: "Import Claude Code usage", exact: true });
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
+  expect(await heading.evaluate(element => element.compareDocumentPosition(document.getElementById("collection-sharing")!) & Node.DOCUMENT_POSITION_PRECEDING)).toBeTruthy();
+  await expect(page.locator("#first-result-title")).toHaveCount(1);
 });
