@@ -211,10 +211,12 @@ export function Walkthrough({ cards, loadMore }: { cards: readonly WalkthroughCa
   const queue = useMemo(() => walkthroughQueue(cards), [cards]);
   const [stored, setSession] = useState<WalkthroughSession | null>(null);
   const [removed, setRemoved] = useState<string[]>([]);
-  // Tools on a later page of the collection join the walk once it has started.
+  // Tools on a later page of the collection join the walk once it has started. Before that, later pages are read only
+  // while nothing is waiting, so a tool behind a first page of answered ones still gets its turn.
   const session = stored && resumeSession(stored, queue);
   const started = stored !== null;
-  useEffect(() => { if (started) loadMore?.(); }, [started, loadMore]);
+  const nothingWaiting = queue.length === 0;
+  useEffect(() => { if (started || nothingWaiting) loadMore?.(); }, [started, nothingWaiting, loadMore]);
   if (!session && queue.length === 0) return null;
   const current = session && currentTool(session, queue);
 

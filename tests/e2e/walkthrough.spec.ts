@@ -230,6 +230,21 @@ test("Skip leaves a tool untouched, and a reload resumes at the first tool witho
   await noSidewaysScroll(browserPage);
 });
 
+// The collection arrives 25 tools at a time.
+const FIRST_PAGE = 25;
+test("a tool waiting on a later page of a long collection still gets its turn", async ({ page: browserPage }) => {
+  const answered = Array.from({ length: FIRST_PAGE }, (_, index) => {
+    const card = picked(`done-${index}`, `Synthetic tool ${index + 1}`, `tool-${index}.example`);
+    return { ...card, prop: { ...card.prop, headline: "Already answered." } };
+  });
+  await open(browserPage, PHONE, { seed: { ...seeded, cards: [...answered, picked("cursor", "Cursor", "cursor.com")] } });
+  const walk = browserPage.getByRole("region", { name: "Go through your tools" });
+  await expect(walk).toContainText("1 tool is waiting for your answer.");
+  await walk.getByRole("button", { name: "Go through your tools one at a time" }).click();
+  await expect(walk.getByRole("heading", { name: "Cursor" })).toBeFocused();
+  await expect(walk.getByRole("status")).toHaveText("1 of 1");
+});
+
 test("the walkthrough works from the keyboard alone, with More for the other levels", async ({ page: browserPage }) => {
   await open(browserPage, DESKTOP, { seed: { ...seeded, cards: [seeded.cards[1]] } });
   const walk = browserPage.getByRole("region", { name: "Go through your tools" });
