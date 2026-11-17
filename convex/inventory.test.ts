@@ -436,6 +436,7 @@ test("saving a blank handle removes the stored credit and keeps it in history", 
 // the page relies on stays.
 const removeNeverUsed = makeFunctionReference<"mutation">("inventory:removeNeverUsed");
 const saveSelection = makeFunctionReference<"mutation">("stack:saveSelection");
+const addManual = makeFunctionReference<"mutation">("onboarding:addManualProduct");
 const REFUSAL = NEVER_USED_KEPT;
 
 async function stackPicks(owner: Awaited<ReturnType<typeof fixture>>["owner"], operationId: string, slugs: string[]) {
@@ -454,9 +455,10 @@ test("Never used it removes a bare stack pick with its link, history and discove
     links: await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
     events: await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
     drafts: (await ctx.db.query("draftImports").collect()).filter(draft => draft.resultPropId === clay),
-    // The save receipt names the tool, so it goes too; the other pick's receipt stays.
-    receipts: (await ctx.db.query("manualProductIntakes").collect()).map(row => row.propId === clay ? "clay" : row.propId === exa ? "exa" : "other"),
-  }))).toEqual({ prop: null, links: [], events: [], drafts: [], receipts: ["exa"] });
+    // The save's receipt stays as a marker of the operation, with nothing about the tool left in it; the other pick's is untouched.
+    receipts: (await ctx.db.query("manualProductIntakes").collect()).map(row => row.propId === exa ? "exa"
+      : `${row.requestJson} ${/clay/i.test(row.operationId + row.requestJson) ? "names the tool" : "names nothing"}`),
+  }))).toEqual({ prop: null, links: [], events: [], drafts: [], receipts: ['{"removed":true} names nothing', "exa"] });
   expect(await others()).toEqual(before);
   expect((await owner.query(list, firstPage)).page.map((row: { product: { slug: string } }) => row.product.slug).sort()).toEqual(["exa", "wisprflow"]);
 });
@@ -490,6 +492,32 @@ test("Never used it refuses a record with evidence, activity, a measurement or a
   });
   await Promise.all(ids.map(id => expect(owner.mutation(removeNeverUsed, { propId: id, expectedVersion: 0 })).rejects.toThrow(REFUSAL)));
   expect(await t.run(async ctx => (await Promise.all(ids.map(id => ctx.db.get(id)))).every(Boolean))).toBe(true);
+});
+
+test("a retry of the save that made a removed tool is refused, so the tool never comes back by itself", async () => {
+  const { t, owner } = await fixture();
+  const RETRY = "A tool from this save was removed from your collection since. Save it again to bring it back.";
+  const tools = () => t.run(async ctx => (await ctx.db.query("props").collect()).length);
+  const before = await tools();
+  // A stack save of one tool, and of two: the response is lost, the tool shows up, the owner answers Never used it.
+  const pick = (slug: string) => ({ kind: "directory" as const, slug, status: "ACTIVE" as const, level: "WEEKLY" as const });
+  const [clay] = await stackPicks(owner, "one-pick", ["clay"]);
+  await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 });
+  await expect(owner.mutation(saveSelection, { operationId: "one-pick", picks: [pick("clay")] })).rejects.toThrow(RETRY);
+  const [exa] = await stackPicks(owner, "two-picks", ["exa", "notion"]);
+  await owner.mutation(removeNeverUsed, { propId: exa, expectedVersion: 1 });
+  await expect(owner.mutation(saveSelection, { operationId: "two-picks", picks: [pick("exa"), pick("notion")] })).rejects.toThrow(RETRY);
+  // A tool added by name, the same way.
+  const typed = { name: "My Notes App", website: "https://notes.example", status: "ACTIVE" as const, operationId: "typed-add" };
+  const added = await owner.mutation(addManual, typed) as Id<"props">;
+  const version = (await t.run(ctx => ctx.db.get(added)))!.relationshipVersion ?? 0;
+  await owner.mutation(removeNeverUsed, { propId: added, expectedVersion: version });
+  await expect(owner.mutation(addManual, typed)).rejects.toThrow(RETRY);
+  // Only Notion, the one tool nobody removed, was added.
+  expect(await tools()).toBe(before + 1);
+  expect(await t.run(async ctx => (await ctx.db.query("products").collect()).some(product => product.name === "My Notes App"))).toBe(false);
+  // A fresh save, with its own operation, still adds the tool.
+  expect((await stackPicks(owner, "fresh-pick", ["clay"]))).toHaveLength(1);
 });
 
 test("a removal decided on a stale screen is refused, so an answer saved since then and its history stay", async () => {

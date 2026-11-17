@@ -15,6 +15,7 @@ import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associa
 import { privateCardPrimaryLink } from "../src/domain/product-destination";
 import type { RankedAccountEvidence } from "../src/domain/account-evidence";
 import { parseOrUserError, userError } from "../src/domain/user-error";
+import { removedReceipt } from "./manualProducts";
 
 async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   const user = await requireUser(ctx);
@@ -143,13 +144,17 @@ export const removeNeverUsed = mutation({
     if (prop.visibility === "PUBLIC" || prop.activity || prop.activityEvidenceId || page?.cardPropIds?.includes(propId)
       || attached.some(Boolean) || drafts.some(draft => draft.evidenceResolution?.targetPropId === propId)) throw userError(NEVER_USED_KEPT);
     // Its discovery row goes too: discovery and the GitHub connection both stop on a row that names a missing record.
-    // Its save receipts go as well: each names the tool, and one left behind would point a replayed save at nothing.
+    // Its save receipts stay as markers with nothing about the tool in them: a retry of that save is then refused,
+    // where a missing receipt would let the retry bring the tool straight back.
     const [links, events, receipts] = await Promise.all([
       ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
       ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
       ctx.db.query("manualProductIntakes").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
     ]);
-    await Promise.all([...links, ...events, ...receipts, ...drafts.filter(draft => draft.resultPropId === propId)].map(row => ctx.db.delete(row._id)));
+    await Promise.all([
+      ...[...links, ...events, ...drafts.filter(draft => draft.resultPropId === propId)].map(row => ctx.db.delete(row._id)),
+      ...receipts.map(row => ctx.db.patch(row._id, removedReceipt(row))),
+    ]);
     await ctx.db.delete(propId);
     // A tool added by name has a product record of its own, holding the name and website its owner typed. It goes
     // once nothing else uses it. A catalog product is shared, so it stays.
