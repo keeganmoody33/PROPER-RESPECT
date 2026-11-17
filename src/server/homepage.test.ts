@@ -11,16 +11,18 @@ const statements = [
   "A stored affiliate or referral link is disclosed on the card.",
 ];
 
-it("the hero holds its one line, the one subline the owner chose and two actions, and nothing else outside the examples", () => {
+it("the hero holds its one line, two actions right under it and the one subline the owner chose, and nothing else outside the examples", () => {
   const $ = load(renderToStaticMarkup(HomePage()));
   const hero = $("section[aria-labelledby=homepage-title]").clone();
   hero.find("#example").remove();
   const lines = hero.find("p, h1, a, li").toArray().filter(element => !$(element).find("p, h1, a, li").length).map(element => $(element).text().trim());
   expect(lines).toEqual([
     "Every tool you've used counts.",
-    "Even the ones you stopped. One page for what you run, what you've tested and what you've moved on from, with the usage behind it.",
+    // The actions come before the examples in the page's order, so a phone shows the way to start in its first screen.
     "Start your collection", "See Keegan’s tooling page",
+    "Even the ones you stopped. One page for what you run, what you've tested and what you've moved on from, with the usage behind it.",
   ]);
+  expect($("#example").prevAll().find("a").toArray().map(link => $(link).text())).toEqual(["Start your collection", "See Keegan’s tooling page"]);
   // The examples carry no line of their own below the card either. Matches "Choose what to share", not "Choose a product example".
   // https://regex101.com/?regex=Keep%20your%20usage%20private%7CChoose%20what%20to%20share&testString=Choose%20what%20to%20share%0AChoose%20a%20product%20example
   expect($("#example").text()).not.toMatch(/Keep your usage private|Choose what to share/);
