@@ -453,7 +453,9 @@ test("Never used it removes a bare stack pick with its link, history and discove
     links: await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
     events: await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
     drafts: (await ctx.db.query("draftImports").collect()).filter(draft => draft.resultPropId === clay),
-  }))).toEqual({ prop: null, links: [], events: [], drafts: [] });
+    // The save receipt names the tool, so it goes too; the other pick's receipt stays.
+    receipts: (await ctx.db.query("manualProductIntakes").collect()).map(row => row.propId === clay ? "clay" : row.propId === exa ? "exa" : "other"),
+  }))).toEqual({ prop: null, links: [], events: [], drafts: [], receipts: ["exa"] });
   expect(await others()).toEqual(before);
   expect((await owner.query(list, firstPage)).page.map((row: { product: { slug: string } }) => row.product.slug).sort()).toEqual(["exa", "wisprflow"]);
 });

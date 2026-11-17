@@ -142,11 +142,13 @@ export const removeNeverUsed = mutation({
     if (prop.visibility === "PUBLIC" || prop.activity || prop.activityEvidenceId || page?.cardPropIds?.includes(propId)
       || attached.some(Boolean) || drafts.some(draft => draft.evidenceResolution?.targetPropId === propId)) throw userError(NEVER_USED_REFUSAL);
     // Its discovery row goes too: discovery and the GitHub connection both stop on a row that names a missing record.
-    const [links, events] = await Promise.all([
+    // Its save receipts go as well: each names the tool, and one left behind would point a replayed save at nothing.
+    const [links, events, receipts] = await Promise.all([
       ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
+      ctx.db.query("manualProductIntakes").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
       ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
     ]);
-    await Promise.all([...links, ...events, ...drafts.filter(draft => draft.resultPropId === propId)].map(row => ctx.db.delete(row._id)));
+    await Promise.all([...links, ...events, ...receipts, ...drafts.filter(draft => draft.resultPropId === propId)].map(row => ctx.db.delete(row._id)));
     await ctx.db.delete(propId);
     return { removed: true };
   },
