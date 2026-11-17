@@ -1,6 +1,6 @@
 # Public ready: main, 17 Nov 2026
 
-Owner instruction, 2026-11-17: get `main` public ready, working on `main`, in small green commits. The lead (Claude Code) plans, briefs, reviews every diff, runs the checks and commits. Build agents never push.
+Owner instruction, 2026-11-17: get `main` public ready, in small green commits, delivered as one PR per phase. The lead (Claude Code) plans, briefs, reviews every diff, runs the checks and commits. Build agents never push.
 
 **Checks before every push:** `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
 
@@ -20,12 +20,12 @@ Proper Respect is your tooling page: one link that shows every tool you use, tes
 - `main` has branch protection: three required checks, up to date with `main`, enforced for admins. See "Delivery" below.
 - The repo is already public on GitHub. It has no license.
 - `docs/launch-readiness.md` and a positioning brief are named in the instruction and are not in the repo. B3 and "fix every drift area" are built from the instruction's own text.
-- `CONTEXT.md`, `docs/002-v2-product-motion.md` and `docs/DEVELOPMENT.md` say sign-up is closed. The owner says it is public. The docs change; Clerk does not.
+- `CONTEXT.md`, `docs/002-v2-product-motion.md` and `docs/DEVELOPMENT.md` said sign-up is closed. Owner, 2026-11-17: the sign-up mode is an open decision, with a waitlist recommended, and today's behaviour is that sign-up is public. The docs change; Clerk does not.
 - `verify.yml` already runs on push to `main`.
 
 ## Delivery
 
-Decided once the first push shows what branch protection allows. Recorded here when known.
+A direct push to `main` is refused: branch protection requires three passing checks on every commit, for admins too. Owner, 2026-11-17: leave branch protection as it is. Cut a branch from the local work, open one PR per phase, and merge each only when all three checks pass and Codex and Devin have reviewed it.
 
 ## File ownership
 

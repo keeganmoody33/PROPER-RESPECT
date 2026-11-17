@@ -46,7 +46,7 @@ the owner's local machine.
 | Production backend | `striped-chicken-693`, last verified at `082e90c` on 2026-09-23 ([receipt](verification/2026-09-23-release-documentation-reconciliation.md)). **Unknown** whether anyone ran a Convex deploy after that. | receipt only |
 | On main, not deployed | 17 Convex files: #52's migration, #58, #60, #64, #81, #90, #91 and R01. `/lecturesfrom` depends on #52. | `git diff 082e90c main -- convex/` |
 | Runtime checks | Last run 2026-09-23. None since. | receipts |
-| Sign-up | Public, by the owner's statement on 2026-11-17. The last recorded read of the Clerk setting, on 2026-09-26, was `restricted`; nobody has read it from the repo since. | owner |
+| Sign-up | The mode is an open decision, with a waitlist recommended. Today's behaviour is that sign-up is public, by the owner's statement on 2026-11-17. The last recorded read of the Clerk setting, on 2026-09-26, was `restricted`; nobody has read it from the repo since. | owner |
 
 Do not deploy main outside the release workflow. Releases push a `v*` tag and
 run `.github/workflows/release.yml` ([deployment runbook](DEPLOYMENT.md),

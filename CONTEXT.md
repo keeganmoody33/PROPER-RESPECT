@@ -12,7 +12,7 @@
 
 PROPER-RESPECT is your tooling page: one link, `proper-respect.com/{handle}`, that shows every tool you use, test and used before, with the usage behind it. You earn respect for what you actually run, and you give props to whoever put you on. A tool you stopped using still counts.
 
-The collection is private first: nothing is published without the person's explicit preview and approval. Sign-up is public (owner, 2026-11-17).
+The collection is private first: nothing is published without the person's explicit preview and approval. Sign-up mode is an open decision, with a waitlist recommended. Today's behaviour is that sign-up is public (owner, 2026-11-17).
 
 The product is not an affiliate network, a payment processor, a review site, a company analytics dashboard, or a surveillance product. It is a user-owned profile and proof surface for product advocacy.
 

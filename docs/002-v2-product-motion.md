@@ -19,8 +19,9 @@ The brief's [Section 3](remediation/CODEX-BRIEF.md) holds the full decisions.
 - **Now:** one link, `proper-respect.com/{handle}`, shows the tools a person
   uses, tests and used before, plus the usage behind them. The collection is
   private first; nothing publishes without owner preview and approval.
-- **Sign-up is public** (owner, 2026-11-17). It was closed until then, and
-  the first second user was an invited tester.
+- **Sign-up mode is an open decision**, with a waitlist recommended. Today's
+  behaviour is that sign-up is public (owner, 2026-11-17). It was closed
+  before, and the first second user was an invited tester.
 - **Props, decided 2026-11-15:** each card can credit the person who put its
   owner on the product, by one handle on one platform, with no count,
   reverse lookup or notifications ([ADR-062](adr/062-props-credit.md)).
