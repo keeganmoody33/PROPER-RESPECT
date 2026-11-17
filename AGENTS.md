@@ -1,6 +1,35 @@
 # Repository Guidelines
 
-Updated: 2026-11-15.
+Updated: 2026-11-17.
+
+## Public-ready pass
+
+Owner instruction, 2026-11-17. The current work is the public-ready pass in
+[`docs/plans/2026-11-17-public-ready.md`](docs/plans/2026-11-17-public-ready.md).
+Read that plan and the two documents it points at before working on a phase.
+For this work, these rules replace the delivery rules below:
+
+- **One PR per phase.** Cut a branch named `public-ready/<phase>` from `main`,
+  keep its commits small and one concern each, and open one PR for the phase.
+  `main` is protected and stays that way: nobody pushes to it directly.
+- **Green before every push.** Run typecheck, lint, the unit tests and a
+  build. Run the browser specs that cover what changed.
+- **Who merges.** The lead Claude Code session merges a phase PR itself, with
+  a merge commit pinned to the reviewed head, only when all three required
+  checks pass and both Codex and Devin have reviewed that head with no open
+  finding. It asks Codex with an `@codex review` comment after each push.
+- **Build agents.** The lead may hand build work to subagents, each with the
+  files it owns named in its brief. Build agents never push. The lead reviews
+  every diff before it lands.
+- **Stops for the owner.** A `v*` tag, deleting a remote branch, closing or
+  merging a PR that is not a phase PR, adding a license, a schema change that
+  needs a migration on production data, and anything a revert can't undo.
+- **New Convex modules.** Code generation needs a configured deployment, which
+  an agent checkout doesn't have. Put new backend functions in existing
+  modules, or ask the owner to run `npx convex codegen`.
+
+Everything else in this file still applies: the conventions, tests first,
+the words in `CONTEXT.md`, and the execution boundaries.
 
 ## Active remediation program
 
@@ -129,7 +158,7 @@ cannot happen, delete the row.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
