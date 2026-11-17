@@ -132,7 +132,7 @@ export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProduc
   </div>;
 }
 
-function Builder({ publicOrigin }: { publicOrigin?: string }) {
+function Builder({ publicOrigin, voice = false }: { publicOrigin?: string; voice?: boolean }) {
   const source = useFirstResultSource();
   const convex = useConvex();
   const { user: clerkUser } = useUser();
@@ -483,7 +483,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
       </nav>
       {message && <p className="message" role="status">{message}</p>}
       <StackPicker mode={{ kind: "signed-in", held: heldSlugs }} />
-      {state.privateInventoryAvailable && <CollectionWalkthrough />}
+      {state.privateInventoryAvailable && <CollectionWalkthrough voice={voice} />}
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />
@@ -878,14 +878,15 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   );
 }
 
-export function OnboardingClient({ publicOrigin }: { publicOrigin?: string }) {
+/** `voice` offers the rapid fire voice walkthrough; the server decides it (src/server/voice-onboarding.ts). */
+export function OnboardingClient({ publicOrigin, voice = false }: { publicOrigin?: string; voice?: boolean }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { isLoaded } = useAuth();
   // Clerk renders nothing until it knows the session; the builder shell shows meanwhile.
   if (!isLoaded) return <SignedOutCollection session="checking" />;
   return (
     <Show when="signed-in" fallback={<SignedOutCollection session="signed-out" />}>
-      {isAuthenticated ? <Builder publicOrigin={publicOrigin} /> : <main className="system-message">
+      {isAuthenticated ? <Builder publicOrigin={publicOrigin} voice={voice} /> : <main className="system-message">
         <p role="status">{isLoading ? "Verifying your session…" : "Could not verify your session. Reload this page to retry."}</p>
       </main>}
     </Show>

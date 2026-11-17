@@ -20,16 +20,18 @@ import {
   startSession, walkthroughLine, walkthroughQueue, walkthroughReason, walkthroughSave,
   type WalkthroughAnswer, type WalkthroughCard, type WalkthroughChoice, type WalkthroughItem, type WalkthroughOutcome, type WalkthroughSession,
 } from "@/src/client/walkthrough";
+import { RapidFire } from "./rapid-fire";
+import { StartDateInput } from "./start-date-input";
 import styles from "./walkthrough.module.css";
 
 // Each screen ends with this many use choices at most; "Something else" covers the rest.
 const USES_SHOWN = 5;
 const SOURCES_READ = 5;
 
-const choiceLabel = (choice: WalkthroughChoice) => choice === "NEVER" ? "Never used it" : levelLabel(choice);
+export const choiceLabel = (choice: WalkthroughChoice) => choice === "NEVER" ? "Never used it" : levelLabel(choice);
 const isMoreChoice = (choice: WalkthroughChoice | undefined) => MORE_CHOICES.some(more => more === choice);
 
-function ChoiceCard({ choice }: { choice: WalkthroughChoice }) {
+export function ChoiceCard({ choice }: { choice: WalkthroughChoice }) {
   return <label className={styles.choice} data-never={choice === "NEVER" ? "" : undefined}>
     <Radio value={choice} className={styles.radio}><RadioIndicator className={styles.dot} /></Radio>
     {choiceLabel(choice)}
@@ -45,7 +47,7 @@ function choiceHint(choice: WalkthroughChoice | undefined, never: ReturnType<typ
     : `${name} has evidence or a published card attached, so it stays in your collection as it is. Nothing new is saved.`;
 }
 
-function ProductMark({ product }: { product: WalkthroughItem["card"]["product"] }) {
+export function ProductMark({ product }: { product: WalkthroughItem["card"]["product"] }) {
   const icon = officialProductIcon(product);
   const [failed, setFailed] = useState(false);
   if (!icon || failed) return <span className={styles.mark} aria-hidden="true">{product.name.trim().charAt(0).toUpperCase()}</span>;
@@ -54,7 +56,7 @@ function ProductMark({ product }: { product: WalkthroughItem["card"]["product"] 
   return <span className={styles.mark} aria-hidden="true"><img src={icon.path} alt="" width={48} height={48} onError={() => setFailed(true)} /></span>;
 }
 
-function ToolScreen({ item, progress, onDone, onLeave }: {
+export function ToolScreen({ item, progress, onDone, onLeave }: {
   item: WalkthroughItem; progress: string; onDone: (outcome: WalkthroughOutcome, name: string) => void; onLeave: () => void;
 }) {
   const { card } = item;
@@ -151,7 +153,7 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
     </fieldset>}
 
     {fields.asksSince && <label className={styles.field}>Since (optional)
-      <input type="date" value={answer.startedAt} aria-describedby={`${ids}-since`} disabled={busy} onChange={event => change({ startedAt: event.target.value })} />
+      <StartDateInput value={answer.startedAt} aria-describedby={`${ids}-since`} disabled={busy} onChange={startedAt => change({ startedAt })} />
       <span id={`${ids}-since`} className={styles.hint}>Leave it blank if you don&apos;t know. Signup dates aren&apos;t first use.</span>
     </label>}
 
@@ -218,8 +220,10 @@ function PageSummary({ session, cards, removed, onPreview, onClose }: {
  * The guided path through the collection: one tool per screen, each answer saved privately as it is given. It never
  * publishes; its last screen hands over to the existing share preview and approval.
  */
-export function Walkthrough({ cards, collection = "read" }: {
+export function Walkthrough({ cards, collection = "read", voice = false }: {
   cards: readonly WalkthroughCard[];
+  /** Offers rapid fire by voice next to the one-at-a-time path (voice onboarding prototype, off unless turned on). */
+  voice?: boolean;
   /** How much of the collection has arrived: nothing yet, some pages with more being read, or all of it. */
   collection?: "starting" | "reading" | "read";
 }) {
@@ -227,12 +231,15 @@ export function Walkthrough({ cards, collection = "read" }: {
   const queue = useMemo(() => walkthroughQueue(cards), [cards]);
   const [stored, setSession] = useState<WalkthroughSession | null>(null);
   const [removed, setRemoved] = useState<string[]>([]);
+  const [rapid, setRapid] = useState(false);
   // A product is asked about once, and whether it still needs an answer can depend on a record on a later page. So the
   // walk is offered only when the whole collection has been read. While later pages are on their way the section is
   // already here, saying so: "Next: go through your tools" points at it, and a new pick lands on the last page.
   const session = stored && resumeSession(stored, queue);
+  // Rapid fire answers from a snapshot of the queue, so cards it has just saved don't vanish under it.
+  const [rapidQueue, setRapidQueue] = useState<readonly WalkthroughItem[]>([]);
   const reading = !session && collection === "reading";
-  if (!session && !reading && (queue.length === 0 || collection !== "read")) return null;
+  if (!rapid && !session && !reading && (queue.length === 0 || collection !== "read")) return null;
   const current = session && currentTool(session, queue);
 
   function done(propId: string, outcome: WalkthroughOutcome, name: string) {
@@ -249,9 +256,14 @@ export function Walkthrough({ cards, collection = "read" }: {
     <p className="onboarding-kicker">ONE AT A TIME / PRIVATE FIRST</p>
     <h2 id={`${ids}-title`}>Go through your tools</h2>
     {reading && <p role="status" className={styles.lede}>Reading the rest of your collection…</p>}
-    {!session && !reading && <>
+    {rapid && <RapidFire queue={rapidQueue} cards={cards} onLeave={() => setRapid(false)}
+      onFinish={(finished, names) => { setRapid(false); setRemoved(names); setSession(finished); }} />}
+    {!rapid && !session && !reading && <>
       <p className={styles.lede}>{queue.length === 1 ? "1 tool is" : `${queue.length} tools are`} waiting for your answer. One tool per screen: how you use it, what you use it for, and the line on its card. Each answer saves privately as you go.</p>
-      <button type="button" className="primary-action" onClick={() => { setRemoved([]); setSession(startSession(queue)); }}>Go through your tools one at a time</button>
+      <div className={styles.actions}>
+        <button type="button" className="primary-action" onClick={() => { setRemoved([]); setSession(startSession(queue)); }}>Go through your tools one at a time</button>
+        {voice && <button type="button" className="secondary-action" onClick={() => { setRemoved([]); setRapidQueue(queue); setRapid(true); }}>Rapid fire by voice</button>}
+      </div>
     </>}
     {session && current && <ToolScreen key={current.propId} item={current} progress={progressLine(session, queue)}
       onDone={(outcome, name) => done(current.propId, outcome, name)} onLeave={() => setSession(null)} />}
@@ -266,8 +278,8 @@ const COLLECTION_PAGE = 25;
  * The walkthrough over the whole collection. It reads every page itself, with its own paging, so the sharing list
  * beside it still shows its choices a page at a time.
  */
-export function CollectionWalkthrough() {
+export function CollectionWalkthrough({ voice = false }: { voice?: boolean }) {
   const { results, status, loadMore } = usePaginatedQuery(api.onboarding.sharingCards, {}, { initialNumItems: COLLECTION_PAGE });
   useEffect(() => { if (status === "CanLoadMore") loadMore(COLLECTION_PAGE); }, [status, loadMore]);
-  return <Walkthrough cards={results} collection={status === "Exhausted" ? "read" : status === "LoadingFirstPage" ? "starting" : "reading"} />;
+  return <Walkthrough cards={results} voice={voice} collection={status === "Exhausted" ? "read" : status === "LoadingFirstPage" ? "starting" : "reading"} />;
 }
