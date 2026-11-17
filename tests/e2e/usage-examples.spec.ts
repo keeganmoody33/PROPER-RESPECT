@@ -895,6 +895,24 @@ test(`at ${NARROWEST_WIDTH}x${NARROWEST_HEIGHT} the card's number is above the e
 
 /** How far a tapped chooser button may move when the card under it changes. */
 const MAX_CHOOSER_SHIFT_PX = 20;
+test(`at ${PHONE_WIDTH}px the examples row fades at whichever edge has more names, so it reads as a row that scrolls`, async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
+  await page.goto("/");
+  const row = page.getByRole("region", { name: "Product usage examples" }).getByRole("group", { name: "Choose a product example" }).locator("..");
+  // Each soft edge is the bar's own colour over the names, so the held bar stays solid over the card behind it.
+  const edges = () => row.evaluate(element => ({ more: element.scrollWidth > element.clientWidth,
+    start: Number(getComputedStyle(element, "::before").opacity), end: Number(getComputedStyle(element, "::after").opacity) }));
+  expect(await edges()).toEqual({ more: true, start: 0, end: 1 });
+  const edge = await row.evaluate(element => {
+    const [bar, soft] = [element.getBoundingClientRect(), getComputedStyle(element, "::after")];
+    return { width: parseFloat(soft.width), sticks: soft.position, clicks: soft.pointerEvents, barWidth: bar.width, content: element.scrollWidth };
+  });
+  expect(edge).toMatchObject({ width: 32, sticks: "sticky", clicks: "none" });
+  await row.evaluate(element => element.scrollTo({ left: element.scrollWidth, behavior: "instant" }));
+  await expect.poll(edges).toEqual({ more: true, start: 1, end: 0 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px picking an example from the chooser shows its card in view, and the tapped name stays put`, async ({ page }) => {
   await page.setViewportSize({ width, height: PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
