@@ -41,16 +41,31 @@ it("builds a canonical URL for a site path made only of safe names, and refuses 
     .forEach(path => expect(() => publicPathMetadata("Title", "Description", path)).toThrow());
 });
 
-it("marks preview pages noindex and keeps the sitemap limited to completed public pages", () => {
+const staticEntries = [
+  { url: "https://public.example/", lastModified: "2026-11-17T00:00:00.000Z" },
+  { url: "https://public.example/about/origins", lastModified: "2026-11-17" },
+  { url: "https://public.example/about/contact", lastModified: "2026-09-22" },
+  { url: "https://public.example/about/privacy", lastModified: "2026-11-15" },
+  { url: "https://public.example/about/terms", lastModified: "2026-11-15" },
+  { url: "https://public.example/about/methodology", lastModified: "2026-11-12" },
+];
+
+it("marks preview pages noindex and keeps the sitemap to public pages, with no listed page when search can't be read", async () => {
   vi.stubEnv("VERCEL_ENV", "preview");
   vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://public.example");
+  vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "");
   expect(layoutMetadata().robots).toEqual({ index: false, follow: false });
-  expect(sitemap()).toEqual([
-    { url: "https://public.example/", lastModified: "2026-11-17T00:00:00.000Z" },
-    { url: "https://public.example/about/origins", lastModified: "2026-11-17" },
-    { url: "https://public.example/about/contact", lastModified: "2026-09-22" },
-    { url: "https://public.example/about/privacy", lastModified: "2026-11-15" },
-    { url: "https://public.example/about/terms", lastModified: "2026-11-15" },
-    { url: "https://public.example/about/methodology", lastModified: "2026-11-12" },
+  expect(await sitemap()).toEqual([...staticEntries, { url: "https://public.example/search" }]);
+});
+
+it("lists search, every listed page and every tool page, and never an unlisted or unpublished page", async () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://public.example");
+  vi.stubEnv("PROPER_RESPECT_E2E_REFERENCE", "1");
+  const urls = (await sitemap()).map(entry => entry.url);
+  expect(urls.slice(staticEntries.length)).toEqual([
+    "https://public.example/search",
+    "https://public.example/lecturesfrom", "https://public.example/synthetic-ria", "https://public.example/synthetic-sam",
+    "https://public.example/tools/clay", "https://public.example/tools/github", "https://public.example/tools/wisprflow",
   ]);
+  expect(urls).not.toContain("https://public.example/keegan");
 });
