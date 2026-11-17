@@ -50,6 +50,8 @@ async function evidenceEntry(ctx: QueryCtx, userId: Id<"users">, rawEvidenceId: 
     ...(raw.storageId ? { uploadedFile: { attribution: uploadAttributionStatus(raw.uploadAttribution), filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize } } : {}) };
 }
 
+// manualProducts.resolveTypedProduct gives a tool added by name this prefix and a slug that only its owner has.
+const OWNER_PRODUCT_PREFIX = "manual-";
 // A save or a removal names the version its screen showed; one decided on an older version is refused.
 const STALE_RELATIONSHIP = "This relationship changed. Reload its saved decisions before trying again.";
 
@@ -149,6 +151,11 @@ export const removeNeverUsed = mutation({
     ]);
     await Promise.all([...links, ...events, ...receipts, ...drafts.filter(draft => draft.resultPropId === propId)].map(row => ctx.db.delete(row._id)));
     await ctx.db.delete(propId);
+    // A tool added by name has a product record of its own, holding the name and website its owner typed. It goes
+    // once nothing else uses it. A catalog product is shared, so it stays.
+    if (product?.slug.startsWith(OWNER_PRODUCT_PREFIX) && !await ctx.db.query("props").withIndex("by_product", q => q.eq("productId", product._id)).first()) {
+      await ctx.db.delete(product._id);
+    }
     return { removed: true };
   },
 });

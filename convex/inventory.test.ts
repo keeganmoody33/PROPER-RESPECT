@@ -507,6 +507,29 @@ test("a removal decided on a stale screen is refused, so an answer saved since t
   expect(await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: opened + 1 })).toEqual({ removed: true });
 });
 
+test("removing a tool the owner added by name takes its own product record too, and leaves a shared or still-used one", async () => {
+  const { t, owner, userId } = await fixture();
+  const [clay] = await stackPicks(owner, "first-picks", ["clay"]);
+  const ids = await t.run(async ctx => {
+    const bare = { userId, status: "ACTIVE" as const, visibility: "PRIVATE" as const, headline: "", note: "", ownerEntered: true };
+    // A name the owner typed gets a product record of its own, with the name and website they typed.
+    const typed = await ctx.db.insert("products", { name: "My Notes App", slug: "manual-my-notes-0123456789abcdef012345", domain: "notes.example", description: "" });
+    const twice = await ctx.db.insert("products", { name: "Other App", slug: "manual-other-ap-0123456789abcdef012345", domain: "", description: "" });
+    return {
+      typed, twice, clayProduct: (await ctx.db.get(clay))!.productId,
+      typedProp: await ctx.db.insert("props", { ...bare, productId: typed }),
+      twiceProp: await ctx.db.insert("props", { ...bare, productId: twice }),
+      twiceKept: await ctx.db.insert("props", { ...bare, productId: twice }),
+    };
+  });
+  await owner.mutation(removeNeverUsed, { propId: ids.typedProp, expectedVersion: 0 });
+  await owner.mutation(removeNeverUsed, { propId: ids.twiceProp, expectedVersion: 0 });
+  await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 });
+  expect(await t.run(async ctx => ({
+    typed: await ctx.db.get(ids.typed), twice: (await ctx.db.get(ids.twice))?.name, clay: (await ctx.db.get(ids.clayProduct))?.slug, kept: Boolean(await ctx.db.get(ids.twiceKept)),
+  }))).toEqual({ typed: null, twice: "Other App", clay: "clay", kept: true });
+});
+
 test("only the owner can remove a record", async () => {
   const { t, other, propId } = await fixture();
   await expect(t.mutation(removeNeverUsed, { propId, expectedVersion: 0 })).rejects.toThrow();
