@@ -93,5 +93,5 @@ No two agents working at the same time edit the same file. The lead owns the sha
 - 2026-11-17: Phase D merged as PR #228 (`bd46ca9`): the option B hero, one meaning each for respect and props, a stopped tool in the featured examples, "tooling page".
 - 2026-11-17: Phase A merged as PR #230 (`b97ca68`): no placeholder or app-written line goes public, the suggested first line, real error messages and error boundaries, and the GitHub refresh diagnosis.
 - 2026-11-17: Phase E opened as PR #229: dependency fixes, README, stale docs, the audit in `docs/verification/2026-11-17-public-ready-audit.md`, and this pass's rules in `AGENTS.md`.
-- 2026-11-17: Phase B opened as PR #231: the stack-first order (B2), the affiliate option behind More options (D5), and the phone fixes (D7).
+- 2026-11-17: Phase B merged as PR #231 (`e75966f`): the stack-first order (B2), the affiliate option behind More options (D5), and the phone fixes (D7).
 - 2026-11-17: the walkthrough (B3) follows Phase B in its own PR. Phase C (search, tool pages, D6) follows in its own PR; its boxes are ticked there.
