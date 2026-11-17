@@ -195,11 +195,14 @@ function PageSummary({ session, cards, removed, onPreview, onClose }: {
   const saved = cards.filter(card => card.product && session.settled[card.prop._id] === "saved");
   return <div className={styles.screen}>
     <h3 ref={heading} tabIndex={-1} className={styles.name}>Here&apos;s your page</h3>
-    <p>These answers are saved privately. Here are the tools you said yes to, with the line each card shows. Preview your page, then approve it to publish them.</p>
-    {saved.length ? <ul className={styles.summary}>{saved.map(card => <li key={card.prop._id}>
-      <strong>{card.product!.name}</strong> <span>{cardStatusLabel(card.prop)}</span>
-      <p>{walkthroughLine(card) || "No line yet, so this card stays private."}</p>
-    </li>)}</ul> : <p>You didn&apos;t save an answer this time. Your collection is as it was.</p>}
+    {/* Each line speaks only for what happened here: answers saved, tools removed, or neither. */}
+    {saved.length > 0 ? <>
+      <p>These answers are saved privately. Here are the tools you said yes to, with the line each card shows. Preview your page, then approve it to publish them.</p>
+      <ul className={styles.summary}>{saved.map(card => <li key={card.prop._id}>
+        <strong>{card.product!.name}</strong> <span>{cardStatusLabel(card.prop)}</span>
+        <p>{walkthroughLine(card) || "No line yet, so this card stays private."}</p>
+      </li>)}</ul>
+    </> : <p>{removed.length > 0 ? "You didn't keep a tool this time." : "You didn't save an answer this time. Your collection is as it was."}</p>}
     {removed.length > 0 && <p className={styles.hint}>Removed from your collection: {removed.join(", ")}.</p>}
     <div className={styles.actions}>
       <button type="button" className="primary-action" onClick={onPreview}>Preview your page</button>

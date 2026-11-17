@@ -265,6 +265,20 @@ test("clearing the line on a tool with a saved note says the note shows instead,
   expect((await calls(browserPage)).filter(call => call.name === "savePrivately").map(call => ({ headline: call.args.headline, note: call.args.note }))).toEqual([{ headline: "", note: "Lead lists." }]);
 });
 
+test("after removing every tool, the last screen names what was removed and never says the collection is unchanged", async ({ page: browserPage }) => {
+  await open(browserPage, PHONE, { seed: { ...seeded, cards: [picked("clay", "Clay", "clay.com")] } });
+  const walk = browserPage.getByRole("region", { name: "Go through your tools" });
+  await walk.getByRole("button", { name: "Go through your tools one at a time" }).click();
+  await walk.getByRole("radiogroup", { name: "How do you use Clay?" }).getByRole("radio", { name: "Never used it" }).click();
+  await walk.getByRole("button", { name: "Remove it and go on" }).click();
+  await expect(walk.getByRole("heading", { name: "Here's your page" })).toBeFocused();
+  await expect(walk).toContainText("Removed from your collection: Clay.");
+  await expect(walk).toContainText("You didn't keep a tool this time.");
+  await expect(walk).not.toContainText("as it was");
+  await expect(walk).not.toContainText("These answers are saved privately.");
+  expect((await stored(browserPage)).cards).toEqual([]);
+});
+
 test("when the server keeps a tool this screen thought was bare, Never used it becomes leave it as it is", async ({ page: browserPage }) => {
   const kept = picked("clay", "Clay", "clay.com");
   // Stands in for a proof the evidence list doesn't show: the fixture refuses to remove a record marked this way.
