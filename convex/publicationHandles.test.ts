@@ -63,7 +63,7 @@ test.each(["icon", "apple-icon", "evidence-fixture", "agents", "auth", "index"].
   expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
 });
 
-test.each(["about", "app", "collection", "contact", "origins", "privacy", "pending-victim123"])("an unpublished owner can still claim %s", async handle => {
+test.each(["collection", "contact", "origins", "privacy", "pending-victim123"])("an unpublished owner can still claim %s", async handle => {
   const { t, owner, userId } = await fixture();
   expect(await owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Owner", bio: "Approved bio" })).toEqual({ handle });
   expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Owner", bio: "Approved bio" });
@@ -175,6 +175,14 @@ test("name destination must be explicitly selected from bounded profile links", 
   await expect(other.mutation(api.onboarding.claimHandle, { ...values, profileLinks: [] })).rejects.toThrow("already claimed");
 });
 
+test.each(["app", "about", "search", "tools", "people", "explore"])("a new claim of %s is refused, and nothing is saved", async handle => {
+  const { t, owner, userId } = await fixture();
+  const before = await t.run(ctx => ctx.db.get(userId));
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Owner", bio: "Approved bio" })).rejects.toThrow("This handle is reserved.");
+  expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
+});
+
+// app is reserved for new claims; an account that held it before the reservation keeps it.
 test.each(["collection", "app"])("existing %s owners can edit their private identity while preserving their publication", async handle => {
   const { t, owner, userId } = await fixture();
   await t.run(ctx => ctx.db.patch(userId, { handle }));
