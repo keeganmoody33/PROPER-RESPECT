@@ -8,7 +8,7 @@
 /* A fixed width for "1 / 5" and "14 / 14", so the arrows don't shift as the count grows. */
 .controls { flex: none; flex-wrap: wrap; max-width: 100%; }
 .controls > span { min-width: 7ch; text-align: center; }
-.chooser { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .4rem; margin-bottom: .9rem; }
+.chooser { --chooser-gap: .4rem; display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--chooser-gap); margin-bottom: .9rem; }
 .choices { display: flex; flex-wrap: wrap; gap: .4rem; }
 /* The rest of the toggles join the group's own row, so the group stays one set of arrow-key stops. */
 .more { display: contents; }
@@ -38,10 +38,10 @@
 /* A phone's tap target: the source link is 44px tall however short its line. */
 .source { align-items: center; display: inline-flex; min-height: 44px; text-underline-offset: .2em; }
 .controls { display: flex; align-items: center; gap: .65rem; }
-@media (max-width: 600px) { .chooser, .choices { gap: .3rem; } .choices button, .moreTrigger { padding: .4rem .5rem; } }
+@media (max-width: 600px) { .chooser { --chooser-gap: .3rem; } .choices { gap: .3rem; } .choices button, .moreTrigger { padding: .4rem .5rem; } }
 /* A phone's tap targets: every chooser toggle and control at least 44px. */
 @media (max-width: 480px) { .choices button, .controls button, .moreTrigger { min-height: 44px; min-width: 44px; } }
-/* One column (homepage.module.css): the card comes first, right under the heading, and the chooser with its controls is one row.
+/* One column (homepage.module.css): the card comes right under the heading and its two actions, and the chooser with its controls is one row.
    While the card reaches below the screen's top quarter the row is held at the foot of the screen, so a picked name stays where it was tapped and the
    new card's top is brought into view above it; its place under the card stays reserved, so nothing moves when it is let go.
    The row scrolls sideways inside itself, never the page. */
@@ -54,6 +54,14 @@
   .chooser, .controls { align-items: center; background: var(--example-panel); border-top: 1px solid var(--control-line); box-sizing: border-box; height: var(--bar-height); padding: .4rem 0; }
   /* Positioned, so the toggles' hidden descriptions are clipped with the row rather than widening the page. */
   .chooser { grid-area: chooser; flex-wrap: nowrap; margin: 0; min-width: 0; position: relative; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  /* A soft edge covers whichever side has more names to scroll to, in the bar's own colour, so the held bar stays solid over
+     the card behind it. A browser without scroll timelines shows the row as before. */
+  @supports (animation-timeline: scroll()) {
+    .chooser { animation: chooserFade linear both; animation-timeline: scroll(self inline); }
+    .chooser::before, .chooser::after { content: ""; align-self: stretch; flex: none; pointer-events: none; position: sticky; width: 2rem; z-index: 1; }
+    .chooser::before { left: 0; margin-right: calc(-2rem - var(--chooser-gap)); opacity: var(--chooser-fade-start); background: linear-gradient(to left, transparent, var(--example-panel)); }
+    .chooser::after { right: 0; margin-left: calc(-2rem - var(--chooser-gap)); opacity: var(--chooser-fade-end); background: linear-gradient(to right, transparent, var(--example-panel)); }
+  }
   .controls { grid-area: controls; gap: .4rem; flex-wrap: nowrap; justify-content: flex-end; padding-left: .4rem; }
   .carousel[data-held] .chooser, .carousel[data-held] .controls { bottom: 0; position: fixed; z-index: 10; }
   .carousel[data-held] .chooser { left: 0; padding-left: 1rem; right: var(--bar-controls); }
@@ -75,4 +83,12 @@
   /* Each card's front carries its own Sample tag, so a phone drops the line that repeats it. */
   .sample { display: none; }
   .slideHead { margin-bottom: .4rem; }
+}
+/* Registered as numbers so the row's two soft edges can follow its scroll position; both are 0 for a row with nothing to scroll. */
+@property --chooser-fade-start { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --chooser-fade-end { syntax: "<number>"; inherits: true; initial-value: 0; }
+@keyframes chooserFade {
+  0% { --chooser-fade-start: 0; --chooser-fade-end: 1; }
+  10%, 90% { --chooser-fade-start: 1; --chooser-fade-end: 1; }
+  100% { --chooser-fade-start: 1; --chooser-fade-end: 0; }
 }
