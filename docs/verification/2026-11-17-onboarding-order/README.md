@@ -10,6 +10,9 @@ under `tests/e2e/components.config.ts`.
 (`tests/e2e/fixtures/fresh-user-backend.js`) with two made-up saved tools,
 "Field Notes" and "Sketchpad", and a synthetic owner. No account, backend or
 real usage was read, and nothing was published.
+The fixture renders without a public origin, so the with-handle shots show
+the page address as a path (`/synthetic-stack`); the live site shows the full
+address.
 
 | File | Viewport | Handle |
 | --- | --- | --- |
@@ -23,5 +26,6 @@ collection, Add a tool, Choose your handle (or Your page address), Choose what
 to share, Bring in supporting context, Download your data.
 
 The same test checks, at both widths: no sideways scroll, every visible
-control in the page at least 44px tall (links inside a sentence excepted), and
+control in the page at least 44px tall, measuring a checkbox or radio by its
+label (links inside a sentence excepted), and
 the handle field visible without opening anything when no handle is chosen.

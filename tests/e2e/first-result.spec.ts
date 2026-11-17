@@ -286,8 +286,8 @@ for (const [width, height] of [[1280, 900], [390, 844]]) for (const claimed of [
     await expect(identity).not.toContainText("pending-owner");
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  // Every control a thumb lands on, except links running inside a sentence.
-  const small = await page.evaluate(minimum => [...document.querySelectorAll("main :is(a, button, select, summary, input:not([type=checkbox], [type=radio], [type=hidden]), textarea)")].flatMap(element => {
+  // Every control a thumb lands on (a checkbox or radio by its label), except links running inside a sentence.
+  const small = await page.evaluate(minimum => [...document.querySelectorAll("main :is(a, button, select, summary, input:not([type=checkbox], [type=radio], [type=hidden]), textarea, label:has(> input:is([type=checkbox], [type=radio])))")].flatMap(element => {
     const box = element.getBoundingClientRect();
     const inProse = element.matches("a") && element.parentElement!.matches("p, li, small, span, strong");
     return element.checkVisibility() && box.height < minimum - 0.5 && !inProse ? [`${element.tagName.toLowerCase()} "${(element.textContent || element.getAttribute("aria-label") || element.getAttribute("name") || "").trim().slice(0, 40)}" ${Math.round(box.height)}px`] : [];

@@ -1540,6 +1540,7 @@ main {
 /* Every control in the collection shell is at least a 44px tap target; brand cards keep their own sizes. */
 .onboarding-shell :is(input:not([type="checkbox"], [type="radio"]), select, textarea, button):not(.product-card *) { min-height: 44px; box-sizing: border-box; }
 .onboarding-shell details > summary { padding-block: max(.5rem, calc((44px - 1lh) / 2)); }
+.onboarding-shell :is(.review-toggle, .profile-link-choice, .sharing-preview-confirmation) { min-height: 44px; }
 .collection-identity .identity-address { overflow-wrap: anywhere; }
 .collection-identity summary { font-weight: 800; cursor: pointer; }
 .sharing-preview { border-block-start: 2px solid var(--ink); padding-block: 1.5rem; margin-top: 2rem; }
