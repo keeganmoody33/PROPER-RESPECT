@@ -19,7 +19,7 @@ Proper Respect is your tooling page: one link that shows every tool you use, tes
 
 - `main` has branch protection: three required checks, up to date with `main`, enforced for admins. See "Delivery" below.
 - The repo is already public on GitHub. It has no license.
-- `docs/launch-readiness.md` and a positioning brief are named in the instruction and are not in the repo. B3 and "fix every drift area" are built from the instruction's own text.
+- The launch readiness notes and the positioning brief the instruction names were not in the repo at first. The owner supplied them the same day: [`2026-11-17-launch-readiness.md`](2026-11-17-launch-readiness.md) (blockers, the build plan by phase, the text-first walkthrough, the voice notes) and [`2026-11-17-positioning-brief.md`](2026-11-17-positioning-brief.md) (the one sentence, the vocabulary, the hero options and every drift area with file paths). Read both before working on any phase.
 - `CONTEXT.md`, `docs/002-v2-product-motion.md` and `docs/DEVELOPMENT.md` said sign-up is closed. Owner, 2026-11-17: the sign-up mode is an open decision, with a waitlist recommended, and today's behaviour is that sign-up is public. The docs change; Clerk does not.
 - `verify.yml` already runs on push to `main`.
 
