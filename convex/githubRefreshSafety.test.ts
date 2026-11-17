@@ -499,12 +499,21 @@ test("a scheduled run over malformed stored timestamps records INVALID_RESPONSE,
   expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "GITHUB", outcome: "FAILURE", errorClass: "INVALID_RESPONSE" })]);
 });
 
-for (const category of ["DECRYPTION", "HTTP", "GRAPHQL", "PARSER", "TRANSPORT"] as const) {
-  test(`scheduled ${category} failures log only fixed diagnostic metadata`, async () => {
+// GitHub answers a dead token with 401. It also uses 403 for rate limits, so a
+// 403 stays a provider failure.
+for (const { category, httpStatus, errorClass } of [
+  { category: "DECRYPTION", errorClass: "PROVIDER_UNAVAILABLE" },
+  { category: "HTTP", httpStatus: 401, errorClass: "CREDENTIAL_REJECTED" },
+  { category: "HTTP", httpStatus: 403, errorClass: "PROVIDER_UNAVAILABLE" },
+  { category: "GRAPHQL", errorClass: "PROVIDER_UNAVAILABLE" },
+  { category: "PARSER", errorClass: "PROVIDER_UNAVAILABLE" },
+  { category: "TRANSPORT", errorClass: "PROVIDER_UNAVAILABLE" },
+] as const) {
+  test(`scheduled ${category}${httpStatus ? ` ${httpStatus}` : ""} failures log only fixed diagnostic metadata and record ${errorClass}`, async () => {
     const sentinel = "PRIVATE-TOKEN-PAYLOAD-SENTINEL";
     const fetcher = vi.fn(async () => {
       if (category === "TRANSPORT") throw new Error(sentinel, { cause: sentinel });
-      if (category === "HTTP") return new Response(sentinel, { status: 401 });
+      if (category === "HTTP") return new Response(sentinel, { status: httpStatus });
       return new Response(category === "GRAPHQL"
         ? JSON.stringify({ errors: [{ message: sentinel }] })
         : JSON.stringify({ private: sentinel }), { headers: { "Content-Type": "application/json" } });
@@ -516,7 +525,7 @@ for (const category of ["DECRYPTION", "HTTP", "GRAPHQL", "PARSER", "TRANSPORT"] 
       const before = await f.state();
       await f.call();
       expect(warn.mock.calls).toEqual([["GitHub refresh failed", {
-        category, ...(category === "HTTP" ? { httpStatus: 401 } : {}),
+        category, ...(category === "HTTP" ? { httpStatus } : {}),
       }]]);
       expect(JSON.stringify(warn.mock.calls)).not.toContain(sentinel);
       const after = await f.state();
@@ -525,12 +534,27 @@ for (const category of ["DECRYPTION", "HTTP", "GRAPHQL", "PARSER", "TRANSPORT"] 
       });
       const rows = await f.t.run(ctx => ctx.db.query("refreshAttempts").collect());
       expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({ outcome: "FAILURE", errorClass: "PROVIDER_UNAVAILABLE" });
+      expect(rows[0]).toMatchObject({ outcome: "FAILURE", errorClass });
       expect(JSON.stringify(rows)).not.toContain(sentinel);
       if (category === "DECRYPTION") expect(fetcher).not.toHaveBeenCalled();
     } finally { warn.mockRestore(); }
   });
 }
+
+test("an HTTP 401 from GitHub records CREDENTIAL_REJECTED, keeps capturedAt, marks the card STALE", async () => {
+  const f = await fixture(vi.fn(async () => new Response("Bad credentials", { status: 401 })));
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  try {
+    const before = await f.state();
+    await f.call();
+    const after = await f.state();
+    expect(after.published?.profile.cards[0].activity).toMatchObject({
+      capturedAt: before.published!.profile.cards[0].activity!.capturedAt, freshness: "STALE",
+    });
+    expect(after.connector).toMatchObject({ status: "ERROR", lastError: "Reconnect GitHub to resume daily refresh." });
+    expect(await attempts(f.t)).toEqual([expect.objectContaining({ provider: "GITHUB", outcome: "FAILURE", errorClass: "CREDENTIAL_REJECTED" })]);
+  } finally { warn.mockRestore(); }
+});
 
 test("successful refresh publishes the same calendar without a diagnostic warning", async () => {
   const f = await fixture();

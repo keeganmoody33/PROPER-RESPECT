@@ -680,7 +680,7 @@ export const prepareGithubRefresh = internalQuery({
 export const completeGithubRefresh = internalMutation({
   args: {
     grant: v.object({ subscriptionId: v.id("metricSubscriptions"), fingerprint: v.string() }),
-    outcome: v.union(v.object({ kind: v.literal("failure") }), v.object({ kind: v.literal("success"),
+    outcome: v.union(v.object({ kind: v.literal("failure"), reason: v.optional(v.literal("CREDENTIAL_REJECTED")) }), v.object({ kind: v.literal("success"),
       providerAccountId: v.optional(v.string()), accountLabel: v.string(), activity: activityModuleValidator, value: v.number() })),
   },
   handler: async (ctx, { grant, outcome }) => {
@@ -729,10 +729,10 @@ export const completeGithubRefresh = internalMutation({
       await ctx.db.patch(published._id, { profile: { ...published.profile,
         cards: published.profile.cards.map((card, i) => i === index && card.activity
           ? { ...card, activity: { ...card.activity, freshness: "STALE" as const } } : card) } });
-      const message = "GitHub activity response unavailable.";
+      const message = outcome.reason === "CREDENTIAL_REJECTED" ? "Reconnect GitHub to resume daily refresh." : "GitHub activity response unavailable.";
       await ctx.db.patch(subscription._id, { lastAttemptedAt: attemptedAt, lastError: message });
       await ctx.db.patch(connector._id, { status: "ERROR", lastError: message });
-      await recordRefreshAttempt(ctx, { subscription, provider: "GITHUB", outcome: "FAILURE", errorClass: "PROVIDER_UNAVAILABLE", attemptedAt });
+      await recordRefreshAttempt(ctx, { subscription, provider: "GITHUB", outcome: "FAILURE", errorClass: outcome.reason ?? "PROVIDER_UNAVAILABLE", attemptedAt });
     }
     return true;
   },
@@ -912,7 +912,7 @@ export const refreshApproved = internalAction({
             await skip();
             continue;
           }
-          let outcome: { kind: "failure" } | ({ kind: "success" } & Awaited<ReturnType<typeof fetchGithubActivity>>);
+          let outcome: { kind: "failure"; reason?: "CREDENTIAL_REJECTED" } | ({ kind: "success" } & Awaited<ReturnType<typeof fetchGithubActivity>>);
           let token: string | undefined;
           try {
             token = await decryptSecret(prepared.credential.ciphertext, prepared.credential.iv);
@@ -923,8 +923,10 @@ export const refreshApproved = internalAction({
             try {
               outcome = { kind: "success", ...await fetchGithubActivity(token) };
             } catch (error) {
-              console.warn("GitHub refresh failed", githubFailureDiagnostic(error));
-              outcome = { kind: "failure" };
+              const diagnostic = githubFailureDiagnostic(error);
+              console.warn("GitHub refresh failed", diagnostic);
+              // 401 means GitHub rejected the token. 403 stays a provider failure: GitHub uses it for rate limits.
+              outcome = "httpStatus" in diagnostic && diagnostic.httpStatus === 401 ? { kind: "failure", reason: "CREDENTIAL_REJECTED" } : { kind: "failure" };
             }
           } else {
             outcome = { kind: "failure" };
