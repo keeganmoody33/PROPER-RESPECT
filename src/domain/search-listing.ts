@@ -81,3 +81,14 @@ export function searchListing(profile: ListingProfile | null, listedInSearch: bo
     cards: [...cards.values()].slice(0, LISTED_TOOLS_MAX),
   };
 }
+
+/**
+ * A user as a sharing preview depends on them. The search switch saves by itself and changes nothing a preview shows,
+ * so it is left out: a preview made before the switch moved is still the one to approve.
+ */
+export function previewedUser<User extends { listedInSearch?: boolean }>(user: User | undefined): Omit<User, "listedInSearch"> | undefined {
+  if (!user) return undefined;
+  const shown: Omit<User, "listedInSearch"> & { listedInSearch?: boolean } = { ...user };
+  delete shown.listedInSearch;
+  return shown;
+}

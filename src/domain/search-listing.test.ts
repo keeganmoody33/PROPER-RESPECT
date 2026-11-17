@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LISTED_BY_DEFAULT, LISTED_TOOLS_MAX, SEARCH_QUERY_MAX, SEARCH_WORDS_MAX, SHOW_PAST_USERS, searchListing, searchProblem, usedBefore, type ListingProfile } from "./search-listing";
+import { LISTED_BY_DEFAULT, LISTED_TOOLS_MAX, previewedUser, SEARCH_QUERY_MAX, SEARCH_WORDS_MAX, SHOW_PAST_USERS, searchListing, searchProblem, usedBefore, type ListingProfile } from "./search-listing";
 import { RELATIONSHIP_LEVELS } from "./relationship-level";
 
 const card = (slug: string, fields: Partial<ListingProfile["cards"][number]> = {}): ListingProfile["cards"][number] => ({
@@ -85,5 +85,14 @@ describe("the search listing rule", () => {
   it("copies nothing but the handle, the name, and each tool's name, slug and level words", () => {
     const listing = searchListing({ ...profile([{ ...card("clay"), headline: "Private?", note: "n", cost: { amount: 1 } } as ListingProfile["cards"][number]]), bio: "bio" } as ListingProfile, true);
     ["Private?", "\"bio\"", "cost", "amount"].forEach(word => expect(JSON.stringify(listing)).not.toContain(word));
+  });
+});
+
+describe("what a sharing preview depends on", () => {
+  it("leaves the search switch out, so saving it never makes a preview out of date", () => {
+    const user: { handle: string; displayName: string; listedInSearch?: boolean } = { handle: "synthetic-sam", displayName: "Synthetic Sam" };
+    expect(previewedUser({ ...user, listedInSearch: true })).toEqual(user);
+    expect(JSON.stringify(previewedUser({ ...user, listedInSearch: false }))).toBe(JSON.stringify(previewedUser(user)));
+    expect(previewedUser(undefined)).toBeUndefined();
   });
 });

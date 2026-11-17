@@ -38,6 +38,7 @@ import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client
 import { CopyProfileLink } from "./copy-profile-link";
 import { SharingPreview } from "./sharing-preview";
 import { SearchListingChoice } from "./search-listing-choice";
+import { previewedUser } from "@/src/domain/search-listing";
 import { StackPicker } from "./stack-builder";
 import { ShareAllSection } from "./share-all-step";
 import { MeasurementSharingChoices } from "./measurement-review";
@@ -160,7 +161,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     profile: PublicProfile; revision: number; previewHash: string; selections: FunctionArgs<typeof api.onboarding.publishSelected>["selections"]; basis: string;
     removeAllCards?: boolean; refreshAccounts?: { accountLabel: string }[];
   } | null>(null);
-  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, measurementSelections, measurementReviewBasis, cards: state?.cards, user: state?.user, connectors: state?.connectors }), [reviewEdits, measurementSelections, measurementReviewBasis, state?.cards, state?.user, state?.connectors]);
+  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, measurementSelections, measurementReviewBasis, cards: state?.cards, user: previewedUser(state?.user), connectors: state?.connectors }), [reviewEdits, measurementSelections, measurementReviewBasis, state?.cards, state?.user, state?.connectors]);
 
   const [setupAttempt, setSetupAttempt] = useState(0);
   const [setupFailed, setSetupFailed] = useState(false);
@@ -430,7 +431,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const publicProfilePath = `/${encodeURIComponent(state.user.handle)}`;
   const publicProfileUrl = publicOrigin ? new URL(publicProfilePath, publicOrigin).href : publicProfilePath;
   const heldSlugs = state.cards.flatMap(card => card.product && isRelationshipConfirmed(card.prop) ? [card.product.slug] : []);
-  const shareAllBasis = JSON.stringify({ cards: state.cards, user: state.user });
+  const shareAllBasis = JSON.stringify({ cards: state.cards, user: previewedUser(state.user) });
   const hasAddress = handleState === "published" || publicIdentityClaimed === true;
   const firstResult = Boolean(state.privateInventoryAvailable && (source || state.cards.length === 0));
   const identityExtras = <>

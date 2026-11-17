@@ -355,6 +355,14 @@ for (const width of [1280, 390]) test(`first private manual card reaches exact p
   await expect(preview).toContainText("Synthetic owner");
   await expect(preview).not.toContainText("pending-owner");
   await expect(preview.getByRole("button", { name: "Publish this preview" })).toBeDisabled();
+  // The search switch saves by itself and changes nothing this preview shows, so it stays the preview to approve.
+  const listing = page.getByRole("switch", { name: "List my page in search" });
+  await expect(listing).toBeChecked();
+  await listing.click();
+  await expect(listing).not.toBeChecked();
+  await expect(preview).not.toContainText("Preview again before publishing.");
+  await preview.getByLabel("I approve making exactly this preview visible to anyone with the public link.").check();
+  await expect(preview.getByRole("button", { name: "Publish this preview" })).toBeEnabled();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture")!));
   const calls = await page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!));
   expect(saved.cards[0].prop).toMatchObject({ visibility: "PRIVATE", headline: "My research log", note: "I keep interview notes here.", status: "ACTIVE" });
