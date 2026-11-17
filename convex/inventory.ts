@@ -8,17 +8,18 @@ import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
 import { readPublishedProfile } from "./publicProfiles";
 import { productUsesValidator, propsCreditValidator, relationshipLevelValidator, statusValidator } from "./validators";
-import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
+import { isRelationshipConfirmed, RELATIONSHIP_EDIT_FALLBACK, relationshipEditSchema } from "../src/domain/inventory";
 import { normalizeUses } from "../src/domain/product-uses";
 import { normalizeCredit } from "../src/domain/props-credit";
 import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
 import { privateCardPrimaryLink } from "../src/domain/product-destination";
 import type { RankedAccountEvidence } from "../src/domain/account-evidence";
+import { parseOrUserError, userError } from "../src/domain/user-error";
 
 async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   const user = await requireUser(ctx);
   const prop = await ctx.db.get(propId);
-  if (!prop || prop.userId !== user._id) throw new Error("Relationship unavailable.");
+  if (!prop || prop.userId !== user._id) throw userError("Relationship unavailable.");
   return { user, prop };
 }
 export function relationshipState(prop: Doc<"props">) {
@@ -60,26 +61,26 @@ export const save = mutation({
   handler: async (ctx, args) => {
     const { user, prop } = await ownedProp(ctx, args.propId);
     if (!args.operationId.trim() || args.operationId.length > 128 || !Number.isSafeInteger(args.expectedVersion) || args.expectedVersion < 0) throw new Error("Invalid save operation.");
-    if (args.clearActivity && args.activityEvidenceId) throw new Error("Choose a supporting snapshot or remove it, not both.");
-    const edit = relationshipEditSchema.parse(args);
+    if (args.clearActivity && args.activityEvidenceId) throw userError("Choose a supporting snapshot or remove it, not both.");
+    const edit = parseOrUserError(relationshipEditSchema, args, RELATIONSHIP_EDIT_FALLBACK);
     const requestJson = JSON.stringify({ ...edit, expectedVersion: args.expectedVersion, activityEvidenceId: args.activityEvidenceId, ...(args.clearActivity ? { clearActivity: true } : {}) });
     const previous = await ctx.db.query("relationshipEvents")
       .withIndex("by_prop_operation", q => q.eq("propId", prop._id).eq("operationId", args.operationId)).unique();
     if (previous) {
-      if (previous.requestJson !== requestJson) throw new Error("This save operation was already used with different decisions.");
+      if (previous.requestJson !== requestJson) throw userError("This save operation was already used with different decisions.");
       return { version: previous.version, duplicate: true };
     }
-    if ((prop.relationshipVersion ?? 0) !== args.expectedVersion) throw new Error("This relationship changed. Reload its saved decisions before trying again.");
+    if ((prop.relationshipVersion ?? 0) !== args.expectedVersion) throw userError("This relationship changed. Reload its saved decisions before trying again.");
     const product = await ctx.db.get(prop.productId);
     const uses = normalizeUses(product?.slug ?? "", edit.uses);
-    if (!uses.ok) throw new Error(uses.message);
+    if (!uses.ok) throw userError(uses.message);
     const credit = normalizeCredit(edit.credit);
-    if (!credit.ok) throw new Error(credit.message);
+    if (!credit.ok) throw userError(credit.message);
     let activity = args.clearActivity ? undefined : prop.activity;
     if (args.activityEvidenceId) {
       const raw = await ctx.db.get(args.activityEvidenceId);
       const proof = await ctx.db.query("proofs").withIndex("by_propId_and_rawEvidenceId", q => q.eq("propId", prop._id).eq("rawEvidenceId", args.activityEvidenceId)).first();
-      if (!raw || raw.userId !== user._id || raw.deletedAt || !proof || !raw.suggestedActivity) throw new Error("Supporting activity unavailable.");
+      if (!raw || raw.userId !== user._id || raw.deletedAt || !proof || !raw.suggestedActivity) throw userError("Supporting activity unavailable.");
       activity = raw.suggestedActivity;
     }
     const now = new Date().toISOString();

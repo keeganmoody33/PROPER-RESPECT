@@ -22,6 +22,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { githubDateObservations } from "../src/domain/evidence-claims";
 import { sameGithubRefreshBinding, validGithubRefreshBinding } from "./githubRefreshIdentity";
 import { publishedCardIndicesForProp } from "./publication";
+import { userError } from "../src/domain/user-error";
 
 function bytesToBase64(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes));
@@ -228,7 +229,7 @@ async function retainGithubSnapshot(ctx: MutationCtx, user: Doc<"users">, args: 
   const candidates = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", user._id).eq("productId", product!._id)).take(2);
   let prop = candidates.length === 1 ? candidates[0] : null;
   const drafts = await ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", user._id).eq("suggestedProductSlug", "github")).take(101);
-  if (drafts.length > 100) throw new Error("Review GitHub discovery history before retaining another capture.");
+  if (drafts.length > 100) throw userError("Review GitHub discovery history before retaining another capture.");
   for (const draft of drafts) {
     if (draft.resultPropId) {
       const target = await ctx.db.get(draft.resultPropId);
@@ -296,10 +297,10 @@ export const saveConnectedSnapshot = internalMutation({
         q.eq("authSubject", args.authSubject),
       )
       .unique();
-    if (!user) throw new Error("Complete account setup before connecting.");
+    if (!user) throw userError("Complete account setup before connecting.");
     if (args.provider === "GITHUB" && (!args.providerAccountId ||
         !validGithubRefreshBinding({ providerAccountId: args.providerAccountId, generation: 1 }))) {
-      throw new Error("Reconnect GitHub to verify the account identity before saving.");
+      throw userError("Reconnect GitHub to verify the account identity before saving.");
     }
     const githubCapture = args.provider === "GITHUB" ? await retainGithubSnapshot(ctx, user, args) : null;
     const now = new Date().toISOString();
@@ -473,7 +474,7 @@ export const connectGithub = action({
     propId: Id<"props"> | null;
   }> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Authentication required.");
+    if (!identity) throw userError("Authentication required.");
     await ctx.runMutation(internal.connectors.consumeGithubConnectLimit, {});
     const snapshot = await fetchGithubActivity(token);
     const encrypted = await encryptSecret(token);
@@ -507,7 +508,7 @@ export const connectDevin = action({
     propId: Id<"props"> | null;
   }> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Authentication required.");
+    if (!identity) throw userError("Authentication required.");
     const snapshot = await fetchDevinActivity(token, organizationId);
     const encrypted = await encryptSecret(
       JSON.stringify({ token, organizationId }),
@@ -537,7 +538,7 @@ export const revokeConnector = mutation({
     const user = await requireUser(ctx);
     const connector = await ctx.db.get(args.connectorId);
     if (!connector || connector.userId !== user._id) {
-      throw new Error("Connector not found.");
+      throw userError("Connector not found.");
     }
     await ctx.db.patch(connector._id, {
       status: "REVOKED",

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { canonicalJson } from "./canonical-json.ts";
 import { measurementDigest } from "./measurements.ts";
+import { userError } from "./user-error.ts";
 
 const DAY_MS = 86_400_000;
 const exact = z.string().regex(/^(0|[1-9][0-9]{0,133})$/).nullable();
@@ -50,11 +51,11 @@ export type PrivateCodexSnapshot = z.infer<typeof privateCodexSnapshotSchema> & 
 export function retainPrivateCodexSnapshot(value: unknown): PrivateCodexSnapshot {
   const input = inputSchema.parse(value);
   const selected = input.rows.filter((row) => row.at >= input.start && row.at < input.end);
-  if (!selected.length) throw new Error("No matching modern response history in this window.");
+  if (!selected.length) throw userError("No matching modern response history in this window.");
   let total = BigInt(0);
   for (const row of selected) {
     const value = row.counts.total_tokens;
-    if (row.status === "conflict" || value === null) throw new Error("Conflicting or unknown totals cannot be kept as a private snapshot.");
+    if (row.status === "conflict" || value === null) throw userError("Conflicting or unknown totals cannot be kept as a private snapshot.");
     total += BigInt(value);
   }
   const snapshot = privateCodexSnapshotSchema.parse({

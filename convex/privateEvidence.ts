@@ -9,12 +9,13 @@ import {
   parsePrivateEvidence,
   privateEvidenceIdentity,
 } from "../src/domain/private-evidence";
+import { userError } from "../src/domain/user-error";
 
 async function ownedProp(ctx: QueryCtx, propId: Id<"props">) {
   const user = await requireUser(ctx);
   const prop = await ctx.db.get(propId);
   if (!prop || prop.userId !== user._id)
-    throw new Error("Evidence unavailable.");
+    throw userError("Evidence unavailable.");
   return { user, prop };
 }
 async function ownedEvidence(
@@ -31,7 +32,7 @@ async function ownedEvidence(
     )
     .first();
   if (!raw || raw.userId !== user._id || raw.deletedAt || !proof)
-    throw new Error("Evidence unavailable.");
+    throw userError("Evidence unavailable.");
   return raw;
 }
 export const submit = mutation({
@@ -52,7 +53,7 @@ export const submit = mutation({
       .unique();
     if (existing) {
       if (existing.deletedAt)
-        throw new Error(
+        throw userError(
           "This evidence was deleted. Supply a new original to create new evidence.",
         );
       const original = {
@@ -170,7 +171,7 @@ export const history = query({
       observationIndex < 0 ||
       !raw.observations?.[observationIndex]
     )
-      throw new Error("Evidence unavailable.");
+      throw userError("Evidence unavailable.");
     return await ctx.db
       .query("claimReviews")
       .withIndex("by_prop_and_rawEvidenceId_and_observationIndex", (q) =>

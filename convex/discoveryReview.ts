@@ -7,6 +7,7 @@ import { PROOF_TYPE_BY_SOURCE } from "./discovery";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { isRelationshipConfirmed } from "../src/domain/inventory";
+import { userError } from "../src/domain/user-error";
 
 type Context = QueryCtx | MutationCtx;
 const chunkSize = 100;
@@ -23,18 +24,18 @@ function inProgress(draft: Doc<"draftImports">) {
 async function ownedDraft(ctx: Context, draftId: Id<"draftImports">) {
   const user = await requireUser(ctx);
   const draft = await ctx.db.get(draftId);
-  if (!draft || draft.userId !== user._id || ["REJECTED", "SUPERSEDED"].includes(draft.status)) throw new Error("Discovery unavailable.");
-  if (!draft.evidenceResolution && (draft.status !== "PENDING" || draft.resultPropId)) throw new Error("Discovery unavailable.");
+  if (!draft || draft.userId !== user._id || ["REJECTED", "SUPERSEDED"].includes(draft.status)) throw userError("Discovery unavailable.");
+  if (!draft.evidenceResolution && (draft.status !== "PENDING" || draft.resultPropId)) throw userError("Discovery unavailable.");
   const product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", draft.suggestedProductSlug)).unique();
   if (!product || product.domain.trim().toLowerCase() !== draft.suggestedDomain.trim().toLowerCase()) throw new Error("Discovery product identity changed.");
   const resolution = draft.evidenceResolution;
-  if (resolution && (draft.resultPropId !== resolution.targetPropId || !Number.isSafeInteger(resolution.nextOffset) || resolution.nextOffset < 0 || resolution.nextOffset > resolution.rawEvidenceIds.length)) throw new Error("Discovery resolution unavailable.");
+  if (resolution && (draft.resultPropId !== resolution.targetPropId || !Number.isSafeInteger(resolution.nextOffset) || resolution.nextOffset < 0 || resolution.nextOffset > resolution.rawEvidenceIds.length)) throw userError("Discovery resolution unavailable.");
   return { user, draft, product };
 }
 
 async function candidate(ctx: Context, draft: Doc<"draftImports">, product: Doc<"products">, propId: Id<"props">) {
   const prop = await ctx.db.get(propId);
-  if (!prop || prop.userId !== draft.userId || prop.productId !== product._id) throw new Error("Relationship unavailable.");
+  if (!prop || prop.userId !== draft.userId || prop.productId !== product._id) throw userError("Relationship unavailable.");
   return prop;
 }
 
@@ -44,9 +45,9 @@ async function evidenceChunk(ctx: Context, draft: Doc<"draftImports">) {
   const entries = [];
   for (const id of ids.slice(offset, offset + chunkSize)) {
     const raw = await ctx.db.get(id);
-    if (!raw || raw.userId !== draft.userId) throw new Error("Evidence unavailable.");
+    if (!raw || raw.userId !== draft.userId) throw userError("Evidence unavailable.");
     const source = await ctx.db.get(raw.evidenceSourceId);
-    if (!source || source.userId !== draft.userId) throw new Error("Evidence unavailable.");
+    if (!source || source.userId !== draft.userId) throw userError("Evidence unavailable.");
     entries.push({ raw, source });
   }
   return { ids, offset, entries };
@@ -125,12 +126,12 @@ export const attach = mutation({
   handler: async (ctx, { draftId, propId, expectedHash }) => {
     const { draft, product } = await ownedDraft(ctx, draftId);
     const existing = draft.evidenceResolution;
-    if (existing && existing.targetPropId !== propId) throw new Error("This discovery was already assigned to a different relationship.");
+    if (existing && existing.targetPropId !== propId) throw userError("This discovery was already assigned to a different relationship.");
     const prop = await candidate(ctx, draft, product, propId);
     if (existing?.appliedHashes.includes(expectedHash)) return { duplicate: true, ...progress(draft)! };
     const chunk = await evidenceChunk(ctx, draft);
-    if (existing && chunk.offset === chunk.ids.length) throw new Error("This evidence attachment is already complete.");
-    if (expectedHash !== await expectation(draft, product, prop, chunk)) throw new Error("This discovery or relationship changed. Review the current information before attaching.");
+    if (existing && chunk.offset === chunk.ids.length) throw userError("This evidence attachment is already complete.");
+    if (expectedHash !== await expectation(draft, product, prop, chunk)) throw userError("This discovery or relationship changed. Review the current information before attaching.");
     let skippedDeleted = existing?.skippedDeleted ?? 0;
     for (const { raw, source } of chunk.entries) {
       if (raw.deletedAt) { skippedDeleted++; continue; }

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUser } from "./authHelpers";
 import { privateCodexSnapshotSchema, retainPrivateCodexSnapshot } from "../src/domain/private-codex-snapshot";
+import { userError } from "../src/domain/user-error";
 
 const count = v.union(v.string(), v.null());
 const keptValidator = v.object({
@@ -48,8 +49,8 @@ export const keep = mutation({
     const dedupKey = `private-codex-snapshot-v1:${snapshot.identity}`;
     const previous = await ctx.db.query("rawEvidence").withIndex("by_dedup_key", (q) => q.eq("dedupKey", dedupKey)).unique();
     if (previous) {
-      if (previous.userId !== user._id || !previous.payload) throw new Error("Snapshot unavailable.");
-      if (previous.deletedAt) throw new Error("This original was removed and cannot be restored by replay.");
+      if (previous.userId !== user._id || !previous.payload) throw userError("Snapshot unavailable.");
+      if (previous.deletedAt) throw userError("This original was removed and cannot be restored by replay.");
       return { snapshotId: previous._id, visibility: "private" as const, replayed: true };
     }
     const sourceKey = `codex-private-snapshot:${args.sourceKey}`;
@@ -92,7 +93,7 @@ export const read = query({
     const user = await requireUser(ctx);
     const row = await ctx.db.get(args.snapshotId);
     if (!row || row.userId !== user._id || !row.payload || row.deletedAt || !row.dedupKey.startsWith("private-codex-snapshot-v1:")) {
-      throw new Error("Snapshot unavailable.");
+      throw userError("Snapshot unavailable.");
     }
     const snapshot = privateCodexSnapshotSchema.parse(JSON.parse(row.payload));
     return {

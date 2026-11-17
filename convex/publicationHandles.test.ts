@@ -227,3 +227,16 @@ test.each([
     expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
   }
 });
+
+// Convex production redacts a plain Error; only a ConvexError's data reaches the person.
+test("claim refusals reach the client as a ConvexError carrying the message as data", async () => {
+  const { t, owner } = await fixture();
+  await owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "Owner", bio: "" });
+  const other = t.withIdentity({ subject: "other" });
+  await expect(other.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "Other", bio: "" }))
+    .rejects.toMatchObject({ name: "ConvexError", data: "That handle is already claimed." });
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "Owner", bio: "x".repeat(501) }))
+    .rejects.toMatchObject({ name: "ConvexError", data: "Use a bio of 500 characters or fewer." });
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle: "app", displayName: "Owner", bio: "" }))
+    .rejects.toMatchObject({ name: "ConvexError", data: "This handle is reserved." });
+});
