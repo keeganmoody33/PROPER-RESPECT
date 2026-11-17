@@ -6,6 +6,7 @@ import { expect, test, vi } from "vitest";
 import schema from "./schema";
 import type { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { NEVER_USED_KEPT } from "../src/domain/inventory";
 
 const modules = import.meta.glob("./**/*.ts");
 const save = makeFunctionReference<"mutation">("inventory:save");
@@ -435,7 +436,7 @@ test("saving a blank handle removes the stored credit and keeps it in history", 
 // the page relies on stays.
 const removeNeverUsed = makeFunctionReference<"mutation">("inventory:removeNeverUsed");
 const saveSelection = makeFunctionReference<"mutation">("stack:saveSelection");
-const REFUSAL = "This tool has evidence or a published card attached, so it stays in your collection.";
+const REFUSAL = NEVER_USED_KEPT;
 
 async function stackPicks(owner: Awaited<ReturnType<typeof fixture>>["owner"], operationId: string, slugs: string[]) {
   const result = await owner.mutation(saveSelection, { operationId, picks: slugs.map(slug => ({ kind: "directory", slug, status: "ACTIVE", level: "WEEKLY" })) });

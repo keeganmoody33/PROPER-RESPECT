@@ -116,7 +116,7 @@ const mutations = {
     const card = state.cards.find(card => card.prop._id === args.propId);
     if (!card) return { removed: false };
     if ((card.prop.relationshipVersion ?? 0) !== args.expectedVersion) throw new Error("This relationship changed. Reload its saved decisions before trying again.");
-    if (card.prop.visibility === "PUBLIC" || card.prop.activity) throw new Error("This tool has evidence or a published card attached, so it stays in your collection.");
+    if (card.prop.visibility === "PUBLIC" || card.prop.activity || card.prop.fixtureAttached) throw new Error("This tool has evidence or a published card attached, so it stays in your collection.");
     retain({ ...state, cards: state.cards.filter(item => item !== card) });
     return { removed: true };
   },

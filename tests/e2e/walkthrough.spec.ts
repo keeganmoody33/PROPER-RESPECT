@@ -262,6 +262,23 @@ test("clearing the line on a tool with a saved note says the note shows instead,
   expect((await calls(browserPage)).filter(call => call.name === "savePrivately").map(call => ({ headline: call.args.headline, note: call.args.note }))).toEqual([{ headline: "", note: "Lead lists." }]);
 });
 
+test("when the server keeps a tool this screen thought was bare, Never used it becomes leave it as it is", async ({ page: browserPage }) => {
+  const kept = picked("clay", "Clay", "clay.com");
+  // Stands in for a proof the evidence list doesn't show: the fixture refuses to remove a record marked this way.
+  await open(browserPage, PHONE, { seed: { ...seeded, cards: [{ ...kept, prop: { ...kept.prop, fixtureAttached: true } }] } });
+  const walk = browserPage.getByRole("region", { name: "Go through your tools" });
+  await walk.getByRole("button", { name: "Go through your tools one at a time" }).click();
+  await walk.getByRole("radiogroup", { name: "How do you use Clay?" }).getByRole("radio", { name: "Never used it" }).click();
+  await walk.getByRole("button", { name: "Remove it and go on" }).click();
+  await expect(walk).toContainText("Clay has evidence or a published card attached, so it stays in your collection as it is. Nothing new is saved.");
+  // Not shown as a failure: the error line stays empty.
+  await expect(walk.locator("[role=alert]")).toHaveText("");
+  await walk.getByRole("button", { name: "Leave it as it is and go on" }).click();
+  await expect(walk.getByRole("heading", { name: "Here's your page" })).toBeFocused();
+  await expect(walk).not.toContainText("Removed from your collection");
+  expect((await stored(browserPage)).cards.map(card => card.product.name)).toEqual(["Clay"]);
+});
+
 test("the walkthrough works from the keyboard alone, with More for the other levels", async ({ page: browserPage }) => {
   await open(browserPage, DESKTOP, { seed: { ...seeded, cards: [seeded.cards[1]] } });
   const walk = browserPage.getByRole("region", { name: "Go through your tools" });

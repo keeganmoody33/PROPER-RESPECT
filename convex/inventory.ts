@@ -8,7 +8,7 @@ import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
 import { readPublishedProfile } from "./publicProfiles";
 import { productUsesValidator, propsCreditValidator, relationshipLevelValidator, statusValidator } from "./validators";
-import { isRelationshipConfirmed, RELATIONSHIP_EDIT_FALLBACK, relationshipEditSchema } from "../src/domain/inventory";
+import { isRelationshipConfirmed, NEVER_USED_KEPT, RELATIONSHIP_EDIT_FALLBACK, relationshipEditSchema } from "../src/domain/inventory";
 import { normalizeUses } from "../src/domain/product-uses";
 import { normalizeCredit } from "../src/domain/props-credit";
 import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
@@ -113,7 +113,6 @@ export async function approvePendingDraftImports(ctx: MutationCtx, prop: Doc<"pr
   for (const draft of drafts) if (draft.resultPropId === prop._id && draft.status === "PENDING") await ctx.db.patch(draft._id, { status: "APPROVED" });
 }
 
-const NEVER_USED_REFUSAL = "This tool has evidence or a published card attached, so it stays in your collection.";
 
 // Never used it (the walkthrough, B3) removes a bare record and keeps nothing about it. A record that evidence, a
 // measurement, a refresh or the page relies on is refused, so nothing they point at goes missing.
@@ -140,13 +139,13 @@ export const removeNeverUsed = mutation({
       ctx.db.query("rawEvidence").withIndex("by_measurement_prop", q => q.eq("measurementPropId", propId)).first(),
     ]);
     if (prop.visibility === "PUBLIC" || prop.activity || prop.activityEvidenceId || page?.cardPropIds?.includes(propId)
-      || attached.some(Boolean) || drafts.some(draft => draft.evidenceResolution?.targetPropId === propId)) throw userError(NEVER_USED_REFUSAL);
+      || attached.some(Boolean) || drafts.some(draft => draft.evidenceResolution?.targetPropId === propId)) throw userError(NEVER_USED_KEPT);
     // Its discovery row goes too: discovery and the GitHub connection both stop on a row that names a missing record.
     // Its save receipts go as well: each names the tool, and one left behind would point a replayed save at nothing.
     const [links, events, receipts] = await Promise.all([
       ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
-      ctx.db.query("manualProductIntakes").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
       ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
+      ctx.db.query("manualProductIntakes").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
     ]);
     await Promise.all([...links, ...events, ...receipts, ...drafts.filter(draft => draft.resultPropId === propId)].map(row => ctx.db.delete(row._id)));
     await ctx.db.delete(propId);

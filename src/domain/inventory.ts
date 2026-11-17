@@ -51,3 +51,6 @@ export function inInventoryView(view: InventoryView, item: {
     case "Used before": return confirmed && item.prop.status === "ARCHIVED";
   }
 }
+
+/** What the server says when Never used it finds something attached to a record: the walkthrough then leaves it as it is. */
+export const NEVER_USED_KEPT = "This tool has evidence or a published card attached, so it stays in your collection.";

@@ -155,6 +155,8 @@ describe("which control saves a line", () => {
     expect(neverUsedAction(picked("Clay", { visibility: "PUBLIC" }), 0).kind).toBe("leave");
     // Until its sources load, nothing is removed.
     expect(neverUsedAction(picked("Clay"), undefined).kind).toBe("leave");
+    // The server refused: something this screen can't see is attached, so the answer becomes "leave it".
+    expect(neverUsedAction(picked("Clay"), 0, true)).toEqual({ kind: "leave", label: "Leave it as it is and go on" });
   });
 });
 

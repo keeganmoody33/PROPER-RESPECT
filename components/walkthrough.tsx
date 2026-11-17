@@ -7,7 +7,7 @@ import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react
 import { Radio, RadioGroup, RadioIndicator } from "@ui-sdk/react/radio";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { isRelationshipConfirmed } from "@/src/domain/inventory";
+import { isRelationshipConfirmed, NEVER_USED_KEPT } from "@/src/domain/inventory";
 import { productUseLabels, productUseOptions, USE_OTHER_MAX } from "@/src/domain/product-uses";
 import { CREDIT_INPUT_MAX, CREDIT_OTHER_PLATFORM_MAX, CREDIT_PLATFORMS, creditPlatform } from "@/src/domain/props-credit";
 import { cardStatusLabel, levelDefinition, levelLabel, levelStatus } from "@/src/domain/relationship-level";
@@ -68,6 +68,8 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
   const [more, setMore] = useState(() => isMoreChoice(answer.choice));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Set when the server refuses a removal: something this screen can't see is attached to the record.
+  const [keptByServer, setKeptByServer] = useState(false);
   const retry = useRef<{ body: string; id: string } | null>(null);
   useEffect(() => { heading.current?.focus(); }, []);
 
@@ -78,7 +80,7 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
     level: fields.saves.level, uses: productUseLabels(product.slug, { picks: [...answer.usePicks], other: answer.useOther }), startedAt: answer.startedAt }) : {};
   const line = headlineField(answer.ownerLine, help.suggestion);
   const action = lineAction(answer.ownerLine, help.suggestion, keptNote(card));
-  const never = neverUsedAction(card, sources?.length);
+  const never = neverUsedAction(card, sources?.length, keptByServer);
   const submitLabel = answer.choice === "NEVER" ? never.label : action.label;
 
   async function submit() {
@@ -99,7 +101,10 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
       retry.current = null;
       onDone("saved", product.name);
     } catch (reason) {
-      setError(errorMessage(reason, "This answer was not saved. Your collection is unchanged; you can retry or skip."));
+      const message = errorMessage(reason, "This answer was not saved. Your collection is unchanged; you can retry or skip.");
+      // Not a failure to show: the hint and the button now say the tool stays as it is.
+      if (answer.choice === "NEVER" && message === NEVER_USED_KEPT) setKeptByServer(true);
+      else setError(message);
     } finally { setBusy(false); }
   }
 

@@ -116,10 +116,11 @@ export function lineAction(owner: string | null, suggestion: string | undefined,
 /**
  * Never used it removes a bare record: one never published, with no evidence, activity or measurement attached
  * (inventory.removeNeverUsed checks the same on the server). Anything else stays as it is and nothing new is saved.
- * Until its sources have loaded, nothing is removed.
+ * Until its sources have loaded, nothing is removed. The server has the last word: once it has kept a record this screen
+ * took for bare, the answer is to leave it.
  */
-export function neverUsedAction(card: WalkthroughCard, sourceCount: number | undefined) {
-  const bare = sourceCount === 0 && !onPage(card) && !card.prop.activity && !card.prop.activityEvidenceId;
+export function neverUsedAction(card: WalkthroughCard, sourceCount: number | undefined, keptByServer = false) {
+  const bare = !keptByServer && sourceCount === 0 && !onPage(card) && !card.prop.activity && !card.prop.activityEvidenceId;
   return bare ? { kind: "remove" as const, label: "Remove it and go on" } : { kind: "leave" as const, label: "Leave it as it is and go on" };
 }
 
