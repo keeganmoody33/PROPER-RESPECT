@@ -62,10 +62,10 @@ No two agents working at the same time edit the same file. The lead owns the sha
 
 ### Phase C: search people and tools
 
-- [ ] C1 Read model of published cards with a search index; listing switch, default on, isolated in one place
-- [ ] C2 `/search` with People and Tools
-- [ ] C3 `/tools/{slug}`: who uses it now, who used it before
-- [ ] C4 Card tool name links to its tool page; sitemap lists listed pages and tool pages
+- [x] C1 Read model of published cards with a search index; listing switch, default on, isolated in one place
+- [x] C2 `/search` with People and Tools
+- [x] C3 `/tools/{slug}`: who uses it now, who used it before
+- [x] C4 Card tool name links to its tool page; sitemap lists listed pages and tool pages
 
 ### Phase D: drift fixes and the option B hero
 
@@ -74,7 +74,7 @@ No two agents working at the same time edit the same file. The lead owns the sha
 - [ ] D3 A stopped or paused tool in the featured examples; referral example out of the featured set
 - [ ] D4 "Tooling page" label; page and collection used consistently
 - [ ] D5 Affiliate link behind more options
-- [ ] D6 Browse section points at `/search`
+- [x] D6 Browse section points at `/search`
 - [ ] D7 Phone nav, Start button, tab scroll cue, About marker contrast
 
 ### Phase E: public ready repo
