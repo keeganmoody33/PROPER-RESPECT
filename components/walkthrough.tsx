@@ -215,19 +215,21 @@ function PageSummary({ session, cards, removed, onPreview, onClose }: {
  * The guided path through the collection: one tool per screen, each answer saved privately as it is given. It never
  * publishes; its last screen hands over to the existing share preview and approval.
  */
-export function Walkthrough({ cards, complete = true }: {
+export function Walkthrough({ cards, collection = "read" }: {
   cards: readonly WalkthroughCard[];
-  /** Whether every page of the collection has been read. */
-  complete?: boolean;
+  /** How much of the collection has arrived: nothing yet, some pages with more being read, or all of it. */
+  collection?: "starting" | "reading" | "read";
 }) {
   const ids = useId();
   const queue = useMemo(() => walkthroughQueue(cards), [cards]);
   const [stored, setSession] = useState<WalkthroughSession | null>(null);
   const [removed, setRemoved] = useState<string[]>([]);
   // A product is asked about once, and whether it still needs an answer can depend on a record on a later page. So the
-  // walk is offered only when the whole collection has been read.
+  // walk is offered only when the whole collection has been read. While later pages are on their way the section is
+  // already here, saying so: "Next: go through your tools" points at it, and a new pick lands on the last page.
   const session = stored && resumeSession(stored, queue);
-  if (!session && (queue.length === 0 || !complete)) return null;
+  const reading = !session && collection === "reading";
+  if (!session && !reading && (queue.length === 0 || collection !== "read")) return null;
   const current = session && currentTool(session, queue);
 
   function done(propId: string, outcome: WalkthroughOutcome, name: string) {
@@ -243,7 +245,8 @@ export function Walkthrough({ cards, complete = true }: {
   return <section id="walkthrough" className={`onboarding-panel ${styles.walkthrough}`} aria-labelledby={`${ids}-title`}>
     <p className="onboarding-kicker">ONE AT A TIME / PRIVATE FIRST</p>
     <h2 id={`${ids}-title`}>Go through your tools</h2>
-    {!session && <>
+    {reading && <p role="status" className={styles.lede}>Reading the rest of your collection…</p>}
+    {!session && !reading && <>
       <p className={styles.lede}>{queue.length === 1 ? "1 tool is" : `${queue.length} tools are`} waiting for your answer. One tool per screen: how you use it, what you use it for, and the line on its card. Each answer saves privately as you go.</p>
       <button type="button" className="primary-action" onClick={() => { setRemoved([]); setSession(startSession(queue)); }}>Go through your tools one at a time</button>
     </>}
@@ -263,5 +266,5 @@ const COLLECTION_PAGE = 25;
 export function CollectionWalkthrough() {
   const { results, status, loadMore } = usePaginatedQuery(api.onboarding.sharingCards, {}, { initialNumItems: COLLECTION_PAGE });
   useEffect(() => { if (status === "CanLoadMore") loadMore(COLLECTION_PAGE); }, [status, loadMore]);
-  return <Walkthrough cards={results} complete={status === "Exhausted"} />;
+  return <Walkthrough cards={results} collection={status === "Exhausted" ? "read" : status === "LoadingFirstPage" ? "starting" : "reading"} />;
 }
