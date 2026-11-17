@@ -29,15 +29,25 @@ for (const width of [1440, 460, 390, 320]) test(`Origins and branded footer rema
 });
 
 const QUICK_VISITS = 3;
+// A phone's slower CPU widens the gap between the page answering clicks and its metadata hydrating.
+const PHONE_CPU_SLOWDOWN = 4;
 
 test("a visitor who leaves the homepage at once lands on a page with one canonical link", async ({ page }) => {
+  test.slow();
+  await (await page.context().newCDPSession(page)).send("Emulation.setCPUThrottlingRate", { rate: PHONE_CPU_SLOWDOWN });
+  const header = page.locator(".site-header");
   for (let visit = 0; visit < QUICK_VISITS; visit++) {
     await page.goto("/");
-    await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Origins", exact: true }).click();
+    await header.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Origins", exact: true }).click();
     await expect(page).toHaveURL(/\/about\/origins$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Giving credit its context");
     await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/about/origins");
+    await expect(page.locator('meta[property="og:url"]')).toHaveCount(1);
+    await header.getByRole("link", { name: "Proper Respect home" }).click();
+    await page.waitForURL(url => url.pathname === "/");
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example");
   }
 });
 
