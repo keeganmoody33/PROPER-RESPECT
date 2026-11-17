@@ -16,6 +16,7 @@ import {
   publicProfileValidator,
   profileLinkValidator,
   productUsesValidator,
+  propsCreditValidator,
   relationshipLevelValidator,
   statusValidator,
   visibilityValidator,
@@ -96,6 +97,8 @@ export default defineSchema({
     headline: v.string(),
     // What the product does for the owner. Saved privately; it goes out with the card when the owner publishes it.
     uses: v.optional(productUsesValidator),
+    // Who put the owner on the product: one handle on one platform. Saved privately; it goes out with the card when published.
+    credit: v.optional(propsCreditValidator),
     note: v.string(),
     ownerEntered: v.optional(v.boolean()),
     // Owner decisions, independent of measured activity and publication.
@@ -420,6 +423,8 @@ export default defineSchema({
     createdAt: v.string(),
   }).index("by_handle", ["handle"]),
 
+  // Retired 2026-11-15 with the "Give props" button: nothing writes or reads this table. It stays defined because
+  // production may hold rows; dropping it is a separate owner decision.
   linkCredits: defineTable({
     handle: v.string(),
     productSlug: v.string(),

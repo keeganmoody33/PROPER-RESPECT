@@ -476,6 +476,38 @@ main {
   margin: 0;
 }
 
+/* Props: one line just above the footer, crediting who put the owner on the product, with a report link where the card is published. */
+.card-credit {
+  align-items: baseline;
+  column-gap: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  line-height: 1.6;
+  margin-top: auto;
+  min-width: 0;
+}
+
+.card-credit + .card-footer {
+  margin-top: 0;
+}
+
+.card-credit-line {
+  font-size: 0.8rem;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.card-credit a {
+  color: inherit;
+  text-underline-offset: 0.15em;
+}
+
+.card-credit-report {
+  font-size: 0.75rem;
+}
+
 .card-uses-block {
   display: grid;
   gap: 0.3rem;
@@ -1959,6 +1991,9 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .card-back-links { align-items: flex-start; column-gap: 0.9rem; font-size: 0.8rem; row-gap: 0; }
   .artifact-list { gap: 0.15rem; }
   .artifact-list a { min-height: 2.75rem; }
+  /* The credit's handle and its report link are each a 44px tall target, one under the other. */
+  .card-credit { align-items: flex-start; flex-direction: column; }
+  .card-credit a { align-items: center; display: inline-flex; min-height: 44px; }
   .card-back-links > .usage-link { flex-basis: 100%; margin-bottom: 0.6rem; min-height: 44px; }
   /* A phone's back keeps to its front's height: Close details stacks its two words beside the name rather than taking a row, and
      the back's lines sit closer, their 44px targets keeping the room a finger needs. */

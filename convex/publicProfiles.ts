@@ -8,6 +8,7 @@ import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-
 import { isHttpUrl } from "../src/domain/http-url";
 import { isRelationshipLevel, type RelationshipLevel } from "../src/domain/relationship-level";
 import { listedUses, type ProductUses } from "../src/domain/product-uses";
+import { listedCredit, type PropsCredit } from "../src/domain/props-credit";
 import { PUBLISHED_URL_MAX } from "../src/domain/published-text-limits";
 import {
   publicRetainedMailboxAggregate,
@@ -24,7 +25,8 @@ const publicProfileV1Validator = v.object({
   })),
 });
 
-export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
+/** The publication a handle shows, directly or through an alias, or null when it shows none (missing, taken down or a stale alias). */
+export async function publicPublication(ctx: QueryCtx, handle: string) {
   const alias = await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).unique();
   if (alias && await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", alias.targetHandle)).first()) return null;
   const published = await ctx.db
@@ -34,6 +36,12 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
 
   if (!published || (alias && alias.publicationId !== published._id)) return null;
   if (published.takenDownAt) return null;
+  return published;
+}
+
+export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
+  const published = await publicPublication(ctx, handle);
+  if (!published) return null;
   // Only presentation is refreshed. The owner's published evidence and
   // relationship projection stays byte-for-byte unchanged in storage.
   // Read only the products in this profile, once per slug. Avoid scanning the
@@ -45,11 +53,13 @@ export async function readPublishedProfile(ctx: QueryCtx, handle: string) {
     }),
   ));
   // Links and artifact links from before the http(s) rule are dropped on read; storage is unchanged.
-  const cards = published.profile.cards.map(({ level: storedLevel, uses: storedUses, ...rest }) => {
-    // A level the registry no longer knows, and uses the product no longer lists, are dropped on read; storage is unchanged.
+  const cards = published.profile.cards.map(({ level: storedLevel, uses: storedUses, credit: storedCredit, ...rest }) => {
+    // A level the registry no longer knows, uses the product no longer lists, and a credit that no longer fits its
+    // platform's rule are dropped on read; storage is unchanged.
     const uses = listedUses(rest.product.slug, storedUses);
-    const stored: typeof rest & { level?: RelationshipLevel; uses?: ProductUses } = {
-      ...rest, ...(isRelationshipLevel(storedLevel) ? { level: storedLevel } : {}), ...(uses ? { uses } : {}),
+    const credit = listedCredit(storedCredit);
+    const stored: typeof rest & { level?: RelationshipLevel; uses?: ProductUses; credit?: PropsCredit } = {
+      ...rest, ...(isRelationshipLevel(storedLevel) ? { level: storedLevel } : {}), ...(uses ? { uses } : {}), ...(credit ? { credit } : {}),
     };
     const linked = stored.primaryLink && !isHttpUrl(stored.primaryLink.url) ? { ...stored, primaryLink: undefined } : stored;
     const activity = withHttpArtifacts(linked.activity);

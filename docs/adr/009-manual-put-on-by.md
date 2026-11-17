@@ -1,5 +1,7 @@
 # ADR-009: Manual "Put On By" Logging — The Social Graph
 
+> **Decided — 2026-11-15:** The owner decided put-on-by for v1 as props: one credit per card, a handle on one platform, with no count, reverse lookup or notifications. See [ADR-062](062-props-credit.md). Whether a props count can ever exist is still undecided.
+
 > **Status correction — 2026-09-20:** Proposed attribution/notification workflow remains unimplemented. Existing supporting links do not prove notification, identity matching or lineage confirmation. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](../verification/2026-09-20-devin-triage-and-phase0-closure.md).
 
 ## Status

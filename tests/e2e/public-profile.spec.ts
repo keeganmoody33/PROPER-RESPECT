@@ -67,6 +67,31 @@ const VIEWPORT_HEIGHT = 1000;
   await page.screenshot({ path: testInfo.outputPath(`2026-11-13-published-uses-${width}-light.png`), fullPage: true, animations: "disabled" });
 }));
 
+const MIN_TARGET_PX = 44;
+const MIN_TEXT_PX = 12;
+[DESKTOP_WIDTH, PHONE_WIDTH].forEach(width => test(`a visitor sees who put the owner on a product, and can report the credit, at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: VIEWPORT_HEIGHT });
+  // Without motion the front isn't mid-turn, scaled down, when its links are measured.
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await page.goto("/keegan");
+  const github = page.locator(".product-card", { has: page.getByRole("heading", { name: "GitHub" }) });
+  const credit = github.locator(".card-front .card-credit");
+  await expect(credit.locator(".card-credit-line")).toHaveText("Props to @lecturesfrom · Proper Respect");
+  await expect(credit.getByRole("link", { name: "@lecturesfrom", exact: true })).toHaveAttribute("href", "https://proper-respect.com/lecturesfrom");
+  await expect(credit.getByRole("link", { name: "Not you? Report", exact: true })).toHaveAttribute(
+    "href", `mailto:33@lecturesfrom.com?subject=${encodeURIComponent('Report credit on proper-respect.com/keegan · card 1 · GitHub · @lecturesfrom on Proper Respect · "Where the receipts live."')}`,
+  );
+  if (width === PHONE_WIDTH) {
+    const heights = await credit.getByRole("link").evaluateAll(links => links.map(link => link.getBoundingClientRect().height));
+    expect(heights.map(height => height >= MIN_TARGET_PX)).toEqual([true, true]);
+  }
+  const fontSizes = await credit.locator(".card-credit-line, .card-credit-report").evaluateAll(nodes => nodes.map(node => parseFloat(getComputedStyle(node).fontSize)));
+  expect(fontSizes.every(size => size >= MIN_TEXT_PX)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await github.screenshot({ path: testInfo.outputPath(`2026-11-15-published-credit-${width}-light.png`), animations: "disabled" });
+}));
+
 test("a public profile links to a report address for that page", async ({ page }) => {
   await page.goto("/keegan");
   await expect(page.getByRole("link", { name: "Report this page" })).toHaveAttribute(
@@ -128,8 +153,10 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`at ${width}px turning a 
   for (const name of ["GitHub", "Wispr Flow"]) for (const top of CARD_TOPS_PX) {
     const card = page.getByRole("article", { name: `${name} card` });
     await card.evaluate((article, offset) => scrollBy(0, article.getBoundingClientRect().top - offset), top);
-    const before = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top }));
-    if (before.top < 0) continue;
+    const before = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top,
+      detailsBelow: article.querySelector(".card-front .card-button")!.getBoundingClientRect().bottom > innerHeight }));
+    // A position where Details is off the screen can't be pressed without scrolling first.
+    if (before.top < 0 || before.detailsBelow) continue;
     await card.getByRole("button", { name: "Details", exact: true }).click();
     await expect(card.getByRole("button", { name: "Close details" })).toBeVisible();
     const after = await card.evaluate(article => ({ scroll: scrollY, top: article.getBoundingClientRect().top }));

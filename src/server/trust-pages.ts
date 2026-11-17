@@ -121,6 +121,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         paragraphs: [
           "Saving a collection and publishing it are separate actions. You select saved cards and details, review an exact preview, then approve publication. Visitors and browser agents can read the resulting public profile without signing in. Raw mailbox evidence and credentials are not part of that public profile.",
           publicProfileFacts.publishedAmount,
+          publicProfileFacts.credit,
           "Review your display name, biography and links as well as the cards in the preview. A display name may initially come from your sign-in identity, including an email address. Removing every public card can leave your public name, profile information and an empty collection visible; it does not delete the published identity.",
         ],
       },

@@ -134,6 +134,28 @@ it("carries what a card's product does for its owner as the words visitors read,
   expect(cards.map(card => "uses" in card)).toEqual([true, false, false]);
 });
 
+it("carries a card's credit as visitors read it, with a link only where the card has one, and nothing for a credit that no longer fits", () => {
+  const base = profile();
+  const card = base.cards[0];
+  const credits = [
+    { platform: "X", handle: "jack" },
+    { platform: "PROPER_RESPECT", handle: "lecturesfrom", linked: true },
+    { platform: "PROPER_RESPECT", handle: "lecturesfrom" },
+    { platform: "OTHER", handle: "a teammate", platformName: "Slack" },
+    // R03's bad-URL set as stored handles.
+    ...["javascript:alert(1)", "data:text/html,x", "ftp://x.com/jack", "https://user:pass@x.com/jack"].map(handle => ({ platform: "X", handle })),
+  ];
+  const cards = projectVisiblePublicProfile({ ...base, cards: credits.map(credit => ({ ...card, credit } as typeof card)) }).cards;
+  expect(cards.map(entry => entry.credit)).toEqual([
+    { text: "Props to @jack · X", platform: "X", handle: "jack", url: "https://x.com/jack" },
+    { text: "Props to @lecturesfrom · Proper Respect", platform: "Proper Respect", handle: "lecturesfrom", url: "https://proper-respect.com/lecturesfrom" },
+    { text: "Props to @lecturesfrom · Proper Respect", platform: "Proper Respect", handle: "lecturesfrom" },
+    { text: "Props to a teammate · Slack", platform: "Slack", handle: "a teammate" },
+    undefined, undefined, undefined, undefined,
+  ]);
+  expect(cards.map(entry => "credit" in entry)).toEqual([true, true, true, true, false, false, false, false]);
+});
+
 it("carries a card's work-sample link as its visible label and URL, and drops a stored link that isn't https", () => {
   const url = "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002";
   const base = profile();

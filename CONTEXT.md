@@ -34,7 +34,8 @@ The product is not an affiliate network, a payment processor, a review site, a c
 | Usage level | How often the linker says they use a product, one of seven from Tried, didn't adopt to Daily | Rank, score |
 | Status | The stored compatibility field each usage level implies: ACTIVE, TESTING or ARCHIVED. Shown as Using, Testing or Used before only on a card with no level | Rank |
 | Lineage | **Later.** The story of who or what put the linker on to a product | Referral chain |
-| Put On By | **Later.** The field where the linker records lineage | Attribution form |
+| Props | The one credit a card gives the person who put its owner on the product: a handle on one platform, set by the owner (ADR-062, decided 2026-11-15) | Score, endorsement count |
+| Put On By | Built as Props for v1 (ADR-062). The fuller lineage field below is **Later** | Attribution form |
 | Floating Lineage | **Later.** Lineage pointing to a person/content/community/event not on PROPER-RESPECT | Orphan link |
 | Import | Bringing in public or user-approved data to create draft props | Scraping |
 | Claim-on-Visit | Browser extension flow where the linker clicks while on a product page to create proof | Browser tracking |
@@ -74,11 +75,14 @@ PROPER-RESPECT does not rely on one universal usage oracle. Proof is a ladder of
 
 ## Lineage Model (Later)
 
-**Later, not built.** `@mentions`, "put on by" and a count of props received
-wait until real users exist (brief Section 3). A props count is a public
-number, and `docs/002-v2-product-motion.md` forbids universal scores and
-rankings, so the owner decides how props fit that rule before any design.
-The model below is kept as the intended language.
+**Decided 2026-11-15, in part.** The owner decided "put on by" for v1 as
+props: each card can credit one person by their handle on one platform,
+set privately by the owner and published with the card
+([ADR-062](docs/adr/062-props-credit.md)). `@mentions`, the four source
+types below and a count of props received are still later. A props count is
+a public number, and `docs/002-v2-product-motion.md` forbids universal
+scores and rankings, so whether a count can exist is still undecided. The
+model below is kept as the intended language.
 
 "Put on by" accepts four source types:
 

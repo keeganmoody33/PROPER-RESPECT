@@ -25,8 +25,8 @@ function publishedCard(type?: LinkType): Card {
   };
 }
 
-function renderPublished(card: Card, viewerSignedIn = false) {
-  const props: ComponentProps<typeof ProductCard> = { card, index: 0, viewerSignedIn };
+function renderPublished(card: Card) {
+  const props: ComponentProps<typeof ProductCard> = { card, index: 0 };
   return load(renderToStaticMarkup(createElement(ProductCard, props)));
 }
 
@@ -41,20 +41,14 @@ test.each(["AFFILIATE", "REFERRAL"] as const)("a stored %s link is disclosed on 
 
 test("a card with no such link gets no invented disclosure", () => {
   for (const card of [publishedCard(), publishedCard("CANONICAL"), publishedCard("INVITE")]) {
-    const $ = renderPublished(card, true);
+    const $ = renderPublished(card);
     expect($(".card-link-disclosure")).toHaveLength(0);
-    expect($(".card-props-action")).toHaveLength(0);
     if (card.primaryLink) expect($(".card-visit").attr("rel")).toBe("noopener noreferrer");
   }
 });
 
-test("a signed-out viewer does not get the props action", () => {
-  const card = publishedCard("AFFILIATE");
-  const signedOut = renderPublished(card, false);
-  expect(signedOut(".card-link-disclosure").first().text()).toBe("Affiliate link");
-  expect(signedOut(".card-props-action")).toHaveLength(0);
-
-  const signedIn = renderPublished(card, true);
-  expect(signedIn(".card-props-action")).toHaveLength(1);
-  expect(signedIn(".card-props-action").text()).toBe("Give props");
+test("a card with a disclosed link offers no props action, only its own controls", () => {
+  const $ = renderPublished(publishedCard("AFFILIATE"));
+  expect($(".card-link-disclosure").first().text()).toBe("Affiliate link");
+  expect($("button").toArray().map(button => $(button).text())).toEqual(["Details ↶", "Close details", "How this was measured"]);
 });

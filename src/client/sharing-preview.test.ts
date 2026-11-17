@@ -29,6 +29,13 @@ test("the visitor's view shows what each product does for the owner before anyth
     .toEqual(["enrich lead and account lists", "keep my CRM records filled in", "score inbound leads"]);
 });
 
+test("the visitor's view shows each card's credit before anything is published, with no report link", () => {
+  const $ = preview([{ ...card, credit: { platform: "GITHUB", handle: "keeganmoody33" } }]);
+  expect($(".card-credit-line").text()).toBe("Props to @keeganmoody33 · GitHub");
+  expect($(".card-credit-line a").attr("href")).toBe("https://github.com/keeganmoody33");
+  expect($(".card-credit-report").length).toBe(0);
+});
+
 test("the preview says nothing about links when no card has one", () => {
   expect(preview([card]).text()).not.toContain("sharing settings");
 });

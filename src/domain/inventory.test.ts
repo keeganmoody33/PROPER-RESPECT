@@ -64,3 +64,11 @@ test("an edit carries what the product does for the owner, within the stored cap
   expect(relationshipEditSchema.safeParse({ ...edit, uses: { picks: [], other: "b".repeat(USE_OTHER_MAX + 1) } }).success).toBe(false);
   expect(relationshipEditSchema.safeParse({ ...edit, uses: { picks: Array.from({ length: USE_PICKS_MAX + 1 }, (_, index) => `pick-${index}`) } }).success).toBe(false);
 });
+
+test("an edit carries the credit the owner typed, for the save to check against its platform", () => {
+  const edit = { status: "TESTING", goTo: false, headline: "", note: "" };
+  expect(relationshipEditSchema.parse({ ...edit, credit: { platform: "X", handle: " @jack " } }).credit)
+    .toEqual({ platform: "X", handle: " @jack " });
+  expect(relationshipEditSchema.parse(edit).credit).toBeUndefined();
+  expect(relationshipEditSchema.safeParse({ ...edit, credit: { platform: "MYSPACE", handle: "jack" } }).success).toBe(false);
+});

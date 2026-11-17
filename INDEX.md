@@ -1,10 +1,12 @@
 # PROPER-RESPECT - Documentation Index
 
-> Updated: 2026-09-28
+> Updated: 2026-11-15
 >
 > Current scope: [V2 product motion](docs/002-v2-product-motion.md) and the owner decisions in [the brief, Section 3](docs/remediation/CODEX-BRIEF.md). One link, `proper-respect.com/{handle}`, shows the tools a person uses, tests and used before, plus the usage behind them. The collection is private first: nothing publishes without owner preview and approval. Public sign-up stays closed until the Phase 2 gate.
 >
-> Later, not built: `@mentions` and "put on by" lineage, a count of props received, and member subdomains or custom domains (#13). ADRs about them are marked **Later** below.
+> Decided 2026-11-15: "put on by" as props, one credit per card to the person who put its owner on a tool ([ADR-062](docs/adr/062-props-credit.md)).
+>
+> Later, not built: `@mentions` and fuller lineage, a count of props received (still undecided), and member subdomains or custom domains (#13). ADRs about them are marked **Later** below.
 
 ## Core Documents
 
@@ -76,6 +78,7 @@ its proposed feature is implemented or a launch requirement.
 | 059 | `docs/adr/059-error-handling.md` | Graceful failures and import review safety |
 | 060 | `docs/adr/060-data-export.md` | User data export should remain free |
 | 061 | `docs/adr/061-competitive-differentiation.md` | Differentiation vs. generic link-in-bio tools |
+| 062 | `docs/adr/062-props-credit.md` | Props: one credit per card to the person who put the owner on a tool (2026-11-15) |
 
 ## Future / Parked ADRs
 

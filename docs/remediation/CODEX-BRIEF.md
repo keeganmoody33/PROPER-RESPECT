@@ -87,10 +87,12 @@ when a test, a check or a live observation proves it, not when code exists.
 **Later, only after real users exist.** Do not build these, and do not shape
 the schema for them now:
 
-- `@mention` other members and show who put you on to a product ("put on by").
+- `@mention` other members. ("Put on by" itself was decided for v1 on
+  2026-11-15 as one props credit per card; see `docs/adr/062-props-credit.md`.)
 - A count of props received from other members. This is a public number, and
   `docs/002-v2-product-motion.md:12-13` forbids universal scores and
   rankings. The owner must decide how props fit that rule before any design.
+  As of 2026-11-15 this is still undecided.
 - Member subdomains or custom domains (issue #13).
 
 **Working assumptions** (these hold until the owner says otherwise):
@@ -1317,8 +1319,9 @@ These are not in the queue until the owner adds them:
 - link health checks with "last checked" dates;
 - a trust queue for challenges;
 - a hosted read-only MCP endpoint over the public JSON;
-- `@mention` and "put on by" credit;
-- props received;
+- `@mention` credit ("put on by" was decided as one props credit per card on
+  2026-11-15, ADR-062);
+- props received (still undecided);
 - member domains (#13);
 - a template repo;
 - Google verification for Gmail.

@@ -8,7 +8,7 @@ import { homepageMarkdown } from "./agent-discovery";
 const statements = [
   "A public profile can show a retained measurement you published, including how much, and withholds an amount you did not publish.",
   "More than one mailbox can be connected. Disconnect stops recording from that mailbox. A retained aggregate of personal and former-employer accounts can stay visible when you record it as public, with the stored label and no email address.",
-  "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
+  "A stored affiliate or referral link is disclosed on the card.",
 ];
 
 it("the hero has no copy: outside the examples it has its one line and two actions, and nothing else", () => {
