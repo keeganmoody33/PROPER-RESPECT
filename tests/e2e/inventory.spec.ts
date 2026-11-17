@@ -451,3 +451,44 @@ for (const width of [1280, 390]) test(`an owner credits who put them on a produc
   await expect(question.getByLabel("Their handle", { exact: true })).toHaveValue("");
   await expect(page.locator(".card-front .card-credit")).toHaveCount(0);
 });
+
+for (const width of [1280, 390]) test(`a suggested line follows the uses as they are ticked, and saves only once the owner keeps it at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 1000 });
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("button", { name: "Load Clay fixture", exact: true }).click();
+  await page.getByText("Review this discovery", { exact: true }).click();
+  const line = page.getByLabel("What it helps you do (optional)", { exact: true });
+  // A discovery's status is the app's guess, so nothing is suggested until the owner picks a level.
+  await expect(line).toHaveValue("");
+  await page.getByLabel("How it fits").selectOption("WEEKLY");
+  await expect(line).toHaveValue("I use Clay most weeks.");
+  const hint = page.getByText("Suggested from your answers. Make it yours before you save.", { exact: false });
+  await expect(hint).toBeVisible();
+  await page.getByRole("checkbox", { name: "enrich lead and account lists", exact: true }).check();
+  await expect(line).toHaveValue("I use Clay most weeks to enrich lead and account lists.");
+  await page.getByLabel("Something else", { exact: true }).fill("score inbound leads");
+  await expect(line).toHaveValue("I use Clay most weeks to enrich lead and account lists and score inbound leads.");
+  await page.screenshot({ path: testInfo.outputPath(`suggested-line-${width}.png`) });
+  const keep = page.getByRole("button", { name: "Use this line", exact: true });
+  if (width <= 480) expect((await keep.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await keep.click();
+  await expect(hint).toHaveCount(0);
+  await expect(line).toHaveValue("I use Clay most weeks to enrich lead and account lists and score inbound leads.");
+  await page.screenshot({ path: testInfo.outputPath(`kept-line-${width}.png`) });
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  await expect(page.locator(".card-front .card-headline")).toHaveText("I use Clay most weeks to enrich lead and account lists and score inbound leads.");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("an untouched suggested line is not saved", async ({ page }) => {
+  await page.goto("/evidence-fixture/inventory");
+  await page.getByRole("button", { name: "Load Clay fixture", exact: true }).click();
+  await page.getByText("Review this discovery", { exact: true }).click();
+  await page.getByLabel("How it fits").selectOption("DAILY");
+  await expect(page.getByLabel("What it helps you do (optional)", { exact: true })).toHaveValue("I use Clay on most working days.");
+  await page.getByRole("button", { name: "Confirm and save privately", exact: true }).click();
+  await expect(page.getByText("Saved privately. Your public profile has not changed.", { exact: true })).toBeVisible();
+  await expect(page.locator(".card-front")).toContainText("No line yet. Add what it helps you do.");
+  await expect(page.locator(".card-front")).not.toContainText("I use Clay on most working days.");
+});

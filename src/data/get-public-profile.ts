@@ -6,7 +6,7 @@ import {
   type PublicProfile,
 } from "@/src/domain/public-profile";
 import { getServerEnv } from "@/src/env";
-import { e2eReferenceProfile } from "./e2e-reference-profile";
+import { E2E_PROFILE_UNAVAILABLE_COOKIE, e2eReferenceProfile } from "./e2e-reference-profile";
 
 // The backend returned a published profile this reader cannot accept. That is
 // an error, not an absence. The message is fixed and no cause is kept, so no
@@ -25,6 +25,8 @@ export async function getPublicProfile(
   if (!parsedHandle.success) return null;
   const handle = parsedHandle.data;
   if (process.env.PROPER_RESPECT_E2E_REFERENCE === "1") {
+    const { cookies } = await import("next/headers");
+    if ((await cookies()).has(E2E_PROFILE_UNAVAILABLE_COOKIE)) throw new PublicProfilePayloadError();
     if (["lecturesfrom", "legacy-profile-url"].includes(handle)) {
       return { ...e2eReferenceProfile, handle: "lecturesfrom" };
     }

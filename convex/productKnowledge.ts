@@ -20,15 +20,16 @@ import {
   sourceDefinitions,
   sourceParserVersion,
 } from "../src/domain/product-knowledge";
+import { userError } from "../src/domain/user-error";
 const DAY = 86_400_000;
 const MAX_BATCH = 5;
 async function ownerProduct(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   const user = await requireUser(ctx),
     prop = await ctx.db.get(propId);
   if (!prop || prop.userId !== user._id)
-    throw new Error("Evidence unavailable.");
+    throw userError("Evidence unavailable.");
   const product = await ctx.db.get(prop.productId);
-  if (!product) throw new Error("Product unavailable.");
+  if (!product) throw userError("Product unavailable.");
   return { user, product };
 }
 async function register(ctx: MutationCtx, product: Doc<"products">) {

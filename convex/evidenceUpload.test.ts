@@ -41,7 +41,8 @@ test("an uploaded original is linked to its private product supporting details",
   const { t, owner, upload } = await fixture();
   const id = await owner.mutation(api.onboarding.retainUpload, upload);
   const prop = await t.run(ctx => ctx.db.query("props").unique());
-  expect(prop).toMatchObject({ visibility: "DRAFT" });
+  // The owner writes the card's words; an upload leaves the line and note empty instead of writing its own.
+  expect(prop).toMatchObject({ visibility: "DRAFT", headline: "", note: "" });
   expect(await t.run(ctx => ctx.db.query("proofs").collect())).toEqual([
     expect.objectContaining({ propId: prop!._id, rawEvidenceId: id, type: "FILE_UPLOAD" }),
   ]);

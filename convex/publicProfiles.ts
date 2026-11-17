@@ -16,6 +16,7 @@ import {
   type RetainedMailboxRow,
   type StoredMailboxAccount,
 } from "../src/domain/retained-mailbox-aggregate";
+import { userError } from "../src/domain/user-error";
 
 const cardValidator = publicProfileValidator.fields.cards.element;
 const publicProfileV1Validator = v.object({
@@ -223,7 +224,7 @@ export const setRetainedAggregateDisplay = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const account = await ctx.db.get(args.accountId);
-    if (!account || account.ownerId !== user._id) throw new Error("Mailbox unavailable.");
+    if (!account || account.ownerId !== user._id) throw userError("Mailbox unavailable.");
     await ctx.db.patch(args.accountId, {
       retainedAggregateDisplay: args.display,
       ...(args.distinction ? { accountDistinction: args.distinction } : {}),

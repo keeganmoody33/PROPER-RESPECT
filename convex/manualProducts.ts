@@ -8,9 +8,10 @@ import { extractDomain, type ProductIdentity } from "../src/domain/discovery";
 import { sha256 } from "../src/domain/product-knowledge";
 import { isHttpUrl } from "../src/domain/http-url";
 import { normalizeWebsite, resolveTypedCatalogProduct } from "../src/domain/typed-product";
-import { isRelationshipConfirmed, relationshipEditSchema, type RelationshipEdit } from "../src/domain/inventory";
+import { isRelationshipConfirmed, RELATIONSHIP_EDIT_FALLBACK, relationshipEditSchema, type RelationshipEdit } from "../src/domain/inventory";
 import { approvePendingDraftImports, relationshipState } from "./inventory";
 import { statusValidator } from "./validators";
+import { parseOrUserError, userError } from "../src/domain/user-error";
 
 export const addManualProductArgs = {
   name: v.string(),
@@ -32,7 +33,7 @@ export const STACK_BATCH_RECEIPT_PREFIX = "stack-batch:";
 
 export function normalizeProductName(input: string): string {
   const name = input.trim().replace(/\s+/g, " ");
-  if (!name || name.length > 160) throw new Error("Enter a product name of 160 characters or fewer.");
+  if (!name || name.length > 160) throw userError("Enter a product name of 160 characters or fewer.");
   return name;
 }
 
@@ -82,7 +83,7 @@ export async function intakeRelationship(ctx: MutationCtx, user: Doc<"users">, i
   const { resolved: { identity, primaryUrl, evidence }, edit, note, confirmDraft, operationId, requestJson, now } = input;
   let product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", identity.slug)).unique();
   if (product && (product.domain !== identity.domain || product.name.toLowerCase() !== identity.name.toLowerCase())) {
-    throw new Error("The stored product identity conflicts with this product. It needs review before adding.");
+    throw userError("The stored product identity conflicts with this product. It needs review before adding.");
   }
   if (!product) {
     const productId = await ctx.db.insert("products", identity);
@@ -114,7 +115,7 @@ export async function intakeRelationship(ctx: MutationCtx, user: Doc<"users">, i
     after: { ...edit, confirmed: true },
   });
   if (primaryUrl) {
-    if (!isHttpUrl(primaryUrl)) throw new Error("Use a public HTTP or HTTPS product website, or leave it blank.");
+    if (!isHttpUrl(primaryUrl)) throw userError("Use a public HTTP or HTTPS product website, or leave it blank.");
     await ctx.db.insert("links", {
       propId, type: "CANONICAL", url: primaryUrl, label: `Open ${product.name}`, isPrimary: true,
     });
@@ -138,9 +139,9 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
   const user = await requireUser(ctx);
   const name = normalizeProductName(args.name);
   const note = (args.description ?? "").trim();
-  if (note.length > 4000) throw new Error("Keep your explanation to 4,000 characters or fewer.");
+  if (note.length > 4000) throw userError("Keep your explanation to 4,000 characters or fewer.");
   const website = normalizeWebsite(args.website ?? args.url ?? args.domain);
-  const edit = args.status === undefined ? undefined : relationshipEditSchema.parse({ status: args.status, goTo: false, headline: "", note });
+  const edit = args.status === undefined ? undefined : parseOrUserError(relationshipEditSchema, { status: args.status, goTo: false, headline: "", note }, RELATIONSHIP_EDIT_FALLBACK);
   const requestJson = edit
     ? JSON.stringify({ version: 2, name, website: website ?? null, note, status: edit.status })
     : JSON.stringify({ version: 1, name, website: website ?? null, note });
@@ -149,9 +150,9 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
   const previous = await ctx.db.query("manualProductIntakes")
     .withIndex("by_user_operation", q => q.eq("userId", user._id).eq("operationId", operationId)).unique();
   if (previous) {
-    if (previous.requestJson !== requestJson) throw new Error("This add-product operation was already used with different details.");
+    if (previous.requestJson !== requestJson) throw userError("This add-product operation was already used with different details.");
     const prop = await ctx.db.get(previous.propId);
-    if (!prop || prop.userId !== user._id) throw new Error("The previously added relationship is unavailable.");
+    if (!prop || prop.userId !== user._id) throw userError("The previously added relationship is unavailable.");
     return prop._id;
   }
 

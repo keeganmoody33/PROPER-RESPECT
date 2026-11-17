@@ -1,5 +1,8 @@
 import type { PublicProfile } from "../domain/public-profile";
 
+// Fixture mode only: while a browser holds this cookie, reading a public page fails.
+export const E2E_PROFILE_UNAVAILABLE_COOKIE = "proper-respect-e2e-profile-unavailable";
+
 export const e2eReferenceProfile: PublicProfile = {
   handle: "keegan",
   displayName: "Keegan Moody",

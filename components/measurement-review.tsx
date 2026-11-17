@@ -7,6 +7,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import { MEASUREMENT_LIMITS } from "@/src/domain/measurements";
 import { MeasurementValue, measurementLabel } from "./measurement-values";
+import { errorMessage } from "@/src/domain/user-error";
 
 type Capture = FunctionReturnType<typeof api.retainedEvidence.measurements>[number];
 
@@ -20,7 +21,7 @@ function ReviewCapture({ capture, propId }: { capture: Capture; propId: Id<"prop
     try {
       await review({ propId, rawEvidenceId: capture.rawEvidenceId, expectedDigest: capture.digest, expectedReviewVersion: capture.reviewVersion, measurementIds: selected });
       setNotice("Measurement choices saved privately. Choose what to share in the sharing preview.");
-    } catch (reason) { setNotice(reason instanceof Error ? reason.message : "Choices were not saved. Reload the source and try again."); }
+    } catch (reason) { setNotice(errorMessage(reason, "Choices were not saved. Reload the source and try again.")); }
     finally { setBusy(false); }
   }
   return <div className="usage-measurement-source">

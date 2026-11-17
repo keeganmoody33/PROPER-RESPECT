@@ -7,6 +7,7 @@ import { MEASUREMENT_LIMITS, measurementDigest, parseMeasurementImport, reviewMe
 import { requireUser } from "./authHelpers";
 import { ingestSignalsForOwner } from "./discovery";
 import { verifyRetainedProductEvidence } from "../src/domain/retained-product-evidence";
+import { userError } from "../src/domain/user-error";
 
 /** Authenticated upload of retained originals, never a live provider connection. */
 export const importPacket = mutation({
@@ -20,13 +21,13 @@ export const importPacket = mutation({
       signals: [packet.signal],
     });
     const source = await ctx.db.query("evidenceSources").withIndex("by_user_type_sourceKey", q => q.eq("userId", user._id).eq("type", packet.sourceType).eq("sourceKey", packet.sourceKey)).unique();
-    if (!source) throw new Error("Retained source unavailable.");
+    if (!source) throw userError("Retained source unavailable.");
     const dedupKey = JSON.stringify(["source-v1", source._id, ["record", packet.signal.sourceRecordId]]);
     const raw = await ctx.db.query("rawEvidence").withIndex("by_dedup_key", q => q.eq("dedupKey", dedupKey)).unique();
-    if (!raw || raw.userId !== user._id) throw new Error("Retained original unavailable.");
+    if (!raw || raw.userId !== user._id) throw userError("Retained original unavailable.");
     const rawEvidenceId = raw._id;
     const duplicate = raw.retainedArtifact !== undefined;
-    if (raw.deletedAt) throw new Error("This original was removed and cannot be restored by replay.");
+    if (raw.deletedAt) throw userError("This original was removed and cannot be restored by replay.");
     if (duplicate) {
       const original = raw.retainedArtifact!;
       // Preparing the same bytes again does not change the original receipt.
@@ -51,12 +52,12 @@ export const importPacket = mutation({
 async function ownedMeasurementProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   const user = await requireUser(ctx);
   const prop = await ctx.db.get(propId);
-  if (!prop || prop.userId !== user._id) throw new Error("Relationship unavailable.");
+  if (!prop || prop.userId !== user._id) throw userError("Relationship unavailable.");
   return { user, prop };
 }
 async function measurementHistory(ctx: QueryCtx | MutationCtx, userId: Id<"users">, propId: Id<"props">) {
   const rows = await ctx.db.query("rawEvidence").withIndex("by_measurement_prop", q => q.eq("measurementPropId", propId)).take(MEASUREMENT_LIMITS.captures + 1);
-  if (rows.length > MEASUREMENT_LIMITS.captures || rows.some(row => row.userId !== userId)) throw new Error("Measurement history unavailable.");
+  if (rows.length > MEASUREMENT_LIMITS.captures || rows.some(row => row.userId !== userId)) throw userError("Measurement history unavailable.");
   return rows;
 }
 function measurementEntries(rows: Doc<"rawEvidence">[]) {
@@ -95,30 +96,30 @@ export const importMeasurements = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
     const parsed = parseMeasurementImport(args.text);
-    if (args.expectedSource && args.expectedSource !== parsed.adapter) throw new Error("This file belongs to a different measurement source. Choose its matching import option.");
+    if (args.expectedSource && args.expectedSource !== parsed.adapter) throw userError("This file belongs to a different measurement source. Choose its matching import option.");
     // Validate before creating the first relationship. Convex commits this whole
     // mutation atomically, including replay and history-bound checks below.
     const name = parsed.adapter === "claude-code" ? "Claude Code" : parsed.adapter === "codex" ? "Codex" : args.productName;
-    if (!args.propId && !name) throw new Error("Name the product these measurements support.");
+    if (!args.propId && !name) throw userError("Name the product these measurements support.");
     const propId = args.propId ?? await addManualProductHandler(ctx, {
       name: name!, ...(parsed.adapter === "metric-packet" && args.website ? { website: args.website } : {}),
       operationId: `measurement:${measurementDigest([name, args.website ?? null, parsed.sourceKey])}`,
     });
     const { prop } = await ownedMeasurementProp(ctx, propId);
     const product = await ctx.db.get(prop.productId);
-    if (!product) throw new Error("Product unavailable.");
-    if ((parsed.adapter === "claude-code" && product.slug !== "claude-code") || (parsed.adapter === "codex" && product.slug !== "codex")) throw new Error("Attach this native capture to its matching product.");
+    if (!product) throw userError("Product unavailable.");
+    if ((parsed.adapter === "claude-code" && product.slug !== "claude-code") || (parsed.adapter === "codex" && product.slug !== "codex")) throw userError("Attach this native capture to its matching product.");
     const dedupKey = canonicalMeasurementIdentity(user._id, propId, parsed.adapter, parsed.sourceKey, parsed.captureId);
     const previous = await ctx.db.query("rawEvidence").withIndex("by_dedup_key", q => q.eq("dedupKey", dedupKey)).unique();
     if (previous) {
-      if (previous.userId !== user._id || previous.measurementPropId !== propId) throw new Error("Measurement unavailable.");
-      if (previous.deletedAt) throw new Error("This original was removed and cannot be restored by replay.");
+      if (previous.userId !== user._id || previous.measurementPropId !== propId) throw userError("Measurement unavailable.");
+      if (previous.deletedAt) throw userError("This original was removed and cannot be restored by replay.");
       if (previous.measurementImport?.digest !== parsed.digest) throw new Error("Measurement capture identity conflict; the original is unchanged.");
       return { propId, rawEvidenceId: previous._id, duplicate: true };
     }
     const history = await measurementHistory(ctx, user._id, propId);
     const totalBytes = history.reduce((sum, row) => sum + new TextEncoder().encode(row.payload ?? "").length, new TextEncoder().encode(args.text).length);
-    if (history.length >= MEASUREMENT_LIMITS.captures || totalBytes > MEASUREMENT_LIMITS.retainedBytes) throw new Error("This relationship has reached the bounded measurement history limit. Existing originals remain available.");
+    if (history.length >= MEASUREMENT_LIMITS.captures || totalBytes > MEASUREMENT_LIMITS.retainedBytes) throw userError("This relationship has reached the bounded measurement history limit. Existing originals remain available.");
     // Reconciliation checks the full source history before any write. Conflicting
     // Claude streams remain reviewable as quarantined rows, never publishable.
     reviewMeasurementImports([...history.filter(row => !row.deletedAt && row.payload && row.measurementImport?.adapter === parsed.adapter && row.measurementImport.sourceKey === parsed.sourceKey).map(row => parseMeasurementImport(row.payload!)), parsed]);
@@ -159,22 +160,22 @@ export const reviewMeasurements = mutation({
   args: { propId: v.id("props"), rawEvidenceId: v.id("rawEvidence"), expectedDigest: v.string(), expectedReviewVersion: v.number(), measurementIds: v.array(v.string()) },
   handler: async (ctx, args) => {
     const { user } = await ownedMeasurementProp(ctx, args.propId);
-    if (!Number.isSafeInteger(args.expectedReviewVersion) || args.expectedReviewVersion < 0 || args.measurementIds.length > MEASUREMENT_LIMITS.publicRows || new Set(args.measurementIds).size !== args.measurementIds.length) throw new Error("Review at most 24 distinct measurement rows.");
+    if (!Number.isSafeInteger(args.expectedReviewVersion) || args.expectedReviewVersion < 0 || args.measurementIds.length > MEASUREMENT_LIMITS.publicRows || new Set(args.measurementIds).size !== args.measurementIds.length) throw userError("Review at most 24 distinct measurement rows.");
     const history = await measurementHistory(ctx, user._id, args.propId);
     const entry = measurementEntries(history).find(item => item.rawEvidenceId === args.rawEvidenceId);
-    if (!entry) throw new Error("Measurement unavailable.");
-    if (entry.digest !== args.expectedDigest) throw new Error("These measurements changed. Open a fresh review.");
+    if (!entry) throw userError("Measurement unavailable.");
+    if (entry.digest !== args.expectedDigest) throw userError("These measurements changed. Open a fresh review.");
     const ids = [...args.measurementIds].sort();
     const allowed = new Set(entry.measurements.filter(row => row.status !== "conflict").map(row => row.id));
-    if (ids.some(id => !allowed.has(id))) throw new Error("Review only available non-conflicting measurements.");
+    if (ids.some(id => !allowed.has(id))) throw userError("Review only available non-conflicting measurements.");
     const currentReview = history.find(row => row._id === entry.rawEvidenceId)?.measurementReview;
     const unchanged = currentReview?.digest === entry.digest && measurementDigest(currentReview.measurementIds) === measurementDigest(ids);
     // Both a reactive save and its immediate retry keep the same approval.
     // An invalidated review, including an empty selection, is never a no-op.
     if (unchanged && (entry.reviewVersion === args.expectedReviewVersion || entry.reviewVersion === args.expectedReviewVersion + 1)) return { version: entry.reviewVersion, duplicate: true };
-    if (entry.reviewVersion !== args.expectedReviewVersion) throw new Error("This measurement review changed. Reload before reviewing again.");
+    if (entry.reviewVersion !== args.expectedReviewVersion) throw userError("This measurement review changed. Reload before reviewing again.");
     const reviews = await ctx.db.query("measurementReviews").withIndex("by_prop", q => q.eq("propId", args.propId)).take(MEASUREMENT_LIMITS.reviews);
-    if (reviews.length >= MEASUREMENT_LIMITS.reviews) throw new Error("This relationship has reached the bounded measurement review history limit. Existing reviews remain available.");
+    if (reviews.length >= MEASUREMENT_LIMITS.reviews) throw userError("This relationship has reached the bounded measurement review history limit. Existing reviews remain available.");
     const version = entry.reviewVersion + 1;
     await ctx.db.patch(entry.rawEvidenceId, { measurementReview: { digest: entry.digest, measurementIds: ids, version } });
     await ctx.db.insert("measurementReviews", { userId: user._id, propId: args.propId, rawEvidenceId: entry.rawEvidenceId, digest: entry.digest, measurementIds: ids, version, reviewedAt: new Date().toISOString() });
@@ -186,18 +187,18 @@ export const reviewMeasurements = mutation({
 /** Used by both publication preview and commit, never trusting client projections. */
 export async function reviewedMeasurementsForPublication(ctx: QueryCtx | MutationCtx, userId: Id<"users">, propId: Id<"props">, evidenceIds: Id<"rawEvidence">[]): Promise<{ retained: Measurement[]; publishedIds: string[]; approvalDigest: string } | undefined> {
   if (!evidenceIds.length) return undefined;
-  if (evidenceIds.length > MEASUREMENT_LIMITS.publicSources || new Set(evidenceIds).size !== evidenceIds.length) throw new Error("Choose at most eight distinct reviewed measurement sources.");
+  if (evidenceIds.length > MEASUREMENT_LIMITS.publicSources || new Set(evidenceIds).size !== evidenceIds.length) throw userError("Choose at most eight distinct reviewed measurement sources.");
   const entries = measurementEntries(await measurementHistory(ctx, userId, propId));
   const approvals: { id: Id<"rawEvidence">; digest: string; reviewVersion: number }[] = [];
   const retained: Measurement[] = [];
   const publishedIds: string[] = [];
   for (const id of evidenceIds) {
     const entry = entries.find(item => item.rawEvidenceId === id);
-    if (!entry || !entry.reviewedMeasurementIds.length) throw new Error("Open a current measurement review before sharing this source.");
+    if (!entry || !entry.reviewedMeasurementIds.length) throw userError("Open a current measurement review before sharing this source.");
     approvals.push({ id, digest: entry.digest, reviewVersion: entry.reviewVersion });
     retained.push(...entry.measurements);
     publishedIds.push(...entry.reviewedMeasurementIds);
   }
-  if (publishedIds.length > MEASUREMENT_LIMITS.publicRows) throw new Error("Share at most 24 measurement rows on a card.");
+  if (publishedIds.length > MEASUREMENT_LIMITS.publicRows) throw userError("Share at most 24 measurement rows on a card.");
   return { retained, publishedIds, approvalDigest: measurementDigest(approvals) };
 }

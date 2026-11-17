@@ -9,7 +9,9 @@ const screenshots = process.env.STACK_PICKER_SCREENSHOTS;
 const HEIGHT = 900;
 const DESKTOP = 1280;
 const PHONE = 375;
-const SHARED = 13;
+// Only the seeded card with a line shares; the twelve the picker saves have none yet.
+const SHARED = 1;
+const STAYING_PRIVATE = 13;
 const SEVERAL = 2;
 // Swaps "@clerk/nextjs" and "convex/react" for synthetic stand-ins; "convex/server" stays real.
 const boundary = /^(@clerk\/nextjs|convex\/react)$/;
@@ -45,17 +47,18 @@ test.beforeAll(async () => {
 });
 
 // One saved tool the picker must not offer again, and one whose saved link
-// share-all must skip by name (R03's javascript: URL).
+// share-all must skip by name (R03's javascript: URL). Both have a line, so only
+// the link keeps the second one private.
 const seeded = {
   user: { _id: "synthetic-owner", handle: "pending-owner", displayName: "Synthetic owner", bio: "" },
   connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true, brandEnrichmentAvailable: false,
   hasPublicationAtCurrentHandle: false, hasClaimedPublicIdentity: false,
   cards: [
     { product: { _id: "product-vercel", _creationTime: 1, name: "Vercel", slug: "vercel", domain: "vercel.com", description: "Synthetic saved product" },
-      prop: { _id: "saved-vercel", _creationTime: 1, userId: "synthetic-owner", productId: "product-vercel", status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
+      prop: { _id: "saved-vercel", _creationTime: 1, userId: "synthetic-owner", productId: "product-vercel", status: "ACTIVE", visibility: "PRIVATE", headline: "Ships every preview.", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
       links: [{ type: "CANONICAL", url: "https://vercel.com", label: "Open Vercel", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false },
     { product: { _id: "product-bad-link", _creationTime: 1, name: "Bad Link Tool", slug: "manual-bad-link-tool", domain: "", description: "" },
-      prop: { _id: "saved-bad-link", _creationTime: 1, userId: "synthetic-owner", productId: "product-bad-link", status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
+      prop: { _id: "saved-bad-link", _creationTime: 1, userId: "synthetic-owner", productId: "product-bad-link", status: "ACTIVE", visibility: "PRIVATE", headline: "Notes I keep.", note: "", confirmedAt: "2026-11-01T12:00:00Z", relationshipVersion: 1, goTo: false },
       links: [{ type: "AFFILIATE", url: "javascript:alert(1)", label: "Bad link", isPrimary: true }], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false },
   ],
 };
@@ -143,8 +146,9 @@ async function noAxeViolations(browserPage: Page) {
   await identity.getByRole("button", { name: "Save public identity" }).click();
 
   await share.getByRole("button", { name: "Preview sharing all confirmed tools" }).click();
-  await expect(share.getByRole("status")).toHaveText(`Preview ready. ${SHARED} cards will be shared. 1 will stay private until you fix it.`);
+  await expect(share.getByRole("status")).toHaveText(`Preview ready. ${SHARED} card will be shared. ${STAYING_PRIVATE} will stay private until you fix them.`);
   await expect(share.getByRole("listitem").filter({ hasText: "Bad Link Tool" })).toHaveText("Bad Link Tool stays private: its saved link is not a public web address. Fix the link in your collection.");
+  await expect(share.getByRole("listitem").filter({ hasText: "Clay stays" })).toHaveText("Clay stays private: it has no line yet. Open it in your collection and add what it helps you do.");
   const preview = share.getByRole("region", { name: "Your visitor’s view" });
   await expect(preview.locator("article.product-card")).toHaveCount(SHARED);
   await expect(preview).toContainText("@synthetic-stack");
@@ -156,7 +160,7 @@ async function noAxeViolations(browserPage: Page) {
   await expect(publish).toBeDisabled();
   await preview.getByLabel("I approve making exactly this preview visible to anyone with the public link.").check();
   await publish.click();
-  await expect(share.getByRole("status")).toHaveText(`Shared ${SHARED} tools. Your public page is live.`);
+  await expect(share.getByRole("status")).toHaveText(`Shared ${SHARED} tool. Your public page is live.`);
   await expect(share.getByRole("link", { name: "https://public.example/synthetic-stack" })).toHaveAttribute("href", "https://public.example/synthetic-stack");
   const published = (await calls(browserPage)).filter(call => call.name === "publishSelected");
   expect(published.map(call => call.args)).toEqual([{ selections: [], shareAllConfirmed: true, expectedPublicationRevision: 0,

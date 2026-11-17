@@ -68,14 +68,21 @@ describe("visitor identity and missing evidence", () => {
     source.profileLinks![0].label = "Later private edit";
     expect(result.profileLinks[0].label).toBe("Website");
   });
-  it("uses visitor fallbacks and leaves absent cost/activity absent", () => {
+  it("leaves a card with no words of the owner's without a line, and absent cost/activity absent", () => {
     const source = profile(); source.cards[0].headline = ""; source.cards[0].note = "";
     delete source.cards[0].cost; delete source.cards[0].startedAt;
     const result = projectVisiblePublicProfile(source).cards[0];
-    expect(result.headline).toBe("Relationship note not supplied.");
-    expect(result.note).toBe(result.headline);
+    expect(result.headline).toBe("");
+    expect(result.note).toBe("");
     expect(result.startDateNote).toBe("Start date not supplied");
     expect(result).not.toHaveProperty("cost"); expect(result).not.toHaveProperty("activity");
+    const text = load(renderToStaticMarkup(createElement(ProductCard, { card: source.cards[0], index: 0 })));
+    expect(text(".card-headline")).toHaveLength(0);
+    expect(text.text()).not.toContain("note not supplied");
+  });
+  it("lets the owner's note stand in for a missing headline, as the card does", () => {
+    const source = profile(); source.cards[0].headline = "";
+    expect(projectVisiblePublicProfile(source).cards[0]).toMatchObject({ headline: "Public note", note: "Public note" });
   });
   it("labels missing periods and empty activity without inventing zero values", () => {
     for (const activity of [

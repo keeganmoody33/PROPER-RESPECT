@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { errorMessage } from "@/src/domain/user-error";
 
 type Observation = Pick<
   Doc<"productObservations">,
@@ -289,7 +290,7 @@ export function ProductKnowledgePanel({ propId }: { propId: Id<"props"> }) {
       setMessage(result);
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "The request failed.",
+        errorMessage(error, "The request failed."),
       );
     } finally {
       setBusy(false);
