@@ -42,7 +42,7 @@ Nothing was deleted.
 | `prototypes/public-mcp/` | 3 high | unchanged |
 | `.github/claude-review/` | 0 | 0 |
 
-- **Root, fixed with `npm audit fix` and no `--force`:** `next` 16.3.8 to 16.4.6 (two critical remote code execution advisories and one high), `zod` to 4.6.7, `dompurify` through `posthog-js`, `undici` through `cheerio`, `vite` through `vitest`. `cheerio` moved to dev dependencies: only tests import it.
+- **Root, fixed with `npm audit fix` and no `--force`:** `next` 16.3.8 to 16.4.6 (two critical remote code execution advisories and one high), `zod` to 4.6.7, `dompurify` through `posthog-js`, `undici` through `cheerio`, `vite` through `vitest`. 
 - **`release-tools/`, not fixed:** `vercel` is pinned at 61.0.0 and the fix is a major bump to 65. It runs only in CI, with the production deploy token. Bump it alone and dry-run the release workflow.
 - **`prototypes/public-mcp/`, not fixed:** exact pins; the fix rewrites them. It runs only in a CI prototype job.
 - Dependabot PR #210 is 235 commits behind and is superseded for the root lockfile by this pass.
