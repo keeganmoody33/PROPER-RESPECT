@@ -7,13 +7,13 @@
 .title, .statement { font-stretch: 62%; font-weight: 900; text-transform: uppercase; margin: 0; }
 
 .hero { background: var(--poster-field); color: var(--poster-ink); border-bottom: 1px solid var(--line); padding: clamp(.75rem, 2vw, 1.75rem) clamp(1rem, 4vw, 5rem) clamp(2rem, 4vw, 4rem);
-  display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); grid-template-areas: "title title" "example side"; gap: clamp(.75rem, 1.6vw, 1.5rem) clamp(1.5rem, 3vw, 3rem); align-items: start; }
+  display: grid; grid-template-columns: minmax(0, 42rem) minmax(0, 1fr); grid-template-areas: "title title" "example side"; gap: clamp(.75rem, 1.6vw, 1.5rem) clamp(1.5rem, 3vw, 3rem); align-items: start; }
 .hero a:focus-visible, .hero :global(button:focus-visible) { outline-color: var(--poster-ink); }
 /* One line across the sheet at every width: eighteen characters of this face run about 7.6 times its size. */
 .title { grid-area: title; font-size: clamp(2rem, 11.6vw, 13rem); line-height: .84; letter-spacing: -.005em; white-space: nowrap; }
 .example { grid-area: example; min-width: 0; padding: clamp(.75rem, 1.6vw, 1.5rem); background: var(--example-panel); color: var(--ink); border: 2px solid var(--ink); box-shadow: 10px 10px 0 var(--poster); }
 .example :global(.product-card) { width: 100%; }
-.hero > .actions { grid-area: side; }
+.side { grid-area: side; display: flex; flex-direction: column; gap: clamp(1.25rem, 2vw, 2rem); }
 
 .actions { display: flex; align-items: flex-start; gap: .9rem; flex-direction: column; }
 .primary { display: inline-flex; justify-content: center; align-items: center; min-height: 52px; padding: .9rem 1.4rem; border: 3px solid var(--ink); background: var(--ink); color: var(--action-text); font-weight: 800; font-size: 1.05rem; text-decoration: none; }
@@ -34,11 +34,11 @@
 
 .respect { background: var(--feature-background); color: var(--feature-text); padding: clamp(3rem, 7vw, 7rem) clamp(1rem, 4vw, 5rem); }
 .respect a:focus-visible { outline-color: var(--poster); }
-.respectInner { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(2rem, 5vw, 5rem); align-items: end; }
-.respectCopy .statement { color: var(--poster); }
-.respectCopy > p { max-width: 46ch; line-height: 1.65; font-size: 1.05rem; margin: clamp(1.5rem, 3vw, 2.5rem) 0 1.25rem; }
+.respectInner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 5rem); align-items: end; }
+.respect .statement { color: var(--poster); }
+.respectCopy > p { max-width: 46ch; line-height: 1.65; font-size: 1.15rem; margin: 0 0 1.25rem; }
 .onDark { font-weight: 700; }
-.bump { display: block; width: 100%; height: auto; border: 3px solid var(--feature-text); }
+.bump { display: block; width: 100%; height: auto; border: 2px solid var(--ink); }
 
 .close .actions { margin-top: 2rem; }
 .privacy { font-size: .85rem; line-height: 1.6; color: var(--secondary); max-width: 52ch; margin: 1.5rem 0 0; }
@@ -52,6 +52,6 @@
 @media (max-width: 600px) {
   .hero { padding-top: .5rem; row-gap: .5rem; }
   .hero .example { padding: .5rem; }
-  .hero > .actions { margin-top: .75rem; }
+  .side { margin-top: .75rem; flex-direction: column-reverse; }
   .actions, .primary { width: 100%; }
 }

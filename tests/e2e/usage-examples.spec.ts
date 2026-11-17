@@ -1206,7 +1206,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the featured cards carry
   expect([looks.Clay.panel, looks.Docker.panel, looks.GitHub.panel]).toEqual([undefined, undefined, "rgb(255, 255, 255)"]);
 });
 
-test("GitHub's calendar draws 10px days with 3px gaps at 1440px, says on a phone that it scrolls, and reads as one summary line", async ({ page }) => {
+test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone that it scrolls, and reads as one summary line", async ({ page }) => {
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -1218,7 +1218,7 @@ test("GitHub's calendar draws 10px days with 3px gaps at 1440px, says on a phone
     return { size: Math.round(first.width), gap: Math.round(second.top - first.bottom), radius: getComputedStyle(element.querySelector("[data-date]")!).borderRadius,
       scrolls: element.querySelector(".contribution-scroll")!.scrollWidth > element.querySelector(".contribution-scroll")!.clientWidth };
   });
-  expect(cells).toEqual({ size: 10, gap: 3, radius: "2px", scrolls: false });
+  expect(cells).toEqual({ size: 8, gap: 2, radius: "2px", scrolls: false });
   // One line for a screen reader, not 365 images.
   await expect(calendar.getByRole("img")).toHaveCount(0);
   await expect(calendar.locator(".contribution-summary")).toHaveText(/^\d[\d,]* contributions from 1 Sep 2025 to 31 Aug 2026, on \d+ of 365 days; the most in a day was \d+, on \d+ \w+ \d{4}\.$/);

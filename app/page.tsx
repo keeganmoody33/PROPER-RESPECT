@@ -20,11 +20,14 @@ export default function HomePage() {
       <main id="homepage-content" className={styles.main} tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="homepage-title">
           <h1 id="homepage-title" className={styles.title}>{siteLine}</h1>
-          {/* Right after the heading, so a phone shows a card in its first screen; a wide screen sets the actions beside it. */}
+          {/* Right after the heading, so a phone shows a card in its first screen; a wide screen sets the art and the actions beside it. */}
           <div className={styles.example} id="example"><ProductExample examples={homepageExamples()} /></div>
-          <div className={styles.actions}>
-            <Link className={styles.primary} href="/app/collection">Start your collection</Link>
-            <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
+          <div className={styles.side}>
+            <Image className={styles.bump} src="/brand/homepage/bump-art.png" alt="Two fists meeting at a bright red diamond" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 45vw" priority />
+            <div className={styles.actions}>
+              <Link className={styles.primary} href="/app/collection">Start your collection</Link>
+              <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
+            </div>
           </div>
         </section>
         <section id="how-it-works" className={styles.journey} aria-labelledby="journey-title">
@@ -35,12 +38,11 @@ export default function HomePage() {
         </section>
         <section className={styles.respect} aria-labelledby="respect-title">
           <div className={styles.respectInner}>
+            <h2 id="respect-title" className={styles.statement}>Give props.<br />Get props.</h2>
             <div className={styles.respectCopy}>
-              <h2 id="respect-title" className={styles.statement}>Give props.<br />Get props.</h2>
               <p>Proper Respect takes its name from giving someone their props. Here the props are for what you run and how long you have run it, on a record your peers can read.</p>
               <Link className={styles.onDark} href="/about/origins">Where the name comes from</Link>
             </div>
-            <Image className={styles.bump} src="/brand/homepage/bump-art.png" alt="Two fists meeting at a bright red diamond" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 45vw" />
           </div>
         </section>
         <section className={styles.close} aria-labelledby="start-title">

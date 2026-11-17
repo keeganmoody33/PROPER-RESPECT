@@ -22,7 +22,9 @@ All data here is synthetic: homepage sample cards and the fixture profile in ref
 | `before-origins-1440.png` | Origins on `9eb44a6`. |
 | `after-origins-1440-first-screen.png` | Origins with its rail of About pages. Captured before the owner struck the large quote the same day; the page no longer shows it. |
 
-The measurements under Targets were taken on the first round. The second round changed colours, the header and the About rail, and the browser specs for those pages passed again after it (174 tests across eight spec files; one theme test failed once and passed on three repeats).
+After `main` brought in the props line (#221), one sample card's back left a 26px gap on the wide hero card, over its 24px limit. The card column is now 42rem wide, as the cards were tuned for, and the fist-bump art sits beside it. Measured again at 1440×1000: card tops 433px; bottoms Clay 784px, GitHub 922px, Cloudflare 920px, Docker 805px, Firecrawl 877px. At 390×844 the card starts at 230px.
+
+The other measurements under Targets were taken on the first round. The second round changed colours, the header and the About rail, and the browser specs for those pages passed again after it (174 tests across eight spec files; one theme test failed once and passed on three repeats).
 
 ## Targets
 
