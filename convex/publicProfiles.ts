@@ -313,8 +313,9 @@ export async function syncSearchListing(ctx: MutationCtx, handle: string) {
     readPublishedProfile(ctx, handle),
     ctx.db.query("users").withIndex("by_handle", q => q.eq("handle", handle)).first(),
   ]);
-  // An old handle reads the page it moved to, whose rows belong to the new handle.
-  const listing = searchListing(profile?.handle === handle ? profile : null, owner?.listedInSearch);
+  // An old handle reads the page it moved to, whose rows belong to the new handle. A page with no account at its
+  // handle has nobody to answer "List my page in search", so it is never listed, whatever the default.
+  const listing = owner ? searchListing(profile?.handle === handle ? profile : null, owner.listedInSearch) : null;
   const page = await ctx.db.query("listedPages").withIndex("by_handle", q => q.eq("handle", handle)).unique();
   if (!listing && page) await ctx.db.delete(page._id);
   if (listing && !page) await ctx.db.insert("listedPages", listing.page);

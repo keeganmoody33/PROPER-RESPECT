@@ -6,7 +6,7 @@ Search, the tool pages and the sitemap read three tables (`listedPages`, `listed
 
 ## Before you run it: one decision
 
-The rebuild lists every page already published, unless its owner turned "List my page in search" off, and none of them has been asked yet. If existing owners should be asked first, don't run it: their pages enter search the next time each one publishes.
+The rebuild lists every page already published, unless its owner turned "List my page in search" off, and none of them has been asked yet. A page with no account at its handle is never listed: nobody could turn it off. If existing owners should be asked first, don't run it: their pages enter search the next time each one publishes.
 
 ## Order
 

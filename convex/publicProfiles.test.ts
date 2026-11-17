@@ -419,7 +419,8 @@ test("moving a published page and seeding the reference page keep search on the 
     return { ownerId, publicationId };
   });
   await t.mutation(internal.publicProfiles.rebuildSearch, {});
-  expect(await t.run(async ctx => (await ctx.db.query("listedPages").collect()).map(page => page.handle))).toEqual(["keegan"]);
+  // Before the move the page sits at a handle no account holds, so nobody can answer for it and it is not listed.
+  expect(await t.run(async ctx => (await ctx.db.query("listedPages").collect()).map(page => page.handle))).toEqual([]);
   await t.mutation(makeFunctionReference<"mutation">("publicationMigration:moveSeededPublication"), {
     ...ids, expectedSubject: "owner-subject", expectedSeedKey: "keegan", fromHandle: "keegan", toHandle: "lecturesfrom",
     expectedRevision: 4, expectedProfileHash: await sha256(canonicalJson(profile)), dryRun: false,
@@ -481,6 +482,10 @@ test("the rebuild fills search from published pages alone, honours takedowns and
   const untouched = await t.run(async ctx => {
     await ctx.db.insert("users", { handle: "synthetic-sam", displayName: "Synthetic Sam", bio: "" });
     await ctx.db.insert("users", { handle: "synthetic-off", displayName: "Synthetic Off", bio: "", listedInSearch: false });
+    await ctx.db.insert("users", { handle: "synthetic-ria", displayName: "Synthetic Ria", bio: "" });
+    await ctx.db.insert("users", { handle: "synthetic-down", displayName: "Synthetic Down", bio: "" });
+    // A page kept after its account left the handle: nobody can answer for it, so it is never listed.
+    await ctx.db.insert("publishedProfiles", page("synthetic-orphan", "Synthetic Orphan", [card("clay", "Clay"), card("orphan-only", "Orphan Only")]));
     await ctx.db.insert("publishedProfiles", page("synthetic-sam", "Synthetic Sam", [card("clay", "Clay"), card("github", "GitHub", { status: "ARCHIVED", level: "PAUSED" })]));
     await ctx.db.insert("publishedProfiles", page("synthetic-ria", "Synthetic Ria", [card("clay", "Clay", { status: "ARCHIVED", level: "STOPPED" })]));
     await ctx.db.insert("publishedProfiles", { ...page("synthetic-down", "Synthetic Down", [card("clay", "Clay")]), takenDownAt: confirmedAt, takedownReason: "Synthetic" });
