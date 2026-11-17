@@ -41,6 +41,7 @@ import { MeasurementSharingChoices } from "./measurement-review";
 import { FirstResultPanel, useFirstResultSource } from "./first-result";
 import { SignedOutCollection } from "./signed-out-collection";
 import { selectFirstResultSource } from "@/src/client/first-result-intent";
+import { errorMessage } from "@/src/domain/user-error";
 
 type ManualProductInput = { name: string; website?: string; description?: string; status?: "ACTIVE" | "TESTING" | "ARCHIVED"; operationId: string };
 
@@ -101,7 +102,7 @@ export function AddProductForm({ onAdd, onAdded }: { onAdd: (input: ManualProduc
       retry.current = null;
       form.reset();
     } catch (error) {
-      setNotice({ kind: "error", text: error instanceof Error ? error.message : "The product was not added. Your collection is unchanged; you can retry." });
+      setNotice({ kind: "error", text: errorMessage(error, "The product was not added. Your collection is unchanged; you can retry.") });
     } finally { setBusy(false); }
   }
   return <div id="add-product" className="collection-add">
@@ -186,7 +187,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
       await operation();
       setMessage(label);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Something went wrong.");
+      setMessage(errorMessage(error, "Something went wrong."));
     } finally {
       setBusy(false);
     }

@@ -13,6 +13,7 @@ import { levelDefinition, statusFallbackLabel, type RelationshipLevel } from "@/
 import { readPendingStack, restorablePicks, writePendingStack } from "@/src/client/pending-stack";
 import { firstResultReturnUrl } from "@/src/client/first-result-intent";
 import styles from "./stack-builder.module.css";
+import { errorMessage } from "@/src/domain/user-error";
 
 type DirectoryModule = typeof import("@/src/domain/product-directory") & typeof import("@/src/client/typed-pick");
 type SaveArgs = { operationId: string; picks: StackPick[] };
@@ -191,7 +192,7 @@ export function StackBuilder({ mode }: { mode: BuilderMode }) {
       dispatch({ type: "saved", result: { created: result.created, confirmed: result.confirmed, unchanged: result.unchanged } });
       attempt.current = null;
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Your tools were not saved. Your list is unchanged; you can retry.");
+      setError(errorMessage(reason, "Your tools were not saved. Your list is unchanged; you can retry."));
     } finally {
       setSaving(false);
     }

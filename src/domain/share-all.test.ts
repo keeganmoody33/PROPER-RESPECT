@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LINK_LABEL_MAX, PUBLISHED_URL_MAX } from "./published-text-limits";
 import { SHARE_ALL_MAX, shareAllSelections, type ShareAllProp } from "./share-all";
+import { prepareImportedProp } from "./discovery";
 
 const MONTHLY_PRICE = 20;
 const SAVED_VERSION = 2;
@@ -105,6 +106,23 @@ describe("shareAllSelections", () => {
     const result = shareAllSelections([prop("odd", { product: { name: "Odd", domain: "bad domain" } })]);
     expect(result.selections.map(selection => [selection.propId, selection.primaryLink])).toEqual([["odd", undefined]]);
     expect(result.skipped).toEqual([]);
+  });
+
+  it("skips and names a card with neither a headline nor a note, so no card goes public without a line", () => {
+    const result = shareAllSelections([
+      prop("empty", { headline: "", note: "" }),
+      prop("blank", { headline: "   ", note: " \n " }),
+      prop("noteOnly", { headline: "", note: "The owner's note" }),
+      prop("headlineOnly", { note: "" }),
+    ]);
+    expect(result.selections.map(selection => selection.propId)).toEqual(["noteOnly", "headlineOnly"]);
+    expect(result.skipped).toEqual(["empty", "blank"].map(id => ({ propId: id, productName: `Product ${id}`, reason: "NEEDS_A_LINE" })));
+  });
+
+  it("never selects a discovery draft, whatever its words", () => {
+    const discovery = prepareImportedProp({ product: { slug: "clay", name: "Clay", domain: "clay.com", description: "" }, canonicalUrl: "https://clay.com", signalIndexes: [0] }, "GMAIL");
+    const result = shareAllSelections([prop("draft", { ...discovery, product: { name: "Clay", domain: "clay.com" } })]);
+    expect(result).toEqual({ selections: [], skipped: [], remainingCount: 0 });
   });
 
   it("shares the first 100 shareable cards in collection order and counts the rest", () => {

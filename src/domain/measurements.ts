@@ -4,6 +4,7 @@ import { canonicalJson } from "./canonical-json.ts";
 import { parseExactJson } from "./exact-json.ts";
 import { normalizeNativeDecimal, parseClaudeNativeCapture, reviewClaudeNativeCaptures, type ClaudeNativeCapture } from "./claude-native-evidence.ts";
 import { parseCodexUsageCapturePortable, reviewCodexUsageCaptures, type CodexUsageCapture } from "./codex-usage.ts";
+import { userError } from "./user-error.ts";
 
 export const MEASUREMENT_LIMITS = { bytes: 256_000, captures: 32, retainedBytes: 750_000, reviews: 256, rows: 8192, publicRows: 24, publicSources: 8 } as const;
 const identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/);
@@ -81,7 +82,7 @@ export function parseMeasurementImport(text: string): MeasurementImport {
     const capture = parseCodexUsageCapturePortable(text);
     const source: MeasurementSource = { namespace: "codex", identityBasis: "OWNER_SUPPLIED", sourceAlias: "account-usage-read", ownerAlias: capture.scope.ownerAlias, accountAlias: capture.scope.accountAlias, workspaceAlias: null, deviceAlias: null };
     return { adapter: "codex", capture, ...common(capture, source, capture.capture.id, capture.capture.capturedAt) };
-  } catch { throw new Error("Use a supported sanitized Claude, Codex, or proper-measurements-v1 JSON capture. Raw prompts, private workspace content and Markdown reports are not accepted."); }
+  } catch { throw userError("Use a supported sanitized Claude, Codex, or proper-measurements-v1 JSON capture. Raw prompts, private workspace content and Markdown reports are not accepted."); }
 }
 
 function codexRows(captures: CodexUsageCapture[]): Measurement[] {
@@ -118,8 +119,8 @@ function codexRows(captures: CodexUsageCapture[]): Measurement[] {
 
 /** Reconciles only one source identity; never adds accounts, snapshots or views. */
 export function reviewMeasurementImports(imports: readonly MeasurementImport[]): Measurement[] {
-  if (!imports.length || imports.length > MEASUREMENT_LIMITS.captures) throw new Error("Measurement history exceeds the bounded import limit.");
-  if (new Set(imports.map(item => `${item.adapter}:${item.sourceKey}`)).size !== 1) throw new Error("Review one measurement source at a time.");
+  if (!imports.length || imports.length > MEASUREMENT_LIMITS.captures) throw userError("Measurement history exceeds the bounded import limit.");
+  if (new Set(imports.map(item => `${item.adapter}:${item.sourceKey}`)).size !== 1) throw userError("Review one measurement source at a time.");
   let rows: Measurement[];
   const first = imports[0];
   if (first.adapter === "claude-code") {
@@ -142,13 +143,13 @@ export function reviewMeasurementImports(imports: readonly MeasurementImport[]):
       ...row, id: measurementDigest([item.digest, row.id]), capturedAt: item.capturedAt, status: "measured", sample: "unknown", derivation: "SOURCE_REPORTED", dimensions: noDimensions, reasons: commonReasons,
     })) : []);
   }
-  if (rows.length > MEASUREMENT_LIMITS.rows) throw new Error("Too many measurement rows.");
+  if (rows.length > MEASUREMENT_LIMITS.rows) throw userError("Too many measurement rows.");
   return rows;
 }
 
 /** Whitelist projection. Private aliases, provenance, hashes and dimensions never copy. */
 export function projectMeasurement(row: Measurement): PublicMeasurement {
-  if (row.status === "conflict") throw new Error("Conflicting measurements cannot be published.");
+  if (row.status === "conflict") throw userError("Conflicting measurements cannot be published.");
   return publicMeasurementSchema.parse({
     metric: row.metric, value: row.value, unit: row.unit, period: row.period,
     scope: row.scope, coverage: row.coverage, temporality: row.temporality, aggregation: row.aggregation,

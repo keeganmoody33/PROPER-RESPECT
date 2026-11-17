@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isHttpUrl } from "./http-url.ts";
+import { userError } from "./user-error.ts";
 
 export const PROFILE_LINK_LIMIT = 8;
 
@@ -20,7 +21,7 @@ export function validateProfileLinks(links: unknown, preferredLinkUrl?: string) 
   const profileLinks = profileLinksSchema.parse(links);
   const preferred = preferredLinkUrl === undefined ? undefined : profileLinkUrlSchema.parse(preferredLinkUrl);
   if (preferred && !profileLinks.some(link => link.url === preferred)) {
-    throw new Error("Choose your name destination from your saved profile links.");
+    throw userError("Choose your name destination from your saved profile links.");
   }
   return { profileLinks, preferredLinkUrl: preferred };
 }

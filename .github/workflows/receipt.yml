@@ -2,7 +2,8 @@ name: Receipt
 # The 30-day receipt's outside witness (R11, docs/runbooks/receipt.md). Reads
 # the public GitHub card once a day, two hours after the 06:00 UTC refresh
 # cron, and appends one line to receipts/github-refresh.jsonl on the receipts
-# branch, pass or fail. A failing check also opens or updates a receipt issue.
+# branch, pass or fail. A failing check also opens or updates a receipt issue,
+# and a passing check closes the open one.
 on:
   schedule:
     # Off the top of the hour, when GitHub delays or drops the most scheduled runs.
@@ -101,6 +102,21 @@ jobs:
           done
           echo "Could not append the receipt line."
           exit 1
+      # Runs only once the line is on the receipts branch: a failed append skips it.
+      - name: Close the receipt issue after a passing check
+        if: steps.check.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          issue="$(gh issue list --repo "$GITHUB_REPOSITORY" --label receipt --state open --limit 1 --json number --jq '.[0].number // empty')"
+          if [ -z "$issue" ]; then
+            echo "No open receipt issue."
+            exit 0
+          fi
+          line="$(cat "$RUNNER_TEMP/receipt-line.json")"
+          run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          body="$(printf 'The receipt check passed.\n\n```json\n%s\n```\n\nRun: %s\n\nSee docs/runbooks/receipt.md.' "$line" "$run_url")"
+          gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment "$body"
       - name: Open or update the receipt issue
         if: steps.check.outcome != 'success'
         env:

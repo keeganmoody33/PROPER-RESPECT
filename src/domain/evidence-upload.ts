@@ -1,3 +1,5 @@
+import { userError } from "./user-error";
+
 export const MAX_EVIDENCE_UPLOAD_BYTES = 19 * 1024 * 1024;
 
 const formats = {
@@ -23,12 +25,12 @@ export function normalizeUploadMime(mimeType: string) {
 }
 
 export function classifyEvidenceUpload(input: { filename: string; mimeType: string; byteSize: number }) {
-  if (!input.filename.trim() || input.filename.length > 255 || /[\x00-\x1f/\\]/.test(input.filename)) throw new Error("Choose a file with a valid filename.");
-  if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > MAX_EVIDENCE_UPLOAD_BYTES) throw new Error("Choose a nonempty file of 19 MiB or less.");
+  if (!input.filename.trim() || input.filename.length > 255 || /[\x00-\x1f/\\]/.test(input.filename)) throw userError("Choose a file with a valid filename.");
+  if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0 || input.byteSize > MAX_EVIDENCE_UPLOAD_BYTES) throw userError("Choose a nonempty file of 19 MiB or less.");
   const extension = input.filename.toLowerCase().split(".").at(-1)!;
-  if (!input.filename.includes(".") || !Object.hasOwn(formats, extension)) throw new Error("Unsupported export format. Choose an image, CSV/TSV, JSON/JSONL, PDF, spreadsheet, text/XML/HTML, or ZIP file.");
+  if (!input.filename.includes(".") || !Object.hasOwn(formats, extension)) throw userError("Unsupported export format. Choose an image, CSV/TSV, JSON/JSONL, PDF, spreadsheet, text/XML/HTML, or ZIP file.");
   const mimeType = normalizeUploadMime(input.mimeType);
-  if (mimeType !== "application/octet-stream" && !(formats[extension as keyof typeof formats] as readonly string[]).includes(mimeType)) throw new Error("The file extension and content type do not match.");
+  if (mimeType !== "application/octet-stream" && !(formats[extension as keyof typeof formats] as readonly string[]).includes(mimeType)) throw userError("The file extension and content type do not match.");
   const sourceType = ["png", "jpg", "jpeg", "webp", "heic", "heif"].includes(extension)
     ? "SCREENSHOT" : extension === "csv" ? "CSV" : "FILE_UPLOAD";
   return { extension, mimeType, sourceType } as const;

@@ -162,6 +162,23 @@ test("a pick of an unconfirmed draft confirms it the way a private save does", a
   });
 });
 
+test("a pick of a discovered or connected draft confirms it without the words the system wrote on it", async () => {
+  const { t, owner } = await fixture();
+  const draft = await t.run(async ctx => {
+    const userId = (await ctx.db.query("users").withIndex("by_auth_subject", q => q.eq("authSubject", "owner")).unique())!._id;
+    const productId = await ctx.db.insert("products", { slug: "github", name: "GitHub", domain: "github.com", description: "" });
+    return ctx.db.insert("props", { userId, productId, status: "TESTING", visibility: "DRAFT",
+      headline: "GitHub may be in your stack.", note: "Proposed from gmail evidence. Review before publishing." });
+  });
+  const result = await owner.mutation(saveSelection, { operationId: "confirm", picks: [dir("github", "ACTIVE")] });
+  expect(result.items).toEqual([{ propId: draft, productName: "GitHub", outcome: "CONFIRMED_DRAFT" }]);
+  await t.run(async ctx => {
+    expect(await ctx.db.get(draft)).toMatchObject({ status: "ACTIVE", visibility: "PRIVATE", headline: "", note: "" });
+    const [event] = await ctx.db.query("relationshipEvents").collect();
+    expect(event).toMatchObject({ before: { headline: "", note: "", confirmed: false }, after: { headline: "", note: "", confirmed: true } });
+  });
+});
+
 test("a pick of an already confirmed relationship changes nothing", async () => {
   const { t, owner } = await fixture();
   const saved = await owner.mutation(add, { name: "GitHub", operationId: "saved", status: "ACTIVE", description: "Daily" });

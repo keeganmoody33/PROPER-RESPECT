@@ -1,6 +1,6 @@
 # The 30-day GitHub refresh receipt
 
-Updated: 2026-09-28. Written for R11. The rules come from Section 10 of
+Updated: 2026-11-17. Written for R11. The rules come from Section 10 of
 `docs/remediation/CODEX-BRIEF.md`; this page explains how to read the receipt.
 
 ## What it proves
@@ -45,6 +45,9 @@ and the count needs both.
     A line with no `reason` failed on freshness or age.
 - **A failure:** the workflow opens an issue labeled `receipt`, or comments on
   the open one, then fails the run.
+- **A pass:** once the line is on the `receipts` branch, the workflow closes
+  the open `receipt` issue with a comment holding the passing line. The next
+  failure opens a new issue.
 
 ## Setup (owner)
 

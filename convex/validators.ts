@@ -65,6 +65,7 @@ export const refreshErrorClassValidator = v.union(
   v.literal("MISSING_METRIC"),
   v.literal("SCOPE_EXCEEDED"),
   v.literal("UNEXPECTED"),
+  v.literal("CREDENTIAL_REJECTED"),
 );
 
 export const freshnessValidator = v.union(

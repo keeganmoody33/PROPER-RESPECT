@@ -2,8 +2,8 @@ import type {
   GenericMutationCtx,
   GenericQueryCtx,
 } from "convex/server";
-import { ConvexError } from "convex/values";
 import type { DataModel, Doc, Id } from "./_generated/dataModel";
+import { userError } from "../src/domain/user-error";
 
 type AuthenticatedCtx =
   | GenericMutationCtx<DataModel>
@@ -12,7 +12,7 @@ type AuthenticatedCtx =
 export async function requireIdentity(ctx: AuthenticatedCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    throw new Error("Authentication required.");
+    throw userError("Authentication required.");
   }
   return identity;
 }
@@ -28,7 +28,7 @@ export async function requireUser(
     )
     .unique();
   if (!user) {
-    throw new Error("Complete account setup before continuing.");
+    throw userError("Complete account setup before continuing.");
   }
   return user;
 }
@@ -62,7 +62,7 @@ export async function consumeWriteLimit(
   const count = current?.windowStart === windowStart ? current.count : 0;
   if (count + units > limit) {
     const minutes = Math.max(1, Math.ceil((windowStart + HOUR_MS - now) / 60_000));
-    throw new ConvexError(`Too many ${label}. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
+    throw userError(`Too many ${label}. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
   }
   const value = { windowStart, count: count + units };
   if (current) await ctx.db.patch(current._id, value);

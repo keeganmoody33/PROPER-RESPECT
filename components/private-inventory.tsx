@@ -8,7 +8,8 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
-import { productUseOptions, USE_OTHER_MAX, type ProductUses } from "@/src/domain/product-uses";
+import { productUseLabels, productUseOptions, USE_OTHER_MAX, type ProductUses } from "@/src/domain/product-uses";
+import { headlineField, headlineHelp, initialOwnerHeadline } from "@/src/client/headline-suggestion";
 import { CREDIT_INPUT_MAX, CREDIT_OTHER_PLATFORM_MAX, CREDIT_PLATFORMS, creditPlatform, listedCredit, normalizeCredit, type CreditPlatform } from "@/src/domain/props-credit";
 import { cardStatusLabel, isRelationshipLevel, levelDefinition, levelStatus, RELATIONSHIP_LEVELS } from "@/src/domain/relationship-level";
 import { AccountEvidence } from "./account-evidence";
@@ -18,6 +19,7 @@ import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { ProductBrandControls } from "./product-brand-controls";
 import { DiscoveryReview } from "./discovery-review";
 import styles from "./private-inventory.module.css";
+import { errorMessage } from "@/src/domain/user-error";
 
 export type InventoryData = {
   cards: FunctionReturnType<typeof api.inventory.list>["page"];
@@ -48,10 +50,19 @@ function History({ propId }: { propId: Id<"props"> }) {
   </div>;
 }
 
-function UsesQuestion({ productName, productSlug, uses }: { productName: string; productSlug: string; uses?: ProductUses }) {
+// The uses as the form holds them now, ticked or typed but not yet saved.
+function formUses(form: HTMLFormElement): ProductUses | undefined {
+  const data = new FormData(form);
+  const picks = data.getAll("usePicks").map(String), other = String(data.get("useOther") ?? "").trim();
+  return picks.length || other ? { picks, ...(other ? { other } : {}) } : undefined;
+}
+
+function UsesQuestion({ productName, productSlug, uses, onChange }: { productName: string; productSlug: string; uses?: ProductUses; onChange: (uses: ProductUses | undefined) => void }) {
   const options = productUseOptions(productSlug);
+  // A checkbox updates its form value after its click is handled, so the form is read once that has happened.
+  const report = (fieldset: HTMLFieldSetElement) => { const { form } = fieldset; if (form) setTimeout(() => onChange(formUses(form))); };
   // The fieldset is the group, so the checkboxes sit in it directly: a group inside it would announce the question twice.
-  return <fieldset className={styles.uses}>
+  return <fieldset className={styles.uses} onClick={event => report(event.currentTarget)} onInput={event => report(event.currentTarget)}>
     <legend>What does {productName} do for you?</legend>
     {!!options.length && <div className={styles.useChoices}>
       {options.map(option => <label key={option.id} className={styles.toggle}>
@@ -91,6 +102,16 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
   // A card saved before levels has none selected; it keeps its fallback wording until the owner picks one.
   const [levelDraft, setLevelDraft] = useState({ version, level: item.prop.level ?? "" });
   const currentLevel = levelDraft.version === version ? levelDraft.level : item.prop.level ?? "";
+  // The owner's line, or null while untouched. A suggestion shows in an untouched field but is saved only once kept or edited.
+  const [headlineDraft, setHeadlineDraft] = useState({ version, owner: initialOwnerHeadline(confirmed ? item.prop.headline : "") });
+  const ownerHeadline = headlineDraft.version === version ? headlineDraft.owner : initialOwnerHeadline(confirmed ? item.prop.headline : "");
+  const chosenLevel = isRelationshipLevel(currentLevel) ? currentLevel : undefined;
+  // The suggestion follows the uses as they are ticked, so a kept line never describes choices the owner just changed.
+  const [usesDraft, setUsesDraft] = useState({ version, uses: item.prop.uses });
+  const currentUses = usesDraft.version === version ? usesDraft.uses : item.prop.uses;
+  const help = headlineHelp({ productName: item.product.name, productSlug: item.product.slug, confirmed,
+    status: chosenLevel ? levelStatus(chosenLevel) : item.prop.status, level: chosenLevel, uses: productUseLabels(item.product.slug, currentUses), startedAt });
+  const headline = headlineField(ownerHeadline, help.suggestion);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState({ version, text: "" });
   const retry = useRef<{ body: string; id: string } | null>(null);
@@ -108,7 +129,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
     const fields = {
       propId: item.prop._id, expectedVersion: item.prop.relationshipVersion ?? 0,
       level: currentLevel, status: levelStatus(currentLevel), goTo: form.get("goTo") === "on",
-      headline: String(form.get("headline") ?? ""), note: String(form.get("note") ?? ""),
+      headline: headline.toSave, note: String(form.get("note") ?? ""),
       uses: usePicks.length || useOther ? { picks: usePicks, ...(useOther ? { other: useOther } : {}) } : undefined,
       credit: credit.credit,
       startedAt: String(form.get("startedAt") ?? "") || undefined,
@@ -122,7 +143,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       await onSave({ ...fields, operationId: retry.current.id });
       retry.current = null;
     } catch (error) {
-      setMessage({ version, text: error instanceof Error ? error.message : "Save failed. Your previous decisions remain intact." });
+      setMessage({ version, text: errorMessage(error, "Save failed. Your previous decisions remain intact.") });
     } finally { setBusy(false); }
   }
   return <><form key={version} id={formId} onSubmit={event => {
@@ -140,8 +161,11 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       <label className={styles.toggle}><input name="goTo" type="checkbox" defaultChecked={item.prop.goTo ?? false} />One of my go-to tools</label></div>
       <p id={`${formId}-level`} className={styles.hint}>{isRelationshipLevel(currentLevel) ? levelDefinition(currentLevel) : "Pick the level that matches how you use it now."}</p>
       <p className={styles.hint}>You choose the level and the go-to mark. Activity never sets either. Earlier choices stay in history.</p>
-      <label>What it helps you do (optional)<input name="headline" maxLength={240} defaultValue={confirmed ? item.prop.headline : ""} /></label>
-      <UsesQuestion productName={item.product.name} productSlug={item.product.slug} uses={item.prop.uses} />
+      <label>What it helps you do (optional)<input name="headline" maxLength={240} value={headline.value} placeholder={help.placeholder}
+        aria-describedby={headline.suggested ? `${formId}-suggested` : undefined} onChange={event => setHeadlineDraft({ version, owner: event.target.value })} /></label>
+      {headline.suggested && <p id={`${formId}-suggested`} className={styles.hint}>Suggested from your answers. Make it yours before you save.{" "}
+        <button type="button" className="secondary-action" onClick={() => setHeadlineDraft({ version, owner: headline.value })}>Use this line</button></p>}
+      <UsesQuestion productName={item.product.name} productSlug={item.product.slug} uses={item.prop.uses} onChange={uses => setUsesDraft({ version, uses })} />
       <CreditQuestion productName={item.product.name} credit={item.prop.credit} />
       <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
@@ -191,7 +215,7 @@ export function DeleteOriginal({ sourceLabel, onDelete, onDeleted }: {
       setConfirming(false);
       onDeleted();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The original was not deleted. Try again.");
+      setError(errorMessage(reason, "The original was not deleted. Try again."));
     } finally { setBusy(false); }
   }
   if (!confirming) return <button type="button" className="secondary-action" onClick={() => { setConfirming(true); setError(""); }}>Delete original</button>;

@@ -88,10 +88,52 @@ test.each([
   }
 });
 
+test("a line the app wrote on an older card is never rendered as the owner's words", () => {
+  const name = baseCard.product.name;
+  const legacy = { headline: `${name} is in my stack.`, note: "Connected activity is private until I approve this card." };
+  const visitor = renderCard(legacy);
+  expect(visitor(".card-headline")).toHaveLength(0);
+  expect(visitor(".card-back blockquote")).toHaveLength(0);
+  expect(visitor.text()).not.toContain("is in my stack");
+  expect(visitor.text()).not.toContain("Connected activity is private");
+  // The owner's own note still stands in when only the headline was the app's.
+  const mixed = renderCard({ headline: `${name} is in my stack.`, note: "Where my code lives." });
+  expect(mixed(".card-headline").text()).toBe("Where my code lives.");
+  expect(mixed(".card-back blockquote").text()).toBe("Where my code lives.");
+  const owner = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, ...legacy }, index: 0, audience: "owner" })));
+  expect(owner(".card-headline").text()).toBe("No line yet. Add what it helps you do.");
+  // A discovery keeps the line that says why it is there: it is private, and not yet the owner's card.
+  const discovery = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, headline: `${name} may be in your stack.`, note: "" }, index: 0, audience: "owner", relationshipConfirmed: false })));
+  expect(discovery(".card-headline").text()).toBe(`${name} may be in your stack.`);
+});
+
 test("an optional headline falls back to the saved owner explanation on the compact front", () => {
   const card = renderCard({ headline: "", note: "Essential for an occasional workflow." });
   expect(card(".card-headline").text()).toBe("Essential for an occasional workflow.");
   expect(card(".card-headline").text()).not.toContain("not supplied");
+});
+
+test("a card with no words of the owner's shows a visitor no line at all, and tells only its owner one is missing", () => {
+  const card = { ...baseCard, headline: "", note: "" };
+  const visitor = renderCard({ headline: "", note: "" });
+  expect(visitor(".card-headline")).toHaveLength(0);
+  expect(visitor(".card-back blockquote")).toHaveLength(0);
+  expect(visitor.text()).not.toContain("note not supplied");
+  expect(visitor.text()).not.toContain("No line yet");
+  const owner = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, audience: "owner" })));
+  expect(owner(".card-headline").text()).toBe("No line yet. Add what it helps you do.");
+  expect(owner.text()).not.toContain("note not supplied");
+  // A discovery is private to its owner and keeps saying so.
+  const discovery = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, audience: "owner", relationshipConfirmed: false })));
+  expect(discovery(".card-headline").text()).toBe("Discovery note not supplied.");
+});
+
+test("a brand preview's official assets never claim to be verified", () => {
+  const product = { slug: "github-copilot", domain: "github.com", name: "GitHub Copilot", description: "Synthetic Copilot card." };
+  const preview = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, product }, index: 0, displayMode: "brand-preview" })));
+  expect(preview(".card-brand-provenance").text()).toContain("Official brand assets");
+  expect(preview(".card-brand-provenance dt").map((_, term) => preview(term).text()).get()).toContain("Checked");
+  expect(preview(".card-brand-provenance").text().toLowerCase()).not.toContain("verif");
 });
 
 test("an owner-described product without a website needs neither an invented link nor telemetry", () => {
