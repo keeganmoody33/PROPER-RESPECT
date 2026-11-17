@@ -86,7 +86,7 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
     setError("");
     try {
       if (answer.choice === "NEVER") {
-        if (never.kind === "remove") await remove({ propId: item.propId as Id<"props"> });
+        if (never.kind === "remove") await remove({ propId: item.propId as Id<"props">, expectedVersion: card.prop.relationshipVersion ?? 0 });
         onDone(never.kind === "remove" ? "removed" : "left", product.name);
         return;
       }

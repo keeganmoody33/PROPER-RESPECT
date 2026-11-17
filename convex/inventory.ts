@@ -50,6 +50,9 @@ async function evidenceEntry(ctx: QueryCtx, userId: Id<"users">, rawEvidenceId: 
     ...(raw.storageId ? { uploadedFile: { attribution: uploadAttributionStatus(raw.uploadAttribution), filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize } } : {}) };
 }
 
+// A save or a removal names the version its screen showed; one decided on an older version is refused.
+const STALE_RELATIONSHIP = "This relationship changed. Reload its saved decisions before trying again.";
+
 export const save = mutation({
   args: {
     propId: v.id("props"), operationId: v.string(), expectedVersion: v.number(),
@@ -70,7 +73,7 @@ export const save = mutation({
       if (previous.requestJson !== requestJson) throw userError("This save operation was already used with different decisions.");
       return { version: previous.version, duplicate: true };
     }
-    if ((prop.relationshipVersion ?? 0) !== args.expectedVersion) throw userError("This relationship changed. Reload its saved decisions before trying again.");
+    if ((prop.relationshipVersion ?? 0) !== args.expectedVersion) throw userError(STALE_RELATIONSHIP);
     const product = await ctx.db.get(prop.productId);
     const uses = normalizeUses(product?.slug ?? "", edit.uses);
     if (!uses.ok) throw userError(uses.message);
@@ -115,13 +118,15 @@ const NEVER_USED_REFUSAL = "This tool has evidence or a published card attached,
 // Never used it (the walkthrough, B3) removes a bare record and keeps nothing about it. A record that evidence, a
 // measurement, a refresh or the page relies on is refused, so nothing they point at goes missing.
 export const removeNeverUsed = mutation({
-  args: { propId: v.id("props") },
-  handler: async (ctx, { propId }) => {
+  args: { propId: v.id("props"), expectedVersion: v.number() },
+  handler: async (ctx, { propId, expectedVersion }) => {
     const user = await requireUser(ctx);
     const prop = await ctx.db.get(propId);
     // Already removed: a second tap changes nothing.
     if (!prop) return { removed: false };
     if (prop.userId !== user._id) throw userError("Relationship unavailable.");
+    // The answer was given on a screen that showed this version. A save since then, from another tab, is kept.
+    if ((prop.relationshipVersion ?? 0) !== expectedVersion) throw userError(STALE_RELATIONSHIP);
     const product = await ctx.db.get(prop.productId);
     const [page, drafts, ...attached] = await Promise.all([
       ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique(),

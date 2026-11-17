@@ -447,7 +447,7 @@ test("Never used it removes a bare stack pick with its link, history and discove
   const [clay, exa] = await stackPicks(owner, "first-picks", ["clay", "exa"]);
   const others = () => t.run(async ctx => ({ exa: await ctx.db.get(exa), discovery: await ctx.db.get(discovery), published: await ctx.db.query("publishedProfiles").collect() }));
   const before = await others();
-  expect(await owner.mutation(removeNeverUsed, { propId: clay })).toEqual({ removed: true });
+  expect(await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 })).toEqual({ removed: true });
   expect(await t.run(async ctx => ({
     prop: await ctx.db.get(clay),
     links: await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
@@ -461,8 +461,8 @@ test("Never used it removes a bare stack pick with its link, history and discove
 test("removing twice is harmless, and picking the tool again later starts a fresh record", async () => {
   const { t, owner } = await fixture();
   const [clay] = await stackPicks(owner, "first-picks", ["clay"]);
-  await owner.mutation(removeNeverUsed, { propId: clay });
-  expect(await owner.mutation(removeNeverUsed, { propId: clay })).toEqual({ removed: false });
+  await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 });
+  expect(await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 })).toEqual({ removed: false });
   const [again] = await stackPicks(owner, "second-picks", ["clay"]);
   expect(again).not.toBe(clay);
   expect(await t.run(ctx => ctx.db.get(again))).toMatchObject({ status: "ACTIVE", level: "WEEKLY", visibility: "PRIVATE" });
@@ -485,13 +485,28 @@ test("Never used it refuses a record with evidence, activity, a measurement or a
     await ctx.db.patch(page._id, { cardPropIds: [onPage] });
     return [propId, withActivity, measured, published, onPage];
   });
-  await Promise.all(ids.map(id => expect(owner.mutation(removeNeverUsed, { propId: id })).rejects.toThrow(REFUSAL)));
+  await Promise.all(ids.map(id => expect(owner.mutation(removeNeverUsed, { propId: id, expectedVersion: 0 })).rejects.toThrow(REFUSAL)));
   expect(await t.run(async ctx => (await Promise.all(ids.map(id => ctx.db.get(id)))).every(Boolean))).toBe(true);
+});
+
+test("a removal decided on a stale screen is refused, so an answer saved since then and its history stay", async () => {
+  const { t, owner } = await fixture();
+  const [clay] = await stackPicks(owner, "first-picks", ["clay"]);
+  const opened = (await t.run(ctx => ctx.db.get(clay)))!.relationshipVersion ?? 0;
+  // Another tab saves a level and a line after this screen opened.
+  await owner.mutation(save, { propId: clay, expectedVersion: opened, operationId: "other-tab", status: "ACTIVE", level: "DAILY", goTo: false, headline: "Where my lists start.", note: "" });
+  await expect(owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: opened })).rejects.toThrow("This relationship changed. Reload its saved decisions before trying again.");
+  expect(await t.run(async ctx => ({
+    prop: await ctx.db.get(clay),
+    events: (await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", clay)).collect()).length,
+  }))).toMatchObject({ prop: { headline: "Where my lists start.", level: "DAILY", relationshipVersion: opened + 1 }, events: expect.any(Number) });
+  // With the version it now has, the same answer goes through.
+  expect(await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: opened + 1 })).toEqual({ removed: true });
 });
 
 test("only the owner can remove a record", async () => {
   const { t, other, propId } = await fixture();
-  await expect(t.mutation(removeNeverUsed, { propId })).rejects.toThrow();
-  await expect(other.mutation(removeNeverUsed, { propId })).rejects.toThrow("unavailable");
+  await expect(t.mutation(removeNeverUsed, { propId, expectedVersion: 0 })).rejects.toThrow();
+  await expect(other.mutation(removeNeverUsed, { propId, expectedVersion: 0 })).rejects.toThrow("unavailable");
   expect(await t.run(ctx => ctx.db.get(propId))).not.toBeNull();
 });

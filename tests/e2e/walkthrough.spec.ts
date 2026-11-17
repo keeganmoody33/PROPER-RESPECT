@@ -170,7 +170,7 @@ const typed = "Where my lists used to start.";
     { name: "savePrivately", propId: "stack-claude-code", expectedVersion: 1, level: "DAILY", status: "ACTIVE", goTo: false, headline: kept, note: "",
       uses: { picks: ["write-features", "review-code"] }, operationId: undefined },
     { name: "savePrivately", propId: "stack-clay", expectedVersion: 1, level: "STOPPED", status: "ARCHIVED", goTo: false, headline: typed, note: "", operationId: undefined },
-    { name: "removeNeverUsed", propId: "stack-cursor", operationId: undefined },
+    { name: "removeNeverUsed", propId: "stack-cursor", expectedVersion: 1, operationId: undefined },
   ]);
   expect((await stored(browserPage)).cards.map(card => card.product.name)).toEqual(["Claude Code", "Clay"]);
 
