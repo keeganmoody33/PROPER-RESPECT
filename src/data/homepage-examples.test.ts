@@ -26,9 +26,10 @@ const CODING_DAYS = 31;
 
 test("the homepage shows a go-to-market engineering stack whose names and links come from the directory", () => {
   expect(examples.map(example => [example.card.product.name, example.card.level, example.card.status, example.card.goTo === true, example.card.startedAt?.slice(0, YEAR_DIGITS)])).toEqual([
-    ["Clay", "DAILY", "ACTIVE", false, "2023"],
     ["GitHub", "DAILY", "ACTIVE", true, "2019"],
+    ["Elicit", "STOPPED", "ARCHIVED", false, "2026"],
     ["Cloudflare", "DAILY", "ACTIVE", true, "2020"],
+    ["Clay", "DAILY", "ACTIVE", false, "2023"],
     // Docker's sample links start in 2024, so its card does too.
     ["Docker", "WEEKLY", "ACTIVE", false, "2024"],
     ["Firecrawl", "WEEKLY", "ACTIVE", false, "2025"],
@@ -39,7 +40,6 @@ test("the homepage shows a go-to-market engineering stack whose names and links 
     ["Spider", "OCCASIONAL", "ACTIVE", false, "2026"],
     ["Open Places", "OCCASIONAL", "ACTIVE", false, "2026"],
     ["Grok Bot", "TESTING", "TESTING", false, "2026"],
-    ["Elicit", "STOPPED", "ARCHIVED", false, "2026"],
     ["Context.dev", "TESTING", "TESTING", false, "2026"],
   ]);
   const fromDirectory = examples.map(({ id }) => {
@@ -59,9 +59,10 @@ const CAPABILITY_LIMIT = 28;
 
 test("each example names the part of a card it shows, in a few words no other example uses", () => {
   expect(examples.map(({ id, capability }) => [id, capability])).toEqual([
-    ["clay", "One published number"],
     ["github", "A year of contributions"],
+    ["elicit", "Stopped using, and why"],
     ["cloudflare", "Go-to, with what it costs"],
+    ["clay", "One published number"],
     ["docker", "A running total"],
     ["firecrawl", "Referral link, disclosed"],
     ["n8n", "Paused, and why"],
@@ -71,7 +72,6 @@ test("each example names the part of a card it shows, in a few words no other ex
     ["spider", "Affiliate link, disclosed"],
     ["open-places", "Used now and then"],
     ["grok-bot", "Still testing"],
-    ["elicit", "Stopped using, and why"],
     ["context-dev", "Testing, week by week"],
   ]);
   expect(new Set(examples.map(({ capability }) => capability)).size).toBe(examples.length);
@@ -80,9 +80,9 @@ test("each example names the part of a card it shows, in a few words no other ex
 
 test("five examples are featured, first, in the order the chooser shows them; the other nine wait behind More examples", () => {
   expect(examples.map(({ id, featured }) => [id, featured])).toEqual([
-    ["clay", true], ["github", true], ["cloudflare", true], ["docker", true], ["firecrawl", true],
-    ["n8n", false], ["claude-code", false], ["exa", false], ["porkbun", false], ["spider", false],
-    ["open-places", false], ["grok-bot", false], ["elicit", false], ["context-dev", false],
+    ["github", true], ["elicit", true], ["cloudflare", true], ["clay", true], ["docker", true],
+    ["firecrawl", false], ["n8n", false], ["claude-code", false], ["exa", false], ["porkbun", false],
+    ["spider", false], ["open-places", false], ["grok-bot", false], ["context-dev", false],
   ]);
 });
 
@@ -94,15 +94,24 @@ function frontDrawing({ card }: (typeof examples)[number]): string {
   return activity?.kind ?? "numbers";
 }
 
-test("the five featured fronts show go-to, cost and a disclosed referral link between them; two of them are a number alone", () => {
+test("the five featured fronts each draw a different thing and show go-to, cost and a tool stopped between them; two of them are a number alone", () => {
   const featured = examples.filter(example => example.featured);
-  expect(featured.map(example => [example.id, frontDrawing(example), example.card.goTo === true, Boolean(example.card.cost), example.card.primaryLink?.type])).toEqual([
-    ["clay", "numbers", false, false, "CANONICAL"],
-    ["github", "contributionCalendar", true, false, "CANONICAL"],
-    ["cloudflare", "per day bars", true, true, "CANONICAL"],
-    ["docker", "headlineMetrics", false, false, "CANONICAL"],
-    ["firecrawl", "per week bars", false, false, "REFERRAL"],
+  expect(featured.map(example => [example.id, frontDrawing(example), example.card.goTo === true, Boolean(example.card.cost), noLongerInUse(example.card), example.card.primaryLink?.type])).toEqual([
+    ["github", "contributionCalendar", true, false, false, "CANONICAL"],
+    ["elicit", "per week bars", false, false, true, "CANONICAL"],
+    ["cloudflare", "per day bars", true, true, false, "CANONICAL"],
+    ["clay", "numbers", false, false, false, "CANONICAL"],
+    ["docker", "headlineMetrics", false, false, false, "CANONICAL"],
   ]);
+  expect(new Set(featured.map(frontDrawing)).size).toBe(featured.length);
+});
+
+test("a past tool is up front, shown as past; Clay doesn't lead until the owner says so; a paid link waits behind More examples", () => {
+  const featured = examples.filter(example => example.featured);
+  expect(featured.filter(({ card }) => noLongerInUse(card)).map(({ id, card }) => [id, card.level, card.status])).toEqual([["elicit", "STOPPED", "ARCHIVED"]]);
+  expect(featured[0].id).not.toBe("clay");
+  expect(featured.filter(({ card }) => card.primaryLink?.type !== "CANONICAL").map(({ id }) => id)).toEqual([]);
+  expect(examples.find(({ id }) => id === "firecrawl")?.featured).toBe(false);
 });
 
 test("Clay's and Exa's cards say what is behind Details: Clay's back holds the most, and Exa's holds the demo its label names", () => {
@@ -117,9 +126,10 @@ test("every headline and note is a short line under the card's limit", () => {
 test("each example shows a different part of a card: its link, cost, work sample, published numbers and kind of activity", () => {
   expect(examples.map(({ id, card }) => [id, card.primaryLink?.type, card.cost && `${card.cost.amount} ${card.cost.currency} ${card.cost.cadence} ${card.cost.basis}`,
     card.usageLink && `${usageLinkLabelText(card.usageLink.label)} / ${usageLinkHost(card.usageLink.url)}`, card.measurements?.length, card.activity?.kind])).toEqual([
-    ["clay", "CANONICAL", undefined, "See how I use it / clay.com", 1, undefined],
     ["github", "CANONICAL", undefined, undefined, undefined, "contributionCalendar"],
+    ["elicit", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["cloudflare", "CANONICAL", "5 USD MONTHLY OWNER_REPORTED", undefined, undefined, "timeSeries"],
+    ["clay", "CANONICAL", undefined, "See how I use it / clay.com", 1, undefined],
     ["docker", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
     ["firecrawl", "REFERRAL", undefined, undefined, undefined, "timeSeries"],
     ["n8n", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
@@ -129,7 +139,6 @@ test("each example shows a different part of a card: its link, cost, work sample
     ["spider", "AFFILIATE", undefined, undefined, undefined, "timeSeries"],
     ["open-places", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["grok-bot", "CANONICAL", undefined, undefined, undefined, "headlineMetrics"],
-    ["elicit", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
     ["context-dev", "CANONICAL", undefined, undefined, undefined, "timeSeries"],
   ]);
   expect(examples.filter(({ card }) => !publicProfileSchema.shape.cards.element.safeParse(card).success).map(({ id }) => id)).toEqual([]);
@@ -188,21 +197,21 @@ test("every outbound link on every example is https", () => {
 
 test("a stopped and a paused example each say why in their note", () => {
   expect(examples.filter(({ card }) => card.status === "ARCHIVED").map(({ id, card }) => [id, card.level, card.note])).toEqual([
-    ["n8n", "PAUSED", "Paused while my nightly jobs move to plain cron."],
     ["elicit", "STOPPED", "I stopped once my market study was done."],
+    ["n8n", "PAUSED", "Paused while my nightly jobs move to plain cron."],
   ]);
 });
 
 test("each sample series is drawn as written, one point a day or a week, and its period covers exactly those points", () => {
   const series = examples.flatMap(({ id, card }) => card.activity?.kind === "timeSeries" ? [{ id, activity: card.activity }] : []);
   expect(series.map(({ id, activity }) => [id, activity.label, activity.unit, activity.points.length, activity.period, activity.points.at(-1)?.value])).toEqual([
+    ["elicit", "papers screened", "per week", 12, { start: "2026-01-05", end: "2026-03-29" }, 0],
     ["cloudflare", "requests", "per day", 31, { start: "2026-08-01", end: "2026-08-31" }, 79400],
     ["firecrawl", "pages scraped", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 11000],
     ["n8n", "executions", "per week", 12, { start: "2025-01-13", end: "2025-04-06" }, 0],
     ["exa", "search requests", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 3600],
     ["spider", "pages crawled", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 31000],
     ["open-places", "places exported", "per week", 12, { start: "2026-06-08", end: "2026-08-30" }, 850],
-    ["elicit", "papers screened", "per week", 12, { start: "2026-01-05", end: "2026-03-29" }, 0],
     ["context-dev", "credits used", "per week", 6, { start: "2026-07-20", end: "2026-08-30" }, 220],
   ]);
   const steps = series.map(({ id, activity }) => [id, [...new Set(activity.points.slice(1).map((point, index) => (Date.parse(point.date) - Date.parse(activity.points[index].date)) / DAY_MS))]]);
@@ -272,9 +281,10 @@ test("Claude Code leads with the coding days it draws, and its sessions are thei
 
 test("every example says what it is used for in one short plain line, its headline, and adds no list of uses beside it", () => {
   expect(examples.map(({ id, card }) => [id, card.headline])).toEqual([
-    ["clay", "Contact enrichment for my sales team."],
     ["github", "Where every project's code lives."],
+    ["elicit", "Screening papers for a market study."],
     ["cloudflare", "DNS, Workers and caching for my projects."],
+    ["clay", "Contact enrichment for my sales team."],
     ["docker", "Packs scrapers and agents to run anywhere."],
     ["firecrawl", "Turns pages into clean Markdown for my agents."],
     ["n8n", "Scheduled jobs and webhooks."],
@@ -284,7 +294,6 @@ test("every example says what it is used for in one short plain line, its headli
     ["spider", "Crawls whole sites for my agents."],
     ["open-places", "Local business lists by category and city."],
     ["grok-bot", "Research and outreach chores."],
-    ["elicit", "Screening papers for a market study."],
     ["context-dev", "Logos and company details by domain."],
   ]);
   expect(examples.filter(({ card }) => productUseLabels(card.product.slug, card.uses).length).map(({ id }) => id)).toEqual([]);
@@ -292,7 +301,7 @@ test("every example says what it is used for in one short plain line, its headli
 
 test("every example with a committed brand carries it, matched to its own product", () => {
   expect(examples.filter(({ card }) => card.product.brand).map(({ id }) => id)).toEqual([
-    "clay", "github", "cloudflare", "docker", "firecrawl", "n8n", "exa", "porkbun", "spider", "open-places", "elicit", "context-dev",
+    "github", "elicit", "cloudflare", "clay", "docker", "firecrawl", "n8n", "exa", "porkbun", "spider", "open-places", "context-dev",
   ]);
   const mismatched = examples.filter(({ card }) => card.product.brand && (card.product.brand.productSlug !== card.product.slug
     || card.product.brand.canonicalDomain !== card.product.domain || !productBrandSnapshotSchema.safeParse(card.product.brand).success));
@@ -328,9 +337,10 @@ function meter({ card, countsPerPeriod }: (typeof examples)[number]) {
 
 test("every card is its tool's own meter: one big number in the tool's unit over a stated period, and at most two counts the tool reports beside it", () => {
   expect(examples.map(example => [example.id, ...meter(example)])).toEqual([
-    ["clay", 1_500_000, "rows enriched", "2023-01-01", "2026-08-31", []],
     ["github", 1121, "contributions", "2025-09-01", "2026-08-31", []],
+    ["elicit", 450, "papers screened a week at its peak", "2026-01-05", "2026-03-29", []],
     ["cloudflare", 1_878_700, "requests over 31 days", "2026-08-01", "2026-08-31", []],
+    ["clay", 1_500_000, "rows enriched", "2023-01-01", "2026-08-31", []],
     ["docker", 48_200, "image pulls", "2024-01-01", "2026-08-31", []],
     ["firecrawl", 55_200, "pages scraped over 12 weeks", "2026-06-08", "2026-08-30", []],
     ["n8n", 1023, "executions a week at its peak", "2025-01-13", "2025-04-06", []],
@@ -340,7 +350,6 @@ test("every card is its tool's own meter: one big number in the tool's unit over
     ["spider", 263_000, "pages crawled over 12 weeks", "2026-06-08", "2026-08-30", []],
     ["open-places", 5450, "places exported over 12 weeks", "2026-06-08", "2026-08-30", []],
     ["grok-bot", 38, "tasks handed off", "2026-08-01", "2026-08-31", []],
-    ["elicit", 450, "papers screened a week at its peak", "2026-01-05", "2026-03-29", []],
     ["context-dev", 760, "credits used over 6 weeks", "2026-07-20", "2026-08-30", []],
   ]);
   // A card publishes numbers or draws activity, never both, so its front can't show two big numbers.

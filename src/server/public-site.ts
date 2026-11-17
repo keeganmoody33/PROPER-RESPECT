@@ -37,7 +37,7 @@ export function publicPageMetadata(title: string, description: string, handle?: 
       title,
       description,
       url,
-      images: [{ url: image, width: 1200, height: 630, alt: "Proper Respect. Earn your respect." }],
+      images: [{ url: image, width: 1200, height: 630, alt: "Proper Respect. Every tool you've used counts." }],
     },
     twitter: { card: "summary_large_image", title, description, images: [image] },
   };

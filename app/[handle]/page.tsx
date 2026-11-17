@@ -48,12 +48,11 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   return (
     <main>
       <PublicProfileWebMcp profile={projectVisiblePublicProfile(profile)} />
-      <div className="profile-context"><p>@{profile.handle} / SHARED PRODUCT COLLECTION</p></div>
+      <div className="profile-context"><p>@{profile.handle} / TOOLING PAGE</p></div>
 
       <section className="stack" aria-labelledby="stack-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">@{profile.handle} / TOOLS WITH A TRACK RECORD</p>
             <h1 id="stack-heading" className={styles.name}><ProfileName profile={profile} /></h1>
             {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
             <ProfileLinks profile={profile} />

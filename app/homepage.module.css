@@ -8,8 +8,9 @@
 
 .hero { border-bottom: 1px solid var(--line); padding: clamp(.75rem, 2vw, 1.75rem) clamp(1rem, 4vw, 5rem) clamp(2rem, 4vw, 4rem);
   display: grid; grid-template-columns: minmax(0, 42rem) minmax(0, 1fr); grid-template-areas: "title title" "example side"; gap: clamp(.75rem, 1.6vw, 1.5rem) clamp(1.5rem, 3vw, 3rem); align-items: start; }
-/* One line across the sheet at every width: eighteen characters of this face run about 7.6 times its size. */
-.title { grid-area: title; font-size: clamp(2rem, 11.6vw, 13rem); line-height: .84; letter-spacing: -.005em; white-space: nowrap; }
+/* Thirty characters of this face run about 12.6 times its size: one line across a wide sheet, two or three on a phone. */
+.title { grid-area: title; font-size: clamp(2.6rem, 6.9vw, 8rem); line-height: .86; letter-spacing: -.005em; text-wrap: balance; }
+.lede { font-size: clamp(1.05rem, 1.35vw, 1.3rem); font-weight: 600; line-height: 1.45; max-width: 38ch; margin: 0; }
 .example { grid-area: example; min-width: 0; padding: clamp(.75rem, 1.6vw, 1.5rem); background: var(--example-panel); color: var(--ink); border: 2px solid var(--ink); box-shadow: 10px 10px 0 var(--poster); }
 .example :global(.product-card) { width: 100%; }
 .side { grid-area: side; display: flex; flex-direction: column; gap: clamp(1.25rem, 2vw, 2rem); }
@@ -49,5 +50,7 @@
   .hero { padding-top: .5rem; row-gap: .5rem; }
   .hero .example { padding: .5rem; }
   .side { margin-top: .75rem; flex-direction: column-reverse; }
+  /* Last in the reversed column, so it reads first: the line under the card, then the actions, then the art. */
+  .lede { order: 1; }
   .actions, .primary { width: 100%; }
 }
