@@ -4,7 +4,7 @@ import { publicSiteOrigin } from "./public-site";
 import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
 export const repositoryUrl = "https://github.com/keeganmoody33/PROPER-RESPECT";
-export const homepageUpdatedAt = "2026-11-15T00:00:00.000Z";
+export const homepageUpdatedAt = "2026-11-16T00:00:00.000Z";
 
 export function creatorBusinessIdentity() {
   return {
@@ -72,20 +72,22 @@ export const publicProfileFacts = {
   disclosedLinks: "A stored affiliate or referral link is disclosed on the card. A prop from that link shows on the profile only for a signed-in account.",
 } as const;
 
+/** The site's one line and its description, shared by the homepage, its Markdown mirror and page metadata. */
+export const siteLine = "Earn your respect.";
+export const siteDescription = "Your tool history, kept apart from your work history: what you run, how much, and since when.";
+
 /** The homepage's three steps, shared word for word by the page and its Markdown mirror. */
 export const homepageSteps = [
-  { label: "01 / Pick", title: "Pick your tools.", body: "Start from a role or search by name. Add anything that is missing by its name." },
-  { label: "02 / Keep it private", title: "Say how you use each one.", body: "Pick how often you use each one, from tried and dropped to daily. Save the whole list privately in one step." },
-  { label: "03 / Share", title: "Preview once, then share.", body: "See exactly what visitors will see. Approve that preview once to share your confirmed tools on your public page." },
+  { title: "Add your tools.", body: "Search by name. Add anything that is missing by its name." },
+  { title: "Say how you use each one.", body: "Pick how often you use each one, from tried and dropped to daily. Save the whole list privately in one step." },
+  { title: "Preview once, then share.", body: "See exactly what visitors will see. Approve that preview once to share your confirmed tools on your public page." },
 ] as const;
 
 export function homepageMarkdown() {
   const origin = publicSiteOrigin();
   return `# Proper Respect
 
-Your tools. Your track record.
-
-A personal record of the tools you use.
+${siteLine}
 
 ${productIdentity().description}
 

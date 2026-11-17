@@ -135,7 +135,7 @@ test("robots, factual sitemap date and ARD link only to available public resourc
   expect(await robots.text()).toContain("Sitemap: https://public.example/sitemap.xml");
   expect(await robots.text()).toContain("Agentmap: https://public.example/.well-known/ard.json");
   const sitemap = await (await request.get("/sitemap.xml")).text();
-  expect(sitemap).toContain("<lastmod>2026-11-15T00:00:00.000Z</lastmod>");
+  expect(sitemap).toContain("<lastmod>2026-11-16T00:00:00.000Z</lastmod>");
   expect(sitemap).not.toMatch(/collection|private-owner/);
   const response = await request.get("/.well-known/ard.json");
   expect(response.status()).toBe(200);

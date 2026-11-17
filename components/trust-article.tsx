@@ -2,8 +2,10 @@ import Link from "next/link";
 import type { TrustDocument } from "@/src/server/trust-pages";
 import styles from "./trust-article.module.css";
 
-export function TrustArticle({ document }: { document: TrustDocument }) {
+/** `pullQuote` repeats a line the document already quotes, set large above it. */
+export function TrustArticle({ document, pullQuote }: { document: TrustDocument; pullQuote?: Readonly<{ text: string; source: string }> }) {
   return <main className={styles.shell}>
+    {pullQuote && <figure className={styles.pullQuote}><blockquote>{pullQuote.text}</blockquote><figcaption>{pullQuote.source}</figcaption></figure>}
     <article>
       <header>
         <p className="eyebrow">{document.eyebrow}</p>

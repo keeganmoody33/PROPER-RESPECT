@@ -8,7 +8,7 @@ import { THEME_BOOTSTRAP } from "@/src/client/theme";
 import { SearchableAnalytics } from "@/components/searchable-analytics";
 import "./globals.css";
 
-const archivo = localFont({ src: "./_homepage-fonts/Archivo.ttf", variable: "--homepage-sans", display: "swap", weight: "100 900" });
+const archivo = localFont({ src: "./_homepage-fonts/Archivo.ttf", variable: "--homepage-sans", display: "swap", weight: "100 900", declarations: [{ prop: "font-stretch", value: "62% 125%" }] });
 const mono = localFont({ src: "./_homepage-fonts/IBMPlexMono-Bold.ttf", variable: "--homepage-mono", display: "swap", weight: "700" });
 
 export function generateMetadata(): Metadata {

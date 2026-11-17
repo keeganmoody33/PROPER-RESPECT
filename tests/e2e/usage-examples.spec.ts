@@ -825,18 +825,17 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
   await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
   expect(first.numberBottom).toBeLessThanOrEqual(PHONE_HEIGHT);
-  // In reading order the line about the site, the heading, the examples, then the call to action.
+  // In reading order the heading, the examples, then the call to action. The heading is one line, inside the first screen.
   const order = await page.evaluate(() => {
     const [heading, examples] = ["#homepage-title", "#example"].map(selector => document.querySelector(selector)!);
-    const tagline = [...document.querySelectorAll("main p")].find(line => line.textContent === "A personal record of the tools you use.")!;
     const start = [...document.querySelectorAll("main a")].find(link => link.textContent === "Start your collection")!;
     const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    // The one line saying what the site is sits in the first screen, above the heading and the card.
-    const line = tagline.getBoundingClientRect();
-    return { taglineThenHeading: before(tagline, heading), headingThenExamples: before(heading, examples), examplesThenStart: before(examples, start),
-      taglineShown: line.top >= 0 && line.bottom <= innerHeight && line.bottom <= heading.getBoundingClientRect().top };
+    const line = heading.getBoundingClientRect();
+    const oneLine = line.height <= parseFloat(getComputedStyle(heading).lineHeight) * 1.5;
+    return { headingThenExamples: before(heading, examples), examplesThenStart: before(examples, start),
+      headingShown: line.top >= 0 && line.right <= innerWidth && line.bottom <= examples.getBoundingClientRect().top, oneLine };
   });
-  expect(order).toEqual({ taglineThenHeading: true, headingThenExamples: true, examplesThenStart: true, taglineShown: true });
+  expect(order).toEqual({ headingThenExamples: true, examplesThenStart: true, headingShown: true, oneLine: true });
   // On a phone the slideshow is in view from the start, so it waits for play rather than reflowing the copy under it.
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await page.clock.runFor(ADVANCE_MS * 2);
@@ -1207,7 +1206,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`the featured cards carry
   expect([looks.Clay.panel, looks.Docker.panel, looks.GitHub.panel]).toEqual([undefined, undefined, "rgb(255, 255, 255)"]);
 });
 
-test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone that it scrolls, and reads as one summary line", async ({ page }) => {
+test("GitHub's calendar draws 10px days with 3px gaps at 1440px, says on a phone that it scrolls, and reads as one summary line", async ({ page }) => {
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
@@ -1219,7 +1218,7 @@ test("GitHub's calendar draws 8px days with 2px gaps at 1440px, says on a phone 
     return { size: Math.round(first.width), gap: Math.round(second.top - first.bottom), radius: getComputedStyle(element.querySelector("[data-date]")!).borderRadius,
       scrolls: element.querySelector(".contribution-scroll")!.scrollWidth > element.querySelector(".contribution-scroll")!.clientWidth };
   });
-  expect(cells).toEqual({ size: 8, gap: 2, radius: "2px", scrolls: false });
+  expect(cells).toEqual({ size: 10, gap: 3, radius: "2px", scrolls: false });
   // One line for a screen reader, not 365 images.
   await expect(calendar.getByRole("img")).toHaveCount(0);
   await expect(calendar.locator(".contribution-summary")).toHaveText(/^\d[\d,]* contributions from 1 Sep 2025 to 31 Aug 2026, on \d+ of 365 days; the most in a day was \d+, on \d+ \w+ \d{4}\.$/);

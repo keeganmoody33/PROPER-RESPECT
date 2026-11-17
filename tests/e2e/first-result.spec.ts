@@ -42,7 +42,7 @@ for (const width of [1280, 390]) for (const mode of ["signin", "signup"]) test(`
   await page.getByRole("button", { name: "Continue with Claude Code", exact: true }).click();
   await expect(page).toHaveURL(/\/app\/collection\?source=claude-code$/);
   await expect(page.getByRole("heading", { name: "Import Claude Code usage", exact: true })).toBeVisible();
-  await expect(page.getByText("Your tools. Your track record.", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Earn your respect.", { exact: true })).toHaveCount(0);
   await expect(page.locator("#collection-profile")).not.toHaveAttribute("open");
   await expect(page.getByRole("button", { name: "Preview sharing", exact: true })).toBeDisabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

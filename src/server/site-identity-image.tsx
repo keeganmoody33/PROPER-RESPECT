@@ -12,7 +12,7 @@ export async function brandIcon(size: number) {
   const width = Math.round(size * 0.875);
   const height = Math.round(width * 856 / 1024);
   return new ImageResponse(
-    <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#f0eee7" }}>
+    <div style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", background: "#ffe600" }}>
       {/* ImageResponse requires a plain image rather than next/image. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={mark} alt="" width={width} height={height} />

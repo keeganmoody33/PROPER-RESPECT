@@ -30,7 +30,7 @@ for (const width of [320, 390, 460, 1440]) test(`theme controls and shell fit at
     await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const mark = page.locator(".site-header .site-mark");
-    await expect(mark).toHaveCSS("background-color", mode === "dark" ? "rgb(240, 238, 231)" : "rgb(23, 23, 19)");
+    await expect(mark).toHaveCSS("background-color", mode === "dark" ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
     if (width === 320 || width === 1440) {
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
       await page.getByRole("img", { name: "Two fists meeting at a bright red diamond" }).scrollIntoViewIfNeeded();
@@ -168,8 +168,8 @@ test("unbranded cards stay fixed while private form controls follow appearance",
   await control.selectOption("dark");
   await card.getByRole("button", { name: "Details", exact: true }).focus();
   expect(await appearance(card)).toEqual(light);
-  await expect(page.getByRole("textbox", { name: "Note" })).toHaveCSS("background-color", "rgb(23, 23, 19)");
-  await expect(page.getByRole("textbox", { name: "Note" })).toHaveCSS("color", "rgb(240, 238, 231)");
+  await expect(page.getByRole("textbox", { name: "Note" })).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await expect(page.getByRole("textbox", { name: "Note" })).toHaveCSS("color", "rgb(255, 255, 255)");
 });
 
 for (const route of ["/keegan", "/app/collection", "/onboarding"]) test(`shared appearance reaches fixture or unconfigured route ${route}`, async ({ page }) => {
@@ -178,8 +178,8 @@ for (const route of ["/keegan", "/app/collection", "/onboarding"]) test(`shared 
     await page.getByRole("combobox", { name: "Appearance" }).first().selectOption(mode);
     await expect(page.getByRole("combobox", { name: "Appearance" }).last()).toHaveValue(mode);
     await expect(page.locator("html")).toHaveAttribute("data-theme", mode);
-    await expect(page.locator("html")).toHaveCSS("background-color", mode === "dark" ? "rgb(23, 23, 19)" : "rgb(240, 238, 231)");
-    await expect(page.locator("main")).toHaveCSS("color", mode === "dark" ? "rgb(240, 238, 231)" : "rgb(23, 23, 19)");
+    await expect(page.locator("html")).toHaveCSS("background-color", mode === "dark" ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)");
+    await expect(page.locator("main")).toHaveCSS("color", mode === "dark" ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
 });
@@ -201,8 +201,8 @@ test("auth frame follows appearance around an explicitly synthetic form", async 
   await page.addScriptTag({ content: authFrameFixture.outputFiles[0].text });
   for (const mode of ["light", "dark"]) {
     await page.getByRole("combobox", { name: "Appearance" }).selectOption(mode);
-    await expect(page.locator(".auth-shell")).toHaveCSS("color", mode === "dark" ? "rgb(240, 238, 231)" : "rgb(23, 23, 19)");
-    await expect(page.getByRole("textbox", { name: "Email" })).toHaveCSS("background-color", mode === "dark" ? "rgb(23, 23, 19)" : "rgb(255, 255, 255)");
+    await expect(page.locator(".auth-shell")).toHaveCSS("color", mode === "dark" ? "rgb(255, 255, 255)" : "rgb(0, 0, 0)");
+    await expect(page.getByRole("textbox", { name: "Email" })).toHaveCSS("background-color", mode === "dark" ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)");
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   }
 });

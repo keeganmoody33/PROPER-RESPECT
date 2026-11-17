@@ -10,11 +10,38 @@
 }
 
 .shell h1 {
-  font-size: clamp(2.4rem, 5vw, 4.5rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-  margin: 1.5rem 0;
+  font-size: clamp(2.8rem, 7vw, 6.5rem);
+  font-stretch: 62%;
+  font-weight: 900;
+  line-height: 0.9;
+  text-transform: uppercase;
+  margin: 1rem 0 1.5rem;
   overflow-wrap: anywhere;
+}
+
+/* The poster's yellow and black in light and dark, like the homepage's first screen. */
+.pullQuote {
+  background: var(--poster);
+  color: #000;
+  border: 3px solid var(--ink);
+  margin: 0 0 clamp(2rem, 5vw, 4rem);
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+}
+
+.pullQuote blockquote {
+  font-size: clamp(2.2rem, 6.4vw, 6rem);
+  font-stretch: 62%;
+  font-weight: 900;
+  line-height: 0.9;
+  text-transform: uppercase;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.shell .pullQuote figcaption {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1rem;
 }
 
 .shell h2 {
