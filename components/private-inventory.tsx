@@ -50,10 +50,19 @@ function History({ propId }: { propId: Id<"props"> }) {
   </div>;
 }
 
-function UsesQuestion({ productName, productSlug, uses }: { productName: string; productSlug: string; uses?: ProductUses }) {
+// The uses as the form holds them now, ticked or typed but not yet saved.
+function formUses(form: HTMLFormElement): ProductUses | undefined {
+  const data = new FormData(form);
+  const picks = data.getAll("usePicks").map(String), other = String(data.get("useOther") ?? "").trim();
+  return picks.length || other ? { picks, ...(other ? { other } : {}) } : undefined;
+}
+
+function UsesQuestion({ productName, productSlug, uses, onChange }: { productName: string; productSlug: string; uses?: ProductUses; onChange: (uses: ProductUses | undefined) => void }) {
   const options = productUseOptions(productSlug);
+  // A checkbox updates its form value after its click is handled, so the form is read once that has happened.
+  const report = (fieldset: HTMLFieldSetElement) => { const { form } = fieldset; if (form) setTimeout(() => onChange(formUses(form))); };
   // The fieldset is the group, so the checkboxes sit in it directly: a group inside it would announce the question twice.
-  return <fieldset className={styles.uses}>
+  return <fieldset className={styles.uses} onClick={event => report(event.currentTarget)} onInput={event => report(event.currentTarget)}>
     <legend>What does {productName} do for you?</legend>
     {!!options.length && <div className={styles.useChoices}>
       {options.map(option => <label key={option.id} className={styles.toggle}>
@@ -97,8 +106,11 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
   const [headlineDraft, setHeadlineDraft] = useState({ version, owner: initialOwnerHeadline(confirmed ? item.prop.headline : "") });
   const ownerHeadline = headlineDraft.version === version ? headlineDraft.owner : initialOwnerHeadline(confirmed ? item.prop.headline : "");
   const chosenLevel = isRelationshipLevel(currentLevel) ? currentLevel : undefined;
+  // The suggestion follows the uses as they are ticked, so a kept line never describes choices the owner just changed.
+  const [usesDraft, setUsesDraft] = useState({ version, uses: item.prop.uses });
+  const currentUses = usesDraft.version === version ? usesDraft.uses : item.prop.uses;
   const help = headlineHelp({ productName: item.product.name, productSlug: item.product.slug, confirmed,
-    status: chosenLevel ? levelStatus(chosenLevel) : item.prop.status, level: chosenLevel, uses: productUseLabels(item.product.slug, item.prop.uses), startedAt });
+    status: chosenLevel ? levelStatus(chosenLevel) : item.prop.status, level: chosenLevel, uses: productUseLabels(item.product.slug, currentUses), startedAt });
   const headline = headlineField(ownerHeadline, help.suggestion);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState({ version, text: "" });
@@ -153,7 +165,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
         aria-describedby={headline.suggested ? `${formId}-suggested` : undefined} onChange={event => setHeadlineDraft({ version, owner: event.target.value })} /></label>
       {headline.suggested && <p id={`${formId}-suggested`} className={styles.hint}>Suggested from your answers. Make it yours before you save.{" "}
         <button type="button" className="secondary-action" onClick={() => setHeadlineDraft({ version, owner: headline.value })}>Use this line</button></p>}
-      <UsesQuestion productName={item.product.name} productSlug={item.product.slug} uses={item.prop.uses} />
+      <UsesQuestion productName={item.product.name} productSlug={item.product.slug} uses={item.prop.uses} onChange={uses => setUsesDraft({ version, uses })} />
       <CreditQuestion productName={item.product.name} credit={item.prop.credit} />
       <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}

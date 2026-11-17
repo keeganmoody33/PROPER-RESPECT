@@ -1,4 +1,5 @@
 import { isHttpUrl } from "./http-url";
+import { ownerLine } from "./system-lines";
 import { LINK_LABEL_MAX, PUBLISHED_URL_MAX } from "./published-text-limits";
 import { defaultPrimaryLink, type CardLink } from "./review";
 import type { RelationshipLevel } from "./relationship-level";
@@ -46,8 +47,9 @@ export type SkippedShare<PropId extends string> = {
 };
 
 // A note stands in for a missing headline on the card, so only a card with neither has no line.
-function hasALine(prop: Pick<ShareAllProp<string, unknown>, "headline" | "note">) {
-  return prop.headline.trim() !== "" || prop.note.trim() !== "";
+// Words the app wrote on an older card are not the owner's, so they don't count as one.
+function hasALine(prop: Pick<ShareAllProp<string, unknown>, "headline" | "note" | "product">) {
+  return ownerLine(prop.headline, prop.product.name) !== "" || ownerLine(prop.note, prop.product.name) !== "";
 }
 
 function linkProblem(link: CardLink): "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG" | null {
