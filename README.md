@@ -1,48 +1,51 @@
 # Proper Respect
 
-**A profile for the tools you use and try.** Keep your stack in one place,
-record what you are testing, and share the cards you choose at
-`proper-respect.com/{handle}`.
+**Proper Respect is your tooling page: one link that shows every tool you use,
+test and used before, with the usage behind it, so you earn respect for what
+you actually run and give props to whoever put you on.**
 
-[Open your collection](https://proper-respect.com/app/collection) ·
-[See a published profile](https://proper-respect.com/lecturesfrom)
+[See a page](https://proper-respect.com/lecturesfrom) ·
+[Start your collection](https://proper-respect.com/app/collection)
 
-## Start with one private result
+![The Proper Respect homepage, with a sample GitHub card](docs/verification/2026-11-17-option-b-hero/home-1440.png)
 
-1. **Choose one source.** Connect GitHub, import a supported sanitized Claude
-   Code or Codex capture, or name a tool manually. Your choice survives sign-in.
-2. **Inspect the result.** Imports open that tool's private record with exact
-   values, source scope, period, coverage, and unknowns. No mailbox connection
-   or public handle is required. Malformed files leave no blank relationship.
-3. **Choose how the tool fits.** Confirm current use, testing, or past use.
-   Context, dates, and go-to status are your decisions; usage does not decide them.
-4. **Share only if you want to.** Review individual measurements, choose the
-   saved cards and reviewed sources, inspect the visitor preview, and approve
-   that exact version. Private saving and importing never publish.
+The card in the screenshot is sample data.
 
-The native import path in this source is R27 work. Check
-[the deployed release](docs/DEVELOPMENT.md#latest-deployed-state) before assuming
-it is available on the live site.
+## What it is
 
-## Measurements keep their native meaning
+- **Your page** is public, at `proper-respect.com/{handle}`. It shows the
+  cards you approved and nothing else.
+- **Your collection** is private. You add tools there, say how you use each
+  one, and choose what to share. Nothing is published without your preview
+  and approval.
+- **A card** is one tool: how often you use it, since when, what you use it
+  for, and the usage behind it where a source can supply it.
+- **A tool you stopped using still counts.** Each card has one of seven usage
+  levels, from Tried, didn't adopt to Daily.
+- **Respect** is what your usage earns. **Props** is the credit a card gives
+  the person who put you on that tool.
 
-A tool can be in your collection without a counter. Available measurements
-depend on the source and its coverage.
+It is not an affiliate network, a review site or a ranking. A card can carry a
+disclosed affiliate or referral link, and no person is scored or compared with
+another. Usage is labelled with its source, period and coverage. It is backed
+by your usage, and it is not independently checked.
 
-| Source | Available implementation |
+## Where the usage comes from
+
+A tool can be on your page without a number. What is available depends on the
+source.
+
+| Source | What it gives |
 | --- | --- |
-| GitHub | Contribution snapshots and explicitly approved daily refresh. Account-bound consent is handled separately in [#150](https://github.com/keeganmoody33/PROPER-RESPECT/pull/150). |
-| Claude Code | Hosted import of the existing sanitized native-metrics JSON contract. Exact integers, decimals, nanosecond periods, and cumulative reconciliation. No automatic collection. |
-| Codex | Hosted import of the existing metadata-capture contract, including nullable summary, daily buckets and thread views. Native acquisition remains blocked. Overlapping views are never added. |
-| Other products | Strict `proper-measurements-v1` sanitized packet for native units such as words, workspace rows or device duration. This is an import contract, not an automatic vendor/device connector. |
-| Manual tools | Your relationship and optional context. No telemetry required. |
-| Other uploads | Retained supporting originals. Generic file uploads do not automatically extract measurements. |
+| GitHub | A contribution calendar, and a daily refresh you approve. |
+| Claude Code | An import of a sanitized usage file you produce yourself. |
+| Codex | An import of a metadata capture you produce yourself. |
+| Other products | A measurement file in the `proper-measurements-v1` shape, in the product's own units. |
+| Tools you add by name | How you use it, in your words. No telemetry needed. |
+| Other uploads | Kept as supporting originals. The app does not read numbers out of them. |
 
-[Usage measurement](docs/usage-measurement.md) documents the exact formats,
-limits, privacy boundaries and remaining live acceptance. Owner-supplied aliases
-do not authenticate an account or prove human activity. Synthetic Claude data
-keeps its synthetic label. Token counts, source cost estimates, API-equivalent
-examples, subscription payments and billed charges remain separate facts.
+[Usage measurement](docs/usage-measurement.md) has the exact formats, limits
+and privacy boundaries.
 
 ## Run the project locally
 
@@ -76,7 +79,7 @@ Don't create `.env.local` for this mode. With no Clerk or Convex keys, the app
 serves synthetic data instead of calling a backend:
 
 - `http://localhost:3000/`: the homepage.
-- `http://localhost:3000/lecturesfrom`: a public profile built from
+- `http://localhost:3000/lecturesfrom`: a public page built from
   synthetic reference data (`src/data/e2e-reference-profile.ts`).
 - `http://localhost:3000/evidence-fixture` and
   `http://localhost:3000/evidence-fixture/inventory`: fixture views of the
@@ -153,9 +156,29 @@ instance, both yours. It never touches production.
    It creates the synthetic `keegan` profile. Run it only against your own dev
    deployment.
 
-Gmail discovery and Context.dev brand data need more server settings; see
-`.env.example` and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Neither is needed
-to try the app.
+Gmail discovery and Context.dev brand data need more server settings. Neither
+is needed to try the app.
+
+## Environment variables
+
+Names only. `.env.example` has a placeholder and a comment for each, and
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) says which runtime holds which
+value. Never commit a real value.
+
+| Variable | Where it is set | What it is for |
+| --- | --- | --- |
+| `NEXT_PUBLIC_CONVEX_URL` | Next.js | The Convex deployment the app talks to. |
+| `PUBLIC_SITE_ORIGIN` | Next.js | The site's public origin, for canonical URLs and share images. HTTPS in production. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Next.js | Clerk sign-in. |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_URL`, `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | Next.js | Clerk's routes and where a person lands after signing in or up. |
+| `CLERK_FRONTEND_API_URL` | Convex | The Clerk issuer Convex trusts. |
+| `CONNECTOR_ENCRYPTION_KEY` | Convex | Encrypts stored connector credentials. Keep it: a new key can't read old credentials. |
+| `MAILBOX_APPLICATION_ORIGIN`, `MAILBOX_ALLOW_LOOPBACK_HTTP` | Next.js and Convex | Gmail discovery's fixed origin. Optional. |
+| `MAILBOX_GOOGLE_CLIENT_ID`, `MAILBOX_GOOGLE_CLIENT_SECRET`, `MAILBOX_ENCRYPTION_ACTIVE_VERSION`, `MAILBOX_ENCRYPTION_KEYS`, `MAILBOX_GOOGLE_TEST_EMAILS` | Convex | Gmail discovery, for listed test accounts only. Optional. |
+| `CONTEXT_DEV_API_KEY` | Convex | Brand data for cards. Optional. |
+| `PROPER_RESPECT_BRAND_RECEIPTS_DIR` | Local only | Reads saved brand receipts in a local preview. Optional. |
+| `PROPER_RESPECT_E2E_REFERENCE` | Local and CI | Set to `1` for fixture mode. |
+| `PROPER_RESPECT_E2E_PORT` | Local | The browser suite's port, default 3000. |
 
 ## Verify
 
@@ -175,19 +198,38 @@ build for a deployment.
 `npm test` runs the Vitest suite (including the Convex backend tests) and the
 Node script tests. `npm run test:e2e` starts the app in fixture mode itself.
 
+## Deploy
+
+A release is a `v*` tag on `main`, pushed by the owner. The release workflow
+checks the tagged commit, deploys the Convex backend, then the Vercel frontend,
+and smoke tests the live site. Nothing deploys from a branch, a pull request or
+a development checkout. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) has the
+configuration, the release steps and rollback.
+
+## Contribute
+
+- Read [`AGENTS.md`](AGENTS.md) first. It holds the rules for anyone, human or
+  agent, changing this repository, and [`CONTEXT.md`](CONTEXT.md) holds the
+  words the product uses.
+- Open a pull request against `main`. `main` is protected: three checks must
+  pass, and the owner merges.
+- Write the failing test first where behaviour changes.
+- Run lint, typecheck, the tests and a build before you push (see Verify).
+- Report a security problem privately to 33@lecturesfrom.com, not in an issue.
+
+The repository is public and has no license yet, so all rights are reserved
+until the owner picks one.
+
 ## Where to go next
 
 - [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md): the working guide and current
   delivery state.
-- [`AGENTS.md`](AGENTS.md): repository rules for anyone, human or agent,
-  making changes.
+- [`docs/plans/2026-11-17-public-ready.md`](docs/plans/2026-11-17-public-ready.md):
+  the current plan.
 - [`docs/000-current-product-thesis.md`](docs/000-current-product-thesis.md):
   what the product is for and its permission boundaries.
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md): configuration, releases and
-  rollback. Production changes are the owner's to make; don't deploy from a
-  development checkout.
-- [`docs/remediation/CODEX-BRIEF.md`](docs/remediation/CODEX-BRIEF.md): the
-  current task list.
+  rollback. Production changes are the owner's to make.
 - `CONTEXT.md`, `PRD.md` and `INDEX.md`: domain language, requirements and a
   map of the docs.
 - [`docs/history/README-2026-06.md`](docs/history/README-2026-06.md): the

@@ -1,32 +1,36 @@
 # Developing PROPER-RESPECT
 
-Updated: 2026-10-06. Start with [AGENTS.md](../AGENTS.md), the
-[remediation brief](remediation/CODEX-BRIEF.md), the
-[Cursor handoff](CURSOR_HANDOFF.md), the
+Updated: 2026-11-17. Start with [AGENTS.md](../AGENTS.md), the
+[public-ready plan](plans/2026-11-17-public-ready.md), the
 [deployment runbook](DEPLOYMENT.md) and the
 [canonical Ref](https://plan.ref.tools/oUl8LCIQb32SAicK).
 
 ## Latest deployed state
 
-Checked 2026-10-06. Release `v0.2.6` deployed
-`8cab986ee3e5f638b320d4baacefff0302a45615`, including the collection editor
-in #149 and truthful footer categories in #148.
-[Release run 37439623114](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37439623114)
-completed its verification, production backend, and production frontend jobs.
-The frontend job also passed the production-domain check and live smoke test.
+Checked 2026-11-17 from the repository, not from production. The latest
+release tag is `v0.3.4`, at `9eb44a6` (2026-11-15). `v0.3.0` and `v0.3.1`
+failed; `v0.3.2`, `v0.3.3` and `v0.3.4` released. `main` is ahead of the tag:
+props credit (#221), the redesign (#225) and the public-ready work are merged
+and not released. A release is the owner pushing a `v*` tag
+([deployment runbook](DEPLOYMENT.md)).
 
-An independent anonymous GET to
-[`/lecturesfrom`](https://proper-respect.com/lecturesfrom) returned HTTP 200
-on 2026-10-06 with Wispr Flow, NotebookLM, Devin Desktop, and GitHub cards.
-The GitHub card's retained activity was visibly stale. No signed-in save,
-provider read, fresh signup, or publication was performed during this check.
+An anonymous GET to
+[`/lecturesfrom`](https://proper-respect.com/lecturesfrom) on 2026-11-17
+returned the owner's page with a GitHub card last captured on 2026-10-09 and
+marked stale. The nightly refresh reaches GitHub and fails there
+([#175](https://github.com/keeganmoody33/PROPER-RESPECT/issues/175)). No
+signed-in save, provider read, fresh signup or publication was performed during
+this check.
 
-For adding tools and sharing a profile, start with the
-[product walkthrough](../README.md#start-with-one-private-result). For the current
-Codex and Claude Code boundaries, read
+**Sign-up.** The mode is an open decision, with a waitlist recommended.
+Today's behaviour is that sign-up is public, by the owner's statement on
+2026-11-17. Nobody has read the Clerk setting from the repo since it read
+`restricted` on 2026-09-26.
+
+For adding tools and sharing a page, start with the [README](../README.md).
+For the current Codex and Claude Code boundaries, read
 [usage measurement](usage-measurement.md). The native Codex launcher remains
-blocked. The release above predates R27 hosted measurement imports; do not infer
-that unmerged source changes are deployed.
+blocked.
 
 The dated state and invited-tester observations below are retained as historical
 evidence. They are not the current deployment or backlog. The remediation brief
@@ -45,8 +49,7 @@ the owner's local machine.
 | Production frontend | `dpl_5poDzGmiTmCdsGTjwdbMfrrsrEYt`, deployed from the CLI on 2026-09-25 at 15:13 EDT, with no commit SHA. All 446 uploaded source files match `archive/live-frontend-2026-09-25` at `e9df8cc`: `5aa32e6` plus the ARD trust manifest, built without `convex deploy`. | Vercel API; hash of every file |
 | Production backend | `striped-chicken-693`, last verified at `082e90c` on 2026-09-23 ([receipt](verification/2026-09-23-release-documentation-reconciliation.md)). **Unknown** whether anyone ran a Convex deploy after that. | receipt only |
 | On main, not deployed | 17 Convex files: #52's migration, #58, #60, #64, #81, #90, #91 and R01. `/lecturesfrom` depends on #52. | `git diff 082e90c main -- convex/` |
-| Runtime checks | Last run 2026-09-23. None since. | receipts |
-| Sign-up | The mode is an open decision, with a waitlist recommended. Today's behaviour is that sign-up is public, by the owner's statement on 2026-11-17. The last recorded read of the Clerk setting, on 2026-09-26, was `restricted`; nobody has read it from the repo since. | owner |
+| Runtime checks | Last run 2026-09-23. Clerk sign-up read `restricted` on 2026-09-26. None since. | receipts |
 
 Do not deploy main outside the release workflow. Releases push a `v*` tag and
 run `.github/workflows/release.yml` ([deployment runbook](DEPLOYMENT.md),
@@ -70,7 +73,7 @@ backlog for these observations. This table recorded the mapping at that time.
 | Data controls | No delete-original UI, no unpublish-all, no export. Gmail disconnect keeps Google's grant. | R15, R17 |
 | Owner isolation | Denial tests exist across most modules. Cross-owner delete and revoke aren't tested. | R15; K07 step 5 |
 | Same behavior for API, artifact (Wispr Flow) and manual products | Save, history and publish are shared. An artifact metric still needs a developer-run script. | K07 step 3; R21; R27 later |
-| Refresh keeps decisions; failure never becomes zero | Failures go stale, never zero. No user can turn refresh on. | R08, R09, R11, K04 |
+| Refresh keeps decisions; failure never becomes zero | Failures go stale, never zero. The owner approves daily GitHub refresh in the sharing preview. | R08, R09, R11, K04 |
 | Finished cards and brands | Unknown products show initials; Terms says "Coming soon". | R26, R07 |
 | A released build | Production is `e9df8cc`; main is undeployed. | R10, K02, K03 |
 
