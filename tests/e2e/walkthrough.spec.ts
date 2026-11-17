@@ -161,6 +161,9 @@ const typed = "Where my lists used to start.";
   await expect(walk.getByRole("listitem").filter({ hasText: "Claude Code" })).toContainText(kept);
   await expect(walk.getByRole("listitem").filter({ hasText: "Clay" })).toContainText(typed);
   await expect(walk).toContainText("Removed from your collection: Cursor.");
+  // It speaks only for these answers: an account may already have a page that is public.
+  await expect(walk).toContainText("These answers are saved privately.");
+  await expect(walk).not.toContainText("Nothing is public yet");
   await noAxeViolations(browserPage);
   await noSidewaysScroll(browserPage);
   await shoot("end");

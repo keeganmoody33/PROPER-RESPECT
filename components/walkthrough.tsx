@@ -195,7 +195,7 @@ function PageSummary({ session, cards, removed, onPreview, onClose }: {
   const saved = cards.filter(card => card.product && session.settled[card.prop._id] === "saved");
   return <div className={styles.screen}>
     <h3 ref={heading} tabIndex={-1} className={styles.name}>Here&apos;s your page</h3>
-    <p>Nothing is public yet. These are the tools you said yes to, with the line each card shows. Preview the page, then approve it to publish.</p>
+    <p>These answers are saved privately. Here are the tools you said yes to, with the line each card shows. Preview your page, then approve it to publish them.</p>
     {saved.length ? <ul className={styles.summary}>{saved.map(card => <li key={card.prop._id}>
       <strong>{card.product!.name}</strong> <span>{cardStatusLabel(card.prop)}</span>
       <p>{walkthroughLine(card) || "No line yet, so this card stays private."}</p>
