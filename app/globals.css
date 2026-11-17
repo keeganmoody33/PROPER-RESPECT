@@ -3,9 +3,7 @@
   --paper: #ffffff;
   --panel: #f5f5f2;
   --signal: #d8ff3e;
-  --poster: #f5d547;
-  --poster-field: #fdf3c4;
-  --poster-ink: #000000;
+  --poster: #ffe600;
   --respect-red: #d1004f;
   --focus-ring: #d1004f;
   --muted: #666666;
@@ -28,10 +26,8 @@
   --ink: #ffffff;
   --paper: #000000;
   --panel: #181818;
-  --poster-field: #1d1a0c;
-  --poster-ink: #f5d547;
   --respect-red: #ff5fa2;
-  --focus-ring: #f5d547;
+  --focus-ring: #ffe600;
   --muted: #b5b5b5;
   --line: rgba(255, 255, 255, 0.3);
   --input: #000000;
@@ -1792,7 +1788,7 @@ main {
 .auth-steps { padding-left: 1.3rem; line-height: 1.6; }
 .auth-steps li { padding: .6rem 0; }
 /* The footer is the dark end of every page in both appearances, so it pins its own inks the way a card does. */
-.site-footer { --ink: #ffffff; --paper: #000000; --panel: #181818; --secondary: #b5b5b5; --muted: #b5b5b5; --line: rgba(255, 255, 255, 0.3); --control-line: #7a7a7a; --respect-red: #ff5fa2; --focus-ring: #f5d547; --action-text: #000000; --example-panel: #262626; --input: #000000; --sample-text: #b5b5b5;
+.site-footer { --ink: #ffffff; --paper: #000000; --panel: #181818; --secondary: #b5b5b5; --muted: #b5b5b5; --line: rgba(255, 255, 255, 0.3); --control-line: #7a7a7a; --respect-red: #ff5fa2; --focus-ring: #ffe600; --action-text: #000000; --example-panel: #262626; --input: #000000; --sample-text: #b5b5b5;
   display: block; padding-block: clamp(2.5rem, 6vw, 5rem) 1.25rem; background: var(--paper); color: var(--ink); border: 0; }
 .site-footer-brand > p { color: var(--poster); }
 .site-footer-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 3rem; }

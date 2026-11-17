@@ -1,4 +1,4 @@
-/* A show poster: one pale field, wood type set as narrow and heavy as the face goes, and the card as the act on the bill. */
+/* A show poster on plain stock: wood type set as narrow and heavy as the face goes, and the card as the act on the bill. */
 .homepage { font-family: var(--homepage-sans), Arial, sans-serif; color: var(--ink); background: var(--paper); }
 .homepage a { text-underline-offset: .22em; }
 .homepage a:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
@@ -6,9 +6,8 @@
 
 .title, .statement { font-stretch: 62%; font-weight: 900; text-transform: uppercase; margin: 0; }
 
-.hero { background: var(--poster-field); color: var(--poster-ink); border-bottom: 1px solid var(--line); padding: clamp(.75rem, 2vw, 1.75rem) clamp(1rem, 4vw, 5rem) clamp(2rem, 4vw, 4rem);
+.hero { border-bottom: 1px solid var(--line); padding: clamp(.75rem, 2vw, 1.75rem) clamp(1rem, 4vw, 5rem) clamp(2rem, 4vw, 4rem);
   display: grid; grid-template-columns: minmax(0, 42rem) minmax(0, 1fr); grid-template-areas: "title title" "example side"; gap: clamp(.75rem, 1.6vw, 1.5rem) clamp(1.5rem, 3vw, 3rem); align-items: start; }
-.hero a:focus-visible, .hero :global(button:focus-visible) { outline-color: var(--poster-ink); }
 /* One line across the sheet at every width: eighteen characters of this face run about 7.6 times its size. */
 .title { grid-area: title; font-size: clamp(2rem, 11.6vw, 13rem); line-height: .84; letter-spacing: -.005em; white-space: nowrap; }
 .example { grid-area: example; min-width: 0; padding: clamp(.75rem, 1.6vw, 1.5rem); background: var(--example-panel); color: var(--ink); border: 2px solid var(--ink); box-shadow: 10px 10px 0 var(--poster); }
@@ -19,9 +18,6 @@
 .primary { display: inline-flex; justify-content: center; align-items: center; min-height: 52px; padding: .9rem 1.4rem; border: 3px solid var(--ink); background: var(--ink); color: var(--action-text); font-weight: 800; font-size: 1.05rem; text-decoration: none; }
 /* The accent is dark on a light page and light on a dark one, so the label follows the theme with it. */
 .primary:hover { background: var(--respect-red); border-color: var(--respect-red); color: var(--action-text); }
-.hero .primary { background: var(--poster-ink); border-color: var(--poster-ink); color: var(--poster-field); }
-.hero .primary:hover { background: transparent; color: var(--poster-ink); }
-.hero .secondary { color: var(--poster-ink); }
 .secondary { font-size: .95rem; font-weight: 600; line-height: 1.5; padding-block: .35rem; }
 
 .journey, .close { padding: clamp(3rem, 7vw, 7rem) clamp(1rem, 4vw, 5rem); }
