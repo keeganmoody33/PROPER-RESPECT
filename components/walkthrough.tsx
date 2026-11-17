@@ -36,10 +36,11 @@ function ChoiceCard({ choice }: { choice: WalkthroughChoice }) {
   </label>;
 }
 
-function choiceHint(choice: WalkthroughChoice | undefined, never: "remove" | "leave", name: string): string {
+function choiceHint(choice: WalkthroughChoice | undefined, never: ReturnType<typeof neverUsedAction>, name: string): string {
   if (!choice) return "Pick one. You can change it later in your collection.";
   if (choice !== "NEVER") return levelDefinition(choice);
-  return never === "remove" ? `Nothing is saved about ${name}. It comes out of your collection.`
+  if (never.kind === "remove") return `Nothing is saved about ${name}. It comes out of your collection.`;
+  return never.why === "ANOTHER_RECORD" ? `Your collection has another record of ${name}, so it stays as it is. Nothing new is saved.`
     : `${name} has evidence or a published card attached, so it stays in your collection as it is. Nothing new is saved.`;
 }
 
@@ -80,7 +81,7 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
     level: fields.saves.level, uses: productUseLabels(product.slug, { picks: [...answer.usePicks], other: answer.useOther }), startedAt: answer.startedAt }) : {};
   const line = headlineField(answer.ownerLine, help.suggestion);
   const action = lineAction(answer.ownerLine, help.suggestion, keptNote(card));
-  const never = neverUsedAction(card, sources?.length, keptByServer);
+  const never = neverUsedAction(card, sources?.length, keptByServer, item.otherRecords);
   const submitLabel = answer.choice === "NEVER" ? never.label : action.label;
 
   async function submit() {
@@ -132,7 +133,7 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
         </RadioGroup>
         <CollapsibleTrigger className={`collection-disclosure ${styles.disclosure}`}>{more ? "Fewer" : "More"}</CollapsibleTrigger>
       </Collapsible>
-      <p id={`${ids}-level-hint`} className={styles.hint}>{choiceHint(answer.choice, never.kind, product.name)}</p>
+      <p id={`${ids}-level-hint`} className={styles.hint}>{choiceHint(answer.choice, never, product.name)}</p>
     </fieldset>
 
     {fields.asksUses && <fieldset className={styles.group} disabled={busy}>

@@ -149,14 +149,21 @@ describe("which control saves a line", () => {
 
   it("removes a bare find for Never used it, and leaves one with evidence, a measurement or a page alone", () => {
     expect(neverUsedAction(picked("Clay"), 0)).toEqual({ kind: "remove", label: "Remove it and go on" });
-    expect(neverUsedAction(found("GitHub"), 1)).toEqual({ kind: "leave", label: "Leave it as it is and go on" });
+    expect(neverUsedAction(found("GitHub"), 1)).toEqual({ kind: "leave", label: "Leave it as it is and go on", why: "ATTACHED" });
     expect(neverUsedAction(found("Devin", { activity: { kind: "headlineMetrics" } }), 0).kind).toBe("leave");
     expect(neverUsedAction(picked("Clay", { activityEvidenceId: "raw-1" }), 0).kind).toBe("leave");
     expect(neverUsedAction(picked("Clay", { visibility: "PUBLIC" }), 0).kind).toBe("leave");
     // Until its sources load, nothing is removed.
     expect(neverUsedAction(picked("Clay"), undefined).kind).toBe("leave");
+    // Another record of the same product stays whatever happens to this one, so nothing here can say the tool is gone.
+    const [bare, withEvidence] = [picked("GitHub"), found("GitHub")];
+    const [item] = walkthroughQueue([bare, withEvidence]);
+    expect(item).toMatchObject({ propId: bare.prop._id, otherRecords: 1 });
+    expect(walkthroughQueue([picked("Exa")])[0].otherRecords).toBe(0);
+    expect(neverUsedAction(bare, 0, false, item.otherRecords)).toEqual({ kind: "leave", label: "Leave it as it is and go on", why: "ANOTHER_RECORD" });
+    expect(neverUsedAction(found("GitHub"), 1)).toMatchObject({ why: "ATTACHED" });
     // The server refused: something this screen can't see is attached, so the answer becomes "leave it".
-    expect(neverUsedAction(picked("Clay"), 0, true)).toEqual({ kind: "leave", label: "Leave it as it is and go on" });
+    expect(neverUsedAction(picked("Clay"), 0, true)).toEqual({ kind: "leave", label: "Leave it as it is and go on", why: "ATTACHED" });
   });
 });
 

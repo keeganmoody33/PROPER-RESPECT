@@ -19,7 +19,8 @@ export type WalkthroughCard = Readonly<{
   isPublishedAtCurrentHandle?: boolean;
 }>;
 
-export type WalkthroughItem = Readonly<{ propId: string; card: WalkthroughCard & { product: NonNullable<WalkthroughCard["product"]> } }>;
+/** `otherRecords` counts the collection's other records of the same product: they stay whatever happens to this one. */
+export type WalkthroughItem = Readonly<{ propId: string; card: WalkthroughCard & { product: NonNullable<WalkthroughCard["product"]> }; otherRecords: number }>;
 
 /** The owner's own words only, as share-all reads them: an app's words on an older card are dropped. */
 const ownerWords = (card: WalkthroughCard, text: string) => ownerLine(text, card.product?.name ?? "");
@@ -37,9 +38,9 @@ export function walkthroughQueue(cards: readonly WalkthroughCard[]): Walkthrough
   const byProduct = cards.filter((card): card is WalkthroughItem["card"] => Boolean(card.product)).reduce((groups, card) =>
     groups.set(card.prop.productId, [...groups.get(card.prop.productId) ?? [], card]), new Map<string, WalkthroughItem["card"][]>());
   const chosen = [...byProduct.values()].flatMap(members => members.some(member => onPage(member) || complete(member)) ? []
-    : [members.find(member => isRelationshipConfirmed(member.prop)) ?? members[0]]);
-  const confirmed = chosen.filter(card => isRelationshipConfirmed(card.prop));
-  return [...confirmed, ...chosen.filter(card => !confirmed.includes(card))].map(card => ({ propId: card.prop._id, card }));
+    : [{ card: members.find(member => isRelationshipConfirmed(member.prop)) ?? members[0], otherRecords: members.length - 1 }]);
+  const confirmed = chosen.filter(({ card }) => isRelationshipConfirmed(card.prop));
+  return [...confirmed, ...chosen.filter(entry => !confirmed.includes(entry))].map(({ card, otherRecords }) => ({ propId: card.prop._id, card, otherRecords }));
 }
 
 /** One stored source of a find, as inventory.evidence lists it. */
@@ -125,9 +126,11 @@ export function lineAction(owner: string | null, suggestion: string | undefined,
  * Until its sources have loaded, nothing is removed. The server has the last word: once it has kept a record this screen
  * took for bare, the answer is to leave it.
  */
-export function neverUsedAction(card: WalkthroughCard, sourceCount: number | undefined, keptByServer = false) {
+export function neverUsedAction(card: WalkthroughCard, sourceCount: number | undefined, keptByServer = false, otherRecords = 0) {
+  // Another record of the product stays in the collection, so removing this one would not take the tool out of it.
+  if (otherRecords > 0) return { kind: "leave" as const, label: "Leave it as it is and go on", why: "ANOTHER_RECORD" as const };
   const bare = !keptByServer && sourceCount === 0 && !onPage(card) && !card.prop.activity && !card.prop.activityEvidenceId;
-  return bare ? { kind: "remove" as const, label: "Remove it and go on" } : { kind: "leave" as const, label: "Leave it as it is and go on" };
+  return bare ? { kind: "remove" as const, label: "Remove it and go on" } : { kind: "leave" as const, label: "Leave it as it is and go on", why: "ATTACHED" as const };
 }
 
 const MISSING_CHOICE = "Choose how you use it first.";
