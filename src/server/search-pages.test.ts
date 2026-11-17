@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import SearchPage, { generateMetadata as searchMetadata } from "@/app/search/page";
 import ToolPage, { generateMetadata as toolMetadata } from "@/app/tools/[slug]/page";
-import { SEARCH_QUERY_MAX } from "@/src/domain/search-listing";
+import { SEARCH_QUERY_MAX, SEARCH_RESULTS_MAX } from "@/src/domain/search-listing";
+import { moreResultsText } from "@/src/server/search-copy";
 
 beforeEach(() => {
   vi.stubEnv("PROPER_RESPECT_E2E_REFERENCE", "1");
@@ -72,4 +73,12 @@ it("an unknown or malformed tool is a 404, never an error", async () => {
     await expect(tool(slug)).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
     expect((await toolMetadata({ params: Promise.resolve({ slug }), searchParams: Promise.resolve({}) })).robots).toEqual({ index: false, follow: false });
   }));
+});
+
+it("says what a cut-off list holds: the closest matches for a search, the first in order for a browse", () => {
+  // A search picks its matches by closeness and shows them A to Z, so it never claims the alphabet's first.
+  expect(moreResultsText("people", true)).toBe(`Showing the ${SEARCH_RESULTS_MAX} closest matches, A to Z. Add more of the name to narrow it.`);
+  expect(moreResultsText("tools", true)).toBe(`Showing the ${SEARCH_RESULTS_MAX} closest matches, A to Z. Add more of the name to narrow it.`);
+  expect(moreResultsText("people", false)).toBe(`Showing the first ${SEARCH_RESULTS_MAX}. Search to find someone else.`);
+  expect(moreResultsText("tools", false)).toBe(`Showing the first ${SEARCH_RESULTS_MAX}. Search to find another tool.`);
 });

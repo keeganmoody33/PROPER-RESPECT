@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { SearchTabs, type SearchTab } from "@/components/search-tabs";
 import { searchPeople, searchQueryProblem, searchTools } from "@/src/data/search";
-import { SEARCH_RESULTS_MAX } from "@/src/domain/search-listing";
 import { publicPathMetadata } from "@/src/server/public-site";
-import { searchPageDescription, searchPageTitle, toolCountsText } from "@/src/server/search-copy";
+import { moreResultsText, searchPageDescription, searchPageTitle, toolCountsText } from "@/src/server/search-copy";
 import styles from "./search.module.css";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -31,7 +30,7 @@ function PeopleResults({ q, people, more }: { q: string } & Awaited<ReturnType<t
       : <ul className={styles.list}>{people.map(person => <li key={person.handle}>
         <Link href={`/${person.handle}`}><span className={styles.name}>{person.displayName}</span><span className={styles.meta}>@{person.handle}</span></Link>
       </li>)}</ul>}
-    {more && <p className={styles.note}>{q ? `Showing the first ${SEARCH_RESULTS_MAX}. Add more of the name to narrow it.` : `Showing the first ${SEARCH_RESULTS_MAX}. Search to find someone else.`}</p>}
+    {more && <p className={styles.note}>{moreResultsText("people", Boolean(q))}</p>}
   </>;
 }
 
@@ -44,7 +43,7 @@ function ToolResults({ q, tools, more }: { q: string } & Awaited<ReturnType<type
       : <ul className={styles.list}>{tools.map(tool => <li key={tool.slug}>
         <Link href={`/tools/${tool.slug}`}><span className={styles.name}>{tool.name}</span><span className={styles.meta}>{toolCountsText(tool)}</span></Link>
       </li>)}</ul>}
-    {more && <p className={styles.note}>{q ? `Showing the first ${SEARCH_RESULTS_MAX}. Add more of the name to narrow it.` : `Showing the first ${SEARCH_RESULTS_MAX}. Search to find another tool.`}</p>}
+    {more && <p className={styles.note}>{moreResultsText("tools", Boolean(q))}</p>}
   </>;
 }
 

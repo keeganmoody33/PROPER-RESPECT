@@ -356,7 +356,7 @@ const toolGroupValidator = v.object({
   nextAfter: v.union(v.string(), v.null()),
 });
 
-/** People with a listed page whose handle or name matches, A to Z. An empty search lists the first people A to Z. */
+/** People with a listed page whose handle or name matches: the closest matches, shown A to Z. An empty search lists the first people A to Z. */
 export const searchPeople = query({
   args: { q: v.string() },
   returns: v.object({ people: v.array(v.object({ handle: v.string(), displayName: v.string() })), more: v.boolean() }),
@@ -370,7 +370,7 @@ export const searchPeople = query({
   },
 });
 
-/** Tools on listed pages whose name matches, A to Z. An empty search lists tools by how many people list them. */
+/** Tools on listed pages whose name matches: the closest matches, shown A to Z. An empty search lists tools by how many people list them. */
 export const searchTools = query({
   args: { q: v.string() },
   returns: v.object({ tools: v.array(toolSummaryValidator), more: v.boolean() }),
