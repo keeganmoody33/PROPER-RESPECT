@@ -117,7 +117,7 @@ describe("how you use it", () => {
     const stack = picked("Clay", { level: "DAILY", uses: { picks: ["build-lists"], other: "score leads" }, startedAt: "2022-03-01",
       credit: { platform: "X", handle: "jack" }, headline: "" });
     expect(initialAnswer(stack)).toEqual({ choice: "DAILY", usePicks: ["build-lists"], useOther: "score leads", startedAt: "2022-03-01",
-      creditPlatform: "X", creditHandle: "jack", creditPlatformName: "", ownerLine: null });
+      creditPlatform: "X", creditHandle: "jack", creditPlatformName: "", ownerLine: null, openedVersion: 1 });
     expect(initialAnswer(found("GitHub"))).toMatchObject({ choice: undefined, creditPlatform: "PROPER_RESPECT", ownerLine: null });
     // A draft's system words are never offered back as the owner's line.
     expect(initialAnswer(found("Wispr", { headline: "Wispr may be in your stack." })).ownerLine).toBeNull();
@@ -165,7 +165,8 @@ describe("the save a walkthrough answer sends", () => {
 
   it("sends the level with the status it implies, the picked uses, the date and the line, and keeps what the walkthrough doesn't ask", () => {
     const stack = picked("Clay", { relationshipVersion: SAVED_VERSION, goTo: true, note: "My own words.", supportingUrl: "https://example.com/work" });
-    const result = walkthroughSave(stack, answer({ usePicks: ["build-lists", "enrich-leads"], useOther: " ", startedAt: "2022-03-01" }), "I use Clay daily.");
+    // The answers come from the screen that opened on this record, so they carry its version.
+    const result = walkthroughSave(stack, { ...initialAnswer(stack), choice: "DAILY", usePicks: ["build-lists", "enrich-leads"], useOther: " ", startedAt: "2022-03-01" }, "I use Clay daily.");
     expect(result).toEqual({ ok: true, args: {
       propId: stack.prop._id, expectedVersion: SAVED_VERSION, level: "DAILY", status: "ACTIVE", goTo: true, headline: "I use Clay daily.", note: "My own words.",
       uses: { picks: ["build-lists", "enrich-leads"] }, credit: undefined, startedAt: "2022-03-01", supportingUrl: "https://example.com/work",
@@ -176,6 +177,15 @@ describe("the save a walkthrough answer sends", () => {
     expect(keptNote(picked("Clay", { note: " Lead lists " }))).toBe("Lead lists");
     expect(keptNote(picked("Clay", { note: "Connected activity is private until I approve this card." }))).toBe("");
     expect(keptNote(found("Wispr Flow", { note: "Unreviewed suggestion" }))).toBe("");
+  });
+
+  it("saves against the version the screen opened with, so a form left open never overwrites a newer save from another tab", () => {
+    const opened = picked("Clay", { relationshipVersion: SAVED_VERSION });
+    const answers = { ...initialAnswer(opened), choice: "DAILY" as const };
+    expect(answers.openedVersion).toBe(SAVED_VERSION);
+    // The record moves on while the screen stays open: the card is newer, the answers on screen are not.
+    const movedOn = { ...opened, prop: { ...opened.prop, relationshipVersion: SAVED_VERSION + 1, level: "PAUSED" as const } };
+    expect(walkthroughSave(movedOn, answers, "I use Clay daily.")).toMatchObject({ ok: true, args: { expectedVersion: SAVED_VERSION } });
   });
 
   it("clears a draft's system note, sends no uses or date when none are given, and starts a never-saved record at version 0", () => {

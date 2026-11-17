@@ -83,6 +83,11 @@ export type WalkthroughAnswer = Readonly<{
   creditPlatform: CreditPlatform; creditHandle: string; creditPlatformName: string;
   /** The owner's line, or null while untouched, so a suggestion can show without counting as theirs. */
   ownerLine: string | null;
+  /**
+   * The record's version when the screen opened. The answers on screen belong to that version, so a save or a removal
+   * names it: if another tab has saved since, the server refuses instead of letting a form left open overwrite it.
+   */
+  openedVersion: number;
 }>;
 
 function savedCredit(stored: unknown): { platform: CreditPlatform; handle: string; platformName: string } {
@@ -98,6 +103,7 @@ export function initialAnswer(card: WalkthroughCard): WalkthroughAnswer {
     choice: confirmed ? card.prop.level : undefined, usePicks: card.prop.uses?.picks ?? [], useOther: card.prop.uses?.other ?? "",
     startedAt: card.prop.startedAt ?? "", creditPlatform: credit.platform, creditHandle: credit.handle, creditPlatformName: credit.platformName,
     ownerLine: initialOwnerHeadline(confirmed ? ownerWords(card, card.prop.headline) : ""),
+    openedVersion: card.prop.relationshipVersion ?? 0,
   };
 }
 
@@ -140,7 +146,7 @@ export function walkthroughSave(card: WalkthroughCard, answer: WalkthroughAnswer
   if (!credit.ok) return { ok: false as const, message: credit.message };
   const other = answer.useOther.trim();
   return { ok: true as const, args: {
-    propId: card.prop._id, expectedVersion: card.prop.relationshipVersion ?? 0, ...fields.saves, goTo: card.prop.goTo ?? false,
+    propId: card.prop._id, expectedVersion: answer.openedVersion, ...fields.saves, goTo: card.prop.goTo ?? false,
     headline, note: savedNote(card),
     uses: answer.usePicks.length || other ? { picks: [...answer.usePicks], ...(other ? { other } : {}) } : undefined,
     credit: credit.credit, startedAt: answer.startedAt || undefined, supportingUrl: card.prop.supportingUrl,
