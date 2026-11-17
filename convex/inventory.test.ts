@@ -5,6 +5,8 @@ import { makeFunctionReference, type FunctionReturnType } from "convex/server";
 import { expect, test, vi } from "vitest";
 import schema from "./schema";
 import type { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import { NEVER_USED_KEPT } from "../src/domain/inventory";
 
 const modules = import.meta.glob("./**/*.ts");
 const save = makeFunctionReference<"mutation">("inventory:save");
@@ -428,4 +430,151 @@ test("saving a blank handle removes the stored credit and keeps it in history", 
   const events = await owner.query(history, { propId, ...historyPage });
   expect(events.page.map((event: { before: { credit?: unknown } }) => event.before.credit))
     .toEqual([{ platform: "OTHER", handle: "a teammate", platformName: "Slack" }, undefined]);
+});
+
+// Never used it (walkthrough, B3): a bare record goes, with nothing kept about it; anything evidence, a measurement or
+// the page relies on stays.
+const removeNeverUsed = makeFunctionReference<"mutation">("inventory:removeNeverUsed");
+const saveSelection = makeFunctionReference<"mutation">("stack:saveSelection");
+const addManual = makeFunctionReference<"mutation">("onboarding:addManualProduct");
+const REFUSAL = NEVER_USED_KEPT;
+
+async function stackPicks(owner: Awaited<ReturnType<typeof fixture>>["owner"], operationId: string, slugs: string[]) {
+  const result = await owner.mutation(saveSelection, { operationId, picks: slugs.map(slug => ({ kind: "directory", slug, status: "ACTIVE", level: "WEEKLY" })) });
+  return result.items.map((item: { propId: Id<"props"> }) => item.propId) as Id<"props">[];
+}
+
+test("Never used it removes a bare stack pick with its link, history and discovery row, and leaves every other record alone", async () => {
+  const { t, owner, propId: discovery } = await fixture();
+  const [clay, exa] = await stackPicks(owner, "first-picks", ["clay", "exa"]);
+  const others = () => t.run(async ctx => ({ exa: await ctx.db.get(exa), discovery: await ctx.db.get(discovery), published: await ctx.db.query("publishedProfiles").collect() }));
+  const before = await others();
+  expect(await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 })).toEqual({ removed: true });
+  expect(await t.run(async ctx => ({
+    prop: await ctx.db.get(clay),
+    links: await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
+    events: await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
+    drafts: (await ctx.db.query("draftImports").collect()).filter(draft => draft.resultPropId === clay),
+    // The save's receipt stays as a marker of the operation, with nothing about the tool left in it; the other pick's is untouched.
+    receipts: (await ctx.db.query("manualProductIntakes").collect()).map(row => row.propId === exa ? "exa"
+      : `${row.requestJson} ${/clay/i.test(row.operationId + row.requestJson) ? "names the tool" : "names nothing"}`),
+  }))).toEqual({ prop: null, links: [], events: [], drafts: [], receipts: ['{"removed":true} names nothing', "exa"] });
+  expect(await others()).toEqual(before);
+  expect((await owner.query(list, firstPage)).page.map((row: { product: { slug: string } }) => row.product.slug).sort()).toEqual(["exa", "wisprflow"]);
+});
+
+test("removing twice is harmless, and picking the tool again later starts a fresh record", async () => {
+  const { t, owner } = await fixture();
+  const [clay] = await stackPicks(owner, "first-picks", ["clay"]);
+  await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 });
+  expect(await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 })).toEqual({ removed: false });
+  const [again] = await stackPicks(owner, "second-picks", ["clay"]);
+  expect(again).not.toBe(clay);
+  expect(await t.run(ctx => ctx.db.get(again))).toMatchObject({ status: "ACTIVE", level: "WEEKLY", visibility: "PRIVATE" });
+});
+
+test("Never used it refuses a record with evidence, activity, a measurement or a published card, and removes nothing", async () => {
+  const { t, owner, userId, productId, propId } = await fixture();
+  const ids = await t.run(async ctx => {
+    const sourceId = await ctx.db.insert("evidenceSources", { userId, type: "GMAIL", connectedAt: "2026-11-01" });
+    const rawEvidenceId = await ctx.db.insert("rawEvidence", { userId, evidenceSourceId: sourceId, capturedAt: "2026-11-01", payload: "{}", dedupKey: "mail-1" });
+    await ctx.db.insert("proofs", { propId, type: "EMAIL_EVIDENCE", rawEvidenceId });
+    const plain = { userId, productId, status: "TESTING" as const, headline: "", note: "" };
+    const withActivity = await ctx.db.insert("props", { ...plain, visibility: "DRAFT", activity: { kind: "headlineMetrics", attributionScope: "PERSONAL",
+      capturedAt: "2026-11-01", freshness: "FRESH", provenanceLabel: "Synthetic", primary: { label: "Sessions", value: 1 }, supporting: [] } });
+    const measured = await ctx.db.insert("props", { ...plain, visibility: "DRAFT" });
+    await ctx.db.insert("rawEvidence", { userId, evidenceSourceId: sourceId, capturedAt: "2026-11-01", dedupKey: "measurement-1", measurementPropId: measured });
+    const published = await ctx.db.insert("props", { ...plain, visibility: "PUBLIC" });
+    const onPage = await ctx.db.insert("props", { ...plain, visibility: "PRIVATE" });
+    const page = (await ctx.db.query("publishedProfiles").collect())[0];
+    await ctx.db.patch(page._id, { cardPropIds: [onPage] });
+    return [propId, withActivity, measured, published, onPage];
+  });
+  await Promise.all(ids.map(id => expect(owner.mutation(removeNeverUsed, { propId: id, expectedVersion: 0 })).rejects.toThrow(REFUSAL)));
+  expect(await t.run(async ctx => (await Promise.all(ids.map(id => ctx.db.get(id)))).every(Boolean))).toBe(true);
+});
+
+test("a retry of the save that made a removed tool is refused, so the tool never comes back by itself", async () => {
+  const { t, owner } = await fixture();
+  const RETRY = "A tool from this save was removed from your collection since. Save it again to bring it back.";
+  const tools = () => t.run(async ctx => (await ctx.db.query("props").collect()).length);
+  const before = await tools();
+  // A stack save of one tool, and of two: the response is lost, the tool shows up, the owner answers Never used it.
+  const pick = (slug: string) => ({ kind: "directory" as const, slug, status: "ACTIVE" as const, level: "WEEKLY" as const });
+  const [clay] = await stackPicks(owner, "one-pick", ["clay"]);
+  await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 });
+  await expect(owner.mutation(saveSelection, { operationId: "one-pick", picks: [pick("clay")] })).rejects.toThrow(RETRY);
+  const [exa] = await stackPicks(owner, "two-picks", ["exa", "notion"]);
+  await owner.mutation(removeNeverUsed, { propId: exa, expectedVersion: 1 });
+  await expect(owner.mutation(saveSelection, { operationId: "two-picks", picks: [pick("exa"), pick("notion")] })).rejects.toThrow(RETRY);
+  // A tool added by name, the same way.
+  const typed = { name: "My Notes App", website: "https://notes.example", status: "ACTIVE" as const, operationId: "typed-add" };
+  const added = await owner.mutation(addManual, typed) as Id<"props">;
+  const version = (await t.run(ctx => ctx.db.get(added)))!.relationshipVersion ?? 0;
+  await owner.mutation(removeNeverUsed, { propId: added, expectedVersion: version });
+  await expect(owner.mutation(addManual, typed)).rejects.toThrow(RETRY);
+  // Only Notion, the one tool nobody removed, was added.
+  expect(await tools()).toBe(before + 1);
+  expect(await t.run(async ctx => (await ctx.db.query("products").collect()).some(product => product.name === "My Notes App"))).toBe(false);
+  // A fresh save, with its own operation, still adds the tool.
+  expect((await stackPicks(owner, "fresh-pick", ["clay"]))).toHaveLength(1);
+});
+
+test("a removal decided on a stale screen is refused, so an answer saved since then and its history stay", async () => {
+  const { t, owner } = await fixture();
+  const [clay] = await stackPicks(owner, "first-picks", ["clay"]);
+  const opened = (await t.run(ctx => ctx.db.get(clay)))!.relationshipVersion ?? 0;
+  // Another tab saves a level and a line after this screen opened.
+  await owner.mutation(save, { propId: clay, expectedVersion: opened, operationId: "other-tab", status: "ACTIVE", level: "DAILY", goTo: false, headline: "Where my lists start.", note: "" });
+  await expect(owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: opened })).rejects.toThrow("This relationship changed. Reload its saved decisions before trying again.");
+  expect(await t.run(async ctx => ({
+    prop: await ctx.db.get(clay),
+    events: (await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", clay)).collect()).length,
+  }))).toMatchObject({ prop: { headline: "Where my lists start.", level: "DAILY", relationshipVersion: opened + 1 }, events: expect.any(Number) });
+  // With the version it now has, the same answer goes through.
+  expect(await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: opened + 1 })).toEqual({ removed: true });
+});
+
+test("removing a tool the owner added by name takes its own product record too, and leaves a shared or still-used one", async () => {
+  const { t, owner, userId } = await fixture();
+  const [clay] = await stackPicks(owner, "first-picks", ["clay"]);
+  const ids = await t.run(async ctx => {
+    const bare = { userId, status: "ACTIVE" as const, visibility: "PRIVATE" as const, headline: "", note: "", ownerEntered: true };
+    // A name the owner typed gets a product record of its own, with the name and website they typed.
+    const typed = await ctx.db.insert("products", { name: "My Notes App", slug: "manual-my-notes-0123456789abcdef012345", domain: "notes.example", description: "" });
+    const twice = await ctx.db.insert("products", { name: "Other App", slug: "manual-other-ap-0123456789abcdef012345", domain: "", description: "" });
+    return {
+      typed, twice, clayProduct: (await ctx.db.get(clay))!.productId,
+      typedProp: await ctx.db.insert("props", { ...bare, productId: typed }),
+      twiceProp: await ctx.db.insert("props", { ...bare, productId: twice }),
+      twiceKept: await ctx.db.insert("props", { ...bare, productId: twice }),
+    };
+  });
+  // Brand data fetched for a typed tool's website is stored against its product, with the provider's response.
+  await t.run(async ctx => {
+    const brand = (productId: Id<"products">, slug: string, domain: string) => ({
+      productId, generation: 1, responseJson: "{}",
+      snapshot: { schemaVersion: 1 as const, provider: "context.dev" as const, adapterVersion: "synthetic", productSlug: slug, canonicalDomain: domain,
+        retrievalId: `${productId}_1`, retrievedAt: "2026-11-17T00:00:00.000Z", partial: false, responseHash: "synthetic", logos: [], colors: [], fonts: [], receipts: [] },
+    });
+    const snapshot = await ctx.db.insert("productBrandSnapshots", brand(ids.typed, "manual-my-notes-0123456789abcdef012345", "notes.example"));
+    await ctx.db.insert("productBrandJobs", { productId: ids.typed, canonicalDomain: "notes.example", generation: 1, status: "READY", requestedAt: 1, currentSnapshotId: snapshot });
+    await ctx.db.insert("productBrandJobs", { productId: ids.twice, canonicalDomain: "other.example", generation: 1, status: "PENDING", requestedAt: 1 });
+  });
+  await owner.mutation(removeNeverUsed, { propId: ids.typedProp, expectedVersion: 0 });
+  await owner.mutation(removeNeverUsed, { propId: ids.twiceProp, expectedVersion: 0 });
+  await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 });
+  expect(await t.run(async ctx => ({
+    typed: await ctx.db.get(ids.typed), twice: (await ctx.db.get(ids.twice))?.name, clay: (await ctx.db.get(ids.clayProduct))?.slug, kept: Boolean(await ctx.db.get(ids.twiceKept)),
+    // Clay's job came with the stack pick: a catalog product is shared, so its brand data stays when one person removes it.
+    brandJobs: (await ctx.db.query("productBrandJobs").collect()).map(job => job.canonicalDomain).sort(),
+    brandSnapshots: (await ctx.db.query("productBrandSnapshots").collect()).length,
+  }))).toEqual({ typed: null, twice: "Other App", clay: "clay", kept: true, brandJobs: ["clay.com", "other.example"], brandSnapshots: 0 });
+});
+
+test("only the owner can remove a record", async () => {
+  const { t, other, propId } = await fixture();
+  await expect(t.mutation(removeNeverUsed, { propId, expectedVersion: 0 })).rejects.toThrow();
+  await expect(other.mutation(removeNeverUsed, { propId, expectedVersion: 0 })).rejects.toThrow("unavailable");
+  expect(await t.run(ctx => ctx.db.get(propId))).not.toBeNull();
 });

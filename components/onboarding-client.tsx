@@ -41,6 +41,7 @@ import { SearchListingChoice } from "./search-listing-choice";
 import { previewedUser } from "@/src/domain/search-listing";
 import { StackPicker } from "./stack-builder";
 import { ShareAllSection } from "./share-all-step";
+import { CollectionWalkthrough } from "./walkthrough";
 import { MeasurementSharingChoices } from "./measurement-review";
 import { FirstResultPanel, useFirstResultSource } from "./first-result";
 import { SignedOutCollection } from "./signed-out-collection";
@@ -481,6 +482,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
       </nav>
       {message && <p className="message" role="status">{message}</p>}
       <StackPicker mode={{ kind: "signed-in", held: heldSlugs }} />
+      {state.privateInventoryAvailable && <CollectionWalkthrough />}
       {state.brandEnrichmentAvailable && <CollectionBrandPreparation key={state.user._id} propIds={[...new Map(state.cards.filter(card => card.product).map(card => [card.prop.productId, card.prop._id])).values()]} />}
       {state.privateInventoryAvailable ? <OwnerCollection brandEnrichmentAvailable={Boolean(state.brandEnrichmentAvailable)} /> : <p role="status">Your collection is temporarily unavailable. Existing evidence remains unchanged.</p>}
       <AddProductForm onAdd={addManualProduct} onAdded={(propId, status) => { if (status === undefined) openRelationship(propId); }} />

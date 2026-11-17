@@ -272,7 +272,8 @@ for (const [width, height] of [[1280, 900], [390, 844]]) for (const claimed of [
     return heading && !element.matches("nav") ? [heading.textContent!.trim()] : [];
   }));
   testInfo.annotations.push({ type: "page order", description: order.join(" > ") });
-  expect(order).toEqual(["Your collection", "Build your stack", "My collection", "Add a tool", claimed ? "Your page address" : "Choose your handle", "Choose what to share", "Bring in supporting context", "Download your data"]);
+  // The seeded cards have a line but no level, so the walkthrough offers itself right after the stack.
+  expect(order).toEqual(["Your collection", "Build your stack", "Go through your tools", "My collection", "Add a tool", claimed ? "Your page address" : "Choose your handle", "Choose what to share", "Bring in supporting context", "Download your data"]);
   await expect(page.locator(".collection-navigation a")).toHaveText(["Build your stack", "Collection", "Add a tool", "Your handle", "Sharing", "Sources"]);
   const identity = page.locator("#collection-profile");
   if (claimed) {

@@ -48,17 +48,17 @@ No two agents working at the same time edit the same file. The lead owns the sha
 
 ### Phase A: no robotic text, ship-ready main
 
-- [ ] A1 Share skips cards with no headline and names them; no placeholder goes public; system text removed
-- [ ] A2 Suggested first line: pure function, prefilled and marked as a suggestion, tested per level
-- [ ] A3 Land #226, #162, #186 on main after re-review
-- [ ] A4 Find why the GitHub card stopped refreshing (#175) and fix it, or say what the owner must check
-- [ ] A5 Real validation messages (#105) and an error boundary (#104)
+- [x] A1 Share skips cards with no headline and names them; no placeholder goes public; system text removed
+- [x] A2 Suggested first line: pure function, prefilled and marked as a suggestion, tested per level
+- [x] A3 Land #226, #162, #186 on main after re-review
+- [x] A4 Find why the GitHub card stopped refreshing (#175) and fix it, or say what the owner must check (diagnosed; a dead token now reads as "Reconnect GitHub"; the lasting fix is the owner's decision)
+- [x] A5 Real validation messages (#105) and an error boundary (#104)
 
 ### Phase B: one clear first run
 
-- [ ] B1 Reserve `search`, `tools`, `people`, `explore`, `app`, `about` (#222); read-only check for taken ones
-- [ ] B2 Onboarding order: sign in, build your stack, handle asked right before sharing, sources below; checked at 390px
-- [ ] B3 Text-first walkthrough, one tool per screen
+- [x] B1 Reserve `search`, `tools`, `people`, `explore`, `app`, `about` (#222); read-only check for taken ones
+- [x] B2 Onboarding order: sign in, build your stack, handle asked right before sharing, sources below; checked at 390px
+- [x] B3 Text-first walkthrough, one tool per screen
 
 ### Phase C: search people and tools
 
@@ -69,23 +69,30 @@ No two agents working at the same time edit the same file. The lead owns the sha
 
 ### Phase D: drift fixes and the option B hero
 
-- [ ] D1 Hero: "Every tool you've used counts."
-- [ ] D2 One meaning each for respect and props
-- [ ] D3 A stopped or paused tool in the featured examples; referral example out of the featured set
-- [ ] D4 "Tooling page" label; page and collection used consistently
-- [ ] D5 Affiliate link behind more options
+- [x] D1 Hero: "Every tool you've used counts."
+- [x] D2 One meaning each for respect and props
+- [x] D3 A stopped or paused tool in the featured examples; referral example out of the featured set
+- [x] D4 "Tooling page" label; page and collection used consistently
+- [x] D5 Affiliate link behind more options
 - [x] D6 Browse section points at `/search`
-- [ ] D7 Phone nav, Start button, tab scroll cue, About marker contrast
+- [x] D7 Phone nav, Start button, tab scroll cue, About marker contrast
 
 ### Phase E: public ready repo
 
-- [ ] README
-- [ ] Secrets sweep of full history, reported
-- [ ] Stale docs fixed; `docs/acceptance/second-user.md` filled
-- [ ] `.gitignore`, dead code, dependency audit
-- [ ] Remote branches listed against main
-- [ ] `AGENTS.md` says what we do now
+- [x] README
+- [x] Secrets sweep of full history, reported
+- [x] Stale docs fixed; `docs/acceptance/second-user.md` filled
+- [x] `.gitignore`, dead code, dependency audit
+- [x] Remote branches listed against main
+- [x] `AGENTS.md` says what we do now
 
 ## Log
 
 - 2026-11-17: plan written.
+- 2026-11-17: groundwork merged as PR #227 (`6ae1fcd`): B1 reserved handles, the plan and the two source documents, the sign-up wording, and #226, #162 and #186 landed (A3).
+- 2026-11-17: Phase D merged as PR #228 (`bd46ca9`): the option B hero, one meaning each for respect and props, a stopped tool in the featured examples, "tooling page".
+- 2026-11-17: Phase A merged as PR #230 (`b97ca68`): no placeholder or app-written line goes public, the suggested first line, real error messages and error boundaries, and the GitHub refresh diagnosis.
+- 2026-11-17: Phase E merged as PR #229 (`6c477a2`): dependency fixes, README, stale docs, the audit in `docs/verification/2026-11-17-public-ready-audit.md`, and this pass's rules in `AGENTS.md`.
+- 2026-11-17: Phase B merged as PR #231 (`e75966f`): the stack-first order (B2), the affiliate option behind More options (D5), and the phone fixes (D7).
+- 2026-11-17: Phase C merged as PR #233 (`5c14098`): search for people and tools, a page per tool, the search listing switch, and the homepage browse section (D6).
+- 2026-11-17: the walkthrough (B3) is PR #232, the last of the pass.

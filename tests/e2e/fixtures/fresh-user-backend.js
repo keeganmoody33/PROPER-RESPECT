@@ -68,7 +68,8 @@ const mutations = {
       const { product, website } = stackProduct(pick);
       const existing = cards.find(card => card.product.slug === product.slug);
       if (existing && existing.prop.visibility !== "DRAFT") return { propId: existing.prop._id, productName: product.name, outcome: "UNCHANGED" };
-      const prop = { ...(existing?.prop ?? { _id: `stack-${product.slug}`, _creationTime: 1, userId: state.user._id, productId: product._id, headline: "", note: "" }),
+      // Like the server, only a record this save creates is marked as one the owner added.
+      const prop = { ...(existing?.prop ?? { _id: `stack-${product.slug}`, _creationTime: 1, userId: state.user._id, productId: product._id, headline: "", note: "", ownerEntered: true }),
         status: pick.status, level: pick.level, visibility: "PRIVATE", confirmedAt: "2026-11-12T12:00:00Z", relationshipVersion: 1, goTo: false };
       const card = { product, prop, links: website ? [{ type: "CANONICAL", url: website, label: `Open ${product.name}`, isPrimary: true }] : [], claims: [], previousStatuses: [], isPublishedAtCurrentHandle: false };
       cards = existing ? cards.map(item => item === existing ? card : item) : [...cards, card];
@@ -104,10 +105,20 @@ const mutations = {
     record("savePrivately", args);
     const card = state.cards.find(card => card.prop._id === args.propId);
     if (!card || args.expectedVersion !== (card.prop.relationshipVersion ?? 0)) throw new Error("Stale fixture relationship.");
-    const { status, level, goTo, headline, note, startedAt, supportingUrl } = args;
+    const { status, level, goTo, headline, note, uses, credit, startedAt, supportingUrl } = args;
     const version = args.expectedVersion + 1;
-    retain({ ...state, history: [...(state.history ?? []), { _id: `event-${args.propId}-${version}`, propId: args.propId, recordedAt: new Date().toISOString(), before: { ...card.prop, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT" }, after: { status, level, goTo, headline, note, startedAt, supportingUrl } }], cards: state.cards.map(item => item === card ? { ...item, prop: { ...item.prop, status, level, goTo, headline, note, startedAt, supportingUrl, relationshipVersion: version, confirmedAt: "2026-09-22T12:00:00Z", visibility: "PRIVATE" } } : item) });
+    retain({ ...state, history: [...(state.history ?? []), { _id: `event-${args.propId}-${version}`, propId: args.propId, recordedAt: new Date().toISOString(), before: { ...card.prop, confirmed: Boolean(card.prop.confirmedAt) || card.prop.visibility !== "DRAFT" }, after: { status, level, goTo, headline, note, uses, credit, startedAt, supportingUrl } }], cards: state.cards.map(item => item === card ? { ...item, prop: { ...item.prop, status, level, goTo, headline, note, uses, credit, startedAt, supportingUrl, relationshipVersion: version, confirmedAt: "2026-09-22T12:00:00Z", visibility: "PRIVATE" } } : item) });
     return { version, duplicate: false };
+  },
+  // Never used it: the server removes a bare record; this fixture's records have no evidence attached.
+  "inventory:removeNeverUsed": async args => {
+    record("removeNeverUsed", args);
+    const card = state.cards.find(card => card.prop._id === args.propId);
+    if (!card) return { removed: false };
+    if ((card.prop.relationshipVersion ?? 0) !== args.expectedVersion) throw new Error("This relationship changed. Reload its saved decisions before trying again.");
+    if (card.prop.visibility === "PUBLIC" || card.prop.activity || card.prop.fixtureAttached) throw new Error("This tool has evidence or a published card attached, so it stays in your collection.");
+    retain({ ...state, cards: state.cards.filter(item => item !== card) });
+    return { removed: true };
   },
   "retainedEvidence:importMeasurements": async args => {
     record("importMeasurements", { expectedSource: args.expectedSource });

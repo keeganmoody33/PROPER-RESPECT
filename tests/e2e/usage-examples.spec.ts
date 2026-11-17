@@ -194,6 +194,8 @@ const VIEWPORT_HEIGHT = 1000;
 
 // Its own test, so the audit's twenty-odd axe runs don't share the slideshow test's time with its checks.
 test(`every example card, front and back, passes axe at ${DESKTOP_WIDTH}px`, async ({ page }) => {
+  // Fourteen cards and their backs, each with its own axe run: 18 to 27 seconds on a CI runner, past 30 on a slow one.
+  test.slow();
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");

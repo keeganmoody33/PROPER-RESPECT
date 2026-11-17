@@ -7,7 +7,7 @@ import {
   intakeRelationship,
   normalizeProductName,
   resolveTypedProduct,
-  STACK_BATCH_RECEIPT_PREFIX,
+  REMOVED_RECEIPT, REMOVED_RECEIPT_MESSAGE, STACK_BATCH_RECEIPT_PREFIX,
   type IntakeOutcome,
   type ResolvedProduct,
 } from "./manualProducts";
@@ -75,6 +75,7 @@ async function replay(ctx: MutationCtx, user: Doc<"users">, operationId: string,
       .gte("operationId", itemReceiptPrefix(operationId)).lt("operationId", `${STACK_BATCH_RECEIPT_PREFIX}${operationId};`))
     .take(MAX_STACK_PICKS + 1);
   if (rows.length === 0) return null;
+  if (rows.some(row => row.requestJson === REMOVED_RECEIPT)) throw userError(REMOVED_RECEIPT_MESSAGE);
   const receipts = rows.map(row => ({ row, receipt: receiptSchema.safeParse(JSON.parse(row.requestJson)).data }));
   const matching = receipts.filter((entry): entry is { row: Doc<"manualProductIntakes">; receipt: Receipt } => entry.receipt?.requestHash === requestHash);
   if (matching.length !== rows.length || rows.length !== pickCount) throw userError("This save was already used with different picks.");

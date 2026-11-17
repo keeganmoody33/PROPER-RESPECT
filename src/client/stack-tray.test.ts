@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { addedMessage, directoryNote, emptyTray, TRAY_LEVELS, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
+import { addedMessage, directoryNote, emptyTray, TRAY_LEVELS, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, savedNextStep, TRAY_LIMIT, TYPED_NAME_MAX, trayPicks, trayReducer, type Tray, type TrayEntry } from "./stack-tray";
 import { resolveTypedPick } from "./typed-pick";
 
 const windsurf: TrayEntry = { slug: "windsurf", name: "Windsurf", domain: "windsurf.com" };
@@ -192,4 +192,12 @@ test("the tray offers the seven levels cold to hot, each with its definition", (
     ["TESTING", "Testing"], ["WEEKLY", "Weekly"], ["DAILY", "Daily"],
   ]);
   expect(TRAY_LEVELS.every(option => option.definition.length > 0)).toBe(true);
+});
+
+test("after a save the next step is the walkthrough when a tool was added, and sharing when nothing was", () => {
+  // A new or confirmed tool has no line yet, so the walkthrough has it waiting.
+  expect(savedNextStep({ saved: 2, created: 1, confirmed: 0, unchanged: 1 })).toEqual({ href: "#walkthrough", label: "Next: go through your tools one at a time" });
+  expect(savedNextStep({ saved: 1, created: 0, confirmed: 1, unchanged: 0 })).toEqual({ href: "#walkthrough", label: "Next: go through your tools one at a time" });
+  // Nothing new: the walkthrough may have nothing waiting and no section on the page, so the link goes to sharing.
+  expect(savedNextStep({ saved: 2, created: 0, confirmed: 0, unchanged: 2 })).toEqual({ href: "#share-all", label: "Next: share your stack" });
 });

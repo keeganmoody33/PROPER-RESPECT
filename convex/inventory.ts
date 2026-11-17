@@ -8,13 +8,14 @@ import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
 import { readPublishedProfile } from "./publicProfiles";
 import { productUsesValidator, propsCreditValidator, relationshipLevelValidator, statusValidator } from "./validators";
-import { isRelationshipConfirmed, RELATIONSHIP_EDIT_FALLBACK, relationshipEditSchema } from "../src/domain/inventory";
+import { isRelationshipConfirmed, NEVER_USED_KEPT, RELATIONSHIP_EDIT_FALLBACK, relationshipEditSchema } from "../src/domain/inventory";
 import { normalizeUses } from "../src/domain/product-uses";
 import { normalizeCredit } from "../src/domain/props-credit";
 import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
 import { privateCardPrimaryLink } from "../src/domain/product-destination";
 import type { RankedAccountEvidence } from "../src/domain/account-evidence";
 import { parseOrUserError, userError } from "../src/domain/user-error";
+import { removedReceipt } from "./manualProducts";
 
 async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   const user = await requireUser(ctx);
@@ -50,6 +51,11 @@ async function evidenceEntry(ctx: QueryCtx, userId: Id<"users">, rawEvidenceId: 
     ...(raw.storageId ? { uploadedFile: { attribution: uploadAttributionStatus(raw.uploadAttribution), filename: raw.filename, mimeType: raw.mimeType, byteSize: raw.byteSize } } : {}) };
 }
 
+// manualProducts.resolveTypedProduct gives a tool added by name this prefix and a slug that only its owner has.
+const OWNER_PRODUCT_PREFIX = "manual-";
+// A save or a removal names the version its screen showed; one decided on an older version is refused.
+const STALE_RELATIONSHIP = "This relationship changed. Reload its saved decisions before trying again.";
+
 export const save = mutation({
   args: {
     propId: v.id("props"), operationId: v.string(), expectedVersion: v.number(),
@@ -70,7 +76,7 @@ export const save = mutation({
       if (previous.requestJson !== requestJson) throw userError("This save operation was already used with different decisions.");
       return { version: previous.version, duplicate: true };
     }
-    if ((prop.relationshipVersion ?? 0) !== args.expectedVersion) throw userError("This relationship changed. Reload its saved decisions before trying again.");
+    if ((prop.relationshipVersion ?? 0) !== args.expectedVersion) throw userError(STALE_RELATIONSHIP);
     const product = await ctx.db.get(prop.productId);
     const uses = normalizeUses(product?.slug ?? "", edit.uses);
     if (!uses.ok) throw userError(uses.message);
@@ -109,6 +115,62 @@ export async function approvePendingDraftImports(ctx: MutationCtx, prop: Doc<"pr
   const drafts = await ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", prop.userId).eq("suggestedProductSlug", product.slug)).collect();
   for (const draft of drafts) if (draft.resultPropId === prop._id && draft.status === "PENDING") await ctx.db.patch(draft._id, { status: "APPROVED" });
 }
+
+
+// Never used it (the walkthrough, B3) removes a bare record and keeps nothing about it. A record that evidence, a
+// measurement, a refresh or the page relies on is refused, so nothing they point at goes missing.
+export const removeNeverUsed = mutation({
+  args: { propId: v.id("props"), expectedVersion: v.number() },
+  handler: async (ctx, { propId, expectedVersion }) => {
+    const user = await requireUser(ctx);
+    const prop = await ctx.db.get(propId);
+    // Already removed: a second tap changes nothing.
+    if (!prop) return { removed: false };
+    if (prop.userId !== user._id) throw userError("Relationship unavailable.");
+    // The answer was given on a screen that showed this version. A save since then, from another tab, is kept.
+    if ((prop.relationshipVersion ?? 0) !== expectedVersion) throw userError(STALE_RELATIONSHIP);
+    const product = await ctx.db.get(prop.productId);
+    const [page, drafts, ...attached] = await Promise.all([
+      ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique(),
+      product ? ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", user._id).eq("suggestedProductSlug", product.slug)).collect() : [],
+      ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", propId)).first(),
+      ctx.db.query("usageSignals").withIndex("by_prop_metric", q => q.eq("propId", propId)).first(),
+      ctx.db.query("metricSubscriptions").withIndex("by_prop_metric", q => q.eq("propId", propId)).first(),
+      ctx.db.query("artifacts").withIndex("by_prop", q => q.eq("propId", propId)).first(),
+      ctx.db.query("claimReviews").withIndex("by_prop", q => q.eq("propId", propId)).first(),
+      ctx.db.query("measurementReviews").withIndex("by_prop", q => q.eq("propId", propId)).first(),
+      ctx.db.query("rawEvidence").withIndex("by_measurement_prop", q => q.eq("measurementPropId", propId)).first(),
+    ]);
+    if (prop.visibility === "PUBLIC" || prop.activity || prop.activityEvidenceId || page?.cardPropIds?.includes(propId)
+      || attached.some(Boolean) || drafts.some(draft => draft.evidenceResolution?.targetPropId === propId)) throw userError(NEVER_USED_KEPT);
+    // Its discovery row goes too: discovery and the GitHub connection both stop on a row that names a missing record.
+    // Its save receipts stay as markers with nothing about the tool in them: a retry of that save is then refused,
+    // where a missing receipt would let the retry bring the tool straight back.
+    const [links, events, receipts] = await Promise.all([
+      ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
+      ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
+      ctx.db.query("manualProductIntakes").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
+    ]);
+    await Promise.all([
+      ...[...links, ...events, ...drafts.filter(draft => draft.resultPropId === propId)].map(row => ctx.db.delete(row._id)),
+      ...receipts.map(row => ctx.db.patch(row._id, removedReceipt(row))),
+    ]);
+    await ctx.db.delete(propId);
+    // A tool added by name has a product record of its own, holding the name and website its owner typed. It goes
+    // once nothing else uses it. A catalog product is shared, so it stays.
+    if (product?.slug.startsWith(OWNER_PRODUCT_PREFIX) && !await ctx.db.query("props").withIndex("by_product", q => q.eq("productId", product._id)).first()) {
+      // Brand data fetched for its website is kept against the product, with the provider's response. It goes too, so
+      // the hourly refresh stops visiting a product that is gone. A fetch still in flight finds no job and is dropped.
+      const [jobs, snapshots] = await Promise.all([
+        ctx.db.query("productBrandJobs").withIndex("by_product", q => q.eq("productId", product._id)).collect(),
+        ctx.db.query("productBrandSnapshots").withIndex("by_product", q => q.eq("productId", product._id)).collect(),
+      ]);
+      await Promise.all([...jobs, ...snapshots].map(row => ctx.db.delete(row._id)));
+      await ctx.db.delete(product._id);
+    }
+    return { removed: true };
+  },
+});
 
 export const list = query({
   args: { paginationOpts: paginationOptsValidator, includeAccountEvidence: v.optional(v.boolean()) },

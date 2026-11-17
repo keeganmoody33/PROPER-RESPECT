@@ -31,6 +31,17 @@ type ManualProductArgs = ObjectType<typeof addManualProductArgs>;
 /** Batch stack saves key their per-item receipts under this prefix; a single add may not use it. */
 export const STACK_BATCH_RECEIPT_PREFIX = "stack-batch:";
 
+// A receipt whose tool was removed with Never used it. The operation stays known, so a retry of it is refused and
+// never brings the tool back by itself; nothing about the tool stays in the row.
+export const REMOVED_RECEIPT = JSON.stringify({ removed: true });
+export const REMOVED_RECEIPT_MESSAGE = "A tool from this save was removed from your collection since. Save it again to bring it back.";
+
+/** What a receipt becomes when its tool is removed. A stack receipt's key ends in the tool's slug, so that part goes too. */
+export function removedReceipt(row: { _id: string; operationId: string }) {
+  const stackPrefix = row.operationId.startsWith(STACK_BATCH_RECEIPT_PREFIX) ? row.operationId.slice(0, row.operationId.lastIndexOf(":") + 1) : undefined;
+  return { requestJson: REMOVED_RECEIPT, ...(stackPrefix ? { operationId: `${stackPrefix}removed-${row._id}` } : {}) };
+}
+
 export function normalizeProductName(input: string): string {
   const name = input.trim().replace(/\s+/g, " ");
   if (!name || name.length > 160) throw userError("Enter a product name of 160 characters or fewer.");
@@ -150,6 +161,7 @@ export async function addManualProductHandler(ctx: MutationCtx, args: ManualProd
   const previous = await ctx.db.query("manualProductIntakes")
     .withIndex("by_user_operation", q => q.eq("userId", user._id).eq("operationId", operationId)).unique();
   if (previous) {
+    if (previous.requestJson === REMOVED_RECEIPT) throw userError(REMOVED_RECEIPT_MESSAGE);
     if (previous.requestJson !== requestJson) throw userError("This add-product operation was already used with different details.");
     const prop = await ctx.db.get(previous.propId);
     if (!prop || prop.userId !== user._id) throw userError("The previously added relationship is unavailable.");

@@ -86,7 +86,9 @@ export default defineSchema({
     requestJson: v.string(),
     propId: v.id("props"),
     createdAt: v.string(),
-  }).index("by_user_operation", ["userId", "operationId"]),
+  }).index("by_user_operation", ["userId", "operationId"])
+    // Never used it removes a record's receipts with it (inventory.removeNeverUsed).
+    .index("by_prop", ["propId"]),
 
   props: defineTable({
     seedKey: v.optional(v.string()),
