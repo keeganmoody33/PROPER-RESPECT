@@ -952,3 +952,11 @@ test("publishing another card leaves a level the registry no longer knows on the
   const page = await t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
   expect(page?.cards.map(card => card.level)).toEqual([undefined, undefined]);
 });
+
+// Convex production redacts a plain Error; only a ConvexError's data reaches the person.
+test("publishing unsaved changes is refused with a ConvexError carrying the message as data", async () => {
+  const { t, owner, propIds: [a], selection } = await fixture(1);
+  await t.run(ctx => ctx.db.patch(a, { level: "OCCASIONAL" }));
+  await expect(owner.query(api.onboarding.previewPublication, { selections: [await selection(a, { level: "DAILY" })] }))
+    .rejects.toMatchObject({ name: "ConvexError", data: "Save relationship changes privately before publishing." });
+});

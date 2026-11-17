@@ -40,6 +40,10 @@ import {
   claimVerdictValidator,
   usageLinkLabelValidator,
 } from "./validators";
+import { parseOrUserError, userError } from "../src/domain/user-error";
+
+const HANDLE_RULE = "Use up to 39 lowercase letters, numbers and hyphens, starting and ending with a letter or number.";
+const COST_RULE = "Check the cost's amount, currency and date, then preview again.";
 
 function pendingHandle(subject: string) {
   const suffix = subject.toLowerCase().replace(/[^a-z0-9]/g, "").slice(-24);
@@ -67,7 +71,7 @@ async function availablePendingHandle(ctx: MutationCtx, subject: string) {
       .withIndex("by_handle", q => q.eq("handle", handle)).first();
     if (!publication) return handle;
   }
-  throw new Error("An available account handle could not be reserved. No account was created.");
+  throw userError("An available account handle could not be reserved. No account was created.");
 }
 
 export const ensureAccount = mutation({
@@ -114,30 +118,30 @@ export const claimHandle = mutation({
     const user = await requireUser(ctx);
     // An account that already holds a handle keeps it when it saves its identity again, even one reserved since.
     const kept = args.handle.trim().toLowerCase() === user.handle;
-    const handle = kept ? handleSchema.parse(user.handle) : claimableHandleSchema.parse(args.handle);
+    const handle = kept ? handleSchema.parse(user.handle) : parseOrUserError(claimableHandleSchema, args.handle, HANDLE_RULE);
     await consumeWriteLimit(ctx, user._id, "claimHandle");
     const displayName = args.displayName.trim(), bio = args.bio.trim();
-    if (!displayName) throw new Error("Enter a display name before saving your public identity.");
-    if (displayName.length > DISPLAY_NAME_MAX) throw new Error("Use a display name of 80 characters or fewer.");
-    if (bio.length > BIO_MAX) throw new Error("Use a bio of 500 characters or fewer.");
+    if (!displayName) throw userError("Enter a display name before saving your public identity.");
+    if (displayName.length > DISPLAY_NAME_MAX) throw userError("Use a display name of 80 characters or fewer.");
+    if (bio.length > BIO_MAX) throw userError("Use a bio of 500 characters or fewer.");
     if (await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).first()) {
-      throw new Error("That handle is reserved by an existing public profile.");
+      throw userError("That handle is reserved by an existing public profile.");
     }
     const linkFields = args.profileLinks !== undefined || args.preferredLinkUrl !== undefined
       ? validateProfileLinks(args.profileLinks ?? user.profileLinks ?? [], args.preferredLinkUrl === null ? undefined : args.preferredLinkUrl ?? user.preferredLinkUrl)
       : {};
     const owners = await ownersForHandle(ctx, handle);
     if (owners.some(owner => owner._id !== user._id)) {
-      throw new Error("That handle is already claimed.");
+      throw userError("That handle is already claimed.");
     }
 
     if (handle !== user.handle) {
       const currentPublication = await ctx.db.query("publishedProfiles")
         .withIndex("by_handle", q => q.eq("handle", user.handle)).unique();
-      if (currentPublication) throw new Error("A published handle cannot be changed here. Its public identity requires a separate owner-verified migration.");
+      if (currentPublication) throw userError("A published handle cannot be changed here. Its public identity requires a separate owner-verified migration.");
       const targetPublication = await ctx.db.query("publishedProfiles")
         .withIndex("by_handle", q => q.eq("handle", handle)).unique();
-      if (targetPublication) throw new Error("That handle already has a published profile and cannot be claimed here.");
+      if (targetPublication) throw userError("That handle already has a published profile and cannot be claimed here.");
     }
 
     const now = new Date().toISOString();
@@ -316,11 +320,11 @@ export const reviewClaim = mutation({
     const user = await requireUser(ctx);
     const prop = await ctx.db.get(args.propId);
     const raw = await ctx.db.get(args.rawEvidenceId);
-    if (!prop || prop.userId !== user._id || !raw || raw.userId !== user._id || raw.deletedAt) throw new Error("Evidence unavailable.");
+    if (!prop || prop.userId !== user._id || !raw || raw.userId !== user._id || raw.deletedAt) throw userError("Evidence unavailable.");
     if (!Number.isInteger(args.observationIndex) || args.observationIndex < 0 || !raw.observations?.[args.observationIndex]) throw new Error("Unknown observation.");
     const proof = await ctx.db.query("proofs").withIndex("by_propId_and_rawEvidenceId", q => q.eq("propId", prop._id).eq("rawEvidenceId", raw._id)).first();
-    if (!proof) throw new Error("Evidence does not support this card.");
-    if ((args.correction?.length ?? 0) > 4000) throw new Error("Correction is too long.");
+    if (!proof) throw userError("Evidence does not support this card.");
+    if ((args.correction?.length ?? 0) > 4000) throw userError("Correction is too long.");
     return await ctx.db.insert("claimReviews", { ...args, userId: user._id, reviewedAt: new Date().toISOString() });
   },
 });
@@ -330,7 +334,7 @@ export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
     await requireUser(ctx);
-    throw new Error("Reload the application to use authenticated file uploads.");
+    throw userError("Reload the application to use authenticated file uploads.");
   },
 });
 
@@ -341,7 +345,7 @@ export const beginUpload = mutation({
     const identity = await requireIdentity(ctx);
     await consumeWriteLimit(ctx, user._id, "beginUpload");
     const { mimeType } = classifyEvidenceUpload(args);
-    if ((args.vendor?.length ?? 0) > 200) throw new Error("Invalid product name.");
+    if ((args.vendor?.length ?? 0) > 200) throw userError("Invalid product name.");
     const site = process.env.CONVEX_SITE_URL;
     if (!site) throw new Error("Authenticated upload endpoint is not configured.");
     const id = await ctx.db.insert("uploadTickets", {
@@ -359,11 +363,11 @@ async function assertRetainableExistingUpload(
   existing: Doc<"rawEvidence">,
   user: Doc<"users">,
 ) {
-  if (existing.userId !== user._id || existing.deletedAt) throw new Error("Upload unavailable.");
+  if (existing.userId !== user._id || existing.deletedAt) throw userError("Upload unavailable.");
   if (!existing.uploadAttribution) return;
   const identity = await requireIdentity(ctx);
   if (existing.uploadAttribution.tokenIdentifier !== identity.tokenIdentifier) {
-    throw new Error("Upload unavailable.");
+    throw userError("Upload unavailable.");
   }
 }
 
@@ -372,11 +376,11 @@ async function ownedUploadTicket(ctx: QueryCtx | MutationCtx, ticketId: Id<"uplo
   const identity = await requireIdentity(ctx);
   const ticket = await ctx.db.get(ticketId);
   if (!ticket || ticket.userId !== user._id || ticket.tokenIdentifier !== identity.tokenIdentifier)
-    throw new Error("Upload unavailable.");
-  if (ticket.expiresAt <= Date.now() && !ticket.evidenceId) throw new Error("Upload expired. Choose the file again.");
+    throw userError("Upload unavailable.");
+  if (ticket.expiresAt <= Date.now() && !ticket.evidenceId) throw userError("Upload expired. Choose the file again.");
   if (ticket.evidenceId) {
     const evidence = await ctx.db.get(ticket.evidenceId);
-    if (!evidence || evidence.deletedAt) throw new Error("Upload unavailable.");
+    if (!evidence || evidence.deletedAt) throw userError("Upload unavailable.");
   }
   return ticket;
 }
@@ -415,7 +419,7 @@ export const retainUpload = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
-    if (args.activity) throw new Error("Upload retention cannot add measurements. Review selected observations separately.");
+    if (args.activity) throw userError("Upload retention cannot add measurements. Review selected observations separately.");
     const storage = await ctx.db.system.get(args.storageId);
     if (!storage || storage.size !== args.byteSize || normalizeUploadMime(storage.contentType ?? "") !== normalizeUploadMime(args.mimeType)) {
       throw new Error("Stored file metadata does not match this upload.");
@@ -424,15 +428,15 @@ export const retainUpload = mutation({
     if (existing) {
       await assertRetainableExistingUpload(ctx, existing, user);
       if (existing.filename !== args.filename || existing.mimeType !== args.mimeType || existing.byteSize !== args.byteSize || existing.detectedVendor !== args.vendor) {
-        throw new Error("This upload was already retained with different metadata.");
+        throw userError("This upload was already retained with different metadata.");
       }
       return existing._id;
     }
     const { sourceType } = classifyEvidenceUpload(args);
     const ticket = await ctx.db.query("uploadTickets").withIndex("by_storage", q => q.eq("storageId", args.storageId)).unique();
-    if (!ticket) throw new Error("Upload unavailable. Choose the file again through authenticated upload.");
+    if (!ticket) throw userError("Upload unavailable. Choose the file again through authenticated upload.");
     await ownedUploadTicket(ctx, ticket._id);
-    if (ticket.evidenceId || !ticket.sha256 || !ticket.receivedAt) throw new Error("Upload unavailable.");
+    if (ticket.evidenceId || !ticket.sha256 || !ticket.receivedAt) throw userError("Upload unavailable.");
     if (ticket.filename !== args.filename || ticket.mimeType !== normalizeUploadMime(args.mimeType) || ticket.byteSize !== args.byteSize || ticket.vendor !== args.vendor)
       throw new Error("Upload metadata differs from the authenticated upload.");
     const now = new Date().toISOString();
@@ -508,8 +512,9 @@ export const retainUpload = mutation({
             productId: product._id,
             status: "TESTING",
             visibility: "DRAFT",
-            headline: `${product.name}: uploaded evidence to review.`,
-            note: "This file has not been interpreted as product use. Review it before describing your relationship.",
+            // The owner writes the card's line; an upload writes none for them.
+            headline: "",
+            note: "",
           });
           prop = (await ctx.db.get(propId))!;
           await ctx.db.insert("links", {
@@ -572,7 +577,7 @@ export const deleteEvidence = mutation({
     const user = await requireUser(ctx);
     const evidence = await ctx.db.get(evidenceId);
     if (!evidence || evidence.userId !== user._id) {
-      throw new Error("Evidence not found.");
+      throw userError("Evidence not found.");
     }
     if (evidence.storageId) {
       await ctx.storage.delete(evidence.storageId);
@@ -631,11 +636,11 @@ type PublicationChange =
 
 function parsePublicationChange(args: { selections: PublicationSelection[]; removeAllCards?: boolean; shareAllConfirmed?: boolean }): PublicationChange {
   if (args.shareAllConfirmed === true) {
-    if (args.selections.length > 0 || args.removeAllCards === true) throw new Error("Share all confirmed cards on its own, without other card changes.");
+    if (args.selections.length > 0 || args.removeAllCards === true) throw userError("Share all confirmed cards on its own, without other card changes.");
     return { kind: "SHARE_ALL_CONFIRMED" };
   }
   if (args.removeAllCards === true) {
-    if (args.selections.length > 0) throw new Error("Remove all cards on its own, without other card changes.");
+    if (args.selections.length > 0) throw userError("Remove all cards on its own, without other card changes.");
     return { kind: "REMOVE_ALL" };
   }
   return { kind: "SELECTED", selections: args.selections };
@@ -674,13 +679,13 @@ const PUBLISHED_PROFILE_MAX_BYTES = 900_000;
 // stay public. It can't be combined with other changes.
 async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users">, change: PublicationChange) {
   const owners = await ownersForHandle(ctx, user.handle);
-  if (owners.length !== 1 || owners[0]._id !== user._id) throw new Error("Publication requires the unique owner of this handle. Resolve account ownership before sharing.");
+  if (owners.length !== 1 || owners[0]._id !== user._id) throw userError("Publication requires the unique owner of this handle. Resolve account ownership before sharing.");
   // Older rows were saved before these caps, so every publish checks them.
-  if (user.displayName.length > DISPLAY_NAME_MAX) throw new Error("Shorten your display name to 80 characters or fewer before sharing.");
-  if (user.bio.length > BIO_MAX) throw new Error("Shorten your bio to 500 characters or fewer before sharing.");
+  if (user.displayName.length > DISPLAY_NAME_MAX) throw userError("Shorten your display name to 80 characters or fewer before sharing.");
+  if (user.bio.length > BIO_MAX) throw userError("Shorten your bio to 500 characters or fewer before sharing.");
   if (change.kind === "SHARE_ALL_CONFIRMED" &&
     !hasClaimedPublicIdentity(await ctx.db.query("sites").withIndex("by_owner", q => q.eq("ownerId", user._id)).unique(), user)) {
-    throw new Error("Claim your public handle before sharing your stack.");
+    throw userError("Claim your public handle before sharing your stack.");
   }
   const removeAllCards = change.kind === "REMOVE_ALL";
   const allProps = await ctx.db.query("props").withIndex("by_user", q => q.eq("userId", user._id)).collect();
@@ -690,15 +695,15 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     const subscriptions = await ctx.db.query("metricSubscriptions").withIndex("by_user", q => q.eq("userId", user._id)).collect();
     const writes = allProps.filter(prop => prop.visibility === "PUBLIC").length + subscriptions.filter(subscription => !subscription.revokedAt).length;
     if (writes > REMOVE_ALL_MAX_WRITES) {
-      throw new Error("Unpublish all handles up to 1,000 public cards and daily refreshes at once. Remove cards 100 at a time in Choose what to share, then try again, or ask through the contact page.");
+      throw userError("Unpublish all handles up to 1,000 public cards and daily refreshes at once. Remove cards 100 at a time in Choose what to share, then try again, or ask through the contact page.");
     }
   }
   const published = await ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique();
   if (removeAllCards) {
     // Remove-all only takes cards down; it must never create a first publication.
-    if (!published) throw new Error("There is no published page to remove cards from.");
+    if (!published) throw userError("There is no published page to remove cards from.");
     // Publishing is refused during a takedown, so say so before the owner approves.
-    if (published.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
+    if (published.takenDownAt) throw userError("This profile is under review. Contact 33@lecturesfrom.com.");
   }
   const previousPropIds = published ? await resolvePublishedCardPropIds(ctx, published, user._id, allProps) : [];
   const products = await Promise.all([...new Set(allProps.map(prop => prop.productId))].map(id => ctx.db.get(id)));
@@ -707,24 +712,24 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   const shareAll = change.kind === "SHARE_ALL_CONFIRMED"
     ? await shareAllFromSavedState(ctx, allProps, productById, new Set(previousPropIds), unresolvedSlugs) : null;
   const selections: PublicationSelection[] = change.kind === "SELECTED" ? change.selections : shareAll?.selections ?? [];
-  if (selections.length > 100) throw new Error("Select at most 100 relationships to change.");
+  if (selections.length > 100) throw userError("Select at most 100 relationships to change.");
   const selectedIds = new Set(selections.map(selection => selection.propId));
-  if (selectedIds.size !== selections.length) throw new Error("Select each relationship only once.");
+  if (selectedIds.size !== selections.length) throw userError("Select each relationship only once.");
   const refreshAccounts: (GithubRefreshBinding & { connectorId: Id<"connectorAccounts">; accountLabel: string })[] = [];
   for (const selection of selections) {
     const prop = propsById.get(selection.propId);
-    if (!prop) throw new Error("Cannot publish another user's product.");
+    if (!prop) throw userError("Cannot publish another user's product.");
     if (selection.publish || prop.visibility === "PUBLIC") {
-      if ((selection.expectedRelationshipVersion ?? 0) !== (prop.relationshipVersion ?? 0)) throw new Error("This relationship changed. Reload before changing publication.");
+      if ((selection.expectedRelationshipVersion ?? 0) !== (prop.relationshipVersion ?? 0)) throw userError("This relationship changed. Reload before changing publication.");
     }
     if (!selection.publish) continue;
-    if (prop.visibility === "DRAFT") throw new Error("Confirm and save this relationship privately before publishing.");
-    if (selection.primaryLink && !isHttpUrl(selection.primaryLink.url)) throw new Error("Use an http or https link without embedded credentials.");
-    if (selection.primaryLink && selection.primaryLink.label.length > LINK_LABEL_MAX) throw new Error("Use a link label of 200 characters or fewer.");
-    if (selection.primaryLink && selection.primaryLink.url.length > PUBLISHED_URL_MAX) throw new Error("Use a link of 2,048 characters or fewer.");
+    if (prop.visibility === "DRAFT") throw userError("Confirm and save this relationship privately before publishing.");
+    if (selection.primaryLink && !isHttpUrl(selection.primaryLink.url)) throw userError("Use an http or https link without embedded credentials.");
+    if (selection.primaryLink && selection.primaryLink.label.length > LINK_LABEL_MAX) throw userError("Use a link label of 200 characters or fewer.");
+    if (selection.primaryLink && selection.primaryLink.url.length > PUBLISHED_URL_MAX) throw userError("Use a link of 2,048 characters or fewer.");
     if (selection.status !== prop.status || selection.level !== prop.level || selection.headline.trim() !== prop.headline ||
         selection.note.trim() !== prop.note || selection.startedAt !== prop.startedAt) {
-      throw new Error("Save relationship changes privately before publishing.");
+      throw userError("Save relationship changes privately before publishing.");
     }
     if (selection.activity && canonicalJson(selection.activity) !== canonicalJson(prop.activity)) {
       // A refresh updates only the public card of a privately saved relationship,
@@ -735,34 +740,34 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
         await hasActiveGithubRefresh(ctx, user._id, prop._id) &&
         (published?.profile.cards ?? []).some((card, index) =>
           previousPropIds[index] === prop._id && canonicalJson(card.activity) === canonicalJson(activity));
-      if (!carriesRefreshedCalendar) throw new Error("Publish only the supporting activity already saved on this relationship.");
+      if (!carriesRefreshedCalendar) throw userError("Publish only the supporting activity already saved on this relationship.");
     }
     if (selection.usageLinkUrl !== undefined) {
-      if (selection.usageLinkUrl !== prop.supportingUrl) throw new Error("Save the link privately before publishing it.");
-      if (!usageLinkUrlSchema.safeParse(selection.usageLinkUrl).success) throw new Error("Use an https link without embedded credentials.");
+      if (selection.usageLinkUrl !== prop.supportingUrl) throw userError("Save the link privately before publishing it.");
+      if (!usageLinkUrlSchema.safeParse(selection.usageLinkUrl).success) throw userError("Use an https link without embedded credentials.");
     }
     // A checked refresh for published activity must name its connection and metric.
     // Withholding the activity instead stops the refresh, as unchecking does.
     if (selection.autoRefresh && selection.activity && (!selection.connectorId || !selection.metricKey)) {
-      throw new Error("A refresh needs its connected account and measurement. Reload and review this card again.");
+      throw userError("A refresh needs its connected account and measurement. Reload and review this card again.");
     }
     if (selection.autoRefresh && selection.connectorId && selection.metricKey && selection.activity) {
       const provider = REFRESH_METRIC_PROVIDERS[selection.metricKey];
-      if (!provider) throw new Error("This measurement can't refresh automatically.");
+      if (!provider) throw userError("This measurement can't refresh automatically.");
       const connector = await ctx.db.get(selection.connectorId);
       if (!connector || connector.userId !== user._id || connector.status === "REVOKED" || connector.provider !== provider) {
-        throw new Error("A connected account is required for refresh.");
+        throw userError("A connected account is required for refresh.");
       }
       // The same connector states the scheduled GitHub refresh accepts (convex/connectors.ts).
       const product = provider === "GITHUB" ? await ctx.db.get(prop.productId) : null;
       if (provider === "GITHUB" && (product?.slug !== "github" || connector.attributionScope !== "PERSONAL" ||
           !["CONNECTED", "ERROR"].includes(connector.status) ||
           selection.activity.kind !== "contributionCalendar" || selection.activity.attributionScope !== "PERSONAL")) {
-        throw new Error("A daily GitHub refresh needs your personal GitHub connection and its personal contribution calendar.");
+        throw userError("A daily GitHub refresh needs your personal GitHub connection and its personal contribution calendar.");
       }
       if (provider === "GITHUB") {
         if (!validGithubRefreshBinding(connector.githubBinding)) {
-          throw new Error("Reconnect GitHub before approving a daily refresh, then open a fresh sharing preview.");
+          throw userError("Reconnect GitHub before approving a daily refresh, then open a fresh sharing preview.");
         }
         refreshAccounts.push({ connectorId: connector._id, accountLabel: connector.accountLabel, ...connector.githubBinding });
       }
@@ -772,7 +777,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
         const submitted = Date.parse(selection.activity.capturedAt);
         const newerPublic = (published?.profile.cards ?? []).some((card, index) => previousPropIds[index] === prop._id &&
           card.activity?.kind === "contributionCalendar" && Date.parse(card.activity.capturedAt) > submitted);
-        if (newerPublic) throw new Error("This card's public GitHub calendar refreshed since you reviewed it. Reload to publish the newer calendar.");
+        if (newerPublic) throw userError("This card's public GitHub calendar refreshed since you reviewed it. Reload to publish the newer calendar.");
       }
     }
   }
@@ -784,7 +789,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     if (propId) return selectedIds.has(propId) ? [] : [{ card, propId }];
     if (selectedProducts.has(card.product.slug)) {
       const sameProductProps = allProps.filter(prop => productById.get(prop.productId)?.slug === card.product.slug);
-      if (!sameProductProps.every(prop => selectedIds.has(prop._id))) throw new Error(`This older publication cannot distinguish the relationships for ${card.product.name}. Select all of its relationships together to replace or remove those cards.`);
+      if (!sameProductProps.every(prop => selectedIds.has(prop._id))) throw userError(`This older publication cannot distinguish the relationships for ${card.product.name}. Select all of its relationships together to replace or remove those cards.`);
       return [];
     }
     return [{ card, propId: null }];
@@ -798,10 +803,10 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   for (const { card } of preserved) {
     const link = card.primaryLink;
     if (link && !isHttpUrl(link.url)) {
-      throw new Error(`The shared ${card.product.name} card links somewhere other than a plain http or https address. Include it in this change to update or remove it.`);
+      throw userError(`The shared ${card.product.name} card links somewhere other than a plain http or https address. Include it in this change to update or remove it.`);
     }
     if (link && (link.label.length > LINK_LABEL_MAX || link.url.length > PUBLISHED_URL_MAX)) {
-      throw new Error(`The shared ${card.product.name} card has a link over the length limit. Include it in this change to update or remove it.`);
+      throw userError(`The shared ${card.product.name} card has a link over the length limit. Include it in this change to update or remove it.`);
     }
   }
   // There's no avatar editor, so a stored avatar that isn't http or https, or is over-long, is left off rather than blocking every publish.
@@ -830,7 +835,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   const replacements = selections.filter(selection => selection.publish).flatMap(selection => {
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);
-    if (!product) throw new Error("The product for this relationship is unavailable.");
+    if (!product) throw userError("The product for this relationship is unavailable.");
     const projection = measurementProjection.get(prop._id);
     const measurements = projection
       ? projectPublishedMeasurements(selection.publish ? "PUBLIC" : "PRIVATE", projection.retained, projection.publishedIds)
@@ -838,7 +843,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     const cards = projectPublicProfile({ user: profileUser, props: [{
       visibility: "PUBLIC", status: prop.status, level: prop.level, goTo: prop.goTo, headline: prop.headline, uses: prop.uses, credit: credits.get(prop._id), note: prop.note,
       startedAt: prop.startedAt, activity: selection.activity, measurements,
-      cost: selection.costVisibility !== undefined ? (selection.cost === undefined ? undefined : costSchema.parse(selection.cost)) : prop.cost,
+      cost: selection.costVisibility !== undefined ? (selection.cost === undefined ? undefined : parseOrUserError(costSchema, selection.cost, COST_RULE)) : prop.cost,
       costVisibility: selection.costVisibility ?? prop.costVisibility,
       product: { name: product.name, slug: product.slug, domain: product.domain, description: product.description, logoUrl: product.logoUrl },
       links: selection.primaryLink ? [{ ...selection.primaryLink, isPrimary: true }] : [],
@@ -859,7 +864,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   }) };
   const cardPropIds = cardsWithIdentity.map(entry => entry.propId);
   if (new TextEncoder().encode(JSON.stringify({ profile, cardPropIds })).length > PUBLISHED_PROFILE_MAX_BYTES) {
-    throw new Error("This page is too large to publish. Share fewer cards or shorten long notes, then preview again.");
+    throw userError("This page is too large to publish. Share fewer cards or shorten long notes, then preview again.");
   }
   // Match public reading's current retained presentation, independently of evidence.
   const displayCards = await Promise.all(profile.cards.map(async ({ uses: storedUses, credit: storedCredit, ...rest }) => {
@@ -892,7 +897,7 @@ async function publishedCredit(stored: Doc<"props">["credit"], productName: stri
   const credit = listedCredit(saved);
   if (!credit) {
     const platform = CREDIT_PLATFORMS.find(option => option.id === saved.platform)?.label ?? "its platform";
-    throw new Error(`Who put you on ${productName} no longer fits ${platform}'s handle rule. Edit it in your collection, then preview again.`);
+    throw userError(`Who put you on ${productName} no longer fits ${platform}'s handle rule. Edit it in your collection, then preview again.`);
   }
   if (credit.platform !== "PROPER_RESPECT") return credit;
   const handle = await publishedHandle(credit.handle);
@@ -936,10 +941,10 @@ export const publishSelected = mutation({
     await consumeWriteLimit(ctx, user._id, "publishSelected");
     const prepared = await preparePublication(ctx, user, change);
     // A republish replaces the snapshot, so it must never lift an operator takedown.
-    if (prepared.published?.takenDownAt) throw new Error("This profile is under review. Contact 33@lecturesfrom.com.");
-    if (expectedPublicationRevision !== prepared.revision) throw new Error("Your publication changed. Open a fresh preview before publishing.");
-    if (expectedPreviewHash !== prepared.previewHash) throw new Error("The sharing preview changed. Open a fresh preview before publishing.");
-    if (change.kind === "SHARE_ALL_CONFIRMED" && prepared.selections.length === 0) throw new Error("There are no confirmed cards left to share.");
+    if (prepared.published?.takenDownAt) throw userError("This profile is under review. Contact 33@lecturesfrom.com.");
+    if (expectedPublicationRevision !== prepared.revision) throw userError("Your publication changed. Open a fresh preview before publishing.");
+    if (expectedPreviewHash !== prepared.previewHash) throw userError("The sharing preview changed. Open a fresh preview before publishing.");
+    if (change.kind === "SHARE_ALL_CONFIRMED" && prepared.selections.length === 0) throw userError("There are no confirmed cards left to share.");
     const now = new Date().toISOString();
     if (change.kind === "REMOVE_ALL") {
       // Every public relationship goes private and stops refreshing, as each
@@ -981,7 +986,7 @@ export const publishSelected = mutation({
         continue;
       }
       await ctx.db.patch(prop._id, {
-        ...(selection.costVisibility !== undefined ? { cost: selection.cost === undefined ? undefined : costSchema.parse(selection.cost), costVisibility: selection.costVisibility } : {}),
+        ...(selection.costVisibility !== undefined ? { cost: selection.cost === undefined ? undefined : parseOrUserError(costSchema, selection.cost, COST_RULE), costVisibility: selection.costVisibility } : {}),
         visibility: "PUBLIC",
       });
       const links = await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", prop._id)).collect();

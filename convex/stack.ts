@@ -13,10 +13,11 @@ import {
 } from "./manualProducts";
 import { relationshipLevelValidator, statusValidator } from "./validators";
 import { levelLabel, levelMatchesStatus } from "../src/domain/relationship-level";
-import { relationshipEditSchema } from "../src/domain/inventory";
+import { isRelationshipConfirmed, RELATIONSHIP_EDIT_FALLBACK, relationshipEditSchema } from "../src/domain/inventory";
 import { directoryEntry } from "../src/domain/product-directory";
 import { sha256 } from "../src/domain/product-knowledge";
 import { normalizeWebsite } from "../src/domain/typed-product";
+import { parseOrUserError, userError } from "../src/domain/user-error";
 
 export const MAX_STACK_PICKS = 100;
 
@@ -55,7 +56,7 @@ function normalizePick(pick: StackPick): StackPick {
 async function resolvePick(userId: Id<"users">, pick: StackPick): Promise<ResolvedProduct> {
   if (pick.kind === "typed") return resolveTypedProduct(userId, pick.name, pick.website);
   const entry = directoryEntry(pick.slug);
-  if (!entry) throw new Error(`${pick.slug} is not in the directory. Search for it again.`);
+  if (!entry) throw userError(`${pick.slug} is not in the directory. Search for it again.`);
   const { slug, name, domain, description, website } = entry;
   return { identity: { slug, name, domain, description }, primaryUrl: website, evidence: entry.evidence !== undefined };
 }
@@ -76,14 +77,25 @@ async function replay(ctx: MutationCtx, user: Doc<"users">, operationId: string,
   if (rows.length === 0) return null;
   const receipts = rows.map(row => ({ row, receipt: receiptSchema.safeParse(JSON.parse(row.requestJson)).data }));
   const matching = receipts.filter((entry): entry is { row: Doc<"manualProductIntakes">; receipt: Receipt } => entry.receipt?.requestHash === requestHash);
-  if (matching.length !== rows.length || rows.length !== pickCount) throw new Error("This save was already used with different picks.");
+  if (matching.length !== rows.length || rows.length !== pickCount) throw userError("This save was already used with different picks.");
   const items: SaveSelectionItem[] = [];
   for (const { row, receipt } of matching.sort((a, b) => a.receipt.index - b.receipt.index)) {
     const prop = await ctx.db.get(row.propId);
-    if (!prop || prop.userId !== user._id) throw new Error("A previously saved relationship is unavailable.");
+    if (!prop || prop.userId !== user._id) throw userError("A previously saved relationship is unavailable.");
     items.push({ propId: prop._id, productName: receipt.productName, outcome: receipt.outcome });
   }
   return summarize(items);
+}
+
+// A draft the owner didn't add (a discovery, a connection or an upload) carries words the system wrote, such as
+// "GitHub may be in your stack." Confirming keeps a draft's headline and note, so they're cleared first: the owner
+// writes the card's line, and share-all skips a card until they do. intakeRelationship confirms the same first row.
+async function clearSystemWords(ctx: MutationCtx, userId: Id<"users">, slug: string) {
+  const product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", slug)).unique();
+  if (!product) return;
+  const draft = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", userId).eq("productId", product._id)).first();
+  if (!draft || isRelationshipConfirmed(draft) || draft.ownerEntered || (!draft.headline && !draft.note)) return;
+  await ctx.db.patch(draft._id, { headline: "", note: "" });
 }
 
 /**
@@ -106,11 +118,11 @@ export const saveSelection = mutation({
     const user = await requireUser(ctx);
     const operationId = args.operationId.trim();
     if (!operationId || operationId.length > 128 || operationId.includes(":")) throw new Error("Invalid save operation.");
-    if (args.picks.length === 0) throw new Error("Pick at least one product to save.");
-    if (args.picks.length > MAX_STACK_PICKS) throw new Error(`Save at most ${MAX_STACK_PICKS} products at a time.`);
+    if (args.picks.length === 0) throw userError("Pick at least one product to save.");
+    if (args.picks.length > MAX_STACK_PICKS) throw userError(`Save at most ${MAX_STACK_PICKS} products at a time.`);
     const picks = args.picks.map(normalizePick);
     const mismatched = picks.find(pick => !levelMatchesStatus(pick.level, pick.status));
-    if (mismatched?.level) throw new Error(`The level ${levelLabel(mismatched.level)} does not match its status. Choose the level again.`);
+    if (mismatched?.level) throw userError(`The level ${levelLabel(mismatched.level)} does not match its status. Choose the level again.`);
     const requestHash = await sha256(JSON.stringify(picks));
     const replayed = await replay(ctx, user, operationId, requestHash, picks.length);
     if (replayed) return replayed;
@@ -120,7 +132,7 @@ export const saveSelection = mutation({
     for (const pick of picks) {
       const product = await resolvePick(user._id, pick);
       const earlier = pickedNames.get(product.identity.slug);
-      if (earlier) throw new Error(`${earlier} is picked twice. Keep one.`);
+      if (earlier) throw userError(`${earlier} is picked twice. Keep one.`);
       pickedNames.set(product.identity.slug, product.identity.name);
       resolved.push(product);
     }
@@ -129,8 +141,9 @@ export const saveSelection = mutation({
     const items: SaveSelectionItem[] = [];
     for (const [index, pick] of picks.entries()) {
       const product = resolved[index]!;
+      await clearSystemWords(ctx, user._id, product.identity.slug);
       const itemOperationId = `${itemReceiptPrefix(operationId)}${product.identity.slug}`;
-      const edit = relationshipEditSchema.parse({ status: pick.status, ...(pick.level ? { level: pick.level } : {}), goTo: false, headline: "", note: "" });
+      const edit = parseOrUserError(relationshipEditSchema, { status: pick.status, ...(pick.level ? { level: pick.level } : {}), goTo: false, headline: "", note: "" }, RELATIONSHIP_EDIT_FALLBACK);
       const { propId, product: saved, outcome } = await intakeRelationship(ctx, user, {
         resolved: product, edit, note: "", confirmDraft: true,
         operationId: itemOperationId, requestJson: JSON.stringify(pick), now,

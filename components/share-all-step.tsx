@@ -8,6 +8,7 @@ import { isHttpUrl } from "@/src/domain/http-url";
 import { canApproveShare, initialShareState, previewSummary, shareFlow, skipReasonText, type ShareAllPreview, type ShareEvent, type ShareState } from "@/src/client/share-all-flow";
 import { SharingPreview } from "./sharing-preview";
 import styles from "./stack-builder.module.css";
+import { errorMessage } from "@/src/domain/user-error";
 
 type Preview = ShareAllPreview<PublicProfile>;
 
@@ -27,7 +28,7 @@ export function ShareAllSection({ identityClaimed, basis, profileUrl, onSetUpIde
 }
 
 function failure(reason: unknown, fallback: string): ShareEvent<PublicProfile> {
-  return { type: "failed", message: reason instanceof Error ? reason.message : fallback };
+  return { type: "failed", message: errorMessage(reason, fallback) };
 }
 
 function statusText(state: ShareState<PublicProfile>) {

@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { mailboxCredentialValidator, mailboxProviderValidator, mailboxScanModeValidator, mailboxFailureValidator, mailboxRevocationOutcomeValidator } from "./mailboxTables";
 import { mailboxSearchWindow, MAILBOX_DAILY_INTERVAL_MS, type MailboxScanMode } from "../src/server/mailbox-search";
+import { userError } from "../src/domain/user-error";
 
 export const MAILBOX_LEASE_MS = 2 * 60 * 1000;
 export function mailboxSourceType(provider: Doc<"mailboxAccounts">["provider"]) {
@@ -183,10 +184,10 @@ export const disconnect = mutation({
   handler: async (ctx, args) => {
     const owner = await requireUser(ctx);
     const account = await ctx.db.get(args.accountId);
-    if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
+    if (!account || account.ownerId !== owner._id) throw userError("Mailbox unavailable.");
     requireMailboxGeneration(account, args.expectedGeneration);
     // While a revocation is in flight only its own finish may disconnect, so a late callback can tell it apart.
-    if (revocationActive(account)) throw new Error("Disconnect already in progress.");
+    if (revocationActive(account)) throw userError("Disconnect already in progress.");
     return await invalidateConnection(ctx, account, "DISCONNECTED");
   },
 });
@@ -283,8 +284,8 @@ export const markNeedsReauth = internalMutation({
 });
 
 async function startLease(ctx: MutationCtx, account: Doc<"mailboxAccounts">, mode?: MailboxScanMode, scheduled = false, discoveryRunId?: Id<"mailboxDiscoveryRuns">) {
-  if (account.status !== "CONNECTED") throw new Error("Mailbox is not connected.");
-  if (revocationActive(account)) throw new Error("Mailbox disconnect in progress.");
+  if (account.status !== "CONNECTED") throw userError("Mailbox is not connected.");
+  if (revocationActive(account)) throw userError("Mailbox disconnect in progress.");
   if (!discoveryRunId) await requireNoDiscoveryRun(ctx, account);
   const secret = await ctx.db.query("mailboxSecrets").withIndex("by_account", q => q.eq("accountId", account._id)).unique();
   if (!secret || secret.generation !== account.generation) throw new Error("Mailbox credentials unavailable.");
@@ -293,13 +294,13 @@ async function startLease(ctx: MutationCtx, account: Doc<"mailboxAccounts">, mod
   if (account.activeJobId) {
     const active = await ctx.db.get(account.activeJobId);
     if (!active || active.accountId !== account._id || active.ownerId !== account.ownerId) throw new Error("Mailbox job ownership mismatch.");
-    if (active.status === "ACTIVE" && active.leaseExpiresAt > now) throw new Error("Mailbox scan already active.");
+    if (active.status === "ACTIVE" && active.leaseExpiresAt > now) throw userError("Mailbox scan already active.");
     await ctx.db.patch(active._id, { status: "EXPIRED", updatedAt: timestamp });
   }
   let context: Doc<"mailboxScanContexts"> | null = null;
   if (mode) {
     context = await ctx.db.query("mailboxScanContexts").withIndex("by_account_mode", q => q.eq("accountId", account._id).eq("mode", mode)).unique();
-    if (context?.lastFailure === "CURSOR_EXPIRED") throw new Error("This search cursor expired. Restart its page search; retained evidence is preserved.");
+    if (context?.lastFailure === "CURSOR_EXPIRED") throw userError("This search cursor expired. Restart its page search; retained evidence is preserved.");
     if (!context || context.status === "COMPLETE") {
       const window = mailboxSearchWindow(mode, now, context?.completedThrough);
       const fields = { ...window, cursor: null, status: "READY" as const, pagesRead: 0, messagesRead: 0, retainedRecords: 0,
@@ -331,7 +332,7 @@ export const startScan = mutation({
   handler: async (ctx, args) => {
     const owner = await requireUser(ctx);
     const account = await ctx.db.get(args.accountId);
-    if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
+    if (!account || account.ownerId !== owner._id) throw userError("Mailbox unavailable.");
     requireMailboxGeneration(account, args.expectedGeneration);
     return await startLease(ctx, account, args.mode);
   },
@@ -340,7 +341,7 @@ export const startScan = mutation({
 const leaseArgs = { accountId: v.id("mailboxAccounts"), expectedGeneration: v.number(), jobId: v.id("mailboxScanJobs") };
 async function activeLease(ctx: Pick<QueryCtx, "db">, args: { accountId: Id<"mailboxAccounts">; expectedGeneration: number; jobId: Id<"mailboxScanJobs"> }) {
   const account = await ctx.db.get(args.accountId);
-  if (!account) throw new Error("Mailbox unavailable.");
+  if (!account) throw userError("Mailbox unavailable.");
   requireMailboxGeneration(account, args.expectedGeneration);
   const job = await ctx.db.get(args.jobId);
   if (account.status !== "CONNECTED" || account.activeJobId !== args.jobId || !job ||
@@ -417,12 +418,12 @@ export const restartSearch = mutation({
   handler: async (ctx, args) => {
     const owner = await requireUser(ctx);
     const account = await ctx.db.get(args.accountId);
-    if (!account || account.ownerId !== owner._id) throw new Error("Mailbox unavailable.");
+    if (!account || account.ownerId !== owner._id) throw userError("Mailbox unavailable.");
     requireMailboxGeneration(account, args.expectedGeneration);
     await requireNoDiscoveryRun(ctx, account);
-    if (account.activeJobId) throw new Error("Wait for the active mailbox read to finish.");
+    if (account.activeJobId) throw userError("Wait for the active mailbox read to finish.");
     const context = await ctx.db.query("mailboxScanContexts").withIndex("by_account_mode", q => q.eq("accountId", account._id).eq("mode", args.mode)).unique();
-    if (!context || context.ownerId !== owner._id || context.queryKey !== args.expectedQueryKey) throw new Error("Mailbox search changed.");
+    if (!context || context.ownerId !== owner._id || context.queryKey !== args.expectedQueryKey) throw userError("Mailbox search changed.");
     await ctx.db.patch(context._id, { cursor: null, status: "READY", lastFailure: undefined, pagesRead: 0, messagesRead: 0, retainedRecords: 0,
       observedEarliest: undefined, observedLatest: undefined, restartCount: context.restartCount + 1, updatedAt: new Date().toISOString() });
   },
@@ -433,9 +434,9 @@ export const setMaintenance = mutation({
   handler: async (ctx, args) => {
     const owner = await requireUser(ctx);
     const account = await ctx.db.get(args.accountId);
-    if (!account || account.ownerId !== owner._id || account.provider !== "GOOGLE") throw new Error("Mailbox unavailable.");
+    if (!account || account.ownerId !== owner._id || account.provider !== "GOOGLE") throw userError("Mailbox unavailable.");
     requireMailboxGeneration(account, args.expectedGeneration);
-    if (args.enabled && account.status !== "CONNECTED") throw new Error("Reconnect this mailbox before enabling maintenance.");
+    if (args.enabled && account.status !== "CONNECTED") throw userError("Reconnect this mailbox before enabling maintenance.");
     if ((account.maintenanceEnabled ?? false) === args.enabled) return;
     const now = Date.now();
     if (!args.enabled && account.activeJobId) {
@@ -500,7 +501,7 @@ function publicDiscoveryRun(run: Doc<"mailboxDiscoveryRuns"> | null) {
 }
 async function requireNoDiscoveryRun(ctx: Pick<QueryCtx, "db">, account: Doc<"mailboxAccounts">) {
   const run = account.discoveryRunId ? await ctx.db.get(account.discoveryRunId) : null;
-  if (run && !isDiscoveryTerminal(run)) throw new Error("Pause or finish discovery first; cancel it before starting a separate search.");
+  if (run && !isDiscoveryTerminal(run)) throw userError("Pause or finish discovery first; cancel it before starting a separate search.");
 }
 
 // Runs reuse existing incomplete queries. A completed historical window stays
@@ -510,20 +511,20 @@ export const startDiscoveryRun = mutation({
   handler: async (ctx, args): Promise<Id<"mailboxDiscoveryRuns">> => {
     const owner = await requireUser(ctx);
     const account = await ctx.db.get(args.accountId);
-    if (!account || account.ownerId !== owner._id || account.provider !== "GOOGLE") throw new Error("Mailbox unavailable.");
+    if (!account || account.ownerId !== owner._id || account.provider !== "GOOGLE") throw userError("Mailbox unavailable.");
     requireMailboxGeneration(account, args.expectedGeneration);
     if (!/^[A-Za-z0-9_-]{8,128}$/.test(args.requestId)) throw new Error("Invalid discovery request identity.");
     const replay = await ctx.db.query("mailboxDiscoveryRuns").withIndex("by_account_request", q => q.eq("accountId", account._id).eq("requestId", args.requestId)).unique();
     if (replay) {
-      if (replay.generation !== account.generation) throw new Error("Discovery generation changed.");
+      if (replay.generation !== account.generation) throw userError("Discovery generation changed.");
       return replay._id;
     }
     await requireNoDiscoveryRun(ctx, account);
-    if (account.status !== "CONNECTED") throw new Error("Reconnect this mailbox first.");
-    if (revocationActive(account)) throw new Error("Mailbox disconnect in progress.");
+    if (account.status !== "CONNECTED") throw userError("Reconnect this mailbox first.");
+    if (revocationActive(account)) throw userError("Mailbox disconnect in progress.");
     if (account.activeJobId) {
       const job = await ctx.db.get(account.activeJobId);
-      if (job?.status === "ACTIVE" && job.leaseExpiresAt > Date.now()) throw new Error("Wait for the active mailbox read to finish.");
+      if (job?.status === "ACTIVE" && job.leaseExpiresAt > Date.now()) throw userError("Wait for the active mailbox read to finish.");
       if (job?.status === "ACTIVE") await ctx.db.patch(job._id, { status: "EXPIRED" });
     }
     const now = new Date().toISOString();
@@ -595,15 +596,15 @@ export const controlDiscoveryRun = mutation({
   handler: async (ctx, args): Promise<Id<"mailboxDiscoveryRuns">> => {
     const owner = await requireUser(ctx);
     const run = await ctx.db.get(args.runId);
-    if (!run || run.ownerId !== owner._id) throw new Error("Discovery unavailable.");
+    if (!run || run.ownerId !== owner._id) throw userError("Discovery unavailable.");
     const account = await ctx.db.get(run.accountId);
-    if (!account || account.discoveryRunId !== run._id || run.generation !== account.generation) throw new Error("Discovery generation changed.");
+    if (!account || account.discoveryRunId !== run._id || run.generation !== account.generation) throw userError("Discovery generation changed.");
     requireMailboxGeneration(account, args.expectedGeneration);
     if (isDiscoveryTerminal(run)) return run._id;
     const now = new Date().toISOString();
     if (args.action === "RESUME") {
       if (run.status === "RUNNING") return run._id;
-      if (account.status !== "CONNECTED" || ["REAUTHORIZE", "CURSOR_EXPIRED", "CURSOR_CYCLE"].includes(run.failure ?? "")) throw new Error("Cancel this run and recover its connection or search before starting another.");
+      if (account.status !== "CONNECTED" || ["REAUTHORIZE", "CURSOR_EXPIRED", "CURSOR_CYCLE"].includes(run.failure ?? "")) throw userError("Cancel this run and recover its connection or search before starting another.");
       await ctx.db.patch(run._id, { status: "RUNNING", step: run.step + 1, failure: undefined, updatedAt: now });
       await ctx.scheduler.runAfter(0, internal.mailboxGoogle.discoveryPage, { runId: run._id, step: run.step + 1 });
     } else {

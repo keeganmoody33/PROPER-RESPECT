@@ -2,6 +2,7 @@ import type { ActivityModule, CuratedProp } from "./public-profile";
 import type { Cost, CostVisibility } from "./cost";
 import { canonicalJson } from "./canonical-json";
 import { DEFAULT_USAGE_LINK_LABEL, usageLinkUrlSchema, type UsageLink, type UsageLinkLabel } from "./usage-links";
+import { userError } from "./user-error";
 
 export type ReviewCard = {
   prop: Pick<CuratedProp, "visibility" | "status" | "level" | "headline" | "note" | "startedAt" | "activity" | "cost" | "costVisibility"> & {
@@ -62,8 +63,8 @@ export function isCurrentReview(card: ReviewCard, edit: ReviewEdit) {
 // Only an explicitly edited publication row may replace an approved snapshot.
 export function explicitPublicationReview(card: ReviewCard, edit?: ReviewEdit, requirePrivateSave = true) {
   if (!edit) return undefined;
-  if (!isCurrentReview(card, edit)) throw new Error("This card changed after publication review. Review its current saved version before publishing.");
-  if (requirePrivateSave && edit.publish && card.prop.visibility === "DRAFT") throw new Error("Confirm and save this discovery privately before publishing it.");
+  if (!isCurrentReview(card, edit)) throw userError("This card changed after publication review. Review its current saved version before publishing.");
+  if (requirePrivateSave && edit.publish && card.prop.visibility === "DRAFT") throw userError("Confirm and save this discovery privately before publishing it.");
   return edit;
 }
 

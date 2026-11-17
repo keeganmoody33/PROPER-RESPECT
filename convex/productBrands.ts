@@ -11,6 +11,7 @@ import { brandNameKey, canonicalBrandDomainSchema, CONTEXT_BRAND_ADAPTER_VERSION
 import { productBrandSnapshotValidator } from "./productBrandTables";
 import { retrieveProductBrand } from "../src/server/context-brand";
 import { internal } from "./_generated/api";
+import { userError } from "../src/domain/user-error";
 
 const REFRESH_COOLDOWN_MS = 60_000;
 const DAY_MS = 86_400_000;
@@ -91,9 +92,9 @@ function verifiedDomain(product: Doc<"products">): string | null {
 async function ownedProduct(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
   const user = await requireUser(ctx);
   const prop = await ctx.db.get(propId);
-  if (!prop || prop.userId !== user._id) throw new Error("Product unavailable.");
+  if (!prop || prop.userId !== user._id) throw userError("Product unavailable.");
   const product = await ctx.db.get(prop.productId);
-  if (!product) throw new Error("Product unavailable.");
+  if (!product) throw userError("Product unavailable.");
   return product;
 }
 
@@ -189,13 +190,13 @@ export const requestForProp = mutation({
 
 async function ownedProducts(ctx: QueryCtx | MutationCtx, propIds: Id<"props">[]) {
   const user = await requireUser(ctx);
-  if (propIds.length > PREPARATION_BATCH_SIZE) throw new Error("Prepare at most 25 products at a time.");
+  if (propIds.length > PREPARATION_BATCH_SIZE) throw userError("Prepare at most 25 products at a time.");
   const products = [];
   for (const propId of new Set(propIds)) {
     const prop = await ctx.db.get(propId);
-    if (!prop || prop.userId !== user._id) throw new Error("Product unavailable.");
+    if (!prop || prop.userId !== user._id) throw userError("Product unavailable.");
     const product = await ctx.db.get(prop.productId);
-    if (!product) throw new Error("Product unavailable.");
+    if (!product) throw userError("Product unavailable.");
     products.push({ propId, product });
   }
   return products;

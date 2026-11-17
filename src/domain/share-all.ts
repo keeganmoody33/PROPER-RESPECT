@@ -42,8 +42,13 @@ export type ShareAllSelection<PropId extends string, Cost> = {
 export type SkippedShare<PropId extends string> = {
   propId: PropId;
   productName: string;
-  reason: "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG" | "ALREADY_ON_PAGE_NEEDS_REVIEW";
+  reason: "NEEDS_A_LINE" | "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG" | "ALREADY_ON_PAGE_NEEDS_REVIEW";
 };
+
+// A note stands in for a missing headline on the card, so only a card with neither has no line.
+function hasALine(prop: Pick<ShareAllProp<string, unknown>, "headline" | "note">) {
+  return prop.headline.trim() !== "" || prop.note.trim() !== "";
+}
 
 function linkProblem(link: CardLink): "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG" | null {
   if (!isHttpUrl(link.url) || link.label.length === 0) return "LINK_NEEDS_REVIEW";
@@ -53,7 +58,9 @@ function linkProblem(link: CardLink): "LINK_NEEDS_REVIEW" | "LINK_TOO_LONG" | nu
 
 // Built only from saved values, so preparePublication's "save privately first"
 // checks pass. Owner-chosen links are refused, not dropped: a bad saved link
-// skips its card by name so the owner can fix it. A card sharing its product with
+// skips its card by name so the owner can fix it. A card with no line at all is
+// skipped by name too: the quick path saves cards without one, and nothing the
+// system writes stands in for the owner's words. A card sharing its product with
 // a published card no relationship owns is skipped too: selecting it would make
 // that approved card ambiguous, and the owner must pick its relationships together.
 export function shareAllSelections<PropId extends string, Cost>(props: readonly ShareAllProp<PropId, Cost>[]) {
@@ -61,6 +68,10 @@ export function shareAllSelections<PropId extends string, Cost>(props: readonly 
   const shareable = props.filter(prop => prop.visibility === "PRIVATE" && !prop.onPublishedPage).flatMap(prop => {
     if (prop.matchesUnresolvedPublishedCard) {
       skipped.push({ propId: prop.propId, productName: prop.product.name, reason: "ALREADY_ON_PAGE_NEEDS_REVIEW" });
+      return [];
+    }
+    if (!hasALine(prop)) {
+      skipped.push({ propId: prop.propId, productName: prop.product.name, reason: "NEEDS_A_LINE" });
       return [];
     }
     const offered = defaultPrimaryLink(prop.primaryLink, prop.product.domain);

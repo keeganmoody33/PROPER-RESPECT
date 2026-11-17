@@ -163,3 +163,15 @@ test("each append attempt starts from a clean clone and tells a missing branch f
 test("a retried append never writes the same line twice", () => {
   assert.match(receiptWorkflow(), /grep -Fxq -f "\$line_file" receipts-work\/receipts\/github-refresh\.jsonl/);
 });
+
+test("a passing check closes the open receipt issue with the passing line, after the line is appended", () => {
+  const workflow = receiptWorkflow();
+  const append = workflow.indexOf("- name: Append the line to the receipts branch");
+  const close = workflow.indexOf("- name: Close the receipt issue after a passing check");
+  assert.ok(append > 0 && close > append);
+  const step = workflow.slice(close, workflow.indexOf("- name:", close + 1));
+  assert.match(step, /if: steps\.check\.outcome == 'success'/);
+  assert.match(step, /gh issue list --repo "\$GITHUB_REPOSITORY" --label receipt --state open/);
+  assert.match(step, /gh issue close "\$issue" --repo "\$GITHUB_REPOSITORY" --comment "\$body"/);
+  assert.match(step, /cat "\$RUNNER_TEMP\/receipt-line\.json"/);
+});

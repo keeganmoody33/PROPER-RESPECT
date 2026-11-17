@@ -149,10 +149,11 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
       product: { name: card.product.name, description: card.product.description },
       status: card.status, ...(card.level ? { level: card.level } : {}), relationshipLabel: cardStatusLabel(card),
       ownerSelectedGoTo: card.goTo === true,
-      headline: card.headline || card.note || "Relationship note not supplied.",
+      // Only the owner's words: a card without any has an empty line, never one the system wrote.
+      headline: card.headline || card.note,
       ...visibleUses(card),
       ...visibleCredit(card),
-      note: card.note || "Relationship note not supplied.",
+      note: card.note,
       ...(card.startedAt ? { startedAt: card.startedAt } : { startDateNote: "Start date not supplied" }),
       ...(card.activity ? { activity: visibleActivity(card.activity) } : {}),
       ...(card.measurements?.length ? { measurements: card.measurements.map(row => publicMeasurementSchema.parse(row)) } : {}),

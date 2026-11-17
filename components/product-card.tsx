@@ -611,8 +611,9 @@ export function ProductCard({
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
-  const notePlaceholder = relationshipConfirmed ? "Relationship note not supplied." : "Discovery note not supplied.";
-  const headlineText = brandPreview ? card.product.description : card.headline || card.note || notePlaceholder;
+  // Only the owner's words go on a card. Without any, a visitor sees no line; the owner and a private discovery say one is missing.
+  const missingLine = !relationshipConfirmed ? "Discovery note not supplied." : audience === "owner" ? "No line yet. Add what it helps you do." : "";
+  const headlineText = brandPreview ? card.product.description : card.headline || card.note || missingLine;
   const [isFlipped, setIsFlipped] = useState(false);
   // Turned over, a card keeps at least the height it had, so its back never makes the page under it jump up.
   const [frontHeight, setFrontHeight] = useState<number>();
@@ -745,7 +746,7 @@ export function ProductCard({
           </a>{disclosure && <span className="card-link-disclosure">{disclosure}</span>}</div>}
         </div>
 
-        <p className="card-headline" data-length={headlineLength(headlineText)}><HeadlineText text={headlineText} accent={brandPreview ? undefined : headlineAccent} colour={accentColour} /></p>
+        {headlineText && <p className="card-headline" data-length={headlineLength(headlineText)}><HeadlineText text={headlineText} accent={brandPreview ? undefined : headlineAccent} colour={accentColour} /></p>}
         {reason && <p className="card-reason">{reason}</p>}
         {!!useLabels.length && <div className="card-uses-block">
           <p className="card-uses-lead">{pastUse ? "I used it to" : "I use it to"}</p>
@@ -818,7 +819,7 @@ export function ProductCard({
               </p>
             </>}
           </div>
-          {!brandPreview && (card.note ? <blockquote>{card.note}</blockquote> : <p>{notePlaceholder}</p>)}
+          {!brandPreview && (card.note ? <blockquote>{card.note}</blockquote> : missingLine && <p>{missingLine}</p>)}
           <p><WholeWords text={card.product.description} /></p>
           {!brandPreview && card.cost && <p>{costDetail(card.cost, { today, sample })}</p>}
           {!brandPreview && card.activity && <>
@@ -846,11 +847,11 @@ export function ProductCard({
           {brandPreview && verifiedAssets && <details className="card-brand-provenance" open>
             <summary>Official brand assets</summary>
             <section className="product-brand-details" aria-label="Official brand provenance">
-              <p>Official vendor assets identify the product. They do not verify ownership or use.</p>
+              <p>Official vendor assets identify the product. They do not prove ownership or use.</p>
               <dl className="brand-provenance">
                 <div><dt>Source</dt><dd>{verifiedAssets.provider}</dd></div>
                 <div><dt>Product</dt><dd><a href={verifiedAssets.productUrl} target="_blank" rel="noopener noreferrer">{card.product.name}</a></dd></div>
-                <div><dt>Verified</dt><dd><time dateTime={verifiedAssets.verifiedAt}>{verifiedAssets.verifiedAt}</time></dd></div>
+                <div><dt>Checked</dt><dd><time dateTime={verifiedAssets.verifiedAt}>{verifiedAssets.verifiedAt}</time></dd></div>
                 <div><dt>Revision</dt><dd>{verifiedAssets.revision}</dd></div>
                 <div><dt>Logo</dt><dd><a href={verifiedAssets.logoSource.productGuidanceUrl} target="_blank" rel="noopener noreferrer">Official product brand guide</a></dd></div>
                 <div><dt>Font</dt><dd>{verifiedAssets.typography.family} · <a href={verifiedAssets.typography.license.path}>{verifiedAssets.typography.license.name}</a></dd></div>

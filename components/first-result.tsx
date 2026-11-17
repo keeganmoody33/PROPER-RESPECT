@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { firstResultSources, readFirstResultSource, selectFirstResultSource, subscribeFirstResultSource, type FirstResultSource } from "@/src/client/first-result-intent";
 import { openRelationship } from "@/src/client/relationship-location";
 import styles from "./first-result.module.css";
+import { errorMessage } from "@/src/domain/user-error";
 
 export function useFirstResultSource() {
   return useSyncExternalStore(subscribeFirstResultSource, readFirstResultSource, () => null);
@@ -69,7 +70,7 @@ export function MeasurementImport({ source, propId }: { source: Exclude<FirstRes
       openRelationship(result.propId);
       form.reset();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The import failed. Your saved measurements have not changed. Try again.");
+      setError(errorMessage(reason, "The import failed. Your saved measurements have not changed. Try again."));
     } finally { setBusy(false); }
   }
   return <form className={styles.importForm} onSubmit={event => { event.preventDefault(); void submit(event.currentTarget); }}>

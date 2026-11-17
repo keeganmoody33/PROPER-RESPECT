@@ -28,6 +28,8 @@ export const relationshipEditSchema = z.object({
   path: ["status"],
 });
 export type RelationshipEdit = z.infer<typeof relationshipEditSchema>;
+// Shown when an edit fails one of zod's own checks rather than a written refinement.
+export const RELATIONSHIP_EDIT_FALLBACK = "These choices could not be saved. Check each field and try again.";
 
 export const inventoryViews = ["All", "Discoveries", "Current", "Testing", "Go-to", "History", "Used before"] as const;
 export type InventoryView = typeof inventoryViews[number];

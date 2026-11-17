@@ -12,6 +12,7 @@ import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
 import { MAILBOX_PAGE_LIMIT } from "../src/server/mailbox-search";
 import { senderDomain } from "../src/domain/mailbox-sender";
+import { userError } from "../src/domain/user-error";
 
 /** Revisit retained headers only. Its pagination cursor is never a provider cursor. */
 export const recheckRetained = mutation({
@@ -234,7 +235,7 @@ export const listUnknown = query({
     const page = await Promise.all(result.page.map(async record => {
       const raw = await ctx.db.get(record.rawEvidenceId);
       const account = await ctx.db.get(record.accountId);
-      if (!raw || raw.userId !== owner._id || account?.ownerId !== owner._id || raw.evidenceSourceId !== account.evidenceSourceId) throw new Error("Mailbox evidence unavailable.");
+      if (!raw || raw.userId !== owner._id || account?.ownerId !== owner._id || raw.evidenceSourceId !== account.evidenceSourceId) throw userError("Mailbox evidence unavailable.");
       return { id: record._id, senderDomain: record.senderDomain, rawEvidenceId: raw._id,
         accountLabel: account.accountLabel, payload: raw.deletedAt ? "This evidence was removed by its owner." : raw.payload, capturedAt: raw.capturedAt,
         provenance: raw.captureProvenance };
@@ -248,16 +249,16 @@ export const reviewUnknown = mutation({
   handler: async (ctx, args) => {
     const owner = await requireUser(ctx);
     const record = await ctx.db.get(args.id);
-    if (!record || record.ownerId !== owner._id) throw new Error("Mailbox evidence unavailable.");
-    if ((args.decision === "LINKED") !== (args.propId !== undefined)) throw new Error("Choose a relationship before attaching evidence.");
+    if (!record || record.ownerId !== owner._id) throw userError("Mailbox evidence unavailable.");
+    if ((args.decision === "LINKED") !== (args.propId !== undefined)) throw userError("Choose a relationship before attaching evidence.");
     if (record.status !== "PENDING") {
       if (record.status === args.decision && record.linkedPropId === args.propId) return;
-      throw new Error("This mailbox record has already been reviewed.");
+      throw userError("This mailbox record has already been reviewed.");
     }
     if (args.propId) {
       const prop = await ctx.db.get(args.propId);
       const raw = await ctx.db.get(record.rawEvidenceId);
-      if (!prop || prop.userId !== owner._id || !raw || raw.userId !== owner._id || raw.deletedAt) throw new Error("Owned relationship and evidence required.");
+      if (!prop || prop.userId !== owner._id || !raw || raw.userId !== owner._id || raw.deletedAt) throw userError("Owned relationship and evidence required.");
       const proof = await ctx.db.query("proofs").withIndex("by_propId_and_rawEvidenceId", q => q.eq("propId", prop._id).eq("rawEvidenceId", raw._id)).first();
       if (!proof) await ctx.db.insert("proofs", { propId: prop._id, type: "EMAIL_EVIDENCE", rawEvidenceId: raw._id, label: "Mailbox header selected by owner" });
     }

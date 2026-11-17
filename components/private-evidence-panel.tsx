@@ -6,6 +6,7 @@ import { ZodError } from "zod";
 import { sourceDefinitions } from "@/src/domain/product-sources";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { errorMessage } from "@/src/domain/user-error";
 import {
   acquisitionLabels,
   canUseAsStart,
@@ -135,9 +136,7 @@ export function PrivateEvidenceIntake({
       setError(
         caught instanceof ZodError
           ? caught.issues.map((issue) => issue.message).join(" ")
-          : caught instanceof Error
-            ? caught.message
-            : "Evidence could not be saved.",
+          : errorMessage(caught, "Evidence could not be saved."),
       );
     }
   }
@@ -383,7 +382,7 @@ export function PrivateEvidencePanel({
       setMessage(result);
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "Evidence could not be saved.",
+        errorMessage(error, "Evidence could not be saved."),
       );
       throw error;
     } finally {

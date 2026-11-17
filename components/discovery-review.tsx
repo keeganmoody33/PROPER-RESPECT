@@ -6,6 +6,7 @@ import { useState } from "react";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { errorMessage } from "@/src/domain/user-error";
 
 type Detail = FunctionReturnType<typeof api.discoveryReview.details>;
 type Candidate = FunctionReturnType<typeof api.discoveryReview.candidates>["page"][number];
@@ -30,7 +31,7 @@ export function DiscoveryResolutionView({ detail, candidates, hasMoreCandidates,
       const result = await onAttach({ draftId: detail.id, propId: target.id, expectedHash });
       setMessage(`${result.processed} of ${result.total} originals processed. ${result.skippedDeleted} deleted originals excluded.`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Attachment did not complete. Review the current records before retrying.");
+      setMessage(errorMessage(error, "Attachment did not complete. Review the current records before retrying."));
     } finally { setBusy(false); }
   }
   return <form onSubmit={event => { event.preventDefault(); void attach(); }}>

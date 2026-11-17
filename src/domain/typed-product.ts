@@ -1,5 +1,6 @@
 import { extractDomain, resolveCatalogProduct, resolveCatalogProductWebsite, type DraftProposal } from "./discovery";
 import { allowsWebProtocol } from "./http-url";
+import { userError } from "./user-error";
 
 // The server applies these rules to a product typed by name, and the stack
 // picker applies the same ones before save, so both resolve it alike.
@@ -7,12 +8,12 @@ import { allowsWebProtocol } from "./http-url";
 export function normalizeWebsite(input: string | undefined): string | undefined {
   const value = input?.trim();
   if (!value) return undefined;
-  if (value.length > 2048) throw new Error("The product website is too long.");
+  if (value.length > 2048) throw userError("The product website is too long.");
   const candidate = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
   let url: URL;
-  try { url = new URL(candidate); } catch { throw new Error("Use a public HTTP or HTTPS product website, or leave it blank."); }
+  try { url = new URL(candidate); } catch { throw userError("Use a public HTTP or HTTPS product website, or leave it blank."); }
   if (!extractDomain(candidate) || !allowsWebProtocol(url) || url.port) {
-    throw new Error("Use a public HTTP or HTTPS product website without credentials, or leave it blank.");
+    throw userError("Use a public HTTP or HTTPS product website without credentials, or leave it blank.");
   }
   url.hash = "";
   return url.href;
@@ -28,7 +29,7 @@ export function resolveTypedCatalogProduct(name: string, website: string | undef
     // A named subproduct may use its company's root website. An explicitly
     // cataloged destination for a different product must not override the name.
     if (!websiteFamily || websiteFamily.product.domain !== named.product.domain || specificProductConflict) {
-      throw new Error("That website does not match the named catalog product. Correct the name or website.");
+      throw userError("That website does not match the named catalog product. Correct the name or website.");
     }
   }
   return named ?? byWebsite ?? undefined;
