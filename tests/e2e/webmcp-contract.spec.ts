@@ -145,8 +145,8 @@ test("homepage remains usable when document.modelContext is unsupported", async 
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Earn your respect.");
-  await page.getByRole("link", { name: "View Keegan’s shared collection" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Every tool you've used counts.");
+  await page.getByRole("link", { name: "See Keegan’s tooling page" }).first().click();
   await expect(page).toHaveURL(/\/lecturesfrom$/);
   await expect(page.getByRole("heading", { level: 1, name: "Keegan Moody" })).toBeVisible();
   expect(errors).toEqual([]);

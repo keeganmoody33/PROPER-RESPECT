@@ -4,7 +4,7 @@ import { publicSiteOrigin } from "./public-site";
 import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
 export const repositoryUrl = "https://github.com/keeganmoody33/PROPER-RESPECT";
-export const homepageUpdatedAt = "2026-11-16T00:00:00.000Z";
+export const homepageUpdatedAt = "2026-11-17T00:00:00.000Z";
 
 export function creatorBusinessIdentity() {
   return {
@@ -22,7 +22,7 @@ export function productIdentity() {
     "@type": "SoftwareApplication",
     name: "Proper Respect",
     url: publicSiteOrigin().href,
-    description: "Build a private collection of the tools you use. Add your experience and usage evidence where available, then choose which cards to share on your profile.",
+    description: "Build a private collection of the tools you use. Add your experience and usage evidence where available, then choose which cards to share on your public page.",
     applicationCategory: "LifestyleApplication",
     operatingSystem: "Web",
     sameAs: [repositoryUrl],
@@ -73,9 +73,9 @@ export const publicProfileFacts = {
   credit: "A card can give props to the person its owner says put them on the tool, named by one handle on one platform, with no confirmation from that person and no count of props.",
 } as const;
 
-/** The site's one line and its description, shared by the homepage, its Markdown mirror and page metadata. */
-export const siteLine = "Earn your respect.";
-export const siteDescription = "Your tool history, kept apart from your work history: what you run, how much, and since when.";
+/** The site's one line and the one line under it, shared word for word by the homepage, its Markdown mirror and page metadata. */
+export const siteLine = "Every tool you've used counts.";
+export const siteDescription = "Even the ones you stopped. One page for what you run, what you've tested and what you've moved on from, with the usage behind it.";
 
 /** The homepage's three steps, shared word for word by the page and its Markdown mirror. */
 export const homepageSteps = [
@@ -90,6 +90,8 @@ export function homepageMarkdown() {
 
 ${siteLine}
 
+${siteDescription}
+
 ${productIdentity().description}
 
 ## How it works
@@ -103,7 +105,7 @@ Created by lecturesfrom, a business in the United States. [Contact: 33@lecturesf
 ## Links
 
 - [Start your collection](${new URL("/app/collection", origin)}).
-- [View Keegan's shared collection](${new URL("/lecturesfrom", origin)}).
+- [See Keegan's tooling page](${new URL("/lecturesfrom", origin)}).
 - [Agent instructions and WebMCP usage](${new URL("/agents.md", origin)}).
 - [Authentication boundaries](${new URL("/auth.md", origin)}).
 - [Origins](${new URL("/about/origins.md", origin)}).
@@ -146,9 +148,9 @@ export function agentCatalog() {
       displayName: "Proper Respect public-profile reading guide",
       type: "text/markdown",
       url: guideUrl,
-      description: "Instructions for reading an owner-published tool collection and using its read-only browser WebMCP tool. This is documentation, not a remote MCP endpoint.",
+      description: "Instructions for reading an owner-published tooling page and using its read-only browser WebMCP tool. This is documentation, not a remote MCP endpoint.",
       representativeQueries: [
-        "How do I read a person's published tool collection on Proper Respect?",
+        "How do I read a person's published tooling page on Proper Respect?",
         "How should I interpret the usage evidence on a Proper Respect profile?",
       ],
       ...(isHttpsProtocol(origin) ? {

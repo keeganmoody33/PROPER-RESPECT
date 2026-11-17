@@ -150,14 +150,10 @@ type ExampleSource = Readonly<{
  * every name, domain and link comes from the directory, and every brand from HOMEPAGE_BRANDS.
  * Each card is its tool's own meter: one number in the unit the tool reports, over a stated period, read like a heavy current user's.
  * The headline is the one line saying what it is used for. Every number is an illustrative sample, labelled so on the card.
+ * A tool stopped is featured beside the ones in use, shown as past: every tool someone has used counts.
  */
+// TODO(owner): the owner has not yet OK'd Clay as the lead example, so another card leads.
 const EXAMPLES: readonly ExampleSource[] = [
-  {
-    slug: "clay", featured: true, capability: "One published number", level: "DAILY", since: "2023", headline: "Contact enrichment for my sales team.", note: "Lists that took a week of spreadsheets take an hour.",
-    measurements: clayMeasurements, usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
-    caveat: "Its link to how I use it opens Clay's public templates.", backHint: "The period and how I use it, inside",
-    credit: { platform: "PROPER_RESPECT", handle: "lecturesfrom", linked: true },
-  },
   {
     slug: "github", featured: true, capability: "A year of contributions", level: "DAILY", goTo: true, since: "2019", headline: "Where every project's code lives.", headlineAccent: "every project's code",
     note: "Contribution counts don't measure quality or hours.", activity: githubActivity,
@@ -165,14 +161,23 @@ const EXAMPLES: readonly ExampleSource[] = [
     source: { href: "https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference", label: "GitHub contribution definitions" },
   },
   {
+    slug: "elicit", featured: true, capability: "Stopped using, and why", level: "STOPPED", since: "2026", headline: "Screening papers for a market study.", note: "I stopped once my market study was done.",
+  },
+  {
     slug: "cloudflare", featured: true, capability: "Go-to, with what it costs", level: "DAILY", goTo: true, since: "2020", headline: "DNS, Workers and caching for my projects.", note: "Every domain I own points through it.",
     cost: { amount: CLOUDFLARE_MONTHLY_USD, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-09-01" },
+  },
+  {
+    slug: "clay", featured: true, capability: "One published number", level: "DAILY", since: "2023", headline: "Contact enrichment for my sales team.", note: "Lists that took a week of spreadsheets take an hour.",
+    measurements: clayMeasurements, usageLink: { url: "https://www.clay.com/templates", label: "SEE_HOW_I_USE_IT" },
+    caveat: "Its link to how I use it opens Clay's public templates.", backHint: "The period and how I use it, inside",
+    credit: { platform: "PROPER_RESPECT", handle: "lecturesfrom", linked: true },
   },
   {
     slug: "docker", featured: true, capability: "A running total", level: "WEEKLY", since: "2024", headline: "Packs scrapers and agents to run anywhere.", note: "Every long-running job I ship is a container.",
   },
   {
-    slug: "firecrawl", featured: true, capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", headlineAccent: "clean Markdown", note: "I pull docs and product pages through it.",
+    slug: "firecrawl", capability: "Referral link, disclosed", level: "WEEKLY", since: "2025", headline: "Turns pages into clean Markdown for my agents.", headlineAccent: "clean Markdown", note: "I pull docs and product pages through it.",
     linkType: "REFERRAL",
     caveat: "A real card's referral link carries its owner's code. This one goes to Firecrawl's home page and credits nobody.",
   },
@@ -202,9 +207,6 @@ const EXAMPLES: readonly ExampleSource[] = [
   },
   {
     slug: "grok-bot", capability: "Still testing", level: "TESTING", since: "2026", headline: "Research and outreach chores.", note: "I'm testing it to see what it can take off my plate.",
-  },
-  {
-    slug: "elicit", capability: "Stopped using, and why", level: "STOPPED", since: "2026", headline: "Screening papers for a market study.", note: "I stopped once my market study was done.",
   },
   {
     slug: "context-dev", capability: "Testing, week by week", level: "TESTING", since: "2026", headline: "Logos and company details by domain.", note: "I'm testing it to fill in company details on cards.",

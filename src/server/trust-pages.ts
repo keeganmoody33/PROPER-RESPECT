@@ -23,7 +23,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     title: "Giving credit its context",
     description: "Why Proper Respect keeps experience and evidence alongside the tools we use.",
     eyebrow: "Origins",
-    updatedAt: "2026-11-16",
+    updatedAt: "2026-11-17",
     introduction: [
       "Proper Respect takes its name from the idea behind giving someone their props: recognizing what they have contributed.",
     ],
@@ -39,7 +39,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         heading: "A record apart from your work history",
         paragraphs: [
           "A work history lists employers and titles. It says little about what you can build. The tools you run say more: which ones, how much, and since when.",
-          "Proper Respect keeps that as its own record. People who use the same tools can read it and know what it took. That is how you earn your respect here, and how you give someone else their props.",
+          "Proper Respect keeps that as its own record. People who use the same tools can read it and know what it took. That is how you earn your respect here. Props are separate: the credit you give the person who put you on a tool.",
         ],
       },
       {
@@ -47,7 +47,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
         paragraphs: [
           "Our product brings its own question to that idea: how do you give a useful tool its due? A name in a list can tell someone what you use. Your experience explains why it matters, what changed when you tried it, and whether you still come back to it.",
           "Proper Respect is a place to keep that context. Build a collection of tools you use and test. Add notes and supporting evidence where it exists. Choose your go-to tools, keep the history, and decide which saved cards and details to share.",
-          "For us, giving props means making recognition specific. Credit the tool and explain the experience. Keep the evidence close enough to inspect, and leave room for the story to change.",
+          "For us, respect means making recognition specific. Show the usage behind a tool and explain the experience. Keep the evidence close enough to inspect, and leave room for the story to change.",
           "Created by lecturesfrom, a business in the United States. Operated by Keegan Moody.",
         ],
       },

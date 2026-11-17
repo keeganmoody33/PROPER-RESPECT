@@ -29,6 +29,10 @@ describe("public profile page", () => {
     });
     const html = renderToStaticMarkup(await render("owner"));
     expect(html).toContain("Owner");
+    // The public page is named a tooling page, once; "collection" is the owner's private list.
+    expect(html.split("TOOLING PAGE").slice(1)).toEqual([expect.any(String)]);
+    expect(html).toContain("@owner / TOOLING PAGE");
+    expect(["SHARED PRODUCT COLLECTION", "TRACK RECORD"].filter(label => html.includes(label))).toEqual([]);
     expect(html).not.toContain("PROFILE · LOADING");
     expect(html).not.toContain("Loading shared product collection");
   });
