@@ -901,13 +901,6 @@ main {
 .product-card-skeleton-foot .product-card-skeleton-ghost { height: 13px; width: 120px; }
 .product-card-skeleton-foot .product-card-skeleton-ghost:last-child { width: 90px; }
 
-.profile-loading-name {
-  display: block;
-  height: 48px;
-  margin-top: 0.7rem;
-  width: min(240px, 70%);
-}
-
 @keyframes usage-bar-grow {
   from { transform: scaleY(0); }
   to { transform: scaleY(1); }

@@ -25,7 +25,7 @@ export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {
     eyebrow: "Origins",
     updatedAt: "2026-11-17",
     introduction: [
-      "Proper Respect takes its name from respect that is earned: recognition for what someone has actually done.",
+      "Proper Respect takes its name from the idea behind giving someone their props: recognizing what they have contributed.",
     ],
     sections: [
       {
