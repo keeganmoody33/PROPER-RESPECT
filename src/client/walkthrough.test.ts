@@ -45,6 +45,13 @@ describe("the walkthrough queue", () => {
     expect(walkthroughQueue([beforeLevels, systemWords]).map(item => item.propId)).toEqual([beforeLevels.prop._id, systemWords.prop._id]);
   });
 
+  it("asks again about a confirmed card whose only words an app wrote, since share-all doesn't count them as a line", () => {
+    const older = picked("GitHub", { headline: "GitHub is in my stack.", note: "Connected activity is private until I approve this card." });
+    expect(walkthroughQueue([older]).map(item => item.propId)).toEqual([older.prop._id]);
+    expect(initialAnswer(older).ownerLine).toBeNull();
+    expect(walkthroughSave(older, { ...initialAnswer(older), choice: "DAILY" }, "")).toMatchObject({ ok: true, args: { note: "" } });
+  });
+
   it("leaves a tool already on the page to the sharing step", () => {
     const shared = picked("Clay", {}, );
     const onPage = { ...shared, isPublishedAtCurrentHandle: true };

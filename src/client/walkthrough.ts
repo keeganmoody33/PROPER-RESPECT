@@ -2,6 +2,7 @@ import { isRelationshipConfirmed } from "@/src/domain/inventory";
 import { creditPlatform, normalizeCredit, type CreditPlatform, type PropsCredit } from "@/src/domain/props-credit";
 import { levelStatus, type RelationshipLevel, type RelationshipStatus } from "@/src/domain/relationship-level";
 import type { ProductUses } from "@/src/domain/product-uses";
+import { ownerLine } from "@/src/domain/system-lines";
 import { initialOwnerHeadline } from "./headline-suggestion";
 
 // One tool per screen, built from what the collection already holds (launch readiness, section 6, E1). Every answer is
@@ -20,10 +21,12 @@ export type WalkthroughCard = Readonly<{
 
 export type WalkthroughItem = Readonly<{ propId: string; card: WalkthroughCard & { product: NonNullable<WalkthroughCard["product"]> } }>;
 
+/** The owner's own words only, as share-all reads them: an app's words on an older card are dropped. */
+const ownerWords = (card: WalkthroughCard, text: string) => ownerLine(text, card.product?.name ?? "");
 /** A note stands in for a missing headline on the card, the same rule share-all uses, so "complete" here means "shares" there. */
-const hasALine = (prop: WalkthroughCard["prop"]) => prop.headline.trim() !== "" || prop.note.trim() !== "";
+export const walkthroughLine = (card: WalkthroughCard) => ownerWords(card, card.prop.headline).trim() || ownerWords(card, card.prop.note).trim();
 const onPage = (card: WalkthroughCard) => card.isPublishedAtCurrentHandle === true || card.prop.visibility === "PUBLIC";
-const complete = (card: WalkthroughCard) => isRelationshipConfirmed(card.prop) && Boolean(card.prop.level) && hasALine(card.prop);
+const complete = (card: WalkthroughCard) => isRelationshipConfirmed(card.prop) && Boolean(card.prop.level) && walkthroughLine(card) !== "";
 
 /**
  * The tools still waiting for an answer, once per product: tools already confirmed first (they need a level or a line),
@@ -94,7 +97,7 @@ export function initialAnswer(card: WalkthroughCard): WalkthroughAnswer {
   return {
     choice: confirmed ? card.prop.level : undefined, usePicks: card.prop.uses?.picks ?? [], useOther: card.prop.uses?.other ?? "",
     startedAt: card.prop.startedAt ?? "", creditPlatform: credit.platform, creditHandle: credit.handle, creditPlatformName: credit.platformName,
-    ownerLine: initialOwnerHeadline(confirmed ? card.prop.headline : ""),
+    ownerLine: initialOwnerHeadline(confirmed ? ownerWords(card, card.prop.headline) : ""),
   };
 }
 
@@ -133,7 +136,7 @@ export function walkthroughSave(card: WalkthroughCard, answer: WalkthroughAnswer
     propId: card.prop._id, expectedVersion: card.prop.relationshipVersion ?? 0, ...fields.saves, goTo: card.prop.goTo ?? false,
     headline,
     // A draft's note was written by the system that found it; the owner writes their own (as RelationshipEditor does).
-    note: confirmed || card.prop.ownerEntered ? card.prop.note : "",
+    note: confirmed || card.prop.ownerEntered ? ownerWords(card, card.prop.note) : "",
     uses: answer.usePicks.length || other ? { picks: [...answer.usePicks], ...(other ? { other } : {}) } : undefined,
     credit: credit.credit, startedAt: answer.startedAt || undefined, supportingUrl: card.prop.supportingUrl,
   } };

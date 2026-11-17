@@ -16,7 +16,7 @@ import { errorMessage } from "@/src/domain/user-error";
 import { headlineField, headlineHelp } from "@/src/client/headline-suggestion";
 import {
   choiceFields, currentTool, initialAnswer, lineAction, MORE_CHOICES, neverUsedAction, PRIMARY_CHOICES, progressLine, resumeSession, settle,
-  startSession, walkthroughQueue, walkthroughReason, walkthroughSave,
+  startSession, walkthroughLine, walkthroughQueue, walkthroughReason, walkthroughSave,
   type WalkthroughAnswer, type WalkthroughCard, type WalkthroughChoice, type WalkthroughItem, type WalkthroughOutcome, type WalkthroughSession,
 } from "@/src/client/walkthrough";
 import styles from "./walkthrough.module.css";
@@ -184,7 +184,7 @@ function PageSummary({ session, cards, removed, onPreview, onClose }: {
     <p>Nothing is public yet. These are the tools you said yes to, with the line each card shows. Preview the page, then approve it to publish.</p>
     {saved.length ? <ul className={styles.summary}>{saved.map(card => <li key={card.prop._id}>
       <strong>{card.product!.name}</strong> <span>{cardStatusLabel(card.prop)}</span>
-      <p>{card.prop.headline.trim() || card.prop.note.trim() || "No line yet, so this card stays private."}</p>
+      <p>{walkthroughLine(card) || "No line yet, so this card stays private."}</p>
     </li>)}</ul> : <p>You didn&apos;t save an answer this time. Your collection is as it was.</p>}
     {removed.length > 0 && <p className={styles.hint}>Removed from your collection: {removed.join(", ")}.</p>}
     <div className={styles.actions}>
