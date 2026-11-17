@@ -6,6 +6,7 @@ import { publicSiteOrigin } from "@/src/server/public-site";
 import { ThemeProvider } from "@/components/theme-provider";
 import { THEME_BOOTSTRAP } from "@/src/client/theme";
 import { SearchableAnalytics } from "@/components/searchable-analytics";
+import { StaleHeadMetadata } from "@/components/stale-head-metadata";
 import "./globals.css";
 
 const archivo = localFont({ src: "./_homepage-fonts/Archivo.ttf", variable: "--homepage-sans", display: "swap", weight: "100 900", declarations: [{ prop: "font-stretch", value: "62% 125%" }] });
@@ -33,6 +34,7 @@ export default function RootLayout({
       </head>
       <body className={`${archivo.variable} ${mono.variable}`}>
         <SearchableAnalytics />
+        <StaleHeadMetadata />
         <ThemeProvider><AppProviders><SiteHeader /><div id="page-content" tabIndex={-1}>{children}</div><SiteFooter /></AppProviders></ThemeProvider>
       </body>
     </html>

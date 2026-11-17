@@ -1,8 +1,8 @@
 # PROPER-RESPECT - Documentation Index
 
-> Updated: 2026-11-15
+> Updated: 2026-11-17
 >
-> Current scope: [V2 product motion](docs/002-v2-product-motion.md) and the owner decisions in [the brief, Section 3](docs/remediation/CODEX-BRIEF.md). One link, `proper-respect.com/{handle}`, shows the tools a person uses, tests and used before, plus the usage behind them. The collection is private first: nothing publishes without owner preview and approval. Public sign-up stays closed until the Phase 2 gate.
+> Current scope: [V2 product motion](docs/002-v2-product-motion.md) and the owner decisions in [the brief, Section 3](docs/remediation/CODEX-BRIEF.md). One link, `proper-respect.com/{handle}`, shows the tools a person uses, tests and used before, plus the usage behind them. The collection is private first: nothing publishes without owner preview and approval. The sign-up mode is an open decision, with a waitlist recommended; today sign-up is public (owner, 2026-11-17).
 >
 > Decided 2026-11-15: "put on by" as props, one credit per card to the person who put its owner on a tool ([ADR-062](docs/adr/062-props-credit.md)).
 >

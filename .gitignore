@@ -5,8 +5,9 @@ node_modules
 coverage
 test-results
 playwright-report
-.env.local
-.env*.local
+# Every env file is local. Only the example is tracked.
+.env*
+!.env.example
 .compound-engineering/config.local.yaml
 .convex
 .vercel

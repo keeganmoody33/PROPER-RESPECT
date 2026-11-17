@@ -6,16 +6,23 @@ Button names below are the ones you'll see on the site.
 
 ## Get one private result
 
-Choose one source at the start of your collection. The choice survives sign-in.
-GitHub requires its own account connection. Claude Code and Codex accept the
-specific sanitized JSON exports described in [usage measurement](usage-measurement.md);
-other metrics need a strict prepared packet. Click **Import privately** to open
-that tool's exact reported values. A malformed file must leave no blank tool.
-You can instead use **Add a tool** and **Save tool privately**.
+Your collection opens on **Build your stack**. Search for the tools you use,
+add any that are missing by name, pick how often you use each, and save. That
+is enough for a private result. You can also use **Add a tool** and **Save
+tool privately**.
 
-You do not need a public handle or a mailbox connection for this step. Review
-measurements with **Save measurement choices privately**, then confirm how you
-use the tool. Those are private decisions; sharing remains a later choice.
+Usage from a source is optional and sits lower on the page, under **Bring in
+supporting context**, below sharing. If you chose a source before signing in,
+the choice survives sign-in and opens there. GitHub requires its own account
+connection. Claude Code and Codex accept the specific sanitized JSON exports
+described in [usage measurement](usage-measurement.md); other metrics need a
+strict prepared packet. Click **Import privately** to open that tool's exact
+reported values. A malformed file must leave no blank tool.
+
+You do not need a public handle or a mailbox connection for any of this.
+Review measurements with **Save measurement choices privately**, then confirm
+how you use the tool. Those are private decisions; sharing remains a later
+choice.
 
 ## What stays private
 
@@ -40,12 +47,12 @@ support the service (for example, to handle a deletion request).
 
 Nothing becomes public until you approve a preview.
 
-1. Under **Choose what to share**, claim a handle and set your display name
-   and an optional short bio (**Public identity**). You only need these if you
-   want to share.
-2. Tick **Share this saved card** on each saved card you want to share, then
-   open the preview. It shows
-   exactly what a visitor will see ("Your visitor's view").
+1. In the step **Choose your handle**, right above sharing, pick a handle and
+   set your display name, then **Save public identity**. A short bio and links
+   are optional. You only need these if you want to share.
+2. Under **Choose what to share**, tick **Share this saved card** on each
+   saved card you want to share, then open the preview. It shows exactly what
+   a visitor will see ("Your visitor's view").
 3. Tick the approval box and click **Publish this preview**.
 
 Only that approved version appears at `proper-respect.com/<your-handle>`. If you

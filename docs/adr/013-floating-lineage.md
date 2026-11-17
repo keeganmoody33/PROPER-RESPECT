@@ -41,9 +41,9 @@ How do we match "Jordan Crawford" (free text) to Jordan's actual account?
 | No match | None | Ignore |
 
 **Example:**
-- Keegan logged: "Jordan Crawford" (name) + "jordan@cannonball.com" (email, if known)
-- Jordan signs up with email: "jordan@cannonball.com"
-- Match: High confidence → auto-suggest to Jordan
+- A linker logged: "Sam Example" (name) + "sam@example.com" (email, if known)
+- Sam signs up with email: "sam@example.com"
+- Match: High confidence → auto-suggest to Sam
 
 ### The Notification
 
