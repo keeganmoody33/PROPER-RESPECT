@@ -150,6 +150,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [listingReady, setListingReady] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
   const [identityMoreOpen, setIdentityMoreOpen] = useState(false);
   const [measurementSelections, setMeasurementSelections] = useState<Record<string, Id<"rawEvidence">[]>>({});
@@ -796,7 +797,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
           <button type="button" className="secondary-action" onClick={() => void previewUnpublishAll()} disabled={busy}>Unpublish all cards</button>
         </section>}
         {/* A different preview (a new hash) starts unapproved. */}
-        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} refreshAccounts={preview.refreshAccounts} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} searchListing={<SearchListingChoice />} />}
+        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} refreshAccounts={preview.refreshAccounts} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} searchListing={<SearchListingChoice onReady={setListingReady} />} searchListingReady={listingReady} />}
       </section>
       <section className="onboarding-panel" id="collection-sources" aria-labelledby="collection-sources-title">
         <p className="onboarding-kicker">SOURCES / OPTIONAL</p>

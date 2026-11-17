@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import { SharingPreview } from "../../components/sharing-preview";
-import { SearchListingChoiceView } from "../../components/search-listing-choice";
+import { SearchListingChoiceLoading, SearchListingChoiceView } from "../../components/search-listing-choice";
 import type { PublicProfile } from "../domain/public-profile";
 
 const card: PublicProfile["cards"][number] = {
@@ -88,6 +88,23 @@ test("the preview asks once whether to list the page in search, before the appro
   const off = load(renderToStaticMarkup(createElement(SearchListingChoiceView, { listed: false, saving: false, error: "Too many publication changes.", onChange: () => {} })));
   expect(off('[role="switch"]').attr("aria-checked")).toBe("false");
   expect(off('[role="alert"]').text()).toBe("Too many publication changes.");
+});
+
+test("until the search listing choice has loaded, the preview says so and nothing can be approved or published", () => {
+  const waiting = load(renderToStaticMarkup(createElement(SharingPreview, {
+    profile: { handle: "owner", displayName: "Owner", bio: "", cards: [card] }, current: true, busy: false, onPublish: () => {},
+    searchListing: createElement(SearchListingChoiceLoading), searchListingReady: false,
+  })));
+  expect(waiting('.sharing-preview .search-listing-choice[role="status"]').text()).toBe("Loading your search listing choice…");
+  expect(waiting(".sharing-preview-confirmation input").attr("disabled")).toBeDefined();
+  expect(waiting(".sharing-preview > button.primary-action").attr("disabled")).toBeDefined();
+  // Once it has loaded the approval is open again; a preview with no choice to ask was never held.
+  const loaded = load(renderToStaticMarkup(createElement(SharingPreview, {
+    profile: { handle: "owner", displayName: "Owner", bio: "", cards: [card] }, current: true, busy: false, onPublish: () => {},
+    searchListing: createElement(SearchListingChoiceView, { listed: true, saving: false, error: "", onChange: () => {} }), searchListingReady: true,
+  })));
+  expect(loaded(".sharing-preview-confirmation input").attr("disabled")).toBeUndefined();
+  expect(preview([card])(".sharing-preview-confirmation input").attr("disabled")).toBeUndefined();
 });
 
 test("without a search listing answer to ask, the preview shows no switch", () => {

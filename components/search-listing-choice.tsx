@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Field, FieldDescription, FieldLabel } from "@ui-sdk/react/field";
 import { Switch, SwitchThumb } from "@ui-sdk/react/switch";
@@ -28,12 +28,26 @@ export function SearchListingChoiceView({ listed, saving, error, onChange }: {
   </Field>;
 }
 
-export function SearchListingChoice() {
+/** Shown while the owner's answer is on its way. The preview holds its approval until the switch itself is there. */
+export function SearchListingChoiceLoading() {
+  return <p role="status" className="search-listing-choice">Loading your search listing choice…</p>;
+}
+
+/**
+ * `onReady` says whether the switch is on screen. A page is listed by default, so the preview around this must not
+ * let anyone publish before they have seen the choice.
+ */
+export function SearchListingChoice({ onReady }: { onReady?: (ready: boolean) => void }) {
   const choice = useQuery(api.publicProfiles.searchListingChoice, {});
   const setSearchListing = useMutation(api.publicProfiles.setSearchListing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  if (!choice) return null;
+  const loaded = choice !== undefined;
+  useEffect(() => {
+    onReady?.(loaded);
+    return () => onReady?.(false);
+  }, [loaded, onReady]);
+  if (!choice) return <SearchListingChoiceLoading />;
   return <SearchListingChoiceView listed={choice.listed} saving={saving} error={error} onChange={async listed => {
     setSaving(true);
     setError("");
