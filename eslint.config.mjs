@@ -6,5 +6,5 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   // Local agent worktrees are whole checkouts with their own build output.
-  globalIgnores([".next/**", "convex/_generated/**", "prototypes/public-mcp/**", ".claude/worktrees/**"]),
+  globalIgnores([".next/**", "convex/_generated/**", "prototypes/public-mcp/**", ".claude/worktrees/**", ".artifacts/**"]),
 ]);

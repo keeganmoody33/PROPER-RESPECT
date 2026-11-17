@@ -7,12 +7,14 @@
 >   `docs/remediation/CODEX-BRIEF.md`, Section 3. One link,
 >   `proper-respect.com/{handle}`, shows the tools a person uses, tests and
 >   used before, plus the usage behind them. The collection is private first,
->   and nothing publishes without owner preview and approval. Public sign-up
->   is closed until the brief's Phase 2 gate.
-> - **Later, not built:** the lineage and "put on by" requirements (US-006,
->   US-009 and the `Lineage` model below), `@mentions`, a props count, member
->   subdomains or custom domains (#13), and open sign-up (the "Sign up" step
->   in the linker flow). Do not shape the schema for them.
+>   and nothing publishes without owner preview and approval. The sign-up
+>   mode is an open decision, with a waitlist recommended; today sign-up is
+>   public (owner, 2026-11-17).
+> - **Built since:** "put on by" as props, one credit per card to the person
+>   who put its owner on a tool (ADR-062, #221).
+> - **Later, not built:** the fuller lineage requirements (US-006, US-009 and
+>   the `Lineage` model below), `@mentions`, a props count, and member
+>   subdomains or custom domains (#13). Do not shape the schema for them.
 > - **Direction and boundaries:** `docs/000-current-product-thesis.md` and
 >   `docs/002-v2-product-motion.md`.
 >

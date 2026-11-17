@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { mkdir } from "node:fs/promises";
 
 for (const width of [1440, 460, 390, 320]) test(`Origins and branded footer remain usable at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
@@ -98,15 +97,25 @@ for (const width of [1440, 390]) for (const theme of ["light", "dark"]) test(`Ab
 });
 
 const QUICK_VISITS = 3;
+// A phone's slower CPU widens the gap between the page answering clicks and its metadata hydrating.
+const PHONE_CPU_SLOWDOWN = 4;
 
 test("a visitor who leaves the homepage at once lands on a page with one canonical link", async ({ page }) => {
+  test.slow();
+  await (await page.context().newCDPSession(page)).send("Emulation.setCPUThrottlingRate", { rate: PHONE_CPU_SLOWDOWN });
+  const header = page.locator(".site-header");
   for (let visit = 0; visit < QUICK_VISITS; visit++) {
     await page.goto("/");
-    await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Origins", exact: true }).click();
+    await header.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Origins", exact: true }).click();
     await expect(page).toHaveURL(/\/about\/origins$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Giving credit its context");
     await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example/about/origins");
+    await expect(page.locator('meta[property="og:url"]')).toHaveCount(1);
+    await header.getByRole("link", { name: "Proper Respect home" }).click();
+    await page.waitForURL(url => url.pathname === "/");
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://public.example");
   }
 });
 
@@ -177,7 +186,7 @@ for (const since of [null, "invalid-date"]) test(`Footer tally does not invent a
   await expect(tally.getByText(/since launch/)).toHaveCount(0);
 });
 
-for (const width of [1440, 320]) for (const theme of ["light", "dark"]) test(`Footer tally keyboard focus and theme at ${width}px ${theme}`, async ({ page }) => {
+for (const width of [1440, 320]) for (const theme of ["light", "dark"]) test(`Footer tally keyboard focus and theme at ${width}px ${theme}`, async ({ page }, testInfo) => {
   await page.route("**/api/tally", route => route.fulfill({ json: TALLY }));
   await page.setViewportSize({ width, height: 900 });
   await page.goto("/");
@@ -191,8 +200,6 @@ for (const width of [1440, 320]) for (const theme of ["light", "dark"]) test(`Fo
   await expect(count).toHaveAccessibleName("Unidentified requests 5 Close");
   expect(await unidentified.evaluate(button => getComputedStyle(button).outlineWidth)).toBe("3px");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  const date = new Date().toISOString().slice(0, 10);
-  const directory = `docs/verification/${date}-request-tally-assets`;
-  await mkdir(directory, { recursive: true });
-  await tally.screenshot({ path: `${directory}/footer-${width}-${theme}.png` });
+  // Under the run's own output folder, so a test run leaves the tracked docs alone.
+  await tally.screenshot({ path: testInfo.outputPath(`footer-${width}-${theme}.png`) });
 });
