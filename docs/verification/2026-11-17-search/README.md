@@ -8,4 +8,4 @@ Synthetic data: fixture mode (`PROPER_RESPECT_E2E_REFERENCE=1`) with no sign-in 
 | `search-1280.png`, `search-390.png` | `/search?q=clay&tab=tools`: the Tools tab with Clay and how many people list it, now and before. |
 | `tool-clay-1280.png`, `tool-clay-390.png` | `/tools/clay`: Uses it now (Synthetic Sam, Daily) and Used before (Synthetic Ria, Stopped using), each linking to their page. |
 
-On a 390 phone the site header's own navigation runs past the edge and scrolls sideways inside itself; that header belongs to the site frame, not to these pages.
+Retaken after Phase B merged, so the phone shots show the header that wraps instead of running past the edge.
