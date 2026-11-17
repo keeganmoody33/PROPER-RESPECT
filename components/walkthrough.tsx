@@ -16,7 +16,7 @@ import { officialProductIcon } from "@/src/domain/product-icons";
 import { errorMessage } from "@/src/domain/user-error";
 import { headlineField, headlineHelp } from "@/src/client/headline-suggestion";
 import {
-  choiceFields, currentTool, initialAnswer, lineAction, MORE_CHOICES, neverUsedAction, PRIMARY_CHOICES, progressLine, resumeSession, settle,
+  choiceFields, currentTool, initialAnswer, keptNote, lineAction, MORE_CHOICES, neverUsedAction, PRIMARY_CHOICES, progressLine, resumeSession, settle,
   startSession, walkthroughLine, walkthroughQueue, walkthroughReason, walkthroughSave,
   type WalkthroughAnswer, type WalkthroughCard, type WalkthroughChoice, type WalkthroughItem, type WalkthroughOutcome, type WalkthroughSession,
 } from "@/src/client/walkthrough";
@@ -77,7 +77,7 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
   const help = fields.saves ? headlineHelp({ productName: product.name, productSlug: product.slug, confirmed: isRelationshipConfirmed(card.prop), status: levelStatus(fields.saves.level),
     level: fields.saves.level, uses: productUseLabels(product.slug, { picks: [...answer.usePicks], other: answer.useOther }), startedAt: answer.startedAt }) : {};
   const line = headlineField(answer.ownerLine, help.suggestion);
-  const action = lineAction(answer.ownerLine, help.suggestion);
+  const action = lineAction(answer.ownerLine, help.suggestion, keptNote(card));
   const never = neverUsedAction(card, sources?.length);
   const submitLabel = answer.choice === "NEVER" ? never.label : action.label;
 
@@ -167,7 +167,8 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
         aria-describedby={`${ids}-line`} onChange={event => change({ ownerLine: event.target.value })} />
       <span id={`${ids}-line`} className={styles.hint}>{line.suggested
         ? "Suggested from your answers. Edit it, or keep it with the button below."
-        : "Your own words. A card shows on your page only with a line, and only after you approve it."}</span>
+        : action.standIn ? `With no line here, your saved note shows on the card: ${action.standIn}`
+          : "Your own words. A card shows on your page only with a line, and only after you approve it."}</span>
     </label>}
 
     <p role="alert" className={styles.error}>{error}</p>

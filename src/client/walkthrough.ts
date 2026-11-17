@@ -105,10 +105,12 @@ export function initialAnswer(card: WalkthroughCard): WalkthroughAnswer {
  * What the main button says and the line it saves. An untouched suggestion is saved only by a button that says it keeps
  * it, and then exactly as shown. Skip is a separate control and never saves anything.
  */
-export function lineAction(owner: string | null, suggestion: string | undefined) {
+export function lineAction(owner: string | null, suggestion: string | undefined, note = ""): { label: string; headline: string; keepsSuggestion: boolean; standIn?: string } {
   if (owner === null && suggestion) return { label: "Keep this line and go on", headline: suggestion, keepsSuggestion: true };
   if (owner !== null && owner.trim()) return { label: "Save and go on", headline: owner, keepsSuggestion: false };
-  return { label: "Save without a line and go on", headline: "", keepsSuggestion: false };
+  // A kept note shows on the card in place of a line, so the button doesn't say the card has none.
+  return note ? { label: "Save and go on", headline: "", keepsSuggestion: false, standIn: note }
+    : { label: "Save without a line and go on", headline: "", keepsSuggestion: false };
 }
 
 /**
@@ -123,6 +125,11 @@ export function neverUsedAction(card: WalkthroughCard, sourceCount: number | und
 
 const MISSING_CHOICE = "Choose how you use it first.";
 
+// A draft's note was written by the system that found it; the owner writes their own (as RelationshipEditor does).
+const savedNote = (card: WalkthroughCard) => isRelationshipConfirmed(card.prop) || card.prop.ownerEntered ? ownerWords(card, card.prop.note) : "";
+/** The note a save keeps: the owner's own words. On the card it stands in for a missing line. */
+export const keptNote = (card: WalkthroughCard) => savedNote(card).trim();
+
 /** The inventory.save arguments for an answer, less its operation id. What the walkthrough doesn't ask is sent back as saved. */
 export function walkthroughSave(card: WalkthroughCard, answer: WalkthroughAnswer, headline: string) {
   const fields = choiceFields(answer.choice);
@@ -131,12 +138,9 @@ export function walkthroughSave(card: WalkthroughCard, answer: WalkthroughAnswer
     ...(answer.creditPlatformName.trim() ? { platformName: answer.creditPlatformName } : {}) });
   if (!credit.ok) return { ok: false as const, message: credit.message };
   const other = answer.useOther.trim();
-  const confirmed = isRelationshipConfirmed(card.prop);
   return { ok: true as const, args: {
     propId: card.prop._id, expectedVersion: card.prop.relationshipVersion ?? 0, ...fields.saves, goTo: card.prop.goTo ?? false,
-    headline,
-    // A draft's note was written by the system that found it; the owner writes their own (as RelationshipEditor does).
-    note: confirmed || card.prop.ownerEntered ? ownerWords(card, card.prop.note) : "",
+    headline, note: savedNote(card),
     uses: answer.usePicks.length || other ? { picks: [...answer.usePicks], ...(other ? { other } : {}) } : undefined,
     credit: credit.credit, startedAt: answer.startedAt || undefined, supportingUrl: card.prop.supportingUrl,
   } };

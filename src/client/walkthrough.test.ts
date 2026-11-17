@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { shareAllSelections } from "@/src/domain/share-all";
 import { suggestedHeadline } from "@/src/domain/suggested-headline";
 import {
-  choiceFields, initialAnswer, lineAction, MORE_CHOICES, neverUsedAction, PRIMARY_CHOICES, progressLine, resumeSession, settle,
+  choiceFields, initialAnswer, keptNote, lineAction, MORE_CHOICES, neverUsedAction, PRIMARY_CHOICES, progressLine, resumeSession, settle,
   startSession, currentTool, walkthroughQueue, walkthroughReason, walkthroughSave, type WalkthroughCard,
 } from "./walkthrough";
 
@@ -138,6 +138,10 @@ describe("which control saves a line", () => {
   it("says it saves no line when the field is cleared or there is no suggestion, so the card stays private", () => {
     expect(lineAction("   ", suggestion)).toEqual({ label: "Save without a line and go on", headline: "", keepsSuggestion: false });
     expect(lineAction(null, undefined)).toEqual({ label: "Save without a line and go on", headline: "", keepsSuggestion: false });
+    // A saved note stands in for a missing line on the card, so the button never says the card has no line.
+    expect(lineAction("   ", suggestion, "Lead lists")).toEqual({ label: "Save and go on", headline: "", keepsSuggestion: false, standIn: "Lead lists" });
+    expect(lineAction(null, undefined, "Lead lists")).toEqual({ label: "Save and go on", headline: "", keepsSuggestion: false, standIn: "Lead lists" });
+    expect(lineAction("My own line.", suggestion, "Lead lists")).toEqual({ label: "Save and go on", headline: "My own line.", keepsSuggestion: false });
     const share = shareAllSelections([{ propId: "clay", visibility: "PRIVATE", onPublishedPage: false, matchesUnresolvedPublishedCard: false,
       status: "ACTIVE", headline: lineAction(null, undefined).headline, note: "", product: { name: "Clay", domain: "clay.com" } }]);
     expect(share.selections).toEqual([]);
@@ -164,6 +168,12 @@ describe("the save a walkthrough answer sends", () => {
       propId: stack.prop._id, expectedVersion: SAVED_VERSION, level: "DAILY", status: "ACTIVE", goTo: true, headline: "I use Clay daily.", note: "My own words.",
       uses: { picks: ["build-lists", "enrich-leads"] }, credit: undefined, startedAt: "2022-03-01", supportingUrl: "https://example.com/work",
     } });
+  });
+
+  it("names the note it keeps, the one a card shows when it has no line: the owner's own, never an app's or a draft's", () => {
+    expect(keptNote(picked("Clay", { note: " Lead lists " }))).toBe("Lead lists");
+    expect(keptNote(picked("Clay", { note: "Connected activity is private until I approve this card." }))).toBe("");
+    expect(keptNote(found("Wispr Flow", { note: "Unreviewed suggestion" }))).toBe("");
   });
 
   it("clears a draft's system note, sends no uses or date when none are given, and starts a never-saved record at version 0", () => {

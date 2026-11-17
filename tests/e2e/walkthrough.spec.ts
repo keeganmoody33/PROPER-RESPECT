@@ -245,6 +245,23 @@ test("a tool waiting on a later page of a long collection still gets its turn", 
   await expect(walk.getByRole("status")).toHaveText("1 of 1");
 });
 
+test("clearing the line on a tool with a saved note says the note shows instead, and keeps it", async ({ page: browserPage }) => {
+  const noted = picked("clay", "Clay", "clay.com");
+  // Saved before levels: the owner's own note and no level, so the walkthrough still asks about it.
+  await open(browserPage, PHONE, { seed: { ...seeded, cards: [{ ...noted, prop: { ...noted.prop, level: undefined, note: "Lead lists." } }] } });
+  const walk = browserPage.getByRole("region", { name: "Go through your tools" });
+  await walk.getByRole("button", { name: "Go through your tools one at a time" }).click();
+  await walk.getByRole("radiogroup", { name: "How do you use Clay?" }).getByRole("radio", { name: "Weekly" }).click();
+  const line = walk.getByRole("textbox", { name: "The line on its card" });
+  await line.fill("");
+  await expect(walk).toContainText("With no line here, your saved note shows on the card: Lead lists.");
+  await expect(walk.getByRole("button", { name: "Save without a line and go on" })).toHaveCount(0);
+  await walk.getByRole("button", { name: "Save and go on", exact: true }).click();
+  await expect(walk.getByRole("heading", { name: "Here's your page" })).toBeFocused();
+  await expect(walk.getByRole("listitem").filter({ hasText: "Clay" })).toContainText("Lead lists.");
+  expect((await calls(browserPage)).filter(call => call.name === "savePrivately").map(call => ({ headline: call.args.headline, note: call.args.note }))).toEqual([{ headline: "", note: "Lead lists." }]);
+});
+
 test("the walkthrough works from the keyboard alone, with More for the other levels", async ({ page: browserPage }) => {
   await open(browserPage, DESKTOP, { seed: { ...seeded, cards: [seeded.cards[1]] } });
   const walk = browserPage.getByRole("region", { name: "Go through your tools" });
