@@ -25,7 +25,7 @@ Run from a checkout of the deployed release, logged in to the Convex team that o
 npx convex run --prod publicProfiles:rebuildSearch '{}'
 ```
 
-Each call does one batch and returns `next`. Pass `next` back as the arguments, for example:
+Each call syncs one page at most and returns `next`, so the number of calls grows with the number of published pages. Pass `next` back as the arguments, for example:
 
 ```sh
 npx convex run --prod publicProfiles:rebuildSearch '{"phase":"pages","cursor":null}'

@@ -490,6 +490,10 @@ test("the rebuild fills search from published pages alone, honours takedowns and
     await ctx.db.insert("publishedProfiles", page("synthetic-ria", "Synthetic Ria", [card("clay", "Clay", { status: "ARCHIVED", level: "STOPPED" })]));
     await ctx.db.insert("publishedProfiles", { ...page("synthetic-down", "Synthetic Down", [card("clay", "Clay")]), takenDownAt: confirmedAt, takedownReason: "Synthetic" });
     await ctx.db.insert("publishedProfiles", page("synthetic-off", "Synthetic Off", [card("notion", "Notion")]));
+    // Card rows whose page row is already gone, for two different pages.
+    for (const lost of ["synthetic-lost-a", "synthetic-lost-b"]) {
+      await ctx.db.insert("listedCards", { handle: lost, displayName: "Lost", sortName: `lost ${lost}`, productSlug: "notion", productName: "Notion", usedBefore: false, levelLabel: "Daily" });
+    }
     // Rows left from a page that is gone, and a count that drifted.
     await ctx.db.insert("listedPages", { handle: "synthetic-gone", displayName: "Gone", sortName: "gone synthetic-gone", searchText: "gone" });
     await ctx.db.insert("listedCards", { handle: "synthetic-gone", displayName: "Gone", sortName: "gone synthetic-gone", productSlug: "linear", productName: "Linear", usedBefore: false, levelLabel: "Daily" });
@@ -502,8 +506,11 @@ test("the rebuild fills search from published pages alone, honours takedowns and
     users: await ctx.db.query("users").collect(), publications: await ctx.db.query("publishedProfiles").collect(),
   }));
 
-  const first = await rebuildAll(t);
-  expect(first.map(run => (run as { phase: string }).phase)).toEqual(["publications", "pages", "cards", "tools"]);
+  const first = await rebuildAll(t) as { phase: string; synced: number }[];
+  expect([...new Set(first.map(run => run.phase))]).toEqual(["publications", "pages", "cards", "tools"]);
+  // One page a call at most, so no call depends on how many pages or how many tools a deployment holds.
+  expect(first.filter(run => run.phase !== "tools").every(run => run.synced <= 1)).toBe(true);
+  expect(first.filter(run => run.phase === "publications").reduce((sum, run) => sum + run.synced, 0)).toBe(untouched.publications.length);
   const built = await everything();
   expect({ users: built.users, publications: built.publications }).toEqual(untouched);
   expect(built.pages.map(row => row.handle)).toEqual(["synthetic-sam", "synthetic-ria"]);

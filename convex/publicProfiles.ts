@@ -262,7 +262,10 @@ export const reservedHandlesHeld = internalQuery({
 // A query can't write, so no per-caller limit can be kept here. Each public search query instead reads a fixed,
 // small number of index rows and refuses over-long input; a per-caller limit would sit in front of Convex.
 const SITEMAP_ENTRIES_MAX = 2000;
-const REBUILD_BATCH = 25;
+// A rebuild call syncs one page at most. A page can list 500 tools and each costs a few index reads, so a batch of
+// pages could pass Convex's limit on index ranges read in one transaction (4,096) and abort the whole call.
+const REBUILD_PAGES_PER_CALL = 1;
+const REBUILD_CARD_ROWS = 50;
 const REBUILD_TOOL_BATCH = 5;
 const TOOL_RECOUNT_MAX = 1000;
 
@@ -481,24 +484,33 @@ const inSequence = <T>(items: readonly T[], step: (item: T) => Promise<unknown>)
   }, Promise.resolve());
 
 // Each table whose rows name a handle to sync again.
-const REBUILD_SOURCES = { publications: "publishedProfiles", pages: "listedPages", cards: "listedCards" } as const;
+const REBUILD_SOURCES = { publications: "publishedProfiles", pages: "listedPages" } as const;
 
 async function rebuildStep(ctx: MutationCtx, phase: RebuildPhase, cursor: string | null) {
   if (phase === "tools") {
     const page = await ctx.db.query("listedTools").paginate({ numItems: REBUILD_TOOL_BATCH, cursor });
     await inSequence(page.page, tool => recountTool(ctx, tool));
-    return { page, count: page.page.length };
+    return { page, count: page.page.length, again: false };
   }
-  const page = await ctx.db.query(REBUILD_SOURCES[phase]).paginate({ numItems: REBUILD_BATCH, cursor });
+  if (phase === "cards") {
+    // Only card rows whose page row is gone are left to tidy: every page with a row was synced in the step before.
+    const page = await ctx.db.query("listedCards").paginate({ numItems: REBUILD_CARD_ROWS, cursor });
+    const pageRows = await Promise.all([...new Set(page.page.map(row => row.handle))].map(async handle =>
+      ({ handle, held: await ctx.db.query("listedPages").withIndex("by_handle", q => q.eq("handle", handle)).unique() })));
+    const stray = pageRows.filter(row => !row.held).map(row => row.handle);
+    if (stray.length > 0) await syncSearchListing(ctx, stray[0]);
+    // With more than one, these rows are read again next call, without the ones just tidied.
+    return { page, count: Math.min(stray.length, 1), again: stray.length > 1 };
+  }
+  const page = await ctx.db.query(REBUILD_SOURCES[phase]).paginate({ numItems: REBUILD_PAGES_PER_CALL, cursor });
   const handles = [...new Set(page.page.map(row => row.handle))];
-  // In turn, because two pages can share a tool's counts.
   await inSequence(handles, handle => syncSearchListing(ctx, handle));
-  return { page, count: handles.length };
+  return { page, count: handles.length, again: false };
 }
 
 /**
  * Rebuilds the search read model from what each published page shows, changing no other data. Safe to run twice:
- * a second run writes nothing. One batch per call; pass the returned `next` back until it is null.
+ * a second run writes nothing. One page per call at most; pass the returned `next` back until it is null.
  * Run: npx convex run publicProfiles:rebuildSearch '{}'   (add --prod for production)
  */
 export const rebuildSearch = internalMutation({
@@ -509,7 +521,8 @@ export const rebuildSearch = internalMutation({
   }),
   handler: async (ctx, args) => {
     const phase = args.phase ?? "publications";
-    const { page, count } = await rebuildStep(ctx, phase, args.cursor ?? null);
+    const { page, count, again } = await rebuildStep(ctx, phase, args.cursor ?? null);
+    if (again) return { phase, synced: count, next: { phase, cursor: args.cursor ?? null } };
     if (!page.isDone) return { phase, synced: count, next: { phase, cursor: page.continueCursor } };
     const following: RebuildPhase | undefined = REBUILD_PHASES[REBUILD_PHASES.indexOf(phase) + 1];
     return { phase, synced: count, next: following ? { phase: following, cursor: null } : null };
