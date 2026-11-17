@@ -10,7 +10,7 @@ The rebuild lists every page already published, unless its owner turned "List my
 
 ## Order
 
-A `v*` tag deploys the backend and then the frontend with no pause between them (`docs/DEPLOYMENT.md`, "Release a tagged version"), so the new tables and functions are there before any page calls them.
+A `v*` tag deploys the backend and then the frontend, each after the owner approves it (`docs/DEPLOYMENT.md`, "Who can release"), so the new tables and functions are there before any page calls them.
 
 1. Push the release tag as usual and let both jobs finish.
 2. Run the rebuild below until it says it is done.

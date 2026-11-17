@@ -1,8 +1,9 @@
 # Deployment runbook
 
-Updated: 2026-11-12. Releases ship `main` at a `v*` tag the owner pushes,
+Updated: 2026-11-17. Releases ship `main` at a `v*` tag the owner pushes,
 through `.github/workflows/release.yml`: the Convex backend first, then the
-Vercel frontend. Pushing the tag is the owner's approval. The first
+Vercel frontend. The owner approves each of the two deploys in the Actions
+run ([who can release](#who-can-release)). The first
 release is [v0.2.0](releases/v0.2.0.md); later ones follow
 [the template](releases/TEMPLATE.md). The earlier selective-release procedure
 below is historical.
@@ -44,7 +45,8 @@ never deploys Convex. The backend deploys only from the release workflow's
 environment. Every job in the release stops unless the repository owner pushed
 the tag and started that attempt, both `production-backend` and `production-frontend`
 deploy from `v*` tags only, and an active tag ruleset restricts `v*` tags.
-Every action it uses is pinned to a commit.
+While the repository is public, each deploy job also waits for the owner's
+approval. Every action it uses is pinned to a commit.
 Each secret is passed only to the steps that run its CLI, and the first of
 those checks the secret before the CLI starts. That check can't tell where the
 secret came from,
@@ -224,16 +226,28 @@ owner verifies. The workflow refuses a tag that is not on `main`, and the
 frontend job fails unless `proper-respect.com` is an alias of the new deployment
 and the smoke-test routes return 200.
 
-### Who can release (changed 2026-11-12)
+### Who can release
 
-Until v0.2.7 each deploy job waited for the owner's approval as the required
-reviewer of its GitHub environment. The repository is now private, and GitHub
-offers required reviewers on a private repository only on Enterprise, so that
-rule is gone from both environments. Pushing the tag is the approval instead.
-Nothing pauses between `backend` and `frontend`, so a release whose migration
-must run between them needs its own plan in its release notes.
+Changed 2026-11-17. Each deploy job waits for the owner's approval. Both GitHub
+environments, `production-backend` and `production-frontend`, name the owner as
+their only required reviewer. `backend` asks first, and `frontend` asks once
+`backend` has passed. Approve each in the Actions run, under **Review
+deployments**. Pushing the tag starts the release; it does not approve it.
 
-Three things keep a release to the owner. The first is in the tagged commit;
+The wait between the two jobs is where a migration that must run between them
+goes: approve `backend`, run the migration, then approve `frontend`. List it in
+the release notes.
+
+GitHub applies that rule only while the repository is public. It offers
+required reviewers on a private repository only on Enterprise. While this
+repository was private, releases v0.3.0 to v0.3.4 (2026-11-13 to 2026-11-15)
+ran with no approval step: the tag push was the only approval, and nothing
+paused between `backend` and `frontend`. The repository is public again, and
+v0.3.5 (2026-11-17) waited at both jobs. The workflow does not check the reviewer rule,
+so if the repository goes private again the wait disappears without a failing
+check. The three checks below are then all that keep a release to the owner.
+
+Three more things keep a release to the owner. The first is in the tagged commit;
 the other two are repository settings that only the owner can change.
 `scripts/release-gate.sh` checks all three, and `verify`, `backend` and
 `frontend` each run it first, so re-running one deploy job checks them again:
@@ -251,8 +265,9 @@ the other two are repository settings that only the owner can change.
    The workflow can't read the bypass list, so check it by hand whenever a
    collaborator or app gains admin access.
 
-An agent working with the owner's credentials passes all three, so an agent
-pushes a release tag only when the owner asks for that release.
+An agent working with the owner's credentials passes all three and can approve
+both deploys, so an agent pushes a release tag, or approves a deploy, only when
+the owner asks for that release.
 
 ## Historical: prepare a selective release
 
