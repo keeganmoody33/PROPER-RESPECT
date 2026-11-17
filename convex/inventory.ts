@@ -110,6 +110,43 @@ export async function approvePendingDraftImports(ctx: MutationCtx, prop: Doc<"pr
   for (const draft of drafts) if (draft.resultPropId === prop._id && draft.status === "PENDING") await ctx.db.patch(draft._id, { status: "APPROVED" });
 }
 
+const NEVER_USED_REFUSAL = "This tool has evidence or a published card attached, so it stays in your collection.";
+
+// Never used it (the walkthrough, B3) removes a bare record and keeps nothing about it. A record that evidence, a
+// measurement, a refresh or the page relies on is refused, so nothing they point at goes missing.
+export const removeNeverUsed = mutation({
+  args: { propId: v.id("props") },
+  handler: async (ctx, { propId }) => {
+    const user = await requireUser(ctx);
+    const prop = await ctx.db.get(propId);
+    // Already removed: a second tap changes nothing.
+    if (!prop) return { removed: false };
+    if (prop.userId !== user._id) throw userError("Relationship unavailable.");
+    const product = await ctx.db.get(prop.productId);
+    const [page, drafts, ...attached] = await Promise.all([
+      ctx.db.query("publishedProfiles").withIndex("by_handle", q => q.eq("handle", user.handle)).unique(),
+      product ? ctx.db.query("draftImports").withIndex("by_user_slug", q => q.eq("userId", user._id).eq("suggestedProductSlug", product.slug)).collect() : [],
+      ctx.db.query("proofs").withIndex("by_prop", q => q.eq("propId", propId)).first(),
+      ctx.db.query("usageSignals").withIndex("by_prop_metric", q => q.eq("propId", propId)).first(),
+      ctx.db.query("metricSubscriptions").withIndex("by_prop_metric", q => q.eq("propId", propId)).first(),
+      ctx.db.query("artifacts").withIndex("by_prop", q => q.eq("propId", propId)).first(),
+      ctx.db.query("claimReviews").withIndex("by_prop", q => q.eq("propId", propId)).first(),
+      ctx.db.query("measurementReviews").withIndex("by_prop", q => q.eq("propId", propId)).first(),
+      ctx.db.query("rawEvidence").withIndex("by_measurement_prop", q => q.eq("measurementPropId", propId)).first(),
+    ]);
+    if (prop.visibility === "PUBLIC" || prop.activity || prop.activityEvidenceId || page?.cardPropIds?.includes(propId)
+      || attached.some(Boolean) || drafts.some(draft => draft.evidenceResolution?.targetPropId === propId)) throw userError(NEVER_USED_REFUSAL);
+    // Its discovery row goes too: discovery and the GitHub connection both stop on a row that names a missing record.
+    const [links, events] = await Promise.all([
+      ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
+      ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", propId)).collect(),
+    ]);
+    await Promise.all([...links, ...events, ...drafts.filter(draft => draft.resultPropId === propId)].map(row => ctx.db.delete(row._id)));
+    await ctx.db.delete(propId);
+    return { removed: true };
+  },
+});
+
 export const list = query({
   args: { paginationOpts: paginationOptsValidator, includeAccountEvidence: v.optional(v.boolean()) },
   handler: async (ctx, { paginationOpts, includeAccountEvidence }) => {

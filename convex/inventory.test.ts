@@ -5,6 +5,7 @@ import { makeFunctionReference, type FunctionReturnType } from "convex/server";
 import { expect, test, vi } from "vitest";
 import schema from "./schema";
 import type { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 const modules = import.meta.glob("./**/*.ts");
 const save = makeFunctionReference<"mutation">("inventory:save");
@@ -428,4 +429,69 @@ test("saving a blank handle removes the stored credit and keeps it in history", 
   const events = await owner.query(history, { propId, ...historyPage });
   expect(events.page.map((event: { before: { credit?: unknown } }) => event.before.credit))
     .toEqual([{ platform: "OTHER", handle: "a teammate", platformName: "Slack" }, undefined]);
+});
+
+// Never used it (walkthrough, B3): a bare record goes, with nothing kept about it; anything evidence, a measurement or
+// the page relies on stays.
+const removeNeverUsed = makeFunctionReference<"mutation">("inventory:removeNeverUsed");
+const saveSelection = makeFunctionReference<"mutation">("stack:saveSelection");
+const REFUSAL = "This tool has evidence or a published card attached, so it stays in your collection.";
+
+async function stackPicks(owner: Awaited<ReturnType<typeof fixture>>["owner"], operationId: string, slugs: string[]) {
+  const result = await owner.mutation(saveSelection, { operationId, picks: slugs.map(slug => ({ kind: "directory", slug, status: "ACTIVE", level: "WEEKLY" })) });
+  return result.items.map((item: { propId: Id<"props"> }) => item.propId) as Id<"props">[];
+}
+
+test("Never used it removes a bare stack pick with its link, history and discovery row, and leaves every other record alone", async () => {
+  const { t, owner, propId: discovery } = await fixture();
+  const [clay, exa] = await stackPicks(owner, "first-picks", ["clay", "exa"]);
+  const others = () => t.run(async ctx => ({ exa: await ctx.db.get(exa), discovery: await ctx.db.get(discovery), published: await ctx.db.query("publishedProfiles").collect() }));
+  const before = await others();
+  expect(await owner.mutation(removeNeverUsed, { propId: clay })).toEqual({ removed: true });
+  expect(await t.run(async ctx => ({
+    prop: await ctx.db.get(clay),
+    links: await ctx.db.query("links").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
+    events: await ctx.db.query("relationshipEvents").withIndex("by_prop", q => q.eq("propId", clay)).collect(),
+    drafts: (await ctx.db.query("draftImports").collect()).filter(draft => draft.resultPropId === clay),
+  }))).toEqual({ prop: null, links: [], events: [], drafts: [] });
+  expect(await others()).toEqual(before);
+  expect((await owner.query(list, firstPage)).page.map((row: { product: { slug: string } }) => row.product.slug).sort()).toEqual(["exa", "wisprflow"]);
+});
+
+test("removing twice is harmless, and picking the tool again later starts a fresh record", async () => {
+  const { t, owner } = await fixture();
+  const [clay] = await stackPicks(owner, "first-picks", ["clay"]);
+  await owner.mutation(removeNeverUsed, { propId: clay });
+  expect(await owner.mutation(removeNeverUsed, { propId: clay })).toEqual({ removed: false });
+  const [again] = await stackPicks(owner, "second-picks", ["clay"]);
+  expect(again).not.toBe(clay);
+  expect(await t.run(ctx => ctx.db.get(again))).toMatchObject({ status: "ACTIVE", level: "WEEKLY", visibility: "PRIVATE" });
+});
+
+test("Never used it refuses a record with evidence, activity, a measurement or a published card, and removes nothing", async () => {
+  const { t, owner, userId, productId, propId } = await fixture();
+  const ids = await t.run(async ctx => {
+    const sourceId = await ctx.db.insert("evidenceSources", { userId, type: "GMAIL", connectedAt: "2026-11-01" });
+    const rawEvidenceId = await ctx.db.insert("rawEvidence", { userId, evidenceSourceId: sourceId, capturedAt: "2026-11-01", payload: "{}", dedupKey: "mail-1" });
+    await ctx.db.insert("proofs", { propId, type: "EMAIL_EVIDENCE", rawEvidenceId });
+    const plain = { userId, productId, status: "TESTING" as const, headline: "", note: "" };
+    const withActivity = await ctx.db.insert("props", { ...plain, visibility: "DRAFT", activity: { kind: "headlineMetrics", attributionScope: "PERSONAL",
+      capturedAt: "2026-11-01", freshness: "FRESH", provenanceLabel: "Synthetic", primary: { label: "Sessions", value: 1 }, supporting: [] } });
+    const measured = await ctx.db.insert("props", { ...plain, visibility: "DRAFT" });
+    await ctx.db.insert("rawEvidence", { userId, evidenceSourceId: sourceId, capturedAt: "2026-11-01", dedupKey: "measurement-1", measurementPropId: measured });
+    const published = await ctx.db.insert("props", { ...plain, visibility: "PUBLIC" });
+    const onPage = await ctx.db.insert("props", { ...plain, visibility: "PRIVATE" });
+    const page = (await ctx.db.query("publishedProfiles").collect())[0];
+    await ctx.db.patch(page._id, { cardPropIds: [onPage] });
+    return [propId, withActivity, measured, published, onPage];
+  });
+  await Promise.all(ids.map(id => expect(owner.mutation(removeNeverUsed, { propId: id })).rejects.toThrow(REFUSAL)));
+  expect(await t.run(async ctx => (await Promise.all(ids.map(id => ctx.db.get(id)))).every(Boolean))).toBe(true);
+});
+
+test("only the owner can remove a record", async () => {
+  const { t, other, propId } = await fixture();
+  await expect(t.mutation(removeNeverUsed, { propId })).rejects.toThrow();
+  await expect(other.mutation(removeNeverUsed, { propId })).rejects.toThrow("unavailable");
+  expect(await t.run(ctx => ctx.db.get(propId))).not.toBeNull();
 });
