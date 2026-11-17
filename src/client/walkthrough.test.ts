@@ -154,7 +154,12 @@ describe("which control saves a line", () => {
     expect(neverUsedAction(picked("Clay", { activityEvidenceId: "raw-1" }), 0).kind).toBe("leave");
     expect(neverUsedAction(picked("Clay", { visibility: "PUBLIC" }), 0).kind).toBe("leave");
     // Until its sources load, nothing is removed.
-    expect(neverUsedAction(picked("Clay"), undefined).kind).toBe("leave");
+    // Until what is attached has loaded, the answer waits: it is neither a removal nor a quiet "leave it".
+    expect(neverUsedAction(picked("Clay"), undefined)).toEqual({ kind: "wait", label: "Checking what is attached…" });
+    // What is already known settles it without waiting.
+    expect(neverUsedAction(picked("Clay", { visibility: "PUBLIC" }), undefined).kind).toBe("leave");
+    expect(neverUsedAction(picked("Clay"), undefined, true).kind).toBe("leave");
+    expect(neverUsedAction(picked("Clay"), undefined, false, 1).kind).toBe("leave");
     // Another record of the same product stays whatever happens to this one, so nothing here can say the tool is gone.
     const [bare, withEvidence] = [picked("GitHub"), found("GitHub")];
     const [item] = walkthroughQueue([bare, withEvidence]);

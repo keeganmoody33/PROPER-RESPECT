@@ -39,6 +39,7 @@ function ChoiceCard({ choice }: { choice: WalkthroughChoice }) {
 function choiceHint(choice: WalkthroughChoice | undefined, never: ReturnType<typeof neverUsedAction>, name: string): string {
   if (!choice) return "Pick one. You can change it later in your collection.";
   if (choice !== "NEVER") return levelDefinition(choice);
+  if (never.kind === "wait") return `Checking what ${name} has attached before anything is removed.`;
   if (never.kind === "remove") return `Nothing is saved about ${name}. It comes out of your collection.`;
   return never.why === "ANOTHER_RECORD" ? `Your collection has another record of ${name}, so it stays as it is. Nothing new is saved.`
     : `${name} has evidence or a published card attached, so it stays in your collection as it is. Nothing new is saved.`;
@@ -89,6 +90,7 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
     setError("");
     try {
       if (answer.choice === "NEVER") {
+        if (never.kind === "wait") return;
         if (never.kind === "remove") await remove({ propId: item.propId as Id<"props">, expectedVersion: answer.openedVersion });
         onDone(never.kind === "remove" ? "removed" : "left", product.name);
         return;
@@ -179,7 +181,7 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
 
     <p role="alert" className={styles.error}>{error}</p>
     <div className={styles.actions}>
-      <button type="submit" className="primary-action" disabled={busy || !answer.choice}>
+      <button type="submit" className="primary-action" disabled={busy || !answer.choice || (answer.choice === "NEVER" && never.kind === "wait")}>
         {busy ? "Saving…" : submitLabel}
       </button>
       <button type="button" className="secondary-action" disabled={busy} onClick={() => onDone("skipped", product.name)}>Skip</button>

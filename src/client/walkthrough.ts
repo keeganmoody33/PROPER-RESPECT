@@ -123,14 +123,18 @@ export function lineAction(owner: string | null, suggestion: string | undefined,
 /**
  * Never used it removes a bare record: one never published, with no evidence, activity or measurement attached
  * (inventory.removeNeverUsed checks the same on the server). Anything else stays as it is and nothing new is saved.
- * Until its sources have loaded, nothing is removed. The server has the last word: once it has kept a record this screen
+ * Until its sources have loaded, the answer can't be sent. The server has the last word: once it has kept a record this screen
  * took for bare, the answer is to leave it.
  */
 export function neverUsedAction(card: WalkthroughCard, sourceCount: number | undefined, keptByServer = false, otherRecords = 0) {
   // Another record of the product stays in the collection, so removing this one would not take the tool out of it.
   if (otherRecords > 0) return { kind: "leave" as const, label: "Leave it as it is and go on", why: "ANOTHER_RECORD" as const };
-  const bare = !keptByServer && sourceCount === 0 && !onPage(card) && !card.prop.activity && !card.prop.activityEvidenceId;
-  return bare ? { kind: "remove" as const, label: "Remove it and go on" } : { kind: "leave" as const, label: "Leave it as it is and go on", why: "ATTACHED" as const };
+  const leave = { kind: "leave" as const, label: "Leave it as it is and go on", why: "ATTACHED" as const };
+  if (keptByServer || onPage(card) || card.prop.activity || card.prop.activityEvidenceId) return leave;
+  // Its sources are still loading. The answer waits for them: sent now it would read as "leave it" and never remove a
+  // record that turns out to be bare.
+  if (sourceCount === undefined) return { kind: "wait" as const, label: "Checking what is attached…" };
+  return sourceCount === 0 ? { kind: "remove" as const, label: "Remove it and go on" } : leave;
 }
 
 const MISSING_CHOICE = "Choose how you use it first.";
