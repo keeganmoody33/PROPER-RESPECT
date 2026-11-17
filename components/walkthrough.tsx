@@ -215,18 +215,19 @@ function PageSummary({ session, cards, removed, onPreview, onClose }: {
  * The guided path through the collection: one tool per screen, each answer saved privately as it is given. It never
  * publishes; its last screen hands over to the existing share preview and approval.
  */
-export function Walkthrough({ cards, loadMore }: { cards: readonly WalkthroughCard[]; loadMore?: () => void }) {
+export function Walkthrough({ cards, complete = true }: {
+  cards: readonly WalkthroughCard[];
+  /** Whether every page of the collection has been read. */
+  complete?: boolean;
+}) {
   const ids = useId();
   const queue = useMemo(() => walkthroughQueue(cards), [cards]);
   const [stored, setSession] = useState<WalkthroughSession | null>(null);
   const [removed, setRemoved] = useState<string[]>([]);
-  // Tools on a later page of the collection join the walk once it has started. Before that, later pages are read only
-  // while nothing is waiting, so a tool behind a first page of answered ones still gets its turn.
+  // A product is asked about once, and whether it still needs an answer can depend on a record on a later page. So the
+  // walk is offered only when the whole collection has been read.
   const session = stored && resumeSession(stored, queue);
-  const started = stored !== null;
-  const nothingWaiting = queue.length === 0;
-  useEffect(() => { if (started || nothingWaiting) loadMore?.(); }, [started, nothingWaiting, loadMore]);
-  if (!session && queue.length === 0) return null;
+  if (!session && (queue.length === 0 || !complete)) return null;
   const current = session && currentTool(session, queue);
 
   function done(propId: string, outcome: WalkthroughOutcome, name: string) {
@@ -250,4 +251,17 @@ export function Walkthrough({ cards, loadMore }: { cards: readonly WalkthroughCa
       onDone={(outcome, name) => done(current.propId, outcome, name)} onLeave={() => setSession(null)} />}
     {session && !current && <PageSummary session={session} cards={cards} removed={removed} onPreview={preview} onClose={() => setSession(null)} />}
   </section>;
+}
+
+// The collection arrives this many tools at a time.
+const COLLECTION_PAGE = 25;
+
+/**
+ * The walkthrough over the whole collection. It reads every page itself, with its own paging, so the sharing list
+ * beside it still shows its choices a page at a time.
+ */
+export function CollectionWalkthrough() {
+  const { results, status, loadMore } = usePaginatedQuery(api.onboarding.sharingCards, {}, { initialNumItems: COLLECTION_PAGE });
+  useEffect(() => { if (status === "CanLoadMore") loadMore(COLLECTION_PAGE); }, [status, loadMore]);
+  return <Walkthrough cards={results} complete={status === "Exhausted"} />;
 }

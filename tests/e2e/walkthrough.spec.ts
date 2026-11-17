@@ -248,6 +248,21 @@ test("a tool waiting on a later page of a long collection still gets its turn", 
   await expect(walk.getByRole("status")).toHaveText("1 of 1");
 });
 
+test("a tool whose product is already answered on a later page is never offered: the whole collection is read first", async ({ page: browserPage }) => {
+  // The first page holds an unanswered record of Cursor; the last record, on the second page, is a finished one of the same product.
+  const waiting = picked("cursor", "Cursor", "cursor.com");
+  const others = Array.from({ length: FIRST_PAGE - 1 }, (_, index) => {
+    const card = picked(`done-${index}`, `Synthetic tool ${index + 1}`, `tool-${index}.example`);
+    return { ...card, prop: { ...card.prop, headline: "Already answered." } };
+  });
+  const finished = { ...waiting, prop: { ...waiting.prop, _id: "stack-cursor-finished", headline: "Where I write code." } };
+  await open(browserPage, PHONE, { seed: { ...seeded, cards: [waiting, ...others, finished] } });
+  await expect(browserPage.getByRole("region", { name: "Build your stack" })).toBeVisible();
+  await expect(browserPage.getByRole("heading", { name: "My collection" })).toBeVisible();
+  await expect(browserPage.getByRole("button", { name: "Go through your tools one at a time" })).toHaveCount(0);
+  await expect(browserPage.getByRole("region", { name: "Go through your tools" })).toHaveCount(0);
+});
+
 test("clearing the line on a tool with a saved note says the note shows instead, and keeps it", async ({ page: browserPage }) => {
   const noted = picked("clay", "Clay", "clay.com");
   // Saved before levels: the owner's own note and no level, so the walkthrough still asks about it.
