@@ -1,0 +1,58 @@
+.walkthrough { scroll-margin-top: 1rem; min-width: 0; }
+.walkthrough > h2 { margin-block: .25rem .75rem; }
+.lede { max-width: 48rem; line-height: 1.5; }
+
+.screen { display: grid; gap: 1rem; min-width: 0; max-width: 40rem; margin-top: 1rem; }
+.topBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; border-bottom: 1px solid var(--line); }
+.progress { margin: 0; font: 700 .9rem/1.5 var(--homepage-mono, ui-monospace), monospace; font-variant-numeric: tabular-nums; }
+.header { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+.header > div { min-width: 0; }
+.mark { display: grid; place-items: center; flex-shrink: 0; width: 3rem; height: 3rem; overflow: hidden; border-radius: .75rem; background: var(--signal); color: #000; font: 800 1.4rem var(--homepage-sans, Arial), Arial, sans-serif; }
+.mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.name { margin: 0; font: 800 clamp(1.6rem, 6vw, 2.2rem)/1.1 var(--homepage-sans, Arial), Arial, sans-serif; overflow-wrap: anywhere; scroll-margin-top: 1rem; }
+.name:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
+.reason { margin: .25rem 0 0; color: var(--secondary); line-height: 1.4; }
+
+.group { display: grid; gap: .5rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.group > legend { padding: 0; margin-bottom: .5rem; font-weight: 800; line-height: 1.4; }
+.choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: .5rem; }
+.choice { display: flex; align-items: center; gap: .6rem; min-height: 44px; padding: .5rem .85rem; box-sizing: border-box; border: 1px solid var(--control-line); background: var(--input); color: var(--ink); font-weight: 700; cursor: pointer; }
+.choice:has([data-checked]) { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.choice[data-never]:not(:has([data-checked])) { border-style: dashed; }
+.radio { display: inline-grid; place-items: center; flex-shrink: 0; width: 20px; height: 20px; padding: 0; border: 2px solid currentColor; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.radio:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+/* The collection page gives every button 44px (globals.css, .onboarding-shell); these sit in a label that already is. */
+.walkthrough .screen .choice > .radio, .walkthrough .screen .check > .box { min-height: 0; }
+
+.check { display: flex; align-items: center; gap: .75rem; min-height: 44px; line-height: 1.4; cursor: pointer; }
+.box { display: inline-grid; place-items: center; flex-shrink: 0; width: 22px; height: 22px; padding: 0; border: 1px solid var(--secondary); border-radius: 2px; background: var(--input); color: var(--paper); font: inherit; font-size: .85rem; line-height: 1; cursor: pointer; }
+.box[data-checked] { background: var(--ink); border-color: var(--ink); }
+.box:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+
+.field { display: grid; gap: .4rem; min-width: 0; font-weight: 700; line-height: 1.4; }
+.field textarea { resize: vertical; line-height: 1.5; }
+.field input, .field select, .field textarea { width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; padding: .7rem .85rem; border: 1px solid var(--control-line); border-radius: 0; color: var(--ink); background: var(--input); font: inherit; font-weight: 400; }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.hint { margin: 0; color: var(--secondary); font-size: .875rem; font-weight: 400; line-height: 1.5; }
+
+.credit > summary { min-height: 44px; box-sizing: border-box; padding-block: .6rem; font-weight: 800; line-height: 1.4; cursor: pointer; }
+.credit > summary:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.credit > .group { margin-top: .5rem; }
+
+.textButton { min-height: 44px; padding: .25rem .5rem; border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 800; text-decoration: underline; cursor: pointer; justify-self: start; }
+.textButton:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.actions > button { min-height: 44px; }
+.error { margin: 0; color: var(--respect-red); font-weight: 700; }
+.error:empty { display: none; }
+
+.summary { display: grid; gap: .75rem; margin: 0; padding: 0; list-style: none; }
+.summary li { padding: .85rem 1rem; border-inline-start: .4rem solid var(--ink); background: var(--input); overflow-wrap: anywhere; }
+.summary span { color: var(--secondary); font-size: .9rem; }
+.summary p { margin: .35rem 0 0; line-height: 1.5; }
+
+@media (max-width: 420px) {
+  .actions > button { flex: 1 1 100%; }
+}
