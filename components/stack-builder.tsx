@@ -272,7 +272,7 @@ export function StackBuilder({ mode }: { mode: BuilderMode }) {
         <button ref={saveButton} type="button" className="primary-action" disabled={saving || tray.items.length === 0} onClick={() => void saveTray(mode.onSave)}>
           {saving ? "Saving…" : saveButtonLabel(tray.items.length)}
         </button>
-        {tray.saved && tray.items.length === 0 && <a href="#share-all">Next: share your stack</a>}
+        {tray.saved && tray.items.length === 0 && <a href="#walkthrough">Next: go through your tools one at a time</a>}
       </> : mode.kind === "signed-out" ? <SignInButton mode="modal" forceRedirectUrl={firstResultReturnUrl(null)} signUpForceRedirectUrl={firstResultReturnUrl(null)}>
         <button type="button" className="primary-action" disabled={tray.items.length === 0}>{signInToSaveLabel(tray.items.length)}</button>
       </SignInButton> : <button type="button" className="primary-action" disabled>Checking your session…</button>}

@@ -137,7 +137,10 @@ async function noAxeViolations(browserPage: Page) {
   ]);
   expect(saves[0].args.operationId).toHaveLength(crypto.randomUUID().length);
 
-  await builder.getByRole("link", { name: "Next: share your stack" }).click();
+  // The next step is the walkthrough; sharing every confirmed tool stays one section further on. It asks about the twelve
+  // new picks and both seeded cards, which have a line but were saved before levels.
+  await builder.getByRole("link", { name: "Next: go through your tools one at a time" }).click();
+  await expect(browserPage.getByRole("region", { name: "Go through your tools" })).toContainText(`${STAYING_PRIVATE + SHARED} tools are waiting for your answer.`);
   const share = browserPage.getByRole("region", { name: "Share every confirmed tool" });
   await share.getByRole("button", { name: "Choose your public handle" }).click();
   const identity = browserPage.locator("#collection-profile");
