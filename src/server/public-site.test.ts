@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { publicSiteOrigin, publicPageMetadata } from "./public-site";
+import { publicSiteOrigin, publicPageMetadata, publicPathMetadata } from "./public-site";
 import { generateMetadata as layoutMetadata } from "@/app/layout";
 import sitemap from "@/app/sitemap";
 
@@ -31,6 +31,14 @@ it("keeps request-host data out of canonical URLs and refuses unsafe handles", (
   vi.stubEnv("VERCEL_URL", "attacker.example");
   expect(publicPageMetadata("Profile", "Published bio", "a-handle").alternates?.canonical).toBe("https://public.example/a-handle");
   expect(() => publicPageMetadata("Profile", "Bio", "//attacker.example")).toThrow();
+});
+
+it("builds a canonical URL for a site path made only of safe names, and refuses any other", () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://public.example");
+  expect(publicPathMetadata("Search people and tools", "Find a page", "/search").alternates?.canonical).toBe("https://public.example/search");
+  expect(publicPathMetadata("Clay: who uses it", "People", "/tools/clay").openGraph).toMatchObject({ url: "https://public.example/tools/clay", title: "Clay: who uses it" });
+  ["//attacker.example", "/tools/../admin", "/tools/Clay", "tools/clay", "/tools/clay?x=1"]
+    .forEach(path => expect(() => publicPathMetadata("Title", "Description", path)).toThrow());
 });
 
 it("marks preview pages noindex and keeps the sitemap limited to completed public pages", () => {
