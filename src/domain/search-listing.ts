@@ -31,6 +31,11 @@ export function searchProblem(q: string): string | null {
 export const SEARCH_RESULTS_MAX = 24;
 /** The most people one group on a tool page shows at a time. */
 export const TOOL_PEOPLE_PAGE = 48;
+/**
+ * The most tools search lists from one page: its first in the page's order. A sync reads this many rows for a page,
+ * so it always sees every row it holds and never writes a tool twice.
+ */
+export const LISTED_TOOLS_MAX = 500;
 /** The longest "continue after" mark a tool page accepts for its next page of people. */
 export const TOOL_CURSOR_MAX = 200;
 
@@ -73,6 +78,6 @@ export function searchListing(profile: ListingProfile | null, listedInSearch: bo
   }, new Map<string, SearchListing["cards"][number]>());
   return {
     page: { handle, displayName, sortName: `${displayName.toLowerCase()} ${handle}`, searchText: `${handle} ${handle.replaceAll("-", " ")} ${displayName}` },
-    cards: [...cards.values()],
+    cards: [...cards.values()].slice(0, LISTED_TOOLS_MAX),
   };
 }

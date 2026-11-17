@@ -6,7 +6,7 @@ import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
 import { handleSchema, RESERVED_HANDLES } from "../src/domain/handle";
-import { LISTED_BY_DEFAULT, SEARCH_RESULTS_MAX, searchListing, searchProblem, TOOL_CURSOR_MAX, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
+import { LISTED_BY_DEFAULT, LISTED_TOOLS_MAX, SEARCH_RESULTS_MAX, searchListing, searchProblem, TOOL_CURSOR_MAX, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
 import { isHttpUrl } from "../src/domain/http-url";
 import { isRelationshipLevel, type RelationshipLevel } from "../src/domain/relationship-level";
 import { listedUses, type ProductUses } from "../src/domain/product-uses";
@@ -261,7 +261,6 @@ export const reservedHandlesHeld = internalQuery({
 // Search (C1 to C4). The read model holds only what syncSearchListing copies from a listed public page.
 // A query can't write, so no per-caller limit can be kept here. Each public search query instead reads a fixed,
 // small number of index rows and refuses over-long input; a per-caller limit would sit in front of Convex.
-const PAGE_TOOLS_MAX = 500;
 const SITEMAP_ENTRIES_MAX = 2000;
 const REBUILD_BATCH = 25;
 const REBUILD_TOOL_BATCH = 5;
@@ -321,7 +320,7 @@ export async function syncSearchListing(ctx: MutationCtx, handle: string) {
   if (listing && !page) await ctx.db.insert("listedPages", listing.page);
   if (listing && page && !sameRow(page, listing.page)) await ctx.db.patch(page._id, listing.page);
 
-  const held = await ctx.db.query("listedCards").withIndex("by_handle", q => q.eq("handle", handle)).take(PAGE_TOOLS_MAX);
+  const held = await ctx.db.query("listedCards").withIndex("by_handle", q => q.eq("handle", handle)).take(LISTED_TOOLS_MAX);
   // The first row held for a tool is kept; any other is a duplicate to remove.
   const firstHeld = new Map(held.map(row => [row.productSlug, row] as const).reverse());
   const wanted = new Map((listing?.cards ?? []).map(card => [card.productSlug, {
@@ -420,7 +419,7 @@ export const listedToolSlugs = query({
   returns: v.array(v.string()),
   handler: async (ctx, { handle }) => {
     if (handleSchema.safeParse(handle).data !== handle) return [];
-    const rows = await ctx.db.query("listedCards").withIndex("by_handle", q => q.eq("handle", handle)).take(PAGE_TOOLS_MAX);
+    const rows = await ctx.db.query("listedCards").withIndex("by_handle", q => q.eq("handle", handle)).take(LISTED_TOOLS_MAX);
     return rows.map(row => row.productSlug);
   },
 });

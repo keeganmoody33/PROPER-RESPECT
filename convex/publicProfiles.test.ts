@@ -11,6 +11,7 @@ import { sha256 } from "../src/domain/product-knowledge";
 import { productBrandSnapshotSchema } from "../src/domain/product-brand";
 import { e2eReferenceProfile } from "../src/data/e2e-reference-profile";
 import { publicProfileV1Schema, type PublicProfile } from "../src/domain/public-profile";
+import { LISTED_TOOLS_MAX } from "../src/domain/search-listing";
 
 const modules = import.meta.glob("./**/*.ts");
 
@@ -444,6 +445,32 @@ async function rebuildAll(t: TestConvex<typeof schema>) {
   await step({});
   return runs;
 }
+
+test("a page with more tools than search lists holds exactly its first 500 through repeated syncs, and unlisting clears every row", async () => {
+  const t = convexTest(schema, modules);
+  const handle = "synthetic-many";
+  const cards = Array.from({ length: LISTED_TOOLS_MAX + OVER_CAP }, (_, index) => ({
+    product: { name: `Tool ${index}`, slug: `tool-${index}`, domain: `tool-${index}.example`, description: "Synthetic product" },
+    status: "ACTIVE" as const, level: "DAILY" as const, headline: "Line", note: "",
+  }));
+  const owner = await t.run(async ctx => {
+    await ctx.db.insert("publishedProfiles", { handle, revision: 1, publishedAt: confirmedAt, profile: { handle, displayName: "Synthetic Many", bio: "", cards } });
+    return ctx.db.insert("users", { handle, displayName: "Synthetic Many", bio: "" });
+  });
+  const held = () => t.run(async ctx => {
+    const [rows, tools] = [await ctx.db.query("listedCards").collect(), await ctx.db.query("listedTools").collect()];
+    return { cards: rows.length, distinct: new Set(rows.map(row => row.productSlug)).size, tools: tools.length, most: Math.max(0, ...tools.map(tool => tool.people)) };
+  });
+  // The rebuild's first step syncs each published page once; three steps here are three syncs of this one page.
+  const sync = () => t.mutation(internal.publicProfiles.rebuildSearch, {});
+  await sync();
+  await sync();
+  expect(await held()).toEqual({ cards: LISTED_TOOLS_MAX, distinct: LISTED_TOOLS_MAX, tools: LISTED_TOOLS_MAX, most: 1 });
+  expect(await t.query(api.publicProfiles.listedToolSlugs, { handle })).toHaveLength(LISTED_TOOLS_MAX);
+  await t.run(ctx => ctx.db.patch(owner, { listedInSearch: false }));
+  await sync();
+  expect(await held()).toEqual({ cards: 0, distinct: 0, tools: 0, most: 0 });
+});
 
 test("the rebuild fills search from published pages alone, honours takedowns and the switch, and changes nothing the second time", async () => {
   const t = convexTest(schema, modules);

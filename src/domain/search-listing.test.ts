@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LISTED_BY_DEFAULT, SEARCH_QUERY_MAX, SEARCH_WORDS_MAX, SHOW_PAST_USERS, searchListing, searchProblem, usedBefore, type ListingProfile } from "./search-listing";
+import { LISTED_BY_DEFAULT, LISTED_TOOLS_MAX, SEARCH_QUERY_MAX, SEARCH_WORDS_MAX, SHOW_PAST_USERS, searchListing, searchProblem, usedBefore, type ListingProfile } from "./search-listing";
 import { RELATIONSHIP_LEVELS } from "./relationship-level";
 
 const card = (slug: string, fields: Partial<ListingProfile["cards"][number]> = {}): ListingProfile["cards"][number] => ({
@@ -17,6 +17,14 @@ describe("the search listing rule", () => {
       page: { handle: "synthetic-sam", displayName: "Synthetic Sam", sortName: "synthetic sam synthetic-sam", searchText: "synthetic-sam synthetic sam Synthetic Sam" },
       cards: [{ productSlug: "clay", productName: "Clay", searchText: "Clay clay", usedBefore: false, levelLabel: "Using" }],
     });
+  });
+
+  it("lists at most 500 tools from one page, the first in the page's order, so a sync can always read every row it holds", () => {
+    const many = Array.from({ length: LISTED_TOOLS_MAX + 1 }, (_, index) => card(`tool-${index}`));
+    const listed = searchListing(profile(many), undefined)!.cards.map(row => row.productSlug);
+    expect(LISTED_TOOLS_MAX).toBe(500);
+    expect(listed).toHaveLength(LISTED_TOOLS_MAX);
+    expect([listed[0], listed.at(-1)]).toEqual(["tool-0", `tool-${LISTED_TOOLS_MAX - 1}`]);
   });
 
   it("lists nothing for a page that is not public: missing, unpublished or taken down", () => {
