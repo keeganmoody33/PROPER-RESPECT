@@ -1742,8 +1742,7 @@ main {
 .site-navigation, .site-footer, .profile-context, .collection-navigation, .auth-intro figcaption { font-family: var(--homepage-sans), Arial, sans-serif; font-size: .9rem; font-weight: 600; line-height: 1.5; }
 .site-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.4rem; padding-block: .5rem; }
 .site-start { background: var(--ink); color: var(--action-text); padding: .55rem .9rem; text-decoration: none; }
-.site-start:hover { background: var(--respect-red); color: #fff; }
-:root[data-theme="dark"] .site-start:hover { color: #000; }
+.site-start:hover { background: var(--respect-red); color: var(--action-text); }
 .auth-steps { padding-left: 1.3rem; line-height: 1.6; }
 .auth-steps li { padding: .6rem 0; }
 .site-footer { display: block; padding-block: clamp(2.5rem, 6vw, 5rem) 1.25rem; border-top: 3px solid var(--ink); border-bottom: 0; }

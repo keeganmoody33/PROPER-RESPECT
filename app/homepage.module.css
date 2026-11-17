@@ -18,7 +18,8 @@
 
 .actions { display: flex; align-items: flex-start; gap: .9rem; flex-direction: column; }
 .primary { display: inline-flex; justify-content: center; align-items: center; min-height: 52px; padding: .9rem 1.4rem; border: 3px solid var(--ink); background: var(--ink); color: var(--action-text); font-weight: 800; font-size: 1.05rem; text-decoration: none; }
-.primary:hover { background: var(--respect-red); border-color: var(--respect-red); color: #fff; }
+/* The accent is dark on a light page and light on a dark one, so the label follows the theme with it. */
+.primary:hover { background: var(--respect-red); border-color: var(--respect-red); color: var(--action-text); }
 .hero .primary { background: var(--poster-ink); border-color: var(--poster-ink); color: var(--poster); }
 .hero .primary:hover { background: var(--poster); color: var(--poster-ink); }
 .secondary { font-size: .95rem; font-weight: 600; line-height: 1.5; padding-block: .35rem; }
