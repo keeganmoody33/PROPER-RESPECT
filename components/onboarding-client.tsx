@@ -45,6 +45,7 @@ import { CollectionWalkthrough } from "./walkthrough";
 import { MeasurementSharingChoices } from "./measurement-review";
 import { FirstResultPanel, useFirstResultSource } from "./first-result";
 import { SignedOutCollection } from "./signed-out-collection";
+import { StartDateInput } from "./start-date-input";
 import { selectFirstResultSource } from "@/src/client/first-result-intent";
 import { errorMessage } from "@/src/domain/user-error";
 
@@ -600,14 +601,11 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                   </label>
                   <label className="review-field">
                     When you started using it (optional)
-                    <input
-                      type="date"
+                    <StartDateInput
                       value={edit.startedAt}
                       readOnly={state.privateInventoryAvailable}
-                      onChange={(event) =>
-                        updateReview(card.prop._id, edit, {
-                          startedAt: event.target.value,
-                        })
+                      onChange={(startedAt) =>
+                        updateReview(card.prop._id, edit, { startedAt })
                       }
                     />
                   </label>

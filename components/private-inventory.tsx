@@ -18,6 +18,7 @@ import { ProductCardSkeleton } from "./product-card-skeleton";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { ProductBrandControls } from "./product-brand-controls";
 import { DiscoveryReview } from "./discovery-review";
+import { StartDateInput } from "./start-date-input";
 import styles from "./private-inventory.module.css";
 import { errorMessage } from "@/src/domain/user-error";
 
@@ -169,7 +170,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       <CreditQuestion productName={item.product.name} credit={item.prop.credit} />
       <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>
       {item.prop.ownerEntered && !confirmed && item.prop.note && <p className={styles.hint}>The note you entered when adding this product is already filled in. Edit it if needed.</p>}
-      <label className={styles.dateField}><span>Started using (optional)</span><input name="startedAt" type="date" aria-label="Started using (optional)" value={startedAt} onChange={event => onStartDateChange(event.target.value)} />
+      <label className={styles.dateField}><span>Started using (optional)</span><StartDateInput name="startedAt" aria-label="Started using (optional)" value={startedAt} onChange={onStartDateChange} />
         {startedAt !== (item.prop.startedAt ?? "") && <span className={styles.draftLabel}>Unsaved</span>}
       </label>
       {dateNotice && <p className={styles.dateNotice} role="status">{dateNotice}</p>}
