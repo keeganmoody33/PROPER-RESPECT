@@ -20,4 +20,11 @@ export const RESERVED_HANDLES: ReadonlySet<string> = new Set([
   "onboarding",
   "sign-in",
   "sign-up",
+  "app",
+  "about",
+  // Held for pages that are planned: search, a page per tool, and browsing people.
+  "search",
+  "tools",
+  "people",
+  "explore",
 ]);

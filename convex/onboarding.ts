@@ -13,6 +13,7 @@ import { mutation, query, internalMutation, internalQuery, type QueryCtx, type M
 import type { Doc, Id } from "./_generated/dataModel";
 import { consumeWriteLimit, requireIdentity, requireUser } from "./authHelpers";
 import { claimableHandleSchema } from "../src/domain/onboarding";
+import { handleSchema } from "../src/domain/handle";
 import { projectPublishedMeasurements } from "../src/domain/measurements";
 import { projectPublicProfile, publicProfileSchema, withHttpArtifacts } from "../src/domain/public-profile";
 import { classifyEvidenceUpload, normalizeUploadMime } from "../src/domain/evidence-upload";
@@ -111,9 +112,12 @@ export const claimHandle = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
-    const handle = claimableHandleSchema.parse(args.handle);
+    // An account that already holds a handle keeps it when it saves its identity again, even one reserved since.
+    const kept = args.handle.trim().toLowerCase() === user.handle;
+    const handle = kept ? handleSchema.parse(user.handle) : claimableHandleSchema.parse(args.handle);
     await consumeWriteLimit(ctx, user._id, "claimHandle");
     const displayName = args.displayName.trim(), bio = args.bio.trim();
+    if (!displayName) throw new Error("Enter a display name before saving your public identity.");
     if (displayName.length > DISPLAY_NAME_MAX) throw new Error("Use a display name of 80 characters or fewer.");
     if (bio.length > BIO_MAX) throw new Error("Use a bio of 500 characters or fewer.");
     if (await ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).first()) {

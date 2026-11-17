@@ -13,3 +13,6 @@ playwright-report
 *.log
 *.tsbuildinfo
 .artifacts
+.claude/worktrees
+.claude/telemetry
+.claude/launch.json

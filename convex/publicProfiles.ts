@@ -1,10 +1,11 @@
-import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
+import { RESERVED_HANDLES } from "../src/domain/handle";
 import { isHttpUrl } from "../src/domain/http-url";
 import { isRelationshipLevel, type RelationshipLevel } from "../src/domain/relationship-level";
 import { listedUses, type ProductUses } from "../src/domain/product-uses";
@@ -228,5 +229,27 @@ export const setRetainedAggregateDisplay = mutation({
       ...(args.distinction ? { accountDistinction: args.distinction } : {}),
     });
     return null;
+  },
+});
+
+/**
+ * Which reserved handles an account, a site or an alias already holds. Read only.
+ * Run: npx convex run publicProfiles:reservedHandlesHeld   (add --prod for production)
+ * It returns the reserved words that are taken and where, and no account details.
+ */
+export const reservedHandlesHeld = internalQuery({
+  args: {},
+  handler: async ctx => {
+    const taken: { handle: string; heldBy: string[] }[] = [];
+    for (const handle of RESERVED_HANDLES) {
+      const [account, site, alias] = await Promise.all([
+        ctx.db.query("users").withIndex("by_handle", q => q.eq("handle", handle)).first(),
+        ctx.db.query("sites").withIndex("by_handle", q => q.eq("handle", handle)).first(),
+        ctx.db.query("publicProfileAliases").withIndex("by_handle", q => q.eq("handle", handle)).first(),
+      ]);
+      const heldBy = [account && "account", site && "site", alias && "alias"].filter((place): place is string => typeof place === "string");
+      if (heldBy.length > 0) taken.push({ handle, heldBy });
+    }
+    return taken;
   },
 });

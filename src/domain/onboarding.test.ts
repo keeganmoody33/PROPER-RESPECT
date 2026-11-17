@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canRefreshMetric, claimableHandleSchema } from "./onboarding";
 
 describe("claimableHandleSchema", () => {
-  it.each(["about", "app", "collection", "contact", "origins", "privacy", "pending-victim123"])("preserves the previously claimable %s handle", handle => {
+  it.each(["collection", "contact", "origins", "privacy", "pending-victim123"])("preserves the previously claimable %s handle", handle => {
     expect(claimableHandleSchema.parse(handle)).toBe(handle);
   });
   it.each(["icon", "apple-icon", "evidence-fixture", "agents", "auth", "index"].flatMap(handle => [handle, `  ${handle.toUpperCase()}  `]))("rejects route-shadowed handle %s after normalization", handle => {

@@ -1,7 +1,7 @@
 # CONTEXT.md - PROPER-RESPECT
 
 > Shared domain language for PROPER-RESPECT.  
-> Last updated: 2026-09-28 (R14).
+> Last updated: 2026-11-17.
 >
 > **Status (2026-09-28):** the product definition follows the owner decisions
 > of 2026-09-25 in `docs/remediation/CODEX-BRIEF.md`, Section 3. Terms and
@@ -10,7 +10,9 @@
 
 ## Product Identity
 
-PROPER-RESPECT is one link, `proper-respect.com/{handle}`. On it, a person shows the tools they use, test and used before, plus the usage behind those tools. The collection is private first: nothing is published without the person's explicit preview and approval. Public sign-up stays closed until the Phase 2 gate in the brief.
+PROPER-RESPECT is your tooling page: one link, `proper-respect.com/{handle}`, that shows every tool you use, test and used before, with the usage behind it. You earn respect for what you actually run, and you give props to whoever put you on. A tool you stopped using still counts.
+
+The collection is private first: nothing is published without the person's explicit preview and approval. Sign-up mode is an open decision, with a waitlist recommended. Today's behaviour is that sign-up is public (owner, 2026-11-17).
 
 The product is not an affiliate network, a payment processor, a review site, a company analytics dashboard, or a surveillance product. It is a user-owned profile and proof surface for product advocacy.
 
@@ -18,10 +20,13 @@ The product is not an affiliate network, a payment processor, a review site, a c
 
 | Term | Definition | Do Not Call It |
 | --- | --- | --- |
-| Linker | The person keeping a private collection of their tools and choosing which cards to publish on their profile | Affiliate, influencer |
+| Linker | The person keeping a private collection of their tools and choosing which cards to publish on their page | Affiliate, influencer |
+| Page | The public tooling page at `proper-respect.com/{handle}`: the cards a person approved | Collection, profile site |
+| Collection | The private list of a person's tools, seen only by them | Page |
+| Respect | What usage earns. A card backed by real usage earns it; nothing else in the product uses the word | Verified, score, rating |
 | Visitor | Someone browsing a linker's profile | Lead |
 | Product Stack | The set of products a linker uses, tests, or used before | Link list |
-| Prop | A linker's relationship with one product | Link entry |
+| Prop | Code name only, for the stored relationship between a linker and one product (`props` table, `propId`). People see it as a card. Never shown as "prop" in the product, because props means credit | Link entry |
 | Product | The tool, app, service, course, community, or physical item being logged | Company page |
 | Link Slot | A card's optional primary link, at most one. Its type is canonical, affiliate, referral or invite, and affiliate and referral links are disclosed on the card. Several slots per card are **Later** | Ad placement |
 | Affiliate Link | A product-provided link that can credit the linker, used as a card's primary link and labeled "Affiliate link" | Tracking link |
@@ -34,12 +39,12 @@ The product is not an affiliate network, a payment processor, a review site, a c
 | Usage level | How often the linker says they use a product, one of seven from Tried, didn't adopt to Daily | Rank, score |
 | Status | The stored compatibility field each usage level implies: ACTIVE, TESTING or ARCHIVED. Shown as Using, Testing or Used before only on a card with no level | Rank |
 | Lineage | **Later.** The story of who or what put the linker on to a product | Referral chain |
-| Props | The one credit a card gives the person who put its owner on the product: a handle on one platform, set by the owner (ADR-062, decided 2026-11-15) | Score, endorsement count |
+| Props | Credit to whoever put you on a tool. The one credit a card gives that person: a handle on one platform, set by the owner (ADR-062, decided 2026-11-15). Nothing else is called props | Score, endorsement count, praise for a tool |
 | Put On By | Built as Props for v1 (ADR-062). The fuller lineage field below is **Later** | Attribution form |
 | Floating Lineage | **Later.** Lineage pointing to a person/content/community/event not on PROPER-RESPECT | Orphan link |
 | Import | Bringing in public or user-approved data to create draft props | Scraping |
 | Claim-on-Visit | Browser extension flow where the linker clicks while on a product page to create proof | Browser tracking |
-| Draft Prop | A prop that has been imported or created but not published | Auto-discovered product |
+| Draft Prop | Code name for a relationship that has been imported or created but not published. People see it as a draft card | Auto-discovered product |
 
 ## Usage Levels
 

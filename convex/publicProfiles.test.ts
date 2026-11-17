@@ -2,7 +2,7 @@
 /// <reference types="vite/client" />
 import { convexTest } from "convex-test";
 import { expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { productBrandSnapshotSchema } from "../src/domain/product-brand";
 import { e2eReferenceProfile } from "../src/data/e2e-reference-profile";
@@ -230,4 +230,14 @@ test("a stored card keeps a known level, drops an unknown one, and a card withou
   const legacy = await t.query(api.publicProfiles.getByHandle, { handle: "levels" });
   expect(legacy?.cards.map(card => card.level)).toEqual(["DAILY", undefined, undefined]);
   expect(await t.run(ctx => ctx.db.get(id))).toEqual(before);
+});
+
+test("the reserved-handle check names a reserved word an account already holds, and nothing else", async () => {
+  const t = convexTest(schema, modules);
+  expect(await t.query(internal.publicProfiles.reservedHandlesHeld, {})).toEqual([]);
+  await t.run(async ctx => {
+    await ctx.db.insert("users", { handle: "tools", displayName: "Synthetic holder", bio: "" });
+    await ctx.db.insert("users", { handle: "not-reserved", displayName: "Synthetic other", bio: "" });
+  });
+  expect(await t.query(internal.publicProfiles.reservedHandlesHeld, {})).toEqual([{ handle: "tools", heldBy: ["account"] }]);
 });

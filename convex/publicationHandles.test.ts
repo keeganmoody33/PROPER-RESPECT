@@ -63,7 +63,7 @@ test.each(["icon", "apple-icon", "evidence-fixture", "agents", "auth", "index"].
   expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
 });
 
-test.each(["about", "app", "collection", "contact", "origins", "privacy", "pending-victim123"])("an unpublished owner can still claim %s", async handle => {
+test.each(["collection", "contact", "origins", "privacy", "pending-victim123"])("an unpublished owner can still claim %s", async handle => {
   const { t, owner, userId } = await fixture();
   expect(await owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Owner", bio: "Approved bio" })).toEqual({ handle });
   expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Owner", bio: "Approved bio" });
@@ -175,6 +175,14 @@ test("name destination must be explicitly selected from bounded profile links", 
   await expect(other.mutation(api.onboarding.claimHandle, { ...values, profileLinks: [] })).rejects.toThrow("already claimed");
 });
 
+test.each(["app", "about", "search", "tools", "people", "explore"])("a new claim of %s is refused, and nothing is saved", async handle => {
+  const { t, owner, userId } = await fixture();
+  const before = await t.run(ctx => ctx.db.get(userId));
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Owner", bio: "Approved bio" })).rejects.toThrow("This handle is reserved.");
+  expect(await t.run(ctx => ctx.db.get(userId))).toEqual(before);
+});
+
+// app is reserved for new claims; an account that held it before the reservation keeps it.
 test.each(["collection", "app"])("existing %s owners can edit their private identity while preserving their publication", async handle => {
   const { t, owner, userId } = await fixture();
   await t.run(ctx => ctx.db.patch(userId, { handle }));
@@ -184,6 +192,23 @@ test.each(["collection", "app"])("existing %s owners can edit their private iden
   expect(await owner.mutation(api.onboarding.claimHandle, { handle, displayName: "Private updated name", bio: "Private updated bio" })).toEqual({ handle });
   expect(await t.run(ctx => ctx.db.get(userId))).toMatchObject({ handle, displayName: "Private updated name" });
   expect(await t.query(api.publicProfiles.getByHandleV2, { handle })).toEqual(publishedBefore);
+});
+
+test.each(["", "   ", "\t\n"])("blank display name %j cannot replace a usable public identity", async displayName => {
+  const { t, owner, userId } = await fixture();
+  await owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName: "Saved owner", bio: "Saved bio" });
+  const preview = await owner.query(api.onboarding.previewPublication, { selections: [] });
+  await owner.mutation(api.onboarding.publishSelected, { selections: [], expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  const state = () => t.run(async ctx => ({
+    user: await ctx.db.get(userId),
+    sites: await ctx.db.query("sites").collect(),
+    publications: await ctx.db.query("publishedProfiles").collect(),
+  }));
+  const before = await state();
+  await expect(owner.mutation(api.onboarding.claimHandle, { handle: "owner", displayName, bio: "Unsaved bio" }))
+    .rejects.toThrow("Enter a display name before saving your public identity.");
+  expect(await state()).toEqual(before);
+  expect((await owner.query(api.onboarding.previewPublication, { selections: [] })).profile.displayName).toBe("Saved owner");
 });
 
 test.each([

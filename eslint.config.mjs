@@ -5,5 +5,6 @@ import nextTs from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores([".next/**", "convex/_generated/**", "prototypes/public-mcp/**"]),
+  // Local agent worktrees are whole checkouts with their own build output.
+  globalIgnores([".next/**", "convex/_generated/**", "prototypes/public-mcp/**", ".claude/worktrees/**"]),
 ]);
