@@ -7,9 +7,10 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authHelpers";
 import { retainedProductBrand } from "./productBrands";
 import { readPublishedProfile } from "./publicProfiles";
-import { productUsesValidator, relationshipLevelValidator, statusValidator } from "./validators";
+import { productUsesValidator, propsCreditValidator, relationshipLevelValidator, statusValidator } from "./validators";
 import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
 import { normalizeUses } from "../src/domain/product-uses";
+import { normalizeCredit } from "../src/domain/props-credit";
 import { associatedAccountEvidenceForProp, rankAccountEvidence } from "./associatedAccountEvidence";
 import { privateCardPrimaryLink } from "../src/domain/product-destination";
 import type { RankedAccountEvidence } from "../src/domain/account-evidence";
@@ -23,7 +24,7 @@ async function ownedProp(ctx: QueryCtx | MutationCtx, propId: Id<"props">) {
 export function relationshipState(prop: Doc<"props">) {
   return { status: prop.status, level: prop.level, goTo: prop.goTo ?? false,
     confirmed: isRelationshipConfirmed(prop),
-    headline: prop.headline, uses: prop.uses, note: prop.note, startedAt: prop.startedAt,
+    headline: prop.headline, uses: prop.uses, credit: prop.credit, note: prop.note, startedAt: prop.startedAt,
     supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId };
 }
 
@@ -51,7 +52,7 @@ async function evidenceEntry(ctx: QueryCtx, userId: Id<"users">, rawEvidenceId: 
 export const save = mutation({
   args: {
     propId: v.id("props"), operationId: v.string(), expectedVersion: v.number(),
-    status: statusValidator, level: v.optional(relationshipLevelValidator), goTo: v.boolean(), headline: v.string(), uses: v.optional(productUsesValidator), note: v.string(),
+    status: statusValidator, level: v.optional(relationshipLevelValidator), goTo: v.boolean(), headline: v.string(), uses: v.optional(productUsesValidator), credit: v.optional(propsCreditValidator), note: v.string(),
     startedAt: v.optional(v.string()), supportingUrl: v.optional(v.string()),
     activityEvidenceId: v.optional(v.id("rawEvidence")),
     clearActivity: v.optional(v.boolean()),
@@ -72,6 +73,8 @@ export const save = mutation({
     const product = await ctx.db.get(prop.productId);
     const uses = normalizeUses(product?.slug ?? "", edit.uses);
     if (!uses.ok) throw new Error(uses.message);
+    const credit = normalizeCredit(edit.credit);
+    if (!credit.ok) throw new Error(credit.message);
     let activity = args.clearActivity ? undefined : prop.activity;
     if (args.activityEvidenceId) {
       const raw = await ctx.db.get(args.activityEvidenceId);
@@ -85,11 +88,11 @@ export const save = mutation({
     await ctx.db.insert("relationshipEvents", {
       userId: user._id, propId: prop._id, operationId: args.operationId, requestJson, version,
       recordedAt: now, basis: "OWNER_ASSERTED", before: relationshipState(prop),
-      after: { ...edit, uses: uses.uses, confirmed: true, activityEvidenceId },
+      after: { ...edit, uses: uses.uses, credit: credit.credit, confirmed: true, activityEvidenceId },
     });
     await ctx.db.patch(prop._id, {
       // A save without a level clears the old one, so it can't outlive the status it implied.
-      ...edit, level: edit.level, uses: uses.uses, activity, activityEvidenceId, relationshipVersion: version,
+      ...edit, level: edit.level, uses: uses.uses, credit: credit.credit, activity, activityEvidenceId, relationshipVersion: version,
       startedAt: edit.startedAt, supportingUrl: edit.supportingUrl,
       startedAtSource: edit.startedAt ? (edit.startedAt === prop.startedAt ? prop.startedAtSource ?? "USER_CONFIRMED" : "USER_CONFIRMED") : undefined,
       confirmedAt: prop.confirmedAt ?? now,
@@ -286,7 +289,7 @@ export const exportRelationships = query({
         id: prop._id,
         product: product ? { name: product.name, slug: product.slug, domain: product.domain } : null,
         status: prop.status, level: prop.level, visibility: prop.visibility, goTo: prop.goTo ?? false,
-        headline: prop.headline, uses: prop.uses, note: prop.note, confirmedAt: prop.confirmedAt,
+        headline: prop.headline, uses: prop.uses, credit: prop.credit, note: prop.note, confirmedAt: prop.confirmedAt,
         relationshipVersion: prop.relationshipVersion ?? 0, startedAt: prop.startedAt, startedAtSource: prop.startedAtSource,
         supportingUrl: prop.supportingUrl, activityEvidenceId: prop.activityEvidenceId,
         activity: prop.activity, cost: prop.cost, costVisibility: prop.costVisibility,

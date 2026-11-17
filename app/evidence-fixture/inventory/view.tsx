@@ -10,6 +10,7 @@ import { ObservedStartDateAction } from "@/components/private-evidence-panel";
 import { RelationshipFocus } from "@/components/owner-collection";
 import { ProductCard } from "@/components/product-card";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
+import { creditInputSchema, normalizeCredit } from "@/src/domain/props-credit";
 import styles from "@/components/private-inventory.module.css";
 
 const initial: InventoryData = { hasMore: false, cards: [{
@@ -83,10 +84,12 @@ export function InventoryFixture() {
       setData(previous.data);
       return { ...previous.result, duplicate: true };
     }
+    const credit = normalizeCredit(args.credit && creditInputSchema.parse(args.credit));
+    if (!credit.ok) throw new Error(credit.message);
     const version = args.expectedVersion + 1;
     const next: InventoryData = { ...data, cards: data.cards.map(item => item.prop._id !== args.propId ? item : ({ ...item,
       previousStatuses: item.prop.confirmedAt ? [item.prop.status] : [],
-      prop: { ...item.prop, status: args.status, level: args.level, goTo: args.goTo, headline: args.headline, uses: args.uses, note: args.note,
+      prop: { ...item.prop, status: args.status, level: args.level, goTo: args.goTo, headline: args.headline, uses: args.uses, credit: credit.credit, note: args.note,
         startedAt: args.startedAt, supportingUrl: args.supportingUrl, relationshipVersion: version,
         activityEvidenceId: args.clearActivity ? undefined : args.activityEvidenceId ?? item.prop.activityEvidenceId,
         activity: args.clearActivity ? undefined : evidence.find(source => source.id === args.activityEvidenceId)?.suggestedActivity ?? item.prop.activity,

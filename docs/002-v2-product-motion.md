@@ -1,6 +1,6 @@
 # 002 — V2 product motion: multi-user on proper-respect.com
 
-Updated: 2026-10-06. Supersedes [V1 motion](002-v1-product-motion.md) as the active
+Updated: 2026-11-15. Supersedes [V1 motion](002-v1-product-motion.md) as the active
 scope. Reuses the existing evidence and publication decisions; this is not a
 new architecture program.
 
@@ -21,10 +21,13 @@ The brief's [Section 3](remediation/CODEX-BRIEF.md) holds the full decisions.
   private first; nothing publishes without owner preview and approval.
 - **Sign-up is closed** until the brief's Phase 2 gate. The second user is an
   invited tester, not a stranger.
-- **Later, only after real users exist:** `@mentions` and "put on by", a count
-  of props received (the owner decides how it fits the no-score rule above
-  before any design), and member subdomains or custom domains (#13). None is
-  built, and the schema is not shaped for them.
+- **Props, decided 2026-11-15:** each card can credit the person who put its
+  owner on the product, by one handle on one platform, with no count,
+  reverse lookup or notifications ([ADR-062](adr/062-props-credit.md)).
+- **Later, only after real users exist:** `@mentions`, a count of props
+  received (still undecided: the owner decides whether it can fit the
+  no-score rule above before any design), and member subdomains or custom
+  domains (#13). None is built, and the schema is not shaped for them.
 
 ## Existing implementation and source
 

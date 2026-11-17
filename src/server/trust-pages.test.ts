@@ -94,3 +94,9 @@ it("distinguishes isolated Searchable public visits from PostHog without promisi
   expect(markdown).toContain("PostHog");
   expect(trustDocuments.privacy.updatedAt).toBe("2026-11-15");
 });
+
+it("says on the privacy page, word for word, what a published props credit is", () => {
+  const credit = "A card can give props to the person its owner says put them on the tool, named by one handle on one platform, with no confirmation from that person and no count of props.";
+  expect(trustDocuments.privacy.sections.find(section => section.heading === "What becomes public")!.paragraphs).toContain(credit);
+  expect(trustMarkdown("privacy")).toContain(credit);
+});

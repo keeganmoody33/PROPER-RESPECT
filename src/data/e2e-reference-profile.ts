@@ -16,6 +16,8 @@ export const e2eReferenceProfile: PublicProfile = {
       status: "ACTIVE",
       headline: "Where the receipts live.",
       uses: { picks: ["host-code", "review-pull-requests"] },
+      // The operator's own handle, so the reference credit names nobody else.
+      credit: { platform: "PROPER_RESPECT", handle: "lecturesfrom", linked: true },
       note: "I use GitHub to turn product thinking into inspectable, attributable work.",
       startedAt: "2024-01-01",
       // Synthetic display fixture, not the owner's bill.

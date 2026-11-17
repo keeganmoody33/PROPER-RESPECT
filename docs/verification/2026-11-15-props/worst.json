@@ -1,0 +1,770 @@
+[
+  {
+    "where": "home Clay",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · Proper R",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(244, 243, 240)",
+      "right": true
+    },
+    "contrast": 18.93
+  },
+  {
+    "where": "home GitHub",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "1,121 contributions from 1 Sep 2025 to 3"
+    ],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "home Cloudflare",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "Cloudflare"
+    ],
+    "split": [],
+    "credit": {
+      "text": "Props to Someone with a long name and a long titl · A commun",
+      "colour": "rgb(38, 38, 38)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 15.13
+  },
+  {
+    "where": "home Docker",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmno · X",
+      "colour": "rgb(44, 51, 63)",
+      "bg": "rgb(249, 250, 251)",
+      "right": true
+    },
+    "contrast": 12.16
+  },
+  {
+    "where": "home Firecrawl",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmnopqrstuvwxyz1234 · YouTube",
+      "colour": "rgb(38, 38, 38)",
+      "bg": "rgb(249, 249, 249)",
+      "right": true
+    },
+    "contrast": 14.37
+  },
+  {
+    "where": "home n8n",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "n8n"
+    ],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij.abcdefghij_abcdefgh · Instagram",
+      "colour": "rgb(22, 22, 22)",
+      "bg": "rgb(250, 250, 250)",
+      "right": true
+    },
+    "contrast": 17.34
+  },
+  {
+    "where": "home Claude Code",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijabcdefghijabcdefghij12 · Substack",
+      "colour": "rgb(94, 93, 89)",
+      "bg": "rgb(250, 249, 245)",
+      "right": true
+    },
+    "contrast": 6.26
+  },
+  {
+    "where": "home Exa",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · GitHub",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "home Porkbun",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · Proper R",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(254, 249, 249)",
+      "right": true
+    },
+    "contrast": 20.13
+  },
+  {
+    "where": "home Spider",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(248, 250, 252)",
+      "bg": "rgb(12, 14, 19)",
+      "right": true
+    },
+    "contrast": 18.45
+  },
+  {
+    "where": "home Open Places",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to Someone with a long name and a long titl · A commun",
+      "colour": "rgb(35, 38, 31)",
+      "bg": "rgb(247, 245, 239)",
+      "right": true
+    },
+    "contrast": 14.08
+  },
+  {
+    "where": "home Grok Bot",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmno · X",
+      "colour": "rgb(240, 238, 231)",
+      "bg": "rgb(37, 37, 31)",
+      "right": true
+    },
+    "contrast": 13.27
+  },
+  {
+    "where": "home Elicit",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmnopqrstuvwxyz1234 · YouTube",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(252, 252, 248)",
+      "right": true
+    },
+    "contrast": 20.42
+  },
+  {
+    "where": "home Context.dev",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij.abcdefghij_abcdefgh · Instagram",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "keegan GitHub",
+    "width": 1440,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "22 contributions from 20 Jul 2026 to 26 "
+    ],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(240, 238, 231)",
+      "bg": "rgb(23, 23, 19)",
+      "right": true
+    },
+    "contrast": 15.48
+  },
+  {
+    "where": "home Clay",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · Proper R",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(244, 243, 240)",
+      "right": true
+    },
+    "contrast": 18.93
+  },
+  {
+    "where": "home GitHub",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "1,121 contributions from 1 Sep 2025 to 3"
+    ],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "home Cloudflare",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "Cloudflare"
+    ],
+    "split": [],
+    "credit": {
+      "text": "Props to Someone with a long name and a long titl · A commun",
+      "colour": "rgb(38, 38, 38)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 15.13
+  },
+  {
+    "where": "home Docker",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmno · X",
+      "colour": "rgb(44, 51, 63)",
+      "bg": "rgb(249, 250, 251)",
+      "right": true
+    },
+    "contrast": 12.16
+  },
+  {
+    "where": "home Firecrawl",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmnopqrstuvwxyz1234 · YouTube",
+      "colour": "rgb(38, 38, 38)",
+      "bg": "rgb(249, 249, 249)",
+      "right": true
+    },
+    "contrast": 14.37
+  },
+  {
+    "where": "home n8n",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "n8n"
+    ],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij.abcdefghij_abcdefgh · Instagram",
+      "colour": "rgb(22, 22, 22)",
+      "bg": "rgb(250, 250, 250)",
+      "right": true
+    },
+    "contrast": 17.34
+  },
+  {
+    "where": "home Claude Code",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijabcdefghijabcdefghij12 · Substack",
+      "colour": "rgb(94, 93, 89)",
+      "bg": "rgb(250, 249, 245)",
+      "right": true
+    },
+    "contrast": 6.26
+  },
+  {
+    "where": "home Exa",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · GitHub",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "home Porkbun",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · Proper R",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(254, 249, 249)",
+      "right": true
+    },
+    "contrast": 20.13
+  },
+  {
+    "where": "home Spider",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(248, 250, 252)",
+      "bg": "rgb(12, 14, 19)",
+      "right": true
+    },
+    "contrast": 18.45
+  },
+  {
+    "where": "home Open Places",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to Someone with a long name and a long titl · A commun",
+      "colour": "rgb(35, 38, 31)",
+      "bg": "rgb(247, 245, 239)",
+      "right": true
+    },
+    "contrast": 14.08
+  },
+  {
+    "where": "home Grok Bot",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmno · X",
+      "colour": "rgb(240, 238, 231)",
+      "bg": "rgb(37, 37, 31)",
+      "right": true
+    },
+    "contrast": 13.27
+  },
+  {
+    "where": "home Elicit",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmnopqrstuvwxyz1234 · YouTube",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(252, 252, 248)",
+      "right": true
+    },
+    "contrast": 20.42
+  },
+  {
+    "where": "home Context.dev",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij.abcdefghij_abcdefgh · Instagram",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "keegan GitHub",
+    "width": 390,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "22 contributions from 20 Jul 2026 to 26 "
+    ],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(240, 238, 231)",
+      "bg": "rgb(23, 23, 19)",
+      "right": true
+    },
+    "contrast": 15.48
+  },
+  {
+    "where": "home Clay",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [
+      "@abcdefghij-abcdefgh"
+    ],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · Proper R",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(244, 243, 240)",
+      "right": true
+    },
+    "contrast": 18.93
+  },
+  {
+    "where": "home GitHub",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "1,121 contributions from 1 Sep 2025 to 3"
+    ],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "home Cloudflare",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "Cloudflare"
+    ],
+    "split": [],
+    "credit": {
+      "text": "Props to Someone with a long name and a long titl · A commun",
+      "colour": "rgb(38, 38, 38)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 15.13
+  },
+  {
+    "where": "home Docker",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmno · X",
+      "colour": "rgb(44, 51, 63)",
+      "bg": "rgb(249, 250, 251)",
+      "right": true
+    },
+    "contrast": 12.16
+  },
+  {
+    "where": "home Firecrawl",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmnopqrstuvwxyz1234 · YouTube",
+      "colour": "rgb(38, 38, 38)",
+      "bg": "rgb(249, 249, 249)",
+      "right": true
+    },
+    "contrast": 14.37
+  },
+  {
+    "where": "home n8n",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "n8n"
+    ],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij.abcdefghij_abcdefgh · Instagram",
+      "colour": "rgb(22, 22, 22)",
+      "bg": "rgb(250, 250, 250)",
+      "right": true
+    },
+    "contrast": 17.34
+  },
+  {
+    "where": "home Claude Code",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijabcdefghijabcdefghij12 · Substack",
+      "colour": "rgb(94, 93, 89)",
+      "bg": "rgb(250, 249, 245)",
+      "right": true
+    },
+    "contrast": 6.26
+  },
+  {
+    "where": "home Exa",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [
+      "@abcdefghij-abcdefgh"
+    ],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · GitHub",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "home Porkbun",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [
+      "@abcdefghij-abcdefgh"
+    ],
+    "credit": {
+      "text": "Props to @abcdefghij-abcdefghij-abcdefghij-abcdef · Proper R",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(254, 249, 249)",
+      "right": true
+    },
+    "contrast": 20.13
+  },
+  {
+    "where": "home Spider",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(248, 250, 252)",
+      "bg": "rgb(12, 14, 19)",
+      "right": true
+    },
+    "contrast": 18.45
+  },
+  {
+    "where": "home Open Places",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to Someone with a long name and a long titl · A commun",
+      "colour": "rgb(35, 38, 31)",
+      "bg": "rgb(247, 245, 239)",
+      "right": true
+    },
+    "contrast": 14.08
+  },
+  {
+    "where": "home Grok Bot",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmno · X",
+      "colour": "rgb(240, 238, 231)",
+      "bg": "rgb(37, 37, 31)",
+      "right": true
+    },
+    "contrast": 13.27
+  },
+  {
+    "where": "home Elicit",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghijklmnopqrstuvwxyz1234 · YouTube",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(252, 252, 248)",
+      "right": true
+    },
+    "contrast": 20.42
+  },
+  {
+    "where": "home Context.dev",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [],
+    "split": [],
+    "credit": {
+      "text": "Props to @abcdefghij.abcdefghij_abcdefgh · Instagram",
+      "colour": "rgb(0, 0, 0)",
+      "bg": "rgb(255, 255, 255)",
+      "right": true
+    },
+    "contrast": 21
+  },
+  {
+    "where": "keegan GitHub",
+    "width": 320,
+    "sideways": false,
+    "small": [],
+    "targets": [],
+    "cut": [
+      "22 contributions from 20 Jul 2026 to 26 "
+    ],
+    "split": [
+      "jane-doe-aaaaaaaaaaa"
+    ],
+    "credit": {
+      "text": "Props to jane-doe-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "colour": "rgb(240, 238, 231)",
+      "bg": "rgb(23, 23, 19)",
+      "right": true
+    },
+    "contrast": 15.48
+  }
+]

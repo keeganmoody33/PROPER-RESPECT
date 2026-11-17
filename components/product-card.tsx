@@ -23,6 +23,8 @@ import { useReducedMotion } from "./use-reduced-motion";
 import { dayMonthYear, formatPeriod, freshnessNote, monthYear as monthYearOf, yearOf } from "@/src/domain/format-period";
 import { activityHeadline, cadenceEnd, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
 import { productUseLabels } from "@/src/domain/product-uses";
+import { creditHref, creditText, listedCredit } from "@/src/domain/props-credit";
+import { reportHref } from "@/src/domain/report-link";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart } from "./usage-chart";
 import { PrivateUsageCardDetails, PrivateUsageCardPreview } from "./private-usage-card-details";
@@ -516,17 +518,25 @@ function ActivityEvidence({ activity, today, sample }: { activity: ActivityModul
   );
 }
 
+// A report names the card as well as the page. One owner can publish two cards with the same product, headline and credit,
+// so the card's place on the page (the profile shows its cards in stored order) names it; the rest lets the operator check.
+const REPORT_HEADLINE_MAX = 80;
+function creditReportSubject(profileHandle: string, position: number, card: Card, credit: { name: string; platform: string }): string {
+  const headline = [...card.headline.trim()];
+  const shown = headline.length > REPORT_HEADLINE_MAX ? `${headline.slice(0, REPORT_HEADLINE_MAX - 1).join("")}…` : headline.join("");
+  return [`Report credit on proper-respect.com/${profileHandle}`, `card ${position}`, card.product.name, `${credit.name} on ${credit.platform}`, ...(shown ? [`"${shown}"`] : [])].join(" · ");
+}
+
 export function ProductCard({
   card,
+  index,
   displayMode = "relationship",
   relationshipConfirmed = true,
   goTo = false,
   audience = "visitor",
   expandedActivity = false,
   privateUsage,
-  viewerSignedIn = false,
   profileHandle,
-  onGiveProps,
   deferBrandAssets = false,
   siteTraits,
   backHint,
@@ -544,9 +554,8 @@ export function ProductCard({
   audience?: "owner" | "visitor";
   expandedActivity?: boolean;
   privateUsage?: PrivateUsageCard;
-  viewerSignedIn?: boolean;
+  /** The published profile the card is shown on. A credit then offers a report naming that page and card. */
   profileHandle?: string;
-  onGiveProps?: (handle: string, productSlug: string) => Promise<void>;
   /** Lays the card out without fetching its brand fonts or logo, for a card nobody can see yet. */
   deferBrandAssets?: boolean;
   /** What measuring the product's own site added to its brand. Used only beside that same brand. */
@@ -592,6 +601,13 @@ export function ProductCard({
     .find(([applies]) => applies)?.[1] ?? backHint ?? backSays;
   const useLabels = brandPreview ? [] : productUseLabels(card.product.slug, card.uses);
   const pastUse = noLongerInUse(card);
+  const credit = brandPreview ? undefined : listedCredit(card.credit);
+  const creditWords = credit && creditText(credit);
+  const creditLink = credit && creditHref(credit);
+  // A Proper Respect page opens here; another platform's profile opens in a new tab.
+  const creditLinkTarget = credit?.platform === "PROPER_RESPECT" || !creditWords ? {}
+    : { target: "_blank", rel: "noopener noreferrer", "aria-label": `${creditWords.name} on ${creditWords.platform} (opens in a new tab)` };
+  const creditReport = credit && creditWords && profileHandle ? reportHref(creditReportSubject(profileHandle, index + 1, card, creditWords)) : undefined;
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
   const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
@@ -726,10 +742,7 @@ export function ProductCard({
             aria-label={`${webLink.label}${disclosure ? ` · ${disclosure}` : ""} (opens in a new tab)`}
           >
             ↗
-          </a>{disclosure && <span className="card-link-disclosure">{disclosure}</span>}
-          {viewerSignedIn && disclosure && <button type="button" className="card-props-action" onClick={() => {
-            if (onGiveProps && profileHandle) void onGiveProps(profileHandle, card.product.slug);
-          }}>Give props</button>}</div>}
+          </a>{disclosure && <span className="card-link-disclosure">{disclosure}</span>}</div>}
         </div>
 
         <p className="card-headline" data-length={headlineLength(headlineText)}><HeadlineText text={headlineText} accent={brandPreview ? undefined : headlineAccent} colour={accentColour} /></p>
@@ -749,6 +762,12 @@ export function ProductCard({
         ) : null}
         {ownerUsage && <PrivateUsageCardPreview usage={ownerUsage} />}
         {cost && <p className="card-cost">{cost}</p>}
+        {creditWords && <div className="card-credit">
+          <p className="card-credit-line">Props to {creditLink
+            ? <a href={creditLink} {...creditLinkTarget}>{creditWords.name}</a>
+            : creditWords.name} · {creditWords.platform}</p>
+          {creditReport && <a className="card-credit-report" href={creditReport}>Not you? Report</a>}
+        </div>}
 
         <div className="card-footer">
           <span id={`${cardId}-footer`} className={ownerGoTo ? "card-go-to" : undefined}><WholeWords text={footerLabel} /></span>

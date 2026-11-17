@@ -89,6 +89,7 @@ test("native Chrome lists and executes only the visible published profile", asyn
         {
           product: { name: "GitHub" },
           uses: ["host my code and its history", "review and merge pull requests"],
+          credit: { text: "Props to @lecturesfrom · Proper Respect", platform: "Proper Respect", handle: "lecturesfrom", url: "https://proper-respect.com/lecturesfrom" },
           activity: {
             kind: "contributionCalendar",
             total: { displayValue: "22", label: "contributions" },

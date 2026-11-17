@@ -1226,3 +1226,62 @@ test("a product with no stored brand takes its look from its own measured page a
   expect(render(claudeCode, HOMEPAGE_SITE_TRAITS.exa).attr("style") ?? "").not.toContain("--brand-card-background");
   expect(render(claudeCode).attr("style") ?? "").not.toContain("--brand-card-background");
 });
+
+test("a card's credit reads Props to the person and where, links on their platform, and sits just above the footer", () => {
+  const $ = renderCard({ credit: { platform: "X", handle: "jack" } });
+  const line = $(".card-front .card-credit-line");
+  expect(line.text()).toBe("Props to @jack · X");
+  expect([line.find("a").text(), line.find("a").attr("href"), line.find("a").attr("target"), line.find("a").attr("rel")])
+    .toEqual(["@jack", "https://x.com/jack", "_blank", "noopener noreferrer"]);
+  expect($(".card-front .card-credit").next().hasClass("card-footer")).toBe(true);
+  expect($(".card-back .card-credit").length).toBe(0);
+});
+
+test("a Proper Respect credit links to their page only when publishing found it, and Other is always plain text", () => {
+  const linked = renderCard({ credit: { platform: "PROPER_RESPECT", handle: "lecturesfrom", linked: true } })(".card-credit-line");
+  expect([linked.text(), linked.find("a").attr("href"), linked.find("a").attr("target")]).toEqual(["Props to @lecturesfrom · Proper Respect", "https://proper-respect.com/lecturesfrom", undefined]);
+  const unlinked = renderCard({ credit: { platform: "PROPER_RESPECT", handle: "lecturesfrom" } })(".card-credit-line");
+  expect([unlinked.text(), unlinked.find("a").length]).toEqual(["Props to @lecturesfrom · Proper Respect", 0]);
+  const other = renderCard({ credit: { platform: "OTHER", handle: "https://x.com/jack", platformName: "Slack" } })(".card-credit-line");
+  expect([other.text(), other.find("a").length]).toEqual(["Props to https://x.com/jack · Slack", 0]);
+});
+
+test("a stored credit outside its platform's rule shows no credit and no link", () => {
+  // R03's bad-URL set as stored handles.
+  const handles = ["javascript:alert(1)", "data:text/html,x", "ftp://x.com/jack", "https://user:pass@x.com/jack"];
+  const shown = handles.map(handle => renderCard({ credit: { platform: "X", handle } } as Partial<Card>)(".card-credit").length);
+  expect(shown).toEqual([0, 0, 0, 0]);
+  expect(renderCard({ credit: { platform: "X", handle: "jack" } })(".card-credit").length).toBe(1);
+});
+
+test("two cards for the same product report as different cards, by credit and headline, with a long headline cut short", () => {
+  const subjectOf = (card: Card, index = 0) => {
+    const href = load(renderToStaticMarkup(createElement(ProductCard, { card, index, profileHandle: "owner" })))(".card-credit-report").attr("href") ?? "";
+    return decodeURIComponent(href.split("?subject=")[1] ?? "");
+  };
+  const first = subjectOf({ ...baseCard, headline: "Enrichment for my sales team.", credit: { platform: "X", handle: "jack" } });
+  const second = subjectOf({ ...baseCard, headline: "Lead lists for a side project.", credit: { platform: "GITHUB", handle: "octocat" } }, 1);
+  // The same product, headline and credit on two cards still name two cards, by their place on the page.
+  const twin = subjectOf({ ...baseCard, headline: "Enrichment for my sales team.", credit: { platform: "X", handle: "jack" } }, 2);
+  expect([first, second, twin]).toEqual([
+    'Report credit on proper-respect.com/owner · card 1 · Example Product · @jack on X · "Enrichment for my sales team."',
+    'Report credit on proper-respect.com/owner · card 2 · Example Product · @octocat on GitHub · "Lead lists for a side project."',
+    'Report credit on proper-respect.com/owner · card 3 · Example Product · @jack on X · "Enrichment for my sales team."',
+  ]);
+  const long = subjectOf({ ...baseCard, headline: "w".repeat(200), credit: { platform: "X", handle: "jack" } });
+  expect(long).toBe(`Report credit on proper-respect.com/owner · card 1 · Example Product · @jack on X · "${"w".repeat(79)}…"`);
+});
+
+test("on a published profile a credit offers a report naming the page and the card; samples, previews and the owner's cards don't", () => {
+  const published = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, credit: { platform: "X", handle: "jack" } }, index: 0, profileHandle: "owner" })));
+  const report = published(".card-credit .card-credit-report");
+  expect([report.text(), report.attr("href")]).toEqual([
+    "Not you? Report",
+    `mailto:33@lecturesfrom.com?subject=${encodeURIComponent('Report credit on proper-respect.com/owner · card 1 · Example Product · @jack on X · "An owner-approved observation."')}`,
+  ]);
+  expect(renderCard({ credit: { platform: "X", handle: "jack" } })(".card-credit-report").length).toBe(0);
+  const preview = load(renderToStaticMarkup(createElement(ProductCard, {
+    card: { ...baseCard, credit: { platform: "X", handle: "jack" } }, index: 0, displayMode: "brand-preview", profileHandle: "owner",
+  })));
+  expect(preview(".card-credit").length).toBe(0);
+});

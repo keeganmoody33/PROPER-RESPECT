@@ -22,6 +22,7 @@ import { buildExport, collectPages, downloadJson, exportFilename } from "@/src/c
 import { USAGE_LINK_LABELS, usageLinkLabelText } from "@/src/domain/usage-links";
 import { isRelationshipConfirmed } from "@/src/domain/inventory";
 import { privateCardPrimaryLink, offeredPrivatePublicationLink } from "@/src/domain/product-destination";
+import { listedCredit } from "@/src/domain/props-credit";
 import { costSchema, type CostVisibility } from "@/src/domain/cost";
 import { ProductKnowledgePanel } from "./product-knowledge-panel";
 import { PrivateEvidencePanel } from "./private-evidence-panel";
@@ -585,6 +586,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                       level: card.prop.level,
                       headline: card.prop.headline,
                       uses: card.prop.uses,
+                      credit: listedCredit(card.prop.credit),
                       note: card.prop.note,
                       startedAt: card.prop.startedAt,
                       activity: card.prop.activity,

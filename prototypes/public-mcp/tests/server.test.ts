@@ -93,6 +93,16 @@ test("what a product does for its owner reaches agents as the labels visitors re
   assert(publicToolResultSchema.safeParse(result).success);
 });
 
+test("who put the owner on a product reaches agents as visitors read it", async () => {
+  const withCredit = { ...fixture(), cards: fixture().cards.map((card, index) => index === 0 ? { ...card, credit: { platform: "GITHUB" as const, handle: "keeganmoody33" } } : card) };
+  const result = await createPublicReader({ ...options, readPublished: async () => withCredit })("keegan");
+  assert.equal(result.kind, "profile");
+  if (result.kind !== "profile") assert.fail();
+  assert.deepEqual(result.profile.cards[0].credit, { text: "Props to @keeganmoody33 · GitHub", platform: "GitHub", handle: "keeganmoody33", url: "https://github.com/keeganmoody33" });
+  assert.equal("credit" in result.profile.cards[1], false);
+  assert(publicToolResultSchema.safeParse(result).success);
+});
+
 test("every optional field the visitor projection emits reaches agents through the strict contract", async () => {
   const base = measurementProfile();
   const meta = { attributionScope: "PERSONAL" as const, capturedAt: "2026-09-21T13:14:15.000Z", freshness: "FRESH" as const, provenanceLabel: "Captured evidence" };
@@ -117,6 +127,7 @@ test("every optional field the visitor projection emits reaches agents through t
       cost: { amount: 12.34, currency: "USD", cadence: "MONTHLY", basis: "ESTIMATE", asOf: "2026-09-05", period },
       primaryLink: { type: "AFFILIATE", url: "https://example.com/buy", label: "Buy" },
       usageLink: { url: "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002", label: "DEMO" },
+      credit: { platform: "X", handle: "jack" },
     })),
   };
   const result = await createPublicReader({ ...options, readPublished: async () => raw })("keegan");
@@ -128,7 +139,7 @@ test("every optional field the visitor projection emits reaches agents through t
     if (value && typeof value === "object") for (const [key, child] of Object.entries(value)) { emitted.add(`${path}.${key}`); collect(child, `${path}.${key}`); }
   })(result.profile, "profile");
   const optional = ["nameLink", "cards[].level", "cards[].uses", "cards[].startedAt", "cards[].startDateNote", "cards[].measurements", "cards[].cost.period",
-    "cards[].primaryLink.disclosure", "cards[].usageLink", "cards[].activity.period", "cards[].activity.note", "cards[].activity.reportedTotal",
+    "cards[].primaryLink.disclosure", "cards[].usageLink", "cards[].credit", "cards[].credit.url", "cards[].activity.period", "cards[].activity.note", "cards[].activity.reportedTotal",
     "cards[].activity.memberSinceYear", "cards[].activity.coverageNote", "cards[].activity.suppliedRange", "cards[].activity.emptyNote",
     "cards[].activity.label", "cards[].activity.unit", "cards[].activity.days", "cards[].activity.primary.unit"];
   assert.deepEqual(optional.filter(key => !emitted.has(`profile.${key}`)), []);

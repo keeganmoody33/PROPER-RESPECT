@@ -25,6 +25,8 @@ import { sha256 } from "../src/domain/product-knowledge";
 import { resolvePublishedCardPropIds } from "./publication";
 import { shareAllSelections } from "../src/domain/share-all";
 import { listedUses } from "../src/domain/product-uses";
+import { CREDIT_PLATFORMS, listedCredit, type PropsCredit } from "../src/domain/props-credit";
+import { publicPublication } from "./publicProfiles";
 import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
 import {
   profileLinkValidator,
@@ -808,6 +810,19 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   for (const selection of selections) if (selection.publish && selection.measurementEvidenceIds?.length) {
     measurementProjection.set(selection.propId, await reviewedMeasurementsForPublication(ctx, user._id, selection.propId, selection.measurementEvidenceIds));
   }
+  // Each credited Proper Respect handle is looked up once, however many cards credit it.
+  const creditedHandles = new Map<string, Promise<string | undefined>>();
+  const publishedHandle = (handle: string) => {
+    const known = creditedHandles.get(handle);
+    if (known) return known;
+    const found = publicPublication(ctx, handle).then(publication => publication?.profile.handle);
+    creditedHandles.set(handle, found);
+    return found;
+  };
+  const credits = new Map(await Promise.all(selections.filter(selection => selection.publish).map(async selection => {
+    const prop = propsById.get(selection.propId)!;
+    return [prop._id, await publishedCredit(prop.credit, productById.get(prop.productId)?.name ?? "this product", publishedHandle)] as const;
+  })));
   const replacements = selections.filter(selection => selection.publish).flatMap(selection => {
     const prop = propsById.get(selection.propId)!;
     const product = productById.get(prop.productId);
@@ -817,7 +832,7 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
       ? projectPublishedMeasurements(selection.publish ? "PUBLIC" : "PRIVATE", projection.retained, projection.publishedIds)
       : undefined;
     const cards = projectPublicProfile({ user: profileUser, props: [{
-      visibility: "PUBLIC", status: prop.status, level: prop.level, goTo: prop.goTo, headline: prop.headline, uses: prop.uses, note: prop.note,
+      visibility: "PUBLIC", status: prop.status, level: prop.level, goTo: prop.goTo, headline: prop.headline, uses: prop.uses, credit: credits.get(prop._id), note: prop.note,
       startedAt: prop.startedAt, activity: selection.activity, measurements,
       cost: selection.costVisibility !== undefined ? (selection.cost === undefined ? undefined : costSchema.parse(selection.cost)) : prop.cost,
       costVisibility: selection.costVisibility ?? prop.costVisibility,
@@ -831,22 +846,23 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
   // Omitted cards retain their exact approved stored projection.
   const cardsWithIdentity = [...preserved, ...replacements];
   const checked = publicProfileSchema.parse({ ...profileUser, cards: cardsWithIdentity.map(entry => entry.card) });
-  // The schema reads a level the registry no longer knows as none, and drops uses it can't accept. That is for display:
-  // an omitted card is stored with the level and uses it was published with.
+  // The schema reads a level the registry no longer knows as none, and drops uses and a credit it can't accept. That is
+  // for display: an omitted card is stored with the level, uses and credit it was published with.
   const profile = { ...checked, cards: checked.cards.map((card, index) => {
     if (index >= preserved.length) return card;
-    const { level, uses } = preserved[index].card;
-    return { ...card, ...(level !== undefined ? { level } : {}), ...(uses !== undefined ? { uses } : {}) };
+    const { level, uses, credit } = preserved[index].card;
+    return { ...card, ...(level !== undefined ? { level } : {}), ...(uses !== undefined ? { uses } : {}), ...(credit !== undefined ? { credit } : {}) };
   }) };
   const cardPropIds = cardsWithIdentity.map(entry => entry.propId);
   if (new TextEncoder().encode(JSON.stringify({ profile, cardPropIds })).length > PUBLISHED_PROFILE_MAX_BYTES) {
     throw new Error("This page is too large to publish. Share fewer cards or shorten long notes, then preview again.");
   }
   // Match public reading's current retained presentation, independently of evidence.
-  const displayCards = await Promise.all(profile.cards.map(async ({ uses: storedUses, ...rest }) => {
-    // Shown as the public reader shows them: a left-out card keeps its stored uses, and only the listed ones display.
+  const displayCards = await Promise.all(profile.cards.map(async ({ uses: storedUses, credit: storedCredit, ...rest }) => {
+    // Shown as the public reader shows them: a left-out card keeps its stored uses and credit, and only what still fits displays.
     const uses = listedUses(rest.product.slug, storedUses);
-    const card = uses ? { ...rest, uses } : rest;
+    const credit = listedCredit(storedCredit);
+    const card = { ...rest, ...(uses ? { uses } : {}), ...(credit ? { credit } : {}) };
     const product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", card.product.slug)).unique();
     if (!product || product.domain !== card.product.domain) return card;
     const brand = await retainedProductBrand(ctx, product);
@@ -859,6 +875,24 @@ async function preparePublication(ctx: QueryCtx | MutationCtx, user: Doc<"users"
     ...(removeAllCards ? { removeAllCards: true } : {}),
     ...(shareAll ? { shareAllConfirmed: true, remainingCount: shareAll.remainingCount, skipped: shareAll.skipped } : {}) }));
   return { profile, displayProfile, previewHash, revision, published, propsById, productById, refreshAccounts, cardPropIds, selections, shareAll };
+}
+
+// The owner chose this credit, so one that no longer fits its platform's rule stops the publish rather than vanishing.
+// A Proper Respect handle links only when it names a published profile now; the card keeps that answer as published.
+// Only the credited profile's handle is read, never its cards, so many credits stay within one transaction's limits.
+async function publishedCredit(stored: Doc<"props">["credit"], productName: string,
+  publishedHandle: (handle: string) => Promise<string | undefined>): Promise<PropsCredit | undefined> {
+  if (!stored) return undefined;
+  // A link is decided here, never carried over from what was saved.
+  const saved = { platform: stored.platform, handle: stored.handle, platformName: stored.platformName };
+  const credit = listedCredit(saved);
+  if (!credit) {
+    const platform = CREDIT_PLATFORMS.find(option => option.id === saved.platform)?.label ?? "its platform";
+    throw new Error(`Who put you on ${productName} no longer fits ${platform}'s handle rule. Edit it in your collection, then preview again.`);
+  }
+  if (credit.platform !== "PROPER_RESPECT") return credit;
+  const handle = await publishedHandle(credit.handle);
+  return handle ? { ...credit, handle, linked: true } : credit;
 }
 
 async function shareAllFromSavedState(ctx: QueryCtx | MutationCtx, allProps: Doc<"props">[],

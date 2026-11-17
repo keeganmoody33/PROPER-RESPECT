@@ -364,3 +364,17 @@ test("Firecrawl's headline sets its phrase apart as its site does, and every phr
   const accents = examples.filter(example => example.headlineAccent).map(example => [example.id, example.headlineAccent, example.card.headline!.includes(example.headlineAccent!)]);
   expect(accents).toEqual([["github", "every project's code", true], ["firecrawl", "clean Markdown", true]]);
 });
+
+test("three examples give sample props, to handles the operator owns or to plain text, and none offers a report", () => {
+  const fronts = examples.map(example => [example.id, load(renderToStaticMarkup(createElement(ProductCard, { card: example.card, index: 0, sample: true })))] as const);
+  const credited = fronts.flatMap(([id, $]) => {
+    const line = $(".card-front .card-credit-line");
+    return line.length ? [[id, line.text(), line.find("a").attr("href") ?? null]] : [];
+  });
+  expect(credited).toEqual([
+    ["clay", "Props to @lecturesfrom · Proper Respect", "https://proper-respect.com/lecturesfrom"],
+    ["n8n", "Props to @keeganmoody33 · GitHub", "https://github.com/keeganmoody33"],
+    ["spider", "Props to a teammate · Slack", null],
+  ]);
+  expect(fronts.map(([, $]) => $(".card-credit-report").length)).toEqual(examples.map(() => 0));
+});
