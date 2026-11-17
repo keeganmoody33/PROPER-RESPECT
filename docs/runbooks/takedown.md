@@ -1,13 +1,14 @@
 # Taking down a reported public profile
 
-Updated: 2026-11-15. Written for R06; step 5 added for props. The owner runs these commands.
+Updated: 2026-11-17. Written for R06; step 5 added for props; search added for Phase C. The owner runs these commands.
 
 A takedown hides a published profile at its handle and at every old handle
 that redirects to it. The page then returns the same 404 as an unpublished
 handle. The owner can't republish while it lasts: publishing fails with
 "This profile is under review." Approved activity refreshes skip the
 hidden snapshot, and `seed:seedKeegan` refuses to replace a taken-down
-`keegan` profile.
+`keegan` profile. The page also leaves search, its tools' pages and the
+sitemap at once, and a restore lists it again.
 
 The takedown doesn't delete or change anything else. The published snapshot,
 the owner's private collection and their account stay as they are, so a

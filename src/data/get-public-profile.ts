@@ -7,6 +7,7 @@ import {
 } from "@/src/domain/public-profile";
 import { getServerEnv } from "@/src/env";
 import { E2E_PROFILE_UNAVAILABLE_COOKIE, e2eReferenceProfile } from "./e2e-reference-profile";
+import { e2eSearchProfiles } from "./e2e-search-profiles";
 
 // The backend returned a published profile this reader cannot accept. That is
 // an error, not an absence. The message is fixed and no cause is kept, so no
@@ -30,6 +31,8 @@ export async function getPublicProfile(
     if (["lecturesfrom", "legacy-profile-url"].includes(handle)) {
       return { ...e2eReferenceProfile, handle: "lecturesfrom" };
     }
+    const searchFixture = e2eSearchProfiles.find(profile => profile.handle === handle);
+    if (searchFixture) return searchFixture;
     if (["collection", "app", "about", "origins", "contact", "privacy"].includes(handle)) {
       return { handle, displayName: `Existing ${handle} owner`, bio: "Synthetic published profile for route compatibility checks.", cards: [] };
     }

@@ -1,13 +1,17 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import type { PublicProfile } from "@/src/domain/public-profile";
 import { ProductCard } from "./product-card";
 import { ProfileLinks, ProfileName } from "./profile-identity";
 
-export function SharingPreview({ profile, current, busy, onPublish, refreshAccounts = [] }: {
+export function SharingPreview({ profile, current, busy, onPublish, refreshAccounts = [], searchListing, searchListingReady = true }: {
   profile: PublicProfile; current: boolean; busy: boolean; onPublish: () => void;
   refreshAccounts?: { accountLabel: string }[];
+  /** The owner's "List my page in search" answer, asked here at publish. */
+  searchListing?: ReactNode;
+  /** False while that answer is still loading. A page is listed by default, so nothing is approved before the choice shows. */
+  searchListingReady?: boolean;
 }) {
   const [approved, setApproved] = useState(false);
   const titleId = useId();
@@ -20,7 +24,8 @@ export function SharingPreview({ profile, current, busy, onPublish, refreshAccou
     {!profile.cards.length && <p>No products will be public.</p>}
     <footer className="profile-footer"><div><strong><ProfileName profile={profile} /></strong><span>@{profile.handle}</span></div><p>{profile.bio}</p><ProfileLinks profile={profile} /></footer>
     {refreshAccounts.map((account, index) => <p key={index}>Daily GitHub refresh will read activity from {account.accountLabel} and update the approved metric on your public card. Reconnecting requires a fresh sharing preview and approval.</p>)}
-    <label className="sharing-preview-confirmation"><input type="checkbox" checked={approved} disabled={!current || busy} onChange={event => setApproved(event.target.checked)} />I approve making exactly this preview visible to anyone with the public link.</label>
-    <button type="button" className="primary-action" disabled={!current || busy || !approved} onClick={onPublish}>{busy ? "Publishing…" : "Publish this preview"}</button>
+    {searchListing}
+    <label className="sharing-preview-confirmation"><input type="checkbox" checked={approved} disabled={!current || busy || !searchListingReady} onChange={event => setApproved(event.target.checked)} />I approve making exactly this preview visible to anyone with the public link.</label>
+    <button type="button" className="primary-action" disabled={!current || busy || !approved || !searchListingReady} onClick={onPublish}>{busy ? "Publishing…" : "Publish this preview"}</button>
   </section>;
 }

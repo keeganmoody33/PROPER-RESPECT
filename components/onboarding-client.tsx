@@ -37,6 +37,8 @@ import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 import { CopyProfileLink } from "./copy-profile-link";
 import { SharingPreview } from "./sharing-preview";
+import { SearchListingChoice } from "./search-listing-choice";
+import { previewedUser } from "@/src/domain/search-listing";
 import { StackPicker } from "./stack-builder";
 import { ShareAllSection } from "./share-all-step";
 import { MeasurementSharingChoices } from "./measurement-review";
@@ -148,6 +150,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [listingReady, setListingReady] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
   const [identityMoreOpen, setIdentityMoreOpen] = useState(false);
   const [measurementSelections, setMeasurementSelections] = useState<Record<string, Id<"rawEvidence">[]>>({});
@@ -159,7 +162,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     profile: PublicProfile; revision: number; previewHash: string; selections: FunctionArgs<typeof api.onboarding.publishSelected>["selections"]; basis: string;
     removeAllCards?: boolean; refreshAccounts?: { accountLabel: string }[];
   } | null>(null);
-  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, measurementSelections, measurementReviewBasis, cards: state?.cards, user: state?.user, connectors: state?.connectors }), [reviewEdits, measurementSelections, measurementReviewBasis, state?.cards, state?.user, state?.connectors]);
+  const previewBasis = useMemo(() => JSON.stringify({ edits: reviewEdits, measurementSelections, measurementReviewBasis, cards: state?.cards, user: previewedUser(state?.user), connectors: state?.connectors }), [reviewEdits, measurementSelections, measurementReviewBasis, state?.cards, state?.user, state?.connectors]);
 
   const [setupAttempt, setSetupAttempt] = useState(0);
   const [setupFailed, setSetupFailed] = useState(false);
@@ -429,7 +432,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const publicProfilePath = `/${encodeURIComponent(state.user.handle)}`;
   const publicProfileUrl = publicOrigin ? new URL(publicProfilePath, publicOrigin).href : publicProfilePath;
   const heldSlugs = state.cards.flatMap(card => card.product && isRelationshipConfirmed(card.prop) ? [card.product.slug] : []);
-  const shareAllBasis = JSON.stringify({ cards: state.cards, user: state.user });
+  const shareAllBasis = JSON.stringify({ cards: state.cards, user: previewedUser(state.user) });
   const hasAddress = handleState === "published" || publicIdentityClaimed === true;
   const firstResult = Boolean(state.privateInventoryAvailable && (source || state.cards.length === 0));
   const identityExtras = <>
@@ -794,7 +797,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
           <button type="button" className="secondary-action" onClick={() => void previewUnpublishAll()} disabled={busy}>Unpublish all cards</button>
         </section>}
         {/* A different preview (a new hash) starts unapproved. */}
-        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} refreshAccounts={preview.refreshAccounts} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
+        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} refreshAccounts={preview.refreshAccounts} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} searchListing={<SearchListingChoice onReady={setListingReady} />} searchListingReady={listingReady} />}
       </section>
       <section className="onboarding-panel" id="collection-sources" aria-labelledby="collection-sources-title">
         <p className="onboarding-kicker">SOURCES / OPTIONAL</p>

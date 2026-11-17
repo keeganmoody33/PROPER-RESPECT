@@ -1,12 +1,17 @@
 // @vitest-environment edge-runtime
 /// <reference types="vite/client" />
-import { convexTest } from "convex-test";
+import { convexTest, type TestConvex } from "convex-test";
+import { makeFunctionReference } from "convex/server";
 import { expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
+import type { Doc, Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { canonicalJson } from "../src/domain/canonical-json";
+import { sha256 } from "../src/domain/product-knowledge";
 import { productBrandSnapshotSchema } from "../src/domain/product-brand";
 import { e2eReferenceProfile } from "../src/data/e2e-reference-profile";
 import { publicProfileV1Schema, type PublicProfile } from "../src/domain/public-profile";
+import { LISTED_TOOLS_MAX, searchListing } from "../src/domain/search-listing";
 
 const modules = import.meta.glob("./**/*.ts");
 
@@ -240,4 +245,293 @@ test("the reserved-handle check names a reserved word an account already holds, 
     await ctx.db.insert("users", { handle: "not-reserved", displayName: "Synthetic other", bio: "" });
   });
   expect(await t.query(internal.publicProfiles.reservedHandlesHeld, {})).toEqual([{ handle: "tools", heldBy: ["account"] }]);
+});
+
+// Search read model (C1). Synthetic people only.
+const confirmedAt = "2026-11-01T00:00:00.000Z";
+const SEARCH_QUERY_MAX = 80;
+const SEARCH_WORDS_MAX = 16;
+const SEARCH_RESULTS_MAX = 24;
+const CURSOR_MAX = 200;
+const OVER_CAP = 30;
+const MONTHLY_PRICE = 4321;
+type SearchAccount = Pick<TestConvex<typeof schema>, "query" | "mutation">;
+type SearchProps = Partial<Omit<Doc<"props">, "_id" | "_creationTime" | "userId" | "productId">>;
+
+async function searchFixture() {
+  const t = convexTest(schema, modules);
+  const ids = await t.run(async ctx => {
+    const person = async (handle: string, displayName: string) => {
+      const userId = await ctx.db.insert("users", { authSubject: handle, handle, displayName, bio: "A private bio line" });
+      await ctx.db.insert("sites", { ownerId: userId, handle, status: "DRAFT" });
+      return userId;
+    };
+    const product = (slug: string, name: string) => ctx.db.insert("products", { slug, name, domain: `${slug}.example`, description: "Synthetic product" });
+    return {
+      sam: await person("synthetic-sam", "Synthetic Sam"), ria: await person("synthetic-ria", "Synthetic Ria"), abe: await person("synthetic-abe", "Synthetic Abe"),
+      clay: await product("clay", "Clay"), github: await product("github", "GitHub"), notion: await product("notion", "Notion"), linear: await product("linear", "Linear"),
+    };
+  });
+  const addProp = (userId: Id<"users">, productId: Id<"products">, fields: SearchProps = {}) => t.run(ctx => ctx.db.insert("props", {
+    userId, productId, visibility: "PRIVATE", status: "ACTIVE", level: "DAILY", relationshipVersion: 1, confirmedAt,
+    headline: "A synthetic headline", note: "A synthetic note", ...fields,
+  }));
+  const selection = async (propId: Id<"props">, publish: boolean) => {
+    const prop = (await t.run(ctx => ctx.db.get(propId)))!;
+    return { propId, expectedRelationshipVersion: prop.relationshipVersion, publish, status: prop.status, level: prop.level,
+      headline: prop.headline, note: prop.note, autoRefresh: false };
+  };
+  const publish = async (account: SearchAccount, choices: [Id<"props">, boolean][], extra: { removeAllCards?: boolean } = {}) => {
+    const selections = await Promise.all(choices.map(([propId, shown]) => selection(propId, shown)));
+    const preview = await account.query(api.onboarding.previewPublication, { selections, ...extra });
+    await account.mutation(api.onboarding.publishSelected, { selections, ...extra, expectedPublicationRevision: preview.revision, expectedPreviewHash: preview.previewHash });
+  };
+  const model = () => t.run(async ctx => ({
+    pages: (await ctx.db.query("listedPages").collect()).map(({ handle, displayName, sortName, searchText }) => ({ handle, displayName, sortName, searchText })),
+    cards: (await ctx.db.query("listedCards").collect()).map(({ handle, productSlug, usedBefore, levelLabel }) => [handle, productSlug, usedBefore, levelLabel]),
+    tools: (await ctx.db.query("listedTools").collect()).map(({ productSlug, productName, peopleNow, peopleBefore, people }) => [productSlug, productName, peopleNow, peopleBefore, people]),
+  }));
+  const as = (handle: string) => t.withIdentity({ subject: handle });
+  return { t, ...ids, addProp, publish, model, as };
+}
+
+test("publishing lists only the page's published cards: a draft, a private card, words and a cost never enter search", async () => {
+  const f = await searchFixture();
+  const clay = await f.addProp(f.sam, f.clay, { cost: { amount: MONTHLY_PRICE, currency: "USD", cadence: "MONTHLY", basis: "OWNER_REPORTED", asOf: "2026-11-01" }, costVisibility: "PUBLIC" });
+  const github = await f.addProp(f.sam, f.github, { status: "ARCHIVED", level: "STOPPED" });
+  await f.addProp(f.sam, f.notion);
+  await f.addProp(f.sam, f.linear, { visibility: "DRAFT", confirmedAt: undefined });
+  await f.publish(f.as("synthetic-sam"), [[clay, true], [github, true]]);
+
+  const model = await f.model();
+  expect(model).toEqual({
+    pages: [{ handle: "synthetic-sam", displayName: "Synthetic Sam", sortName: "synthetic sam synthetic-sam", searchText: "synthetic-sam synthetic sam Synthetic Sam" }],
+    cards: [["synthetic-sam", "clay", false, "Daily"], ["synthetic-sam", "github", true, "Stopped using"]],
+    tools: [["clay", "Clay", 1, 0, 1], ["github", "GitHub", 0, 1, 1]],
+  });
+  const stored = JSON.stringify(await f.t.run(async ctx => [await ctx.db.query("listedPages").collect(), await ctx.db.query("listedCards").collect(), await ctx.db.query("listedTools").collect()]));
+  for (const hidden of ["Notion", "Linear", "synthetic headline", "synthetic note", "private bio", String(MONTHLY_PRICE)]) expect(stored).not.toContain(hidden);
+
+  expect((await f.t.query(api.publicProfiles.searchPeople, { q: "synthetic" })).people).toEqual([{ handle: "synthetic-sam", displayName: "Synthetic Sam" }]);
+  expect((await f.t.query(api.publicProfiles.searchPeople, { q: "Sam" })).people.map(person => person.handle)).toEqual(["synthetic-sam"]);
+  expect((await f.t.query(api.publicProfiles.searchPeople, { q: "ria" })).people).toEqual([]);
+  expect((await f.t.query(api.publicProfiles.searchTools, { q: "cla" })).tools).toEqual([{ slug: "clay", name: "Clay", peopleNow: 1, peopleBefore: 0 }]);
+  expect((await f.t.query(api.publicProfiles.searchTools, { q: "notion" })).tools).toEqual([]);
+  expect(await f.t.query(api.publicProfiles.listedToolSlugs, { handle: "synthetic-sam" })).toEqual(["clay", "github"]);
+});
+
+test("a republish replaces the page's rows, and unpublishing a card or every card removes them", async () => {
+  const f = await searchFixture();
+  const clay = await f.addProp(f.sam, f.clay);
+  const github = await f.addProp(f.sam, f.github);
+  const sam = f.as("synthetic-sam");
+  await f.publish(sam, [[clay, true], [github, true]]);
+  await f.t.run(ctx => ctx.db.patch(clay, { status: "ARCHIVED", level: "PAUSED", relationshipVersion: 2 }));
+  await f.publish(sam, [[clay, true]]);
+  expect((await f.model()).cards).toEqual([["synthetic-sam", "clay", true, "Paused"], ["synthetic-sam", "github", false, "Daily"]]);
+  expect((await f.model()).tools).toEqual([["clay", "Clay", 0, 1, 1], ["github", "GitHub", 1, 0, 1]]);
+
+  await f.publish(sam, [[github, false]]);
+  expect(await f.model()).toMatchObject({ cards: [["synthetic-sam", "clay", true, "Paused"]], tools: [["clay", "Clay", 0, 1, 1]] });
+
+  await f.publish(sam, [], { removeAllCards: true });
+  expect(await f.model()).toEqual({ pages: [], cards: [], tools: [] });
+  expect(await f.t.query(api.publicProfiles.toolPage, { slug: "clay" })).toBeNull();
+});
+
+test("a takedown drops the page from search and a restore brings it back", async () => {
+  const f = await searchFixture();
+  await f.publish(f.as("synthetic-sam"), [[await f.addProp(f.sam, f.clay), true]]);
+  const listed = await f.model();
+  await f.t.mutation(internal.publicProfiles.takeDownHandle, { handle: "synthetic-sam", reason: "Report 2026-11-17: synthetic", dryRun: true });
+  expect(await f.model()).toEqual(listed);
+  await f.t.mutation(internal.publicProfiles.takeDownHandle, { handle: "synthetic-sam", reason: "Report 2026-11-17: synthetic", dryRun: false });
+  expect(await f.model()).toEqual({ pages: [], cards: [], tools: [] });
+  expect((await f.t.query(api.publicProfiles.searchPeople, { q: "sam" })).people).toEqual([]);
+  await f.t.mutation(internal.publicProfiles.restoreHandle, { handle: "synthetic-sam", dryRun: false });
+  expect(await f.model()).toEqual(listed);
+});
+
+test("an unlisted page stays out of search through a republish, and the switch lists it again at once", async () => {
+  const f = await searchFixture();
+  const sam = f.as("synthetic-sam");
+  expect(await sam.query(api.publicProfiles.searchListingChoice, {})).toEqual({ listed: true });
+  await sam.mutation(api.publicProfiles.setSearchListing, { listed: false });
+  expect(await sam.query(api.publicProfiles.searchListingChoice, {})).toEqual({ listed: false });
+  const clay = await f.addProp(f.sam, f.clay);
+  await f.publish(sam, [[clay, true]]);
+  await f.publish(sam, [[await f.addProp(f.sam, f.github), true]]);
+  expect(await f.model()).toEqual({ pages: [], cards: [], tools: [] });
+  expect(await f.t.query(api.publicProfiles.listedToolSlugs, { handle: "synthetic-sam" })).toEqual([]);
+  expect((await f.t.query(api.publicProfiles.getByHandleV2, { handle: "synthetic-sam" }))?.cards).toHaveLength(2);
+
+  await sam.mutation(api.publicProfiles.setSearchListing, { listed: true });
+  expect((await f.model()).cards).toEqual([["synthetic-sam", "clay", false, "Daily"], ["synthetic-sam", "github", false, "Daily"]]);
+  await sam.mutation(api.publicProfiles.setSearchListing, { listed: false });
+  expect(await f.model()).toEqual({ pages: [], cards: [], tools: [] });
+  await expect(f.t.mutation(api.publicProfiles.setSearchListing, { listed: true })).rejects.toThrow("Authentication required.");
+});
+
+test("a tool page lists people A to Z in two groups, counts people per tool, and knows nothing else", async () => {
+  const f = await searchFixture();
+  await f.publish(f.as("synthetic-sam"), [[await f.addProp(f.sam, f.clay, { level: "WEEKLY" }), true], [await f.addProp(f.sam, f.github), true]]);
+  await f.publish(f.as("synthetic-ria"), [[await f.addProp(f.ria, f.clay, { status: "ARCHIVED", level: "TRIED_NOT_ADOPTED" }), true]]);
+  await f.publish(f.as("synthetic-abe"), [[await f.addProp(f.abe, f.clay, { status: "TESTING", level: "TESTING" }), true]]);
+
+  expect(await f.t.query(api.publicProfiles.toolPage, { slug: "clay" })).toEqual({
+    slug: "clay", name: "Clay", peopleNow: 2, peopleBefore: 1,
+    now: { people: [{ handle: "synthetic-abe", displayName: "Synthetic Abe", levelLabel: "Testing" }, { handle: "synthetic-sam", displayName: "Synthetic Sam", levelLabel: "Weekly" }], nextAfter: null },
+    before: { people: [{ handle: "synthetic-ria", displayName: "Synthetic Ria", levelLabel: "Tried, didn't adopt" }], nextAfter: null },
+  });
+  expect(await f.t.query(api.publicProfiles.toolPage, { slug: "notion" })).toBeNull();
+  expect(await f.t.query(api.publicProfiles.toolPage, { slug: "Not A Slug" })).toBeNull();
+  expect((await f.t.query(api.publicProfiles.toolPage, { slug: "clay", nowAfter: "synthetic abe synthetic-abe" }))?.now.people.map(person => person.handle)).toEqual(["synthetic-sam"]);
+  expect((await f.t.query(api.publicProfiles.searchPeople, { q: "" })).people.map(person => person.handle)).toEqual(["synthetic-abe", "synthetic-ria", "synthetic-sam"]);
+  expect((await f.t.query(api.publicProfiles.searchTools, { q: "" })).tools.map(tool => [tool.slug, tool.peopleNow + tool.peopleBefore])).toEqual([["clay", 3], ["github", 1]]);
+  expect(await f.t.query(api.publicProfiles.sitemapListing, {})).toEqual({ handles: ["synthetic-abe", "synthetic-ria", "synthetic-sam"], tools: ["clay", "github"] });
+});
+
+test("with more people than one list shows, an accented name still takes its place among the first, A to Z", async () => {
+  const t = convexTest(schema, modules);
+  const row = (displayName: string, handle: string) => searchListing({ handle, displayName, cards: [{ product: { slug: "clay", name: "Clay" }, status: "ACTIVE" }] }, undefined)!.page;
+  await t.run(async ctx => {
+    await ctx.db.insert("listedPages", row("Élodie Durand", "synthetic-elodie"));
+    await Promise.all(Array.from({ length: SEARCH_RESULTS_MAX + OVER_CAP }, (_, index) => ctx.db.insert("listedPages", row(`Frank ${String(index).padStart(2, "0")}`, `synthetic-frank-${index}`))));
+  });
+  const { people, more } = await t.query(api.publicProfiles.searchPeople, { q: "" });
+  expect(more).toBe(true);
+  expect(people).toHaveLength(SEARCH_RESULTS_MAX);
+  expect(people.slice(0, 2).map(person => person.handle)).toEqual(["synthetic-elodie", "synthetic-frank-0"]);
+});
+
+test("search refuses over-long input and caps every result list", async () => {
+  const f = await searchFixture();
+  await expect(f.t.query(api.publicProfiles.searchPeople, { q: "a".repeat(SEARCH_QUERY_MAX + 1) })).rejects.toThrow("Search with 80 characters or fewer.");
+  await expect(f.t.query(api.publicProfiles.searchTools, { q: "a".repeat(SEARCH_QUERY_MAX + 1) })).rejects.toThrow("Search with 80 characters or fewer.");
+  expect(await f.t.query(api.publicProfiles.searchPeople, { q: ` ${"a".repeat(SEARCH_QUERY_MAX)} ` })).toEqual({ people: [], more: false });
+  const words = (count: number) => Array.from({ length: count }, () => "a").join(" ");
+  expect((await f.t.query(api.publicProfiles.searchTools, { q: words(SEARCH_WORDS_MAX) })).tools).toEqual([]);
+  await expect(f.t.query(api.publicProfiles.searchTools, { q: words(SEARCH_WORDS_MAX + 1) })).rejects.toThrow("Search with 16 words or fewer.");
+  await expect(f.t.query(api.publicProfiles.toolPage, { slug: "clay", beforeAfter: "a".repeat(CURSOR_MAX + 1) })).rejects.toThrow("That page of people is out of range.");
+  await f.t.run(ctx => Promise.all(Array.from({ length: OVER_CAP }, (_, index) => ctx.db.insert("listedPages", {
+    handle: `person-${index}`, displayName: `Person ${index}`, sortName: `person ${String(index).padStart(2, "0")}`, searchText: `person-${index} person ${index} Person ${index}`,
+  }))));
+  for (const q of ["", "person"]) {
+    const result = await f.t.query(api.publicProfiles.searchPeople, { q });
+    expect([result.people.length, result.more]).toEqual([SEARCH_RESULTS_MAX, true]);
+  }
+});
+
+test("moving a published page and seeding the reference page keep search on the page's own handle", async () => {
+  const t = convexTest(schema, modules);
+  const profile = { ...e2eReferenceProfile, handle: "keegan" };
+  const ids = await t.run(async ctx => {
+    const ownerId = await ctx.db.insert("users", { handle: "lecturesfrom", seedKey: "keegan", authSubject: "owner-subject", displayName: "Private name", bio: "" });
+    await ctx.db.insert("sites", { ownerId, handle: "lecturesfrom", seedKey: "keegan-hosted-site", status: "ACTIVE" });
+    const publicationId = await ctx.db.insert("publishedProfiles", { handle: "keegan", profile, revision: 4, publishedAt: "2026-07-25T00:00:00.000Z" });
+    return { ownerId, publicationId };
+  });
+  await t.mutation(internal.publicProfiles.rebuildSearch, {});
+  // Before the move the page sits at a handle no account holds, so nobody can answer for it and it is not listed.
+  expect(await t.run(async ctx => (await ctx.db.query("listedPages").collect()).map(page => page.handle))).toEqual([]);
+  await t.mutation(makeFunctionReference<"mutation">("publicationMigration:moveSeededPublication"), {
+    ...ids, expectedSubject: "owner-subject", expectedSeedKey: "keegan", fromHandle: "keegan", toHandle: "lecturesfrom",
+    expectedRevision: 4, expectedProfileHash: await sha256(canonicalJson(profile)), dryRun: false,
+  });
+  const rows = await t.run(async ctx => ({
+    pages: (await ctx.db.query("listedPages").collect()).map(page => [page.handle, page.displayName]),
+    cards: (await ctx.db.query("listedCards").collect()).map(card => [card.handle, card.productSlug]),
+  }));
+  expect(rows).toEqual({ pages: [["lecturesfrom", "Keegan Moody"]], cards: [["lecturesfrom", "github"], ["lecturesfrom", "wisprflow"]] });
+
+  const seeded = convexTest(schema, modules);
+  await seeded.mutation(internal.seed.seedKeegan, {});
+  expect(await seeded.run(async ctx => (await ctx.db.query("listedPages").collect()).map(page => page.handle))).toEqual(["keegan"]);
+});
+
+async function rebuildAll(t: TestConvex<typeof schema>) {
+  const runs: unknown[] = [];
+  const step = async (args: { phase?: "publications" | "pages" | "cards" | "tools"; cursor?: string | null }): Promise<void> => {
+    const result = await t.mutation(internal.publicProfiles.rebuildSearch, args);
+    runs.push(result);
+    if (result.next) await step(result.next);
+  };
+  await step({});
+  return runs;
+}
+
+test("a page with more tools than search lists holds exactly its first 500 through repeated syncs, and unlisting clears every row", async () => {
+  const t = convexTest(schema, modules);
+  const handle = "synthetic-many";
+  const cards = Array.from({ length: LISTED_TOOLS_MAX + OVER_CAP }, (_, index) => ({
+    product: { name: `Tool ${index}`, slug: `tool-${index}`, domain: `tool-${index}.example`, description: "Synthetic product" },
+    status: "ACTIVE" as const, level: "DAILY" as const, headline: "Line", note: "",
+  }));
+  const owner = await t.run(async ctx => {
+    await ctx.db.insert("publishedProfiles", { handle, revision: 1, publishedAt: confirmedAt, profile: { handle, displayName: "Synthetic Many", bio: "", cards } });
+    return ctx.db.insert("users", { handle, displayName: "Synthetic Many", bio: "" });
+  });
+  const held = () => t.run(async ctx => {
+    const [rows, tools] = [await ctx.db.query("listedCards").collect(), await ctx.db.query("listedTools").collect()];
+    return { cards: rows.length, distinct: new Set(rows.map(row => row.productSlug)).size, tools: tools.length, most: Math.max(0, ...tools.map(tool => tool.people)) };
+  });
+  // The rebuild's first step syncs each published page once; three steps here are three syncs of this one page.
+  const sync = () => t.mutation(internal.publicProfiles.rebuildSearch, {});
+  await sync();
+  await sync();
+  expect(await held()).toEqual({ cards: LISTED_TOOLS_MAX, distinct: LISTED_TOOLS_MAX, tools: LISTED_TOOLS_MAX, most: 1 });
+  expect(await t.query(api.publicProfiles.listedToolSlugs, { handle })).toHaveLength(LISTED_TOOLS_MAX);
+  await t.run(ctx => ctx.db.patch(owner, { listedInSearch: false }));
+  await sync();
+  expect(await held()).toEqual({ cards: 0, distinct: 0, tools: 0, most: 0 });
+});
+
+test("the rebuild fills search from published pages alone, honours takedowns and the switch, and changes nothing the second time", async () => {
+  const t = convexTest(schema, modules);
+  const card = (slug: string, name: string, fields: Partial<PublicProfile["cards"][number]> = {}): PublicProfile["cards"][number] => ({
+    product: { name, slug, domain: `${slug}.example`, description: "Synthetic product" }, status: "ACTIVE", level: "DAILY", headline: "Line", note: "", ...fields,
+  });
+  const page = (handle: string, displayName: string, cards: PublicProfile["cards"]) => ({ handle, revision: 1, publishedAt: confirmedAt, profile: { handle, displayName, bio: "", cards } });
+  const untouched = await t.run(async ctx => {
+    await ctx.db.insert("users", { handle: "synthetic-sam", displayName: "Synthetic Sam", bio: "" });
+    await ctx.db.insert("users", { handle: "synthetic-off", displayName: "Synthetic Off", bio: "", listedInSearch: false });
+    await ctx.db.insert("users", { handle: "synthetic-ria", displayName: "Synthetic Ria", bio: "" });
+    await ctx.db.insert("users", { handle: "synthetic-down", displayName: "Synthetic Down", bio: "" });
+    // A page kept after its account left the handle: nobody can answer for it, so it is never listed.
+    await ctx.db.insert("publishedProfiles", page("synthetic-orphan", "Synthetic Orphan", [card("clay", "Clay"), card("orphan-only", "Orphan Only")]));
+    await ctx.db.insert("publishedProfiles", page("synthetic-sam", "Synthetic Sam", [card("clay", "Clay"), card("github", "GitHub", { status: "ARCHIVED", level: "PAUSED" })]));
+    await ctx.db.insert("publishedProfiles", page("synthetic-ria", "Synthetic Ria", [card("clay", "Clay", { status: "ARCHIVED", level: "STOPPED" })]));
+    await ctx.db.insert("publishedProfiles", { ...page("synthetic-down", "Synthetic Down", [card("clay", "Clay")]), takenDownAt: confirmedAt, takedownReason: "Synthetic" });
+    await ctx.db.insert("publishedProfiles", page("synthetic-off", "Synthetic Off", [card("notion", "Notion")]));
+    // Card rows whose page row is already gone, for two different pages.
+    for (const lost of ["synthetic-lost-a", "synthetic-lost-b"]) {
+      await ctx.db.insert("listedCards", { handle: lost, displayName: "Lost", sortName: `lost ${lost}`, productSlug: "notion", productName: "Notion", usedBefore: false, levelLabel: "Daily" });
+    }
+    // Rows left from a page that is gone, and a count that drifted.
+    await ctx.db.insert("listedPages", { handle: "synthetic-gone", displayName: "Gone", sortName: "gone synthetic-gone", searchText: "gone" });
+    await ctx.db.insert("listedCards", { handle: "synthetic-gone", displayName: "Gone", sortName: "gone synthetic-gone", productSlug: "linear", productName: "Linear", usedBefore: false, levelLabel: "Daily" });
+    await ctx.db.insert("listedTools", { productSlug: "linear", productName: "Linear", searchText: "Linear linear", peopleNow: 1, peopleBefore: 0, people: 1 });
+    await ctx.db.insert("listedTools", { productSlug: "clay", productName: "Clay", searchText: "Clay clay", peopleNow: 7, peopleBefore: 0, people: 7 });
+    return { users: await ctx.db.query("users").collect(), publications: await ctx.db.query("publishedProfiles").collect() };
+  });
+  const everything = () => t.run(async ctx => ({
+    pages: await ctx.db.query("listedPages").collect(), cards: await ctx.db.query("listedCards").collect(), tools: await ctx.db.query("listedTools").collect(),
+    users: await ctx.db.query("users").collect(), publications: await ctx.db.query("publishedProfiles").collect(),
+  }));
+
+  const first = await rebuildAll(t) as { phase: string; synced: number }[];
+  expect([...new Set(first.map(run => run.phase))]).toEqual(["publications", "pages", "cards", "tools"]);
+  // One page a call at most, so no call depends on how many pages or how many tools a deployment holds.
+  expect(first.filter(run => run.phase !== "tools").every(run => run.synced <= 1)).toBe(true);
+  expect(first.filter(run => run.phase === "publications").reduce((sum, run) => sum + run.synced, 0)).toBe(untouched.publications.length);
+  const built = await everything();
+  expect({ users: built.users, publications: built.publications }).toEqual(untouched);
+  expect(built.pages.map(row => row.handle)).toEqual(["synthetic-sam", "synthetic-ria"]);
+  expect(built.cards.map(row => [row.handle, row.productSlug, row.usedBefore])).toEqual([
+    ["synthetic-sam", "clay", false], ["synthetic-sam", "github", true], ["synthetic-ria", "clay", true],
+  ]);
+  expect(built.tools.map(row => [row.productSlug, row.peopleNow, row.peopleBefore, row.people])).toEqual([["clay", 1, 1, 2], ["github", 0, 1, 1]]);
+
+  await rebuildAll(t);
+  expect(await everything()).toEqual(built);
 });

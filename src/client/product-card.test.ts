@@ -1327,3 +1327,27 @@ test("on a published profile a credit offers a report naming the page and the ca
   })));
   expect(preview(".card-credit").length).toBe(0);
 });
+
+test("on a listed public page the tool's name opens its tool page; anywhere else, and on a sample, it stays plain text", () => {
+  const card = (props: Partial<Parameters<typeof ProductCard>[0]> = {}) =>
+    load(renderToStaticMarkup(createElement(ProductCard, { card: baseCard, index: 0, ...props })));
+  const linked = card({ toolPageLink: true });
+  expect(linked(".card-front .card-title h2 a").attr("href")).toBe("/tools/example-product");
+  expect(linked(".card-front .card-title h2").text()).toBe("Example Product");
+  expect(linked(".card-back h2 a")).toHaveLength(0);
+  expect(card()(".card-title h2 a")).toHaveLength(0);
+  expect(card({ toolPageLink: true, sample: true })(".card-title a[href^='/tools/']")).toHaveLength(0);
+  expect(card({ toolPageLink: true, audience: "owner" })(".card-title a[href^='/tools/']")).toHaveLength(0);
+});
+
+test("a wordmark card links its drawn wordmark, keeping the hidden name for screen readers", () => {
+  const logos = brand.logos.map(logo => ({ ...logo, width: WORDMARK_WIDTH, height: WORDMARK_HEIGHT }));
+  const $ = load(renderToStaticMarkup(createElement(ProductCard, {
+    card: { ...baseCard, product: { ...baseCard.product, brand: { ...brand, logos, styleguide: lightSurface } } }, index: 0, toolPageLink: true,
+  })));
+  expect($(".card-front .card-title h2").text()).toBe("Example Product");
+  expect($(".card-title h2 a")).toHaveLength(0);
+  expect($(".card-title a.card-tool-link").attr("href")).toBe("/tools/example-product");
+  expect($(".card-title a.card-tool-link").attr("aria-label")).toBe("Example Product: who uses it");
+  expect($(".card-title a.card-tool-link .product-logo")).toHaveLength(1);
+});

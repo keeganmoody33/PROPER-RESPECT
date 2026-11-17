@@ -4,7 +4,7 @@ import { ProductExample } from "@/components/product-example";
 import { publicPageMetadata } from "@/src/server/public-site";
 import { PublicSiteGuideWebMcp } from "@/components/public-site-guide-webmcp";
 import { homepageExamples } from "@/src/data/homepage-examples";
-import { homepageSteps, productIdentity, publicSiteGuide, siteDescription, siteLine } from "@/src/server/agent-discovery";
+import { homepageBrowse, homepageSteps, productIdentity, publicSiteGuide, siteDescription, siteLine } from "@/src/server/agent-discovery";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
@@ -37,6 +37,13 @@ export default function HomePage() {
           <ol className={styles.steps}>
             {homepageSteps.map(step => <li key={step.title}><h3>{step.title}</h3><p>{step.body}</p></li>)}
           </ol>
+        </section>
+        <section className={styles.browse} aria-labelledby="browse-title">
+          <h2 id="browse-title" className={styles.statement}>{homepageBrowse.title}</h2>
+          <div className={styles.browseCopy}>
+            <p>{homepageBrowse.body}</p>
+            <Link className={styles.primary} href="/search">{homepageBrowse.action}</Link>
+          </div>
         </section>
         <section className={styles.respect} aria-labelledby="respect-title">
           <div className={styles.respectInner}>

@@ -57,6 +57,8 @@ test("nested trust pages preserve claimable root profiles", async ({ page, reque
   expect(sitemap).toMatch(/<loc>https:\/\/public\.example\/about\/methodology<\/loc>\s*<lastmod>2026-11-12<\/lastmod>/);
   expect(sitemap).toMatch(/<loc>https:\/\/public\.example\/about\/privacy<\/loc>\s*<lastmod>2026-11-15<\/lastmod>/);
   expect(sitemap).not.toContain(".md</loc>");
+  for (const path of ["search", "synthetic-sam", "tools/clay"]) expect(sitemap).toContain(`<loc>https://public.example/${path}</loc>`);
+  expect(sitemap).not.toContain("<loc>https://public.example/keegan</loc>");
 });
 
 test("contact identity matches its visible operator and avoids invented business facts", async ({ page }) => {

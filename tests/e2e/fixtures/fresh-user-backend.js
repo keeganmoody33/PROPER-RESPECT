@@ -131,6 +131,12 @@ const mutations = {
     retain({ ...state, measurementCaptures: state.measurementCaptures.map(capture => capture.rawEvidenceId === args.rawEvidenceId ? { ...capture, reviewedMeasurementIds: args.measurementIds, reviewVersion: capture.reviewVersion + 1 } : capture) });
     return null;
   },
+  // The switch saves on the account at once, apart from any publish.
+  "publicProfiles:setSearchListing": async args => {
+    record("setSearchListing", args);
+    retain({ ...state, user: { ...state.user, listedInSearch: args.listed } });
+    return { listed: args.listed };
+  },
   "onboarding:claimHandle": async args => {
     record("claimHandle", args);
     retain({ ...state, hasClaimedPublicIdentity: true, user: { ...state.user, ...args, displayName: args.displayName.trim(), preferredLinkUrl: args.preferredLinkUrl ?? undefined } });
@@ -205,6 +211,7 @@ export function useQuery(ref, args) {
     case "inventory:detail": return current?.cards.find(card => card.prop._id === args.propId) ?? null;
     case "mailboxes:listAccounts": return empty;
     case "productKnowledge:getForProduct": return { supported: false, sources: empty };
+    case "publicProfiles:searchListingChoice": return current ? { listed: current.user.listedInSearch ?? true } : undefined;
     default: return undefined;
   }
 }

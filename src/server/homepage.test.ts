@@ -3,7 +3,7 @@ import { load } from "cheerio";
 import { expect, it, vi } from "vitest";
 import { trustDocuments, trustMarkdown } from "./trust-pages";
 import HomePage from "@/app/page";
-import { homepageMarkdown } from "./agent-discovery";
+import { homepageBrowse, homepageMarkdown } from "./agent-discovery";
 
 const statements = [
   "A public profile can show a retained measurement you published, including how much, and withholds an amount you did not publish.",
@@ -55,4 +55,19 @@ it("describes the same three steps of the flow that exists, on the page and in i
   expect(steps.map(([title, body]) => html.includes(`<h3>${title}</h3><p>${body}</p>`))).toEqual([true, true, true]);
   expect(markdown).toContain(steps.map(([title, body], index) => `${index + 1}. ${title} ${body}`).join("\n"));
   expect(retired.filter(text => html.includes(text) || markdown.includes(text))).toEqual([]);
+});
+
+it("points at search to see what other people run, on the page and in its markdown, after how it works", () => {
+  vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://canonical.example");
+  const $ = load(renderToStaticMarkup(HomePage()));
+  const browse = $("section[aria-labelledby=browse-title]");
+  expect(browse.find("h2").text()).toBe("See what other people run.");
+  expect(browse.find("p").first().text()).toBe(homepageBrowse.body);
+  expect(browse.find("a").map((_, link) => [[$(link).text(), $(link).attr("href")]]).get()).toEqual([["Search people and tools", "/search"]]);
+  expect($("main > section").index(browse)).toBe($("main > section").index($("#how-it-works")) + 1);
+  const markdown = homepageMarkdown();
+  expect(markdown).toContain(`## See what other people run\n\n${homepageBrowse.body}`);
+  expect(markdown).toContain("- [Search people and tools](https://canonical.example/search).");
+  ["—", "–", " - "].forEach(dash => expect(browse.text()).not.toContain(dash));
+  vi.unstubAllEnvs();
 });
