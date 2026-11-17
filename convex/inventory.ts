@@ -154,6 +154,13 @@ export const removeNeverUsed = mutation({
     // A tool added by name has a product record of its own, holding the name and website its owner typed. It goes
     // once nothing else uses it. A catalog product is shared, so it stays.
     if (product?.slug.startsWith(OWNER_PRODUCT_PREFIX) && !await ctx.db.query("props").withIndex("by_product", q => q.eq("productId", product._id)).first()) {
+      // Brand data fetched for its website is kept against the product, with the provider's response. It goes too, so
+      // the hourly refresh stops visiting a product that is gone. A fetch still in flight finds no job and is dropped.
+      const [jobs, snapshots] = await Promise.all([
+        ctx.db.query("productBrandJobs").withIndex("by_product", q => q.eq("productId", product._id)).collect(),
+        ctx.db.query("productBrandSnapshots").withIndex("by_product", q => q.eq("productId", product._id)).collect(),
+      ]);
+      await Promise.all([...jobs, ...snapshots].map(row => ctx.db.delete(row._id)));
       await ctx.db.delete(product._id);
     }
     return { removed: true };

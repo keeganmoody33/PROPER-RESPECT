@@ -522,12 +522,26 @@ test("removing a tool the owner added by name takes its own product record too, 
       twiceKept: await ctx.db.insert("props", { ...bare, productId: twice }),
     };
   });
+  // Brand data fetched for a typed tool's website is stored against its product, with the provider's response.
+  await t.run(async ctx => {
+    const brand = (productId: Id<"products">, slug: string, domain: string) => ({
+      productId, generation: 1, responseJson: "{}",
+      snapshot: { schemaVersion: 1 as const, provider: "context.dev" as const, adapterVersion: "synthetic", productSlug: slug, canonicalDomain: domain,
+        retrievalId: `${productId}_1`, retrievedAt: "2026-11-17T00:00:00.000Z", partial: false, responseHash: "synthetic", logos: [], colors: [], fonts: [], receipts: [] },
+    });
+    const snapshot = await ctx.db.insert("productBrandSnapshots", brand(ids.typed, "manual-my-notes-0123456789abcdef012345", "notes.example"));
+    await ctx.db.insert("productBrandJobs", { productId: ids.typed, canonicalDomain: "notes.example", generation: 1, status: "READY", requestedAt: 1, currentSnapshotId: snapshot });
+    await ctx.db.insert("productBrandJobs", { productId: ids.twice, canonicalDomain: "other.example", generation: 1, status: "PENDING", requestedAt: 1 });
+  });
   await owner.mutation(removeNeverUsed, { propId: ids.typedProp, expectedVersion: 0 });
   await owner.mutation(removeNeverUsed, { propId: ids.twiceProp, expectedVersion: 0 });
   await owner.mutation(removeNeverUsed, { propId: clay, expectedVersion: 1 });
   expect(await t.run(async ctx => ({
     typed: await ctx.db.get(ids.typed), twice: (await ctx.db.get(ids.twice))?.name, clay: (await ctx.db.get(ids.clayProduct))?.slug, kept: Boolean(await ctx.db.get(ids.twiceKept)),
-  }))).toEqual({ typed: null, twice: "Other App", clay: "clay", kept: true });
+    // Clay's job came with the stack pick: a catalog product is shared, so its brand data stays when one person removes it.
+    brandJobs: (await ctx.db.query("productBrandJobs").collect()).map(job => job.canonicalDomain).sort(),
+    brandSnapshots: (await ctx.db.query("productBrandSnapshots").collect()).length,
+  }))).toEqual({ typed: null, twice: "Other App", clay: "clay", kept: true, brandJobs: ["clay.com", "other.example"], brandSnapshots: 0 });
 });
 
 test("only the owner can remove a record", async () => {
