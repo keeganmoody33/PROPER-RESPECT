@@ -12,6 +12,21 @@ const PER_OWNER_TOOL_PREFIX = "manual-";
 
 /** The longest search a visitor may send. Longer input is refused, never cut short. */
 export const SEARCH_QUERY_MAX = 80;
+/** The most words one search may hold; the backend's text search takes no more. */
+export const SEARCH_WORDS_MAX = 16;
+
+// Runs of anything but letters and digits, where the search splits words: "clay-code tools" splits into three, "clay" into one.
+// https://regex101.com/?regex=%5B%5E%5Cp%7BL%7D%5Cp%7BN%7D%5D%2B&flags=gu&testString=clay-code%20tools
+const WORD_BREAK = /[^\p{L}\p{N}]+/u;
+
+/** What a visitor is told when a search can't be sent, or null when it can. */
+export function searchProblem(q: string): string | null {
+  const term = q.trim();
+  if (term.length > SEARCH_QUERY_MAX) return `Search with ${SEARCH_QUERY_MAX} characters or fewer.`;
+  if (term.split(WORD_BREAK).filter(Boolean).length > SEARCH_WORDS_MAX) return `Search with ${SEARCH_WORDS_MAX} words or fewer.`;
+  return null;
+}
+
 /** The most people or tools one search shows. */
 export const SEARCH_RESULTS_MAX = 24;
 /** The most people one group on a tool page shows at a time. */

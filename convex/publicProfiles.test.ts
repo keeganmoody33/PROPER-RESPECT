@@ -249,6 +249,7 @@ test("the reserved-handle check names a reserved word an account already holds, 
 // Search read model (C1). Synthetic people only.
 const confirmedAt = "2026-11-01T00:00:00.000Z";
 const SEARCH_QUERY_MAX = 80;
+const SEARCH_WORDS_MAX = 16;
 const SEARCH_RESULTS_MAX = 24;
 const CURSOR_MAX = 200;
 const OVER_CAP = 30;
@@ -394,6 +395,9 @@ test("search refuses over-long input and caps every result list", async () => {
   await expect(f.t.query(api.publicProfiles.searchPeople, { q: "a".repeat(SEARCH_QUERY_MAX + 1) })).rejects.toThrow("Search with 80 characters or fewer.");
   await expect(f.t.query(api.publicProfiles.searchTools, { q: "a".repeat(SEARCH_QUERY_MAX + 1) })).rejects.toThrow("Search with 80 characters or fewer.");
   expect(await f.t.query(api.publicProfiles.searchPeople, { q: ` ${"a".repeat(SEARCH_QUERY_MAX)} ` })).toEqual({ people: [], more: false });
+  const words = (count: number) => Array.from({ length: count }, () => "a").join(" ");
+  expect((await f.t.query(api.publicProfiles.searchTools, { q: words(SEARCH_WORDS_MAX) })).tools).toEqual([]);
+  await expect(f.t.query(api.publicProfiles.searchTools, { q: words(SEARCH_WORDS_MAX + 1) })).rejects.toThrow("Search with 16 words or fewer.");
   await expect(f.t.query(api.publicProfiles.toolPage, { slug: "clay", beforeAfter: "a".repeat(CURSOR_MAX + 1) })).rejects.toThrow("That page of people is out of range.");
   await f.t.run(ctx => Promise.all(Array.from({ length: OVER_CAP }, (_, index) => ctx.db.insert("listedPages", {
     handle: `person-${index}`, displayName: `Person ${index}`, sortName: `person ${String(index).padStart(2, "0")}`, searchText: `person-${index} person ${index} Person ${index}`,

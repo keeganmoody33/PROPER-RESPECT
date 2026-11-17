@@ -2,7 +2,7 @@ import { fetchQuery } from "convex/nextjs";
 import { z } from "zod";
 import { api } from "@/convex/_generated/api";
 import { handleSchema } from "@/src/domain/handle";
-import { SEARCH_QUERY_MAX, SEARCH_RESULTS_MAX, searchListing, TOOL_PEOPLE_PAGE, type SearchListing } from "@/src/domain/search-listing";
+import { SEARCH_RESULTS_MAX, searchListing, searchProblem, TOOL_PEOPLE_PAGE, type SearchListing } from "@/src/domain/search-listing";
 import { getServerEnv } from "@/src/env";
 import { e2eSearchProfiles } from "./e2e-search-profiles";
 
@@ -30,7 +30,7 @@ const convexUrl = () => ({ url: getServerEnv().NEXT_PUBLIC_CONVEX_URL });
 
 /** What a visitor is told when a search is too long. Null when it can be sent. */
 export function searchQueryProblem(q: string): string | null {
-  return q.trim().length > SEARCH_QUERY_MAX ? `Search with ${SEARCH_QUERY_MAX} characters or fewer.` : null;
+  return searchProblem(q);
 }
 
 // Fixture mode reads the same listing rule the backend writes from, over invented pages, so the two can't drift.

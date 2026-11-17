@@ -6,7 +6,7 @@ import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
 import { handleSchema, RESERVED_HANDLES } from "../src/domain/handle";
-import { LISTED_BY_DEFAULT, SEARCH_QUERY_MAX, SEARCH_RESULTS_MAX, searchListing, TOOL_CURSOR_MAX, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
+import { LISTED_BY_DEFAULT, SEARCH_RESULTS_MAX, searchListing, searchProblem, TOOL_CURSOR_MAX, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
 import { isHttpUrl } from "../src/domain/http-url";
 import { isRelationshipLevel, type RelationshipLevel } from "../src/domain/relationship-level";
 import { listedUses, type ProductUses } from "../src/domain/product-uses";
@@ -344,9 +344,9 @@ export async function syncSearchListing(ctx: MutationCtx, handle: string) {
 }
 
 function searchTerm(q: string) {
-  const term = q.trim();
-  if (term.length > SEARCH_QUERY_MAX) throw userError(`Search with ${SEARCH_QUERY_MAX} characters or fewer.`);
-  return term;
+  const problem = searchProblem(q);
+  if (problem) throw userError(problem);
+  return q.trim();
 }
 
 const toolSummaryValidator = v.object({ slug: v.string(), name: v.string(), peopleNow: v.number(), peopleBefore: v.number() });

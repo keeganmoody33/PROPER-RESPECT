@@ -5,7 +5,7 @@ const { fetchQuery } = vi.hoisted(() => ({ fetchQuery: vi.fn() }));
 vi.mock("convex/nextjs", () => ({ fetchQuery }));
 vi.mock("@/src/env", () => ({ getServerEnv: () => ({ NEXT_PUBLIC_CONVEX_URL: "https://test.convex.cloud" }) }));
 import { getListedToolSlugs, getSitemapListing, getToolPage, searchPeople, searchQueryProblem, searchTools } from "./search";
-import { SEARCH_QUERY_MAX } from "@/src/domain/search-listing";
+import { SEARCH_QUERY_MAX, SEARCH_WORDS_MAX } from "@/src/domain/search-listing";
 
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
 const fixture = () => vi.stubEnv("PROPER_RESPECT_E2E_REFERENCE", "1");
@@ -42,6 +42,8 @@ test("a search over 80 characters is refused before it is sent", () => {
   expect(searchQueryProblem("a".repeat(SEARCH_QUERY_MAX))).toBeNull();
   expect(searchQueryProblem(` ${"a".repeat(SEARCH_QUERY_MAX)} `)).toBeNull();
   expect(searchQueryProblem("a".repeat(SEARCH_QUERY_MAX + 1))).toBe("Search with 80 characters or fewer.");
+  expect(searchQueryProblem(Array.from({ length: SEARCH_WORDS_MAX }, () => "a").join("  "))).toBeNull();
+  expect(searchQueryProblem(Array.from({ length: SEARCH_WORDS_MAX + 1 }, () => "a").join(" "))).toBe("Search with 16 words or fewer.");
 });
 
 test("the backend's rows become links only when each handle and slug is one", async () => {

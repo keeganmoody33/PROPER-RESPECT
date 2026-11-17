@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LISTED_BY_DEFAULT, SHOW_PAST_USERS, searchListing, usedBefore, type ListingProfile } from "./search-listing";
+import { LISTED_BY_DEFAULT, SEARCH_QUERY_MAX, SEARCH_WORDS_MAX, SHOW_PAST_USERS, searchListing, searchProblem, usedBefore, type ListingProfile } from "./search-listing";
 import { RELATIONSHIP_LEVELS } from "./relationship-level";
 
 const card = (slug: string, fields: Partial<ListingProfile["cards"][number]> = {}): ListingProfile["cards"][number] => ({
@@ -66,8 +66,16 @@ describe("the search listing rule", () => {
     expect(JSON.stringify(listing)).not.toContain("example.com");
   });
 
+  it("refuses a search over 80 characters or 16 words, counting words the way search splits them", () => {
+    const words = (count: number, joiner: string) => Array.from({ length: count }, () => "ab").join(joiner);
+    expect([searchProblem(""), searchProblem(` ${"a".repeat(SEARCH_QUERY_MAX)} `), searchProblem(words(SEARCH_WORDS_MAX, "-"))]).toEqual([null, null, null]);
+    expect(searchProblem("a".repeat(SEARCH_QUERY_MAX + 1))).toBe("Search with 80 characters or fewer.");
+    expect(searchProblem(words(SEARCH_WORDS_MAX + 1, "-"))).toBe("Search with 16 words or fewer.");
+    expect(searchProblem(words(SEARCH_WORDS_MAX + 1, " "))).toBe("Search with 16 words or fewer.");
+  });
+
   it("copies nothing but the handle, the name, and each tool's name, slug and level words", () => {
     const listing = searchListing({ ...profile([{ ...card("clay"), headline: "Private?", note: "n", cost: { amount: 1 } } as ListingProfile["cards"][number]]), bio: "bio" } as ListingProfile, true);
-    for (const word of ["Private?", "\"bio\"", "cost", "amount"]) expect(JSON.stringify(listing)).not.toContain(word);
+    ["Private?", "\"bio\"", "cost", "amount"].forEach(word => expect(JSON.stringify(listing)).not.toContain(word));
   });
 });
