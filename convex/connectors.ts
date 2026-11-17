@@ -248,7 +248,7 @@ async function retainGithubSnapshot(ctx: MutationCtx, user: Doc<"users">, args: 
   });
   if (candidates.length === 0) {
     const propId = await ctx.db.insert("props", { userId: user._id, productId: product._id, status: "TESTING", visibility: "DRAFT",
-      headline: "GitHub is in my stack.", note: "Connected activity is private until I approve this card.", activity });
+      headline: "", note: "", activity });
     prop = (await ctx.db.get(propId))!;
     await ctx.db.insert("links", { propId, type: "CANONICAL", url: "https://github.com", label: "Open GitHub", isPrimary: true });
   }
@@ -389,8 +389,9 @@ export const saveConnectedSnapshot = internalMutation({
         productId: product._id,
         status: "TESTING",
         visibility: "DRAFT",
-        headline: `${product.name} is in my stack.`,
-        note: "Connected activity is private until I approve this card.",
+        // The owner writes the card's line; a connection writes none for them.
+        headline: "",
+        note: "",
         // Account creation belongs to activity.memberSince. It does not
         // establish when the owner began using this product.
         activity: args.activity,

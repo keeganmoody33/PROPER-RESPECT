@@ -13,7 +13,7 @@ import {
 } from "./manualProducts";
 import { relationshipLevelValidator, statusValidator } from "./validators";
 import { levelLabel, levelMatchesStatus } from "../src/domain/relationship-level";
-import { relationshipEditSchema } from "../src/domain/inventory";
+import { isRelationshipConfirmed, relationshipEditSchema } from "../src/domain/inventory";
 import { directoryEntry } from "../src/domain/product-directory";
 import { sha256 } from "../src/domain/product-knowledge";
 import { normalizeWebsite } from "../src/domain/typed-product";
@@ -86,6 +86,17 @@ async function replay(ctx: MutationCtx, user: Doc<"users">, operationId: string,
   return summarize(items);
 }
 
+// A draft the owner didn't add (a discovery, a connection or an upload) carries words the system wrote, such as
+// "GitHub may be in your stack." Confirming keeps a draft's headline and note, so they're cleared first: the owner
+// writes the card's line, and share-all skips a card until they do. intakeRelationship confirms the same first row.
+async function clearSystemWords(ctx: MutationCtx, userId: Id<"users">, slug: string) {
+  const product = await ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", slug)).unique();
+  if (!product) return;
+  const draft = await ctx.db.query("props").withIndex("by_user_product", q => q.eq("userId", userId).eq("productId", product._id)).first();
+  if (!draft || isRelationshipConfirmed(draft) || draft.ownerEntered || (!draft.headline && !draft.note)) return;
+  await ctx.db.patch(draft._id, { headline: "", note: "" });
+}
+
 /**
  * Saves every pick privately in one transaction, or none of them. Never publishes.
  * Only relationships it creates spend the hourly saveStack allowance.
@@ -129,6 +140,7 @@ export const saveSelection = mutation({
     const items: SaveSelectionItem[] = [];
     for (const [index, pick] of picks.entries()) {
       const product = resolved[index]!;
+      await clearSystemWords(ctx, user._id, product.identity.slug);
       const itemOperationId = `${itemReceiptPrefix(operationId)}${product.identity.slug}`;
       const edit = relationshipEditSchema.parse({ status: pick.status, ...(pick.level ? { level: pick.level } : {}), goTo: false, headline: "", note: "" });
       const { propId, product: saved, outcome } = await intakeRelationship(ctx, user, {

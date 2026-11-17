@@ -94,6 +94,29 @@ test("an optional headline falls back to the saved owner explanation on the comp
   expect(card(".card-headline").text()).not.toContain("not supplied");
 });
 
+test("a card with no words of the owner's shows a visitor no line at all, and tells only its owner one is missing", () => {
+  const card = { ...baseCard, headline: "", note: "" };
+  const visitor = renderCard({ headline: "", note: "" });
+  expect(visitor(".card-headline")).toHaveLength(0);
+  expect(visitor(".card-back blockquote")).toHaveLength(0);
+  expect(visitor.text()).not.toContain("note not supplied");
+  expect(visitor.text()).not.toContain("No line yet");
+  const owner = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, audience: "owner" })));
+  expect(owner(".card-headline").text()).toBe("No line yet. Add what it helps you do.");
+  expect(owner.text()).not.toContain("note not supplied");
+  // A discovery is private to its owner and keeps saying so.
+  const discovery = load(renderToStaticMarkup(createElement(ProductCard, { card, index: 0, audience: "owner", relationshipConfirmed: false })));
+  expect(discovery(".card-headline").text()).toBe("Discovery note not supplied.");
+});
+
+test("a brand preview's official assets never claim to be verified", () => {
+  const product = { slug: "github-copilot", domain: "github.com", name: "GitHub Copilot", description: "Synthetic Copilot card." };
+  const preview = load(renderToStaticMarkup(createElement(ProductCard, { card: { ...baseCard, product }, index: 0, displayMode: "brand-preview" })));
+  expect(preview(".card-brand-provenance").text()).toContain("Official brand assets");
+  expect(preview(".card-brand-provenance dt").map((_, term) => preview(term).text()).get()).toContain("Checked");
+  expect(preview(".card-brand-provenance").text().toLowerCase()).not.toContain("verif");
+});
+
 test("an owner-described product without a website needs neither an invented link nor telemetry", () => {
   const card = renderCard({ product: { ...baseCard.product, domain: "" }, primaryLink: undefined, activity: undefined });
   // The only link left is the site's own explanation of evidence.

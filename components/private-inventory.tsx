@@ -8,7 +8,8 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { inventoryViews, inInventoryView, isRelationshipConfirmed, type InventoryView } from "@/src/domain/inventory";
 import { privateCardPrimaryLink } from "@/src/domain/product-destination";
-import { productUseOptions, USE_OTHER_MAX, type ProductUses } from "@/src/domain/product-uses";
+import { productUseLabels, productUseOptions, USE_OTHER_MAX, type ProductUses } from "@/src/domain/product-uses";
+import { headlineField, headlineHelp, initialOwnerHeadline } from "@/src/client/headline-suggestion";
 import { CREDIT_INPUT_MAX, CREDIT_OTHER_PLATFORM_MAX, CREDIT_PLATFORMS, creditPlatform, listedCredit, normalizeCredit, type CreditPlatform } from "@/src/domain/props-credit";
 import { cardStatusLabel, isRelationshipLevel, levelDefinition, levelStatus, RELATIONSHIP_LEVELS } from "@/src/domain/relationship-level";
 import { AccountEvidence } from "./account-evidence";
@@ -91,6 +92,13 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
   // A card saved before levels has none selected; it keeps its fallback wording until the owner picks one.
   const [levelDraft, setLevelDraft] = useState({ version, level: item.prop.level ?? "" });
   const currentLevel = levelDraft.version === version ? levelDraft.level : item.prop.level ?? "";
+  // The owner's line, or null while untouched. A suggestion shows in an untouched field but is saved only once kept or edited.
+  const [headlineDraft, setHeadlineDraft] = useState({ version, owner: initialOwnerHeadline(confirmed ? item.prop.headline : "") });
+  const ownerHeadline = headlineDraft.version === version ? headlineDraft.owner : initialOwnerHeadline(confirmed ? item.prop.headline : "");
+  const chosenLevel = isRelationshipLevel(currentLevel) ? currentLevel : undefined;
+  const help = headlineHelp({ productName: item.product.name, productSlug: item.product.slug, confirmed,
+    status: chosenLevel ? levelStatus(chosenLevel) : item.prop.status, level: chosenLevel, uses: productUseLabels(item.product.slug, item.prop.uses), startedAt });
+  const headline = headlineField(ownerHeadline, help.suggestion);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState({ version, text: "" });
   const retry = useRef<{ body: string; id: string } | null>(null);
@@ -108,7 +116,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
     const fields = {
       propId: item.prop._id, expectedVersion: item.prop.relationshipVersion ?? 0,
       level: currentLevel, status: levelStatus(currentLevel), goTo: form.get("goTo") === "on",
-      headline: String(form.get("headline") ?? ""), note: String(form.get("note") ?? ""),
+      headline: headline.toSave, note: String(form.get("note") ?? ""),
       uses: usePicks.length || useOther ? { picks: usePicks, ...(useOther ? { other: useOther } : {}) } : undefined,
       credit: credit.credit,
       startedAt: String(form.get("startedAt") ?? "") || undefined,
@@ -140,7 +148,10 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       <label className={styles.toggle}><input name="goTo" type="checkbox" defaultChecked={item.prop.goTo ?? false} />One of my go-to tools</label></div>
       <p id={`${formId}-level`} className={styles.hint}>{isRelationshipLevel(currentLevel) ? levelDefinition(currentLevel) : "Pick the level that matches how you use it now."}</p>
       <p className={styles.hint}>You choose the level and the go-to mark. Activity never sets either. Earlier choices stay in history.</p>
-      <label>What it helps you do (optional)<input name="headline" maxLength={240} defaultValue={confirmed ? item.prop.headline : ""} /></label>
+      <label>What it helps you do (optional)<input name="headline" maxLength={240} value={headline.value} placeholder={help.placeholder}
+        aria-describedby={headline.suggested ? `${formId}-suggested` : undefined} onChange={event => setHeadlineDraft({ version, owner: event.target.value })} /></label>
+      {headline.suggested && <p id={`${formId}-suggested`} className={styles.hint}>Suggested from your answers. Make it yours before you save.{" "}
+        <button type="button" className="secondary-action" onClick={() => setHeadlineDraft({ version, owner: headline.value })}>Use this line</button></p>}
       <UsesQuestion productName={item.product.name} productSlug={item.product.slug} uses={item.prop.uses} />
       <CreditQuestion productName={item.product.name} credit={item.prop.credit} />
       <label>Explanation or workflow (optional)<textarea name="note" rows={4} maxLength={4000} defaultValue={confirmed || item.prop.ownerEntered ? item.prop.note : ""} /></label>

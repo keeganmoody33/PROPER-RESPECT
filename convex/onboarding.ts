@@ -508,8 +508,9 @@ export const retainUpload = mutation({
             productId: product._id,
             status: "TESTING",
             visibility: "DRAFT",
-            headline: `${product.name}: uploaded evidence to review.`,
-            note: "This file has not been interpreted as product use. Review it before describing your relationship.",
+            // The owner writes the card's line; an upload writes none for them.
+            headline: "",
+            note: "",
           });
           prop = (await ctx.db.get(propId))!;
           await ctx.db.insert("links", {

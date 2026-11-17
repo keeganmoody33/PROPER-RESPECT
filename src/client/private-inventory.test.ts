@@ -169,3 +169,22 @@ test("a card with a level shows it selected with its definition, beside an uncha
   expect(view(".card-title .eyebrow").text()).toBe("Occasionally · since 2023");
   expect(view(".card-footer .card-go-to").text()).toBe("Go-to");
 });
+
+test("a saved card with no line shows a marked suggestion; a product without listed uses gets an example placeholder instead", () => {
+  const saved = { ...item, prop: { ...item.prop, visibility: "PRIVATE" as const, status: "ACTIVE" as const, level: "DAILY" as const, headline: "", note: "", confirmedAt: "2026-11-01T00:00:00.000Z" } };
+  const clay = { ...saved, prop: { ...saved.prop, uses: { picks: ["build-lists"] } }, product: { ...saved.product, name: "Clay", slug: "clay" } };
+  const $ = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item: clay, evidence: [], onSave: vi.fn() })));
+  const field = $('input[name="headline"]');
+  expect(field.attr("value")).toBe("I use Clay daily to build target account lists.");
+  const hint = $(`#${field.attr("aria-describedby")}`);
+  expect(hint.text()).toContain("Suggested from your answers. Make it yours before you save.");
+  expect(hint.find("button").text()).toBe("Use this line");
+  const plain = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item: saved, evidence: [], onSave: vi.fn() })));
+  expect(plain('input[name="headline"]').attr("value")).toBe("");
+  expect(plain('input[name="headline"]').attr("placeholder")).toBe("I use Example product on most working days.");
+  expect(plain.text()).not.toContain("Suggested from your answers");
+  const written = { ...clay, prop: { ...clay.prop, headline: "Where the receipts live." } };
+  const kept = load(renderToStaticMarkup(createElement(InventoryRelationshipDetails, { item: written, evidence: [], onSave: vi.fn() })));
+  expect(kept('input[name="headline"]').attr("value")).toBe("Where the receipts live.");
+  expect(kept.text()).not.toContain("Suggested from your answers");
+});

@@ -40,7 +40,8 @@ test("zero creates one unconfirmed private card and exact replay adds nothing", 
   expect(after.proofs).toEqual(before.proofs);
   expect(after.signals).toEqual(before.signals);
   expect(after.drafts).toEqual(before.drafts);
-  expect(after.props[0]).toMatchObject({ visibility: "DRAFT", status: "TESTING" });
+  // A connection writes no words for the owner: the card waits for a line of their own.
+  expect(after.props[0]).toMatchObject({ visibility: "DRAFT", status: "TESTING", headline: "", note: "" });
   expect(after.publications).toEqual([]); expect(after.subscriptions).toEqual([]);
 });
 test.each(["DRAFT", "PRIVATE", "PUBLIC"] as const)("one %s relationship retains all owner fields", async visibility => {
@@ -231,6 +232,7 @@ test("Devin still uses its existing organization snapshot path", async () => {
   const after = await rows();
   expect(result.propId).not.toBeNull(); expect(after.signals).toHaveLength(1); expect(after.raw).toEqual([]);
   expect(after.connectors[0].provider).toBe("DEVIN"); expect(after.props[0].activity).toEqual(devin.activity);
+  expect(after.props[0]).toMatchObject({ visibility: "DRAFT", headline: "", note: "" });
 });
 
 test("an optional snapshot value stays required for a GitHub capture", async () => {

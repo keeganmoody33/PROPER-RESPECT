@@ -1,6 +1,7 @@
 // @vitest-environment edge-runtime
 /// <reference types="vite/client" />
 import { convexTest, type TestConvex } from "convex-test";
+import { makeFunctionReference } from "convex/server";
 import { afterEach, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -313,6 +314,24 @@ test("share-all starts brand retrieval for every shared product with its own web
   const tidal = await f.t.run(ctx => ctx.db.query("products").withIndex("by_slug", q => q.eq("slug", "tidal")).unique());
   expect(new Set(after.brandJobs.map(job => `${job.productId} ${job.canonicalDomain}`))).toEqual(new Set([`${tidal!._id} tidal.com`, `${notion!._id} notion.so`]));
   expect(after.scheduled).toHaveLength(2);
+});
+
+test("a card saved through the stack picker has no line, so share-all keeps it private and names it", async () => {
+  const f = await fixture();
+  const saveStack = makeFunctionReference<"mutation", { operationId: string; picks: { kind: "directory"; slug: string; status: "ACTIVE" }[] },
+    { items: { propId: Id<"props">; productName: string }[] }>("stack:saveSelection");
+  const saved = await f.owner.mutation(saveStack, { operationId: "quick", picks: [{ kind: "directory", slug: "github", status: "ACTIVE" }] });
+  const stackCard = saved.items[0].propId;
+  expect(await f.t.run(ctx => ctx.db.get(stackCard))).toMatchObject({ visibility: "PRIVATE", headline: "", note: "" });
+  const written = await f.addProp();
+
+  const preview = await publishAll(f.owner);
+  expect(preview).toMatchObject({ sharedCount: 1, skipped: [{ propId: stackCard, productName: "GitHub", reason: "NEEDS_A_LINE" }] });
+  expect(await f.visibilities([stackCard, written])).toEqual(["PRIVATE", "PUBLIC"]);
+  const page = await f.t.query(api.publicProfiles.getByHandleV2, { handle: "owner" });
+  expect(page?.cards.map(card => card.product.name)).toEqual(["Tool 1"]);
+  expect(JSON.stringify(page)).not.toContain("not supplied");
+  expect(JSON.stringify((await f.rows()).publications)).not.toContain("not supplied");
 });
 
 test("share-all with nothing left to share is refused and publishes no page", async () => {
