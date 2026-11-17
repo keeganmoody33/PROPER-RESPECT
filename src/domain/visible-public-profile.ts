@@ -1,4 +1,5 @@
 import { publicMeasurementSchema, type PublicMeasurement } from "./measurements";
+import { ownerLine } from "./system-lines";
 import type { ActivityModule, PublicProfile } from "./public-profile";
 import { contributionCalendarCoverage } from "./contribution-calendar-coverage";
 import { compactNumber } from "./format-activity-number";
@@ -150,10 +151,10 @@ export function projectVisiblePublicProfile(profile: PublicProfile): VisiblePubl
       status: card.status, ...(card.level ? { level: card.level } : {}), relationshipLabel: cardStatusLabel(card),
       ownerSelectedGoTo: card.goTo === true,
       // Only the owner's words: a card without any has an empty line, never one the system wrote.
-      headline: card.headline || card.note,
+      headline: ownerLine(card.headline, card.product.name) || ownerLine(card.note, card.product.name),
       ...visibleUses(card),
       ...visibleCredit(card),
-      note: card.note,
+      note: ownerLine(card.note, card.product.name),
       ...(card.startedAt ? { startedAt: card.startedAt } : { startDateNote: "Start date not supplied" }),
       ...(card.activity ? { activity: visibleActivity(card.activity) } : {}),
       ...(card.measurements?.length ? { measurements: card.measurements.map(row => publicMeasurementSchema.parse(row)) } : {}),

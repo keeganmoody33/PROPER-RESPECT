@@ -24,6 +24,7 @@ import { dayMonthYear, formatPeriod, freshnessNote, monthYear as monthYearOf, ye
 import { activityHeadline, cadenceEnd, FRONT_ARTIFACT_LIMIT, normalizeSeries } from "@/src/domain/activity-headline";
 import { productUseLabels } from "@/src/domain/product-uses";
 import { creditHref, creditText, listedCredit } from "@/src/domain/props-credit";
+import { ownerLine } from "@/src/domain/system-lines";
 import { reportHref } from "@/src/domain/report-link";
 import { privateUsageCardSchema, type PrivateUsageCard } from "@/src/domain/private-usage-card";
 import { UsageChart } from "./usage-chart";
@@ -610,10 +611,14 @@ export function ProductCard({
   const creditReport = credit && creditWords && profileHandle ? reportHref(creditReportSubject(profileHandle, index + 1, card, creditWords)) : undefined;
   const cost = !brandPreview && card.cost ? costSummary(card.cost, { today, sample }) : undefined;
   // A paused or stopped card's note is why, so its front says it under the headline.
-  const reason = !brandPreview && pastUse && card.note && card.note !== card.headline ? card.note : undefined;
+  // A confirmed card shows only its owner's words. An older one can still hold a line the app wrote, which is dropped here
+  // too: the public page renders the stored card, not the projection. A discovery keeps its line: it says why it is there.
+  const headline = relationshipConfirmed ? ownerLine(card.headline, card.product.name) : card.headline;
+  const note = relationshipConfirmed ? ownerLine(card.note, card.product.name) : card.note;
+  const reason = !brandPreview && pastUse && note && note !== headline ? note : undefined;
   // Only the owner's words go on a card. Without any, a visitor sees no line; the owner and a private discovery say one is missing.
   const missingLine = !relationshipConfirmed ? "Discovery note not supplied." : audience === "owner" ? "No line yet. Add what it helps you do." : "";
-  const headlineText = brandPreview ? card.product.description : card.headline || card.note || missingLine;
+  const headlineText = brandPreview ? card.product.description : headline || note || missingLine;
   const [isFlipped, setIsFlipped] = useState(false);
   // Turned over, a card keeps at least the height it had, so its back never makes the page under it jump up.
   const [frontHeight, setFrontHeight] = useState<number>();
@@ -819,7 +824,7 @@ export function ProductCard({
               </p>
             </>}
           </div>
-          {!brandPreview && (card.note ? <blockquote>{card.note}</blockquote> : missingLine && <p>{missingLine}</p>)}
+          {!brandPreview && (note ? <blockquote>{note}</blockquote> : missingLine && <p>{missingLine}</p>)}
           <p><WholeWords text={card.product.description} /></p>
           {!brandPreview && card.cost && <p>{costDetail(card.cost, { today, sample })}</p>}
           {!brandPreview && card.activity && <>
