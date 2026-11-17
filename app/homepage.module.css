@@ -36,10 +36,7 @@
 .respect a:focus-visible { outline-color: var(--poster); }
 .respectInner { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(2rem, 5vw, 5rem); align-items: end; }
 .respectCopy .statement { color: var(--poster); }
-.quote { margin: clamp(1.75rem, 3vw, 3rem) 0 1.75rem; border-left: 6px solid var(--feature-accent); padding-left: 1.25rem; }
-.quote blockquote { margin: 0; font-size: clamp(1.4rem, 2.4vw, 2.2rem); font-weight: 700; line-height: 1.2; letter-spacing: -.015em; max-width: 24ch; }
-.quote figcaption { margin-top: .7rem; font-size: .9rem; color: var(--feature-muted); }
-.respectCopy > p { max-width: 46ch; line-height: 1.65; font-size: 1.05rem; margin: 0 0 1.25rem; }
+.respectCopy > p { max-width: 46ch; line-height: 1.65; font-size: 1.05rem; margin: clamp(1.5rem, 3vw, 2.5rem) 0 1.25rem; }
 .onDark { font-weight: 700; }
 .bump { display: block; width: 100%; height: auto; border: 3px solid var(--feature-text); }
 

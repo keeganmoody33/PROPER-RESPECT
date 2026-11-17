@@ -15,7 +15,7 @@ All data here is synthetic: homepage sample cards and the fixture profile in ref
 | File | What it shows |
 | --- | --- |
 | `before-home-1440.png` | The homepage on `9eb44a6`, full page. |
-| `after-home-1440.png` | The homepage after, full page. |
+| `after-home-1440.png` | The homepage after, full page. Captured before the owner asked, the same day, to keep the Aretha Franklin quote on Origins only; the props section no longer shows it. |
 | `after-home-390-first-screen.png` | A phone's first screen after. |
 | `after-home-1440-dark-first-screen.png` | The first screen in dark appearance. |
 | `before-origins-1440.png` | Origins on `9eb44a6`. |

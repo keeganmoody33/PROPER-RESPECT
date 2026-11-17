@@ -18,7 +18,7 @@ export type TrustDocument = Readonly<{
   sections: readonly TrustSection[];
 }>;
 
-/** The line the name leans on, set large on the homepage and above the origins page. The origins page cites its source. */
+/** The line the name leans on, set large above the origins page, which cites its source. */
 export const originsPullQuote = { text: "“As people, we deserve respect from one another.”", source: "Aretha Franklin, speaking to Vogue about Respect, 2016" } as const;
 
 export const trustDocuments: Readonly<Record<TrustSlug, TrustDocument>> = {

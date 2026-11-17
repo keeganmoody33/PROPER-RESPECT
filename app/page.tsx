@@ -5,7 +5,6 @@ import { publicPageMetadata } from "@/src/server/public-site";
 import { PublicSiteGuideWebMcp } from "@/components/public-site-guide-webmcp";
 import { homepageExamples } from "@/src/data/homepage-examples";
 import { homepageSteps, productIdentity, publicSiteGuide, siteDescription, siteLine } from "@/src/server/agent-discovery";
-import { originsPullQuote } from "@/src/server/trust-pages";
 import styles from "./homepage.module.css";
 
 export function generateMetadata() {
@@ -38,12 +37,8 @@ export default function HomePage() {
           <div className={styles.respectInner}>
             <div className={styles.respectCopy}>
               <h2 id="respect-title" className={styles.statement}>Give props.<br />Get props.</h2>
-              <figure className={styles.quote}>
-                <blockquote>{originsPullQuote.text}</blockquote>
-                <figcaption>{originsPullQuote.source}</figcaption>
-              </figure>
               <p>Proper Respect takes its name from giving someone their props. Here the props are for what you run and how long you have run it, on a record your peers can read.</p>
-              <Link className={styles.onDark} href="/about/origins">Read where the name comes from</Link>
+              <Link className={styles.onDark} href="/about/origins">Where the name comes from</Link>
             </div>
             <Image className={styles.bump} src="/brand/homepage/bump-art.png" alt="Two fists meeting at a bright red diamond" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 45vw" />
           </div>
