@@ -1,6 +1,6 @@
 # 002 — V2 product motion: multi-user on proper-respect.com
 
-Updated: 2026-11-15. Supersedes [V1 motion](002-v1-product-motion.md) as the active
+Updated: 2026-11-17. Supersedes [V1 motion](002-v1-product-motion.md) as the active
 scope. Reuses the existing evidence and publication decisions; this is not a
 new architecture program.
 
@@ -19,8 +19,8 @@ The brief's [Section 3](remediation/CODEX-BRIEF.md) holds the full decisions.
 - **Now:** one link, `proper-respect.com/{handle}`, shows the tools a person
   uses, tests and used before, plus the usage behind them. The collection is
   private first; nothing publishes without owner preview and approval.
-- **Sign-up is closed** until the brief's Phase 2 gate. The second user is an
-  invited tester, not a stranger.
+- **Sign-up is public** (owner, 2026-11-17). It was closed until then, and
+  the first second user was an invited tester.
 - **Props, decided 2026-11-15:** each card can credit the person who put its
   owner on the product, by one handle on one platform, with no count,
   reverse lookup or notifications ([ADR-062](adr/062-props-credit.md)).
