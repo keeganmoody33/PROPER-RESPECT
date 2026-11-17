@@ -16,7 +16,7 @@
 
 .rail {
   position: sticky;
-  top: 6rem;
+  top: calc(var(--header-cover, 5.5rem) + 0.5rem);
   align-self: start;
 }
 

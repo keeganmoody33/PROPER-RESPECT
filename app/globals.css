@@ -1744,8 +1744,11 @@ main {
 /* The header stays with the reader on a wide screen and lets the page show through it. */
 @media (min-width: 601px) {
   .site-header { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: blur(14px) saturate(1.5); }
-  html { scroll-padding-top: 5.5rem; }
+  /* What the sticky header covers: one row, or two where its navigation wraps below 1100px. */
+  :root { --header-cover: 5.5rem; }
+  html { scroll-padding-top: var(--header-cover); }
 }
+@media (min-width: 601px) and (max-width: 1100px) { :root { --header-cover: 9rem; } }
 /* A page change cross-fades instead of flashing, where the browser supports it and the visitor allows motion. */
 @media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }
 .site-wordmark { display: inline-flex; align-items: center; gap: .6rem; font-stretch: 62%; font-size: 1.5rem; font-weight: 900; line-height: 1; text-transform: uppercase; text-decoration: none; }
@@ -1757,7 +1760,7 @@ main {
 .auth-steps { padding-left: 1.3rem; line-height: 1.6; }
 .auth-steps li { padding: .6rem 0; }
 /* The footer is the dark end of every page in both appearances, so it pins its own inks the way a card does. */
-.site-footer { --ink: #ffffff; --paper: #000000; --panel: #181818; --secondary: #b5b5b5; --muted: #b5b5b5; --line: rgba(255, 255, 255, 0.3); --control-line: #7a7a7a; --respect-red: #ff5fa2; --focus-ring: #f5d547; --action-text: #000000;
+.site-footer { --ink: #ffffff; --paper: #000000; --panel: #181818; --secondary: #b5b5b5; --muted: #b5b5b5; --line: rgba(255, 255, 255, 0.3); --control-line: #7a7a7a; --respect-red: #ff5fa2; --focus-ring: #f5d547; --action-text: #000000; --example-panel: #262626; --input: #000000; --sample-text: #b5b5b5;
   display: block; padding-block: clamp(2.5rem, 6vw, 5rem) 1.25rem; background: var(--paper); color: var(--ink); border: 0; }
 .site-footer-brand > p { color: var(--poster); }
 .site-footer-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 3rem; }
