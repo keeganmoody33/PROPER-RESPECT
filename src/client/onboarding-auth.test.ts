@@ -149,9 +149,16 @@ test.each([
   // The source picker sits with the sources, below sharing, never above the stack.
   expect(main.indexOf('aria-label="Choose what to bring in"')).toBeGreaterThan(main.indexOf('id="collection-sources"'));
   const step = main.slice(main.indexOf('id="collection-profile"'), main.indexOf('id="collection-sharing"'));
+  // The step's disclosures are UI SDK collapsibles, never a hand-rolled or native one.
+  expect(step).not.toContain("<details");
+  const disclosure = (label: string) => step.match(new RegExp(`<button[^>]*aria-expanded="false"[^>]*>${label}</button>`))?.index ?? -1;
   if (claimed) {
     expect(step).toContain(published ? ">https://canonical.example/maya-ops</a>" : "https://canonical.example/maya-ops");
     expect(step).not.toContain("pending-owner");
+    // The form waits behind its trigger, and stays in the page so a half-typed change survives closing it.
+    const change = disclosure(published ? "Change your name, bio or links" : "Change your handle or name");
+    expect(change).toBeGreaterThanOrEqual(0);
+    expect(change).toBeLessThan(step.indexOf('name="handle"'));
   } else {
     // With no handle, the field is the step itself: not folded into a disclosure, and no placeholder address.
     const handleAt = step.indexOf('name="handle"');
@@ -160,8 +167,10 @@ test.each([
     expect(step.slice(0, handleAt)).not.toContain("<details");
     expect(step.slice(0, step.indexOf('name="displayName"'))).not.toContain("<details");
     expect(step).not.toContain("canonical.example/pending-owner");
-    // Bio and links stay one tap away in the same form, so saving the handle keeps them.
-    expect(step.indexOf("<details")).toBeLessThan(step.indexOf('name="bio"'));
+    // Bio and links stay one tap away in the same form, and in the page while folded, so saving the handle keeps them.
+    const more = disclosure("Add a bio and links \\(optional\\)");
+    expect(more).toBeGreaterThan(step.indexOf('name="displayName"'));
+    expect(more).toBeLessThan(step.indexOf('name="bio"'));
   }
   expect(step.split("<form").length - 1).toBe(1);
 });
@@ -217,9 +226,10 @@ test.each(["Exhausted", "CanLoadMore"])("sharing requires complete account cover
   const canonical = html.indexOf("Product or account page");
   const purpose = html.slice(html.lastIndexOf("<select", canonical), html.indexOf("</select>", canonical));
   expect(purpose).not.toContain("affiliate");
-  const more = html.indexOf("<summary>More options</summary>");
+  const more = html.match(/<button[^>]*aria-expanded="false"[^>]*>More options<\/button>/)?.index ?? -1;
   expect(more).toBeGreaterThan(canonical);
-  expect(html.slice(more, html.indexOf("</details>", more))).toContain("Mark this as my affiliate link");
+  expect(html.indexOf("Mark this as my affiliate link")).toBeGreaterThan(more);
+  expect(html.slice(canonical, more)).not.toContain("<details");
   expect(html).not.toMatch(/value="https:\/\/github\.com\/synthetic-account"/);
   expect(html).not.toContain("I approve making exactly this preview visible");
 });

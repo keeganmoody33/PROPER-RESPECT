@@ -14,6 +14,8 @@ import {
 import { useAction, useConvex, useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionArgs } from "convex/server";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { PublicProfile } from "@/src/domain/public-profile";
@@ -147,6 +149,8 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
   const uploadAttempt = useRef<{ file: File; vendor: string; uploadUrl: string } | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [identityOpen, setIdentityOpen] = useState(false);
+  const [identityMoreOpen, setIdentityMoreOpen] = useState(false);
   const [measurementSelections, setMeasurementSelections] = useState<Record<string, Id<"rawEvidence">[]>>({});
   const [measurementReviewBasis, setMeasurementReviewBasis] = useState<Record<string, string>>({});
   const [reviewEdits, setReviewEdits] = useState<
@@ -433,18 +437,21 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
     <label className="full">Short footer bio (optional)<textarea name="bio" defaultValue={state.user.bio} rows={2} /></label>
     <ProfileLinksFields links={state.user.profileLinks} preferredLinkUrl={state.user.preferredLinkUrl} />
   </>;
-  // One form keeps every claimHandle field, so saving a handle never blanks the bio or links folded below it.
+  // One form keeps every claimHandle field, and its folded panels stay mounted, so saving a handle never blanks the bio or
+  // links below it. The browser can't point at a field it can't show, so a refused field opens the panel it sits in first.
   const identityForm = <form onSubmit={event => { event.preventDefault(); void submitProfile(new FormData(event.currentTarget)); }}
-    onInvalidCapture={event => (event.target as HTMLElement).closest("details")?.setAttribute("open", "")} className="form-grid">
+    onInvalidCapture={() => flushSync(() => setIdentityMoreOpen(true))} className="form-grid">
     <label>Handle<input key={`${handleState}:${state.user.handle}`} name="handle" defaultValue={handleState === "draft" && publicIdentityClaimed === false ? "" : state.user.handle} readOnly={handleState !== "draft"} aria-describedby="identity-handle-guidance" placeholder="your-handle" required /></label>
     <label>Display name<input name="displayName" defaultValue={state.user.displayName ?? clerkUser?.fullName ?? ""} required pattern={"[\\s\\S]*\\S[\\s\\S]*"} title="Enter a display name with at least one non-space character." /></label>
-    {hasAddress ? identityExtras : <details className="full identity-more"><summary>Add a bio and links (optional)</summary><div className="form-grid">{identityExtras}</div></details>}
+    {hasAddress ? identityExtras : <Collapsible className="full identity-more" open={identityMoreOpen} onOpenChange={setIdentityMoreOpen}>
+      <CollapsibleTrigger className="collection-disclosure">Add a bio and links (optional)</CollapsibleTrigger>
+      <CollapsiblePanel className="form-grid" keepMounted>{identityExtras}</CollapsiblePanel>
+    </Collapsible>}
     <div className="action-row full"><button className="secondary-action" disabled={busy || handleState === "unknown"}>Save public identity</button></div>
   </form>;
   const focusHandle = () => {
-    const handle = document.querySelector<HTMLInputElement>("#collection-profile input[name='handle']");
-    handle?.closest("details")?.setAttribute("open", "");
-    handle?.focus();
+    flushSync(() => setIdentityOpen(true));
+    document.querySelector<HTMLInputElement>("#collection-profile input[name='handle']")?.focus();
   };
 
   return (
@@ -488,7 +495,10 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
           : handleState === "unknown" ? "Public identity status is unavailable. Reload before saving."
             : publicIdentityClaimed ? "Your page is not published yet. You can change this handle until you share."
               : "You need a handle only to share. Pick one you are happy to show publicly."}</p>
-        {hasAddress ? <details className="identity-change"><summary>{handleState === "published" ? "Change your name, bio or links" : "Change your handle or name"}</summary>{identityForm}</details> : identityForm}
+        {hasAddress ? <Collapsible className="identity-change" open={identityOpen} onOpenChange={setIdentityOpen}>
+          <CollapsibleTrigger className="collection-disclosure">{handleState === "published" ? "Change your name, bio or links" : "Change your handle or name"}</CollapsibleTrigger>
+          <CollapsiblePanel keepMounted>{identityForm}</CollapsiblePanel>
+        </Collapsible> : identityForm}
       </section>
 
       <section className="onboarding-panel" id="collection-sharing" aria-labelledby="collection-sharing-title">
@@ -645,10 +655,13 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
                     </select>
                   </label>
                   <p>Use your own referral or invite URL. It appears publicly only after you approve the sharing preview.</p>
-                  {edit.linkType !== "AFFILIATE" && <details><summary>More options</summary>
-                    <p>If this link pays you a commission, mark it. The card then shows the label Affiliate link.</p>
-                    <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, { linkType: "AFFILIATE" })}>Mark this as my affiliate link</button>
-                  </details>}
+                  {edit.linkType !== "AFFILIATE" && <Collapsible>
+                    <CollapsibleTrigger className="collection-disclosure">More options</CollapsibleTrigger>
+                    <CollapsiblePanel hiddenUntilFound>
+                      <p>If this link pays you a commission, mark it. The card then shows the label Affiliate link.</p>
+                      <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, { linkType: "AFFILIATE" })}>Mark this as my affiliate link</button>
+                    </CollapsiblePanel>
+                  </Collapsible>}
                   {publicationOffer && publicationOffer.url !== edit.linkUrl && <>
                     <p>Your private card opens {publicationOffer.url}. Visitors will use the primary link above until you choose otherwise and approve a preview.</p>
                     <button type="button" className="secondary-action" onClick={() => updateReview(card.prop._id, edit, {
