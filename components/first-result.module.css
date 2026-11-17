@@ -10,4 +10,5 @@
 .importForm input { max-width: 100%; min-width: 0; }
 .importForm button { justify-self: start; }
 .hint { font-size: .88rem; line-height: 1.5; }
+.manual { display: inline-flex; align-items: center; min-height: 44px; }
 @media (max-width: 600px) { .source { min-height: 0; } .importForm button { width: 100%; } }

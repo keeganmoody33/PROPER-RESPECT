@@ -817,9 +817,9 @@ test(`on a ${PHONE_WIDTH}px touch screen one tap on Play moves the slideshow on 
   await context.close();
 });
 
-/** The phone's first screen: the card starts by here, and its number is above the examples row held at the screen's foot. */
-const PHONE_CARD_TOP_PX = 300;
-test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right after the heading, and holds still`, async ({ page }) => {
+/** The phone's first screen: the card starts by here, under the heading and the two actions, and its number is above the examples row held at the screen's foot. */
+const PHONE_CARD_TOP_PX = 380;
+test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the heading, the way to start and the card are all in the first screen, and the card holds still`, async ({ page }) => {
   await page.clock.install();
   await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -842,16 +842,18 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
   await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
   expect(first.numberBottom).toBeLessThanOrEqual(PHONE_HEIGHT);
-  // In reading order the heading, the examples, then the call to action. The heading wraps as it needs to, whole inside the first screen above the examples.
+  // In reading order and on screen: the heading, the call to action, then the examples. The heading wraps as it needs to, and a
+  // phone shows the way to start without a scroll.
   const order = await page.evaluate(() => {
     const [heading, examples] = ["#homepage-title", "#example"].map(selector => document.querySelector(selector)!);
     const start = [...document.querySelectorAll("main a")].find(link => link.textContent === "Start your collection")!;
     const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    const box = heading.getBoundingClientRect();
-    return { headingThenExamples: before(heading, examples), examplesThenStart: before(examples, start),
-      headingShown: box.top >= 0 && box.right <= innerWidth && box.bottom <= innerHeight && box.bottom <= examples.getBoundingClientRect().top };
+    const [box, startBox, examplesTop] = [heading.getBoundingClientRect(), start.getBoundingClientRect(), examples.getBoundingClientRect().top];
+    return { headingThenStart: before(heading, start), startThenExamples: before(start, examples),
+      headingShown: box.top >= 0 && box.right <= innerWidth && box.bottom <= startBox.top,
+      startShown: startBox.left >= 0 && startBox.right <= innerWidth && startBox.bottom <= examplesTop && examplesTop <= innerHeight };
   });
-  expect(order).toEqual({ headingThenExamples: true, examplesThenStart: true, headingShown: true });
+  expect(order).toEqual({ headingThenStart: true, startThenExamples: true, headingShown: true, startShown: true });
   // On a phone the slideshow is in view from the start, so it waits for play rather than reflowing the copy under it.
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await page.clock.runFor(ADVANCE_MS * 2);
@@ -885,11 +887,32 @@ test(`at ${NARROWEST_WIDTH}x${NARROWEST_HEIGHT} the card's number is above the e
   const barTop = await carousel.getByRole("group", { name: "Choose a product example" }).evaluate(group => group.parentElement!.getBoundingClientRect().top);
   const bottoms = await numbers.evaluateAll(strongs => strongs.map(strong => strong.getBoundingClientRect().bottom));
   expect(bottoms.filter(bottom => bottom > barTop)).toEqual([]);
+  // The smallest phone still shows the way to start above the card, without a scroll.
+  const start = (await page.getByRole("link", { name: "Start your collection", exact: true }).first().boundingBox())!;
+  expect(start.y + start.height).toBeLessThanOrEqual((await carousel.boundingBox())!.y);
   expect(await page.evaluate(() => scrollY)).toBe(0);
 });
 
 /** How far a tapped chooser button may move when the card under it changes. */
 const MAX_CHOOSER_SHIFT_PX = 20;
+test(`at ${PHONE_WIDTH}px the examples row fades at whichever edge has more names, so it reads as a row that scrolls`, async ({ page }) => {
+  await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
+  await page.goto("/");
+  const row = page.getByRole("region", { name: "Product usage examples" }).getByRole("group", { name: "Choose a product example" }).locator("..");
+  // Each soft edge is the bar's own colour over the names, so the held bar stays solid over the card behind it.
+  const edges = () => row.evaluate(element => ({ more: element.scrollWidth > element.clientWidth,
+    start: Number(getComputedStyle(element, "::before").opacity), end: Number(getComputedStyle(element, "::after").opacity) }));
+  expect(await edges()).toEqual({ more: true, start: 0, end: 1 });
+  const edge = await row.evaluate(element => {
+    const [bar, soft] = [element.getBoundingClientRect(), getComputedStyle(element, "::after")];
+    return { width: parseFloat(soft.width), sticks: soft.position, clicks: soft.pointerEvents, barWidth: bar.width, content: element.scrollWidth };
+  });
+  expect(edge).toMatchObject({ width: 32, sticks: "sticky", clicks: "none" });
+  await row.evaluate(element => element.scrollTo({ left: element.scrollWidth, behavior: "instant" }));
+  await expect.poll(edges).toEqual({ more: true, start: 1, end: 0 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px picking an example from the chooser shows its card in view, and the tapped name stays put`, async ({ page }) => {
   await page.setViewportSize({ width, height: PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });

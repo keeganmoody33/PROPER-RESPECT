@@ -125,6 +125,56 @@ test.each(["PENDING", "RUNNING"])("a stranded %s brand job keeps an explicit ret
   expect(html).not.toMatch(/<button[^>]*disabled/);
 });
 
+const firstRunSections = ['id="build-stack"', 'id="private-collection-title"', 'id="add-product"', 'id="collection-profile"', 'id="collection-sharing"', 'id="collection-sources"'];
+
+test.each([
+  { label: "no handle yet", claimed: false, published: false },
+  { label: "a draft handle", claimed: true, published: false },
+  { label: "a published handle", claimed: true, published: true },
+])("the first run reads stack, collection, handle, sharing, then sources with $label", ({ claimed, published }) => {
+  auth.convex = { isLoading: false, isAuthenticated: true };
+  auth.ownerState = {
+    user: { _id: "owner", handle: claimed ? "maya-ops" : "pending-owner", displayName: "Owner", bio: "" },
+    cards: [], connectors: [], drafts: [], evidence: [], privateInventoryAvailable: true,
+    hasClaimedPublicIdentity: claimed, hasPublicationAtCurrentHandle: published,
+  };
+  const html = render();
+  const navigationStart = html.indexOf('<nav class="collection-navigation"');
+  const navigation = html.slice(navigationStart, html.indexOf("</nav>", navigationStart));
+  expect(navigation.split('href="#').slice(1).map(link => link.slice(0, link.indexOf('"')))).toEqual(["build-stack", "private-collection-title", "add-product", "collection-profile", "collection-sharing", "collection-sources"]);
+  const main = html.slice(html.indexOf("</nav>", navigationStart));
+  const positions = firstRunSections.map(marker => main.indexOf(marker));
+  expect(positions.every(position => position >= 0)).toBe(true);
+  expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  // The source picker sits with the sources, below sharing, never above the stack.
+  expect(main.indexOf('aria-label="Choose what to bring in"')).toBeGreaterThan(main.indexOf('id="collection-sources"'));
+  const step = main.slice(main.indexOf('id="collection-profile"'), main.indexOf('id="collection-sharing"'));
+  // The step's disclosures are UI SDK collapsibles, never a hand-rolled or native one.
+  expect(step).not.toContain("<details");
+  const disclosure = (label: string) => step.match(new RegExp(`<button[^>]*aria-expanded="false"[^>]*>${label}</button>`))?.index ?? -1;
+  if (claimed) {
+    expect(step).toContain(published ? ">https://canonical.example/maya-ops</a>" : "https://canonical.example/maya-ops");
+    expect(step).not.toContain("pending-owner");
+    // The form waits behind its trigger, and stays in the page so a half-typed change survives closing it.
+    const change = disclosure(published ? "Change your name, bio or links" : "Change your handle or name");
+    expect(change).toBeGreaterThanOrEqual(0);
+    expect(change).toBeLessThan(step.indexOf('name="handle"'));
+  } else {
+    // With no handle, the field is the step itself: not folded into a disclosure, and no placeholder address.
+    const handleAt = step.indexOf('name="handle"');
+    const handleInput = step.slice(step.lastIndexOf("<input", handleAt), step.indexOf(">", handleAt));
+    expect(handleInput).toContain('value=""');
+    expect(step.slice(0, handleAt)).not.toContain("<details");
+    expect(step.slice(0, step.indexOf('name="displayName"'))).not.toContain("<details");
+    expect(step).not.toContain("canonical.example/pending-owner");
+    // Bio and links stay one tap away in the same form, and in the page while folded, so saving the handle keeps them.
+    const more = disclosure("Add a bio and links \\(optional\\)");
+    expect(more).toBeGreaterThan(step.indexOf('name="displayName"'));
+    expect(more).toBeLessThan(step.indexOf('name="bio"'));
+  }
+  expect(step.split("<form").length - 1).toBe(1);
+});
+
 test("private collection and simple owner-described product entry precede optional sharing identity", () => {
   auth.convex = { isLoading: false, isAuthenticated: true };
   auth.ownerState = {
@@ -133,7 +183,7 @@ test("private collection and simple owner-described product entry precede option
   };
   const html = render();
   expect(html).toContain("Add a tool");
-  expect(html.indexOf("Add a tool")).toBeLessThan(html.indexOf("Public identity"));
+  expect(html.indexOf("Add a tool")).toBeLessThan(html.indexOf('id="collection-profile"'));
   expect(html).toContain("Name a tool and choose how you use it.");
   expect(html).not.toContain('name="slug"');
   expect(html).not.toMatch(/name="website"[^>]*required/);
@@ -172,6 +222,14 @@ test.each(["Exhausted", "CanLoadMore"])("sharing requires complete account cover
   expect(html).toContain("https://github.com/synthetic-account");
   expect(html).toContain("Use the private account page in this preview");
   expect(html).toContain("Visitors will use the primary link above until you choose otherwise and approve a preview.");
+  // The default path never offers an affiliate link; it waits behind More options.
+  const canonical = html.indexOf("Product or account page");
+  const purpose = html.slice(html.lastIndexOf("<select", canonical), html.indexOf("</select>", canonical));
+  expect(purpose).not.toContain("affiliate");
+  const more = html.match(/<button[^>]*aria-expanded="false"[^>]*>More options<\/button>/)?.index ?? -1;
+  expect(more).toBeGreaterThan(canonical);
+  expect(html.indexOf("Mark this as my affiliate link")).toBeGreaterThan(more);
+  expect(html.slice(canonical, more)).not.toContain("<details");
   expect(html).not.toMatch(/value="https:\/\/github\.com\/synthetic-account"/);
   expect(html).not.toContain("I approve making exactly this preview visible");
 });
