@@ -99,31 +99,6 @@
   overflow-wrap: anywhere;
 }
 
-/* The same pale field and ink as the homepage's first screen, in light and dark. */
-.pullQuote {
-  background: var(--poster-field);
-  color: var(--poster-ink);
-  border-left: 8px solid var(--poster);
-  margin: 0 0 clamp(2rem, 5vw, 4rem);
-  padding: clamp(1.25rem, 3vw, 2.5rem);
-}
-
-.pullQuote blockquote {
-  font-size: clamp(2rem, 5vw, 4.5rem);
-  font-stretch: 62%;
-  font-weight: 900;
-  line-height: 0.9;
-  text-transform: uppercase;
-  margin: 0;
-  text-wrap: balance;
-}
-
-.shell .pullQuote figcaption {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-top: 1rem;
-}
-
 .shell h2 {
   font-size: clamp(1.5rem, 3vw, 2rem);
   line-height: 1.2;

@@ -20,7 +20,7 @@ All data here is synthetic: homepage sample cards and the fixture profile in ref
 | `after-home-1440-dark-first-screen.png` | The first screen in dark appearance. |
 | `after-footer-1440.png` | The dark footer and the header over a scrolled page. |
 | `before-origins-1440.png` | Origins on `9eb44a6`. |
-| `after-origins-1440-first-screen.png` | Origins with its rail of About pages and the quote. |
+| `after-origins-1440-first-screen.png` | Origins with its rail of About pages. Captured before the owner struck the large quote the same day; the page no longer shows it. |
 
 The measurements under Targets were taken on the first round. The second round changed colours, the header and the About rail, and the browser specs for those pages passed again after it (174 tests across eight spec files; one theme test failed once and passed on three repeats).
 
