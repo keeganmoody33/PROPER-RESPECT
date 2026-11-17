@@ -4,7 +4,7 @@ for (const width of [1280, 390]) test(`homepage titles match the approved brand 
   await page.setViewportSize({ width, height: 844 });
   const response = await page.goto("/");
   expect(response?.status()).toBe(200);
-  const title = "Proper Respect: Earn your respect.";
+  const title = "Proper Respect: Every tool you've used counts.";
   await expect.soft(page).toHaveTitle(title);
   await expect.soft(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title);
   await expect.soft(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", title);
