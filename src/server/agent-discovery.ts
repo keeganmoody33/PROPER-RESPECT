@@ -84,6 +84,13 @@ export const homepageSteps = [
   { title: "Preview once, then share.", body: "See exactly what visitors will see. Approve that preview once to share your confirmed tools on your public page." },
 ] as const;
 
+/** The homepage's way into other people's pages, shared word for word by the page and its Markdown mirror. */
+export const homepageBrowse = {
+  title: "See what other people run.",
+  body: "Look up a person by name or handle, or open a tool to see who uses it now and who used it before. Only pages their owners list show up.",
+  action: "Search people and tools",
+} as const;
+
 export function homepageMarkdown() {
   const origin = publicSiteOrigin();
   return `# Proper Respect
@@ -98,6 +105,10 @@ ${productIdentity().description}
 
 ${homepageSteps.map((step, index) => `${index + 1}. ${step.title} ${step.body}`).join("\n")}
 
+## ${homepageBrowse.title.slice(0, -1)}
+
+${homepageBrowse.body}
+
 Private by default. Shared by choice. Activity does not rank importance. Homepage usage examples contain sample data, not connected account measurements.
 
 Created by lecturesfrom, a business in the United States. [Contact: 33@lecturesfrom.com](${new URL("/about/contact", origin)}).
@@ -106,6 +117,7 @@ Created by lecturesfrom, a business in the United States. [Contact: 33@lecturesf
 
 - [Start your collection](${new URL("/app/collection", origin)}).
 - [See Keegan's tooling page](${new URL("/lecturesfrom", origin)}).
+- [${homepageBrowse.action}](${new URL("/search", origin)}).
 - [Agent instructions and WebMCP usage](${new URL("/agents.md", origin)}).
 - [Authentication boundaries](${new URL("/auth.md", origin)}).
 - [Origins](${new URL("/about/origins.md", origin)}).
