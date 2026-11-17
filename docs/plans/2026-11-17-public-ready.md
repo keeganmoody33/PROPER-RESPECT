@@ -62,10 +62,10 @@ No two agents working at the same time edit the same file. The lead owns the sha
 
 ### Phase C: search people and tools
 
-- [ ] C1 Read model of published cards with a search index; listing switch, default on, isolated in one place
-- [ ] C2 `/search` with People and Tools
-- [ ] C3 `/tools/{slug}`: who uses it now, who used it before
-- [ ] C4 Card tool name links to its tool page; sitemap lists listed pages and tool pages
+- [x] C1 Read model of published cards with a search index; listing switch, default on, isolated in one place
+- [x] C2 `/search` with People and Tools
+- [x] C3 `/tools/{slug}`: who uses it now, who used it before
+- [x] C4 Card tool name links to its tool page; sitemap lists listed pages and tool pages
 
 ### Phase D: drift fixes and the option B hero
 
@@ -74,7 +74,7 @@ No two agents working at the same time edit the same file. The lead owns the sha
 - [x] D3 A stopped or paused tool in the featured examples; referral example out of the featured set
 - [x] D4 "Tooling page" label; page and collection used consistently
 - [x] D5 Affiliate link behind more options
-- [ ] D6 Browse section points at `/search`
+- [x] D6 Browse section points at `/search`
 - [x] D7 Phone nav, Start button, tab scroll cue, About marker contrast
 
 ### Phase E: public ready repo
@@ -92,6 +92,7 @@ No two agents working at the same time edit the same file. The lead owns the sha
 - 2026-11-17: groundwork merged as PR #227 (`6ae1fcd`): B1 reserved handles, the plan and the two source documents, the sign-up wording, and #226, #162 and #186 landed (A3).
 - 2026-11-17: Phase D merged as PR #228 (`bd46ca9`): the option B hero, one meaning each for respect and props, a stopped tool in the featured examples, "tooling page".
 - 2026-11-17: Phase A merged as PR #230 (`b97ca68`): no placeholder or app-written line goes public, the suggested first line, real error messages and error boundaries, and the GitHub refresh diagnosis.
-- 2026-11-17: Phase E opened as PR #229: dependency fixes, README, stale docs, the audit in `docs/verification/2026-11-17-public-ready-audit.md`, and this pass's rules in `AGENTS.md`.
+- 2026-11-17: Phase E merged as PR #229 (`6c477a2`): dependency fixes, README, stale docs, the audit in `docs/verification/2026-11-17-public-ready-audit.md`, and this pass's rules in `AGENTS.md`.
 - 2026-11-17: Phase B merged as PR #231 (`e75966f`): the stack-first order (B2), the affiliate option behind More options (D5), and the phone fixes (D7).
-- 2026-11-17: the walkthrough (B3) follows Phase B in its own PR. Phase C (search, tool pages, D6) follows in its own PR; its boxes are ticked there.
+- 2026-11-17: Phase C merged as PR #233 (`5c14098`): search for people and tools, a page per tool, the search listing switch, and the homepage browse section (D6).
+- 2026-11-17: the walkthrough (B3) is PR #232, the last of the pass.

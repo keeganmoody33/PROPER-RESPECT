@@ -5,6 +5,7 @@ import type {
 } from "convex/server";
 import type { DataModel, Doc } from "./_generated/dataModel";
 import { projectPublicProfile } from "../src/domain/public-profile";
+import { syncSearchListing } from "./publicProfiles";
 
 type MutationCtx = GenericMutationCtx<DataModel>;
 
@@ -480,6 +481,7 @@ export const seedKeegan = internalMutation({
     } else {
       await ctx.db.insert("publishedProfiles", publishedValue);
     }
+    await syncSearchListing(ctx, "keegan");
 
     return {
       handle: "keegan",

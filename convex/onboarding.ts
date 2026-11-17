@@ -27,7 +27,7 @@ import { resolvePublishedCardPropIds } from "./publication";
 import { shareAllSelections } from "../src/domain/share-all";
 import { listedUses } from "../src/domain/product-uses";
 import { CREDIT_PLATFORMS, listedCredit, type PropsCredit } from "../src/domain/props-credit";
-import { publicPublication } from "./publicProfiles";
+import { publicPublication, syncSearchListing } from "./publicProfiles";
 import { associatedAccountEvidenceForProp } from "./associatedAccountEvidence";
 import {
   profileLinkValidator,
@@ -1005,6 +1005,7 @@ export const publishSelected = mutation({
       profile: prepared.profile, cardPropIds: prepared.cardPropIds };
     if (prepared.published) await ctx.db.replace(prepared.published._id, value);
     else await ctx.db.insert("publishedProfiles", value);
+    await syncSearchListing(ctx, user.handle);
     const site = await ctx.db.query("sites").withIndex("by_owner", q => q.eq("ownerId", user._id)).unique();
     if (site) await ctx.db.patch(site._id, { handle: user.handle, status: "ACTIVE" });
     await ctx.db.patch(user._id, { onboardingStatus: "PUBLISHED", updatedAt: now });

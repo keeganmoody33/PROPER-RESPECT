@@ -23,8 +23,16 @@ export function publicSiteOrigin(): URL {
 }
 
 export function publicPageMetadata(title: string, description: string, handle?: string): Metadata {
+  return publicPathMetadata(title, description, handle === undefined ? "/" : `/${handleSchema.parse(handle)}`);
+}
+
+/** Metadata for a site path such as /search or /tools/clay. Every segment must be a lowercase handle-shaped name. */
+export function publicPathMetadata(title: string, description: string, path: string): Metadata {
+  const segments = path.split("/").slice(1);
+  if (!path.startsWith("/") || (path !== "/" && !segments.every(segment => handleSchema.safeParse(segment).data === segment))) {
+    throw new Error("A public page path must be made of handle-shaped segments.");
+  }
   const origin = publicSiteOrigin();
-  const path = handle === undefined ? "/" : `/${handleSchema.parse(handle)}`;
   const url = new URL(path, origin).href;
   const image = new URL("/share-image.png?v=20261117", origin).href;
   return {
