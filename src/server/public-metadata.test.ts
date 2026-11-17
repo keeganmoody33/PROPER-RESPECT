@@ -30,6 +30,7 @@ describe("public profile metadata", () => {
     vi.stubEnv("PUBLIC_SITE_ORIGIN", "https://proper-respect.com");
     vi.mocked(getPublicProfile).mockResolvedValue(null);
     const metadata = await generateMetadata({ params: Promise.resolve({ handle: "private-owner" }) });
+    expect(metadata.title).toBe("Page not found");
     expect(metadata.robots).toMatchObject({ index: false, follow: false });
     expect(metadata.alternates).toBeUndefined();
     expect(metadata.openGraph).toBeUndefined();
@@ -38,6 +39,7 @@ describe("public profile metadata", () => {
   it("does not advertise an unavailable profile", async () => {
     vi.mocked(getPublicProfile).mockRejectedValue(new Error("Unavailable"));
     const metadata = await generateMetadata({ params: Promise.resolve({ handle: "missing" }) });
+    expect(metadata.title).toBe("Tooling page");
     expect(metadata.robots).toMatchObject({ index: false, follow: false });
     expect(metadata.alternates).toBeUndefined();
   });

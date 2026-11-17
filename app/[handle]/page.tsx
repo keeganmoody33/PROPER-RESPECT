@@ -22,10 +22,10 @@ export async function generateMetadata({
   const { handle } = await params;
   try {
     const profile = await getPublicProfile(handle);
-    if (!profile) return { title: "Profile not found", robots: { index: false, follow: false } };
+    if (!profile) return { title: "Page not found", robots: { index: false, follow: false } };
     return publicPageMetadata(profile.displayName, profile.bio, profile.handle);
   } catch {
-    return { title: "Public profile", robots: { index: false, follow: false } };
+    return { title: "Tooling page", robots: { index: false, follow: false } };
   }
 }
 
