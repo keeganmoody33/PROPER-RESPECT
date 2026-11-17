@@ -19,7 +19,7 @@ test("publishes working PR icons and the current share image on public pages", a
   }
   await page.goto("/");
   const image = await page.locator('meta[property="og:image"]').getAttribute("content");
-  expect(image).toBe("https://public.example/share-image.png?v=20261116");
+  expect(image).toBe("https://public.example/share-image.png?v=20261117");
   await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute("content", image!);
   const imageUrl = new URL(image!);
   const response = await request.get(imageUrl.pathname + imageUrl.search);

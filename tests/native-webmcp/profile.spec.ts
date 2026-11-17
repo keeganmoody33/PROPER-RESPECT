@@ -181,7 +181,7 @@ test("Next Link navigation unregisters old native handles and remounts exactly o
     const tool = (await context.getTools()).find(tool => tool.name === "get_public_site_guide")!;
     (window as RetainedWindow).nativeWebMcpTest = { sentinel: "same-document", tool };
   });
-  await page.getByRole("link", { name: "View Keegan’s shared collection" }).click();
+  await page.getByRole("link", { name: "See Keegan’s tooling page" }).first().click();
   await expect(page).toHaveURL(/\/lecturesfrom$/);
   expect(await page.evaluate(() => (window as RetainedWindow).nativeWebMcpTest?.sentinel)).toBe("same-document");
   await expectProfileTool(page);
@@ -195,7 +195,7 @@ test("Next Link navigation unregisters old native handles and remounts exactly o
 
 test("native homepage guide returns canonical public documentation without networking", async ({ page }, testInfo) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Earn your respect.");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Every tool you've used counts.");
   await expect.poll(async () => (await tools(page)).map(tool => tool.name)).toEqual([guideName]);
   const [guide] = await tools(page);
   expect(guide.description).toBe("Explains Proper Respect, links to public documentation, and describes how to read a supplied published profile.");

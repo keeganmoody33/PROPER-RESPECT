@@ -20,13 +20,14 @@ export default function HomePage() {
       <main id="homepage-content" className={styles.main} tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="homepage-title">
           <h1 id="homepage-title" className={styles.title}>{siteLine}</h1>
-          {/* Right after the heading, so a phone shows a card in its first screen; a wide screen sets the art and the actions beside it. */}
+          {/* Right after the heading, so a phone shows a card in its first screen; a wide screen sets the line, the art and the actions beside it. */}
           <div className={styles.example} id="example"><ProductExample examples={homepageExamples()} /></div>
           <div className={styles.side}>
+            <p className={styles.lede}>{siteDescription}</p>
             <Image className={styles.bump} src="/brand/homepage/bump-art.png" alt="Two fists meeting at a bright red diamond" width={1536} height={1024} sizes="(max-width: 900px) 100vw, 45vw" priority />
             <div className={styles.actions}>
               <Link className={styles.primary} href="/app/collection">Start your collection</Link>
-              <Link className={styles.secondary} href="/lecturesfrom">View Keegan’s shared collection</Link>
+              <Link className={styles.secondary} href="/lecturesfrom">See Keegan’s tooling page</Link>
             </div>
           </div>
         </section>
@@ -40,7 +41,7 @@ export default function HomePage() {
           <div className={styles.respectInner}>
             <h2 id="respect-title" className={styles.statement}>Give props.<br />Get props.</h2>
             <div className={styles.respectCopy}>
-              <p>Proper Respect takes its name from giving someone their props. Here the props are for what you run and how long you have run it, on a record your peers can read.</p>
+              <p>Respect is what your usage earns: what you run and how long you have run it, on a page your peers can read. Props are the credit you give whoever put you on a tool, and the credit you get when you put someone on one.</p>
               <Link className={styles.onDark} href="/about/origins">Where the name comes from</Link>
             </div>
           </div>
@@ -49,7 +50,7 @@ export default function HomePage() {
           <h2 id="start-title" className={styles.statement}>Make it yours.</h2>
           <div className={styles.actions}>
             <Link className={styles.primary} href="/app/collection">Start your collection</Link>
-            <Link className={styles.secondary} href="/lecturesfrom">See the shared collection</Link>
+            <Link className={styles.secondary} href="/lecturesfrom">See Keegan’s tooling page</Link>
           </div>
           <p className={styles.privacy}>Private by default. Shared by choice.</p>
           <p className={styles.privacy}>Created by lecturesfrom, a business in the United States. <Link href="/about/contact">Contact: 33@lecturesfrom.com</Link>.</p>

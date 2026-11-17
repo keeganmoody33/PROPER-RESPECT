@@ -1,15 +1,19 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 /** The widest screen that shows a phone's chooser row, with Play and no arrows (product-example.module.css). */
 const PHONE_ONLY_MAX_PX = 600;
+/** The example shown first, and the one the slideshow moves on to. Clay doesn't lead until the owner says so. */
+const LEAD = "GitHub", SECOND = "Elicit";
+/** The numbers a front sets large: a published one, or the one leading its activity. */
+const BIG_NUMBER = ".card-front :is(.usage-measurement-stats strong, .card-activity-preview > p:first-child strong)";
 for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and caveats distinct at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 1000 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
-  await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText("One published number");
+  await expect(carousel.locator("[data-current=true] [data-capability]")).toHaveText(CAPABILITIES[LEAD]);
   // A phone's row keeps the names and Play; the arrows and count are for wider screens, where the row has room.
   const arrows = width > PHONE_ONLY_MAX_PX;
   const count = carousel.getByText("1 / 5", { exact: true });
@@ -111,7 +115,7 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
   // With every example open, the arrows run through all fourteen and wrap.
   if (arrows) {
     await carousel.getByRole("button", { name: "Next example" }).click();
-    await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+    await expect(carousel.getByRole("article", { name: `${LEAD} card` })).toBeVisible();
     await carousel.getByRole("button", { name: "Previous example" }).click();
     await expect(carousel.getByRole("article", { name: "Context.dev card" })).toBeVisible();
   } else await carousel.getByRole("button", { name: "Context.dev", exact: true }).click();
@@ -124,6 +128,15 @@ for (const width of [1440, 390, 320]) test(`usage slideshow keeps metrics and ca
 /** Each toggle's product name, without the description it carries for screen readers. */
 async function toggleNames(chooser: Locator) {
   return chooser.getByRole("button").evaluateAll(buttons => buttons.map(button => button.firstChild?.textContent));
+}
+
+/** Picks Clay, which no longer leads, and returns its card once it is shown. */
+async function showClay(page: Page) {
+  const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await carousel.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name: "Clay", exact: true }).click();
+  const card = carousel.getByRole("article", { name: "Clay card" });
+  await expect(card).toBeVisible();
+  return card;
 }
 
 /** Shows the nine examples that wait behind the five featured ones. */
@@ -140,6 +153,7 @@ const SHOWN_EXAMPLE = '[aria-label="Product usage examples"] [data-current="true
 
 /** What each example shows, named above its card and as its chooser toggle's description. */
 const CAPABILITIES: Readonly<Record<string, string>> = {
+  GitHub: "A year of contributions",
   Clay: "One published number",
   "Claude Code": "Coding days",
   Firecrawl: "Referral link, disclosed",
@@ -184,7 +198,7 @@ test(`every example card, front and back, passes axe at ${DESKTOP_WIDTH}px`, asy
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: `${LEAD} card` })).toBeVisible();
   await openMoreExamples(carousel);
   expect((await new AxeBuilder({ page }).include('[aria-label="Product usage examples"]').analyze()).violations).toEqual([]);
   for (const name of Object.keys(CAPABILITIES)) {
@@ -292,16 +306,16 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   const status = carousel.locator("[data-slide-status]");
-  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
   await expect(status).toHaveAttribute("aria-live", "off");
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Elicit card" })).toBeVisible();
   await carousel.hover();
   await expect(status).toHaveAttribute("aria-live", "polite");
-  await expect(status).toHaveText("2 of 5: GitHub");
+  await expect(status).toHaveText("2 of 5: Elicit");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Elicit card" })).toBeVisible();
   await page.mouse.move(0, 0);
   await page.clock.fastForward(8100);
   await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
@@ -310,28 +324,28 @@ test("slideshow advances on its own quietly, pauses on hover and focus, and stop
   await expect(carousel.getByRole("article", { name: "Cloudflare card" })).toBeVisible();
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Docker card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
   const toggle = carousel.getByRole("button", { name: /slideshow$/ });
   await toggle.focus();
   await expect(toggle).toHaveText("Pause slideshow");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Docker card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
   await toggle.press("Enter");
   await expect(toggle).toHaveText("Play slideshow");
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Docker card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
   await toggle.press("Enter");
   await expect(toggle).toHaveText("Pause slideshow");
   await expect(toggle).toBeFocused();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "Docker card" })).toBeVisible();
   await carousel.getByRole("button", { name: "Next example" }).focus();
   await page.clock.fastForward(16000);
-  await expect(carousel.getByRole("article", { name: "Firecrawl card" })).toBeVisible();
-  // Only the five featured examples take turns: after Firecrawl it wraps to Clay, never on to the nine behind More examples.
+  await expect(carousel.getByRole("article", { name: "Docker card" })).toBeVisible();
+  // Only the five featured examples take turns: after Docker it wraps to GitHub, never on to the nine behind More examples.
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
   await expect(carousel.locator("[aria-roledescription=slide]")).toHaveCount(5);
 });
 
@@ -339,19 +353,19 @@ test("an open back holds the slideshow, wherever focus and the pointer go, until
   await page.clock.install();
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  const clay = carousel.getByRole("article", { name: "Clay card" });
+  const lead = carousel.getByRole("article", { name: `${LEAD} card` });
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
-  await clay.getByRole("button", { name: "Details", exact: true }).click();
+  await lead.getByRole("button", { name: "Details", exact: true }).click();
   await page.mouse.move(0, 0);
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(17_000);
-  await expect(clay.getByRole("button", { name: "Close details" })).toBeVisible();
-  await expect(carousel.locator("[data-slide-status]")).toHaveText("1 of 5: Clay");
-  await clay.getByRole("button", { name: "Close details" }).click();
+  await expect(lead.getByRole("button", { name: "Close details" })).toBeVisible();
+  await expect(carousel.locator("[data-slide-status]")).toHaveText(`1 of 5: ${LEAD}`);
+  await lead.getByRole("button", { name: "Close details" }).click();
   await page.mouse.move(0, 0);
   await page.locator("#homepage-content").focus();
   await page.clock.fastForward(8100);
-  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: `${SECOND} card` })).toBeVisible();
 });
 
 test("with More examples open and nothing else picked, the slideshow still takes turns among the five featured", async ({ page }) => {
@@ -365,7 +379,7 @@ test("with More examples open and nothing else picked, the slideshow still takes
   // Focus and the pointer leave the slideshow, so only the timer moves it.
   await page.locator("#homepage-content").focus();
   await page.mouse.move(0, 0);
-  for (const name of ["GitHub", "Cloudflare", "Docker", "Firecrawl", "Clay"]) {
+  for (const name of [...FEATURED.slice(1), LEAD]) {
     await page.clock.fastForward(8100);
     await expect(carousel.getByRole("article", { name: `${name} card` })).toBeVisible();
   }
@@ -379,17 +393,17 @@ test("slideshow never advances on its own for a visitor who prefers reduced moti
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await page.clock.fastForward(24000);
-  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: `${LEAD} card` })).toBeVisible();
 });
 
 test("the example chooser is one tab stop: arrows move, a press picks, and the picked example stays pressed", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const chooser = page.getByRole("group", { name: "Choose a product example" });
-  const github = chooser.getByRole("button", { name: "Clay", exact: true });
+  const github = chooser.getByRole("button", { name: LEAD, exact: true });
   const second = chooser.getByRole("button").nth(1);
   const third = chooser.getByRole("button").nth(2);
-  expect(await toggleNames(chooser)).toEqual(["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl"]);
+  expect(await toggleNames(chooser)).toEqual([...FEATURED]);
   await expect(github).toHaveAttribute("aria-pressed", "true");
   await github.focus();
   await page.keyboard.press("ArrowRight");
@@ -400,7 +414,7 @@ test("the example chooser is one tab stop: arrows move, a press picks, and the p
   await expect(second).toHaveAttribute("aria-pressed", "true");
   await expect(github).toHaveAttribute("aria-pressed", "false");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  await expect(carousel.getByRole("article")).toHaveAccessibleName("GitHub card");
+  await expect(carousel.getByRole("article")).toHaveAccessibleName(`${SECOND} card`);
   // Pressing the picked example again keeps it: one example is always shown.
   await page.keyboard.press("Enter");
   await expect(second).toHaveAttribute("aria-pressed", "true");
@@ -417,19 +431,19 @@ test("the example chooser is one tab stop: arrows move, a press picks, and the p
   // Opened, the nine join the same group: still one tab stop, and the arrow keys reach them from the last featured toggle.
   await more.press("Enter");
   await expect(chooser.getByRole("button")).toHaveCount(14);
-  await chooser.getByRole("button", { name: "Firecrawl", exact: true }).focus();
+  await chooser.getByRole("button", { name: FEATURED.at(-1), exact: true }).focus();
   await page.keyboard.press("ArrowRight");
-  const n8n = chooser.getByRole("button", { name: "n8n", exact: true });
-  await expect(n8n).toBeFocused();
+  const firecrawl = chooser.getByRole("button", { name: "Firecrawl", exact: true });
+  await expect(firecrawl).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(carousel.getByRole("article")).toHaveAccessibleName("n8n card");
+  await expect(carousel.getByRole("article")).toHaveAccessibleName("Firecrawl card");
   await expect(carousel.getByText("6 / 14", { exact: true })).toBeVisible();
   await page.keyboard.press("Shift+Tab");
   await expect(chooser.locator(":focus")).toHaveCount(0);
   // Closing the nine while one of them is shown keeps it shown, and the slideshow's count keeps all fourteen.
   await more.click();
   await expect(chooser.getByRole("button")).toHaveCount(5);
-  await expect(carousel.getByRole("article")).toHaveAccessibleName("n8n card");
+  await expect(carousel.getByRole("article")).toHaveAccessibleName("Firecrawl card");
   await expect(carousel.getByText("6 / 14", { exact: true })).toBeVisible();
 });
 
@@ -438,7 +452,7 @@ test("pressing the example already shown stops the slideshow for good", async ({
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
-  const github = page.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name: "Clay", exact: true });
+  const github = page.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name: LEAD, exact: true });
   await expect(github).toHaveAttribute("aria-pressed", "true");
   await github.press("Enter");
   await expect(github).toHaveAttribute("aria-pressed", "true");
@@ -447,7 +461,7 @@ test("pressing the example already shown stops the slideshow for good", async ({
   await page.locator("#homepage-content").focus();
   await page.mouse.move(0, 0);
   await page.clock.fastForward(24000);
-  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: `${LEAD} card` })).toBeVisible();
 });
 
 test("a hidden example asks for no brand font or logo until it is shown or next", async ({ page }) => {
@@ -459,10 +473,12 @@ test("a hidden example asks for no brand font or logo until it is shown or next"
   });
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  // Clay's font, since it is shown, and GitHub's font and logo, since it is next. Clay's reviewed app icon is this site's own file.
+  // GitHub's font and logo, since it is shown, and Elicit's fonts and logo, since it is next (measured 17 Nov 2026).
   expect([...assets].sort()).toEqual([
     "/api/brand-fonts/1ab1b6a248cab8ba937f10ddd4b6cd983c88752d97371ff6c9eae613a7e21a2e.woff2",
-    "/api/brand-fonts/45386689a773179ad2a4f750698c7b6152d7b57f4e7c41aed967d8704d49e115.woff2",
+    "/api/brand-fonts/2ba924c1bb9da65e902c1360cafcc7c28b2aaf6428d08b773777701409d93852.woff2",
+    "/api/brand-fonts/4bdae757061773359c9c86a5f1c9a5754b8999ab926bfdf89923a36cbf9aed8a.woff2",
+    "/api/brand-images/105442cc-6552-4e6f-8b2d-6268eb13c024.png",
     "/api/brand-images/c625fdf9-bcc0-4e62-a4ea-6f385a71cd16.png",
   ]);
   assets.clear();
@@ -496,7 +512,7 @@ test("a hidden example asks for no brand font or logo until it is shown or next"
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 }));
 
-const FEATURED = ["Clay", "GitHub", "Cloudflare", "Docker", "Firecrawl"] as const;
+const FEATURED = [LEAD, SECOND, "Cloudflare", "Clay", "Docker"] as const;
 const COLLAPSED_CHOOSER_LIMIT = 100;
 
 test(`the chooser stays one short row at ${DESKTOP_WIDTH}px, so each featured card is whole in the first screen`, async ({ page }) => {
@@ -584,6 +600,7 @@ test("on a phone Firecrawl's Referral link tag takes its own row under the arrow
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
   const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
   await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
   const card = carousel.getByRole("article", { name: "Firecrawl card" });
   const header = await card.locator(".card-front > .card-topline").evaluate(topline => {
@@ -669,13 +686,13 @@ test("the slideshow waits for the visitor to reach it before it moves on, then m
   // Longer than a slide's turn at the top of the page, with the slideshow below the fold.
   await page.clock.runFor(ADVANCE_MS * 2);
   await carousel.locator("[data-current=true] article").scrollIntoViewIfNeeded();
-  await expect(current).toHaveText("One published number");
+  await expect(current).toHaveText(CAPABILITIES[LEAD]);
   // In view, it starts playing (its slides stop announcing themselves) and gets a whole turn before moving on.
   await expect(carousel.locator("[data-slide-status]")).toHaveAttribute("aria-live", "off");
   await page.clock.runFor(ADVANCE_MS - TURN_MARGIN_MS);
-  await expect(current).toHaveText("One published number");
+  await expect(current).toHaveText(CAPABILITIES[LEAD]);
   await page.clock.runFor(TURN_MARGIN_MS * 2);
-  await expect(current).not.toHaveText("One published number");
+  await expect(current).not.toHaveText(CAPABILITIES[LEAD]);
 });
 
 test("a screen reader finds one heading per card: the face it shows, never the hidden one's", async ({ page }) => {
@@ -791,12 +808,12 @@ test(`on a ${PHONE_WIDTH}px touch screen one tap on Play moves the slideshow on 
   await page.clock.install();
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  await expect(carousel.getByRole("article", { name: "Clay card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: `${LEAD} card` })).toBeVisible();
   await carousel.getByRole("button", { name: "Play slideshow" }).tap();
   await expect(carousel.getByRole("button", { name: "Pause slideshow" })).toBeVisible();
   // A tap is not a hover: nothing is left holding the slideshow once the finger lifts.
   await page.clock.runFor(TOUCH_TURN_MS);
-  await expect(carousel.getByRole("article", { name: "GitHub card" })).toBeVisible();
+  await expect(carousel.getByRole("article", { name: `${SECOND} card` })).toBeVisible();
   await context.close();
 });
 
@@ -809,13 +826,13 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  const card = carousel.getByRole("article", { name: "Clay card" });
+  const card = carousel.getByRole("article", { name: `${LEAD} card` });
   await expect(card).toBeVisible();
-  const first = await card.evaluate(article => ({
+  const first = await card.evaluate((article, number) => ({
     top: article.getBoundingClientRect().top,
-    numberBottom: article.querySelector(".card-front .usage-measurement-stats strong")!.getBoundingClientRect().bottom,
+    numberBottom: article.querySelector(number)!.getBoundingClientRect().bottom,
     scrolled: scrollY,
-  }));
+  }), BIG_NUMBER);
   expect(first.scrolled).toBe(0);
   expect(first.top).toBeLessThanOrEqual(PHONE_CARD_TOP_PX);
   // The row's visible top edge is its bar's ruled border, just above the toggles.
@@ -825,17 +842,16 @@ test(`at ${PHONE_WIDTH}x${PHONE_HEIGHT} the card is in the first screen, right a
   await expect(card.locator(".card-front .card-sample-tag")).toHaveText("Sample");
   await expect(card.locator(".card-front .card-sample-tag")).toBeVisible();
   expect(first.numberBottom).toBeLessThanOrEqual(PHONE_HEIGHT);
-  // In reading order the heading, the examples, then the call to action. The heading is one line, inside the first screen.
+  // In reading order the heading, the examples, then the call to action. The heading wraps as it needs to, whole inside the first screen above the examples.
   const order = await page.evaluate(() => {
     const [heading, examples] = ["#homepage-title", "#example"].map(selector => document.querySelector(selector)!);
     const start = [...document.querySelectorAll("main a")].find(link => link.textContent === "Start your collection")!;
     const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    const line = heading.getBoundingClientRect();
-    const oneLine = line.height <= parseFloat(getComputedStyle(heading).lineHeight) * 1.5;
+    const box = heading.getBoundingClientRect();
     return { headingThenExamples: before(heading, examples), examplesThenStart: before(examples, start),
-      headingShown: line.top >= 0 && line.right <= innerWidth && line.bottom <= examples.getBoundingClientRect().top, oneLine };
+      headingShown: box.top >= 0 && box.right <= innerWidth && box.bottom <= innerHeight && box.bottom <= examples.getBoundingClientRect().top };
   });
-  expect(order).toEqual({ headingThenExamples: true, examplesThenStart: true, headingShown: true, oneLine: true });
+  expect(order).toEqual({ headingThenExamples: true, examplesThenStart: true, headingShown: true });
   // On a phone the slideshow is in view from the start, so it waits for play rather than reflowing the copy under it.
   await expect(carousel.getByRole("button", { name: "Play slideshow" })).toBeVisible();
   await page.clock.runFor(ADVANCE_MS * 2);
@@ -848,6 +864,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`at ${width}px Firecrawl'
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
   await carousel.getByRole("group", { name: "Choose a product example" }).getByRole("button", { name: "Firecrawl", exact: true }).click();
   const headline = carousel.getByRole("article", { name: "Firecrawl card" }).locator(".card-front .card-headline");
   await expect(headline.locator(".card-headline-accent")).toHaveText("clean Markdown");
@@ -863,7 +880,7 @@ test(`at ${NARROWEST_WIDTH}x${NARROWEST_HEIGHT} the card's number is above the e
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  const numbers = carousel.getByRole("article", { name: "Clay card" }).locator(".card-front .usage-measurement-stats strong");
+  const numbers = carousel.getByRole("article", { name: `${LEAD} card` }).locator(BIG_NUMBER);
   await expect(numbers).toHaveCount(1);
   const barTop = await carousel.getByRole("group", { name: "Choose a product example" }).evaluate(group => group.parentElement!.getBoundingClientRect().top);
   const bottoms = await numbers.evaluateAll(strongs => strongs.map(strong => strong.getBoundingClientRect().bottom));
@@ -912,7 +929,7 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px the held
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  const card = carousel.getByRole("article", { name: "Clay card" });
+  const card = carousel.getByRole("article", { name: `${LEAD} card` });
   // Only the card's last 60px at the screen's top.
   await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().bottom - 60));
   const chooser = carousel.getByRole("group", { name: "Choose a product example" });
@@ -933,6 +950,7 @@ for (const width of [DESKTOP_WIDTH, PHONE_WIDTH]) test(`Firecrawl's front says i
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "Product usage examples" });
+  await openMoreExamples(carousel);
   await carousel.getByRole("button", { name: "Firecrawl", exact: true }).click();
   const front = carousel.getByRole("article", { name: "Firecrawl card" }).locator(".card-front");
   const link = front.getByRole("link", { name: "Open Firecrawl · Referral link (opens in a new tab)" });
@@ -1083,8 +1101,8 @@ test("opening More examples mounts none of the nine; each mounts when it is pick
   await expect(slides).toHaveCount(FEATURED.length);
   await carousel.getByRole("button", { name: "Spider", exact: true }).click();
   // Spider, and Open Places because it comes next.
-  expect(await slides.evaluateAll(elements => elements.map(element => element.getAttribute("data-example")))).toEqual(["clay", "github", "cloudflare", "docker", "firecrawl", "spider", "open-places"]);
-  await expect(slides.filter({ has: page.getByRole("article", { name: "Spider card" }) })).toHaveAttribute("aria-label", "10 of 14: Spider");
+  expect(await slides.evaluateAll(elements => elements.map(element => element.getAttribute("data-example")))).toEqual(["github", "elicit", "cloudflare", "clay", "docker", "spider", "open-places"]);
+  await expect(slides.filter({ has: page.getByRole("article", { name: "Spider card" }) })).toHaveAttribute("aria-label", "11 of 14: Spider");
 });
 
 /**
@@ -1092,12 +1110,12 @@ test("opening More examples mounts none of the nine; each mounts when it is pick
  * macOS and CI's Linux: each one's brand surface, band and heading face, what its front draws, its biggest number, its sizes.
  */
 const FEATURED_LOOK = [
+  { name: "GitHub", slug: "github", surface: "rgb(255, 255, 255)", band: null, draws: "calendar" },
+  { name: "Elicit", slug: "elicit", surface: "rgb(252, 252, 248)", band: null, draws: "per week bars" },
+  { name: "Cloudflare", slug: "cloudflare", surface: "rgb(255, 255, 255)", band: "rgb(255, 94, 31)", draws: "per day bars" },
   // Clay's green hero covers the header as one slab, over its warm grey second surface.
   { name: "Clay", slug: "clay", surface: "rgb(244, 243, 240)", band: "rgb(3, 93, 68)", draws: "numbers" },
-  { name: "GitHub", slug: "github", surface: "rgb(255, 255, 255)", band: null, draws: "calendar" },
-  { name: "Cloudflare", slug: "cloudflare", surface: "rgb(255, 255, 255)", band: "rgb(255, 94, 31)", draws: "per day bars" },
   { name: "Docker", slug: "docker", surface: "rgb(249, 250, 251)", band: "rgb(15, 17, 23)", draws: "number" },
-  { name: "Firecrawl", slug: "firecrawl", surface: "rgb(249, 249, 249)", band: null, draws: "per week bars" },
 ] as const;
 const MAX_FACE_DIFFERENCE_PX = 80;
 const MIN_BAND_CONTRAST = 4.5, MIN_LARGE_BAND_CONTRAST = 3;
@@ -1262,10 +1280,10 @@ test("a colour hero's slab covers the header, an inset hero rounds the card, and
   for (const name of FEATURED) looks[name] = await look(name);
   // Clay's green, Docker's dark and Cloudflare's orange hero cover the whole header; Cloudflare's 16px inset slab also rounds the card.
   expect(Object.fromEntries(FEATURED.map(name => [name, looks[name].topline]))).toEqual({
-    Clay: "rgb(3, 93, 68)", GitHub: "rgba(0, 0, 0, 0)", Cloudflare: "rgb(255, 94, 31)", Docker: "rgb(15, 17, 23)", Firecrawl: "rgba(0, 0, 0, 0)",
+    GitHub: "rgba(0, 0, 0, 0)", Elicit: "rgba(0, 0, 0, 0)", Cloudflare: "rgb(255, 94, 31)", Clay: "rgb(3, 93, 68)", Docker: "rgb(15, 17, 23)",
   });
   expect([looks.Cloudflare.radius, looks.Docker.radius]).toEqual(["16px", "18px"]);
-  // Firecrawl's orange 5,520 is 3.2:1 on its #f9f9f9: allowed only because it is drawn at 24px or more.
+  // A brand-coloured number that reads only 3:1 on its surface is allowed only because it is drawn at 24px or more.
   expect(Object.fromEntries(FEATURED.map(name => [name, looks[name].numbersRead]))).toEqual(Object.fromEntries(FEATURED.map(name => [name, true])));
 });
 
@@ -1288,7 +1306,7 @@ test("the work-sample link on Clay's back lights up in Clay's lime on hover, not
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const clay = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  const clay = await showClay(page);
   await clay.getByRole("button", { name: "Details", exact: true }).click();
   const link = clay.getByRole("link", { name: /See how I use it/ });
   await link.hover();
@@ -1300,7 +1318,7 @@ test("Clay's Details and Close details keep Clay's lime and black on hover, not 
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const clay = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  const clay = await showClay(page);
   const details = clay.getByRole("button", { name: "Details", exact: true });
   await details.hover();
   await expect(details).toHaveCSS("background-color", "rgb(203, 216, 16)");
@@ -1339,7 +1357,7 @@ for (const width of [PHONE_WIDTH, NARROWEST_WIDTH]) test(`at ${width}px turning 
   await page.goto("/");
   await page.evaluate(() => document.fonts.ready);
   const carousel = page.getByRole("region", { name: "Product usage examples" });
-  const card = carousel.getByRole("article", { name: "Clay card" });
+  const card = await showClay(page);
   const details = card.getByRole("button", { name: "Details", exact: true });
   // Read to the card's foot, so the card's top is above the screen and Details is still on it.
   await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().top + 40));
@@ -1440,7 +1458,7 @@ test("a sample's How this was measured speaks in plain dates, keeps the exact va
   await page.setViewportSize({ width: DESKTOP_WIDTH, height: VIEWPORT_HEIGHT });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  const card = await showClay(page);
   await card.getByRole("button", { name: "Details", exact: true }).click();
   await card.getByRole("button", { name: "How this was measured" }).click();
   const panel = card.locator(".card-provenance-panel");
@@ -1455,7 +1473,7 @@ test("mid-turn, the incoming face stays inside the card's edge, so none of it is
   await page.setViewportSize({ width: PHONE_WIDTH, height: PHONE_HEIGHT });
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto("/");
-  const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+  const card = await showClay(page);
   await card.evaluate(article => scrollBy(0, article.getBoundingClientRect().top - 10));
   await card.getByRole("button", { name: "Details", exact: true }).click();
   // Every moment of the turn, the incoming back's drawn box against the card's.
@@ -1480,7 +1498,7 @@ test("with motion allowed the card visibly turns over, in under 300ms; with redu
   for (const motion of ["no-preference", "reduce"] as const) {
     await page.emulateMedia({ reducedMotion: motion });
     await page.goto("/");
-    const card = page.getByRole("region", { name: "Product usage examples" }).getByRole("article", { name: "Clay card" });
+    const card = await showClay(page);
     await card.getByRole("button", { name: "Details", exact: true }).click();
     const turn = await card.locator(".card-back").evaluate(back => ({ name: getComputedStyle(back).animationName, seconds: parseFloat(getComputedStyle(back).animationDuration) }));
     if (motion === "reduce") expect(turn.name).toBe("none");
@@ -1562,6 +1580,7 @@ test(`at ${PHONE_WIDTH}px GitHub's source link under its card is a ${MIN_TAP_PX}
  * measured page, in system faces; x.ai blocked the measurement, so Grok Bot keeps the house card.
  */
 const OTHER_LOOK = [
+  { name: "Firecrawl", slug: "firecrawl", surface: "rgb(249, 249, 249)" },
   { name: "n8n", slug: "n8n", surface: "rgb(250, 250, 250)" },
   { name: "Claude Code", slug: undefined, surface: "rgb(250, 249, 245)" },
   { name: "Exa", slug: "exa", surface: "rgb(255, 255, 255)" },
@@ -1569,7 +1588,6 @@ const OTHER_LOOK = [
   { name: "Spider", slug: "spider", surface: "rgb(12, 14, 19)" },
   { name: "Open Places", slug: "open-places", surface: "rgb(247, 245, 239)" },
   { name: "Grok Bot", slug: undefined, surface: "rgb(37, 37, 31)" },
-  { name: "Elicit", slug: "elicit", surface: "rgb(252, 252, 248)" },
   { name: "Context.dev", slug: "context-dev", surface: "rgb(255, 255, 255)" },
 ] as const;
 

@@ -16,9 +16,11 @@ export async function GET() {
         <img src={mark} alt="" width={72} height={60} />
         <span>PROPER RESPECT</span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", fontSize: 150, lineHeight: 0.9, fontWeight: 900, letterSpacing: -6 }}>
-        <div>EARN YOUR</div>
-        <div>RESPECT.</div>
+      {/* A straight apostrophe: the share-image subset keeps only printable ASCII. */}
+      <div style={{ display: "flex", flexDirection: "column", fontSize: 112, lineHeight: 0.9, fontWeight: 900, letterSpacing: -4 }}>
+        <div>EVERY TOOL</div>
+        <div>YOU&apos;VE USED</div>
+        <div>COUNTS.</div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", borderTop: "4px solid #000000", paddingTop: 24, fontSize: 24, fontWeight: 600 }}>
         <div>Private by default. Shared by choice.</div>
