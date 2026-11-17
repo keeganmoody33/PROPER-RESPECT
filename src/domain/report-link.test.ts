@@ -13,4 +13,8 @@ describe("reportHref", () => {
       "mailto:33@lecturesfrom.com?subject=Clay%20Bcc%3A%20someone%40example.com%20x%20y%20tab",
     );
   });
+
+  it("replaces half of a broken character pair instead of throwing, so one bad headline can't take a profile page down", () => {
+    expect(reportHref("Clay " + String.fromCharCode(0xd800) + " rows")).toBe("mailto:33@lecturesfrom.com?subject=Clay%20%EF%BF%BD%20rows");
+  });
 });
