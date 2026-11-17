@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LISTED_BY_DEFAULT, LISTED_TOOLS_MAX, previewedUser, SEARCH_QUERY_MAX, SEARCH_WORDS_MAX, SHOW_PAST_USERS, searchListing, searchProblem, usedBefore, type ListingProfile } from "./search-listing";
+import { bySortName, LISTED_BY_DEFAULT, LISTED_TOOLS_MAX, previewedUser, SEARCH_QUERY_MAX, SEARCH_WORDS_MAX, SHOW_PAST_USERS, searchListing, searchProblem, usedBefore, type ListingProfile } from "./search-listing";
 import { RELATIONSHIP_LEVELS } from "./relationship-level";
 
 const card = (slug: string, fields: Partial<ListingProfile["cards"][number]> = {}): ListingProfile["cards"][number] => ({
@@ -94,5 +94,18 @@ describe("what a sharing preview depends on", () => {
     expect(previewedUser({ ...user, listedInSearch: true })).toEqual(user);
     expect(JSON.stringify(previewedUser({ ...user, listedInSearch: false }))).toBe(JSON.stringify(previewedUser(user)));
     expect(previewedUser(undefined)).toBeUndefined();
+  });
+});
+
+describe("the order people are listed in", () => {
+  const sortName = (displayName: string, handle: string) => searchListing(profile([card("clay")], { displayName, handle }), undefined)!.page.sortName;
+
+  it("stores a key in the order it is shown, so an accented name sits with its letter and the first 24 are the same either way", () => {
+    expect(sortName("Élodie Durand", "synthetic-elodie")).toBe("elodie durand synthetic-elodie");
+    const people = [["Zed", "synthetic-zed"], ["Élodie", "synthetic-elodie"], ["adam", "synthetic-adam"], ["Frank", "synthetic-frank"]]
+      .map(([displayName, handle]) => ({ handle, sortName: sortName(displayName, handle) }));
+    expect([...people].sort(bySortName).map(person => person.handle)).toEqual(["synthetic-adam", "synthetic-elodie", "synthetic-frank", "synthetic-zed"]);
+    // The database orders the stored key the same way, so what it picks first is what the list shows first.
+    expect([...people].sort(bySortName).map(person => person.sortName)).toEqual(people.map(person => person.sortName).sort());
   });
 });

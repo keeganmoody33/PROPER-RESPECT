@@ -51,6 +51,21 @@ export type SearchListing = {
   cards: { productSlug: string; productName: string; searchText: string; usedBefore: boolean; levelLabel: string }[];
 };
 
+// Matches any combining mark, such as the accent left when "É" is split into "E" and its acute.
+// https://regex101.com/?regex=%5Cp%7BM%7D%2B&flags=gu&testString=E%CC%81lodie
+const COMBINING_MARKS = /\p{M}+/gu;
+
+/**
+ * A name as it is ordered: lower case with accents folded, so "Élodie" sits with E. The database orders the stored key
+ * by its characters and bySortName does the same, so the first people it picks are the first the list shows.
+ */
+const sortKey = (name: string) => name.normalize("NFD").replace(COMBINING_MARKS, "").toLowerCase();
+
+/** The order people are shown in: by the stored key, character by character, exactly as the database index orders it. */
+export function bySortName(a: { sortName: string }, b: { sortName: string }): number {
+  return a.sortName < b.sortName ? -1 : a.sortName > b.sortName ? 1 : 0;
+}
+
 /** Tried, stopped or paused, or with no level and only marked as used before. Testing is current use. */
 export function usedBefore(card: { status: RelationshipStatus; level?: string }): boolean {
   return (isRelationshipLevel(card.level) ? levelStatus(card.level) : card.status) === "ARCHIVED";
@@ -77,7 +92,7 @@ export function searchListing(profile: ListingProfile | null, listedInSearch: bo
     return held && (row.usedBefore || !held.usedBefore) ? kept : kept.set(row.productSlug, row);
   }, new Map<string, SearchListing["cards"][number]>());
   return {
-    page: { handle, displayName, sortName: `${displayName.toLowerCase()} ${handle}`, searchText: `${handle} ${handle.replaceAll("-", " ")} ${displayName}` },
+    page: { handle, displayName, sortName: `${sortKey(displayName)} ${handle}`, searchText: `${handle} ${handle.replaceAll("-", " ")} ${displayName}` },
     cards: [...cards.values()].slice(0, LISTED_TOOLS_MAX),
   };
 }

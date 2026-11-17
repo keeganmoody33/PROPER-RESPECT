@@ -2,7 +2,7 @@ import { fetchQuery } from "convex/nextjs";
 import { z } from "zod";
 import { api } from "@/convex/_generated/api";
 import { handleSchema } from "@/src/domain/handle";
-import { SEARCH_RESULTS_MAX, searchListing, searchProblem, TOOL_PEOPLE_PAGE, type SearchListing } from "@/src/domain/search-listing";
+import { bySortName, SEARCH_RESULTS_MAX, searchListing, searchProblem, TOOL_PEOPLE_PAGE, type SearchListing } from "@/src/domain/search-listing";
 import { getServerEnv } from "@/src/env";
 import { e2eSearchProfiles } from "./e2e-search-profiles";
 
@@ -66,7 +66,7 @@ export async function searchPeople(q: string): Promise<{ people: SearchPerson[];
   const term = q.trim();
   if (fixtureMode()) {
     const found = fixtureListings().map(listing => listing.page).filter(page => !term || matches(page.searchText, term))
-      .sort((a, b) => byText(a.sortName, b.sortName));
+      .sort(bySortName);
     return { people: found.slice(0, SEARCH_RESULTS_MAX).map(({ handle, displayName }) => ({ handle, displayName })), more: found.length > SEARCH_RESULTS_MAX };
   }
   const result = await fetchQuery(api.publicProfiles.searchPeople, { q: term }, convexUrl());
@@ -89,7 +89,7 @@ function fixtureGroup(slug: string, usedBefore: boolean, after: string | undefin
   const rows = fixtureListings().flatMap(listing => listing.cards.filter(card => card.productSlug === slug && card.usedBefore === usedBefore)
     .map(card => ({ handle: listing.page.handle, displayName: listing.page.displayName, levelLabel: card.levelLabel, sortName: listing.page.sortName })))
     .filter(row => after === undefined || row.sortName > after)
-    .sort((a, b) => byText(a.sortName, b.sortName));
+    .sort(bySortName);
   const people = rows.slice(0, TOOL_PEOPLE_PAGE);
   return {
     people: people.map(({ handle, displayName, levelLabel }) => ({ handle, displayName, levelLabel })),

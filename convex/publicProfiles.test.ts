@@ -11,7 +11,7 @@ import { sha256 } from "../src/domain/product-knowledge";
 import { productBrandSnapshotSchema } from "../src/domain/product-brand";
 import { e2eReferenceProfile } from "../src/data/e2e-reference-profile";
 import { publicProfileV1Schema, type PublicProfile } from "../src/domain/public-profile";
-import { LISTED_TOOLS_MAX } from "../src/domain/search-listing";
+import { LISTED_TOOLS_MAX, searchListing } from "../src/domain/search-listing";
 
 const modules = import.meta.glob("./**/*.ts");
 
@@ -389,6 +389,19 @@ test("a tool page lists people A to Z in two groups, counts people per tool, and
   expect((await f.t.query(api.publicProfiles.searchPeople, { q: "" })).people.map(person => person.handle)).toEqual(["synthetic-abe", "synthetic-ria", "synthetic-sam"]);
   expect((await f.t.query(api.publicProfiles.searchTools, { q: "" })).tools.map(tool => [tool.slug, tool.peopleNow + tool.peopleBefore])).toEqual([["clay", 3], ["github", 1]]);
   expect(await f.t.query(api.publicProfiles.sitemapListing, {})).toEqual({ handles: ["synthetic-abe", "synthetic-ria", "synthetic-sam"], tools: ["clay", "github"] });
+});
+
+test("with more people than one list shows, an accented name still takes its place among the first, A to Z", async () => {
+  const t = convexTest(schema, modules);
+  const row = (displayName: string, handle: string) => searchListing({ handle, displayName, cards: [{ product: { slug: "clay", name: "Clay" }, status: "ACTIVE" }] }, undefined)!.page;
+  await t.run(async ctx => {
+    await ctx.db.insert("listedPages", row("Élodie Durand", "synthetic-elodie"));
+    await Promise.all(Array.from({ length: SEARCH_RESULTS_MAX + OVER_CAP }, (_, index) => ctx.db.insert("listedPages", row(`Frank ${String(index).padStart(2, "0")}`, `synthetic-frank-${index}`))));
+  });
+  const { people, more } = await t.query(api.publicProfiles.searchPeople, { q: "" });
+  expect(more).toBe(true);
+  expect(people).toHaveLength(SEARCH_RESULTS_MAX);
+  expect(people.slice(0, 2).map(person => person.handle)).toEqual(["synthetic-elodie", "synthetic-frank-0"]);
 });
 
 test("search refuses over-long input and caps every result list", async () => {

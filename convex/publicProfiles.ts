@@ -6,7 +6,7 @@ import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
 import { handleSchema, RESERVED_HANDLES } from "../src/domain/handle";
-import { LISTED_BY_DEFAULT, LISTED_TOOLS_MAX, SEARCH_RESULTS_MAX, searchListing, searchProblem, TOOL_CURSOR_MAX, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
+import { bySortName, LISTED_BY_DEFAULT, LISTED_TOOLS_MAX, SEARCH_RESULTS_MAX, searchListing, searchProblem, TOOL_CURSOR_MAX, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
 import { isHttpUrl } from "../src/domain/http-url";
 import { isRelationshipLevel, type RelationshipLevel } from "../src/domain/relationship-level";
 import { listedUses, type ProductUses } from "../src/domain/product-uses";
@@ -368,7 +368,7 @@ export const searchPeople = query({
     const rows = term
       ? await ctx.db.query("listedPages").withSearchIndex("search_people", search => search.search("searchText", term)).take(SEARCH_RESULTS_MAX + 1)
       : await ctx.db.query("listedPages").withIndex("by_sort_name").take(SEARCH_RESULTS_MAX + 1);
-    const people = rows.slice(0, SEARCH_RESULTS_MAX).sort((a, b) => a.sortName.localeCompare(b.sortName, "en"));
+    const people = rows.slice(0, SEARCH_RESULTS_MAX).sort(bySortName);
     return { people: people.map(({ handle, displayName }) => ({ handle, displayName })), more: rows.length > SEARCH_RESULTS_MAX };
   },
 });
