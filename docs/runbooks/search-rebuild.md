@@ -10,9 +10,12 @@ The rebuild lists every page already published, unless its owner turned "List my
 
 ## Order
 
-1. Deploy the Convex backend that includes Phase C. The new tables and functions exist only after that.
+A `v*` tag deploys the backend and then the frontend with no pause between them (`docs/DEPLOYMENT.md`, "Release a tagged version"), so the new tables and functions are there before any page calls them.
+
+1. Push the release tag as usual and let both jobs finish.
 2. Run the rebuild below until it says it is done.
-3. Deploy the frontend. If the frontend goes first, `/search` and `/tools/{slug}` call functions the backend doesn't have yet and show the error page. Card links and the sitemap quietly show nothing until the backend catches up.
+
+Between the two steps search works and is nearly empty: it holds only pages published since the deploy. Nothing shows an error. If the frontend is ever deployed by hand ahead of the backend, `/search` and `/tools/{slug}` show the error page until the backend catches up.
 
 ## The rebuild
 
