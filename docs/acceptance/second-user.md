@@ -1,8 +1,11 @@
 # Second-user acceptance record
 
-Updated: 2026-10-06. Written for R21; extended for the R27 first-result path. Run it together with the tester (K07),
-after the release that contains R12 to R21 (K06). The eight steps are the
-Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
+Updated: 2026-11-17. Written for R21, extended for the R27 first-result path,
+and rewritten for public sign-up and the onboarding order of 2026-11-17: build
+your stack, check your collection, choose a handle, share. Run it with one
+outside person, after the release that contains the public-ready work. The
+steps are still the Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`,
+Section 8. Nobody has run it on production yet: every result below is blank.
 
 ## How to fill this in
 
@@ -27,11 +30,18 @@ Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
 
 ## Steps
 
-### 1. Invitation, account and email-code sign-in
+### 1. Sign-up, account and sign-in
 
-- [ ] The tester accepts the Clerk invitation and creates the account.
-- [ ] The tester signs out, then signs back in with an email code.
-- [ ] The code arrives within 2 minutes.
+Sign-up is public today, so the tester starts at `proper-respect.com` with no
+invitation. If the owner has switched to a waitlist by the time this runs,
+note that here and admit the tester first.
+
+- [ ] From the homepage, "Start your collection" leads to sign-up, and the
+      tester creates an account with Google, GitHub or email.
+- [ ] After sign-up the tester lands on their collection, with "Build your
+      stack" first on the page.
+- [ ] The tester signs out, then signs back in and sees the same collection.
+- [ ] An email code, if the tester used email, arrives within 2 minutes.
 
 | Result | Evidence | Notes |
 |---|---|---|
@@ -39,9 +49,13 @@ Phase 2 gate in `docs/remediation/CODEX-BRIEF.md`, Section 8.
 
 ### 2. Empty private collection
 
-- [ ] At `/app/collection`, the tester sees an empty private collection.
-- [ ] The source picker is shown. No mailbox or public handle is required.
-- [ ] A source selected before sign-in is still selected afterward.
+- [ ] At `/app/collection`, **Build your stack** is first on the page and the
+  collection under it is empty.
+- [ ] The tester adds three tools by name, picks how often they use each, and
+  saves. No mailbox or handle is asked for. The three tools appear in the
+  collection.
+- [ ] A source selected before sign-in is still selected afterward, and opens
+  under **Bring in supporting context**, below sharing.
 
 | Result | Evidence | Notes |
 |---|---|---|
@@ -94,14 +108,19 @@ automated ownership tests, for example `convex/ownerAuth.test.ts`.
 
 ### 6. Preview and publish exactly one card
 
-- [ ] Only now, if sharing is desired, claim a handle under **Choose what to share
-  → Public identity**, then **Save public identity**.
+- [ ] Each card the tester wants to share has a line in "What it helps you do":
+  the suggested line kept with **Use this line**, or their own words. A card
+  with no line is named by **Share every confirmed tool** and stays private.
+- [ ] The **Choose your handle** step is visible right before sharing, not in
+  a collapsed box. The tester picks a handle and a display name, then
+  **Save public identity**.
 - [ ] Review selected measurements privately, then explicitly include that source
   in the sharing preview. No raw original or private account alias appears.
 
 - [ ] The tester ticks **Share this saved card** on one saved card, previews it ("Your visitor's view"),
   ticks the approval box and clicks **Publish this preview**.
-- [ ] Signed out, `proper-respect.com/<tester-handle>` shows only that card.
+- [ ] Signed out, `proper-respect.com/<tester-handle>` shows only that card,
+  with the tester's own line and no text the app wrote for them.
 
 | Result | Evidence | Notes |
 |---|---|---|
