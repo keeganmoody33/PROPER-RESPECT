@@ -27,7 +27,7 @@ export function clerkFrontendApiHost(publishableKey: string | undefined): string
  * (nonces would force dynamic rendering of every page) and Clerk's CSP guide.
  * It leaves out upgrade-insecure-requests, which report-only mode ignores.
  */
-export function contentSecurityPolicyReportOnly({ clerkHost, development }: { clerkHost?: string; development: boolean }) {
+export function contentSecurityPolicyReportOnly({ clerkHost, development, voice = false }: { clerkHost?: string; development: boolean; voice?: boolean }) {
   const clerk = clerkHost ? [`https://${clerkHost}`] : [];
   // PostHog loads its SDK extensions from the asset host (or the managed proxy) and posts events to the API host.
   const posthogAssets = ["https://us-assets.i.posthog.com", "https://flow.proper-respect.com"];
@@ -40,7 +40,9 @@ export function contentSecurityPolicyReportOnly({ clerkHost, development }: { cl
     // Evidence uploads POST to the Convex site URL.
     "connect-src": ["'self'", ...clerk, "https://*.protect.clerk.com:*", "https://clerk-telemetry.com",
       "https://*.clerk-telemetry.com", "https://*.convex.cloud", "wss://*.convex.cloud", "https://*.convex.site", ...posthogApi,
-      "https://tracker.searchableanalytics.com"],
+      "https://tracker.searchableanalytics.com",
+      // Voice onboarding opens its WebRTC call to OpenAI's Realtime API (only when it is turned on).
+      ...(voice ? ["https://api.openai.com"] : [])],
     // Brand logos and fonts come from many hosts; Clerk needs https://img.clerk.com.
     "img-src": ["'self'", "data:", "https:"],
     "font-src": ["'self'", "data:", "https:"],
@@ -58,7 +60,11 @@ export function contentSecurityPolicyReportOnly({ clerkHost, development }: { cl
 
 type HeaderRule = { source: string; headers: { key: string; value: string }[] };
 
-export function securityHeaderRules(env: { publishableKey?: string; development: boolean }): HeaderRule[] {
+// The pages that hold the walkthrough. Only they may use the microphone, and only while voice onboarding is on.
+export const VOICE_PAGES = ["/app/collection", "/onboarding"] as const;
+const PERMISSIONS = (microphone: string) => `camera=(), microphone=${microphone}, geolocation=(), payment=()`;
+
+export function securityHeaderRules(env: { publishableKey?: string; development: boolean; voice?: boolean }): HeaderRule[] {
   const noFraming = [
     { key: "X-Frame-Options", value: "DENY" },
     { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
@@ -69,13 +75,15 @@ export function securityHeaderRules(env: { publishableKey?: string; development:
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
+        { key: "Permissions-Policy", value: PERMISSIONS("()") },
         { key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicyReportOnly({
-          clerkHost: clerkFrontendApiHost(env.publishableKey), development: env.development,
+          clerkHost: clerkFrontendApiHost(env.publishableKey), development: env.development, voice: env.voice,
         }) },
         { key: "Reporting-Endpoints", value: 'csp-endpoint="/api/csp-report"' },
       ],
     },
     ...["/app/:path*", "/sign-in/:path*", "/sign-up/:path*"].map(source => ({ source, headers: noFraming })),
+    // Later rules win for the same key, so this replaces the site-wide policy on these pages only.
+    ...(env.voice ? VOICE_PAGES.map(source => ({ source, headers: [{ key: "Permissions-Policy", value: PERMISSIONS("(self)") }] })) : []),
   ];
 }
