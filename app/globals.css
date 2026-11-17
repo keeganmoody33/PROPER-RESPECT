@@ -391,6 +391,12 @@ main {
   overflow-wrap: anywhere;
 }
 
+/* The tool's name on a listed page opens its tool page; the padding widens the target without moving the line. */
+.card-tool-link { color: inherit; text-decoration-line: underline; text-decoration-thickness: .06em; text-underline-offset: .14em; padding-block: .45rem; }
+.card-tool-link:hover { text-decoration-thickness: .1em; }
+.card-tool-link:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+a.card-tool-link:has(.product-logo) { display: inline-block; padding-block: 0; text-decoration: none; }
+
 .card-destination {
   align-items: center;
   display: flex;

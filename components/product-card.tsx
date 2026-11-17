@@ -546,6 +546,7 @@ export function ProductCard({
   countsPerPeriod = false,
   today: readOn,
   onTurn,
+  toolPageLink = false,
 }: {
   card: Card;
   index: number;
@@ -573,8 +574,12 @@ export function ProductCard({
   today?: string;
   /** Told each time the card turns, with whether its back now shows. */
   onTurn?: (backShown: boolean) => void;
+  /** The card is on a page listed in search, so its tool's name opens that tool's page. */
+  toolPageLink?: boolean;
 }) {
   const brandPreview = displayMode === "brand-preview";
+  // A plain path, never a link the owner typed: the slug was checked as a handle-shaped name when the page was read.
+  const toolHref = toolPageLink && !brandPreview && !sample && audience === "visitor" ? `/tools/${card.product.slug}` : undefined;
   // An invented sample keeps its own wording and never ages.
   const today = sample ? undefined : readOn ?? new Date().toISOString().slice(0, 10);
   const parsedUsage = audience === "owner" && !brandPreview && privateUsage
@@ -737,8 +742,10 @@ export function ProductCard({
             {sample ? <div className="card-eyebrow-row"><p className="eyebrow">{topLine}</p><span className="card-sample-tag">Sample</span></div>
               : <p className="eyebrow">{topLine}</p>}
             {/* A wordmark shows the name, so the heading keeps it for screen readers only. */}
-            <h2 className={wordmark ? "card-product-name" : undefined}>{card.product.name}</h2>
-            {wordmark && <ProductLogo logo={logo} mark={card.product.name} onFailed={markFailed} />}
+            <h2 className={wordmark ? "card-product-name" : undefined}>{toolHref && !wordmark ? <a className="card-tool-link" href={toolHref}>{card.product.name}</a> : card.product.name}</h2>
+            {wordmark && (toolHref
+              ? <a className="card-tool-link" href={toolHref} aria-label={`${card.product.name}: who uses it`}><ProductLogo logo={logo} mark={card.product.name} onFailed={markFailed} /></a>
+              : <ProductLogo logo={logo} mark={card.product.name} onFailed={markFailed} />)}
           </div>
           {webLink && <div className="card-destination"><a
             className="card-visit"

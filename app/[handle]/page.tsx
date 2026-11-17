@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { getPublicMailboxAggregate } from "@/src/data/get-public-mailbox-aggregate";
+import { getListedToolSlugs } from "@/src/data/search";
 import { getPublicProfile } from "@/src/data/get-public-profile";
 import { publicPageMetadata } from "@/src/server/public-site";
 import { reportHref } from "@/src/domain/report-link";
@@ -38,7 +39,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   if (!profile) notFound();
   if (profile.handle !== rawHandle) permanentRedirect(`/${profile.handle}`);
-  const retainedSources = await getPublicMailboxAggregate(profile.handle);
+  const [retainedSources, toolPages] = await Promise.all([getPublicMailboxAggregate(profile.handle), getListedToolSlugs(profile.handle)]);
   // The request's day, so a snapshot's and a price's age read the same in the server's HTML and the visitor's browser.
   const today = new Date().toISOString().slice(0, 10);
 
@@ -74,6 +75,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
                 goTo={card.goTo}
                 profileHandle={profile.handle}
                 today={today}
+                toolPageLink={toolPages.has(card.product.slug)}
               />
             ))}
           </div>
