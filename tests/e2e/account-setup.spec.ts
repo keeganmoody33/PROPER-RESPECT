@@ -177,6 +177,44 @@ for (const width of [1280, 390]) test(`blank display name preserves the saved id
   await preview.screenshot({ path: testInfo.outputPath(`profile-name-corrected-${width}.png`) });
 });
 
+for (const width of [1280, 390]) test(`a refused link opens the folded bio and links, and folding them keeps what was typed at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
+    ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());
+  await page.goto("http://127.0.0.1:8882/fresh-user-fixture");
+  const identity = page.locator("#collection-profile");
+  const more = identity.getByRole("button", { name: "Add a bio and links (optional)", exact: true });
+  const bio = identity.getByLabel("Short footer bio (optional)");
+  await expect(more).toHaveAttribute("aria-expanded", "false");
+  await expect(bio).toBeHidden();
+  await more.focus();
+  await page.keyboard.press("Enter");
+  await expect(more).toHaveAttribute("aria-expanded", "true");
+  await bio.fill("I keep the receipts.");
+  await identity.getByRole("button", { name: "Add a profile link" }).click();
+  await identity.getByLabel("Link 1 label").fill("Work");
+  await more.click();
+  await expect(bio).toBeHidden();
+
+  // The empty link address refuses the save. The browser can only point at a field it can show, so its panel opens first.
+  await identity.getByLabel("Handle", { exact: true }).fill("synthetic-owner");
+  await identity.getByLabel("Display name", { exact: true }).press("Enter");
+  await expect(more).toHaveAttribute("aria-expanded", "true");
+  await expect(identity.getByLabel("Link 1 URL")).toBeFocused();
+  const claims = () => page.evaluate(() => JSON.parse(localStorage.getItem("proper-respect-fresh-user-fixture-calls")!)
+    .filter((call: { name: string }) => call.name === "claimHandle").map((call: { args: unknown }) => call.args));
+  expect(await claims()).toEqual([]);
+
+  // Folded again, the bio and the link are still in the form that saves.
+  await identity.getByLabel("Link 1 URL").fill("https://maya.example");
+  await more.click();
+  await expect(bio).toBeHidden();
+  await identity.getByLabel("Display name", { exact: true }).press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Identity changes saved to your draft." })).toBeVisible();
+  expect(await claims()).toMatchObject([{ handle: "synthetic-owner", bio: "I keep the receipts.", profileLinks: [{ label: "Work", url: "https://maya.example" }] }]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("unknown publication state explains why identity saving is unavailable", async ({ page }) => {
   await page.route("**/*", route => route.request().url().startsWith("http://127.0.0.1:8882/fresh-user-fixture")
     ? route.fulfill({ contentType: "text/html", body: journeyScript }) : route.abort());

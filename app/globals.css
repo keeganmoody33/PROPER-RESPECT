@@ -1542,7 +1542,10 @@ main {
 .onboarding-shell details > summary { padding-block: max(.5rem, calc((44px - 1lh) / 2)); }
 .onboarding-shell :is(.review-toggle, .profile-link-choice, .sharing-preview-confirmation) { min-height: 44px; }
 .collection-identity .identity-address { overflow-wrap: anywhere; }
-.collection-identity summary { font-weight: 800; cursor: pointer; }
+/* A disclosure in the collection shell is a UI SDK collapsible; its trigger reads as a plain line with a mark for its state. */
+.collection-disclosure { display: flex; align-items: center; gap: .5rem; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; text-align: start; cursor: pointer; }
+.collection-disclosure::after { content: "+" / ""; }
+.collection-disclosure[aria-expanded="true"]::after { content: "\2212" / ""; }
 .sharing-preview { border-block-start: 2px solid var(--ink); padding-block: 1.5rem; margin-top: 2rem; }
 .sharing-preview .card-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 .sharing-preview .profile-footer { gap: 1.2rem; margin-block: 1rem; padding: 1rem 0; }
