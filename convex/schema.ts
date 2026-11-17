@@ -38,6 +38,8 @@ export default defineSchema({
     avatarUrl: v.optional(v.string()),
     profileLinks: v.optional(v.array(profileLinkValidator)),
     preferredLinkUrl: v.optional(v.string()),
+    // "List my page in search", asked at publish. Absent means the default in src/domain/search-listing.ts.
+    listedInSearch: v.optional(v.boolean()),
     onboardingStatus: v.optional(
       v.union(
         v.literal("PROFILE"),
@@ -449,4 +451,41 @@ export default defineSchema({
     takenDownAt: v.optional(v.string()),
     takedownReason: v.optional(v.string()),
   }).index("by_handle", ["handle"]),
+
+  // Search read model (C1). Only syncSearchListing in publicProfiles.ts writes these, from what a listed public
+  // page shows; publicProfiles:rebuildSearch rebuilds them. Rows are keyed by the page's current handle.
+  listedPages: defineTable({
+    handle: v.string(),
+    displayName: v.string(),
+    sortName: v.string(),
+    searchText: v.string(),
+  })
+    .index("by_handle", ["handle"])
+    .index("by_sort_name", ["sortName"])
+    .searchIndex("search_people", { searchField: "searchText" }),
+
+  listedCards: defineTable({
+    handle: v.string(),
+    displayName: v.string(),
+    sortName: v.string(),
+    productSlug: v.string(),
+    productName: v.string(),
+    usedBefore: v.boolean(),
+    levelLabel: v.string(),
+  })
+    .index("by_handle", ["handle"])
+    .index("by_product_people", ["productSlug", "usedBefore", "sortName"]),
+
+  // One row per tool with a listed card: how many people list it. A count per tool, never a score on a person.
+  listedTools: defineTable({
+    productSlug: v.string(),
+    productName: v.string(),
+    searchText: v.string(),
+    peopleNow: v.number(),
+    peopleBefore: v.number(),
+    people: v.number(),
+  })
+    .index("by_slug", ["productSlug"])
+    .index("by_people", ["people"])
+    .searchIndex("search_tools", { searchField: "searchText" }),
 });

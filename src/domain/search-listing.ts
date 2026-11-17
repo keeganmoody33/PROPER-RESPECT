@@ -10,6 +10,9 @@ export const SHOW_PAST_USERS = true;
 /** A tool added by name has an identity per owner, so it would split by person and never gather a list of people. */
 const PER_OWNER_TOOL_PREFIX = "manual-";
 
+/** The longest search a visitor may send. Longer input is refused, never cut short. */
+export const SEARCH_QUERY_MAX = 80;
+
 /** The public page as a visitor reads it, after takedowns and the read filters. Null when nothing is public at the handle. */
 export type ListingProfile = {
   handle: string;

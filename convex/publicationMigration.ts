@@ -3,6 +3,7 @@ import { internalMutation } from "./_generated/server";
 import { claimableHandleSchema } from "../src/domain/onboarding";
 import { canonicalJson } from "../src/domain/canonical-json";
 import { sha256 } from "../src/domain/product-knowledge";
+import { syncSearchListing } from "./publicProfiles";
 
 // Operator recovery of an already-published seeded snapshot, never a private-data projection.
 export const moveSeededPublication = internalMutation({
@@ -58,6 +59,8 @@ export const moveSeededPublication = internalMutation({
         handle: from, targetHandle: to, ownerId: owner._id, publicationId: publication._id,
         createdAt: new Date().toISOString(),
       });
+      await syncSearchListing(ctx, from);
+      await syncSearchListing(ctx, to);
     }
     return { status: args.dryRun ? "ready" : "migrated", fromHandle: from, toHandle: to, cardCount: publication.profile.cards.length };
   },
