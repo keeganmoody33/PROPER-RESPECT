@@ -148,17 +148,24 @@ export function walkthroughSave(card: WalkthroughCard, answer: WalkthroughAnswer
 }
 
 export type WalkthroughOutcome = "saved" | "skipped" | "removed" | "left";
-export type WalkthroughSession = Readonly<{ order: readonly string[]; settled: Readonly<Record<string, WalkthroughOutcome>> }>;
+/** `products` names the product each tool in `order` is a record of, so a product is asked about once. */
+export type WalkthroughSession = Readonly<{ order: readonly string[]; settled: Readonly<Record<string, WalkthroughOutcome>>; products: Readonly<Record<string, string>> }>;
+
+const productsOf = (items: readonly WalkthroughItem[]) => Object.fromEntries(items.map(item => [item.propId, item.card.prop.productId]));
 
 /** The tools there are when the walkthrough starts. Skips live only here: after a reload a skipped tool is asked again. */
 export function startSession(queue: readonly WalkthroughItem[]): WalkthroughSession {
-  return { order: queue.map(item => item.propId), settled: {} };
+  return { order: queue.map(item => item.propId), settled: {}, products: productsOf(queue) };
 }
 
-/** Adds tools that arrived since it started, for example a later page of the collection. */
+/**
+ * Adds tools that arrived since it started, for example a later page of the collection. Another record of a product
+ * already answered here stays out: removing one record of a product must not bring its twin up as a new tool.
+ */
 export function resumeSession(session: WalkthroughSession, queue: readonly WalkthroughItem[]): WalkthroughSession {
-  const added = queue.map(item => item.propId).filter(id => !session.order.includes(id));
-  return added.length ? { ...session, order: [...session.order, ...added] } : session;
+  const answered = new Set(session.order.filter(id => session.settled[id]).map(id => session.products[id]));
+  const added = queue.filter(item => !session.order.includes(item.propId) && !answered.has(item.card.prop.productId));
+  return added.length ? { ...session, order: [...session.order, ...added.map(item => item.propId)], products: { ...session.products, ...productsOf(added) } } : session;
 }
 
 export function settle(session: WalkthroughSession, propId: string, outcome: WalkthroughOutcome): WalkthroughSession {

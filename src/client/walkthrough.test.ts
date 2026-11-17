@@ -224,6 +224,23 @@ describe("progress and resume", () => {
     expect(progressLine(session, reloaded)).toBe("1 of 2");
   });
 
+  it("asks about a product once: a second record of one already answered never joins the walk", () => {
+    // Two finds of the same product. The queue offers the first; removing it leaves the second as the product's record.
+    const [first, second] = [found("GitHub"), found("GitHub")];
+    expect(first.prop.productId).toBe(second.prop.productId);
+    // Tools already confirmed come first, so Exa leads and the find follows.
+    let session = startSession(walkthroughQueue([first, second, exa]));
+    expect(session.order).toEqual([exa.prop._id, first.prop._id]);
+    session = settle(session, first.prop._id, "removed");
+    const afterRemoval = walkthroughQueue([second, exa]);
+    expect(afterRemoval.map(item => item.propId)).toEqual([exa.prop._id, second.prop._id]);
+    session = resumeSession(session, afterRemoval);
+    expect(session.order).toEqual([exa.prop._id, first.prop._id]);
+    expect(currentTool(session, afterRemoval)?.propId).toBe(exa.prop._id);
+    session = settle(session, exa.prop._id, "saved");
+    expect(currentTool(resumeSession(session, afterRemoval), afterRemoval)).toBeUndefined();
+  });
+
   it("adds tools that arrive while it runs and passes over one finished elsewhere", () => {
     let session = startSession(queue);
     const linear = found("Linear");
