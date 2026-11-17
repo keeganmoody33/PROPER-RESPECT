@@ -28,6 +28,74 @@ for (const width of [1440, 460, 390, 320]) test(`Origins and branded footer rema
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+const TAP_TARGET = 44;
+const TEXT_CONTRAST = 4.5;
+const MARKER_CONTRAST = 3;
+
+// Same-page anchors leave the phone header; the footer still links them.
+for (const width of [390, 320]) test(`every header link reads in full and is tappable at ${width}px`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto("/");
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  const links = navigation.getByRole("link");
+  await expect(links).toHaveText(["Origins", "Sign in", "Your collection"]);
+  const frame = (await navigation.boundingBox())!;
+  let widest = { name: "", width: 0 };
+  for (const link of await links.all()) {
+    const box = (await link.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(frame.x - 0.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width + 0.5);
+    expect(box.height).toBeGreaterThanOrEqual(TAP_TARGET);
+    expect(await link.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    if (box.width > widest.width) widest = { name: (await link.textContent())!, width: Math.round(box.width) };
+  }
+  expect(await navigation.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  expect((await page.locator(".site-header").getByRole("combobox", { name: "Appearance" }).boundingBox())!.height).toBeGreaterThanOrEqual(TAP_TARGET);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const footer = page.getByRole("navigation", { name: "Footer navigation" });
+  await expect(footer.getByRole("link", { name: "How it works", exact: true })).toHaveAttribute("href", "/#how-it-works");
+  await expect(footer.getByRole("link", { name: "Usage examples", exact: true })).toHaveAttribute("href", "/#example");
+  testInfo.annotations.push({ type: "widest header link", description: `${widest.name} ${widest.width}px of ${Math.round(frame.width)}px` });
+});
+
+test("wide screens keep the same-page header anchors", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.getByRole("navigation", { name: "Main navigation" }).getByRole("link")).toHaveText(["How it works", "Example", "Origins", "Sign in", "Your collection"]);
+});
+
+/** WCAG relative luminance contrast between two computed "rgb(r, g, b)" colours. */
+function contrast(first: string, second: string) {
+  const luminance = (color: string) => {
+    const [r, g, b] = color.slice(color.indexOf("(") + 1, color.indexOf(")")).split(",").slice(0, 3).map(part => Number(part) / 255)
+      .map(channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+for (const width of [1440, 390]) for (const theme of ["light", "dark"]) test(`About rail marks the current page legibly at ${width}px in ${theme}`, async ({ page }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto("/");
+  await page.getByRole("combobox", { name: "Appearance" }).first().selectOption(theme);
+  await page.goto("/about/privacy");
+  const current = page.getByRole("navigation", { name: "About Proper Respect" }).locator('a[aria-current="page"]');
+  await expect(current).toHaveText("Privacy");
+  const colors = await current.evaluate((element, side) => {
+    const style = getComputedStyle(element);
+    // The first opaque surface behind the link: its own fill, or the page it sits on.
+    let surface: Element = element;
+    while (surface.parentElement && getComputedStyle(surface).backgroundColor === "rgba(0, 0, 0, 0)") surface = surface.parentElement;
+    return { text: style.color, background: getComputedStyle(surface).backgroundColor, marker: style.getPropertyValue(`border-${side}-color`) };
+  }, width > 800 ? "left" : "bottom");
+  const text = contrast(colors.text, colors.background);
+  const marker = contrast(colors.marker, colors.background);
+  expect(text).toBeGreaterThanOrEqual(TEXT_CONTRAST);
+  expect(marker).toBeGreaterThanOrEqual(MARKER_CONTRAST);
+  testInfo.annotations.push({ type: "about rail contrast", description: `text ${text.toFixed(2)}:1, marker ${marker.toFixed(2)}:1` });
+});
+
 const QUICK_VISITS = 3;
 // A phone's slower CPU widens the gap between the page answering clicks and its metadata hydrating.
 const PHONE_CPU_SLOWDOWN = 4;

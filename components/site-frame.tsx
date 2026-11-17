@@ -11,8 +11,8 @@ export function SiteHeader() {
     </Link>
     <div className="site-theme"><ThemeSelector /></div>
     <nav className="site-navigation" aria-label="Main navigation">
-      <Link href="/#how-it-works">How it works</Link>
-      <Link href="/#example">Example</Link>
+      <Link className="site-nav-wide" href="/#how-it-works">How it works</Link>
+      <Link className="site-nav-wide" href="/#example">Example</Link>
       <Link href="/about/origins">Origins</Link>
       <Link href="/sign-in">Sign in</Link>
       <Link className="site-start" href="/app/collection">Your collection</Link>
@@ -60,10 +60,11 @@ export function AuthFrame({ children }: { children: React.ReactNode }) {
       <h1 id="auth-intro-title">Earn your respect.</h1>
       <p>Keep what you run, how much, and since when. Start in private. Share when you choose.</p>
       <ol className="auth-steps">
-        <li>Create your private collection.</li>
-        <li>Add a tool and record your experience.</li>
+        <li>Build your stack from the tools you use, test or used before.</li>
+        <li>Check your private collection.</li>
+        <li>Choose a handle for your public page.</li>
+        <li>Preview your page, then approve what you share.</li>
         <li>Connect a source when you want supporting evidence.</li>
-        <li>Preview your profile before sharing.</li>
       </ol>
     </section>
     <div className="auth-form">{children}</div>

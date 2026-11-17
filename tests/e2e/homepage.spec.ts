@@ -4,7 +4,6 @@ import AxeBuilder from "@axe-core/playwright";
 /** The hero's link to Keegan's page and the closing one. */
 const PAGE_LINKS = 2;
 /** Tab stops from the skip link to the call to action: the slideshow's controls, chooser and shown card come first. */
-const MAX_TAB_STOPS_TO_START = 30;
 for (const width of [1440, 390, 320]) test(`homepage preserves collection and profile entry at ${width}px`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width, height: 1000 });
   const errors: string[] = [];
@@ -45,13 +44,15 @@ for (const width of [1440, 390, 320]) test(`homepage preserves collection and pr
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator("#page-content")).toBeFocused();
-  // The examples come right after the heading, in the page's order as on a phone's screen; the call to action follows them.
+  // The way to start comes right after the heading, in the page's order as on a phone's screen; the examples follow it.
+  const start = page.getByRole("link", { name: "Start your collection", exact: true }).first();
+  await page.keyboard.press("Tab");
+  await expect(start).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "See Keegan’s tooling page" }).first()).toBeFocused();
   await page.keyboard.press("Tab");
   // A phone's examples row starts at Play; a wider screen's controls start at the arrows.
   await expect(page.getByRole("button", { name: width > 600 ? "Previous example" : "Play slideshow" })).toBeFocused();
-  const start = page.getByRole("link", { name: "Start your collection", exact: true }).first();
-  for (let stops = 0; stops < MAX_TAB_STOPS_TO_START && !(await start.evaluate(link => link === document.activeElement)); stops++) await page.keyboard.press("Tab");
-  await expect(start).toBeFocused();
   await expect(page.getByRole("link", { name: "Start your collection", exact: true }).first()).toHaveAttribute("href", "/app/collection");
   // Both links to Keegan's public page call it a page, never a collection.
   await expect(page.getByRole("link", { name: "See Keegan’s tooling page" })).toHaveCount(PAGE_LINKS);

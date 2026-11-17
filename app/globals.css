@@ -1533,13 +1533,19 @@ main {
   border-block: 1px solid var(--line);
 }
 
-.collection-navigation a { padding-block: .5rem; font-weight: 800; }
+.collection-navigation a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 800; }
 .collection-add { padding-block: 1rem 2.5rem; scroll-margin-top: 1rem; }
 .collection-add h2 { font: 900 2rem var(--homepage-sans), Arial, sans-serif; margin-bottom: .5rem; }
 .collection-add > p { max-width: 48rem; line-height: 1.5; }
-.collection-identity { margin-block: 1.5rem; }
+/* Every control in the collection shell is at least a 44px tap target; brand cards keep their own sizes. */
+.onboarding-shell :is(input:not([type="checkbox"], [type="radio"]), select, textarea, button):not(.product-card *) { min-height: 44px; box-sizing: border-box; }
+.onboarding-shell details > summary { padding-block: max(.5rem, calc((44px - 1lh) / 2)); }
+.onboarding-shell :is(.review-toggle, .profile-link-choice, .sharing-preview-confirmation) { min-height: 44px; }
 .collection-identity .identity-address { overflow-wrap: anywhere; }
-.collection-identity > summary { font-weight: 800; cursor: pointer; padding-block: .5rem; }
+/* A disclosure in the collection shell is a UI SDK collapsible; its trigger reads as a plain line with a mark for its state. */
+.collection-disclosure { display: flex; align-items: center; gap: .5rem; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; text-align: start; cursor: pointer; }
+.collection-disclosure::after { content: "+" / ""; }
+.collection-disclosure[aria-expanded="true"]::after { content: "\2212" / ""; }
 .sharing-preview { border-block-start: 2px solid var(--ink); padding-block: 1.5rem; margin-top: 2rem; }
 .sharing-preview .card-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 .sharing-preview .profile-footer { gap: 1.2rem; margin-block: 1rem; padding: 1rem 0; }
@@ -1828,10 +1834,12 @@ main {
 }
 @media (max-width: 600px) {
   .site-header { padding-block: .8rem; flex-wrap: wrap; }
-  .site-navigation { width: 100%; justify-content: flex-start; gap: .6rem 1rem; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+  /* A phone keeps the links that leave the page; the same-page anchors stay in the footer. Every item wraps rather than scrolls out of sight. */
+  .site-navigation { width: 100%; justify-content: flex-start; gap: 0 1.2rem; padding-block: 0; font-size: .8rem; }
+  .site-navigation a { display: inline-flex; align-items: center; min-height: 44px; white-space: nowrap; }
+  .site-navigation .site-nav-wide { display: none; }
   .site-wordmark { font-size: 1.25rem; gap: .4rem; }
   .site-wordmark img { width: 26px; }
-  .site-navigation { font-size: .8rem; }
 }
 
 .site-skip { position: absolute; top: .5rem; left: 1rem; padding: .75rem; background: var(--panel); z-index: 100; transform: translateY(-200%); }
