@@ -1,0 +1,44 @@
+/* Search and tool pages: the homepage's poster type over plain rows of names, each row a link. */
+.page { max-width: 64rem; margin: 0 auto; padding: clamp(1.5rem, 4vw, 4rem) clamp(1rem, 4vw, 5rem) clamp(3rem, 7vw, 7rem); color: var(--ink); font-family: var(--homepage-sans), Arial, sans-serif; }
+.page a:focus-visible, .page button:focus-visible, .page input:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+
+.kicker { font-size: .85rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 .75rem; color: var(--secondary); }
+.kicker a { color: inherit; display: inline-flex; align-items: center; min-height: 44px; }
+.title { font-stretch: 62%; font-weight: 900; text-transform: uppercase; font-size: clamp(2.6rem, 7vw, 6rem); line-height: .88; margin: 0; overflow-wrap: anywhere; text-wrap: balance; }
+.lede { font-size: clamp(1.05rem, 1.35vw, 1.25rem); font-weight: 600; line-height: 1.5; max-width: 46ch; margin: 1rem 0 0; }
+
+.form { margin: clamp(1.5rem, 3vw, 2.5rem) 0 0; }
+.form label { display: block; font-weight: 700; margin-bottom: .5rem; }
+.field { display: flex; gap: .5rem; flex-wrap: wrap; }
+.field input { flex: 1 1 14rem; min-width: 0; min-height: 52px; padding: .75rem 1rem; font: inherit; font-size: 1.1rem; color: var(--ink); background: var(--input); border: 3px solid var(--ink); border-radius: 0; }
+.field button { min-height: 52px; padding: .75rem 1.4rem; font: inherit; font-weight: 800; font-size: 1.05rem; color: var(--action-text); background: var(--ink); border: 3px solid var(--ink); border-radius: 0; cursor: pointer; }
+.field button:hover { background: var(--respect-red); border-color: var(--respect-red); }
+
+/* Two tabs that are links, so the choice lives in the address and works with no script. */
+.tabs { display: flex; gap: 0; margin: 1.5rem 0 0; border-bottom: 1px solid var(--line); }
+.tabs a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 1.1rem; margin-bottom: -1px; font-weight: 800; font-size: 1.05rem; color: var(--secondary); text-decoration: none; border-bottom: 4px solid transparent; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--poster); }
+.tabs a:focus-visible { outline-offset: -3px; }
+
+.results { margin-top: clamp(1.5rem, 3vw, 2.5rem); }
+.results h2, .group h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .25rem; overflow-wrap: anywhere; }
+.note { color: var(--secondary); line-height: 1.55; margin: .25rem 0 0; max-width: 60ch; }
+.problem { font-weight: 700; color: var(--respect-red); margin: 1rem 0 0; }
+
+.list { list-style: none; margin: 1rem 0 0; padding: 0; border-top: 3px solid var(--ink); }
+.list li { border-bottom: 1px solid var(--line); }
+.list a { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .25rem 1rem; min-height: 56px; padding: .85rem 0; color: var(--ink); text-decoration: none; }
+.list a:hover .name { text-decoration: underline; text-underline-offset: .2em; }
+.name { font-weight: 800; font-size: 1.2rem; min-width: 0; overflow-wrap: anywhere; }
+.meta { color: var(--secondary); font-size: .95rem; min-width: 0; overflow-wrap: anywhere; }
+.more { display: inline-flex; align-items: center; min-height: 44px; margin-top: .75rem; font-weight: 700; color: var(--ink); text-underline-offset: .22em; }
+
+.groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(1.5rem, 4vw, 4rem); margin-top: clamp(2rem, 4vw, 3.5rem); }
+.group { min-width: 0; }
+.group h2 { font-stretch: 62%; font-weight: 900; text-transform: uppercase; font-size: clamp(1.8rem, 3.5vw, 2.6rem); line-height: .95; }
+.count { color: var(--respect-red); }
+
+@media (max-width: 720px) {
+  .groups { grid-template-columns: minmax(0, 1fr); }
+}

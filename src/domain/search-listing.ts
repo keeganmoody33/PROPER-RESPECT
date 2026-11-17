@@ -16,6 +16,8 @@ export const SEARCH_QUERY_MAX = 80;
 export const SEARCH_RESULTS_MAX = 24;
 /** The most people one group on a tool page shows at a time. */
 export const TOOL_PEOPLE_PAGE = 48;
+/** The longest "continue after" mark a tool page accepts for its next page of people. */
+export const TOOL_CURSOR_MAX = 200;
 
 /** The public page as a visitor reads it, after takedowns and the read filters. Null when nothing is public at the handle. */
 export type ListingProfile = {

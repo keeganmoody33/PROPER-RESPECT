@@ -6,7 +6,7 @@ import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
 import { handleSchema, RESERVED_HANDLES } from "../src/domain/handle";
-import { LISTED_BY_DEFAULT, SEARCH_QUERY_MAX, SEARCH_RESULTS_MAX, searchListing, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
+import { LISTED_BY_DEFAULT, SEARCH_QUERY_MAX, SEARCH_RESULTS_MAX, searchListing, TOOL_CURSOR_MAX, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
 import { isHttpUrl } from "../src/domain/http-url";
 import { isRelationshipLevel, type RelationshipLevel } from "../src/domain/relationship-level";
 import { listedUses, type ProductUses } from "../src/domain/product-uses";
@@ -263,7 +263,6 @@ export const reservedHandlesHeld = internalQuery({
 // small number of index rows and refuses over-long input; a per-caller limit would sit in front of Convex.
 const PAGE_TOOLS_MAX = 500;
 const SITEMAP_ENTRIES_MAX = 2000;
-const CURSOR_MAX = 200;
 const REBUILD_BATCH = 25;
 const REBUILD_TOOL_BATCH = 5;
 const TOOL_RECOUNT_MAX = 1000;
@@ -404,7 +403,7 @@ export const toolPage = query({
   returns: v.union(v.null(), v.object({ ...toolSummaryValidator.fields, now: toolGroupValidator, before: toolGroupValidator })),
   handler: async (ctx, args) => {
     if (handleSchema.safeParse(args.slug).data !== args.slug) return null;
-    if ([args.nowAfter, args.beforeAfter].some(after => (after?.length ?? 0) > CURSOR_MAX)) throw userError("That page of people is out of range.");
+    if ([args.nowAfter, args.beforeAfter].some(after => (after?.length ?? 0) > TOOL_CURSOR_MAX)) throw userError("That page of people is out of range.");
     const tool = await ctx.db.query("listedTools").withIndex("by_slug", q => q.eq("productSlug", args.slug)).unique();
     if (!tool) return null;
     const [now, before] = await Promise.all([
