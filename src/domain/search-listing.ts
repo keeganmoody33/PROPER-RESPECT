@@ -12,6 +12,10 @@ const PER_OWNER_TOOL_PREFIX = "manual-";
 
 /** The longest search a visitor may send. Longer input is refused, never cut short. */
 export const SEARCH_QUERY_MAX = 80;
+/** The most people or tools one search shows. */
+export const SEARCH_RESULTS_MAX = 24;
+/** The most people one group on a tool page shows at a time. */
+export const TOOL_PEOPLE_PAGE = 48;
 
 /** The public page as a visitor reads it, after takedowns and the read filters. Null when nothing is public at the handle. */
 export type ListingProfile = {

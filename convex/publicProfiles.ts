@@ -6,7 +6,7 @@ import { publicProfileValidator } from "./validators";
 import { productBrandEligibility, retainedProductBrand } from "./productBrands";
 import { projectPublicProfileV1, withHttpArtifacts } from "../src/domain/public-profile";
 import { handleSchema, RESERVED_HANDLES } from "../src/domain/handle";
-import { LISTED_BY_DEFAULT, SEARCH_QUERY_MAX, searchListing } from "../src/domain/search-listing";
+import { LISTED_BY_DEFAULT, SEARCH_QUERY_MAX, SEARCH_RESULTS_MAX, searchListing, TOOL_PEOPLE_PAGE } from "../src/domain/search-listing";
 import { isHttpUrl } from "../src/domain/http-url";
 import { isRelationshipLevel, type RelationshipLevel } from "../src/domain/relationship-level";
 import { listedUses, type ProductUses } from "../src/domain/product-uses";
@@ -261,8 +261,6 @@ export const reservedHandlesHeld = internalQuery({
 // Search (C1 to C4). The read model holds only what syncSearchListing copies from a listed public page.
 // A query can't write, so no per-caller limit can be kept here. Each public search query instead reads a fixed,
 // small number of index rows and refuses over-long input; a per-caller limit would sit in front of Convex.
-const SEARCH_RESULTS_MAX = 24;
-const TOOL_PEOPLE_PAGE = 48;
 const PAGE_TOOLS_MAX = 500;
 const SITEMAP_ENTRIES_MAX = 2000;
 const CURSOR_MAX = 200;
