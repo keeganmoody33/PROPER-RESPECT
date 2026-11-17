@@ -3,7 +3,8 @@
 # it does anything else, so re-running one deploy job checks it again.
 #
 # GitHub offers required reviewers on a private repository only on Enterprise,
-# so the owner's tag push is the approval. Needs ACTOR, TRIGGERING_ACTOR and
+# so this gate doesn't rely on them: while the repository is private, the
+# owner's tag push is the only approval. Needs ACTOR, TRIGGERING_ACTOR and
 # GH_TOKEN (actions: read) beside the variables Actions sets.
 set -euo pipefail
 
