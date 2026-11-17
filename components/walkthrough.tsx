@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { Checkbox, CheckboxIndicator } from "@ui-sdk/react/checkbox";
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@ui-sdk/react/collapsible";
 import { Radio, RadioGroup, RadioIndicator } from "@ui-sdk/react/radio";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -27,6 +28,13 @@ const SOURCES_READ = 5;
 
 const choiceLabel = (choice: WalkthroughChoice) => choice === "NEVER" ? "Never used it" : levelLabel(choice);
 const isMoreChoice = (choice: WalkthroughChoice | undefined) => MORE_CHOICES.some(more => more === choice);
+
+function ChoiceCard({ choice }: { choice: WalkthroughChoice }) {
+  return <label className={styles.choice} data-never={choice === "NEVER" ? "" : undefined}>
+    <Radio value={choice} className={styles.radio}><RadioIndicator className={styles.dot} /></Radio>
+    {choiceLabel(choice)}
+  </label>;
+}
 
 function choiceHint(choice: WalkthroughChoice | undefined, never: "remove" | "leave", name: string): string {
   if (!choice) return "Pick one. You can change it later in your collection.";
@@ -95,7 +103,6 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
     } finally { setBusy(false); }
   }
 
-  const choices = more ? [...PRIMARY_CHOICES, ...MORE_CHOICES] : PRIMARY_CHOICES;
   return <form className={styles.screen} aria-labelledby={`${ids}-name`} onSubmit={event => { event.preventDefault(); void submit(); }}>
     <div className={styles.topBar}>
       <p className={styles.progress} role="status">{progress}</p>
@@ -111,14 +118,15 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
 
     <fieldset className={styles.group} disabled={busy}>
       <legend id={`${ids}-level`}>How do you use {product.name}?</legend>
-      <RadioGroup<WalkthroughChoice> className={styles.choices} aria-labelledby={`${ids}-level`} aria-describedby={`${ids}-level-hint`}
-        value={answer.choice ?? null} onValueChange={value => change({ choice: value ?? undefined })}>
-        {choices.map(choice => <label key={choice} className={styles.choice} data-never={choice === "NEVER" ? "" : undefined}>
-          <Radio value={choice} className={styles.radio}><RadioIndicator className={styles.dot} /></Radio>
-          {choiceLabel(choice)}
-        </label>)}
-      </RadioGroup>
-      <button type="button" className={styles.textButton} aria-expanded={more} onClick={() => setMore(open => !open)}>{more ? "Fewer" : "More"}</button>
+      {/* More opens the other three levels inside the same group, so the arrow keys still move across every level. */}
+      <Collapsible className={styles.levels} open={more} onOpenChange={setMore}>
+        <RadioGroup<WalkthroughChoice> className={styles.choices} aria-labelledby={`${ids}-level`} aria-describedby={`${ids}-level-hint`}
+          value={answer.choice ?? null} onValueChange={value => change({ choice: value ?? undefined })}>
+          {PRIMARY_CHOICES.map(choice => <ChoiceCard key={choice} choice={choice} />)}
+          <CollapsiblePanel className={styles.morePanel}>{MORE_CHOICES.map(choice => <ChoiceCard key={choice} choice={choice} />)}</CollapsiblePanel>
+        </RadioGroup>
+        <CollapsibleTrigger className={`collection-disclosure ${styles.disclosure}`}>{more ? "Fewer" : "More"}</CollapsibleTrigger>
+      </Collapsible>
       <p id={`${ids}-level-hint`} className={styles.hint}>{choiceHint(answer.choice, never.kind, product.name)}</p>
     </fieldset>
 
@@ -139,9 +147,9 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
       <span id={`${ids}-since`} className={styles.hint}>Leave it blank if you don&apos;t know. Signup dates aren&apos;t first use.</span>
     </label>}
 
-    {fields.asksCredit && <details className={styles.credit} open={Boolean(answer.creditHandle)}>
-      <summary>Who put you on {product.name}? (optional)</summary>
-      <fieldset className={styles.group} disabled={busy}>
+    {fields.asksCredit && <Collapsible className={styles.credit} defaultOpen={Boolean(answer.creditHandle)}>
+      <CollapsibleTrigger className={`collection-disclosure ${styles.disclosure}`}>Who put you on {product.name}? (optional)</CollapsibleTrigger>
+      <CollapsiblePanel><fieldset className={styles.group} disabled={busy}>
         <legend className={styles.hint}>Give them props. A Proper Respect handle links to their page here.</legend>
         <label className={styles.field}>Platform<select value={answer.creditPlatform} onChange={event => change({ creditPlatform: creditPlatform(event.target.value) ?? "PROPER_RESPECT" })}>
           {CREDIT_PLATFORMS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
@@ -150,8 +158,8 @@ function ToolScreen({ item, progress, onDone, onLeave }: {
           <input autoComplete="off" spellCheck={false} maxLength={CREDIT_INPUT_MAX} value={answer.creditHandle} onChange={event => change({ creditHandle: event.target.value })} /></label>
         {answer.creditPlatform === "OTHER" && <label className={styles.field}>Where they are
           <input maxLength={CREDIT_OTHER_PLATFORM_MAX} value={answer.creditPlatformName} onChange={event => change({ creditPlatformName: event.target.value })} /></label>}
-      </fieldset>
-    </details>}
+      </fieldset></CollapsiblePanel>
+    </Collapsible>}
 
     {fields.asksLine && <label className={styles.field}>The line on its card
       {/* Several rows, so a kept suggestion is read whole before the button keeps it. */}
