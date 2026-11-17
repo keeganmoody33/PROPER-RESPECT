@@ -19,7 +19,9 @@ every step. Setup (GitHub environments, secrets, `PUBLIC_HANDLE`) is in
 2. **Tag the release** on a commit that is on `main`. Pushing the tag starts
    the release. While the repository is public, each deploy then waits for
    your approval ([who can release](../DEPLOYMENT.md#who-can-release)).
-   A migration that must run between them goes in this file:
+   If the repository is private, nothing waits: `frontend` starts as soon as
+   `backend` passes. A migration that must run between them then needs its
+   own plan in this file, written before you tag:
 
    ```sh
    git fetch origin && git checkout origin/main
@@ -28,7 +30,9 @@ every step. Setup (GitHub environments, secrets, `PUBLIC_HANDLE`) is in
 
 3. **Approve `backend`** in the Actions run, under **Review deployments**, and
    watch it. It deploys Convex and records `DEPLOYED_SHA`.
-4. **Run any migration this release lists** (none by default), dry run first.
+4. **Run any migration this release lists** (none by default), dry run first,
+   before you approve `frontend`. If nothing waited for your approval, follow
+   this release's own migration plan instead.
 5. **Approve `frontend`** and watch it. It deploys, checks the production
    alias, and smoke tests `/`, `/$PUBLIC_HANDLE` and `/sitemap.xml`.
 6. **Verify** signed out, then signed in as the owner.

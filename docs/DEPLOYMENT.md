@@ -245,7 +245,9 @@ ran with no approval step: the tag push was the only approval, and nothing
 paused between `backend` and `frontend`. The repository is public again, and
 v0.3.5 (2026-11-17) waited at both jobs. The workflow does not check the reviewer rule,
 so if the repository goes private again the wait disappears without a failing
-check. The three checks below are then all that keep a release to the owner.
+check. The three checks below are then all that keep a release to the owner,
+and a release whose migration must run between the two deploys needs its own
+plan in its release notes, written before the tag is pushed.
 
 Three more things keep a release to the owner. The first is in the tagged commit;
 the other two are repository settings that only the owner can change.
