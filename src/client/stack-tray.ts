@@ -191,3 +191,13 @@ export function addedMessage(added: TrayAdded) {
   if (added.overLimit) parts.push(`Your list holds ${TRAY_LIMIT} tools. Save these first, then add the rest.`);
   return parts.join(" ");
 }
+
+/**
+ * Where "Next" leads after a save. A new or confirmed tool has no line yet, so the walkthrough has it waiting. When the
+ * save added nothing, the walkthrough may have nothing to ask and no section on the page, so the next step is sharing.
+ */
+export function savedNextStep(summary: SavedSummary): { href: string; label: string } {
+  return summary.created + summary.confirmed > 0
+    ? { href: "#walkthrough", label: "Next: go through your tools one at a time" }
+    : { href: "#share-all", label: "Next: share your stack" };
+}

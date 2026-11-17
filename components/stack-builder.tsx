@@ -6,7 +6,7 @@ import { SignInButton } from "@clerk/nextjs";
 import { makeFunctionReference } from "convex/server";
 import type { SaveSelectionResult } from "@/convex/stack";
 import {
-  addedMessage, emptyTray, directoryNote, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, signInToSaveLabel, TRAY_LEVELS, TYPED_NAME_MAX, trayPicks, trayReducer,
+  addedMessage, emptyTray, directoryNote, nextActiveOption, resolveTypedWhenReady, saveAttempt, saveButtonLabel, savedMessage, savedNextStep, signInToSaveLabel, TRAY_LEVELS, TYPED_NAME_MAX, trayPicks, trayReducer,
   type DirectoryLoad, type SaveAttempt, type StackPick, type TrayEntry, type TypedResolution,
 } from "@/src/client/stack-tray";
 import { levelDefinition, statusFallbackLabel, type RelationshipLevel } from "@/src/domain/relationship-level";
@@ -272,7 +272,7 @@ export function StackBuilder({ mode }: { mode: BuilderMode }) {
         <button ref={saveButton} type="button" className="primary-action" disabled={saving || tray.items.length === 0} onClick={() => void saveTray(mode.onSave)}>
           {saving ? "Saving…" : saveButtonLabel(tray.items.length)}
         </button>
-        {tray.saved && tray.items.length === 0 && <a href="#walkthrough">Next: go through your tools one at a time</a>}
+        {tray.saved && tray.items.length === 0 && <a href={savedNextStep(tray.saved).href}>{savedNextStep(tray.saved).label}</a>}
       </> : mode.kind === "signed-out" ? <SignInButton mode="modal" forceRedirectUrl={firstResultReturnUrl(null)} signUpForceRedirectUrl={firstResultReturnUrl(null)}>
         <button type="button" className="primary-action" disabled={tray.items.length === 0}>{signInToSaveLabel(tray.items.length)}</button>
       </SignInButton> : <button type="button" className="primary-action" disabled>Checking your session…</button>}
