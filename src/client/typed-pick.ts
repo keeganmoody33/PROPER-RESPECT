@@ -1,6 +1,7 @@
 import { directoryEntry, extractDomain, searchDirectory } from "@/src/domain/product-directory";
 import { normalizeWebsite, resolveTypedCatalogProduct } from "@/src/domain/typed-product";
 import type { TrayEntry, TypedResolution } from "./stack-tray";
+import { errorMessage } from "@/src/domain/user-error";
 
 function trayEntry(entry: TrayEntry): TrayEntry {
   return { slug: entry.slug, name: entry.name, domain: entry.domain };
@@ -27,7 +28,7 @@ export function resolveTypedPick(name: string, website?: string): TypedResolutio
     normalized = normalizeWebsite(website);
     catalogSlug = resolveTypedCatalogProduct(trimmed, normalized)?.product.slug;
   } catch (error) {
-    return { kind: "refused", message: error instanceof Error ? error.message : "Correct the name or website." };
+    return { kind: "refused", message: errorMessage(error, "Correct the name or website.") };
   }
   const domain = normalized ? extractDomain(normalized) ?? "" : "";
   const entry = catalogSlug ? directoryEntry(catalogSlug) : exactDirectoryName(trimmed, domain);

@@ -19,6 +19,7 @@ import { PrivateEvidencePanel } from "./private-evidence-panel";
 import { ProductBrandControls } from "./product-brand-controls";
 import { DiscoveryReview } from "./discovery-review";
 import styles from "./private-inventory.module.css";
+import { errorMessage } from "@/src/domain/user-error";
 
 export type InventoryData = {
   cards: FunctionReturnType<typeof api.inventory.list>["page"];
@@ -130,7 +131,7 @@ function RelationshipEditor({ item, evidence, onSave, startedAt, onStartDateChan
       await onSave({ ...fields, operationId: retry.current.id });
       retry.current = null;
     } catch (error) {
-      setMessage({ version, text: error instanceof Error ? error.message : "Save failed. Your previous decisions remain intact." });
+      setMessage({ version, text: errorMessage(error, "Save failed. Your previous decisions remain intact.") });
     } finally { setBusy(false); }
   }
   return <><form key={version} id={formId} onSubmit={event => {
@@ -202,7 +203,7 @@ export function DeleteOriginal({ sourceLabel, onDelete, onDeleted }: {
       setConfirming(false);
       onDeleted();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "The original was not deleted. Try again.");
+      setError(errorMessage(reason, "The original was not deleted. Try again."));
     } finally { setBusy(false); }
   }
   if (!confirming) return <button type="button" className="secondary-action" onClick={() => { setConfirming(true); setError(""); }}>Delete original</button>;
