@@ -21,23 +21,24 @@ it("an empty search shows listed people A to Z, one box and two tabs that keep t
   const $ = await search();
   expect($("h1").text()).toBe("Search people and tools");
   expect($('form[role="search"][action="/search"][method="get"] input[name="q"]').attr("maxlength")).toBe(String(SEARCH_QUERY_MAX));
-  expect($('nav[aria-label="Search for"] a').map((_, link) => [[$(link).text(), $(link).attr("href"), $(link).attr("aria-current") ?? ""]]).get())
-    .toEqual([["People", "/search", "page"], ["Tools", "/search?tab=tools", ""]]);
-  expect($("#results-title").text()).toBe("People with a listed page, A to Z");
+  expect($('[role="tablist"][aria-label="Search for"] [role="tab"]').map((_, tab) => [[$(tab).text(), $(tab).attr("href"), $(tab).attr("aria-selected")]]).get())
+    .toEqual([["People", "/search", "true"], ["Tools", "/search?tab=tools", "false"]]);
+  expect($('[role="tabpanel"] h2').text()).toBe("People with a listed page, A to Z");
   expect(rows($)).toEqual([["/lecturesfrom", "Keegan Moody@lecturesfrom"], ["/synthetic-ria", "Synthetic Ria@synthetic-ria"], ["/synthetic-sam", "Synthetic Sam@synthetic-sam"]]);
   expect(DASHES.filter(dash => $("main").text().includes(dash))).toEqual([]);
 });
 
 it("a search finds a person, and the Tools tab finds a tool with its counts", async () => {
   const people = await search({ q: "sam" });
-  expect(people("#results-title").text()).toBe("People matching “sam”");
+  expect(people('[role="tabpanel"] h2').text()).toBe("People matching “sam”");
   expect(rows(people)).toEqual([["/synthetic-sam", "Synthetic Sam@synthetic-sam"]]);
-  expect(people('nav a[href="/search?q=sam&tab=tools"]').text()).toBe("Tools");
+  expect(people('[role="tab"][href="/search?q=sam&tab=tools"]').text()).toBe("Tools");
 
   const tools = await search({ q: "clay", tab: "tools" });
   expect(tools('input[type="hidden"][name="tab"]').val()).toBe("tools");
+  expect(tools('[role="tab"][aria-selected="true"]').text()).toBe("Tools");
   expect(rows(tools)).toEqual([["/tools/clay", "Clay1 person uses it now · 1 person used it before"]]);
-  expect((await search({ tab: "tools" }))("#results-title").text()).toBe("Tools on listed pages");
+  expect((await search({ tab: "tools" }))('[role="tabpanel"] h2').text()).toBe("Tools on listed pages");
   expect(rows(await search({ q: "nobody-here" }))).toEqual([]);
 });
 

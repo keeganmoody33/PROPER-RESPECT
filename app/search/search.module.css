@@ -14,12 +14,12 @@
 .field button { min-height: 52px; padding: .75rem 1.4rem; font: inherit; font-weight: 800; font-size: 1.05rem; color: var(--action-text); background: var(--ink); border: 3px solid var(--ink); border-radius: 0; cursor: pointer; }
 .field button:hover { background: var(--respect-red); border-color: var(--respect-red); }
 
-/* Two tabs that are links, so the choice lives in the address and works with no script. */
-.tabs { display: flex; gap: 0; margin: 1.5rem 0 0; border-bottom: 1px solid var(--line); }
-.tabs a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 1.1rem; margin-bottom: -1px; font-weight: 800; font-size: 1.05rem; color: var(--secondary); text-decoration: none; border-bottom: 4px solid transparent; }
-.tabs a:hover { color: var(--ink); }
-.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--poster); }
-.tabs a:focus-visible { outline-offset: -3px; }
+.tabs { margin: 1.5rem 0 0; }
+.tabList { display: flex; border-bottom: 1px solid var(--line); }
+.tabList [data-slot="tabs-tab"] { display: inline-flex; align-items: center; min-height: 48px; padding: 0 1.1rem; margin-bottom: -1px; font-weight: 800; font-size: 1.05rem; color: var(--secondary); text-decoration: none; border-bottom: 4px solid transparent; }
+.tabList [data-slot="tabs-tab"]:hover { color: var(--ink); }
+.tabList [data-slot="tabs-tab"][data-selected] { color: var(--ink); border-bottom-color: var(--respect-red); }
+.page .tabList [data-slot="tabs-tab"]:focus-visible { outline-offset: -3px; }
 
 .results { margin-top: clamp(1.5rem, 3vw, 2.5rem); }
 .results h2, .group h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -.01em; margin: 0 0 .25rem; overflow-wrap: anywhere; }
