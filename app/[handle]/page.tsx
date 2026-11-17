@@ -22,10 +22,10 @@ export async function generateMetadata({
   const { handle } = await params;
   try {
     const profile = await getPublicProfile(handle);
-    if (!profile) return { title: "Profile not found", robots: { index: false, follow: false } };
+    if (!profile) return { title: "Page not found", robots: { index: false, follow: false } };
     return publicPageMetadata(profile.displayName, profile.bio, profile.handle);
   } catch {
-    return { title: "Public profile", robots: { index: false, follow: false } };
+    return { title: "Tooling page", robots: { index: false, follow: false } };
   }
 }
 
@@ -44,16 +44,14 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   // No app/[handle]/loading.tsx and no in-page Suspense here: either one
   // around this await would stream HTTP 200 before notFound() can set 404.
-  // ProfileLoading is the inventory/collection/profile-loading fallback.
   return (
     <main>
       <PublicProfileWebMcp profile={projectVisiblePublicProfile(profile)} />
-      <div className="profile-context"><p>@{profile.handle} / SHARED PRODUCT COLLECTION</p></div>
+      <div className="profile-context"><p>@{profile.handle} / TOOLING PAGE</p></div>
 
       <section className="stack" aria-labelledby="stack-heading">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">@{profile.handle} / TOOLS WITH A TRACK RECORD</p>
             <h1 id="stack-heading" className={styles.name}><ProfileName profile={profile} /></h1>
             {profile.bio && <p className={styles.bio}>{profile.bio}</p>}
             <ProfileLinks profile={profile} />

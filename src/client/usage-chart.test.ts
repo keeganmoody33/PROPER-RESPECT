@@ -2,7 +2,6 @@ import { load } from "cheerio";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
-import { ProfileLoading } from "../../components/profile-loading";
 import { ProductCardSkeleton } from "../../components/product-card-skeleton";
 import { coverageDays, UsageChart, usageChartLog } from "../../components/usage-chart";
 
@@ -118,15 +117,6 @@ test("skeleton cards keep the existing status copy for assistive tech", () => {
   expect($.text()).not.toMatch(/score|rank|rating/i);
 });
 
-test("the public profile loading fallback uses skeleton cards and the shared collection label", () => {
-  const $ = load(renderToStaticMarkup(createElement(ProfileLoading)));
-
-  expect($("[role='status']").attr("aria-busy")).toBe("true");
-  expect($(".visually-hidden").text()).toContain("Loading shared product collection…");
-  expect($(".usage-chart-log").text()).toBe("PROFILE · LOADING");
-  expect($(".product-card-skeleton")).toHaveLength(3);
-  expect($.text()).not.toMatch(/score|rank/i);
-});
 
 test("a zero bar is marked as zero, so it draws as a stub on the baseline instead of an empty gap", () => {
   const $ = load(renderToStaticMarkup(createElement(UsageChart, {

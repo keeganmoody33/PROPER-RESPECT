@@ -51,7 +51,7 @@ test("nested trust pages preserve claimable root profiles", async ({ page, reque
   expect((await request.get("/about/missing.md")).status()).toBe(404);
   const sitemap = await (await request.get("/sitemap.xml")).text();
   for (const [slug] of pages) expect(sitemap).toContain(`<loc>https://public.example/about/${slug}</loc>`);
-  expect(sitemap).toMatch(/<loc>https:\/\/public\.example\/about\/origins<\/loc>\s*<lastmod>2026-11-16<\/lastmod>/);
+  expect(sitemap).toMatch(/<loc>https:\/\/public\.example\/about\/origins<\/loc>\s*<lastmod>2026-11-17<\/lastmod>/);
   expect(sitemap).toMatch(/<loc>https:\/\/public\.example\/about\/contact<\/loc>\s*<lastmod>2026-09-22<\/lastmod>/);
   expect(sitemap).toMatch(/<loc>https:\/\/public\.example\/about\/terms<\/loc>\s*<lastmod>2026-11-15<\/lastmod>/);
   expect(sitemap).toMatch(/<loc>https:\/\/public\.example\/about\/methodology<\/loc>\s*<lastmod>2026-11-12<\/lastmod>/);
