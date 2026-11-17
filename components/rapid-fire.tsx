@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useReducer, useRef, useState } from "react";
-import { useMutation, useQueries } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Checkbox, CheckboxIndicator } from "@ui-sdk/react/checkbox";
 import { RadioGroup } from "@ui-sdk/react/radio";
 import { api } from "@/convex/_generated/api";
@@ -13,7 +13,7 @@ import { levelStatus } from "@/src/domain/relationship-level";
 import { errorMessage } from "@/src/domain/user-error";
 import { headlineHelp } from "@/src/client/headline-suggestion";
 import {
-  addComment, creditAnswer, lineFromComment, rapidFireCards, rapidFireSave, rapidFireTally, sinceAnswer, STATUS_LABEL, usesAnswer,
+  addComment, creditAnswer, lineFromComment, rapidFireCards, rapidFireNote, rapidFireSave, rapidFireTally, sinceAnswer, STATUS_LABEL, usesAnswer,
   type RapidFireAnswer, type RapidFireCard, type RapidFireStatus,
 } from "@/src/client/rapid-fire";
 import { useRapidFireVoice, type VoiceState } from "@/src/client/rapid-fire-voice";
@@ -37,20 +37,29 @@ const USES_SHOWN = 5;
 type Phase = "intro" | "cards" | "check";
 type Store = Readonly<{ phase: Phase; cards: readonly RapidFireCard[]; index: number; fixing?: string }>;
 
-/** Each tool's first stored sources, read once for the order and for whether Never used it can remove it. */
-function useSignals(queue: readonly WalkthroughItem[]) {
-  const requests = useMemo(() => Object.fromEntries(queue.map(item => [item.propId, {
-    query: api.inventory.evidence, args: { propId: item.propId as Id<"props">, paginationOpts: { numItems: SOURCES_READ, cursor: null } },
-  }])), [queue]);
-  const results = useQueries(requests);
-  return useMemo(() => {
-    const read = (propId: string): RankSource[] | undefined => {
-      const result = results[propId] as { page?: { sourceType: string; capturedAt?: string; captureProvenance?: { adapter: { id: string } } }[] } | Error | undefined;
-      if (!result || result instanceof Error || !result.page) return undefined;
-      return result.page.map(source => ({ sourceType: source.sourceType, capturedAt: source.capturedAt, adapterId: source.captureProvenance?.adapter.id }));
-    };
-    return Object.fromEntries(queue.map(item => [item.propId, read(item.propId)])) as Record<string, RankSource[] | undefined>;
-  }, [queue, results]);
+type Signals = Readonly<Record<string, readonly RankSource[] | undefined>>;
+
+/** One tool's first stored sources, read for the order and for whether Never used it can remove it. Renders nothing. */
+function SourceReader({ propId, onRead }: { propId: string; onRead: (propId: string, sources: RankSource[]) => void }) {
+  const result = useQuery(api.inventory.evidence, { propId: propId as Id<"props">, paginationOpts: { numItems: SOURCES_READ, cursor: null } });
+  useEffect(() => {
+    if (result) onRead(propId, result.page.map(source => ({ sourceType: source.sourceType, capturedAt: source.capturedAt, adapterId: source.captureProvenance?.adapter.id })));
+  }, [result, propId, onRead]);
+  return null;
+}
+
+type RapidFireProps = Readonly<{
+  queue: readonly WalkthroughItem[]; cards: readonly WalkthroughCard[];
+  onFinish: (session: WalkthroughSession, removed: string[]) => void; onLeave: () => void;
+}>;
+
+export function RapidFire(props: RapidFireProps) {
+  const [signals, setSignals] = useState<Signals>({});
+  const read = useCallback((propId: string, sources: RankSource[]) => setSignals(current => ({ ...current, [propId]: sources })), []);
+  return <>
+    {props.queue.map(item => <SourceReader key={item.propId} propId={item.propId} onRead={read} />)}
+    <RapidFireScreens {...props} signals={signals} />
+  </>;
 }
 
 // What the walkthrough's page summary hears about each card; the rest count as skipped.
@@ -78,12 +87,8 @@ function lineOptions(card: RapidFireCard) {
   return { suggestion, said: lineFromComment(card.answer.comment) };
 }
 
-export function RapidFire({ queue, cards, onFinish, onLeave }: {
-  queue: readonly WalkthroughItem[]; cards: readonly WalkthroughCard[];
-  onFinish: (session: WalkthroughSession, removed: string[]) => void; onLeave: () => void;
-}) {
+function RapidFireScreens({ queue, cards, onFinish, onLeave, signals }: RapidFireProps & { signals: Signals }) {
   const ids = useId();
-  const signals = useSignals(queue);
   const save = useMutation(api.inventory.save);
   const remove = useMutation(api.inventory.removeNeverUsed);
   const voice = useRapidFireVoice();
@@ -109,7 +114,8 @@ export function RapidFire({ queue, cards, onFinish, onLeave }: {
   const persist = useCallback((propId: string) => {
     const run = async () => {
       const card = store.current.cards.find(value => value.item.propId === propId);
-      if (!card) return;
+      // A card fixed on its own screen holds that screen's save, and a removal is final: neither is saved over.
+      if (!card || closed(card)) return;
       const plan = rapidFireSave(card);
       if (plan.kind === "none") { setCard(propId, value => ({ ...value, status: plan.status, error: undefined })); return; }
       if (plan.kind === "error") { setCard(propId, value => ({ ...value, status: "notSaved", error: plan.message })); return; }
@@ -364,7 +370,7 @@ export function RapidFire({ queue, cards, onFinish, onLeave }: {
     <label className={styles.field}>What you said about it
       <textarea rows={3} maxLength={1000} value={answer.comment} onChange={event => patch({ comment: event.target.value })}
         placeholder="Your words, as you say them." />
-      <span className={styles.hint}>Kept in your private note as you said it. You can use it as the card&apos;s line at the end.</span>
+      <span className={styles.hint}>Kept in your private note as you said it. With no line, your note shows on the card if you publish it; you can pick a line at the end.</span>
     </label>
 
     {voice.error && <p role="alert" className={styles.error}>{voice.error}</p>}
@@ -374,7 +380,7 @@ export function RapidFire({ queue, cards, onFinish, onLeave }: {
       {!voice.active && voice.state !== "starting" && <button type="button" className="secondary-action"
         onClick={() => void voice.start(deck.map(value => value.item.card.product.name), tools, product.name)}>Turn on voice</button>}
     </div>
-    <p className={styles.hint}>Next saves this card privately. No level means nothing is saved.</p>
+    <p className={styles.hint}>{cardHint(card)}</p>
   </div>;
 }
 
@@ -382,6 +388,22 @@ function tallyLine(tally: ReturnType<typeof rapidFireTally>): string {
   const parts = [`${tally.saved} saved privately`, tally.never && `${tally.never} never used`, tally.notSaved && `${tally.notSaved} not saved`,
     tally.waiting && `${tally.waiting} with no answer yet`].filter(Boolean);
   return `${parts.join(", ")}.`;
+}
+
+/** Done elsewhere: fixed on the tool's own screen, or settled by the batched removal. Moving on never saves over it. */
+const closed = (card: RapidFireCard) => card.fixed === true || card.status === "removed" || card.status === "kept";
+
+function cardHint(card: RapidFireCard): string {
+  if (card.status === "removed") return "Removed from your collection. Nothing here is saved.";
+  if (card.status === "kept") return "This tool stays in your collection as it is. Nothing here is saved.";
+  if (card.fixed) return "You fixed this one on its own screen, so changes here aren't saved. Tap it on the check screen to change it again.";
+  return "Next saves this card privately. No level means nothing is saved.";
+}
+
+function lineHint(line: string, standIn: string): string {
+  if (line.trim()) return `Line: ${line}`;
+  if (standIn) return `No line, so your note shows on the card if you publish it: ${standIn}`;
+  return "No line yet, so this card stays private even after you publish.";
 }
 
 function removeLabel(removing: boolean, waiting: boolean, count: number): string {
@@ -401,6 +423,8 @@ function CheckRow({ card, live, onFix, onLine }: {
   const level = choice && choiceLabel(choice);
   const uses = shown ? productUseLabels(product.slug, shown.uses) : productUseLabels(product.slug, { picks: [...answer.usePicks], other: answer.useOther });
   const line = shown ? shown.headline : answer.ownerLine ?? "";
+  // With no line, the note stands in on the card (the rule share-all uses), so the row says so rather than "private".
+  const standIn = line.trim() ? "" : (shown ? shown.note : rapidFireNote(card.item, answer.comment)).trim();
   const { suggestion, said } = lineOptions(card);
   const canLine = !card.fixed && card.status === "saved";
   return <li className={rapid.row} data-status={card.status}>
@@ -411,7 +435,7 @@ function CheckRow({ card, live, onFix, onLine }: {
     {level && <p className={rapid.chips}><span className={rapid.chip}>{level}</span>{uses.map(use => <span key={use} className={rapid.chip}>{use}</span>)}</p>}
     {card.error && <p className={styles.error}>{card.error}</p>}
     {!card.fixed && answer.comment && <blockquote className={rapid.quote}>{answer.comment}</blockquote>}
-    <p className={styles.hint}>{line ? <>Line: {line}</> : "No line yet, so this card stays private even after you publish."}</p>
+    <p className={styles.hint}>{lineHint(line, standIn)}</p>
     {canLine && <div className={rapid.lineChoices}>
       {suggestion && suggestion !== line && <button type="button" className="secondary-action" onClick={() => onLine(suggestion)}>Use the suggested line: {suggestion}</button>}
       {said && said !== line && <button type="button" className="secondary-action" onClick={() => onLine(said)}>Use what you said as the line</button>}

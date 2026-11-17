@@ -76,6 +76,12 @@ describe("moving on from a card", () => {
     expect(plan.kind === "save" && plan.args).toMatchObject({ headline: "Where my lists start.", expectedVersion: 7 });
   });
 
+  it("refuses a note and comment over the note's limit instead of cutting what was said", () => {
+    const [noted] = deck(card("Clay", { ownerEntered: true, note: "n".repeat(3950) }));
+    expect(rapidFireSave(answered(noted, { choice: "DAILY", comment: "c".repeat(100) }))).toMatchObject({ kind: "error" });
+    expect(rapidFireSave(answered(noted, { choice: "DAILY", comment: "c".repeat(48) })).kind).toBe("save");
+  });
+
   it("refuses a since that isn't a year or a real date, and a credit that doesn't fit its platform", () => {
     const [clay] = deck(card("Clay"));
     expect(rapidFireSave(answered(clay, { choice: "DAILY", startedAt: "2023-02-30" }))).toMatchObject({ kind: "error" });

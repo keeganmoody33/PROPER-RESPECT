@@ -72,10 +72,11 @@ export function lineFromComment(comment: string): string {
   return (space > 0 ? cut.slice(0, space) : text.slice(0, SUGGESTED_HEADLINE_MAX)).replace(/[\s,;:]+$/, "");
 }
 
-const NOTE_MAX = 4000;
-/** The note a save keeps: the owner's saved note, then what they said here. */
+export const NOTE_MAX = 4000;
+const NOTE_TOO_LONG = "Your saved note and what you said come to more than 4,000 characters. Shorten what you said.";
+/** The note a save keeps: the owner's saved note, then what they said here. Never cut: a save over the limit is refused. */
 export function rapidFireNote(item: WalkthroughItem, comment: string): string {
-  return [keptNote(item.card), comment.trim()].filter(Boolean).join("\n\n").slice(0, NOTE_MAX);
+  return [keptNote(item.card), comment.trim()].filter(Boolean).join("\n\n");
 }
 
 /** What moving on from a card does: save these arguments, or nothing, and why. */
@@ -87,7 +88,9 @@ export function rapidFireSave(card: RapidFireCard) {
   // Only the owner's own line is saved. A template suggestion is never kept without the tap that says it keeps it.
   const result = walkthroughSave(item.card, { ...answer, openedVersion: card.version }, answer.ownerLine?.trim() ? answer.ownerLine : "");
   if (!result.ok) return { kind: "error" as const, message: result.message };
-  const args = { ...result.args, note: rapidFireNote(item, answer.comment) };
+  const note = rapidFireNote(item, answer.comment);
+  if (note.length > NOTE_MAX) return { kind: "error" as const, message: NOTE_TOO_LONG };
+  const args = { ...result.args, note };
   // The answers alone, without the version they name, so going back and on again unchanged saves nothing new.
   return { kind: "save" as const, args, body: JSON.stringify({ ...args, expectedVersion: undefined }) };
 }

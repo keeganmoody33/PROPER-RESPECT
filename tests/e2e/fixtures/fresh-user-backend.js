@@ -220,17 +220,13 @@ export function useQuery(ref, args) {
     case "inventory:selectedActivity": return null;
     case "retainedEvidence:measurements": return (current?.measurementCaptures ?? empty).filter(capture => capture.propId === args.propId);
     case "inventory:detail": return current?.cards.find(card => card.prop._id === args.propId) ?? null;
+    // Rapid fire reads each tool's first sources (components/rapid-fire.tsx). This fixture stores none.
+    case "inventory:evidence": return { page: empty, isDone: true, continueCursor: "" };
     case "mailboxes:listAccounts": return empty;
     case "productKnowledge:getForProduct": return { supported: false, sources: empty };
     case "publicProfiles:searchListingChoice": return current ? { listed: current.user.listedInSearch ?? true } : undefined;
     default: return undefined;
   }
-}
-// Rapid fire reads each tool's first sources at once (components/rapid-fire.tsx). This fixture stores none.
-export function useQueries(requests) {
-  useSyncExternalStore(subscribe, snapshot, snapshot);
-  return Object.fromEntries(Object.entries(requests).map(([key, request]) =>
-    [key, getFunctionName(request.query) === "inventory:evidence" ? { page: empty, isDone: true, continueCursor: "" } : undefined]));
 }
 function located(card) {
   return { propId: card.prop._id, productId: card.product._id, name: card.product.name, domain: card.product.domain,

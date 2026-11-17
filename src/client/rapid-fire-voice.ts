@@ -14,10 +14,13 @@ const SESSION_ROUTE = "/api/voice/session";
 
 export function useRapidFireVoice() {
   const session = useRef<RealtimeSession | null>(null);
+  // Each start and stop moves this on, so a start still loading when Stop is pressed never opens the microphone.
+  const attempt = useRef(0);
   const [state, setState] = useState<VoiceState>("off");
   const [error, setError] = useState("");
 
   const stop = useCallback(() => {
+    attempt.current += 1;
     session.current?.close();
     session.current = null;
     setState("off");
@@ -35,6 +38,8 @@ export function useRapidFireVoice() {
 
   const start = useCallback(async (names: readonly string[], controls: RapidFireControls, firstCard: string) => {
     if (session.current) return true;
+    const mine = ++attempt.current;
+    const cancelled = () => attempt.current !== mine;
     setError("");
     setState("starting");
     try {
@@ -43,6 +48,7 @@ export function useRapidFireVoice() {
       if (!response.ok || !body.key) throw new Error(body.error || "Voice is unavailable right now. You can tap through instead.");
       const [{ RealtimeAgent, RealtimeSession: Session }, { rapidFireInstructions, rapidFireTools }] =
         await Promise.all([import("@openai/agents-realtime"), import("./voice-tools")]);
+      if (cancelled()) return false;
       const agent = new RealtimeAgent({ name: "Rapid fire", instructions: rapidFireInstructions(names), tools: rapidFireTools(controls) });
       const live = new Session(agent, {
         transport: "webrtc", model: body.model,
@@ -57,10 +63,13 @@ export function useRapidFireVoice() {
       live.on("error", () => setError("Voice hit a problem. Your answers on screen are kept; you can keep tapping."));
       session.current = live;
       await live.connect({ apiKey: body.key, model: body.model });
+      // Stopped while connecting: stop already closed this session and set the light off.
+      if (cancelled()) { live.close(); return false; }
       setState("listening");
       note(`First card: ${firstCard}.`, true);
       return true;
     } catch (reason) {
+      if (cancelled()) return false;
       session.current?.close();
       session.current = null;
       setState("off");
