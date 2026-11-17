@@ -1549,6 +1549,17 @@ a.card-tool-link:has(.product-logo) { display: inline-block; padding-block: 0; t
 .sharing-preview { border-block-start: 2px solid var(--ink); padding-block: 1.5rem; margin-top: 2rem; }
 .sharing-preview .card-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
 .sharing-preview .profile-footer { gap: 1.2rem; margin-block: 1rem; padding: 1rem 0; }
+.search-listing-choice { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: .5rem 1rem; max-width: 48rem; margin-block: 1.5rem 0; padding: 1rem; border: 1px solid var(--line); }
+.search-listing-choice [data-slot="field-label"] { display: block; font-weight: 800; }
+.search-listing-choice [data-slot="field-description"] { margin: .35rem 0 0; line-height: 1.5; color: var(--secondary); }
+.search-listing-choice [data-slot="switch"] { position: relative; flex: 0 0 auto; width: 3.25rem; height: 2.75rem; padding: 0; border: 0; background: none; cursor: pointer; }
+.search-listing-choice [data-slot="switch"]::before { content: ""; position: absolute; inset: .55rem 0; border: 2px solid var(--ink); border-radius: 999px; background: var(--paper); }
+.search-listing-choice [data-slot="switch"][data-checked]::before { background: var(--ink); }
+.search-listing-choice [data-slot="switch-thumb"] { position: absolute; top: .85rem; left: .3rem; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: var(--ink); transition: transform .15s; }
+.search-listing-choice [data-slot="switch-thumb"][data-checked] { transform: translateX(1.4rem); background: var(--paper); }
+.search-listing-choice [data-slot="switch"]:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.search-listing-error { grid-column: 1 / -1; margin: 0; color: var(--respect-red); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .search-listing-choice [data-slot="switch-thumb"] { transition: none; } }
 .sharing-preview-confirmation { display: flex; align-items: start; gap: .65rem; max-width: 48rem; line-height: 1.5; margin-block: 1.5rem; }
 .sharing-preview-confirmation input { flex: 0 0 auto; margin-top: .25rem; }
 .sharing-selection-count { font-weight: 700; }

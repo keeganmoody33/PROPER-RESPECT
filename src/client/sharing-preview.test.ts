@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test } from "vitest";
 import { SharingPreview } from "../../components/sharing-preview";
+import { SearchListingChoiceView } from "../../components/search-listing-choice";
 import type { PublicProfile } from "../domain/public-profile";
 
 const card: PublicProfile["cards"][number] = {
@@ -71,4 +72,24 @@ test("older preview responses without refresh-account metadata still render a fi
   const $ = preview([githubCard]);
   expect($(".product-card").text()).toContain("Saved activity from github.com/account-a");
   expect($.text()).not.toContain("Daily GitHub refresh will read activity");
+});
+
+test("the preview asks once whether to list the page in search, before the approval, and says the page stays public either way", () => {
+  const $ = load(renderToStaticMarkup(createElement(SharingPreview, {
+    profile: { handle: "owner", displayName: "Owner", bio: "", cards: [card] }, current: true, busy: false, onPublish: () => {},
+    searchListing: createElement(SearchListingChoiceView, { listed: true, saving: false, error: "", onChange: () => {} }),
+  })));
+  const choice = $(".sharing-preview .search-listing-choice");
+  expect(choice.find('[data-slot="field-label"]').text()).toBe("List my page in search");
+  expect(choice.text()).toContain("Your page stays public at its link either way.");
+  expect(choice.find('[role="switch"]').attr("aria-checked")).toBe("true");
+  expect($(".sharing-preview > *").index(choice)).toBeLessThan($(".sharing-preview > *").index($(".sharing-preview-confirmation")));
+  ["—", "–", " - "].forEach(dash => expect(choice.text()).not.toContain(dash));
+  const off = load(renderToStaticMarkup(createElement(SearchListingChoiceView, { listed: false, saving: false, error: "Too many publication changes.", onChange: () => {} })));
+  expect(off('[role="switch"]').attr("aria-checked")).toBe("false");
+  expect(off('[role="alert"]').text()).toBe("Too many publication changes.");
+});
+
+test("without a search listing answer to ask, the preview shows no switch", () => {
+  expect(preview([card])(".search-listing-choice")).toHaveLength(0);
 });

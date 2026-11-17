@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, type ReactNode } from "react";
 import { useConvex, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { PublicProfile } from "@/src/domain/public-profile";
 import { isHttpUrl } from "@/src/domain/http-url";
 import { canApproveShare, initialShareState, previewSummary, shareFlow, skipReasonText, type ShareAllPreview, type ShareEvent, type ShareState } from "@/src/client/share-all-flow";
 import { SharingPreview } from "./sharing-preview";
+import { SearchListingChoice } from "./search-listing-choice";
 import styles from "./stack-builder.module.css";
 import { errorMessage } from "@/src/domain/user-error";
 
@@ -17,7 +18,7 @@ export function ShareAllSection({ identityClaimed, basis, profileUrl, onSetUpIde
 }) {
   const convex = useConvex();
   const publishSelected = useMutation(api.onboarding.publishSelected);
-  return <ShareAllStep identityClaimed={identityClaimed} basis={basis} profileUrl={profileUrl} onSetUpIdentity={onSetUpIdentity}
+  return <ShareAllStep identityClaimed={identityClaimed} basis={basis} profileUrl={profileUrl} onSetUpIdentity={onSetUpIdentity} searchListing={<SearchListingChoice />}
     onPreview={async () => {
       const result = await convex.query(api.onboarding.previewPublication, { selections: [], shareAllConfirmed: true });
       return { ...result, sharedCount: result.sharedCount ?? 0, remainingCount: result.remainingCount ?? 0, skipped: result.skipped ?? [] };
@@ -38,8 +39,8 @@ function statusText(state: ShareState<PublicProfile>) {
   return state.remainingCount ? `${shared} ${state.remainingCount} more remain; preview again to share them.` : shared;
 }
 
-export function ShareAllStep({ identityClaimed, basis, profileUrl, onSetUpIdentity, onPreview, onPublish }: {
-  identityClaimed: boolean | null; basis: string; profileUrl: string; onSetUpIdentity: () => void;
+export function ShareAllStep({ identityClaimed, basis, profileUrl, onSetUpIdentity, onPreview, onPublish, searchListing }: {
+  identityClaimed: boolean | null; basis: string; profileUrl: string; onSetUpIdentity: () => void; searchListing?: ReactNode;
   onPreview: () => Promise<Preview>; onPublish: (preview: Preview) => Promise<void>;
 }) {
   const [state, dispatch] = useReducer(shareFlow<PublicProfile>, identityClaimed === true, initialShareState<PublicProfile>);
@@ -93,7 +94,7 @@ export function ShareAllStep({ identityClaimed, basis, profileUrl, onSetUpIdenti
         <ul>{shown.preview.skipped.map(card => <li key={card.propId}><strong>{card.productName}</strong> stays private: {skipReasonText(card.reason)}</li>)}</ul>
       </div>}
       {canApproveShare(shown.preview) && <SharingPreview key={shown.preview.previewHash} profile={shown.preview.profile} refreshAccounts={[...shown.preview.refreshAccounts ?? []]}
-        current={shown.basis === basis} busy={state.step === "publishing"} onPublish={() => void publish(shown.preview)} />}
+        current={shown.basis === basis} busy={state.step === "publishing"} searchListing={searchListing} onPublish={() => void publish(shown.preview)} />}
     </>}
   </section>;
 }

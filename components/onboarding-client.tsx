@@ -35,6 +35,7 @@ import { MailboxManagement } from "./mailbox-management";
 import { prepareCollectionBrands, type BrandPreparationItem } from "@/src/client/product-brand-preparation";
 import { CopyProfileLink } from "./copy-profile-link";
 import { SharingPreview } from "./sharing-preview";
+import { SearchListingChoice } from "./search-listing-choice";
 import { StackPicker } from "./stack-builder";
 import { ShareAllSection } from "./share-all-step";
 import { MeasurementSharingChoices } from "./measurement-review";
@@ -835,7 +836,7 @@ function Builder({ publicOrigin }: { publicOrigin?: string }) {
           <button type="button" className="secondary-action" onClick={() => void previewUnpublishAll()} disabled={busy}>Unpublish all cards</button>
         </section>}
         {/* A different preview (a new hash) starts unapproved. */}
-        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} refreshAccounts={preview.refreshAccounts} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} />}
+        {preview && <SharingPreview key={`${preview.basis}:${preview.previewHash}`} profile={preview.profile} refreshAccounts={preview.refreshAccounts} current={preview.basis === previewBasis} busy={busy} onPublish={() => void publish()} searchListing={<SearchListingChoice />} />}
       </section>
       <section className="onboarding-panel" id="collection-data" aria-labelledby="collection-data-title">
         <p className="onboarding-kicker">YOUR DATA</p>
