@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  addComment, creditAnswer, lineFromComment, rapidFireCards, rapidFireNote, rapidFireSave, rapidFireTally, removeFillers, sinceAnswer, usesAnswer,
+  addComment, creditAnswer, rapidFireUrl, withoutRapidFire, lineFromComment, rapidFireCards, rapidFireNote, rapidFireSave, rapidFireTally, removeFillers, sinceAnswer, usesAnswer,
   type RapidFireCard,
 } from "./rapid-fire";
 import { walkthroughQueue, type WalkthroughCard } from "./walkthrough";
@@ -17,6 +17,15 @@ function card(name: string, prop: Partial<WalkthroughCard["prop"]> = {}): Walkth
 }
 const deck = (...cards: WalkthroughCard[]) => rapidFireCards(walkthroughQueue(cards));
 const answered = (value: RapidFireCard, answer: Partial<RapidFireCard["answer"]>): RapidFireCard => ({ ...value, answer: { ...value.answer, ...answer } });
+
+describe("opening rapid fire", () => {
+  it("reloads the same page with the flag, and takes the flag off once it opens", () => {
+    const opened = rapidFireUrl("http://localhost:3000/app/collection?tab=all#share-all");
+    expect(opened).toBe("http://localhost:3000/app/collection?tab=all&rapid=1#walkthrough");
+    expect(withoutRapidFire(opened)).toBe("http://localhost:3000/app/collection?tab=all#walkthrough");
+    expect(withoutRapidFire("http://localhost:3000/app/collection")).toBeUndefined();
+  });
+});
 
 describe("what the owner said, kept as said", () => {
   it.each([

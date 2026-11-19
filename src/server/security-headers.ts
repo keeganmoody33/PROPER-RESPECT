@@ -60,10 +60,11 @@ export function contentSecurityPolicyReportOnly({ clerkHost, development, voice 
 
 type HeaderRule = { source: string; headers: { key: string; value: string }[] };
 
-// Permissions-Policy belongs to the document, and Next's client navigation keeps the first document's: a visitor who
-// opens the homepage and follows a link to the collection keeps the homepage's policy. So while voice onboarding is on,
-// this site's own pages may ask for the microphone everywhere (the browser still asks the owner); other origins never
-// may, and with voice off the microphone stays blocked as before. Only the walkthrough asks for it.
+// The pages that hold the walkthrough. Only they may use the microphone, and only while voice onboarding is on.
+// Permissions-Policy belongs to the document, and Next's client navigation keeps the first document's, so opening rapid
+// fire reloads the page (rapidFireUrl in src/client/rapid-fire.ts): the new document carries this policy (owner
+// decision, 2026-11-19: "Reload on open").
+export const VOICE_PAGES = ["/app/collection", "/onboarding"] as const;
 const PERMISSIONS = (microphone: string) => `camera=(), microphone=${microphone}, geolocation=(), payment=()`;
 
 export function securityHeaderRules(env: { publishableKey?: string; development: boolean; voice?: boolean }): HeaderRule[] {
@@ -77,7 +78,7 @@ export function securityHeaderRules(env: { publishableKey?: string; development:
       headers: [
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        { key: "Permissions-Policy", value: PERMISSIONS(env.voice ? "(self)" : "()") },
+        { key: "Permissions-Policy", value: PERMISSIONS("()") },
         { key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicyReportOnly({
           clerkHost: clerkFrontendApiHost(env.publishableKey), development: env.development, voice: env.voice,
         }) },
@@ -85,5 +86,7 @@ export function securityHeaderRules(env: { publishableKey?: string; development:
       ],
     },
     ...["/app/:path*", "/sign-in/:path*", "/sign-up/:path*"].map(source => ({ source, headers: noFraming })),
+    // Later rules win for the same key, so this replaces the site-wide policy on these pages only.
+    ...(env.voice ? VOICE_PAGES.map(source => ({ source, headers: [{ key: "Permissions-Policy", value: PERMISSIONS("(self)") }] })) : []),
   ];
 }

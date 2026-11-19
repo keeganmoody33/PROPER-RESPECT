@@ -89,12 +89,15 @@ describe("next.config headers", () => {
     }
   });
 
-  it("lets this site's own pages use the microphone only while voice onboarding is on", async () => {
+  it("lets the walkthrough pages use the microphone only while voice onboarding is on", async () => {
     vi.stubEnv("VOICE_ONBOARDING", "1");
     vi.stubEnv("OPENAI_API_KEY", "sk-test-synthetic");
-    // Every page, because a client navigation from the homepage to the collection keeps the homepage's policy.
-    for (const path of ["/", "/keegan", "/app/collection", "/onboarding", "/about/privacy"]) {
+    for (const path of ["/app/collection", "/onboarding"]) {
       expect((await headersFor(path))["Permissions-Policy"]).toBe("camera=(), microphone=(self), geolocation=(), payment=()");
+    }
+    // Opening rapid fire reloads the page, so no other page needs the microphone.
+    for (const path of ["/", "/keegan", "/app/collection/other", "/about/privacy"]) {
+      expect((await headersFor(path))["Permissions-Policy"]).toBe("camera=(), microphone=(), geolocation=(), payment=()");
     }
     expect((await headersFor("/app/collection"))["Content-Security-Policy-Report-Only"]).toContain("https://api.openai.com");
     vi.stubEnv("OPENAI_API_KEY", "");

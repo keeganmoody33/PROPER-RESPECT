@@ -20,6 +20,7 @@ import {
   startSession, walkthroughLine, walkthroughQueue, walkthroughReason, walkthroughSave,
   type WalkthroughAnswer, type WalkthroughCard, type WalkthroughChoice, type WalkthroughItem, type WalkthroughOutcome, type WalkthroughSession,
 } from "@/src/client/walkthrough";
+import { rapidFireUrl, withoutRapidFire } from "@/src/client/rapid-fire";
 import { RapidFire } from "./rapid-fire";
 import { StartDateInput } from "./start-date-input";
 import styles from "./walkthrough.module.css";
@@ -232,6 +233,8 @@ export function Walkthrough({ cards, collection = "read", voice = false }: {
   const [stored, setSession] = useState<WalkthroughSession | null>(null);
   const [removed, setRemoved] = useState<string[]>([]);
   const [rapid, setRapid] = useState(false);
+  // The walkthrough mounts only in the browser (after sign-in), so the address can be read on the first render.
+  const [pendingRapid, setPendingRapid] = useState(() => typeof window !== "undefined" && withoutRapidFire(window.location.href) !== undefined);
   // A product is asked about once, and whether it still needs an answer can depend on a record on a later page. So the
   // walk is offered only when the whole collection has been read. While later pages are on their way the section is
   // already here, saying so: "Next: go through your tools" points at it, and a new pick lands on the last page.
@@ -239,6 +242,18 @@ export function Walkthrough({ cards, collection = "read", voice = false }: {
   // Rapid fire answers from a snapshot of the queue, so cards it has just saved don't vanish under it.
   const [rapidQueue, setRapidQueue] = useState<readonly WalkthroughItem[]>([]);
   const reading = !session && collection === "reading";
+  // Opening rapid fire reloads the page so it carries the microphone policy. The reload opens it once the whole queue is
+  // here (state adjusted during render, as React's docs show), then takes the flag off the address.
+  if (pendingRapid && voice && !rapid && collection === "read" && queue.length > 0) {
+    setPendingRapid(false);
+    setRemoved([]);
+    setRapidQueue(queue);
+    setRapid(true);
+  }
+  useEffect(() => {
+    const rest = rapid ? withoutRapidFire(window.location.href) : undefined;
+    if (rest !== undefined) window.history.replaceState(window.history.state, "", rest);
+  }, [rapid]);
   if (!rapid && !session && !reading && (queue.length === 0 || collection !== "read")) return null;
   const current = session && currentTool(session, queue);
 
@@ -262,7 +277,7 @@ export function Walkthrough({ cards, collection = "read", voice = false }: {
       <p className={styles.lede}>{queue.length === 1 ? "1 tool is" : `${queue.length} tools are`} waiting for your answer. One tool per screen: how you use it, what you use it for, and the line on its card. Each answer saves privately as you go.</p>
       <div className={styles.actions}>
         <button type="button" className="primary-action" onClick={() => { setRemoved([]); setSession(startSession(queue)); }}>Go through your tools one at a time</button>
-        {voice && <button type="button" className="secondary-action" onClick={() => { setRemoved([]); setRapidQueue(queue); setRapid(true); }}>Rapid fire by voice</button>}
+        {voice && <button type="button" className="secondary-action" onClick={() => window.location.assign(rapidFireUrl(window.location.href))}>Rapid fire by voice</button>}
       </div>
     </>}
     {session && current && <ToolScreen key={current.propId} item={current} progress={progressLine(session, queue)}

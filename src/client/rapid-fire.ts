@@ -8,6 +8,28 @@ import { initialAnswer, keptNote, walkthroughSave, type WalkthroughAnswer, type 
 // the card privately in the background; a check screen at the end lets the owner fix anything; publishing and removal
 // stay taps. Everything here is pure, so voice and taps reach the same answers.
 
+/** The query flag a reload carries to open rapid fire once the collection has loaded. */
+export const RAPID_FIRE_PARAM = "rapid";
+
+/**
+ * Where opening rapid fire goes: this same page, reloaded. A browser keeps the first document's microphone policy
+ * across client navigation, so only a fresh load of the walkthrough page gets the one that lets it ask for the mic.
+ */
+export function rapidFireUrl(href: string): string {
+  const url = new URL(href);
+  url.searchParams.set(RAPID_FIRE_PARAM, "1");
+  url.hash = "walkthrough";
+  return url.toString();
+}
+
+/** The address with the flag taken off, once rapid fire has opened, so a later reload doesn't open it again. */
+export function withoutRapidFire(href: string): string | undefined {
+  const url = new URL(href);
+  if (url.searchParams.get(RAPID_FIRE_PARAM) !== "1") return undefined;
+  url.searchParams.delete(RAPID_FIRE_PARAM);
+  return url.toString();
+}
+
 /** The walkthrough's answer plus what the owner said about the tool, kept in their own words. */
 export type RapidFireAnswer = WalkthroughAnswer & Readonly<{ comment: string }>;
 
