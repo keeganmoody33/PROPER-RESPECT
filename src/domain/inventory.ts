@@ -3,11 +3,9 @@ import { isHttpsUrl } from "./http-url.ts";
 import { productUsesSchema } from "./product-uses.ts";
 import { creditInputSchema } from "./props-credit.ts";
 import { levelMatchesStatus, relationshipLevelSchema } from "./relationship-level.ts";
+import { startDateSchema } from "./start-date.ts";
 
-const optionalDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
-  const parsed = new Date(`${value}T00:00:00Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-}, "Use a real calendar date, or leave it unknown.").optional();
+const optionalDate = startDateSchema.optional();
 
 export const relationshipEditSchema = z.object({
   status: z.enum(["ACTIVE", "TESTING", "ARCHIVED"]),

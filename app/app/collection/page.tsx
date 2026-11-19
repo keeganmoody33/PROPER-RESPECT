@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { OnboardingClient } from "@/components/onboarding-client";
 import { publicSiteOrigin } from "@/src/server/public-site";
+import { voiceOnboardingEnabled } from "@/src/server/voice-onboarding";
 
 export const metadata = { robots: { index: false, follow: false } };
 
@@ -25,5 +26,5 @@ export default function CollectionPage() {
     );
   }
 
-  return <OnboardingClient publicOrigin={publicSiteOrigin().origin} />;
+  return <OnboardingClient publicOrigin={publicSiteOrigin().origin} voice={voiceOnboardingEnabled()} />;
 }

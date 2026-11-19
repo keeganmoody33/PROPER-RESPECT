@@ -8,6 +8,7 @@ import { productBrandSnapshotSchema } from "./product-brand";
 import { relationshipLevelSchema, type RelationshipLevel } from "./relationship-level";
 import { listedUses, productUsesSchema, type ProductUses } from "./product-uses";
 import { handleSchema } from "./handle.ts";
+import { startDateSchema } from "./start-date.ts";
 import { listedCredit, propsCreditSchema, type PropsCredit } from "./props-credit.ts";
 
 export { handleSchema };
@@ -169,7 +170,8 @@ export const publicProfileSchema = z.object({
       // Who put the owner on the product. A credit that no longer fits its platform's rule is dropped, not a reason to refuse the page.
       credit: propsCreditSchema.optional().catch(undefined),
       note: z.string(),
-      startedAt: z.iso.date().optional(),
+      // A calendar date, or just a year when that is all the owner gave.
+      startedAt: startDateSchema.optional(),
       activity: activityModuleSchema.optional(),
       measurements: z.array(publicMeasurementSchema).max(24).optional(),
       cost: costSchema.optional(),
