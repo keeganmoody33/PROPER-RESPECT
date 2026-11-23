@@ -36,12 +36,15 @@ jobs:
       - run: npx playwright install chromium
       - run: npx playwright test --config playwright.codex-connection.config.ts
       - name: Retain synthetic connection browser proof
-        if: always()
+        # Saved only when a test fails, so passing runs use no artifact storage. An upload
+        # failure (such as a full storage quota) is reported but does not fail the job.
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: codex-connection-browser-proof
           path: test-results/codex-connection/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
   public-mcp-prototype:
     name: Local public MCP prototype
@@ -95,7 +98,10 @@ jobs:
       - run: npx playwright install chromium
       - run: npx playwright test --config tests/e2e/components.config.ts
       - name: Retain synthetic first-result browser proof
-        if: always()
+        # Saved only when a test fails, so passing runs use no artifact storage. An upload
+        # failure (such as a full storage quota) is reported but does not fail the job.
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: first-result-browser-proof
@@ -103,7 +109,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - name: Retain synthetic GitHub consent browser proof
-        if: always()
+        # Saved only when a test fails, so passing runs use no artifact storage. An upload
+        # failure (such as a full storage quota) is reported but does not fail the job.
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: github-consent-browser-proof

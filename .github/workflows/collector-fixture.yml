@@ -46,12 +46,15 @@ jobs:
       - name: Verify synthetic approval and private results on desktop and mobile
         run: npx playwright test --config tests/collector-browser/playwright.config.ts
       - name: Retain synthetic browser evidence
-        if: always()
+        # Saved only when a test fails, so passing runs use no artifact storage. An upload
+        # failure (such as a full storage quota) is reported but does not fail the job.
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: durable-collector-fixture-proof
           path: |
             tests/collector-browser/screenshots/
             tests/collector-browser/artifacts/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
