@@ -8,10 +8,19 @@ permissions:
 concurrency:
   group: verify-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+# Jobs run on Blacksmith runners (docs.blacksmith.sh/blacksmith-runners/overview).
+# ubuntu-2604 matches the ubuntu-26.04 image ubuntu-latest gave these jobs. The heavy
+# jobs take 4 vCPU, the size GitHub gives public repositories; the two short jobs take 2.
+# setup-node's npm cache goes to Blacksmith's cache with no change here.
+# The Blacksmith GitHub app is installed on the lecturesfrom organization, which owns this repository.
+# Playwright installs browsers without --with-deps: that flag runs apt-get update, and on Blacksmith's
+# 26.04 image the Ubuntu archives answered so slowly that every job hit its timeout in that step
+# (run 45156536006). This relies on the image carrying the browser libraries. If one is missing, the
+# browser launch fails with Playwright's "missing dependencies" error rather than passing quietly.
 jobs:
   codex-connection-prototype:
     name: Synthetic Codex connection
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 10
     env:
       NEXT_TELEMETRY_DISABLED: '1'
@@ -24,19 +33,22 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npx playwright test --config playwright.codex-connection.config.ts
       - name: Retain synthetic connection browser proof
-        if: always()
+        # Saved only when a test fails, so passing runs use no artifact storage. An upload
+        # failure (such as a full storage quota) is reported but does not fail the job.
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: codex-connection-browser-proof
           path: test-results/codex-connection/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
   public-mcp-prototype:
     name: Local public MCP prototype
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -55,10 +67,10 @@ jobs:
       - run: npm --prefix prototypes/public-mcp run lint
       - run: npm --prefix prototypes/public-mcp run build
       - run: npm --prefix prototypes/public-mcp test
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npm --prefix prototypes/public-mcp run test:e2e
   verify:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 15
     env:
       # Synthetic build configuration. No deployment or owner credentials are used.
@@ -83,10 +95,13 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npx playwright test --config tests/e2e/components.config.ts
       - name: Retain synthetic first-result browser proof
-        if: always()
+        # Saved only when a test fails, so passing runs use no artifact storage. An upload
+        # failure (such as a full storage quota) is reported but does not fail the job.
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: first-result-browser-proof
@@ -94,7 +109,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
       - name: Retain synthetic GitHub consent browser proof
-        if: always()
+        # Saved only when a test fails, so passing runs use no artifact storage. An upload
+        # failure (such as a full storage quota) is reported but does not fail the job.
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: github-consent-browser-proof
@@ -104,7 +122,7 @@ jobs:
   browser:
     # Split from verify so each fits its 15 minutes. Every check here starts its own dev server or
     # production build, so none needs the build verify makes.
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 15
     env:
       # Synthetic build configuration. No deployment or owner credentials are used.
@@ -121,7 +139,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npx playwright test --config tests/e2e/cursor-environment.config.ts
       - run: npx playwright test --config playwright.usage-preview.config.ts
       - run: npx playwright test --config tests/e2e/trust-preview.config.ts
@@ -137,14 +155,15 @@ jobs:
           npm run build -- --webpack
           npx playwright test --config tests/e2e/markdown-negotiation.config.ts
   browser-specs:
-    # The default config's spec list ran past browser's 15 minutes on CI, so it runs here in two halves at once.
-    name: browser-specs (${{ matrix.shard }}/2)
-    runs-on: ubuntu-latest
+    # The default config's spec list ran past browser's 15 minutes on CI, so it runs here in thirds at once.
+    # With two halves, shard 2 ran its tests for about 228s against shard 1's 108s and held up every run.
+    name: browser-specs (${{ matrix.shard }}/3)
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     env:
       # Synthetic build configuration. No deployment or owner credentials are used.
       NEXT_PUBLIC_CONVEX_URL: https://example.convex.cloud
@@ -160,11 +179,11 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npx playwright test --shard=${{ matrix.shard }}/2 tests/e2e/public-metadata.spec.ts tests/e2e/homepage.spec.ts tests/e2e/public-profile.spec.ts tests/e2e/product-icons.spec.ts tests/e2e/usage-examples.spec.ts tests/e2e/discovery.spec.ts tests/e2e/webmcp-contract.spec.ts tests/e2e/trust-pages.spec.ts tests/e2e/site-frame.spec.ts tests/e2e/site-identity.spec.ts tests/e2e/inventory.spec.ts tests/e2e/security-headers.spec.ts tests/e2e/usage-chart-skeleton.spec.ts
+      - run: npx playwright install chromium
+      - run: npx playwright test --shard=${{ matrix.shard }}/3 tests/e2e/public-metadata.spec.ts tests/e2e/homepage.spec.ts tests/e2e/public-profile.spec.ts tests/e2e/product-icons.spec.ts tests/e2e/usage-examples.spec.ts tests/e2e/discovery.spec.ts tests/e2e/webmcp-contract.spec.ts tests/e2e/trust-pages.spec.ts tests/e2e/site-frame.spec.ts tests/e2e/site-identity.spec.ts tests/e2e/inventory.spec.ts tests/e2e/security-headers.spec.ts tests/e2e/usage-chart-skeleton.spec.ts
   native-webmcp:
     name: Native Chrome WebMCP
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: '1'
@@ -177,5 +196,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chrome
+      # Current stable Chrome from Google's package, put in place with dpkg. `playwright install chrome`
+      # runs apt-get update first, which hung this job for 15 minutes on Blacksmith (run 45159219203).
+      # dpkg fails loudly if a library Chrome needs is missing.
+      - name: Install current stable Chrome
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/google-chrome.deb" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i "$RUNNER_TEMP/google-chrome.deb"
+          google-chrome --version
       - run: npx playwright test --config tests/native-webmcp/config.ts

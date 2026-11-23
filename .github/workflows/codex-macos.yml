@@ -76,10 +76,13 @@ jobs:
       - name: Run native acquisition and durable sync against synthetic sources
         run: npx vitest run src/local/codex-rollout-native.test.ts src/local/codex-rollout-history.test.ts tests/support/codex-history-cli.test.ts src/domain/collector-contract.test.ts src/local/collector-private-store.test.ts src/local/collector-companion.test.ts src/local/collector-service.test.ts src/local/collector-fixture-http.test.ts src/local/cursor-report-adapter.test.ts tests/support/collector-fixture-cli.test.ts --maxWorkers=2 --reporter=default --reporter=github-actions --reporter=junit --outputFile.junit=test-results/codex-macos/junit.xml
       - name: Retain macOS acquisition evidence
-        if: always()
+        # Saved only when a test fails, so passing runs use no artifact storage. An upload
+        # failure (such as a full storage quota) is reported but does not fail the job.
+        if: failure()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: codex-macos-acquisition-proof
           path: test-results/codex-macos/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
