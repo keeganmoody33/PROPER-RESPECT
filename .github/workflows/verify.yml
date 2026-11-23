@@ -13,6 +13,10 @@ concurrency:
 # jobs take 4 vCPU, the size GitHub gives public repositories; the two short jobs take 2.
 # setup-node's npm cache goes to Blacksmith's cache with no change here.
 # The Blacksmith GitHub app is installed on the lecturesfrom organization, which owns this repository.
+# Playwright installs browsers without --with-deps: that flag runs apt-get update, and on Blacksmith's
+# 26.04 image the Ubuntu archives answered so slowly that every job hit its timeout in that step
+# (run 45156536006). This relies on the image carrying the browser libraries. If one is missing, the
+# browser launch fails with Playwright's "missing dependencies" error rather than passing quietly.
 jobs:
   codex-connection-prototype:
     name: Synthetic Codex connection
@@ -29,7 +33,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npx playwright test --config playwright.codex-connection.config.ts
       - name: Retain synthetic connection browser proof
         if: always()
@@ -60,7 +64,7 @@ jobs:
       - run: npm --prefix prototypes/public-mcp run lint
       - run: npm --prefix prototypes/public-mcp run build
       - run: npm --prefix prototypes/public-mcp test
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npm --prefix prototypes/public-mcp run test:e2e
   verify:
     runs-on: blacksmith-4vcpu-ubuntu-2604
@@ -88,7 +92,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npx playwright test --config tests/e2e/components.config.ts
       - name: Retain synthetic first-result browser proof
         if: always()
@@ -126,7 +130,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npx playwright test --config tests/e2e/cursor-environment.config.ts
       - run: npx playwright test --config playwright.usage-preview.config.ts
       - run: npx playwright test --config tests/e2e/trust-preview.config.ts
@@ -166,7 +170,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install chromium
       - run: npx playwright test --shard=${{ matrix.shard }}/3 tests/e2e/public-metadata.spec.ts tests/e2e/homepage.spec.ts tests/e2e/public-profile.spec.ts tests/e2e/product-icons.spec.ts tests/e2e/usage-examples.spec.ts tests/e2e/discovery.spec.ts tests/e2e/webmcp-contract.spec.ts tests/e2e/trust-pages.spec.ts tests/e2e/site-frame.spec.ts tests/e2e/site-identity.spec.ts tests/e2e/inventory.spec.ts tests/e2e/security-headers.spec.ts tests/e2e/usage-chart-skeleton.spec.ts
   native-webmcp:
     name: Native Chrome WebMCP
@@ -183,5 +187,5 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chrome
+      - run: npx playwright install chrome
       - run: npx playwright test --config tests/native-webmcp/config.ts
