@@ -84,7 +84,7 @@ and frontend second.
 ## Final review finding — confirmed, not waived
 
 After final-head CI run `35519114748` passed on `838f662964a6229e4146d105d8ca924184686a9a`,
-Devin's new review raised [historical-account precedence](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22#discussion_r4057273533)
+Devin's new review raised [historical-account precedence](https://github.com/lecturesfrom/PROPER-RESPECT/pull/22#discussion_r4057273533)
 as well as the already recorded 200-proof bound. The precedence finding is real:
 
 - Extend the existing later-proof fixture with a CONNECTED GitHub connector

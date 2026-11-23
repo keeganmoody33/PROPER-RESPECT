@@ -1,10 +1,10 @@
 # Cursor continuation: Proper Respect
 
-Updated: 2026-09-23. Canonical remote: https://github.com/keeganmoody33/PROPER-RESPECT.
+Updated: 2026-09-23. Canonical remote: https://github.com/lecturesfrom/PROPER-RESPECT.
 
 ## Current checkpoint
 
-Continue from the accepted work and [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24).
+Continue from the accepted work and [release gaps #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24).
 Main includes PRs #25–64. Runtime changes from PRs #52, #58, #60, and #64
 remain excluded from production.
 The backend and frontend have distinct accepted commits. Read the
@@ -76,7 +76,7 @@ original verification receipts remain unchanged; current release status is above
 ### PR #22 GitHub lookup correction, September 20, 2026
 
 The owner authorized the Devin findings on
-[PR #22](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22) with review body
+[PR #22](https://github.com/lecturesfrom/PROPER-RESPECT/pull/22) with review body
 “Devin fixes”. GitHub private-card lookup now prefers a CONNECTED connector
 account over historical proofs, and GitHub cards scan the newest 200 proofs
 instead of the oldest 200. Owner-selected non-homepage links and publication
@@ -92,7 +92,7 @@ include the correction. This history does not authorize a new synchronization. S
 
 ### Upload replay issuer binding, September 20, 2026
 
-[Issue #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) first
+[Issue #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24) first
 item: verified `retainUpload` replay now requires the current
 `tokenIdentifier` to match stored `uploadAttribution`. Legacy rows without
 attribution still replay for the same owner. Merged to `main` as

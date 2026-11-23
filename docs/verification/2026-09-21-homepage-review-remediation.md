@@ -1,6 +1,6 @@
 # Homepage review remediation — 2026-09-21 UTC
 
-Reviewed PR: https://github.com/keeganmoody33/PROPER-RESPECT/pull/35
+Reviewed PR: https://github.com/lecturesfrom/PROPER-RESPECT/pull/35
 Reviewed head: `87d22a2084a8fe6109e93f22da5178e59504bea2`.
 
 - Copilot `4059010404` / `PRRT_kwDOSyRAjs6kOV8m`: confirmed. Activating the skip link did not focus the main region. Added `tabIndex={-1}` to the main target. The browser test now activates the link, verifies focus on main, then tabs directly to the first collection entry link.

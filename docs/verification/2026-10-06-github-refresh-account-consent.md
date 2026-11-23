@@ -101,12 +101,12 @@ artificial `/tmp/.git` sentinel in synthetic file-isolation tests.
 
 ## Issue #123 remains unproved at the provider boundary
 
-[Issue #123](https://github.com/keeganmoody33/PROPER-RESPECT/issues/123) began with
+[Issue #123](https://github.com/lecturesfrom/PROPER-RESPECT/issues/123) began with
 `BAD_CONFIGURATION` and an empty receipt handle. Later comments show a September
 30 GitHub capture remaining stale through October 5. Those later failures do not
 establish a credential, HTTP, GraphQL or parser cause.
 
-[PR #142](https://github.com/keeganmoody33/PROPER-RESPECT/pull/142) records that the
+[PR #142](https://github.com/lecturesfrom/PROPER-RESPECT/pull/142) records that the
 October 1 refresh reached its approved relationship and logged
 `PROVIDER_UNAVAILABLE`. It added sanitized diagnostic categories because the old
 catch discarded the narrower cause. The PR and issue contain no later runtime

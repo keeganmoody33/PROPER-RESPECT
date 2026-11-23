@@ -102,7 +102,7 @@ No deployment, account read, publication, external directory submission, busines
 
 Inspected head: `000c886e052aa87c98b0b5d8ac7917cd7253e05c`.
 
-- [Copilot receipt path finding](https://github.com/keeganmoody33/PROPER-RESPECT/pull/44#discussion_r4065655420): fix now. Replace the private machine path with a generic private-evidence reference; preserve the originals outside Git.
-- [Copilot decision-record path finding](https://github.com/keeganmoody33/PROPER-RESPECT/pull/44#discussion_r4065655357): fix now. Replace absolute paths with public repository-relative evidence or generic private artifact names.
+- [Copilot receipt path finding](https://github.com/lecturesfrom/PROPER-RESPECT/pull/44#discussion_r4065655420): fix now. Replace the private machine path with a generic private-evidence reference; preserve the originals outside Git.
+- [Copilot decision-record path finding](https://github.com/lecturesfrom/PROPER-RESPECT/pull/44#discussion_r4065655357): fix now. Replace absolute paths with public repository-relative evidence or generic private artifact names.
 
 Validation: the pre-fix receipt and decision records contain absolute private filesystem paths. After remediation, both files pass the absolute-private-path scan and `git diff --check`. These are documentation-only changes; application behavior is unchanged. Earlier commit history still contains the original paths; this correction does not rewrite history.

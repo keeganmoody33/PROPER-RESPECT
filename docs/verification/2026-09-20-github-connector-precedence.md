@@ -2,11 +2,11 @@
 
 Date: 2026-09-20. Branch: `cursor/github-card-account-destination-7318`.
 Parent: `e4a6ac8e15b470127432b7e9d6401b6edaced9d3` on
-[PR #22](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22).
+[PR #22](https://github.com/lecturesfrom/PROPER-RESPECT/pull/22).
 Owner authorization: PR review body “Devin fixes” covering
-[stale proof vs connector](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22#discussion_r4057273533)
+[stale proof vs connector](https://github.com/lecturesfrom/PROPER-RESPECT/pull/22#discussion_r4057273533)
 and
-[200 total-proof prefix](https://github.com/keeganmoody33/PROPER-RESPECT/pull/22#discussion_r4057273504).
+[200 total-proof prefix](https://github.com/lecturesfrom/PROPER-RESPECT/pull/22#discussion_r4057273504).
 This receipt is not merge, deploy, Convex sync, or GitHub-thread resolution.
 
 ## Reproduced defect

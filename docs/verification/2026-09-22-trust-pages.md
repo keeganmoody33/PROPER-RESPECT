@@ -43,7 +43,7 @@ PStack applied **Model the Domain** to share HTML/Markdown facts without inventi
 
 ## PR 48 native navigation correction
 
-Reviewed PR head `38e929d523b2bf7132a2ffa01e551805eb23724f`. The application verification job passed, but [Native Chrome WebMCP run 35738390929](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/35738390929/job/106781428466) passed seven checks and failed the eighth. Chrome installed and executed successfully. The lifecycle test still waited for the removed placeholder heading, `Where it comes from.`, after navigating to Origins. This is a stale assertion from the trust-page change, not a browser download failure or evidence of a registration regression.
+Reviewed PR head `38e929d523b2bf7132a2ffa01e551805eb23724f`. The application verification job passed, but [Native Chrome WebMCP run 35738390929](https://github.com/lecturesfrom/PROPER-RESPECT/actions/runs/35738390929/job/106781428466) passed seven checks and failed the eighth. Chrome installed and executed successfully. The lifecycle test still waited for the removed placeholder heading, `Where it comes from.`, after navigating to Origins. This is a stale assertion from the trust-page change, not a browser download failure or evidence of a registration regression.
 
 Disposition: **fix now**. Update only that heading expectation to `Giving credit its context`. Keep the same-document sentinel, empty registration list, stale-handle rejection, return navigation and single-tool remount assertions intact.
 

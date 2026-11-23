@@ -127,7 +127,7 @@ startup-services-not-contained
 account-selection-unproved
 ```
 
-Source: [native adapter](https://github.com/keeganmoody33/PROPER-RESPECT/blob/c002560f209174728b9b138a529f814c94e33872/src/local/codex-native-adapter.ts#L19-L24).
+Source: [native adapter](https://github.com/lecturesfrom/PROPER-RESPECT/blob/c002560f209174728b9b138a529f814c94e33872/src/local/codex-native-adapter.ts#L19-L24).
 
 Quota percentages measure a quota window. Account token counts measure token
 activity. Neither alone establishes USD paid. The existing Codex card projects
@@ -167,7 +167,7 @@ See the exact [adapter contract](verification/2026-09-24-claude-native-metrics-a
 
 No automatic AI usage collector is enabled by these parsers or imports. PostHog
 measures Proper Respect application traffic; it supplies no Codex or Claude token
-source. Daily GitHub refresh is a separate connection; [#150](https://github.com/keeganmoody33/PROPER-RESPECT/pull/150) handles account-bound consent. Actual
+source. Daily GitHub refresh is a separate connection; [#150](https://github.com/lecturesfrom/PROPER-RESPECT/pull/150) handles account-bound consent. Actual
 billed charges need billing evidence separate from token observations or estimates.
 
 ## Local Codex rollout collection

@@ -1,6 +1,6 @@
 # Release CLI reconciliation — 2026-10-06
 
-Source: [PR #134](https://github.com/keeganmoody33/PROPER-RESPECT/pull/134), head `6560f383b5a33fd28e4a09fe30215a030ced2a2f`.
+Source: [PR #134](https://github.com/lecturesfrom/PROPER-RESPECT/pull/134), head `6560f383b5a33fd28e4a09fe30215a030ced2a2f`.
 Current base: `258660ce212ed50623ff2b93765f7cf8d327dff6`.
 Ref: https://plan.ref.tools/oLGxQYBMTcFHrrvg.
 

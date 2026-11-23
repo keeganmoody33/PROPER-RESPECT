@@ -1,6 +1,6 @@
 # Main consolidation and Cursor readiness
 
-Date: 2026-09-18. Repository: `keeganmoody33/PROPER-RESPECT` (public).
+Date: 2026-09-18. Repository: `lecturesfrom/PROPER-RESPECT` (public).
 Audit baseline: accepted `b2e9e62bb7d29eb472167021120d7a73a5ad45d3`,
 remote main `4bc8cc81d90be9c5520cae4675573da5bce70e09`.
 
@@ -13,10 +13,10 @@ main checkout's 87 untracked tooling/guidance files; those remain untouched.
 
 | Open PR at audit | Finding | Disposition after consolidation |
 | --- | --- | --- |
-| [#19](https://github.com/keeganmoody33/PROPER-RESPECT/pull/19) | Exact unique-card-key fix is already an ancestor of accepted HEAD; targets an obsolete feature base | Close as incorporated |
-| [#18](https://github.com/keeganmoody33/PROPER-RESPECT/pull/18) | Its Next/sharp upgrades still leave current advisories | Superseded by the verified current lockfile repair |
-| [#17](https://github.com/keeganmoody33/PROPER-RESPECT/pull/17) | Old card layout/seed conflict with accepted product work | Preserve canonical/OpenGraph origin follow-up in hosted release; broader local-env ignore is included here; retire old implementation proposal |
-| [#3](https://github.com/keeganmoody33/PROPER-RESPECT/pull/3) | Independent optional skill bundle, not adopted; historical review failure | Retire optional proposal; keep current AGENTS/CE workflow |
+| [#19](https://github.com/lecturesfrom/PROPER-RESPECT/pull/19) | Exact unique-card-key fix is already an ancestor of accepted HEAD; targets an obsolete feature base | Close as incorporated |
+| [#18](https://github.com/lecturesfrom/PROPER-RESPECT/pull/18) | Its Next/sharp upgrades still leave current advisories | Superseded by the verified current lockfile repair |
+| [#17](https://github.com/lecturesfrom/PROPER-RESPECT/pull/17) | Old card layout/seed conflict with accepted product work | Preserve canonical/OpenGraph origin follow-up in hosted release; broader local-env ignore is included here; retire old implementation proposal |
+| [#3](https://github.com/lecturesfrom/PROPER-RESPECT/pull/3) | Independent optional skill bundle, not adopted; historical review failure | Retire optional proposal; keep current AGENTS/CE workflow |
 
 Keep the distinct prototype `b19ab3ea7b2c69ab5bdf7bc1089241ed94118b6e`
 and completed Composio experiment `b562bf0a6d6f296a62f2d1a5ea827e985f1177b3`.

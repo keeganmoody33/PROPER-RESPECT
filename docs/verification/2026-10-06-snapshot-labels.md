@@ -1,6 +1,6 @@
 # Snapshot-label reconciliation — 2026-10-06
 
-Source proposal: [PR #118](https://github.com/keeganmoody33/PROPER-RESPECT/pull/118), original head `5aaa72c61806383b9dc59772c764e00d7c8419f7`.
+Source proposal: [PR #118](https://github.com/lecturesfrom/PROPER-RESPECT/pull/118), original head `5aaa72c61806383b9dc59772c764e00d7c8419f7`.
 Current base: `258660ce212ed50623ff2b93765f7cf8d327dff6`.
 Reconciled source commit: `90b1be0a238b032afee4f9f3a5d47b54cab57548`.
 Ref: https://plan.ref.tools/oLGxQYBMTcFHrrvg.

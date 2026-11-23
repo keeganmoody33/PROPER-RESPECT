@@ -12,7 +12,7 @@ it("links the app and contact page to the same factual creator on the configured
     "@type": "SoftwareApplication",
     name: "Proper Respect",
     url: "https://canonical.example/",
-    sameAs: ["https://github.com/keeganmoody33/PROPER-RESPECT"],
+    sameAs: ["https://github.com/lecturesfrom/PROPER-RESPECT"],
     creator: {
       "@id": "https://canonical.example/about/contact#organization",
       "@type": "Organization",
@@ -75,7 +75,7 @@ it.each(["https://proper-respect.com", "https://canonical.example:8443"])("binds
     identityType: "https",
     provenance: [{
       relation: "publishedFrom",
-      sourceId: "https://github.com/keeganmoody33/PROPER-RESPECT",
+      sourceId: "https://github.com/lecturesfrom/PROPER-RESPECT",
     }],
   });
   expect(JSON.stringify(entry)).not.toContain("untrusted-");

@@ -38,7 +38,7 @@ the exact release run. September 23 held-release notes describe historical
 state, not the current release. New measurement work still needs review and a
 separately authorized release.
 
-[Release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24)
+[Release gaps #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24)
 remains the acceptance and bug queue. Completed Tasks 1–4, private evidence, and
 source checkpoints remain intact; no seed reruns or automatic owner transfer.
 
@@ -68,7 +68,7 @@ keep work context private by default, and preserve historical claims when source
 access stops. New source reads, recurrence, transfer, deployment and publication
 retain separate authorization gates.
 
-Owner-specific custom-domain routing remains the separate [custom-domain milestone #13](https://github.com/keeganmoody33/PROPER-RESPECT/issues/13),
+Owner-specific custom-domain routing remains the separate [custom-domain milestone #13](https://github.com/lecturesfrom/PROPER-RESPECT/issues/13),
 which is **Later** (brief Section 3), not a prerequisite for path-based profiles. All historical products, every
 connector, production Composio replacement, prototype A/B selection and perfect
 styling are not launch prerequisites. No new ADRs or parallel planning program;

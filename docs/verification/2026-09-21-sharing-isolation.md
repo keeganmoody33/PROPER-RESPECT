@@ -67,7 +67,7 @@ administrators. An independent API readback confirmed each value. No required
 reviewer count was added. These repository settings are separate from this test PR.
 
 Both jobs passed on exact merged main in
-[run 35635690707](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/35635690707).
+[run 35635690707](https://github.com/lecturesfrom/PROPER-RESPECT/actions/runs/35635690707).
 Raw before/request/readback JSON and local test logs are retained in the private
 September 21 CI-readiness receipt directory. No failing merge was attempted.
 
@@ -88,7 +88,7 @@ and query, and reached the canonical profile with 200 after one redirect. This
 proves public-link continuity, not authenticated old-host rollback. `/robots.txt`
 still returned 404.
 
-The release queue remains [issue 24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24).
+The release queue remains [issue 24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24).
 Fresh-user signup, first saved card across a real new session, exact sharing preview,
 and two-user hosted acceptance remain open. Private metadata-only usage import and
 provider lifecycle verification remain separate gates. The owner has no second

@@ -2,8 +2,8 @@
 
 Date: 2026-09-20. Base: `origin/main`
 `4df11b5fd3ff4e4747f61fa2d72998842970fd7b` (merge of PR #22 head `a29ceab`).
-Finding: [PR #23 discussion](https://github.com/keeganmoody33/PROPER-RESPECT/pull/23#discussion_r4055875525),
-queued as the first item of [issue #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24).
+Finding: [PR #23 discussion](https://github.com/lecturesfrom/PROPER-RESPECT/pull/23#discussion_r4055875525),
+queued as the first item of [issue #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24).
 This is a source correction, not upload-boundary production release, Convex
 sync, data transfer or publication.
 

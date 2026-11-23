@@ -1,6 +1,6 @@
 # 003 - Evidence Surfaces
 
-> **Status correction — 2026-09-20:** Current source includes separately authorized Gmail discovery, private uploads and retained review. The old four-page continuation below is historical; both hosted bounded runs and retained-only recheck completed, and further reads remain paused. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
+> **Status correction — 2026-09-20:** Current source includes separately authorized Gmail discovery, private uploads and retained review. The old four-page continuation below is historical; both hosted bounded runs and retained-only recheck completed, and further reads remain paused. See [release gaps #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
 
 > Updated: 2026-09-19. Current source roles and verified implementation limits; Tasks 1–4 and accepted checkpoints stay fixed.
 

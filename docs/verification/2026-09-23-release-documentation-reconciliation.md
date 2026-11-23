@@ -20,10 +20,10 @@ from accepted production:
 
 | PR | Held runtime change |
 | --- | --- |
-| [#52](https://github.com/keeganmoody33/PROPER-RESPECT/pull/52) | Canonical `lecturesfrom` profile, alias, and migration |
-| [#58](https://github.com/keeganmoody33/PROPER-RESPECT/pull/58) | GitHub capture identity, deduplication, and review preservation |
-| [#60](https://github.com/keeganmoody33/PROPER-RESPECT/pull/60) | Validated and bounded GitHub provider adapter |
-| [#64](https://github.com/keeganmoody33/PROPER-RESPECT/pull/64) | Scheduled GitHub authority, fingerprint, and replay guards |
+| [#52](https://github.com/lecturesfrom/PROPER-RESPECT/pull/52) | Canonical `lecturesfrom` profile, alias, and migration |
+| [#58](https://github.com/lecturesfrom/PROPER-RESPECT/pull/58) | GitHub capture identity, deduplication, and review preservation |
+| [#60](https://github.com/lecturesfrom/PROPER-RESPECT/pull/60) | Validated and bounded GitHub provider adapter |
+| [#64](https://github.com/lecturesfrom/PROPER-RESPECT/pull/64) | Scheduled GitHub authority, fingerprint, and replay guards |
 
 PR #49 is a local public-reading prototype. PR #56 is a local parser/CLI. Neither
 is a hosted capability. The audit's per-file matrix retains the remaining PR
@@ -42,7 +42,7 @@ backend's runtime verification comes from the September 23 release receipt.
 
 ## Completed operations and remaining acceptance
 
-[Issue #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24), under
+[Issue #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24), under
 "Scope routing and documentation," records the native app/auth cutover at
 `dbbc42770ea9ad1c70477698b70792c0585d07c7` on September 21. Its exact wording is:
 

@@ -18,7 +18,7 @@ An anonymous GET to
 [`/lecturesfrom`](https://proper-respect.com/lecturesfrom) on 2026-11-17
 returned the owner's page with a GitHub card last captured on 2026-10-09 and
 marked stale. The nightly refresh reaches GitHub and fails there
-([#175](https://github.com/keeganmoody33/PROPER-RESPECT/issues/175)). No
+([#175](https://github.com/lecturesfrom/PROPER-RESPECT/issues/175)). No
 signed-in save, provider read, fresh signup or publication was performed during
 this check.
 
@@ -58,7 +58,7 @@ run `.github/workflows/release.yml` ([deployment runbook](DEPLOYMENT.md),
 ### Historical invited-tester observations, September 27
 
 The [remediation brief](remediation/CODEX-BRIEF.md) and
-[#24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) were the
+[#24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24) were the
 backlog for these observations. This table recorded the mapping at that time.
 
 | Outcome | Status in source | Tasks |
@@ -131,7 +131,7 @@ best effort: failed or interrupted writes can be dropped, and cached totals can
 be delayed. The [shared privacy page](../src/server/trust-pages.ts) describes the
 same boundaries in HTML and Markdown.
 
-The author of [PR #148](https://github.com/keeganmoody33/PROPER-RESPECT/pull/148)
+The author of [PR #148](https://github.com/lecturesfrom/PROPER-RESPECT/pull/148)
 reported that KV was configured in Vercel. That report is unverified: this pass
 has not inspected hosted settings or values, read a production tally, or sent
 requests to the configured store. Source integration does not establish a

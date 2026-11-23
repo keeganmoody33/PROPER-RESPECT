@@ -23,8 +23,8 @@ Delete-original confirmation, retained originals, snapshot removal, work-sample 
 These dispositions were recorded before editing in [the collection reconciliation receipt](../../work/pstack/2026-10-06-collection-reconciliation.md).
 
 - #126 says "Needs a closer look" and "Findings: None." Fix now through desktop and mobile behavior checks and inspection against the Paper exports. The old review does not clear this new head.
-- #127 [focus coverage comment](https://github.com/keeganmoody33/PROPER-RESPECT/pull/127#discussion_r4127379069) says "Compare both normal and focused card appearance in each theme." Fix now with an actual keyboard-focus regression inside the collection and an equivalent card outside it.
-- #127 [QA status comment](https://github.com/keeganmoody33/PROPER-RESPECT/pull/127#discussion_r4127379190) says "Those statuses imply different merge gates; update the PR description or this report so reviewers and automation have one current acceptance state." This dated receipt and its delivering PR replace the old conflicting statements for the new change. The old proposal and its review thread remain preserved for parent disposition.
+- #127 [focus coverage comment](https://github.com/lecturesfrom/PROPER-RESPECT/pull/127#discussion_r4127379069) says "Compare both normal and focused card appearance in each theme." Fix now with an actual keyboard-focus regression inside the collection and an equivalent card outside it.
+- #127 [QA status comment](https://github.com/lecturesfrom/PROPER-RESPECT/pull/127#discussion_r4127379190) says "Those statuses imply different merge gates; update the PR description or this report so reviewers and automation have one current acceptance state." This dated receipt and its delivering PR replace the old conflicting statements for the new change. The old proposal and its review thread remain preserved for parent disposition.
 - #129 has no substantive GitHub review or inline comments. Its new implementation requires fresh review.
 
 ## Local verification

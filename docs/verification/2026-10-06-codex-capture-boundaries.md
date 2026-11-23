@@ -1,29 +1,29 @@
 # Codex capture boundary fixes
 
 Date: 2026-10-06. Base: `main` at `a49a607f98b78aa63612d92ceaf442a811ff170b`.
-Branch: `fix/codex-capture-boundaries`. [PR #156](https://github.com/keeganmoody33/PROPER-RESPECT/pull/156)
-addresses the two post-merge findings on [PR #154](https://github.com/keeganmoody33/PROPER-RESPECT/pull/154)
+Branch: `fix/codex-capture-boundaries`. [PR #156](https://github.com/lecturesfrom/PROPER-RESPECT/pull/156)
+addresses the two post-merge findings on [PR #154](https://github.com/lecturesfrom/PROPER-RESPECT/pull/154)
 and the subsequent clock review below.
 
 ## Review dispositions before implementation
 
-- [Timestamp precision](https://github.com/keeganmoody33/PROPER-RESPECT/pull/154#discussion_r4197886388):
+- [Timestamp precision](https://github.com/lecturesfrom/PROPER-RESPECT/pull/154#discussion_r4197886388):
   **fix now**. Source and retention conversions discard fractions finer than a
   millisecond. That can manufacture same-position conflicts or admit a record
   before a fractional approved start.
-- [Acquisition deadline](https://github.com/keeganmoody33/PROPER-RESPECT/pull/154#discussion_r4197886482):
+- [Acquisition deadline](https://github.com/lecturesfrom/PROPER-RESPECT/pull/154#discussion_r4197886482):
   **fix now**. A delayed timer callback is not an absolute deadline. A late read
   or validation step can currently commit after the five-second limit.
 
 ### Follow-up review on PR #156
 
-- [Wall-clock rollback](https://github.com/keeganmoody33/PROPER-RESPECT/pull/156#discussion_r4198169717):
+- [Wall-clock rollback](https://github.com/lecturesfrom/PROPER-RESPECT/pull/156#discussion_r4198169717):
   **fix now**. The fixed deadline still used wall time. A backward clock change
   during an event-loop stall could admit a result after five elapsed seconds.
   Use an injectable monotonic clock for the read budget, capped by the approval
   time remaining at the start. Keep wall time for absolute approval expiry and
   displayed timestamps, and check both clocks after acquisition and validation.
-- [Stale hosted verification status](https://github.com/keeganmoody33/PROPER-RESPECT/pull/156#discussion_r4198169788):
+- [Stale hosted verification status](https://github.com/lecturesfrom/PROPER-RESPECT/pull/156#discussion_r4198169788):
   **fix now**. Record the successful run for `09d0747` as historical evidence
   and distinguish it from the later clock correction's current-head checks.
 - Independent review of the clock correction found that fractional monotonic
@@ -96,14 +96,14 @@ subsequent PR #156 review identified the rollback gap recorded above.
 
 ### Historical hosted checks for `09d0747`
 
-[Hosted run 37498707458](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37498707458)
+[Hosted run 37498707458](https://github.com/lecturesfrom/PROPER-RESPECT/actions/runs/37498707458)
 passed all four CI jobs for exact head
 `09d07473676bb2897336f626f5f6527f72ed6017`:
 
 - 1,978 Vitest tests passed, with two skips.
 - All 122 Node script tests passed.
 - All eight Codex desktop/mobile browser tests passed.
-- [Browser proof artifact](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37498707458/artifacts/11429196386)
+- [Browser proof artifact](https://github.com/lecturesfrom/PROPER-RESPECT/actions/runs/37498707458/artifacts/11429196386)
   is retained until October 13, 2026.
 
 These results predate the monotonic-clock correction and do not verify later
@@ -127,7 +127,7 @@ correction. After both changes:
   aborts. On-time results committed; exact-deadline and late results rejected.
 
 For hosted results on later revisions, use the
-[current-head checks on PR #156](https://github.com/keeganmoody33/PROPER-RESPECT/pull/156/checks)
+[current-head checks on PR #156](https://github.com/lecturesfrom/PROPER-RESPECT/pull/156/checks)
 and confirm the run's commit matches the PR head. The historical run above is
 evidence only for `09d0747`.
 
