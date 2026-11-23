@@ -187,5 +187,12 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install chrome
+      # Current stable Chrome from Google's package, put in place with dpkg. `playwright install chrome`
+      # runs apt-get update first, which hung this job for 15 minutes on Blacksmith (run 45159219203).
+      # dpkg fails loudly if a library Chrome needs is missing.
+      - name: Install current stable Chrome
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/google-chrome.deb" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i "$RUNNER_TEMP/google-chrome.deb"
+          google-chrome --version
       - run: npx playwright test --config tests/native-webmcp/config.ts
