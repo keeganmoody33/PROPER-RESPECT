@@ -8,10 +8,15 @@ permissions:
 concurrency:
   group: verify-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+# Jobs run on Blacksmith runners (docs.blacksmith.sh/blacksmith-runners/overview).
+# ubuntu-2604 matches the ubuntu-26.04 image ubuntu-latest gave these jobs. The heavy
+# jobs take 4 vCPU, the size GitHub gives public repositories; the two short jobs take 2.
+# setup-node's npm cache goes to Blacksmith's cache with no change here.
+# The Blacksmith GitHub app is installed on the lecturesfrom organization, which owns this repository.
 jobs:
   codex-connection-prototype:
     name: Synthetic Codex connection
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 10
     env:
       NEXT_TELEMETRY_DISABLED: '1'
@@ -36,7 +41,7 @@ jobs:
           retention-days: 7
   public-mcp-prototype:
     name: Local public MCP prototype
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +63,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm --prefix prototypes/public-mcp run test:e2e
   verify:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 15
     env:
       # Synthetic build configuration. No deployment or owner credentials are used.
@@ -104,7 +109,7 @@ jobs:
   browser:
     # Split from verify so each fits its 15 minutes. Every check here starts its own dev server or
     # production build, so none needs the build verify makes.
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 15
     env:
       # Synthetic build configuration. No deployment or owner credentials are used.
@@ -140,7 +145,7 @@ jobs:
     # The default config's spec list ran past browser's 15 minutes on CI, so it runs here in thirds at once.
     # With two halves, shard 2 ran its tests for about 228s against shard 1's 108s and held up every run.
     name: browser-specs (${{ matrix.shard }}/3)
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 15
     strategy:
       fail-fast: false
@@ -165,7 +170,7 @@ jobs:
       - run: npx playwright test --shard=${{ matrix.shard }}/3 tests/e2e/public-metadata.spec.ts tests/e2e/homepage.spec.ts tests/e2e/public-profile.spec.ts tests/e2e/product-icons.spec.ts tests/e2e/usage-examples.spec.ts tests/e2e/discovery.spec.ts tests/e2e/webmcp-contract.spec.ts tests/e2e/trust-pages.spec.ts tests/e2e/site-frame.spec.ts tests/e2e/site-identity.spec.ts tests/e2e/inventory.spec.ts tests/e2e/security-headers.spec.ts tests/e2e/usage-chart-skeleton.spec.ts
   native-webmcp:
     name: Native Chrome WebMCP
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: '1'
