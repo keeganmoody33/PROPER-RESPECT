@@ -142,7 +142,7 @@ The first API-visible macOS compiler receipt, run `37530478445` at commit
 `st_mtimespec` was hidden by the strict POSIX feature namespace. The reader now
 requests Darwin's extension namespace on Apple platforms and retains the POSIX
 namespace on Linux. The corrected workflow, run
-[`37531009381`](https://github.com/keeganmoody33/PROPER-RESPECT/actions/runs/37531009381)
+[`37531009381`](https://github.com/lecturesfrom/PROPER-RESPECT/actions/runs/37531009381)
 at `a6c670b6fc71b418d608c75d612c06112195a701`, succeeded, including compilation
 and the synthetic native/durable test step. That run is Darwin CI evidence for
 this helper; it is not real-Mac acceptance.

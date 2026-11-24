@@ -4,7 +4,7 @@ Branch `feat/cursor-report-adapter` starts at current main
 `6cf026b11499854b53f8aaae01f9a133df7578dd`. The isolated worktree is
 `/workspace/PROPER-RESPECT-cursor`. Delivery is a local commit and a portable
 Git patch. The owner approved code publication on October 7; the isolated branch
-is now published as draft [PR #158](https://github.com/keeganmoody33/PROPER-RESPECT/pull/158).
+is now published as draft [PR #158](https://github.com/lecturesfrom/PROPER-RESPECT/pull/158).
 
 This implements supplied-report normalization and a Cursor-owned replacement
 proposal. Acquisition, shared pairing, durable sync, generic measurement import,

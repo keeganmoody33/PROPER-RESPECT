@@ -1,6 +1,6 @@
 # Proper Respect: positioning brief
 
-Written 2026-11-17 from a read of `keeganmoody33/proper-respect` at main `a44b840` (after #221 and #225), plus open PR #226 and the open issues. Read only. The live site couldn't be reached from here, so nothing below describes production data, only the code and docs.
+Written 2026-11-17 from a read of `lecturesfrom/proper-respect` at main `a44b840` (after #221 and #225), plus open PR #226 and the open issues. Read only. The live site couldn't be reached from here, so nothing below describes production data, only the code and docs.
 
 Source of truth for intent: Keegan's message of 2026-11-17, quoted in his words where it fits.
 

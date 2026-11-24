@@ -40,7 +40,7 @@ Rebase resolved one component-test-list conflict by retaining both the merged ac
 
 ## Devin review correction — September 21
 
-Finding [r4058967862](https://github.com/keeganmoody33/PROPER-RESPECT/pull/33#discussion_r4058967862) confirmed at 4757755815f2617f5e822590308ff5fb28018bd6. Corrected in `a439d6f6dfda157aa2ab68f054c7bf505f18f596`: the unmatched-mailbox picker now passes includeAccountEvidence:false. All production inventory.list callers were audited; only PrivateInventory and UnmatchedRecords call it, and both now omit account joins. The earlier legacy-query limitation does not excuse a missed current UI caller.
+Finding [r4058967862](https://github.com/lecturesfrom/PROPER-RESPECT/pull/33#discussion_r4058967862) confirmed at 4757755815f2617f5e822590308ff5fb28018bd6. Corrected in `a439d6f6dfda157aa2ab68f054c7bf505f18f596`: the unmatched-mailbox picker now passes includeAccountEvidence:false. All production inventory.list callers were audited; only PrivateInventory and UnmatchedRecords call it, and both now omit account joins. The earlier legacy-query limitation does not excuse a missed current UI caller.
 
 RED: the actual MailboxManagement component could not render the unmatched-record picker when a synthetic query adapter rejected the expensive options. GREEN: it renders a GitHub choice and submits exactly mailboxDiscovery.reviewUnknown with the selected retained record/relationship; no provider HTTP call is made. This adapter models the budget failure, while the existing real-handler 25-card probe verifies zero original joins for the selected option.
 

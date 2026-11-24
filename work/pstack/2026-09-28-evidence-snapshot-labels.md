@@ -1,7 +1,7 @@
 # Dated evidence snapshots
 
 Date: 2026-09-28. Base: `859870cc4e9719f1a9edb0012523b88f938a2174`.
-Issue: [#103](https://github.com/keeganmoody33/PROPER-RESPECT/issues/103).
+Issue: [#103](https://github.com/lecturesfrom/PROPER-RESPECT/issues/103).
 Ref: https://plan.ref.tools/oUl8LCIQb32SAicK.
 Checkout: `/Users/keeganmoody/.codex/worktrees/evidence-snapshot-labels/PROPER-RESPECT`.
 Branch: `codex/evidence-snapshot-labels-20260928`. This thread expects to resume this checkout.

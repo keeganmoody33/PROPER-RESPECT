@@ -9,7 +9,7 @@ describe("usage links", () => {
   test.each([
     "https://www.loom.com/share/e5b8c04bca094dd8a5507925ab887002",
     "https://youtu.be/dQw4w9WgXcQ",
-    "https://github.com/keeganmoody33/PROPER-RESPECT",
+    "https://github.com/lecturesfrom/PROPER-RESPECT",
   ])("accepts any https link: %s", url => {
     expect(usageLinkUrlSchema.parse(url)).toBe(url);
   });

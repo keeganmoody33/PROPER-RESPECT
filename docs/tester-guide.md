@@ -63,7 +63,7 @@ change something later, it stays private until you preview and approve again.
 GitHub contribution calendar updates once a day without a new preview. Only
 the calendar changes: its numbers, its capture date, or an "out of date" mark
 if a refresh fails. To stop it, untick the box and publish again, or
-disconnect GitHub. The separate [account-consent fix](https://github.com/keeganmoody33/PROPER-RESPECT/pull/150)
+disconnect GitHub. The separate [account-consent fix](https://github.com/lecturesfrom/PROPER-RESPECT/pull/150)
 requires a fresh approval after reconnect once released.
 
 ## Removing your data

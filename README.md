@@ -69,7 +69,7 @@ Two ways to run it locally:
 ## 1. Fixture mode: no accounts
 
 ```bash
-git clone https://github.com/keeganmoody33/PROPER-RESPECT.git
+git clone https://github.com/lecturesfrom/PROPER-RESPECT.git
 cd PROPER-RESPECT
 npm ci
 PROPER_RESPECT_E2E_REFERENCE=1 npm run dev

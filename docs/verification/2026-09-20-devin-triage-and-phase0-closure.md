@@ -87,7 +87,7 @@ Three temporary synthetic probes were executed and restored byte-for-byte:
    main and blocks the separate upload-boundary release, not #22's lookup diff.
 
 All deferred bugs and capability gates are tracked together in
-[Close the release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24).
+[Close the release gaps #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24).
 The queue separates completed two-account Gmail consent/read history from
 future reads/recurrence; no old completed work is restarted. No new blocker
 against the narrow reviewed account-precedence correction was established;
@@ -193,11 +193,11 @@ Owner authorized correcting the five open comments on reviewed head
 
 | Review comment | Disposition and correction |
 | --- | --- |
-| [Devin r4057352180](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057352180) | Fix now: move the Wispr status note outside YAML frontmatter; preserve its metadata values. |
-| [Devin r4057352216](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057352216) | Fix now: resolve the V2 motion link relative to this receipt's directory. |
-| [Devin r4057352253](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057352253) | Fix now: point the README-linked root index to active V2 motion and label V1 references historical. |
-| [Copilot r4057356764](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057356764) | Superseded by the identical frontmatter finding above; verified with the same parse check. |
-| [Copilot r4057356789](https://github.com/keeganmoody33/PROPER-RESPECT/pull/25#discussion_r4057356789) | Fix now: explicitly qualify the entire preserved rolling receipt body as historical, including present-tense release claims. |
+| [Devin r4057352180](https://github.com/lecturesfrom/PROPER-RESPECT/pull/25#discussion_r4057352180) | Fix now: move the Wispr status note outside YAML frontmatter; preserve its metadata values. |
+| [Devin r4057352216](https://github.com/lecturesfrom/PROPER-RESPECT/pull/25#discussion_r4057352216) | Fix now: resolve the V2 motion link relative to this receipt's directory. |
+| [Devin r4057352253](https://github.com/lecturesfrom/PROPER-RESPECT/pull/25#discussion_r4057352253) | Fix now: point the README-linked root index to active V2 motion and label V1 references historical. |
+| [Copilot r4057356764](https://github.com/lecturesfrom/PROPER-RESPECT/pull/25#discussion_r4057356764) | Superseded by the identical frontmatter finding above; verified with the same parse check. |
+| [Copilot r4057356789](https://github.com/lecturesfrom/PROPER-RESPECT/pull/25#discussion_r4057356789) | Fix now: explicitly qualify the entire preserved rolling receipt body as historical, including present-tense release claims. |
 
 This is one documentation correction on #25. PR #26 remains separate. A new
 commit restarts exact-head CI and owner review; neither merge nor deployment

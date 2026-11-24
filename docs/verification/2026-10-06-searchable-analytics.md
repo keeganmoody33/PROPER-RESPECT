@@ -1,6 +1,6 @@
 # Searchable public-traffic reconciliation
 
-Date: 2026-10-06 (America/New_York). Source PR [#141](https://github.com/keeganmoody33/PROPER-RESPECT/pull/141) at `884db6b6d5f7e079a4d42cf158f1d78512bc4063`. Baseline main `258660ce212ed50623ff2b93765f7cf8d327dff6`. Isolated branch `codex/searchable-reconcile-20261006`; main incorporated by merge `b8e957e`. Original checkout remains untouched.
+Date: 2026-10-06 (America/New_York). Source PR [#141](https://github.com/lecturesfrom/PROPER-RESPECT/pull/141) at `884db6b6d5f7e079a4d42cf158f1d78512bc4063`. Baseline main `258660ce212ed50623ff2b93765f7cf8d327dff6`. Isolated branch `codex/searchable-reconcile-20261006`; main incorporated by merge `b8e957e`. Original checkout remains untouched.
 
 ## Review dispositions before implementation
 

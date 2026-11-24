@@ -1,6 +1,6 @@
 # 002 - Product Motion
 
-> **Status correction — 2026-09-20:** Superseded as the active motion document by [002-v2-product-motion.md](002-v2-product-motion.md). The prior private-discovery principles remain historical context; do not reimplement completed email discovery. See [release gaps #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
+> **Status correction — 2026-09-20:** Superseded as the active motion document by [002-v2-product-motion.md](002-v2-product-motion.md). The prior private-discovery principles remain historical context; do not reimplement completed email discovery. See [release gaps #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24) and the [Phase 0/Devin receipt](verification/2026-09-20-devin-triage-and-phase0-closure.md).
 
 > Updated: 2026-09-16. Follow `000-current-product-thesis.md`.
 

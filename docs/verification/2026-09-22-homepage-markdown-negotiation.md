@@ -73,7 +73,7 @@ For preview verification, set `VERCEL_ENV=preview` on both commands. The new wor
 
 Inspected integrated head: `9eeafdf8143425e2e03cb96eeadc94351a4051e3`.
 
-[Copilot thread PRRT_kwDOSyRAjs6k-dIf](https://github.com/keeganmoody33/PROPER-RESPECT/pull/55#discussion_r4078028540): **not a bug under the current HTTP standard**. The comment applies the former `accept-ext` distinction after `q`. [RFC 9110 §12.5.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-12.5.1) removed that grammar and says: “Recipients SHOULD process any parameter named "q" as weight, regardless of parameter ordering.” RFC 9110 obsoletes RFC 7231.
+[Copilot thread PRRT_kwDOSyRAjs6k-dIf](https://github.com/lecturesfrom/PROPER-RESPECT/pull/55#discussion_r4078028540): **not a bug under the current HTTP standard**. The comment applies the former `accept-ext` distinction after `q`. [RFC 9110 §12.5.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-12.5.1) removed that grammar and says: “Recipients SHOULD process any parameter named "q" as weight, regardless of parameter ordering.” RFC 9110 obsoletes RFC 7231.
 
 The current parser treats `q` as the weight in either position, matches the offered UTF-8 charset, and refuses an unsupported `profile=agent` media parameter in either position. Ignoring all parameters after `q` would silently select a representation that does not satisfy the requested parameters. Keep the parser unchanged. Add explicit regressions for supported charset and unsupported profile before/after `q`, including lower Markdown preference, because these order combinations were not previously named tests. These are characterization regressions for correct existing behavior, so no product RED failure is claimed.
 

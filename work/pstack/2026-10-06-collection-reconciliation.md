@@ -16,8 +16,8 @@ The Paper desktop/mobile exports retained in #127 were inspected from that exact
 
 - #125's head review has “Findings: None.” No inline review comments exist. The current-main port requires fresh review.
 - #126's head review says “Needs a closer look” and “Findings: None.” Fix now in the layout concern by executing desktop/mobile visual checks against the inspected Paper exports. The old review does not clear a new head.
-- #127 [focus coverage comment](https://github.com/keeganmoody33/PROPER-RESPECT/pull/127#discussion_r4127379069): “Compare both normal and focused card appearance in each theme.” Fix now in the layout concern with an actual keyboard-focus regression inside the collection.
-- #127 [QA status comment](https://github.com/keeganmoody33/PROPER-RESPECT/pull/127#discussion_r4127379190): “Those statuses imply different merge gates; update the PR description or this report so reviewers and automation have one current acceptance state.” Superseded for the delivering concern by a new dated receipt and matching PR checks. Preserve the original proposal and its review thread for parent disposition.
+- #127 [focus coverage comment](https://github.com/lecturesfrom/PROPER-RESPECT/pull/127#discussion_r4127379069): “Compare both normal and focused card appearance in each theme.” Fix now in the layout concern with an actual keyboard-focus regression inside the collection.
+- #127 [QA status comment](https://github.com/lecturesfrom/PROPER-RESPECT/pull/127#discussion_r4127379190): “Those statuses imply different merge gates; update the PR description or this report so reviewers and automation have one current acceptance state.” Superseded for the delivering concern by a new dated receipt and matching PR checks. Preserve the original proposal and its review thread for parent disposition.
 - #129 has no substantive GitHub review or inline comments. Its original proposal remains preserved. New work requires fresh review.
 
 ## Verification

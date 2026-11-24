@@ -1,6 +1,6 @@
 # Proper Respect: launch readiness
 
-Written 2026-11-17 from a read of `keeganmoody33/proper-respect` at main `a44b840`, the open PRs and issues, and two public reads of production (the `/lecturesfrom` page and Clerk's public environment endpoint). Read only: nothing was signed up for, pushed, merged, deployed or changed. The app was not run locally (it needs Clerk and Convex keys this session doesn't have), so the sign-up journey below is traced in code, not clicked through.
+Written 2026-11-17 from a read of `lecturesfrom/proper-respect` at main `a44b840`, the open PRs and issues, and two public reads of production (the `/lecturesfrom` page and Clerk's public environment endpoint). Read only: nothing was signed up for, pushed, merged, deployed or changed. The app was not run locally (it needs Clerk and Convex keys this session doesn't have), so the sign-up journey below is traced in code, not clicked through.
 
 Builds on [`2026-11-17-positioning-brief.md`](2026-11-17-positioning-brief.md) in this folder. Keegan picked hero option B there and wants every drift fixed.
 

@@ -44,8 +44,8 @@ Combined verification: all 10 current account-setup and inventory browser tests 
 
 ## PR 54 review dispositions — 2026-09-22
 
-- [PRRT_kwDOSyRAjs6k-UnF](https://github.com/keeganmoody33/PROPER-RESPECT/pull/54#discussion_r4077975294): **fix now**. The success link targets the collection heading, not the new record or its editor. Rename it **Review your collection** and correct the navigation claim; no inventory component changes.
-- [PRRT_kwDOSyRAjs6k-UnU](https://github.com/keeganmoody33/PROPER-RESPECT/pull/54#discussion_r4077975316): **fix now**. A `pending-` prefix is claimable. `onboardingStatus` cannot substitute for identity state because `retainUpload` sets `REVIEW` before a handle is claimed. Root approved a bounded authenticated `sites.by_owner` read in `getState`, returning `hasClaimedPublicIdentity` only when the owned site's handle equals the current user handle. No database schema or mutation changes.
+- [PRRT_kwDOSyRAjs6k-UnF](https://github.com/lecturesfrom/PROPER-RESPECT/pull/54#discussion_r4077975294): **fix now**. The success link targets the collection heading, not the new record or its editor. Rename it **Review your collection** and correct the navigation claim; no inventory component changes.
+- [PRRT_kwDOSyRAjs6k-UnU](https://github.com/lecturesfrom/PROPER-RESPECT/pull/54#discussion_r4077975316): **fix now**. A `pending-` prefix is claimable. `onboardingStatus` cannot substitute for identity state because `retainUpload` sets `REVIEW` before a handle is claimed. Root approved a bounded authenticated `sites.by_owner` read in `getState`, returning `hasClaimedPublicIdentity` only when the owned site's handle equals the current user handle. No database schema or mutation changes.
 
 The UI must treat an absent capability as unknown, disable preview, and explain that identity status is unavailable; it must not infer identity from a prefix or workflow status. Release requires the updated Convex query to be synchronized **before** the frontend. This task does not authorize or perform that synchronization.
 

@@ -1,8 +1,8 @@
 # Cursor integration with the existing collector
 
 The shared collector contract is in-tree at `src/domain/collector-contract.ts`
-after [PR #157](https://github.com/keeganmoody33/PROPER-RESPECT/pull/157) and
-[PR #158](https://github.com/keeganmoody33/PROPER-RESPECT/pull/158) merged to
+after [PR #157](https://github.com/lecturesfrom/PROPER-RESPECT/pull/157) and
+[PR #158](https://github.com/lecturesfrom/PROPER-RESPECT/pull/158) merged to
 main (`563e5fd0fc47fbc5163f5145a5ebec81d1003d85`). Pre-merge comparison used
 local `e168e8d5a91ad31cf55374ce7ccbb483c1aeff32` against PR #157 at
 `a6c670b6fc71b418d608c75d612c06112195a701`; that pin is historical. The

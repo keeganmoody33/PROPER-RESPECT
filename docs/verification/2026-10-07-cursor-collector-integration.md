@@ -36,7 +36,7 @@ the existing test cleanup. Source-pin binding and the actual schema callback are
 caller responsibilities, explicitly documented and tested; they are not claimed
 to authenticate an account or authorize a connection.
 
-Copilot review 5450117027 of [PR #158](https://github.com/keeganmoody33/PROPER-RESPECT/pull/158)
+Copilot review 5450117027 of [PR #158](https://github.com/lecturesfrom/PROPER-RESPECT/pull/158)
 at `b273257fb7860763b28385e740d99b0b68f78c2c` found that the adapter handoff still
 reported 47 tests for the current `src/server/cursor-report/*.test.mjs` glob.
 Disposition: fix now. Re-ran that Node 24 command: **57 passed, 0 failed, 0
@@ -106,7 +106,7 @@ now by selecting all Cursor commits since the named base, or since the already
 integrated cleanup commit.
 
 The owner explicitly approved pushing the tested code and opening a draft PR on
-October 7 at 09:36 UTC. [PR #158](https://github.com/keeganmoody33/PROPER-RESPECT/pull/158)
+October 7 at 09:36 UTC. [PR #158](https://github.com/lecturesfrom/PROPER-RESPECT/pull/158)
 opened at `e79164f09fe39e504b9e0a9079628b2e4806dd7a`, based directly on current
 main `6cf026b11499854b53f8aaae01f9a133df7578dd`. PR #157 remains a separate draft
 at `a6c670b6fc71b418d608c75d612c06112195a701`; none of its 55 changed files or

@@ -40,9 +40,9 @@ provider request, transfer, publication or stored-data rewrite occurred.
 
 Date: 2026-09-20. Base: `origin/main`
 `e086131a03d7a68ea50b2feca298a11d152a40f5` (merge of PR #27 head `d024b6c`).
-Finding: [issue #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24)
+Finding: [issue #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24)
 unknown-product identity collisions, from
-[PR #16 comment 3650427663](https://github.com/keeganmoody33/PROPER-RESPECT/pull/16#discussion_r3650427663).
+[PR #16 comment 3650427663](https://github.com/lecturesfrom/PROPER-RESPECT/pull/16#discussion_r3650427663).
 Skipped byte-budget isolation and exhaustive GitHub index architecture.
 No deploy, Convex sync, transfer or publication.
 

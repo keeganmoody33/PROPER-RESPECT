@@ -60,7 +60,7 @@ test("homepage advertises truthful identity and a working markdown alternate", a
     "@type": "SoftwareApplication",
     name: "Proper Respect",
     url: "https://public.example/",
-    sameAs: ["https://github.com/keeganmoody33/PROPER-RESPECT"],
+    sameAs: ["https://github.com/lecturesfrom/PROPER-RESPECT"],
   });
   expect(identity).not.toHaveProperty("aggregateRating");
   expect(identity).not.toHaveProperty("offers");

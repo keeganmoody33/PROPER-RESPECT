@@ -3,7 +3,7 @@
 Branch: `codex/onboarding-identity-20261008`.
 Base: `6cf026b11499854b53f8aaae01f9a133df7578dd`.
 Ref: https://plan.ref.tools/Ln459iX6fvAnTGXt
-Issue: https://github.com/keeganmoody33/PROPER-RESPECT/issues/159, linked to release-gaps issue #24.
+Issue: https://github.com/lecturesfrom/PROPER-RESPECT/issues/159, linked to release-gaps issue #24.
 
 ## Behavior
 

@@ -43,7 +43,7 @@ The scanner inspects homepage bundles, while the working WebMCP tool belongs to 
 With Codex 0.153.4, the actual remote-main marketplace was installed using:
 
 ```sh
-codex plugin marketplace add keeganmoody33/PROPER-RESPECT --ref main --json
+codex plugin marketplace add lecturesfrom/PROPER-RESPECT --ref main --json
 codex plugin add proper-respect@proper-respect-official --json
 ```
 

@@ -3,7 +3,7 @@ import { relationshipLevelsRule } from "@/src/domain/relationship-level";
 import { publicSiteOrigin } from "./public-site";
 import { markdownWithMetadata, type MarkdownMetadata } from "./markdown-metadata";
 
-export const repositoryUrl = "https://github.com/keeganmoody33/PROPER-RESPECT";
+export const repositoryUrl = "https://github.com/lecturesfrom/PROPER-RESPECT";
 export const homepageUpdatedAt = "2026-11-17T00:00:00.000Z";
 
 export function creatorBusinessIdentity() {

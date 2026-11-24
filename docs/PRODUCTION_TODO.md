@@ -1,6 +1,6 @@
 # Proper Respect production to-do list
 
-Updated September 21, 2026. [Live checklist](https://plan.ref.tools/aGrDHnZ8uoiYcMlA) · [Existing release queue #24](https://github.com/keeganmoody33/PROPER-RESPECT/issues/24) · [Canonical product Ref](https://plan.ref.tools/oUl8LCIQb32SAicK).
+Updated September 21, 2026. [Live checklist](https://plan.ref.tools/aGrDHnZ8uoiYcMlA) · [Existing release queue #24](https://github.com/lecturesfrom/PROPER-RESPECT/issues/24) · [Canonical product Ref](https://plan.ref.tools/oUl8LCIQb32SAicK).
 
 Checked items below describe the stated local or research result. They do not imply deployment or hosted acceptance. Existing Tasks 1–4 and saved profile data remain unchanged.
 
