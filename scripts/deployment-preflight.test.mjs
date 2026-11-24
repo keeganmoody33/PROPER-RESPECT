@@ -47,7 +47,7 @@ function workflowPattern(text, name) {
 }
 
 // Runs scripts/release-gate.sh with a stub curl that answers GitHub's API from `api`.
-function runReleaseGate({ actor = "owner", triggeringActor = "owner", api = {} } = {}) {
+function runReleaseGate({ actor = "owner", triggeringActor = "owner", releaseOwner = "owner", api = {} } = {}) {
   const bin = mkdtempSync(join(tmpdir(), "release-gate-"));
   const tagOnly = { branch_policies: [{ type: "tag", name: "v*" }] };
   const responses = {
@@ -72,7 +72,9 @@ process.stdout.write(body === undefined || body === null ? "404" : "200");
     encoding: "utf8",
     env: {
       PATH: `${bin}:${process.env.PATH}`, TMPDIR: tmpdir(), ACTOR: actor, TRIGGERING_ACTOR: triggeringActor, GH_TOKEN: "stub",
-      GITHUB_REPOSITORY_OWNER: "owner", GITHUB_REPOSITORY: "owner/repo", GITHUB_API_URL: "https://api.github.test",
+      ...(releaseOwner === null ? {} : { RELEASE_OWNER: releaseOwner }),
+      // The organization that owns the repository, which never releases.
+      GITHUB_REPOSITORY_OWNER: "org", GITHUB_REPOSITORY: "owner/repo", GITHUB_API_URL: "https://api.github.test",
     },
   });
   rmSync(bin, { recursive: true, force: true });
@@ -168,7 +170,7 @@ test("the production-domain check reads the deployment's aliases and says why it
   for (const exit of step.split("exit 1").slice(0, -1)) assert.match(exit.slice(-400), /echo "/);
 });
 
-test("the release gate stops unless the repository owner pushed the tag and started this attempt", () => {
+test("the release gate stops unless the release owner pushed the tag and started this attempt", () => {
   // Required reviewers aren't offered on a private repository below Enterprise,
   // so the workflow doesn't read them: the gate has to hold without them (2026-11-12).
   assert.doesNotMatch(releaseWorkflow(), /required_reviewers/);
@@ -179,6 +181,24 @@ test("the release gate stops unless the repository owner pushed the tag and star
   const rerunByOther = runReleaseGate({ triggeringActor: "collaborator" });
   assert.equal(rerunByOther.status, 1);
   assert.match(rerunByOther.output, /started by collaborator\./);
+});
+
+test("the release gate checks the pinned release owner, not the organization that owns the repository", () => {
+  // Since 2026-11-23 github.repository_owner is the lecturesfrom organization.
+  const byOrganization = runReleaseGate({ actor: "org", triggeringActor: "org" });
+  assert.equal(byOrganization.status, 1);
+  assert.match(byOrganization.output, /Only owner can release\. This run was started by org\./);
+  // null leaves RELEASE_OWNER out of the environment.
+  for (const releaseOwner of [null, ""]) {
+    const unpinned = runReleaseGate({ releaseOwner });
+    assert.equal(unpinned.status, 1, JSON.stringify(releaseOwner));
+    assert.match(unpinned.output, /RELEASE_OWNER is not set, so no one can release\./);
+  }
+  // Every gate step and both deploy conditions name the same account.
+  const workflow = releaseWorkflow();
+  assert.doesNotMatch(workflow, /\$\{\{[^}]*repository_owner/);
+  assert.doesNotMatch(workflow, /\n    if:[^\n]*repository_owner/);
+  assert.deepEqual([...workflow.matchAll(/\n          RELEASE_OWNER: (\S+)\n/g)].map(m => m[1]), ["keeganmoody33", "keeganmoody33", "keeganmoody33"]);
 });
 
 test("every release job checks the gate itself, so re-running one deploy job can't skip it", () => {
@@ -194,6 +214,7 @@ test("every release job checks the gate itself, so re-running one deploy job can
     const gate = job.indexOf("run: bash scripts/release-gate.sh");
     assert.ok(gate > 0, name);
     const step = job.slice(job.lastIndexOf("\n      - ", gate), gate);
+    assert.match(step, /RELEASE_OWNER: keeganmoody33\n/, name);
     assert.match(step, /ACTOR: \$\{\{ github\.actor \}\}/, name);
     assert.match(step, /TRIGGERING_ACTOR: \$\{\{ github\.triggering_actor \}\}/, name);
     assert.match(step, /GH_TOKEN: \$\{\{ github\.token \}\}/, name);
@@ -204,7 +225,7 @@ test("every release job checks the gate itself, so re-running one deploy job can
     }
   }
   for (const name of ["backend", "frontend"]) {
-    assert.match(jobs[name], /\n    if: github\.actor == github\.repository_owner && github\.triggering_actor == github\.repository_owner\n/, name);
+    assert.match(jobs[name], /\n    if: github\.actor == 'keeganmoody33' && github\.triggering_actor == 'keeganmoody33'\n/, name);
   }
 });
 
