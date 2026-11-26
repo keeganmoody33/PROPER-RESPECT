@@ -89,6 +89,22 @@ describe("next.config headers", () => {
     }
   });
 
+  it("lets the walkthrough pages use the microphone only while voice onboarding is on", async () => {
+    vi.stubEnv("VOICE_ONBOARDING", "1");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test-synthetic");
+    for (const path of ["/app/collection", "/onboarding"]) {
+      expect((await headersFor(path))["Permissions-Policy"]).toBe("camera=(), microphone=(self), geolocation=(), payment=()");
+    }
+    // Opening rapid fire reloads the page, so no other page needs the microphone.
+    for (const path of ["/", "/keegan", "/app/collection/other", "/about/privacy"]) {
+      expect((await headersFor(path))["Permissions-Policy"]).toBe("camera=(), microphone=(), geolocation=(), payment=()");
+    }
+    expect((await headersFor("/app/collection"))["Content-Security-Policy-Report-Only"]).toContain("https://api.openai.com");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    expect((await headersFor("/app/collection"))["Permissions-Policy"]).toBe("camera=(), microphone=(), geolocation=(), payment=()");
+    expect((await headersFor("/app/collection"))["Content-Security-Policy-Report-Only"]).not.toContain("api.openai.com");
+  });
+
   it.each(["/app/collection", "/sign-in", "/sign-in/factor-one", "/sign-up"])("forbids framing %s", async path => {
     const headers = await headersFor(path);
     expect(headers["X-Frame-Options"]).toBe("DENY");

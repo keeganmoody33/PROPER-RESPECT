@@ -220,6 +220,8 @@ export function useQuery(ref, args) {
     case "inventory:selectedActivity": return null;
     case "retainedEvidence:measurements": return (current?.measurementCaptures ?? empty).filter(capture => capture.propId === args.propId);
     case "inventory:detail": return current?.cards.find(card => card.prop._id === args.propId) ?? null;
+    // Rapid fire reads each tool's first sources (components/rapid-fire.tsx). This fixture stores none.
+    case "inventory:evidence": return { page: empty, isDone: true, continueCursor: "" };
     case "mailboxes:listAccounts": return empty;
     case "productKnowledge:getForProduct": return { supported: false, sources: empty };
     case "publicProfiles:searchListingChoice": return current ? { listed: current.user.listedInSearch ?? true } : undefined;
