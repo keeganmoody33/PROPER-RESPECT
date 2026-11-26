@@ -4,15 +4,22 @@
 #
 # GitHub offers required reviewers on a private repository only on Enterprise,
 # so this gate doesn't rely on them: while the repository is private, the
-# owner's tag push is the only approval. Needs ACTOR, TRIGGERING_ACTOR and
-# GH_TOKEN (actions: read) beside the variables Actions sets.
+# owner's tag push is the only approval. Needs RELEASE_OWNER, ACTOR,
+# TRIGGERING_ACTOR and GH_TOKEN (actions: read) beside the variables Actions sets.
 set -euo pipefail
 
+# RELEASE_OWNER is the one account that may release, pinned in release.yml. It
+# is not GITHUB_REPOSITORY_OWNER: since 2026-11-23 the repository belongs to the
+# lecturesfrom organization, which never pushes a tag itself.
 # triggering_actor is whoever started this attempt, so a re-run by anyone else
 # stops here too.
+if [ -z "${RELEASE_OWNER:-}" ]; then
+  echo "RELEASE_OWNER is not set, so no one can release."
+  exit 1
+fi
 for who in "$ACTOR" "$TRIGGERING_ACTOR"; do
-  if [ "$who" != "$GITHUB_REPOSITORY_OWNER" ]; then
-    echo "Only $GITHUB_REPOSITORY_OWNER can release. This run was started by $who."
+  if [ "$who" != "$RELEASE_OWNER" ]; then
+    echo "Only $RELEASE_OWNER can release. This run was started by $who."
     exit 1
   fi
 done

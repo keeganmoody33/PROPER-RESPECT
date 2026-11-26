@@ -1,6 +1,6 @@
 # Deployment runbook
 
-Updated: 2026-11-17. Releases ship `main` at a `v*` tag the owner pushes,
+Updated: 2026-11-24. Releases ship `main` at a `v*` tag the owner pushes,
 through `.github/workflows/release.yml`: the Convex backend first, then the
 Vercel frontend. The owner approves each of the two deploys in the Actions
 run ([who can release](#who-can-release)). The first
@@ -42,11 +42,14 @@ preview or production deployment. Its build command is
 `npm run deploy:check && npm run build`: a Vercel build is frontend-only and
 never deploys Convex. The backend deploys only from the release workflow's
 `backend` job, with `CONVEX_DEPLOY_KEY` from the `production-backend` GitHub
-environment. Every job in the release stops unless the repository owner pushed
+environment. Every job in the release stops unless the release owner pushed
 the tag and started that attempt, both `production-backend` and `production-frontend`
 deploy from `v*` tags only, and an active tag ruleset restricts `v*` tags.
 While the repository is public, each deploy job also waits for the owner's
-approval. Every action it uses is pinned to a commit.
+approval. Every action it uses is pinned to a commit. Since 2026-11-24 its
+jobs run on Blacksmith runners, like the pull request checks, because GitHub's
+own runners stopped starting after the move to `lecturesfrom`. The deploy
+secrets therefore reach Blacksmith's machines during a release.
 Each secret is passed only to the steps that run its CLI, and the first of
 those checks the secret before the CLI starts. That check can't tell where the
 secret came from,
@@ -255,17 +258,22 @@ the other two are repository settings that only the owner can change.
 `frontend` each run it first, so re-running one deploy job checks them again:
 
 1. The script stops unless `github.actor` and `github.triggering_actor` are both
-   the repository owner. The two deploy jobs also carry that condition
-   themselves.
+   the release owner, `keeganmoody33`. The two deploy jobs also carry that
+   condition themselves. The account is pinned in `release.yml`, not read from
+   `github.repository_owner`, because the repository has belonged to the
+   `lecturesfrom` organization since 2026-11-23 and an organization never pushes
+   a tag. Changing who may release takes a reviewed change to `release.yml`.
 2. Both environments deploy from `v*` tags only (Settings, Environments, the
    environment, Deployment branches and tags). Already set.
 3. A tag ruleset (Settings, Rules, Rulesets, New tag ruleset): enforcement
    **Active**, target tags matching `v*`, with **Restrict creations**,
    **Restrict updates** and **Restrict deletions** on. Its bypass list holds
-   **Repository admin** only, which is the owner. Without it, any app or
+   **Repository admin** only. Without the ruleset, any app or
    collaborator with write access could tag a commit that rewrites check 1.
    The workflow can't read the bypass list, so check it by hand whenever a
-   collaborator or app gains admin access.
+   collaborator or app gains admin access. Under the organization, Repository
+   admin also covers every organization owner, so keep the release owner the
+   organization's only owner.
 
 An agent working with the owner's credentials passes all three and can approve
 both deploys, so an agent pushes a release tag, or approves a deploy, only when

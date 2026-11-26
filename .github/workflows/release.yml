@@ -1,5 +1,5 @@
 name: Release
-# A v* tag pushed by the repository owner deploys the backend, then the
+# A v* tag pushed by the release owner deploys the backend, then the
 # frontend. While the repository is public, each deploy environment also holds
 # its job for the owner's review. GitHub offers required reviewers on a private
 # repository only on Enterprise, so this workflow doesn't rely on that hold
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2604
     timeout-minutes: 20
     permissions:
       contents: read
@@ -81,10 +81,14 @@ jobs:
           fi
           echo "value=$expected_deployment" >> "$GITHUB_OUTPUT"
       - name: Require the owner's release and owner-only tags
-        # scripts/release-gate.sh: the owner pushed the tag and started this
+        # scripts/release-gate.sh: the release owner pushed the tag and started this
         # attempt, both environments deploy from v* tags only, and a tag
         # ruleset restricts v* tags.
         env:
+          # The one account that may release, pinned here and in the job conditions.
+          # It is not github.repository_owner, which is the lecturesfrom
+          # organization since the repository moved there (2026-11-23).
+          RELEASE_OWNER: keeganmoody33
           ACTOR: ${{ github.actor }}
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
           GH_TOKEN: ${{ github.token }}
@@ -100,11 +104,11 @@ jobs:
 
   backend:
     needs: verify
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 20
     # A re-run of this job alone skips verify, so the owner check is repeated
     # here and the gate script runs again below.
-    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
+    if: github.actor == 'keeganmoody33' && github.triggering_actor == 'keeganmoody33'
     permissions:
       contents: read
       # The gate script reads the deploy environments' tag rules.
@@ -116,10 +120,14 @@ jobs:
         with:
           persist-credentials: false
       - name: Require the owner's release and owner-only tags
-        # scripts/release-gate.sh: the owner pushed the tag and started this
+        # scripts/release-gate.sh: the release owner pushed the tag and started this
         # attempt, both environments deploy from v* tags only, and a tag
         # ruleset restricts v* tags.
         env:
+          # The one account that may release, pinned here and in the job conditions.
+          # It is not github.repository_owner, which is the lecturesfrom
+          # organization since the repository moved there (2026-11-23).
+          RELEASE_OWNER: keeganmoody33
           ACTOR: ${{ github.actor }}
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
           GH_TOKEN: ${{ github.token }}
@@ -161,11 +169,11 @@ jobs:
 
   frontend:
     needs: [verify, backend]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     timeout-minutes: 20
     # A re-run of this job alone skips verify, so the owner check is repeated
     # here and the gate script runs again below.
-    if: github.actor == github.repository_owner && github.triggering_actor == github.repository_owner
+    if: github.actor == 'keeganmoody33' && github.triggering_actor == 'keeganmoody33'
     permissions:
       contents: read
       # The gate script reads the deploy environments' tag rules.
@@ -180,10 +188,14 @@ jobs:
         with:
           persist-credentials: false
       - name: Require the owner's release and owner-only tags
-        # scripts/release-gate.sh: the owner pushed the tag and started this
+        # scripts/release-gate.sh: the release owner pushed the tag and started this
         # attempt, both environments deploy from v* tags only, and a tag
         # ruleset restricts v* tags.
         env:
+          # The one account that may release, pinned here and in the job conditions.
+          # It is not github.repository_owner, which is the lecturesfrom
+          # organization since the repository moved there (2026-11-23).
+          RELEASE_OWNER: keeganmoody33
           ACTOR: ${{ github.actor }}
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
           GH_TOKEN: ${{ github.token }}
